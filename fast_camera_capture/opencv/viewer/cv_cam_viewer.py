@@ -4,7 +4,7 @@ from typing import Union
 
 import cv2
 
-from fast_camera_capture.data.frame_payload import FramePayload
+from fast_camera_capture.detection.models.frame_payload import FramePayload
 
 
 class CvCamViewer:

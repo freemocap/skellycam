@@ -6,8 +6,8 @@ import traceback
 import cv2
 import numpy as np
 
-from fast_camera_capture.data.frame_payload import FramePayload
-from fast_camera_capture.data.webcam_config import WebcamConfig
+from fast_camera_capture.detection.models.frame_payload import FramePayload
+from fast_camera_capture.opencv.camera.models.webcam_config import WebcamConfig
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
 from fast_camera_capture.opencv.config.determine_backend import determine_backend
 

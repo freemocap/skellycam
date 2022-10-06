@@ -4,10 +4,10 @@ import time
 import traceback
 from typing import Optional
 
-from fast_camera_capture.data.webcam_config import WebcamConfig
+from fast_camera_capture.opencv.camera.models.webcam_config import WebcamConfig
 from fast_camera_capture.opencv.camera.attributes import Attributes
 from fast_camera_capture.opencv.camera.internal_camera_thread import VideoCaptureThread
-from fast_camera_capture.viewer.cv_cam_viewer import CvCamViewer
+from fast_camera_capture.opencv.viewer.cv_cam_viewer import CvCamViewer
 
 logger = logging.getLogger(__name__)
 
