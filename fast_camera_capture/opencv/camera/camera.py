@@ -1,0 +1,85 @@
+import asyncio
+import logging
+import time
+import traceback
+from typing import Optional
+
+from fast_camera_capture.data.webcam_config import WebcamConfig
+from fast_camera_capture.opencv.camera.attributes import Attributes
+from fast_camera_capture.opencv.camera.internal_camera_thread import VideoCaptureThread
+from fast_camera_capture.viewer.cv_cam_viewer import CvCamViewer
+
+logger = logging.getLogger(__name__)
+
+
+class Camera:
+    def __init__(
+        self,
+        config: WebcamConfig,
+    ):
+        self._config = config
+        self._capture_thread: Optional[VideoCaptureThread] = None
+
+    @property
+    def name(self):
+        return f"Camera_{self._config.webcam_id}"
+
+    @property
+    def attributes(self):
+        return Attributes(self._capture_thread)
+
+    @property
+    def webcam_id_as_str(self):
+        return self._config.webcam_id
+
+    @property
+    def is_capturing_frames(self):
+        return self._capture_thread.is_capturing_frames
+
+    @property
+    def new_frame_ready(self):
+        return self._capture_thread.new_frame_ready
+
+    @property
+    def latest_frame(self):
+        return self._capture_thread.latest_frame
+
+    def connect(self):
+        if self._capture_thread and self._capture_thread.is_capturing_frames:
+            logger.debug(
+                f"Already capturing frames for webcam_id: {self.webcam_id_as_str}"
+            )
+            return
+        logger.debug(f"Camera ID: [{self._config.webcam_id}] Creating thread")
+        self._capture_thread = VideoCaptureThread(config=self._config)
+        self._capture_thread.start()
+
+    def stop_frame_capture(self):
+        self._capture_thread.stop()
+
+    def close(self):
+        try:
+            self._capture_thread.stop()
+            while self._capture_thread.is_alive():
+                # wait for thread to die.
+                # TODO: use threading.Event for synchronize mainthread vs other threads
+                time.sleep(0.1)
+        except:
+            logger.error("Printing traceback")
+            traceback.print_exc()
+        finally:
+            logger.info(f"Camera ID: [{self._config.webcam_id}] has closed")
+
+    async def show(self):
+        viewer = CvCamViewer()
+        viewer.begin_viewer(self.webcam_id_as_str)
+        while True:
+            if self.new_frame_ready:
+                viewer.recv_img(self.latest_frame)
+                await asyncio.sleep(0)
+
+
+if __name__ == "__main__":
+    cam = Camera(WebcamConfig(webcam_id=0))
+    cam.connect()
+    asyncio.run(cam.show())
