@@ -5,14 +5,14 @@
 <h3 align="center">fast-camera-capture</h3>
 <p align="center">📝 An easy and efficient way to connect to cameras and aggregate frame data.</p>
 <p align="center">
-    <a href="https://github.com/freemocap/freemocap/releases/latest">
-        <img src="https://img.shields.io/github/release/freemocap/freemocap.svg" alt="Latest Release">
+    <a href="https://github.com/freemocap/fast-camera-capture/releases/latest">
+        <img src="https://img.shields.io/github/release/freemocap/fast-camera-capture.svg" alt="Latest Release">
     </a>
-    <a href="https://github.com/freemocap/freemocap/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/license-AGPL-blue.svg" alt="MIT License">
+    <a href="https://github.com/freemocap/fast-camera-capture/blob/main/LICENSE">
+        <img src="https://img.shields.io/badge/license-AGPL-blue.svg" alt="AGPL">
     </a>
-    <a href="https://github.com/freemocap/freemocap/issues">
-        <img src="https://img.shields.io/badge/contributions-welcome-ff69b4.svg" alt="Contributions Welcome">
+    <a href="https://github.com/freemocap/fast-camera-capture/issues">
+        <img src="https://img.shields.io/badge/contributions-almost-ff69b4.svg" alt="Contributions Welcome">
     </a>
   <a href="https://github.com/psf/black">
     <img alt="https://img.shields.io/badge/code%20style-black-000000.svg" src="https://img.shields.io/badge/code%20style-black-000000.svg">
