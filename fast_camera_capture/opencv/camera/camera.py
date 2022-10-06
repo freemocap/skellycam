@@ -29,8 +29,8 @@ class Camera:
         return Attributes(self._capture_thread)
 
     @property
-    def webcam_id_as_str(self):
-        return self._config.cam_id
+    def cam_id(self):
+        return str(self._config.cam_id)
 
     @property
     def is_capturing_frames(self):
@@ -47,7 +47,7 @@ class Camera:
     def connect(self):
         if self._capture_thread and self._capture_thread.is_capturing_frames:
             logger.debug(
-                f"Already capturing frames for webcam_id: {self.webcam_id_as_str}"
+                f"Already capturing frames for webcam_id: {self.cam_id}"
             )
             return
         logger.debug(f"Camera ID: [{self._config.cam_id}] Creating thread")
@@ -70,9 +70,9 @@ class Camera:
         finally:
             logger.info(f"Camera ID: [{self._config.cam_id}] has closed")
 
-    async def showAsync(self):
+    async def show_async(self):
         viewer = CvCamViewer()
-        viewer.begin_viewer(self.webcam_id_as_str)
+        viewer.begin_viewer(self.cam_id)
         while True:
             if self.new_frame_ready:
                 viewer.recv_img(self.latest_frame)
@@ -80,7 +80,7 @@ class Camera:
 
     def show(self):
         viewer = CvCamViewer()
-        viewer.begin_viewer(self.webcam_id_as_str)
+        viewer.begin_viewer(self.cam_id)
         while True:
             if self.new_frame_ready:
                 viewer.recv_img(self.latest_frame)

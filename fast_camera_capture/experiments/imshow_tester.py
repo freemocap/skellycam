@@ -13,7 +13,7 @@ async def imshow_testing():
         c.connect()
         cvcams.append(c)
 
-    await asyncio.gather(*[cam.showAsync() for cam in cvcams])
+    await asyncio.gather(*[cam.show_async() for cam in cvcams])
 
 
 if __name__ == "__main__":
