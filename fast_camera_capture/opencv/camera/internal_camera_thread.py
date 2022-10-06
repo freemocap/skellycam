@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
-from fast_camera_capture.opencv.camera.models.webcam_config import WebcamConfig
+from fast_camera_capture.opencv.camera.models.cam_args import CamArgs
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
 from fast_camera_capture.opencv.config.determine_backend import determine_backend
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
-        config: WebcamConfig
+        config: CamArgs
     ):
         super().__init__()
         self._new_frame_ready = False
@@ -78,7 +78,7 @@ class VideoCaptureThread(threading.Thread):
 
     def _start_frame_loop(self):
         self._is_capturing_frames = True
-        logger.info(f"Camera ID: [{self._config.webcam_id}] Frame capture loop has started")
+        logger.info(f"Camera ID: [{self._config.cam_id}] Frame capture loop has started")
         self._capture_start_timestamp_ns = time.time_ns()
         try:
             while self._is_capturing_frames:
@@ -88,13 +88,13 @@ class VideoCaptureThread(threading.Thread):
                 )
                 self._num_frames_processed += 1
         except:
-            logger.error(f"Camera ID: [{self._config.webcam_id}] Frame loop thread exited due to error")
+            logger.error(f"Camera ID: [{self._config.cam_id}] Frame loop thread exited due to error")
             traceback.print_exc()
         else:
-            logger.info(f"Camera ID: [{self._config.webcam_id}] Frame capture has stopped.")
+            logger.info(f"Camera ID: [{self._config.cam_id}] Frame capture has stopped.")
 
     def _create_cv2_capture(self):
-        logger.info(f"Connecting to Camera: {self._config.webcam_id}...")
+        logger.info(f"Connecting to Camera: {self._config.cam_id}...")
         cap_backend = determine_backend()
 
         try:
@@ -103,21 +103,21 @@ class VideoCaptureThread(threading.Thread):
             pass
 
         capture = cv2.VideoCapture(
-            int(self._config.webcam_id), cap_backend
+            int(self._config.cam_id), cap_backend
         )
 
         try:
             success, image = capture.read()
         except Exception as e:
             logger.error(
-                f"Problem when trying to read frame from Camera: {self._config.webcam_id}"
+                f"Problem when trying to read frame from Camera: {self._config.cam_id}"
             )
             traceback.print_exc()
             raise e
 
         if not success or image is None:
             logger.error(
-                f"Failed to read frame from camera at port# {self._config.webcam_id}: "
+                f"Failed to read frame from camera at port# {self._config.cam_id}: "
                 f"returned value: {success}, "
                 f"returned image: {image}"
             )
@@ -125,7 +125,7 @@ class VideoCaptureThread(threading.Thread):
 
         apply_configuration(capture, self._config)
 
-        logger.info(f"Successfully connected to Camera: {self._config.webcam_id}!")
+        logger.info(f"Successfully connected to Camera: {self._config.cam_id}!")
         return capture
 
     def _get_next_frame(self):
@@ -140,7 +140,7 @@ class VideoCaptureThread(threading.Thread):
                     retrieval_timestamp - self.first_frame_timestamp
                 )
         except:
-            logger.error(f"Failed to read frame from Camera: {self._config.webcam_id}")
+            logger.error(f"Failed to read frame from Camera: {self._config.cam_id}")
             raise Exception
 
         self._new_frame_ready = success
@@ -154,13 +154,13 @@ class VideoCaptureThread(threading.Thread):
             timestamp_unix_time_seconds=retrieval_timestamp,
             timestamp_in_seconds_from_record_start=current_frame_timestamp_diff,
             frame_number=self.latest_frame_number,
-            webcam_id=str(self._config.webcam_id),
+            webcam_id=str(self._config.cam_id),
         )
 
     def stop(self):
         self._is_capturing_frames = False
         if self._cv2_video_capture is not None:
             logger.debug(
-                f"Releasing `opencv_video_capture_object` for Camera: {self._config.webcam_id}"
+                f"Releasing `opencv_video_capture_object` for Camera: {self._config.cam_id}"
             )
             self._cv2_video_capture.release()

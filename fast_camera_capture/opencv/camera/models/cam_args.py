@@ -1,10 +1,10 @@
 from pydantic import BaseModel
 
-from fast_camera_capture.home_dir import os_independent_home_dir
+from fast_camera_capture.system.environment.home_dir import os_independent_home_dir
 
 
-class WebcamConfig(BaseModel):
-    webcam_id: int = 0
+class CamArgs(BaseModel):
+    cam_id: int = 0
     exposure: int = -7
     resolution_width: int = 1280
     resolution_height: int = 720
