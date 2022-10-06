@@ -86,7 +86,8 @@ class Camera:
                 viewer.recv_img(self.latest_frame)
 
 
-# if __name__ == "__main__":
-#     cam1 = Camera(CamArgs(webcam_id=3))
-#     cam1.connect()
-#     asyncio.run(cam1.show())
+if __name__ == "__main__":
+    cam1 = Camera(CamArgs(webcam_id=3))
+    cam1.connect()
+    while True:
+        time.sleep(1)

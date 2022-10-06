@@ -1,5 +1,7 @@
+import math
 import multiprocessing
 from multiprocessing import Process
+from time import perf_counter_ns, time_ns
 from typing import Dict, List
 
 from fast_camera_capture import CamArgs, Camera
@@ -37,7 +39,6 @@ class CamGroupProcess:
             for cam in cameras:
                 if cam.new_frame_ready:
                     queue = queues[cam.cam_id]
-                    print(f"Sending frame for {cam.cam_id}")
                     queue.put_nowait(cam.latest_frame)
 
     def get_all(self):
@@ -45,14 +46,18 @@ class CamGroupProcess:
         for cam_id in self._cam_ids:
             queue = self._queues[cam_id]
             if not queue.empty():
-                result.append(queue.get_nowait())
+                result.append(queue.get())
 
         return result
 
 
 if __name__ == "__main__":
-    p = CamGroupProcess(["0", "2"])
+    p = CamGroupProcess(["0"])
     p.start_capture()
     while True:
+        curr = perf_counter_ns() * 1e-6
         frames = p.get_all()
-        print(frames)
+        if frames:
+            end = perf_counter_ns() * 1e-6
+            frame_count_in_ms = f"{math.trunc(end - curr)}"
+            print(f"{frame_count_in_ms}ms for this frame")
