@@ -9,7 +9,7 @@ async def imshow_testing():
     cams = detect_cameras()
     cvcams = []
     for info in cams.cameras_found_list:
-        c = Camera(CamArgs(webcam_id=info))
+        c = Camera(CamArgs(cam_id=info))
         c.connect()
         cvcams.append(c)
 
