@@ -9,7 +9,7 @@ import numpy as np
 from fast_camera_capture.data.frame_payload import FramePayload
 from fast_camera_capture.data.webcam_config import WebcamConfig
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
-from fast_camera_capture.opencv.config.system_independent_cap import system_independent_cap
+from fast_camera_capture.opencv.config.determine_backend import determine_backend
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +31,16 @@ class VideoCaptureThread(threading.Thread):
         self._num_frames_processed = 0
 
         self._elapsed_during_frame_grab = []
-        self._timestamps_npy = []
+        self._capture_timestamps = []
         self._median_framerate = None
         self._frame: FramePayload = FramePayload()
         self._cv2_video_capture = self._create_cv2_capture()
 
     @property
     def first_frame_timestamp(self):
-        return self._timestamps_npy[0]
+        if len(self._capture_timestamps) > 0:
+            return self._capture_timestamps[0]
+        return None
 
     @property
     def median_framerate(self):
@@ -48,7 +50,7 @@ class VideoCaptureThread(threading.Thread):
             )
         else:
             self._median_framerate = np.nanmedian(
-                (np.diff(self._timestamps_npy) ** -1) / 1e9
+                (np.diff(self._capture_timestamps) ** -1) / 1e9
             )
 
         return self._median_framerate
@@ -77,12 +79,12 @@ class VideoCaptureThread(threading.Thread):
     def _start_frame_loop(self):
         self._is_capturing_frames = True
         logger.info(f"Camera ID: [{self._config.webcam_id}] Frame capture loop has started")
-        self._timestamp_in_seconds_from_record_start = time.time_ns()
+        self._capture_start_timestamp_ns = time.time_ns()
         try:
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
-                self._timestamps_npy.append(
-                    self._timestamp_in_seconds_from_record_start
+                self._capture_timestamps.append(
+                    self._capture_start_timestamp_ns
                 )
                 self._num_frames_processed += 1
         except:
@@ -93,7 +95,7 @@ class VideoCaptureThread(threading.Thread):
 
     def _create_cv2_capture(self):
         logger.info(f"Connecting to Camera: {self._config.webcam_id}...")
-        cap_backend = system_independent_cap()
+        cap_backend = determine_backend()
 
         try:
             self._cv2_video_capture.release()
@@ -130,9 +132,13 @@ class VideoCaptureThread(threading.Thread):
         try:
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
-            current_frame_timestamp_diff = (
-                time.perf_counter_ns() - self.first_frame_timestamp
-            )
+            retrieval_timestamp = time.perf_counter_ns()
+            if not self.first_frame_timestamp:
+                current_frame_timestamp_diff = retrieval_timestamp
+            else:
+                current_frame_timestamp_diff = (
+                    retrieval_timestamp - self.first_frame_timestamp
+                )
         except:
             logger.error(f"Failed to read frame from Camera: {self._config.webcam_id}")
             raise Exception
@@ -145,7 +151,8 @@ class VideoCaptureThread(threading.Thread):
         return FramePayload(
             success=success,
             image=image,
-            timestamp_unix_time_seconds=time.time(),
+            timestamp_unix_time_seconds=retrieval_timestamp,
+            timestamp_in_seconds_from_record_start=current_frame_timestamp_diff,
             frame_number=self.latest_frame_number,
             webcam_id=str(self._config.webcam_id),
         )

@@ -80,6 +80,6 @@ class Camera:
 
 
 if __name__ == "__main__":
-    cam = Camera(WebcamConfig(webcam_id=0))
-    cam.connect()
-    asyncio.run(cam.show())
+    cam1 = Camera(WebcamConfig(webcam_id=3))
+    cam1.connect()
+    asyncio.run(cam1.show())

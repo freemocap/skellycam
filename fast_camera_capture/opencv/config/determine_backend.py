@@ -6,7 +6,7 @@ import cv2
 logger = logging.getLogger(__name__)
 
 
-def system_independent_cap():
+def determine_backend():
     if platform.system() == "Windows":
         logger.debug(f"Windows machine detected - using backend `cv2.CAP_DSHOW`")
         return cv2.CAP_DSHOW

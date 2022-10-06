@@ -1,5 +1,3 @@
-
-
 class Attributes:
 
     def __init__(self, cv2_capture):
@@ -12,4 +10,3 @@ class Attributes:
     @property
     def image_height(self):
         return int(self._cv2_capture.get(4))
-
