@@ -5,6 +5,7 @@ from time import perf_counter_ns
 from typing import Dict, List
 
 from fast_camera_capture import CamArgs, Camera
+from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.group.strategies.queue_communicator import QueueCommunicator
 
 
@@ -35,14 +36,13 @@ class CamGroupProcess:
                     queue = queues[cam.cam_id]
                     queue.put_nowait(cam.latest_frame)
 
-    def get_all(self):
-        result = []
-        for cam_id in self._cam_ids:
-            queue = self._queues[cam_id]
-            if not queue.empty():
-                result.append(queue.get())
+    def get_by_cam_id(self, cam_id) -> FramePayload | None:
+        if cam_id not in self._queues:
+            return
 
-        return result
+        queue = self._queues[cam_id]
+        if not queue.empty():
+            return queue.get()
 
 
 if __name__ == "__main__":
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     p.start_capture()
     while True:
         curr = perf_counter_ns() * 1e-6
-        frames = p.get_all()
+        frames = p.get_by_cam_id()
         if frames:
             end = perf_counter_ns() * 1e-6
             frame_count_in_ms = f"{math.trunc(end - curr)}"
