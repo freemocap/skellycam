@@ -31,8 +31,8 @@ class CamGroupZeromqProcess:
     @staticmethod
     def _begin(cam_ids: List[str]):
         cameras = CamGroupZeromqProcess._create_cams(cam_ids)
-        parent_zmq = zmq.Context()
-        send = parent_zmq.socket(zmq.PUSH)
+        child_zmq = zmq.Context()
+        send = child_zmq.socket(zmq.PUSH)
         send.bind("ipc://camstream")
         for cam in cameras:
             cam.connect()
