@@ -48,11 +48,6 @@ class CamGroupZeromqProcess:
 if __name__ == "__main__":
     p = CamGroupZeromqProcess(["0"])
     p.start_capture()
-    # while True:
-    #     frame = p.get()
-    #     if frame:
-    #         cv2.imshow("test", frame.image)
-    #         cv2.waitKey(1)
     while True:
         curr = perf_counter_ns() * 1e-6
         frames = p.get()

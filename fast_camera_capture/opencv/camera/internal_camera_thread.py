@@ -23,7 +23,7 @@ class VideoCaptureThread(threading.Thread):
     ):
         super().__init__()
         self._new_frame_ready = False
-        self.daemon = True
+        self.daemon = False
 
         self._config = config
         self._is_capturing_frames = False

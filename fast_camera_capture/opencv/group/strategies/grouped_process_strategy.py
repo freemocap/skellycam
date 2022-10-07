@@ -20,7 +20,9 @@ class GroupedProcessStrategy:
 
     def get_by_cam_id(self, cam_id: str):
         for process in self._processes:
-            return process.get_by_cam_id(cam_id)
+            curr = process.get_by_cam_id(cam_id)
+            if curr:
+                return curr
 
     def _create_processes(self, cam_ids: List[str],
         cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS):
@@ -28,5 +30,5 @@ class GroupedProcessStrategy:
         cam_ids_as_nparray = np.array(cam_ids)
         cam_ids_split_nparray = np.array_split(cam_ids_as_nparray, cameras_per_process)
         camera_subarrays = [subarray.tolist() for subarray in cam_ids_split_nparray]
-
+        print(camera_subarrays)
         return [CamGroupProcess(cam_id_subarray) for cam_id_subarray in camera_subarrays]
