@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
-from typing import Optional
+from typing import Optional, Union
 
 from fast_camera_capture.opencv.camera.models.cam_args import CamArgs
 from fast_camera_capture.opencv.camera.attributes import Attributes
@@ -16,8 +16,10 @@ class Camera:
     def __init__(
         self,
         config: CamArgs,
+        initial_time_stamp:Union[int,float]=time.perf_counter_ns()
     ):
         self._config = config
+        self._initial_time_stamp = initial_time_stamp
         self._capture_thread: Optional[VideoCaptureThread] = None
 
     @property
@@ -51,7 +53,7 @@ class Camera:
             )
             return
         logger.debug(f"Camera ID: [{self._config.cam_id}] Creating thread")
-        self._capture_thread = VideoCaptureThread(config=self._config)
+        self._capture_thread = VideoCaptureThread(config=self._config, initial_time_stamp = self._initial_time_stamp)
         self._capture_thread.start()
 
     def stop_frame_capture(self):

@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 import traceback
+from typing import Union
 
 import cv2
 import numpy as np
@@ -17,7 +18,8 @@ logger = logging.getLogger(__name__)
 class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
-        config: CamArgs
+        config: CamArgs,
+        initial_time_stamp: Union[int,float]
     ):
         super().__init__()
         self._new_frame_ready = False
@@ -30,11 +32,14 @@ class VideoCaptureThread(threading.Thread):
         self._number_of_frames_recorded: int = 0
         self._num_frames_processed = 0
 
+        self._initial_time_stamp = initial_time_stamp
         self._elapsed_during_frame_grab = []
         self._capture_timestamps = []
         self._median_framerate = None
         self._frame: FramePayload = FramePayload()
         self._cv2_video_capture = self._create_cv2_capture()
+
+
 
     @property
     def first_frame_timestamp(self):
@@ -82,9 +87,6 @@ class VideoCaptureThread(threading.Thread):
         try:
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
-                self._capture_timestamps.append(
-                    time.perf_counter_ns()
-                )
                 self._num_frames_processed += 1
         except:
             logger.error(f"Camera ID: [{self._config.cam_id}] Frame loop thread exited due to error")
@@ -96,13 +98,8 @@ class VideoCaptureThread(threading.Thread):
         try:
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
-            retrieval_timestamp = time.perf_counter_ns()
-            if not self.first_frame_timestamp:
-                current_frame_timestamp_diff = retrieval_timestamp
-            else:
-                current_frame_timestamp_diff = (
-                    retrieval_timestamp - self.first_frame_timestamp
-                )
+            retrieval_timestamp = time.perf_counter_ns() - self._initial_time_stamp
+
         except:
             logger.error(f"Failed to read frame from Camera: {self._config.cam_id}")
             raise Exception
@@ -115,8 +112,7 @@ class VideoCaptureThread(threading.Thread):
         return FramePayload(
             success=success,
             image=image,
-            timestamp_unix_time_seconds=retrieval_timestamp,
-            timestamp_in_seconds_from_record_start=current_frame_timestamp_diff,
+            timestamp_ns=retrieval_timestamp,
             frame_number=self.latest_frame_number,
             webcam_id=str(self._config.cam_id),
         )

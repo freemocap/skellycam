@@ -16,7 +16,7 @@ class CamGroupZeromqProcess:
         self._payload = None
         parent_zmq = zmq.Context()
         self._parent_recv = parent_zmq.socket(zmq.PULL)
-        self._parent_recv.connect("ipc://camstream")
+        self._parent_recv.connect("tcp://127.0.0.1:5556")
 
     def start_capture(self):
         self._process = Process(target=CamGroupZeromqProcess._begin, args=(self._cam_ids,))
@@ -33,7 +33,7 @@ class CamGroupZeromqProcess:
         cameras = CamGroupZeromqProcess._create_cams(cam_ids)
         child_zmq = zmq.Context()
         send = child_zmq.socket(zmq.PUSH)
-        send.bind("ipc://camstream")
+        send.bind("tcp://127.0.0.1:5556")
         for cam in cameras:
             cam.connect()
         while True:
