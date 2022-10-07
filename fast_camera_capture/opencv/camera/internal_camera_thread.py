@@ -79,12 +79,11 @@ class VideoCaptureThread(threading.Thread):
     def _start_frame_loop(self):
         self._is_capturing_frames = True
         logger.info(f"Camera ID: [{self._config.cam_id}] Frame capture loop has started")
-        self._capture_start_timestamp_ns = time.time_ns()
         try:
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
                 self._capture_timestamps.append(
-                    self._capture_start_timestamp_ns
+                    time.perf_counter_ns()
                 )
                 self._num_frames_processed += 1
         except:
@@ -92,6 +91,35 @@ class VideoCaptureThread(threading.Thread):
             traceback.print_exc()
         else:
             logger.info(f"Camera ID: [{self._config.cam_id}] Frame capture has stopped.")
+
+    def _get_next_frame(self):
+        try:
+            self._cv2_video_capture.grab()
+            success, image = self._cv2_video_capture.retrieve()
+            retrieval_timestamp = time.perf_counter_ns()
+            if not self.first_frame_timestamp:
+                current_frame_timestamp_diff = retrieval_timestamp
+            else:
+                current_frame_timestamp_diff = (
+                    retrieval_timestamp - self.first_frame_timestamp
+                )
+        except:
+            logger.error(f"Failed to read frame from Camera: {self._config.cam_id}")
+            raise Exception
+
+        self._new_frame_ready = success
+
+        if success:
+            self._number_of_frames_recorded += 1
+
+        return FramePayload(
+            success=success,
+            image=image,
+            timestamp_unix_time_seconds=retrieval_timestamp,
+            timestamp_in_seconds_from_record_start=current_frame_timestamp_diff,
+            frame_number=self.latest_frame_number,
+            webcam_id=str(self._config.cam_id),
+        )
 
     def _create_cv2_capture(self):
         logger.info(f"Connecting to Camera: {self._config.cam_id}...")
@@ -127,35 +155,6 @@ class VideoCaptureThread(threading.Thread):
 
         logger.info(f"Successfully connected to Camera: {self._config.cam_id}!")
         return capture
-
-    def _get_next_frame(self):
-        try:
-            self._cv2_video_capture.grab()
-            success, image = self._cv2_video_capture.retrieve()
-            retrieval_timestamp = time.perf_counter_ns()
-            if not self.first_frame_timestamp:
-                current_frame_timestamp_diff = retrieval_timestamp
-            else:
-                current_frame_timestamp_diff = (
-                    retrieval_timestamp - self.first_frame_timestamp
-                )
-        except:
-            logger.error(f"Failed to read frame from Camera: {self._config.cam_id}")
-            raise Exception
-
-        self._new_frame_ready = success
-
-        if success:
-            self._number_of_frames_recorded += 1
-
-        return FramePayload(
-            success=success,
-            image=image,
-            timestamp_unix_time_seconds=retrieval_timestamp,
-            timestamp_in_seconds_from_record_start=current_frame_timestamp_diff,
-            frame_number=self.latest_frame_number,
-            webcam_id=str(self._config.cam_id),
-        )
 
     def stop(self):
         self._is_capturing_frames = False

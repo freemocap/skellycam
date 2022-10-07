@@ -1,10 +1,11 @@
 import math
 import multiprocessing
 from multiprocessing import Process
-from time import perf_counter_ns, time_ns
+from time import perf_counter_ns
 from typing import Dict, List
 
 from fast_camera_capture import CamArgs, Camera
+from fast_camera_capture.opencv.group.strategies.queue_communicator import QueueCommunicator
 
 
 class CamGroupProcess:
@@ -12,19 +13,12 @@ class CamGroupProcess:
         self._cam_ids = cam_ids
         self._process: Process = None
         self._payload = None
-        self._queues = self._create_queues()
+        communicator = QueueCommunicator(cam_ids)
+        self._queues = communicator.queues
 
     def start_capture(self):
         self._process = Process(target=CamGroupProcess._begin, args=(self._cam_ids, self._queues))
         self._process.start()
-
-    def _create_queues(self):
-        d = {}
-        for cam_id in self._cam_ids:
-            d.update({
-                cam_id: multiprocessing.Queue()
-            })
-        return d
 
     @staticmethod
     def _create_cams(cam_ids: List[str]):

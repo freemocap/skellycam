@@ -1,3 +1,5 @@
 numpy==1.23.3
 opencv-python==4.6.0.66
 pydantic==1.10.2
+pyzmq==24.0.1
+Pillow==9.2.0
