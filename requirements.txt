@@ -6,3 +6,4 @@ pyzmq==24.0.1
 Pillow==9.2.0
 psutil==5.9.2
 setproctitle==1.3.2
+pyqt6==6.4.0
