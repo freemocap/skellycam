@@ -9,7 +9,7 @@ from fast_camera_capture.opencv.group.strategies.strategies import Strategy
 
 
 class CameraGroup:
-    def __init__(self, cam_ids: List[str], strategy: Strategy = Strategy.X_CAM_PER_PROCESS):
+    def __init__(self, cam_ids: List[str] = None, strategy: Strategy = Strategy.X_CAM_PER_PROCESS):
         self._strategy_enum = strategy
         self._cam_ids = cam_ids
         # Make optional, if a list of cams is sent then just use that
@@ -21,6 +21,10 @@ class CameraGroup:
     @property
     def is_capturing(self):
         return self._strategy_class.is_capturing
+
+    @property
+    def cams(self):
+        return self._cam_ids
 
     def start(self):
         """
@@ -42,14 +46,13 @@ class CameraGroup:
 
 async def getall(g: CameraGroup):
     await asyncio.gather(
-        cam_show("0", lambda: g.get_by_cam_id("0")),
-        cam_show("2", lambda: g.get_by_cam_id("2"))
+        *[cam_show(cam_id, lambda: g.get_by_cam_id(cam_id)) for cam_id in g.cams]
     )
 
 
 if __name__ == "__main__":
-    cams = ["0"]
-    g = CameraGroup(cams)
+    cams = detect_cameras()
+    g = CameraGroup(cams.cameras_found_list)
     g.start()
 
     asyncio.run(getall(g))

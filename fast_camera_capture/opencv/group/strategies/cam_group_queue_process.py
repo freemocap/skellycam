@@ -57,7 +57,7 @@ class CamGroupProcess:
 
     @staticmethod
     def _begin(cam_ids: List[str], queues: Dict[str, multiprocessing.Queue]):
-        setproctitle(f"Cameras {' '.join(cam_ids)}")
+        setproctitle(f"Cameras TESTINGg {' '.join(cam_ids)}")
         cameras = CamGroupProcess._create_cams(cam_ids)
         for cam in cameras:
             cam.connect()
@@ -67,7 +67,7 @@ class CamGroupProcess:
                 # This tight loop ends up 100% the process, so a sleep between framecaptures is
                 # necessary. We can get away with this because we don't expect another frame for
                 # awhile.
-                sleep(0.05)
+                sleep(0.03)
                 for cam in cameras:
                     if cam.new_frame_ready:
                         queue = queues[cam.cam_id]

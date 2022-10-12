@@ -34,4 +34,4 @@ def _begin(shared_value, cam_id):
         if not payload:
             continue
         cv2.imshow(str(cam_id), payload.image)
-        cv2.waitKey(30)
+        cv2.waitKey(10)
