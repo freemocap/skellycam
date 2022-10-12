@@ -1,9 +1,11 @@
+import dataclasses
 from typing import NamedTuple
 
 import numpy as np
 
 
-class FramePayload(NamedTuple):
+@dataclasses.dataclass()
+class FramePayload:
     success: bool = False
     image: np.ndarray = None
     timestamp_ns: float = None

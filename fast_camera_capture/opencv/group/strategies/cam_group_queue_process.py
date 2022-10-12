@@ -19,13 +19,29 @@ class CamGroupProcess:
         communicator = QueueCommunicator(cam_ids)
         self._queues = communicator.queues
 
+    @property
+    def camera_ids(self):
+        return self._cam_ids
+
     def start_capture(self):
+        """
+        Start capturing frames. Only return if the underlying process is fully running.
+        :return:
+        """
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupProcess._begin,
             args=(self._cam_ids, self._queues)
         )
         self._process.start()
+        while not self._process.is_alive():
+            sleep(1)
+
+    @property
+    def is_capturing(self):
+        if self._process:
+            return self._process.is_alive()
+        return False
 
     @staticmethod
     def _create_cams(cam_ids: List[str]):
@@ -45,7 +61,7 @@ class CamGroupProcess:
             for cam in cameras:
                 if cam.new_frame_ready:
                     queue = queues[cam.cam_id]
-                    queue.put(cam.latest_frame, block=True)
+                    queue.put(cam.latest_frame)
 
     def get_by_cam_id(self, cam_id) -> FramePayload | None:
         if cam_id not in self._queues:
@@ -54,10 +70,6 @@ class CamGroupProcess:
         queue = self._queues[cam_id]
         if not queue.empty():
             return queue.get(block=True)
-
-    # def queue_size(self, cam_id):
-    #     queue = self._queues[cam_id]
-    #     return queue()
 
 
 if __name__ == "__main__":
