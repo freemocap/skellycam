@@ -58,6 +58,8 @@ class Camera:
             initial_time_stamp=self._initial_time_stamp,
         )
         self._capture_thread.start()
+        while not self._capture_thread.is_capturing_frames:
+            time.sleep(.1)
 
     def stop_frame_capture(self):
         self._capture_thread.stop()
