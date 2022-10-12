@@ -57,7 +57,7 @@ class CamGroupProcess:
 
     @staticmethod
     def _begin(cam_ids: List[str], queues: Dict[str, multiprocessing.Queue]):
-        setproctitle(f"Cameras TESTINGg {' '.join(cam_ids)}")
+        setproctitle(f"Cameras {' '.join(cam_ids)}")
         cameras = CamGroupProcess._create_cams(cam_ids)
         for cam in cameras:
             cam.connect()
