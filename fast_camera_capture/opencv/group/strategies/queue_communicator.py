@@ -1,5 +1,6 @@
-import multiprocessing
 from typing import List
+
+from fast_camera_capture.multiproc.queue import Queue
 
 
 class QueueCommunicator:
@@ -11,7 +12,7 @@ class QueueCommunicator:
         d = {}
         for identifier in self._identifiers:
             d.update({
-                identifier: multiprocessing.Queue()
+                identifier: Queue()
             })
         return d
 

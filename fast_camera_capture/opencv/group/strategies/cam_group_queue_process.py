@@ -1,5 +1,4 @@
 import math
-import multiprocessing
 from multiprocessing import Process
 from time import perf_counter_ns, sleep
 from typing import Dict, List
@@ -8,6 +7,7 @@ from setproctitle import setproctitle
 
 from fast_camera_capture import CamArgs, Camera
 from fast_camera_capture.detection.models.frame_payload import FramePayload
+from fast_camera_capture.multiproc.queue import Queue
 from fast_camera_capture.opencv.group.strategies.queue_communicator import QueueCommunicator
 
 
@@ -56,7 +56,7 @@ class CamGroupProcess:
         return [Camera(CamArgs(cam_id=cam)) for cam in cam_ids]
 
     @staticmethod
-    def _begin(cam_ids: List[str], queues: Dict[str, multiprocessing.Queue]):
+    def _begin(cam_ids: List[str], queues: Dict[str, Queue]):
         setproctitle(f"Cameras {' '.join(cam_ids)}")
         cameras = CamGroupProcess._create_cams(cam_ids)
         for cam in cameras:
@@ -81,6 +81,7 @@ class CamGroupProcess:
             return
 
         queue = self._queues[cam_id]
+
         if not queue.empty():
             return queue.get(block=True)
 

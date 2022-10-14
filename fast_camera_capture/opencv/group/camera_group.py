@@ -45,9 +45,8 @@ class CameraGroup:
 
 
 async def getall(g: CameraGroup):
-    await asyncio.gather(
-        *[cam_show(cam_id, lambda: g.get_by_cam_id(cam_id)) for cam_id in g.cams]
-    )
+    grab_all = [cam_show(cam_id, lambda: g.get_by_cam_id(cam_id)) for cam_id in g.cams]
+    await asyncio.gather(*grab_all)
 
 
 if __name__ == "__main__":
