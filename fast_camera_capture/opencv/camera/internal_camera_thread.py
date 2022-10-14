@@ -18,7 +18,6 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
         config: CamArgs,
-        initial_time_stamp: Union[int, float],
     ):
         super().__init__()
         self._new_frame_ready = False
@@ -31,7 +30,6 @@ class VideoCaptureThread(threading.Thread):
         self._number_of_frames_recorded: int = 0
         self._num_frames_processed = 0
 
-        self._initial_time_stamp = initial_time_stamp
         self._elapsed_during_frame_grab = []
         self._capture_timestamps = []
         self._median_framerate = None
@@ -96,7 +94,7 @@ class VideoCaptureThread(threading.Thread):
         try:
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
-            retrieval_timestamp = time.perf_counter_ns() - self._initial_time_stamp
+            retrieval_timestamp = time.perf_counter_ns()
         except:
             logger.error(f"Failed to read frame from Camera: {self._config.cam_id}")
             raise Exception
