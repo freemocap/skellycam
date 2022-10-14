@@ -7,7 +7,7 @@ from typing import Optional, Union
 from fast_camera_capture.opencv.camera.models.cam_args import CamArgs
 from fast_camera_capture.opencv.camera.attributes import Attributes
 from fast_camera_capture.opencv.camera.internal_camera_thread import VideoCaptureThread
-from fast_camera_capture.opencv.viewer.cv_cam_viewer import CvCamViewer
+from fast_camera_capture.opencv.viewer.cv_imshow.cv_cam_viewer import CvCamViewer
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,10 @@ class Camera:
             )
             return
         logger.debug(f"Camera ID: [{self._config.cam_id}] Creating thread")
-        self._capture_thread = VideoCaptureThread(config=self._config, initial_time_stamp = self._initial_time_stamp)
+        self._capture_thread = VideoCaptureThread(
+            config=self._config,
+            initial_time_stamp=self._initial_time_stamp,
+        )
         self._capture_thread.start()
 
     def stop_frame_capture(self):
@@ -86,10 +89,3 @@ class Camera:
         while True:
             if self.new_frame_ready:
                 viewer.recv_img(self.latest_frame)
-
-
-if __name__ == "__main__":
-    cam1 = Camera(CamArgs(webcam_id=3))
-    cam1.connect()
-    while True:
-        time.sleep(1)

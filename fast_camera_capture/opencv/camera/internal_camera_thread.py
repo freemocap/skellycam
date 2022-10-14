@@ -11,7 +11,6 @@ from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.camera.models.cam_args import CamArgs
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
 from fast_camera_capture.opencv.config.determine_backend import determine_backend
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +18,7 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
         config: CamArgs,
-        initial_time_stamp: Union[int,float]
+        initial_time_stamp: Union[int, float],
     ):
         super().__init__()
         self._new_frame_ready = False
@@ -38,8 +37,6 @@ class VideoCaptureThread(threading.Thread):
         self._median_framerate = None
         self._frame: FramePayload = FramePayload()
         self._cv2_video_capture = self._create_cv2_capture()
-
-
 
     @property
     def first_frame_timestamp(self):
@@ -88,6 +85,7 @@ class VideoCaptureThread(threading.Thread):
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
                 self._num_frames_processed += 1
+                time.sleep(.03)
         except:
             logger.error(f"Camera ID: [{self._config.cam_id}] Frame loop thread exited due to error")
             traceback.print_exc()
@@ -99,12 +97,11 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
             retrieval_timestamp = time.perf_counter_ns() - self._initial_time_stamp
-
         except:
             logger.error(f"Failed to read frame from Camera: {self._config.cam_id}")
             raise Exception
-
-        self._new_frame_ready = success
+        else:
+            self._new_frame_ready = success
 
         if success:
             self._number_of_frames_recorded += 1
