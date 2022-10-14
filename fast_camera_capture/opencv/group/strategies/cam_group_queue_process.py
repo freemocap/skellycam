@@ -57,7 +57,7 @@ class CamGroupProcess:
             # This tight loop ends up 100% the process, so a sleep between framecaptures is
             # necessary. We can get away with this because we don't expect another frame for
             # awhile.
-            sleep(0.05)
+            sleep(0.001)
             for cam in cameras:
                 if cam.new_frame_ready:
                     queue = queues[cam.cam_id]
@@ -73,7 +73,7 @@ class CamGroupProcess:
 
 
 if __name__ == "__main__":
-    p = CamGroupProcess(["0"])
+    p = CamGroupProcess(["0", ])
     p.start_capture()
     while True:
         # print("Queue size: ", p.queue_size("0"))

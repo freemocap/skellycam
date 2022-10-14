@@ -83,7 +83,7 @@ class VideoCaptureThread(threading.Thread):
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
                 self._num_frames_processed += 1
-                time.sleep(.03)
+                # time.sleep(.03)
         except:
             logger.error(f"Camera ID: [{self._config.cam_id}] Frame loop thread exited due to error")
             traceback.print_exc()
