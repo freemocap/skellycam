@@ -54,6 +54,7 @@ class Camera:
         logger.debug(f"Camera ID: [{self._config.cam_id}] Creating thread")
         self._capture_thread = VideoCaptureThread(
             config=self._config,
+
         )
         self._capture_thread.start()
 

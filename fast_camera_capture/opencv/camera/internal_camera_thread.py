@@ -18,6 +18,7 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
         config: CamArgs,
+
     ):
         super().__init__()
         self._new_frame_ready = False
@@ -83,7 +84,7 @@ class VideoCaptureThread(threading.Thread):
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
                 self._num_frames_processed += 1
-                # time.sleep(.03)
+
         except:
             logger.error(f"Camera ID: [{self._config.cam_id}] Frame loop thread exited due to error")
             traceback.print_exc()
@@ -95,6 +96,7 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
             retrieval_timestamp = time.perf_counter_ns()
+
         except:
             logger.error(f"Failed to read frame from Camera: {self._config.cam_id}")
             raise Exception
