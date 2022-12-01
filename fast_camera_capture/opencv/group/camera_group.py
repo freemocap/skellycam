@@ -1,4 +1,5 @@
 import asyncio
+import multiprocessing
 from typing import List
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
@@ -22,12 +23,19 @@ class CameraGroup:
     def is_capturing(self):
         return self._strategy_class.is_capturing
 
+    @property
+    def exit_event(self):
+        return self._exit_event
+
     def start(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
         :return:
         """
-        self._strategy_class.start_capture()
+        self._exit_event = multiprocessing.Event()
+        self._strategy_class.start_capture(self.exit_event)
+
+
 
     def get_by_cam_id(self, cam_id: str):
         return self._strategy_class.get_by_cam_id(cam_id)

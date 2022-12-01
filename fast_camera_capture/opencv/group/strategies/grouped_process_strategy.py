@@ -1,3 +1,4 @@
+import multiprocessing
 from typing import Dict, List
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
@@ -25,9 +26,9 @@ class GroupedProcessStrategy:
                 return False
         return True
 
-    def start_capture(self):
+    def start_capture(self, exit_event: multiprocessing.Event):
         for process in self._processes:
-            process.start_capture()
+            process.start_capture(exit_event = exit_event)
 
     def get_by_cam_id(self, cam_id: str):
         for process in self._processes:
