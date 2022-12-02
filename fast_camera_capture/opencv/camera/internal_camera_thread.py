@@ -11,6 +11,7 @@ from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.camera.models.cam_args import CamArgs
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
 from fast_camera_capture.opencv.config.determine_backend import determine_backend
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +19,6 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
         config: CamArgs,
-
     ):
         super().__init__()
         self._new_frame_ready = False
@@ -79,17 +79,23 @@ class VideoCaptureThread(threading.Thread):
 
     def _start_frame_loop(self):
         self._is_capturing_frames = True
-        logger.info(f"Camera ID: [{self._config.cam_id}] Frame capture loop has started")
+        logger.info(
+            f"Camera ID: [{self._config.cam_id}] Frame capture loop has started"
+        )
         try:
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
                 self._num_frames_processed += 1
 
         except:
-            logger.error(f"Camera ID: [{self._config.cam_id}] Frame loop thread exited due to error")
+            logger.error(
+                f"Camera ID: [{self._config.cam_id}] Frame loop thread exited due to error"
+            )
             traceback.print_exc()
         else:
-            logger.info(f"Camera ID: [{self._config.cam_id}] Frame capture has stopped.")
+            logger.info(
+                f"Camera ID: [{self._config.cam_id}] Frame capture has stopped."
+            )
 
     def _get_next_frame(self):
         try:
@@ -123,9 +129,7 @@ class VideoCaptureThread(threading.Thread):
         except:
             pass
 
-        capture = cv2.VideoCapture(
-            int(self._config.cam_id), cap_backend
-        )
+        capture = cv2.VideoCapture(int(self._config.cam_id), cap_backend)
 
         try:
             success, image = capture.read()

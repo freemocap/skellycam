@@ -5,8 +5,10 @@ from pathlib import Path
 import cv2
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
-from fast_camera_capture.examples.framerate_diagnostics import calculate_camera_diagnostic_results, \
-    show_timestamp_diagnostic_plots
+from fast_camera_capture.examples.framerate_diagnostics import (
+    calculate_camera_diagnostic_results,
+    show_timestamp_diagnostic_plots,
+)
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 
@@ -27,7 +29,9 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
         latest_frame_payloads = camera_group.latest_frames()
         for cam_id, frame_payload in latest_frame_payloads.items():
             if frame_payload is not None:
-                video_recorder_dictionary[cam_id].append_frame_payload_to_list(frame_payload)
+                video_recorder_dictionary[cam_id].append_frame_payload_to_list(
+                    frame_payload
+                )
                 cv2.imshow(f"Camera {cam_id} - Press ESC to quit", frame_payload.image)
 
         frame_count_dictionary = {}
@@ -46,9 +50,13 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
     timestamps_dictionary = {}
     for cam_id, video_recorder in video_recorder_dictionary.items():
         timestamps_dictionary[cam_id] = video_recorder.timestamps
-    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(timestamps_dictionary)
+    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(
+        timestamps_dictionary
+    )
     print(timestamp_diagnostic_data_class.__dict__)
-    show_timestamp_diagnostic_plots(timestamps_dictionary, shared_zero_time, save_path, show_plot=False)
+    show_timestamp_diagnostic_plots(
+        timestamps_dictionary, shared_zero_time, save_path, show_plot=False
+    )
 
     # save videos
     for cam_id, video_recorder in video_recorder_dictionary.items():
@@ -63,8 +71,16 @@ if __name__ == "__main__":
     found_camera_response = detect_cameras()
     camera_ids_list_in = found_camera_response.cameras_found_list
 
-    save_path_in = Path.home() / 'fast-camera-capture-recordings' / time.strftime("%m-%d-%Y_%H_%M_%S")
+    save_path_in = (
+        Path.home()
+        / "fast-camera-capture-recordings"
+        / time.strftime("%m-%d-%Y_%H_%M_%S")
+    )
     save_path_in.mkdir(parents=True, exist_ok=True)
-    asyncio.run(record_synchronized_videos(camera_ids_list=camera_ids_list_in, save_path=save_path_in))
+    asyncio.run(
+        record_synchronized_videos(
+            camera_ids_list=camera_ids_list_in, save_path=save_path_in
+        )
+    )
 
-    print('done!')
+    print("done!")

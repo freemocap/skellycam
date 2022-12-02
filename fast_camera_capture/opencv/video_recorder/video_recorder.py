@@ -35,15 +35,17 @@ class VideoRecorder:
         self._frame_payload_list.append(frame_payload)
 
     def save_video_to_file(
-            self,
-            path_to_save_video_file: Union[str, Path],
-            frames_per_second: float = None,
+        self,
+        path_to_save_video_file: Union[str, Path],
+        frames_per_second: float = None,
     ):
 
         if frames_per_second is None:
             self._timestamps_npy = self._gather_timestamps()
             try:
-                frames_per_second = np.nanmedian((np.diff(self._timestamps_npy) ** -1))*1e9
+                frames_per_second = (
+                    np.nanmedian((np.diff(self._timestamps_npy) ** -1)) * 1e9
+                )
             except Exception as e:
                 logger.debug("Error calculating frames per second")
                 traceback.print_exc()
@@ -61,12 +63,12 @@ class VideoRecorder:
         self._cv2_video_writer.release()
 
     def _initialize_video_writer(
-            self,
-            image_height: Union[int, float],
-            image_width: Union[int, float],
-            frames_per_second: Union[int, float] = None,
-            fourcc: str = "mp4v",
-            # calibration_videos: bool = False,
+        self,
+        image_height: Union[int, float],
+        image_width: Union[int, float],
+        frames_per_second: Union[int, float] = None,
+        fourcc: str = "mp4v",
+        # calibration_videos: bool = False,
     ) -> cv2.VideoWriter:
 
         video_writer_object = cv2.VideoWriter(
@@ -80,7 +82,7 @@ class VideoRecorder:
             logger.error(
                 f"cv2.VideoWriter failed to initialize for: {str(self._path_to_save_video_file)}"
             )
-            raise Exception('cv2.VideoWriter is not open')
+            raise Exception("cv2.VideoWriter is not open")
 
         return video_writer_object
 
@@ -116,9 +118,7 @@ class VideoRecorder:
         timestamps_npy = np.empty(0)
         try:
             for frame_payload in self._frame_payload_list:
-                timestamps_npy = np.append(
-                    timestamps_npy, frame_payload.timestamp_ns
-                )
+                timestamps_npy = np.append(timestamps_npy, frame_payload.timestamp_ns)
         except Exception as e:
             logger.error("Error gathering timestamps")
             logger.error(e)
@@ -140,7 +140,7 @@ class VideoRecorder:
 
         # save timestamps to human readable (csv/text) file (via pandas.DataFrame)
         path_to_save_timestamps_csv = (
-                base_timestamp_path_str + "_timestamps_human_readable.csv"
+            base_timestamp_path_str + "_timestamps_human_readable.csv"
         )
         timestamp_dataframe = pd.DataFrame(timestamps_npy)
         timestamp_dataframe.to_csv(str(path_to_save_timestamps_csv))

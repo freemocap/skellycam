@@ -19,7 +19,9 @@ class CamGroupZeromqProcess:
         self._parent_recv.connect("tcp://127.0.0.1:5556")
 
     def start_capture(self):
-        self._process = Process(target=CamGroupZeromqProcess._begin, args=(self._cam_ids,))
+        self._process = Process(
+            target=CamGroupZeromqProcess._begin, args=(self._cam_ids,)
+        )
         self._process.start()
         while not self._process.is_alive():
             sleep(0.01)

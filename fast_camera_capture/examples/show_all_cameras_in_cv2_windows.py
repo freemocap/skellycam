@@ -35,11 +35,9 @@ async def show_all_cameras_in_cv2_windows(camera_ids_list: list = None):
     camera_group.close()
 
 
-
-
 if __name__ == "__main__":
     found_camera_response = detect_cameras()
     camera_ids_list_in = found_camera_response.cameras_found_list
     asyncio.run(show_all_cameras_in_cv2_windows(camera_ids_list_in))
 
-    print('done!')
+    print("done!")

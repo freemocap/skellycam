@@ -1,5 +1,4 @@
 class Attributes:
-
     def __init__(self, cv2_capture):
         self._cv2_capture = cv2_capture
 

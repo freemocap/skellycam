@@ -26,18 +26,21 @@ class TimestampDiagnosticsDataClass:
     mean_median_absolute_deviation_per_camera: float
 
 
-def show_timestamp_diagnostic_plots(timestamps_dictionary: dict,
-                                    shared_zero_time: int,
-                                    save_path: str | Path,
-                                    show_plot: bool = False):
+def show_timestamp_diagnostic_plots(
+    timestamps_dictionary: dict,
+    shared_zero_time: int,
+    save_path: str | Path,
+    show_plot: bool = False,
+):
     import matplotlib.pyplot as plt
     import matplotlib
+
     matplotlib.use("qt5agg")
     matplotlib.set_loglevel("warning")
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))
 
     # plot timestamps
-    max_frame_duration = .1  # sec
+    max_frame_duration = 0.1  # sec
 
     ax1.set_xlabel("Frame number")
     ax1.set_ylabel("Timestamp (sec)")
@@ -53,25 +56,27 @@ def show_timestamp_diagnostic_plots(timestamps_dictionary: dict,
     ax3.set_title("Histogram of frame durations")
 
     number_of_frames = len(list(timestamps_dictionary.values())[0])
-    ax2.plot([0, number_of_frames], [.033, .033], 'k-', label="30 fps")
-    ax3.plot([.033, .033], [0, number_of_frames], 'k-', label="30 fps")
+    ax2.plot([0, number_of_frames], [0.033, 0.033], "k-", label="30 fps")
+    ax3.plot([0.033, 0.033], [0, number_of_frames], "k-", label="30 fps")
 
     for cam_id, timestamps in timestamps_dictionary.items():
         timestamps_formatted = np.asarray(timestamps) - shared_zero_time
         timestamps_formatted = timestamps_formatted / 1e9
 
-        ax1.plot(timestamps_formatted, '.-', label=cam_id)
+        ax1.plot(timestamps_formatted, ".-", label=cam_id)
         ax1.legend()
 
-        ax2.plot(np.diff(timestamps_formatted), '.', label=cam_id, alpha=.5)
+        ax2.plot(np.diff(timestamps_formatted), ".", label=cam_id, alpha=0.5)
 
         ax2.legend()
 
-        ax3.hist(np.diff(timestamps_formatted),
-                 bins=np.arange(0, max_frame_duration, .001),
-                 label=cam_id,
-                 alpha=0.5,
-                 density=True)
+        ax3.hist(
+            np.diff(timestamps_formatted),
+            bins=np.arange(0, max_frame_duration, 0.001),
+            label=cam_id,
+            alpha=0.5,
+            density=True,
+        )
         ax3.legend()
 
     plt.tight_layout()
@@ -80,12 +85,14 @@ def show_timestamp_diagnostic_plots(timestamps_dictionary: dict,
     logger.info(f"Saved timestamp diagnostic plot to {figure_file_path}")
     if show_plot:
         plt.show()
-        plt.pause(.1)
+        plt.pause(0.1)
         input("Press Enter to continue...")
         plt.close()
 
 
-def calculate_camera_diagnostic_results(timestamps_dictionary) -> TimestampDiagnosticsDataClass:
+def calculate_camera_diagnostic_results(
+    timestamps_dictionary,
+) -> TimestampDiagnosticsDataClass:
     mean_framerates_per_camera = {}
     standard_deviation_framerates_per_camera = {}
     median_framerates_per_camera = {}
@@ -97,23 +104,34 @@ def calculate_camera_diagnostic_results(timestamps_dictionary) -> TimestampDiagn
         framerate_per_frame = 1 / frame_durations
         mean_framerates_per_camera[cam_id] = np.nanmean(framerate_per_frame)
         median_framerates_per_camera[cam_id] = np.nanmedian(framerate_per_frame)
-        standard_deviation_framerates_per_camera[cam_id] = np.nanstd(framerate_per_frame)
-        median_absolute_deviation_per_camera[cam_id] = median_abs_deviation(framerate_per_frame)
+        standard_deviation_framerates_per_camera[cam_id] = np.nanstd(
+            framerate_per_frame
+        )
+        median_absolute_deviation_per_camera[cam_id] = median_abs_deviation(
+            framerate_per_frame
+        )
 
     mean_mean_framerate = np.nanmean(list(mean_framerates_per_camera.values()))
-    mean_standard_deviation_framerates = np.nanmean(list(standard_deviation_framerates_per_camera.values()))
+    mean_standard_deviation_framerates = np.nanmean(
+        list(standard_deviation_framerates_per_camera.values())
+    )
     mean_median_framerates = np.nanmean(list(median_framerates_per_camera.values()))
-    mean_median_absolute_deviation_per_camera = np.nanmean(list(median_absolute_deviation_per_camera.values()))
+    mean_median_absolute_deviation_per_camera = np.nanmean(
+        list(median_absolute_deviation_per_camera.values())
+    )
 
-    return TimestampDiagnosticsDataClass(mean_framerates_per_camera=mean_framerates_per_camera,
-                                         standard_deviation_framerates_per_camera=standard_deviation_framerates_per_camera,
-                                         median_framerates_per_camera=median_framerates_per_camera,
-                                         median_absolute_deviation_per_camera=median_absolute_deviation_per_camera,
-                                         mean_mean_framerate=float(mean_mean_framerate),
-                                         mean_standard_deviation_framerates=float(mean_standard_deviation_framerates),
-                                         mean_median_framerates=float(mean_median_framerates),
-                                         mean_median_absolute_deviation_per_camera=float(
-                                             mean_median_absolute_deviation_per_camera))
+    return TimestampDiagnosticsDataClass(
+        mean_framerates_per_camera=mean_framerates_per_camera,
+        standard_deviation_framerates_per_camera=standard_deviation_framerates_per_camera,
+        median_framerates_per_camera=median_framerates_per_camera,
+        median_absolute_deviation_per_camera=median_absolute_deviation_per_camera,
+        mean_mean_framerate=float(mean_mean_framerate),
+        mean_standard_deviation_framerates=float(mean_standard_deviation_framerates),
+        mean_median_framerates=float(mean_median_framerates),
+        mean_median_absolute_deviation_per_camera=float(
+            mean_median_absolute_deviation_per_camera
+        ),
+    )
 
 
 if __name__ == "__main__":
@@ -143,8 +161,13 @@ if __name__ == "__main__":
                 should_continue = False
 
         print(
-            f"Loop duration: {loop_duration:.3f} ms: Timestamps: {[len(val) for val in timestamps_dictionary_in.values()]}")
+            f"Loop duration: {loop_duration:.3f} ms: Timestamps: {[len(val) for val in timestamps_dictionary_in.values()]}"
+        )
 
-    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(timestamps_dictionary_in)
+    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(
+        timestamps_dictionary_in
+    )
     print(timestamp_diagnostic_data_class.__dict__)
-    show_timestamp_diagnostic_plots(timestamps_dictionary_in, shared_zero_time_in, pause_on_show=True)
+    show_timestamp_diagnostic_plots(
+        timestamps_dictionary_in, shared_zero_time_in, pause_on_show=True
+    )

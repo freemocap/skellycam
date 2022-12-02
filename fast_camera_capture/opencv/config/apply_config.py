@@ -25,28 +25,16 @@ def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CamArgs):
             )
             return
     except Exception as e:
-        logger.error(
-            f"Failed when trying to check if Camera {config.cam_id} is open"
-        )
+        logger.error(f"Failed when trying to check if Camera {config.cam_id} is open")
         return
 
     try:
-        cv2_vid_cap.set(
-            cv2.CAP_PROP_EXPOSURE, config.exposure
-        )
-        cv2_vid_cap.set(
-            cv2.CAP_PROP_FRAME_WIDTH, config.resolution_width
-        )
-        cv2_vid_cap.set(
-            cv2.CAP_PROP_FRAME_HEIGHT, config.resolution_height
-        )
+        cv2_vid_cap.set(cv2.CAP_PROP_EXPOSURE, config.exposure)
+        cv2_vid_cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution_width)
+        cv2_vid_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution_height)
 
-        cv2_vid_cap.set(
-            cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.fourcc)
-        )
+        cv2_vid_cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.fourcc))
     except Exception as e:
-        logger.error(
-            f"Problem applying configuration for camera: {config.cam_id}"
-        )
+        logger.error(f"Problem applying configuration for camera: {config.cam_id}")
         traceback.print_exc()
         raise e
