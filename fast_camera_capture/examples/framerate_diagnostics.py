@@ -34,7 +34,7 @@ def show_timestamp_diagnostic_plots(timestamps_dictionary: dict,
     import matplotlib
     matplotlib.use("qt5agg")
     matplotlib.set_loglevel("warning")
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(9, 3))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))
 
     # plot timestamps
     max_frame_duration = .1  # sec
