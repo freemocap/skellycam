@@ -1,5 +1,7 @@
 import asyncio
+import logging
 import multiprocessing
+import time
 from typing import List
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
@@ -8,6 +10,7 @@ from fast_camera_capture.opencv.group.strategies.grouped_process_strategy import
     GroupedProcessStrategy
 from fast_camera_capture.opencv.group.strategies.strategies import Strategy
 
+logger = logging.getLogger(__name__)
 
 class CameraGroup:
     def __init__(self, cam_ids: List[str], strategy: Strategy = Strategy.X_CAM_PER_PROCESS):
@@ -46,6 +49,27 @@ class CameraGroup:
     def _resolve_strategy(self, cam_ids: List[str]):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
             return GroupedProcessStrategy(cam_ids)
+
+    def close(self, wait_for_exit: bool = True):
+        logger.info("Closing camera group")
+        self._set_exit_event()
+        self._terminate_processes()
+
+        if wait_for_exit:
+            while self.is_capturing:
+                print('waiting for camera group to stop capturing....')
+                time.sleep(.1)
+
+
+    def _set_exit_event(self):
+        logger.info("Setting exit event")
+        self.exit_event.set()
+
+    def _terminate_processes(self):
+        logger.info("Terminating processes")
+        for cam_group_process in self._strategy_class._processes:
+            logger.info(f"Terminating process - {cam_group_process.name}")
+            cam_group_process.terminate()
 
 
 async def getall(g: CameraGroup):
