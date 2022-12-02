@@ -1,5 +1,7 @@
+import logging
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 from scipy.stats import median_abs_deviation
@@ -8,6 +10,9 @@ from rich import print
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class TimestampDiagnosticsDataClass:
@@ -21,13 +26,15 @@ class TimestampDiagnosticsDataClass:
     mean_median_absolute_deviation_per_camera: float
 
 
-def show_timestamp_diagnostic_plots(timestamps_dictionary: dict, shared_zero_time: int, pause_on_show: bool = False):
+def show_timestamp_diagnostic_plots(timestamps_dictionary: dict,
+                                    shared_zero_time: int,
+                                    save_path: str | Path,
+                                    show_plot: bool = False):
     import matplotlib.pyplot as plt
     import matplotlib
     matplotlib.use("qt5agg")
     matplotlib.set_loglevel("warning")
-    plt.ion()
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(10, 10))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(3, 9))
 
     # plot timestamps
     max_frame_duration = .1  # sec
@@ -53,14 +60,12 @@ def show_timestamp_diagnostic_plots(timestamps_dictionary: dict, shared_zero_tim
         timestamps_formatted = np.asarray(timestamps) - shared_zero_time
         timestamps_formatted = timestamps_formatted / 1e9
 
-
         ax1.plot(timestamps_formatted, '.-', label=cam_id)
         ax1.legend()
 
         ax2.plot(np.diff(timestamps_formatted), '.', label=cam_id, alpha=.5)
 
         ax2.legend()
-
 
         ax3.hist(np.diff(timestamps_formatted),
                  bins=np.arange(0, max_frame_duration, .001),
@@ -69,9 +74,13 @@ def show_timestamp_diagnostic_plots(timestamps_dictionary: dict, shared_zero_tim
                  density=True)
         ax3.legend()
 
-    plt.show()
-    plt.pause(.1)
-    if pause_on_show:
+    plt.tight_layout()
+    figure_file_path = Path(save_path) / "timestamp_diagnostics.png"
+    plt.savefig(figure_file_path)
+    logger.info(f"Saved timestamp diagnostic plot to {figure_file_path}")
+    if show_plot:
+        plt.show()
+        plt.pause(.1)
         input("Press Enter to continue...")
         plt.close()
 
@@ -81,6 +90,7 @@ def calculate_camera_diagnostic_results(timestamps_dictionary) -> TimestampDiagn
     standard_deviation_framerates_per_camera = {}
     median_framerates_per_camera = {}
     median_absolute_deviation_per_camera = {}
+
     for cam_id, timestamps in timestamps_dictionary.items():
         timestamps_formatted = (np.asarray(timestamps) - timestamps[0]) / 1e9
         frame_durations = np.diff(timestamps_formatted)
@@ -102,7 +112,8 @@ def calculate_camera_diagnostic_results(timestamps_dictionary) -> TimestampDiagn
                                          mean_mean_framerate=float(mean_mean_framerate),
                                          mean_standard_deviation_framerates=float(mean_standard_deviation_framerates),
                                          mean_median_framerates=float(mean_median_framerates),
-                                         mean_median_absolute_deviation_per_camera=float(mean_median_absolute_deviation_per_camera))
+                                         mean_median_absolute_deviation_per_camera=float(
+                                             mean_median_absolute_deviation_per_camera))
 
 
 if __name__ == "__main__":
@@ -111,12 +122,12 @@ if __name__ == "__main__":
     g = CameraGroup(cam_ids)
     g.start()
 
-    timestamps_dictionary = {key: [] for key in cam_ids}
+    timestamps_dictionary_in = {key: [] for key in cam_ids}
 
     loop_time = time.perf_counter_ns()
 
     break_after_n_frames = 200
-    shared_zero_time = time.perf_counter_ns()
+    shared_zero_time_in = time.perf_counter_ns()
     should_continue = True
     while should_continue:
         prev_loop_time = loop_time
@@ -127,14 +138,13 @@ if __name__ == "__main__":
             frame_payload = g.get_by_cam_id(cam_id)
             if frame_payload is not None:
                 if frame_payload.success:
-                    timestamps_dictionary[cam_id].append(frame_payload.timestamp_ns)
-            if len(timestamps_dictionary[cam_id]) > break_after_n_frames:
+                    timestamps_dictionary_in[cam_id].append(frame_payload.timestamp_ns)
+            if len(timestamps_dictionary_in[cam_id]) > break_after_n_frames:
                 should_continue = False
 
         print(
-            f"Loop duration: {loop_duration:.3f} ms: Timestamps: {[len(val) for val in timestamps_dictionary.values()]}")
+            f"Loop duration: {loop_duration:.3f} ms: Timestamps: {[len(val) for val in timestamps_dictionary_in.values()]}")
 
-    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(timestamps_dictionary)
+    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(timestamps_dictionary_in)
     print(timestamp_diagnostic_data_class.__dict__)
-    show_timestamp_diagnostic_plots(timestamps_dictionary, shared_zero_time, pause_on_show=True)
-
+    show_timestamp_diagnostic_plots(timestamps_dictionary_in, shared_zero_time_in, pause_on_show=True)

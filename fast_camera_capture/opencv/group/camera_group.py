@@ -57,7 +57,7 @@ class CameraGroup:
 
         if wait_for_exit:
             while self.is_capturing:
-                print('waiting for camera group to stop capturing....')
+                logger.debug('waiting for camera group to stop....')
                 time.sleep(.1)
 
 

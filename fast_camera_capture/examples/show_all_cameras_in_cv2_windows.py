@@ -10,13 +10,14 @@ from fast_camera_capture.opencv.group.camera_group import CameraGroup
 logger = logging.getLogger(__name__)
 
 
-async def show_all_cameras_in_cv2_windows():
-    found_camera_response = detect_cameras()
-    camera_ids_list = found_camera_response.cameras_found_list
+async def show_all_cameras_in_cv2_windows(camera_ids_list: list = None):
+
+    if camera_ids_list is None:
+        camera_ids_list = [0]
+
     camera_group = CameraGroup(camera_ids_list)
     camera_group.start()
     should_continue = True
-    loop = 0
 
     for p in multiprocessing.active_children():
         print(f"before big frame loop - found child process: {p}")
@@ -27,12 +28,8 @@ async def show_all_cameras_in_cv2_windows():
             if frame_payload is not None:
                 cv2.imshow(f"Camera {cam_id} - Press ESC to quit", frame_payload.image)
         if cv2.waitKey(1) == 27:
-            for p in multiprocessing.active_children():
-                print(f"ESC key pressed - found child process: {p}")
-
+            logger.info(f"ESC key pressed - shutting down")
             cv2.destroyAllWindows()
-            print('setting exit event')
-
             should_continue = False
 
     camera_group.close()
@@ -41,10 +38,8 @@ async def show_all_cameras_in_cv2_windows():
 
 
 if __name__ == "__main__":
-    asyncio.run(show_all_cameras_in_cv2_windows())
-
-    while len(multiprocessing.active_children()) > 0:
-        for p in multiprocessing.active_children():
-            print(f"at the end - found child process: {p}")
+    found_camera_response = detect_cameras()
+    camera_ids_list_in = found_camera_response.cameras_found_list
+    asyncio.run(show_all_cameras_in_cv2_windows(camera_ids_list_in))
 
     print('done!')
