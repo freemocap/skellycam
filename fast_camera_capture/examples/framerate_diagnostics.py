@@ -2,12 +2,14 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Dict
 
 import numpy as np
 from scipy.stats import median_abs_deviation
 from rich import print
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
+from fast_camera_capture.detection.models.frame_payload import FramePayload
 
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
 
@@ -25,73 +27,106 @@ class TimestampDiagnosticsDataClass:
     mean_median_framerates: float
     mean_median_absolute_deviation_per_camera: float
 
+def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
+    timestamps_npy = np.empty(0)
 
-def show_timestamp_diagnostic_plots(
-    timestamps_dictionary: dict,
-    shared_zero_time: int,
-    save_path: str | Path,
-    show_plot: bool = False,
-):
-    import matplotlib.pyplot as plt
-    import matplotlib
-
-    matplotlib.use("qt5agg")
-    matplotlib.set_loglevel("warning")
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))
-
-    # plot timestamps
-    max_frame_duration = 0.1  # sec
-
-    ax1.set_xlabel("Frame number")
-    ax1.set_ylabel("Timestamp (sec)")
-    ax1.set_title("Timestamps from shared zero")
-
-    ax2.set_ylim(0, max_frame_duration)
-    ax2.set_xlabel("Frame number")
-    ax2.set_ylabel("Frame duration (sec)")
-    ax2.set_title("Frame Duration (time elapsed between timestamps)")
-
-    ax3.set_xlabel("Frame duration (sec)")
-    ax3.set_ylabel("Number of frames with a given duration")
-    ax3.set_title("Histogram of frame durations")
-
-    number_of_frames = len(list(timestamps_dictionary.values())[0])
-    ax2.plot([0, number_of_frames], [0.033, 0.033], "k-", label="30 fps")
-    ax3.plot([0.033, 0.033], [0, number_of_frames], "k-", label="30 fps")
-
-    for cam_id, timestamps in timestamps_dictionary.items():
-        timestamps_formatted = np.asarray(timestamps) - shared_zero_time
-        timestamps_formatted = timestamps_formatted / 1e9
-
-        ax1.plot(timestamps_formatted, ".-", label=cam_id)
-        ax1.legend()
-
-        ax2.plot(np.diff(timestamps_formatted), ".", label=cam_id, alpha=0.5)
-
-        ax2.legend()
-
-        ax3.hist(
-            np.diff(timestamps_formatted),
-            bins=np.arange(0, max_frame_duration, 0.001),
-            label=cam_id,
-            alpha=0.5,
-            density=True,
+    for frame in list_of_frames:
+        timestamps_npy = np.append(
+            timestamps_npy, frame.timestamp_ns
         )
-        ax3.legend()
+    return timestamps_npy
 
-    plt.tight_layout()
-    figure_file_path = Path(save_path) / "timestamp_diagnostics.png"
-    plt.savefig(figure_file_path)
-    logger.info(f"Saved timestamp diagnostic plot to {figure_file_path}")
-    if show_plot:
-        plt.show()
-        plt.pause(0.1)
-        input("Press Enter to continue...")
-        plt.close()
+def create_timestamp_diagnostic_plots(
+    raw_frame_list_dictionary: Dict[str, List[FramePayload]],
+    synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
+    path_to_save_plots_png: str | Path
+):
+    """plot some diagnostics to assess quality of camera sync"""
+
+    # opportunistic load of matplotlib to avoid startup time costs
+    from matplotlib import pyplot as plt
+
+    plt.set_loglevel("warning")
+
+    synchronized_timestamps_dictionary = {}
+    for camera_id, camera_synchronized_frame_list in synchronized_frame_list_dictionary.items():
+        synchronized_timestamps_dictionary[camera_id] = gather_timestamps(camera_synchronized_frame_list) / 1e9
+
+    raw_timestamps_dictionary = {}
+    for camera_id, camera_raw_frame_list in raw_frame_list_dictionary.items():
+        raw_timestamps_dictionary[camera_id] = gather_timestamps(camera_raw_frame_list) / 1e9
+
+
+    max_frame_duration = 0.1
+    fig = plt.figure(figsize=(18, 10))
+    ax1 = plt.subplot(
+        231,
+        title="(Raw) Camera Frame Timestamp vs Frame#",
+        xlabel="Frame#",
+        ylabel="Timestamp (sec)",
+    )
+    ax2 = plt.subplot(
+        232,
+        ylim=(0, max_frame_duration),
+        title="(Raw) Camera Frame Duration Trace",
+        xlabel="Frame#",
+        ylabel="Duration (sec)",
+    )
+    ax3 = plt.subplot(
+        233,
+        xlim=(0, max_frame_duration),
+        title="(Raw) Camera Frame Duration Histogram (count)",
+        xlabel="Duration(s, 1ms bins)",
+        ylabel="Probability",
+    )
+    ax4 = plt.subplot(
+        234,
+        title="(Synchronized) Camera Frame Timestamp vs Frame#",
+        xlabel="Frame#",
+        ylabel="Timestamp (sec)",
+    )
+    ax5 = plt.subplot(
+        235,
+        ylim=(0, max_frame_duration),
+        title="(Synchronized) Camera Frame Duration Trace",
+        xlabel="Frame#",
+        ylabel="Duration (sec)",
+    )
+    ax6 = plt.subplot(
+        236,
+        xlim=(0, max_frame_duration),
+        title="(Synchronized) Camera Frame Duration Histogram (count)",
+        xlabel="Duration(s, 1ms bins)",
+        ylabel="Probability",
+    )
+
+    for camera_id, timestamps in raw_timestamps_dictionary.items():
+        ax1.plot(timestamps, label=f"Camera# {str(camera_id)}")
+        ax1.legend()
+        ax2.plot(np.diff(timestamps), ".")
+        ax3.hist(
+            np.diff(timestamps),
+            bins=np.arange(0, max_frame_duration, 0.0025),
+            alpha=0.5,
+        )
+
+    for camera_id, timestamps in synchronized_timestamps_dictionary.items():
+        ax4.plot(timestamps, label=f"Camera# {str(camera_id)}")
+        ax4.legend()
+        ax5.plot(np.diff(timestamps), ".")
+        ax6.hist(
+            np.diff(timestamps),
+            bins=np.arange(0, max_frame_duration, 0.0025),
+            alpha=0.5,
+        )
+
+    fig_save_path = Path(path_to_save_plots_png)
+    plt.savefig(str(fig_save_path))
+    logger.info(f"Saving diagnostic figure as png")
 
 
 def calculate_camera_diagnostic_results(
-    timestamps_dictionary,
+        timestamps_dictionary,
 ) -> TimestampDiagnosticsDataClass:
     mean_framerates_per_camera = {}
     standard_deviation_framerates_per_camera = {}
@@ -168,6 +203,4 @@ if __name__ == "__main__":
         timestamps_dictionary_in
     )
     print(timestamp_diagnostic_data_class.__dict__)
-    show_timestamp_diagnostic_plots(
-        timestamps_dictionary_in, shared_zero_time_in, pause_on_show=True
-    )
+

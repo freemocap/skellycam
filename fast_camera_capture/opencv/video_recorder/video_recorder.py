@@ -34,11 +34,15 @@ class VideoRecorder:
     def append_frame_payload_to_list(self, frame_payload: FramePayload):
         self._frame_payload_list.append(frame_payload)
 
-    def save_video_to_file(
+    def save_frame_list_to_video_file(
         self,
         path_to_save_video_file: Union[str, Path],
+        list_of_frames: List[FramePayload] = None,
         frames_per_second: float = None,
     ):
+
+        if list_of_frames is None:
+            list_of_frames = self._frame_payload_list
 
         if frames_per_second is None:
             self._timestamps_npy = self._gather_timestamps()
@@ -54,8 +58,8 @@ class VideoRecorder:
         self._path_to_save_video_file = path_to_save_video_file
 
         self._cv2_video_writer = self._initialize_video_writer(
-            image_height=self._frame_payload_list[0].image.shape[0],
-            image_width=self._frame_payload_list[0].image.shape[1],
+            image_height=list_of_frames[0].image.shape[0],
+            image_width=list_of_frames[0].image.shape[1],
             frames_per_second=frames_per_second,
         )
         self._write_frame_list_to_video_file()

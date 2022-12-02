@@ -1,15 +1,16 @@
 import asyncio
 import logging
+import os
 from pathlib import Path
 
 import cv2
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.examples.framerate_diagnostics import (
-    calculate_camera_diagnostic_results,
-    show_timestamp_diagnostic_plots,
+    calculate_camera_diagnostic_results, create_timestamp_diagnostic_plots,
 )
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
+from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,15 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
 
     camera_group.close()
 
+    raw_frame_list_dictionary = {}
+    for camera_id, video_recorder in video_recorder_dictionary.items():
+        raw_frame_list_dictionary[camera_id] = video_recorder._frame_payload_list.copy()
+
+    # save videos
+    synchronized_frame_list_dictionary = save_synchronized_videos(
+        dictionary_of_video_recorders=video_recorder_dictionary,
+        folder_to_save_videos=save_path)
+
     # get timestamp diagnostics
     timestamps_dictionary = {}
     for cam_id, video_recorder in video_recorder_dictionary.items():
@@ -53,18 +63,17 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
     timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(
         timestamps_dictionary
     )
+
     print(timestamp_diagnostic_data_class.__dict__)
-    show_timestamp_diagnostic_plots(
-        timestamps_dictionary, shared_zero_time, save_path, show_plot=False
+
+    diagnostic_plot_file_path = Path(save_path) / "timestamp_diagnostic_plots.png"
+    create_timestamp_diagnostic_plots(
+        raw_frame_list_dictionary=raw_frame_list_dictionary,
+        synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
+        path_to_save_plots_png=diagnostic_plot_file_path
     )
 
-    # save videos
-    for cam_id, video_recorder in video_recorder_dictionary.items():
-        logger.info(f"Saving video for camera {cam_id}")
-        video_file_name = Path(save_path) / f"camera_{cam_id}_unsynchronized.mp4"
-        video_recorder.save_video_to_file(video_file_name)
-
-
+    os.startfile(diagnostic_plot_file_path, 'open')
 if __name__ == "__main__":
     import time
 
@@ -72,9 +81,9 @@ if __name__ == "__main__":
     camera_ids_list_in = found_camera_response.cameras_found_list
 
     save_path_in = (
-        Path.home()
-        / "fast-camera-capture-recordings"
-        / time.strftime("%m-%d-%Y_%H_%M_%S")
+            Path.home()
+            / "fast-camera-capture-recordings"
+            / time.strftime("%m-%d-%Y_%H_%M_%S")
     )
     save_path_in.mkdir(parents=True, exist_ok=True)
     asyncio.run(
