@@ -28,7 +28,7 @@ class GroupedProcessStrategy:
 
     def start_capture(self, exit_event: multiprocessing.Event):
         for process in self._processes:
-            process.start_capture(exit_event = exit_event)
+            process.start_capture(exit_event=exit_event)
 
     def get_by_cam_id(self, cam_id: str):
         for process in self._processes:
@@ -43,7 +43,7 @@ class GroupedProcessStrategy:
         }
 
     def _create_processes(
-        self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
+            self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
     ):
         camera_subarrays = array_split_by(cam_ids, cameras_per_process)
         processes = [CamGroupProcess(cam_id_subarray) for cam_id_subarray in camera_subarrays]
@@ -52,4 +52,3 @@ class GroupedProcessStrategy:
             for cam_id in process.camera_ids:
                 cam_id_to_process[cam_id] = process
         return processes, cam_id_to_process
-

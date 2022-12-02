@@ -38,6 +38,22 @@ class CameraGroup:
         self._exit_event = multiprocessing.Event()
         self._strategy_class.start_capture(self.exit_event)
 
+        self._wait_for_cameras_to_start()
+
+
+    def _wait_for_cameras_to_start(self):
+        logger.info(f"Waiting for cameras {self._cam_ids} to start")
+        all_cameras_started = False
+        while not all_cameras_started:
+            time.sleep(.5)
+            camera_started_dictionary = dict.fromkeys(self._cam_ids, False)
+            for camera_id in self._cam_ids:
+                camera_started_dictionary[camera_id] = self.get_by_cam_id(camera_id) is not None
+            logger.debug(f"Camera started? {camera_started_dictionary}")
+            all_cameras_started = all(list(camera_started_dictionary.values()))
+
+        logger.info(f"All cameras {self._cam_ids} started!")
+
 
 
     def get_by_cam_id(self, cam_id: str):
@@ -70,6 +86,7 @@ class CameraGroup:
         for cam_group_process in self._strategy_class._processes:
             logger.info(f"Terminating process - {cam_group_process.name}")
             cam_group_process.terminate()
+
 
 
 async def getall(g: CameraGroup):

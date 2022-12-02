@@ -40,7 +40,8 @@ class CamGroupProcess:
         )
         self._process.start()
         while not self._process.is_alive():
-            sleep(1)
+            logger.debug(f"Waiting for Process {self._process.name} to start")
+            sleep(.25)
 
     @property
     def is_capturing(self):
