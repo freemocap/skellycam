@@ -153,6 +153,6 @@ class VideoCaptureThread(threading.Thread):
         self._is_capturing_frames = False
         if self._cv2_video_capture is not None:
             logger.debug(
-                f"Releasing `opencv_video_capture_object` for Camera: {self._config.cam_id}"
+                f"Releasing Camera: {self._config.cam_id}"
             )
             self._cv2_video_capture.release()
