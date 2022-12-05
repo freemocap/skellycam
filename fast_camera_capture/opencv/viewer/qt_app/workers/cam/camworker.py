@@ -37,6 +37,4 @@ class CamFrameWorker(QThread):
             image.shape[0],
             QImage.Format.Format_RGB888,
         )
-        return converted_frame.scaled(
-            640, 480, Qt.AspectRatioMode.KeepAspectRatio
-        )
+        return converted_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio)

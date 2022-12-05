@@ -1,8 +1,11 @@
+import multiprocessing
 from typing import Dict, List
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.camera.types.camera_id import CameraId
-from fast_camera_capture.opencv.group.strategies.cam_group_queue_process import CamGroupProcess
+from fast_camera_capture.opencv.group.strategies.cam_group_queue_process import (
+    CamGroupProcess,
+)
 from fast_camera_capture.utils.array_split_by import array_split_by
 
 ### Don't change this? Users should submit the actual value they want
@@ -25,9 +28,9 @@ class GroupedProcessStrategy:
                 return False
         return True
 
-    def start_capture(self):
+    def start_capture(self, exit_event: multiprocessing.Event):
         for process in self._processes:
-            process.start_capture()
+            process.start_capture(exit_event=exit_event)
 
     def get_by_cam_id(self, cam_id: str):
         for process in self._processes:
@@ -45,10 +48,11 @@ class GroupedProcessStrategy:
         self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
     ):
         camera_subarrays = array_split_by(cam_ids, cameras_per_process)
-        processes = [CamGroupProcess(cam_id_subarray) for cam_id_subarray in camera_subarrays]
+        processes = [
+            CamGroupProcess(cam_id_subarray) for cam_id_subarray in camera_subarrays
+        ]
         cam_id_to_process = {}
         for process in processes:
             for cam_id in process.camera_ids:
                 cam_id_to_process[cam_id] = process
         return processes, cam_id_to_process
-

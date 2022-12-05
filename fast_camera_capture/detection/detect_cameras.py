@@ -1,4 +1,6 @@
-from fast_camera_capture.detection.private.detect_possible_cameras import DetectPossibleCameras
+from fast_camera_capture.detection.private.detect_possible_cameras import (
+    DetectPossibleCameras,
+)
 from fast_camera_capture.detection.private.found_camera_cache import FoundCameraCache
 
 

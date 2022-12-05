@@ -1,3 +1,4 @@
+import logging
 import math
 import multiprocessing
 from multiprocessing import Process
@@ -8,7 +9,11 @@ from setproctitle import setproctitle
 
 from fast_camera_capture import CamArgs, Camera
 from fast_camera_capture.detection.models.frame_payload import FramePayload
-from fast_camera_capture.opencv.group.strategies.queue_communicator import QueueCommunicator
+from fast_camera_capture.opencv.group.strategies.queue_communicator import (
+    QueueCommunicator,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class CamGroupProcess:
@@ -23,19 +28,25 @@ class CamGroupProcess:
     def camera_ids(self):
         return self._cam_ids
 
-    def start_capture(self):
+    @property
+    def name(self):
+        return self._process.name
+
+    def start_capture(self, exit_event: multiprocessing.Event):
         """
         Start capturing frames. Only return if the underlying process is fully running.
         :return:
         """
+        logger.info(f"Starting capture `Process` for {self._cam_ids}")
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupProcess._begin,
-            args=(self._cam_ids, self._queues)
+            args=(self._cam_ids, self._queues, exit_event),
         )
         self._process.start()
         while not self._process.is_alive():
-            sleep(1)
+            logger.debug(f"Waiting for Process {self._process.name} to start")
+            sleep(0.25)
 
     @property
     def is_capturing(self):
@@ -43,25 +54,42 @@ class CamGroupProcess:
             return self._process.is_alive()
         return False
 
+    def terminate(self):
+        if self._process:
+            self._process.terminate()
+            logger.info(f"CamGroupProcess {self.name} terminate command executed")
+
     @staticmethod
     def _create_cams(cam_ids: List[str]):
         return [Camera(CamArgs(cam_id=cam)) for cam in cam_ids]
 
     @staticmethod
-    def _begin(cam_ids: List[str], queues: Dict[str, multiprocessing.Queue]):
+    def _begin(
+        cam_ids: List[str],
+        queues: Dict[str, multiprocessing.Queue],
+        exit_event: multiprocessing.Event,
+    ):
+        logger.info(
+            f"Starting frame loop capture in CamGroupProcess for cameras: {cam_ids}"
+        )
         setproctitle(f"Cameras {cam_ids}")
         cameras = CamGroupProcess._create_cams(cam_ids)
         for cam in cameras:
             cam.connect()
-        while True:
+        while not exit_event.is_set():
             # This tight loop ends up 100% the process, so a sleep between framecaptures is
             # necessary. We can get away with this because we don't expect another frame for
             # awhile.
-            sleep(0.05)
+            sleep(0.001)
             for cam in cameras:
                 if cam.new_frame_ready:
                     queue = queues[cam.cam_id]
                     queue.put(cam.latest_frame)
+
+        # close cameras on exit
+        for cam in cameras:
+            logger.info(f"Closing camera {cam.cam_id}")
+            cam.close()
 
     def get_by_cam_id(self, cam_id) -> FramePayload | None:
         if cam_id not in self._queues:
@@ -73,7 +101,11 @@ class CamGroupProcess:
 
 
 if __name__ == "__main__":
-    p = CamGroupProcess(["0"])
+    p = CamGroupProcess(
+        [
+            "0",
+        ]
+    )
     p.start_capture()
     while True:
         # print("Queue size: ", p.queue_size("0"))

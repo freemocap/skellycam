@@ -10,13 +10,9 @@ class QueueCommunicator:
     def _create_queues(self):
         d = {}
         for identifier in self._identifiers:
-            d.update({
-                identifier: multiprocessing.Queue()
-            })
+            d.update({identifier: multiprocessing.Queue()})
         return d
 
     @property
     def queues(self):
         return self._queues
-
-

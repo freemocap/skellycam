@@ -1,11 +1,12 @@
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QMainWindow
 
-from fast_camera_capture.opencv.viewer.qt_app.workers.cam.camworker import CamFrameWorker
+from fast_camera_capture.opencv.viewer.qt_app.workers.cam.camworker import (
+    CamFrameWorker,
+)
 
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
         self._worker = CamFrameWorker(["0"])
