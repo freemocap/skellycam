@@ -28,15 +28,22 @@ class GroupedProcessStrategy:
                 return False
         return True
 
-    def start_capture(self, exit_event: multiprocessing.Event):
+    def start_capture(self, event_dictionary: Dict[str, multiprocessing.Event]):
+
         for process in self._processes:
-            process.start_capture(exit_event=exit_event)
+            process.start_capture(event_dictionary=event_dictionary)
+
+    def check_if_camera_is_ready(self, cam_id: str) -> bool:
+        for process in self._processes:
+                if cam_id in process.camera_ids:
+                    return process.check_if_camera_is_ready(cam_id)
 
     def get_by_cam_id(self, cam_id: str):
         for process in self._processes:
             curr = process.get_by_cam_id(cam_id)
             if curr:
                 return curr
+
 
     def get_latest_frames(self) -> Dict[CameraId, FramePayload]:
         return {

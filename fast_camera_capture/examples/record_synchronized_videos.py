@@ -22,18 +22,20 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
     camera_group.start()
     should_continue = True
 
-    video_recorder_dictionary = {}
-    for camera_id in camera_ids_list:
-        video_recorder_dictionary[camera_id] = VideoRecorder()
+    video_recorder_dictionary = dict.fromkeys(camera_ids_list, VideoRecorder())
+
 
     while should_continue:
+
         latest_frame_payloads = camera_group.latest_frames()
+
         for cam_id, frame_payload in latest_frame_payloads.items():
             if frame_payload is not None:
                 video_recorder_dictionary[cam_id].append_frame_payload_to_list(
                     frame_payload
                 )
                 cv2.imshow(f"Camera {cam_id} - Press ESC to quit", frame_payload.image)
+
 
         frame_count_dictionary = {}
         for cam_id, video_recorder in video_recorder_dictionary.items():
@@ -59,7 +61,8 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
     # get timestamp diagnostics
     timestamps_dictionary = {}
     for cam_id, video_recorder in video_recorder_dictionary.items():
-        timestamps_dictionary[cam_id] = video_recorder.timestamps
+        timestamps_dictionary[cam_id] = video_recorder.timestamps - shared_zero_time
+
     timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(
         timestamps_dictionary
     )
@@ -74,6 +77,8 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
     )
 
     os.startfile(diagnostic_plot_file_path, 'open')
+
+
 if __name__ == "__main__":
     import time
 

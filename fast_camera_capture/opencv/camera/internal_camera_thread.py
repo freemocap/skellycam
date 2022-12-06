@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import threading
 import time
 import traceback
@@ -19,10 +20,12 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
         config: CamArgs,
+        ready_event: multiprocessing.Event = None,
     ):
         super().__init__()
         self._new_frame_ready = False
         self.daemon = False
+        self._ready_event = ready_event
 
         self._config = config
         self._is_capturing_frames = False
@@ -151,6 +154,9 @@ class VideoCaptureThread(threading.Thread):
         apply_configuration(capture, self._config)
 
         logger.info(f"Successfully connected to Camera: {self._config.cam_id}!")
+
+        self._ready_event.set()
+
         return capture
 
     def stop(self):

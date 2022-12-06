@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class CamGroupProcess:
     def __init__(self, cam_ids: List[str]):
+        self._cameras_ready_event_dictionary = None
         self._cam_ids = cam_ids
         self._process: Process = None
         self._payload = None
@@ -32,16 +33,20 @@ class CamGroupProcess:
     def name(self):
         return self._process.name
 
-    def start_capture(self, exit_event: multiprocessing.Event):
+    def start_capture(self, event_dictionary: Dict[str, multiprocessing.Event]):
         """
         Start capturing frames. Only return if the underlying process is fully running.
         :return:
         """
         logger.info(f"Starting capture `Process` for {self._cam_ids}")
+
+        self._cameras_ready_event_dictionary = dict.fromkeys(self._cam_ids, multiprocessing.Event())
+        event_dictionary["ready"] = self._cameras_ready_event_dictionary
+
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupProcess._begin,
-            args=(self._cam_ids, self._queues, exit_event),
+            args=(self._cam_ids, self._queues, event_dictionary),
         )
         self._process.start()
         while not self._process.is_alive():
@@ -65,31 +70,41 @@ class CamGroupProcess:
 
     @staticmethod
     def _begin(
-        cam_ids: List[str],
-        queues: Dict[str, multiprocessing.Queue],
-        exit_event: multiprocessing.Event,
+            cam_ids: List[str],
+            queues: Dict[str, multiprocessing.Queue],
+            event_dictionary: Dict[str, multiprocessing.Event],
     ):
         logger.info(
             f"Starting frame loop capture in CamGroupProcess for cameras: {cam_ids}"
         )
+        ready_event_dictionary = event_dictionary["ready"]
+        start_event = event_dictionary["start"]
+        exit_event = event_dictionary["exit"]
+
         setproctitle(f"Cameras {cam_ids}")
         cameras = CamGroupProcess._create_cams(cam_ids)
         for cam in cameras:
-            cam.connect()
+            cam.connect(ready_event_dictionary[cam.cam_id])
+
+
         while not exit_event.is_set():
             # This tight loop ends up 100% the process, so a sleep between framecaptures is
             # necessary. We can get away with this because we don't expect another frame for
             # awhile.
-            sleep(0.001)
-            for cam in cameras:
-                if cam.new_frame_ready:
-                    queue = queues[cam.cam_id]
-                    queue.put(cam.latest_frame)
+            if start_event.is_set():
+                sleep(0.001)
+                for cam in cameras:
+                    if cam.new_frame_ready:
+                        queue = queues[cam.cam_id]
+                        queue.put(cam.latest_frame)
 
         # close cameras on exit
         for cam in cameras:
             logger.info(f"Closing camera {cam.cam_id}")
             cam.close()
+
+    def check_if_camera_is_ready(self, cam_id: str):
+        return self._cameras_ready_event_dictionary[cam_id].is_set()
 
     def get_by_cam_id(self, cam_id) -> FramePayload | None:
         if cam_id not in self._queues:

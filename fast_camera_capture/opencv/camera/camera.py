@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import multiprocessing
 import time
 import traceback
 from typing import Optional, Union
@@ -44,13 +45,14 @@ class Camera:
     def latest_frame(self):
         return self._capture_thread.latest_frame
 
-    def connect(self):
+    def connect(self, ready_event: multiprocessing.Event = None):
         if self._capture_thread and self._capture_thread.is_capturing_frames:
             logger.debug(f"Already capturing frames for webcam_id: {self.cam_id}")
             return
         logger.debug(f"Camera ID: [{self._config.cam_id}] Creating thread")
         self._capture_thread = VideoCaptureThread(
             config=self._config,
+            ready_event=ready_event,
         )
         self._capture_thread.start()
 

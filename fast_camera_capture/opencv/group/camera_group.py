@@ -40,7 +40,9 @@ class CameraGroup:
         :return:
         """
         self._exit_event = multiprocessing.Event()
-        self._strategy_class.start_capture(self.exit_event)
+        self._start_event = multiprocessing.Event()
+        event_dictionary = {"start": self._start_event, "exit": self._exit_event}
+        self._strategy_class.start_capture(event_dictionary)
 
         self._wait_for_cameras_to_start()
 
@@ -51,13 +53,16 @@ class CameraGroup:
             time.sleep(0.5)
             camera_started_dictionary = dict.fromkeys(self._cam_ids, False)
             for camera_id in self._cam_ids:
-                camera_started_dictionary[camera_id] = (
-                    self.get_by_cam_id(camera_id) is not None
-                )
+                camera_started_dictionary[camera_id] = self.check_if_camera_is_ready(camera_id)
+
             logger.debug(f"Camera started? {camera_started_dictionary}")
             all_cameras_started = all(list(camera_started_dictionary.values()))
 
         logger.info(f"All cameras {self._cam_ids} started!")
+        self._start_event.set() #start frame capture on all cameras
+
+    def check_if_camera_is_ready(self, cam_id: str):
+        return self._strategy_class.check_if_camera_is_ready(cam_id)
 
     def get_by_cam_id(self, cam_id: str):
         return self._strategy_class.get_by_cam_id(cam_id)
@@ -90,16 +95,16 @@ class CameraGroup:
             cam_group_process.terminate()
 
 
-async def getall(g: CameraGroup):
-    await asyncio.gather(
-        cam_show("0", lambda: g.get_by_cam_id("0")),
-        cam_show("2", lambda: g.get_by_cam_id("2")),
-    )
-
-
-if __name__ == "__main__":
-    cams = ["0"]
-    g = CameraGroup(cams)
-    g.start()
-
-    asyncio.run(getall(g))
+# async def getall(g: CameraGroup):
+#     await asyncio.gather(
+#         cam_show("0", lambda: g.get_by_cam_id("0")),
+#         cam_show("2", lambda: g.get_by_cam_id("2")),
+#     )
+#
+#
+# if __name__ == "__main__":
+#     cams = ["0"]
+#     g = CameraGroup(cams)
+#     g.start()
+#
+#     asyncio.run(getall(g))
