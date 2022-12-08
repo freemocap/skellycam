@@ -11,6 +11,19 @@ from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecord
 logger = logging.getLogger(__name__)
 
 
+def test_frame_synchronization(synchronized_frame_list_dictionary):
+    frame_count_list = []
+
+    for frame_list  in synchronized_frame_list_dictionary.values():
+        frame_count_list.append(len(frame_list))
+
+    logger.info(f"frame_count_list: {frame_count_list}")
+
+    assert np.all(np.diff(frame_count_list) == 0), "Frame count is not the same for all cameras"
+
+    logger.info("Test passed: Frame count is the same for all cameras :D")
+
+
 def save_synchronized_videos(
         dictionary_of_video_recorders: Dict[str, VideoRecorder],
         folder_to_save_videos=Union[str, Path],
@@ -91,7 +104,10 @@ def save_synchronized_videos(
 
     logger.info(f"np.diff(final_frame_timestamps): {np.diff(final_frame_timestamps)}")
 
+    test_frame_synchronization(synchronized_frame_list_dictionary)
+
     for camera_id, frame_list in synchronized_frame_list_dictionary.items():
+        logger.info(f" Saving camera {camera_id} video with {len(frame_list)} frames")
         dictionary_of_video_recorders[camera_id].save_frame_list_to_video_file(
             list_of_frames=frame_list,
             path_to_save_video_file=Path(folder_to_save_videos) / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
