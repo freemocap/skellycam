@@ -28,7 +28,7 @@ def save_synchronized_videos(
         dictionary_of_video_recorders: Dict[str, VideoRecorder],
         folder_to_save_videos=Union[str, Path],
 ):
-    logger.info(f"saving synchronized video to folder: {str(folder_to_save_videos)}")
+    logger.info(f"Saving synchronized videos to folder: {str(folder_to_save_videos)}")
 
     each_cam_raw_frame_list = []
     first_frame_timestamps = []
@@ -107,7 +107,7 @@ def save_synchronized_videos(
     test_frame_synchronization(synchronized_frame_list_dictionary)
 
     for camera_id, frame_list in synchronized_frame_list_dictionary.items():
-        logger.info(f" Saving camera {camera_id} video with {len(frame_list)} frames")
+        logger.info(f" Saving camera {camera_id} video with {len(frame_list)} frames...")
         dictionary_of_video_recorders[camera_id].save_frame_list_to_video_file(
             list_of_frames=frame_list,
             path_to_save_video_file=Path(folder_to_save_videos) / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",

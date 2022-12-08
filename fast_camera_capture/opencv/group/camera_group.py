@@ -56,6 +56,8 @@ class CameraGroup:
                 camera_started_dictionary[camera_id] = self.check_if_camera_is_ready(camera_id)
 
             logger.debug(f"Camera started? {camera_started_dictionary}")
+            logger.debug(f"Active processes { multiprocessing.active_children()}")
+
             all_cameras_started = all(list(camera_started_dictionary.values()))
 
         logger.info(f"All cameras {self._cam_ids} started!")
