@@ -16,14 +16,40 @@ from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecord
 logger = logging.getLogger(__name__)
 
 
+def plot_first_and_last_frames(synchronized_frame_list_dictionary, path_to_save_plots_png, open_image_after_saving: bool = False):
+    import matplotlib.pyplot as plt
+
+    number_of_cameras = len(synchronized_frame_list_dictionary)
+    fig = plt.Figure(figsize=(10, 10))
+
+    for cam_id, frame_payload_list in synchronized_frame_list_dictionary.items():
+
+        first_frame = frame_payload_list[0].image
+        last_frame  = frame_payload_list[-1].image
+
+        first_frame_ax = fig.add_subplot(number_of_cameras, 2, (int(cam_id)*2)+1)
+        first_frame_ax.imshow(first_frame)
+        first_frame_ax.set_title(f"First frame - Camera {cam_id}")
+
+        last_frame_ax = fig.add_subplot(number_of_cameras, 2, (int(cam_id)*2)+2)
+        last_frame_ax.imshow(last_frame)
+        last_frame_ax.set_title(f"Last frame - Camera {cam_id}")
+
+    fig.savefig(path_to_save_plots_png)
+
+    if open_image_after_saving:
+        os.startfile(path_to_save_plots_png, 'open')
+
+
 async def record_synchronized_videos(camera_ids_list: list, save_path: str | Path):
     camera_group = CameraGroup(camera_ids_list)
     shared_zero_time = time.perf_counter_ns()
     camera_group.start()
     should_continue = True
 
-    video_recorder_dictionary = dict.fromkeys(camera_ids_list, VideoRecorder())
-
+    video_recorder_dictionary = {}
+    for camera_id in camera_ids_list:
+        video_recorder_dictionary[camera_id] = VideoRecorder()
 
     while should_continue:
 
@@ -35,7 +61,6 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
                     frame_payload
                 )
                 cv2.imshow(f"Camera {cam_id} - Press ESC to quit", frame_payload.image)
-
 
         frame_count_dictionary = {}
         for cam_id, video_recorder in video_recorder_dictionary.items():
@@ -73,10 +98,16 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
     create_timestamp_diagnostic_plots(
         raw_frame_list_dictionary=raw_frame_list_dictionary,
         synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
-        path_to_save_plots_png=diagnostic_plot_file_path
+        path_to_save_plots_png=diagnostic_plot_file_path,
+        open_image_after_saving=True,
     )
 
-    os.startfile(diagnostic_plot_file_path, 'open')
+    plot_first_and_last_frames(synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
+                               path_to_save_plots_png=Path(save_path) / "first_and_last_frames.png",
+                               open_image_after_saving=True,
+                               )
+
+
 
 
 if __name__ == "__main__":

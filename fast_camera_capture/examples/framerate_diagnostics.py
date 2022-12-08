@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,7 +40,8 @@ def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
 def create_timestamp_diagnostic_plots(
     raw_frame_list_dictionary: Dict[str, List[FramePayload]],
     synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
-    path_to_save_plots_png: str | Path
+    path_to_save_plots_png: str | Path,
+    open_image_after_saving: bool = False,
 ):
     """plot some diagnostics to assess quality of camera sync"""
 
@@ -123,6 +125,9 @@ def create_timestamp_diagnostic_plots(
     fig_save_path = Path(path_to_save_plots_png)
     plt.savefig(str(fig_save_path))
     logger.info(f"Saving diagnostic figure as png")
+
+    if open_image_after_saving:
+        os.startfile(path_to_save_plots_png, 'open')
 
 
 def calculate_camera_diagnostic_results(
