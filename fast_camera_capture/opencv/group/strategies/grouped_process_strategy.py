@@ -22,6 +22,10 @@ class GroupedProcessStrategy:
         self._processes, self._cam_id_process_map = self._create_processes(cam_ids)
 
     @property
+    def processes(self):
+        return self._processes
+
+    @property
     def is_capturing(self):
         for process in self._processes:
             if not process.is_capturing:
@@ -32,6 +36,7 @@ class GroupedProcessStrategy:
 
         for process in self._processes:
             process.start_capture(event_dictionary=event_dictionary)
+
 
     def check_if_camera_is_ready(self, cam_id: str) -> bool:
         for process in self._processes:

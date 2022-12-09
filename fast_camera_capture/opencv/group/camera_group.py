@@ -18,6 +18,7 @@ class CameraGroup:
     def __init__(
         self, cam_ids: List[str], strategy: Strategy = Strategy.X_CAM_PER_PROCESS
     ):
+        self._event_dictionary = None
         self._strategy_enum = strategy
         self._cam_ids = cam_ids
         # Make optional, if a list of cams is sent then just use that
@@ -30,6 +31,7 @@ class CameraGroup:
     def is_capturing(self):
         return self._strategy_class.is_capturing
 
+
     @property
     def exit_event(self):
         return self._exit_event
@@ -41,22 +43,26 @@ class CameraGroup:
         """
         self._exit_event = multiprocessing.Event()
         self._start_event = multiprocessing.Event()
-        event_dictionary = {"start": self._start_event, "exit": self._exit_event}
-        self._strategy_class.start_capture(event_dictionary)
+        self._event_dictionary = {"start": self._start_event, "exit": self._exit_event}
+        self._strategy_class.start_capture(self._event_dictionary)
 
         self._wait_for_cameras_to_start()
 
-    def _wait_for_cameras_to_start(self):
+    def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.info(f"Waiting for cameras {self._cam_ids} to start")
         all_cameras_started = False
         while not all_cameras_started:
             time.sleep(0.5)
             camera_started_dictionary = dict.fromkeys(self._cam_ids, False)
+
             for camera_id in self._cam_ids:
                 camera_started_dictionary[camera_id] = self.check_if_camera_is_ready(camera_id)
 
             logger.debug(f"Camera started? {camera_started_dictionary}")
+
             logger.debug(f"Active processes { multiprocessing.active_children()}")
+            if restart_process_if_it_dies:
+                self._restart_dead_processes()
 
             all_cameras_started = all(list(camera_started_dictionary.values()))
 
@@ -96,6 +102,12 @@ class CameraGroup:
             logger.info(f"Terminating process - {cam_group_process.name}")
             cam_group_process.terminate()
 
+    def _restart_dead_processes(self):
+        active_processes = multiprocessing.active_children()
+        for process in self._strategy_class.processes:
+            if process.name not in active_processes:
+                logger.info(f"Process {process.name} died! Restarting now...")
+                process.start_capture(event_dictionary=self._event_dictionary)
 
 # async def getall(g: CameraGroup):
 #     await asyncio.gather(
