@@ -104,8 +104,9 @@ class CameraGroup:
 
     def _restart_dead_processes(self):
         active_processes = multiprocessing.active_children()
+        active_process_names = [process.name for process in active_processes]
         for process in self._strategy_class.processes:
-            if process.name not in active_processes:
+            if process.name not in active_process_names:
                 logger.info(f"Process {process.name} died! Restarting now...")
                 process.start_capture(event_dictionary=self._event_dictionary)
 

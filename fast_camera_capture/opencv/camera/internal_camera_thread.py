@@ -147,9 +147,11 @@ class VideoCaptureThread(threading.Thread):
             logger.error(
                 f"Failed to read frame from camera at port# {self._config.cam_id}: "
                 f"returned value: {success}, "
-                f"returned image: {image}"
+                f"returned image: {image} - releasing, closing, and deleting capture object and re-running self._create_cv2_capture()"
             )
-            raise Exception
+            capture.release()
+            del capture
+            return self._create_cv2_capture()
 
         apply_configuration(capture, self._config)
 
