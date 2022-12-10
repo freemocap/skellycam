@@ -87,6 +87,7 @@ def save_synchronized_videos(
     logger.info("NOTE - this is a slow process, I think it's like O(n^2) or something")
     synchronized_frame_list_dictionary = {}
     for camera_id, camera_frame_list in enumerate(each_cam_clipped_frame_list):
+        logger.info(f"Creating synchronized frame list for camera {camera_id}...")
         cam_synchronized_frame_list = []
         for reference_frame in reference_frame_list:
             closest_frame = get_nearest_frame(camera_frame_list, reference_frame)

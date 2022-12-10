@@ -20,6 +20,7 @@ class VideoRecorder:
         self._frame_payload_list: List[FramePayload] = []
         self._timestamps_npy = np.empty(0)
 
+
     @property
     def timestamps(self) -> np.ndarray:
         return self._gather_timestamps()
@@ -27,6 +28,10 @@ class VideoRecorder:
     @property
     def number_of_frames(self) -> int:
         return len(self._frame_payload_list)
+
+    @property
+    def frame_payload_list(self) -> List[FramePayload]:
+        return self._frame_payload_list
 
     def close(self):
         self._cv2_video_writer.release()
