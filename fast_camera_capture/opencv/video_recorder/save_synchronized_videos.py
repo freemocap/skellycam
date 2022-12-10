@@ -14,19 +14,21 @@ logger = logging.getLogger(__name__)
 def test_frame_synchronization(synchronized_frame_list_dictionary):
     frame_count_list = []
 
-    for frame_list  in synchronized_frame_list_dictionary.values():
+    for frame_list in synchronized_frame_list_dictionary.values():
         frame_count_list.append(len(frame_list))
 
     logger.info(f"frame_count_list: {frame_count_list}")
 
-    assert np.all(np.diff(frame_count_list) == 0), "Frame count is not the same for all cameras"
+    assert np.all(
+        np.diff(frame_count_list) == 0
+    ), "Frame count is not the same for all cameras"
 
     logger.info("Test passed: Frame count is the same for all cameras :D")
 
 
 def save_synchronized_videos(
-        dictionary_of_video_recorders: Dict[str, VideoRecorder],
-        folder_to_save_videos=Union[str, Path],
+    dictionary_of_video_recorders: Dict[str, VideoRecorder],
+    folder_to_save_videos=Union[str, Path],
 ):
     logger.info(f"Saving synchronized videos to folder: {str(folder_to_save_videos)}")
 
@@ -53,7 +55,9 @@ def save_synchronized_videos(
     logger.info(f"earliest_final_frame: {earliest_final_frame}")
 
     logger.info(f"----")
-    logger.info(f"Clipping each camera's frame list to latest first frame and earliest final frame")
+    logger.info(
+        f"Clipping each camera's frame list to latest first frame and earliest final frame"
+    )
     each_cam_clipped_frame_list = []
     each_cam_clipped_timestamp_list = []
     for og_frame_list in each_cam_raw_frame_list:
@@ -66,9 +70,7 @@ def save_synchronized_videos(
                 continue
 
             each_cam_clipped_frame_list[-1].append(frame)
-            each_cam_clipped_timestamp_list[-1].append(
-                frame.timestamp_ns
-            )
+            each_cam_clipped_timestamp_list[-1].append(frame.timestamp_ns)
 
     number_of_frames_per_camera_clipped = [len(f) for f in each_cam_clipped_frame_list]
     min_number_of_frames = np.min(number_of_frames_per_camera_clipped)
@@ -81,9 +83,11 @@ def save_synchronized_videos(
     ]
 
     logger.info(
-        "Creating synchronized frame list by matching each camera's timestamps to the timestamps of the camera with the fewest frames")
+        "Creating synchronized frame list by matching each camera's timestamps to the timestamps of the camera with the fewest frames"
+    )
     logger.info(
-        "TODO - Make a reference timestamp list based on the desired/measured framerate (while ensuring we won't throw away good frames...)")
+        "TODO - Make a reference timestamp list based on the desired/measured framerate (while ensuring we won't throw away good frames...)"
+    )
     logger.info("NOTE - this is a slow process, I think it's like O(n^2) or something")
     synchronized_frame_list_dictionary = {}
     for camera_id, camera_frame_list in enumerate(each_cam_clipped_frame_list):
@@ -108,20 +112,22 @@ def save_synchronized_videos(
     test_frame_synchronization(synchronized_frame_list_dictionary)
 
     for camera_id, frame_list in synchronized_frame_list_dictionary.items():
-        logger.info(f" Saving camera {camera_id} video with {len(frame_list)} frames...")
+        logger.info(
+            f" Saving camera {camera_id} video with {len(frame_list)} frames..."
+        )
         dictionary_of_video_recorders[camera_id].save_frame_list_to_video_file(
             list_of_frames=frame_list,
-            path_to_save_video_file=Path(folder_to_save_videos) / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
+            path_to_save_video_file=Path(folder_to_save_videos)
+            / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
         )
 
     return synchronized_frame_list_dictionary
 
+
 def get_nearest_frame(frame_list, reference_frame) -> FramePayload:
     timestamps = gather_timestamps(frame_list)
 
-    close_frame_index = np.argmin(
-        np.abs(timestamps - reference_frame.timestamp_ns)
-    )
+    close_frame_index = np.argmin(np.abs(timestamps - reference_frame.timestamp_ns))
 
     return frame_list[close_frame_index]
 

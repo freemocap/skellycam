@@ -63,10 +63,10 @@ In this example, we connect a camera at index 0. Calling `show` allows us to vie
 to see video.
 
 ```python
-from fast_camera_capture import CamArgs, Camera
+from fast_camera_capture import WebcamConfig, Camera
 
 if __name__ == "__main__":
-    cam1 = Camera(CamArgs(cam_id=0))
+    cam1 = Camera(WebcamConfig(cam_id=0))
     cam1.connect()
     cam1.show()
 ```

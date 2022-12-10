@@ -20,7 +20,6 @@ class VideoRecorder:
         self._frame_payload_list: List[FramePayload] = []
         self._timestamps_npy = np.empty(0)
 
-
     @property
     def timestamps(self) -> np.ndarray:
         return self._gather_timestamps()

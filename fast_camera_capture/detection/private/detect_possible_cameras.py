@@ -57,8 +57,6 @@ class DetectPossibleCameras:
             logger.debug(f"Deleting cap {cap}")
             del cap
 
-
-
         logger.debug(f"Deleting caps_list {caps_list}")
         del caps_list
 

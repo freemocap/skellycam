@@ -5,7 +5,7 @@ import time
 import traceback
 from typing import Optional, Union
 
-from fast_camera_capture.opencv.camera.models.cam_args import CamArgs
+from fast_camera_capture.opencv.camera.models.camera_id import WebcamConfig
 from fast_camera_capture.opencv.camera.attributes import Attributes
 from fast_camera_capture.opencv.camera.internal_camera_thread import VideoCaptureThread
 from fast_camera_capture.opencv.viewer.cv_imshow.cv_cam_viewer import CvCamViewer
@@ -16,14 +16,14 @@ logger = logging.getLogger(__name__)
 class Camera:
     def __init__(
         self,
-        config: CamArgs,
+        config: WebcamConfig,
     ):
         self._config = config
         self._capture_thread: Optional[VideoCaptureThread] = None
 
     @property
     def name(self):
-        return f"Camera_{self._config.cam_id}"
+        return f"Camera_{self._config.camera_id}"
 
     @property
     def attributes(self):
@@ -31,7 +31,7 @@ class Camera:
 
     @property
     def cam_id(self):
-        return str(self._config.cam_id)
+        return str(self._config.camera_id)
 
     @property
     def is_capturing_frames(self):
@@ -49,7 +49,7 @@ class Camera:
         if self._capture_thread and self._capture_thread.is_capturing_frames:
             logger.debug(f"Already capturing frames for webcam_id: {self.cam_id}")
             return
-        logger.debug(f"Camera ID: [{self._config.cam_id}] Creating thread")
+        logger.debug(f"Camera ID: [{self._config.camera_id}] Creating thread")
         self._capture_thread = VideoCaptureThread(
             config=self._config,
             ready_event=ready_event,
@@ -70,7 +70,7 @@ class Camera:
             logger.error("Printing traceback")
             traceback.print_exc()
         finally:
-            logger.info(f"Camera ID: [{self._config.cam_id}] has closed")
+            logger.info(f"Camera ID: [{self._config.camera_id}] has closed")
 
     async def show_async(self):
         viewer = CvCamViewer()

@@ -7,16 +7,23 @@ import cv2
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.examples.framerate_diagnostics import (
-    calculate_camera_diagnostic_results, create_timestamp_diagnostic_plots,
+    calculate_camera_diagnostic_results,
+    create_timestamp_diagnostic_plots,
 )
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
-from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
+    save_synchronized_videos,
+)
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
 
 
-def plot_first_and_last_frames(synchronized_frame_list_dictionary, path_to_save_plots_png, open_image_after_saving: bool = False):
+def plot_first_and_last_frames(
+    synchronized_frame_list_dictionary,
+    path_to_save_plots_png,
+    open_image_after_saving: bool = False,
+):
     import matplotlib.pyplot as plt
 
     number_of_cameras = len(synchronized_frame_list_dictionary)
@@ -25,20 +32,20 @@ def plot_first_and_last_frames(synchronized_frame_list_dictionary, path_to_save_
     for cam_id, frame_payload_list in synchronized_frame_list_dictionary.items():
 
         first_frame = frame_payload_list[0].image
-        last_frame  = frame_payload_list[-1].image
+        last_frame = frame_payload_list[-1].image
 
-        first_frame_ax = fig.add_subplot(number_of_cameras, 2, (int(cam_id)*2)+1)
+        first_frame_ax = fig.add_subplot(number_of_cameras, 2, (int(cam_id) * 2) + 1)
         first_frame_ax.imshow(first_frame)
         first_frame_ax.set_title(f"First frame - Camera {cam_id}")
 
-        last_frame_ax = fig.add_subplot(number_of_cameras, 2, (int(cam_id)*2)+2)
+        last_frame_ax = fig.add_subplot(number_of_cameras, 2, (int(cam_id) * 2) + 2)
         last_frame_ax.imshow(last_frame)
         last_frame_ax.set_title(f"Last frame - Camera {cam_id}")
 
     fig.savefig(path_to_save_plots_png)
 
     if open_image_after_saving:
-        os.startfile(path_to_save_plots_png, 'open')
+        os.startfile(path_to_save_plots_png, "open")
 
 
 async def record_synchronized_videos(camera_ids_list: list, save_path: str | Path):
@@ -81,7 +88,8 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
     # save videos
     synchronized_frame_list_dictionary = save_synchronized_videos(
         dictionary_of_video_recorders=video_recorder_dictionary,
-        folder_to_save_videos=save_path)
+        folder_to_save_videos=save_path,
+    )
 
     # get timestamp diagnostics
     timestamps_dictionary = {}
@@ -102,12 +110,11 @@ async def record_synchronized_videos(camera_ids_list: list, save_path: str | Pat
         open_image_after_saving=True,
     )
 
-    plot_first_and_last_frames(synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
-                               path_to_save_plots_png=Path(save_path) / "first_and_last_frames.png",
-                               open_image_after_saving=True,
-                               )
-
-
+    plot_first_and_last_frames(
+        synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
+        path_to_save_plots_png=Path(save_path) / "first_and_last_frames.png",
+        open_image_after_saving=True,
+    )
 
 
 if __name__ == "__main__":
@@ -117,9 +124,9 @@ if __name__ == "__main__":
     camera_ids_list_in = found_camera_response.cameras_found_list
 
     save_path_in = (
-            Path.home()
-            / "fast-camera-capture-recordings"
-            / time.strftime("%m-%d-%Y_%H_%M_%S")
+        Path.home()
+        / "fast-camera-capture-recordings"
+        / time.strftime("%m-%d-%Y_%H_%M_%S")
     )
     save_path_in.mkdir(parents=True, exist_ok=True)
     asyncio.run(

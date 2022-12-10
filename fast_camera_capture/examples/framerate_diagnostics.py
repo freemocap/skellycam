@@ -28,14 +28,14 @@ class TimestampDiagnosticsDataClass:
     mean_median_framerates: float
     mean_median_absolute_deviation_per_camera: float
 
+
 def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
     timestamps_npy = np.empty(0)
 
     for frame in list_of_frames:
-        timestamps_npy = np.append(
-            timestamps_npy, frame.timestamp_ns
-        )
+        timestamps_npy = np.append(timestamps_npy, frame.timestamp_ns)
     return timestamps_npy
+
 
 def create_timestamp_diagnostic_plots(
     raw_frame_list_dictionary: Dict[str, List[FramePayload]],
@@ -51,13 +51,19 @@ def create_timestamp_diagnostic_plots(
     plt.set_loglevel("warning")
 
     synchronized_timestamps_dictionary = {}
-    for camera_id, camera_synchronized_frame_list in synchronized_frame_list_dictionary.items():
-        synchronized_timestamps_dictionary[camera_id] = gather_timestamps(camera_synchronized_frame_list) / 1e9
+    for (
+        camera_id,
+        camera_synchronized_frame_list,
+    ) in synchronized_frame_list_dictionary.items():
+        synchronized_timestamps_dictionary[camera_id] = (
+            gather_timestamps(camera_synchronized_frame_list) / 1e9
+        )
 
     raw_timestamps_dictionary = {}
     for camera_id, camera_raw_frame_list in raw_frame_list_dictionary.items():
-        raw_timestamps_dictionary[camera_id] = gather_timestamps(camera_raw_frame_list) / 1e9
-
+        raw_timestamps_dictionary[camera_id] = (
+            gather_timestamps(camera_raw_frame_list) / 1e9
+        )
 
     max_frame_duration = 0.1
     fig = plt.figure(figsize=(18, 10))
@@ -127,11 +133,11 @@ def create_timestamp_diagnostic_plots(
     logger.info(f"Saving diagnostic figure as png")
 
     if open_image_after_saving:
-        os.startfile(path_to_save_plots_png, 'open')
+        os.startfile(path_to_save_plots_png, "open")
 
 
 def calculate_camera_diagnostic_results(
-        timestamps_dictionary,
+    timestamps_dictionary,
 ) -> TimestampDiagnosticsDataClass:
     mean_framerates_per_camera = {}
     standard_deviation_framerates_per_camera = {}
@@ -208,4 +214,3 @@ if __name__ == "__main__":
         timestamps_dictionary_in
     )
     print(timestamp_diagnostic_data_class.__dict__)
-

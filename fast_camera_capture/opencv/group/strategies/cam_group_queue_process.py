@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from setproctitle import setproctitle
 
-from fast_camera_capture import CamArgs, Camera
+from fast_camera_capture import WebcamConfig, Camera
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.group.strategies.queue_communicator import (
     QueueCommunicator,
@@ -33,20 +33,26 @@ class CamGroupProcess:
     def name(self):
         return self._process.name
 
-    def start_capture(self, event_dictionary: Dict[str, multiprocessing.Event]):
+    def start_capture(
+        self,
+        event_dictionary: Dict[str, multiprocessing.Event],
+        webcam_config_dict: Dict[str, WebcamConfig],
+    ):
         """
         Start capturing frames. Only return if the underlying process is fully running.
         :return:
         """
         logger.info(f"Starting capture `Process` for {self._cam_ids}")
 
-        self._cameras_ready_event_dictionary = dict.fromkeys(self._cam_ids, multiprocessing.Event())
+        self._cameras_ready_event_dictionary = {
+            camera_id: multiprocessing.Event() for camera_id in self._cam_ids
+        }
         event_dictionary["ready"] = self._cameras_ready_event_dictionary
 
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupProcess._begin,
-            args=(self._cam_ids, self._queues, event_dictionary),
+            args=(self._cam_ids, self._queues, event_dictionary, webcam_config_dict),
         )
         self._process.start()
         while not self._process.is_alive():
@@ -65,14 +71,18 @@ class CamGroupProcess:
             logger.info(f"CamGroupProcess {self.name} terminate command executed")
 
     @staticmethod
-    def _create_cams(cam_ids: List[str]):
-        return [Camera(CamArgs(cam_id=cam)) for cam in cam_ids]
+    def _create_cams(webcam_config_dict: Dict[str, WebcamConfig]) -> Dict[str, Camera]:
+        return {
+            webcam_config.camera_id: Camera(webcam_config)
+            for webcam_config in webcam_config_dict.values()
+        }
 
     @staticmethod
     def _begin(
-            cam_ids: List[str],
-            queues: Dict[str, multiprocessing.Queue],
-            event_dictionary: Dict[str, multiprocessing.Event],
+        cam_ids: List[str],
+        queues: Dict[str, multiprocessing.Queue],
+        event_dictionary: Dict[str, multiprocessing.Event],
+        webcam_config_dict: Dict[str, WebcamConfig],
     ):
         logger.info(
             f"Starting frame loop capture in CamGroupProcess for cameras: {cam_ids}"
@@ -82,10 +92,16 @@ class CamGroupProcess:
         exit_event = event_dictionary["exit"]
 
         setproctitle(f"Cameras {cam_ids}")
-        cameras = CamGroupProcess._create_cams(cam_ids)
-        for cam in cameras:
-            cam.connect(ready_event_dictionary[cam.cam_id])
 
+        process_webcam_config_dict = {
+            camera_id: webcam_config_dict[camera_id] for camera_id in cam_ids
+        }
+        cameras_dictionary = CamGroupProcess._create_cams(
+            webcam_config_dict=process_webcam_config_dict
+        )
+
+        for camera in cameras_dictionary.values():
+            camera.connect(ready_event_dictionary[camera.cam_id])
 
         while not exit_event.is_set():
             # This tight loop ends up 100% the process, so a sleep between framecaptures is
@@ -93,15 +109,15 @@ class CamGroupProcess:
             # awhile.
             if start_event.is_set():
                 sleep(0.001)
-                for cam in cameras:
-                    if cam.new_frame_ready:
-                        queue = queues[cam.cam_id]
-                        queue.put(cam.latest_frame)
+                for camera in cameras_dictionary.values():
+                    if camera.new_frame_ready:
+                        queue = queues[camera.cam_id]
+                        queue.put(camera.latest_frame)
 
         # close cameras on exit
-        for cam in cameras:
-            logger.info(f"Closing camera {cam.cam_id}")
-            cam.close()
+        for camera in cameras_dictionary.values():
+            logger.info(f"Closing camera {camera.cam_id}")
+            camera.close()
 
     def check_if_camera_is_ready(self, cam_id: str):
         return self._cameras_ready_event_dictionary[cam_id].is_set()
