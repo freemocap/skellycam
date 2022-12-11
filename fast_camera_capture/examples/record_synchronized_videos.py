@@ -11,7 +11,7 @@ from fast_camera_capture.examples.framerate_diagnostics import (
     create_timestamp_diagnostic_plots,
 )
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
-from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
+from fast_camera_capture.opencv.video_recorder.record_synchronized_videos import (
     save_synchronized_videos,
 )
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder

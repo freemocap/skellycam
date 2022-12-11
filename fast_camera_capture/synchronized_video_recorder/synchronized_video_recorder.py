@@ -16,7 +16,7 @@ from fast_camera_capture.examples.record_synchronized_videos import (
     plot_first_and_last_frames,
 )
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
-from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
+from fast_camera_capture.opencv.video_recorder.record_synchronized_videos import (
     save_synchronized_videos,
 )
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
