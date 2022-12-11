@@ -8,21 +8,18 @@ import cv2
 
 from fast_camera_capture import WebcamConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
-from fast_camera_capture.examples.framerate_diagnostics import (
-    calculate_camera_diagnostic_results,
-    create_timestamp_diagnostic_plots,
-)
-from fast_camera_capture.examples.record_synchronized_videos import (
-    plot_first_and_last_frames,
-)
+from fast_camera_capture.diagnostics.framerate_diagnostics import calculate_camera_diagnostic_results, \
+    create_timestamp_diagnostic_plots
+from fast_camera_capture.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
-from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
-    save_synchronized_videos,
-)
+from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 from fast_camera_capture.utils.default_paths import (
     default_video_save_path,
-    default_session_name, get_iso6201_time_string, SESSION_START_TIME_FORMAT_STRING,
+    default_session_name,
+    get_iso6201_time_string,
+    SESSION_START_TIME_FORMAT_STRING,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,10 +27,10 @@ logger = logging.getLogger(__name__)
 
 class SynchronizedVideoRecorder:
     def __init__(
-            self,
-            video_save_folder_path: Union[str, Path] = None,
-            webcam_config_dict: Dict[str, WebcamConfig] = None,
-            string_tag: str = None,
+        self,
+        video_save_folder_path: Union[str, Path] = None,
+        webcam_config_dict: Dict[str, WebcamConfig] = None,
+        string_tag: str = None,
     ):
         self._session_start_time_iso8601 = get_iso6201_time_string()
         self._session_start_time_unix_seconds = time.time()
@@ -41,7 +38,7 @@ class SynchronizedVideoRecorder:
 
         if video_save_folder_path is None:
             self._video_save_folder_path = (
-                    default_video_save_path() / self._session_name
+                default_video_save_path() / self._session_name
             )
         else:
             self._video_save_folder_path = Path(video_save_folder_path)
@@ -88,7 +85,7 @@ class SynchronizedVideoRecorder:
         timestamps_dictionary = {}
         for cam_id, video_recorder in self._video_recorder_dictionary.items():
             timestamps_dictionary[cam_id] = (
-                    video_recorder.timestamps - self._shared_zero_time
+                video_recorder.timestamps - self._shared_zero_time
             )
 
         self._timestamp_diagnostics = calculate_camera_diagnostic_results(
@@ -98,7 +95,7 @@ class SynchronizedVideoRecorder:
         print(self._timestamp_diagnostics.dict())
 
         diagnostic_plot_file_path = (
-                Path(self._video_save_folder_path) / "timestamp_diagnostic_plots.png"
+            Path(self._video_save_folder_path) / "timestamp_diagnostic_plots.png"
         )
         create_timestamp_diagnostic_plots(
             raw_frame_list_dictionary=self._copy_frame_payload_lists(),
@@ -110,7 +107,7 @@ class SynchronizedVideoRecorder:
         plot_first_and_last_frames(
             synchronized_frame_list_dictionary=self._synchronized_frame_list_dictionary,
             path_to_save_plots_png=Path(self._video_save_folder_path)
-                                   / "first_and_last_frames.png",
+            / "first_and_last_frames.png",
             open_image_after_saving=True,
         )
 
@@ -152,28 +149,31 @@ class SynchronizedVideoRecorder:
             "read_me": f"This file contains the information relevant to session: {self._session_name}",
             "session_details": self._get_session_details_dict(),
             "camera_configurations": {},
-            "timestamp_diagnostic_results": self._timestamp_diagnostics.dict()}
+            "timestamp_diagnostic_results": self._timestamp_diagnostics.dict(),
+        }
 
         for camera_id, webcam_config in self._webcam_config_dict.items():
-            session_information_dictionary["camera_configurations"][camera_id] = webcam_config.dict()
+            session_information_dictionary["camera_configurations"][
+                camera_id
+            ] = webcam_config.dict()
 
         return session_information_dictionary
 
     def _get_session_details_dict(self):
-        return {"session_name": self._session_name,
-                "session_start_time_iso8601": self._session_start_time_iso8601,
-                "session_start_time_unix_seconds": self._session_start_time_unix_seconds,
-                "video_save_folder_path": str(self._video_save_folder_path),
-                }
+        return {
+            "session_name": self._session_name,
+            "session_start_time_iso8601": self._session_start_time_iso8601,
+            "session_start_time_unix_seconds": self._session_start_time_unix_seconds,
+            "video_save_folder_path": str(self._video_save_folder_path),
+        }
 
     def _save_session_information(self):
         session_information_dictionary = self._create_session_information_dict()
         json_path = self._video_save_folder_path / "session_information.json"
-        with open(json_path, 'w') as file:
+        with open(json_path, "w") as file:
             json_string = json.dumps(session_information_dictionary, indent=4)
             logger.info(f"Saving session information to {json_path}")
             file.write(json_string)
-
 
 
 if __name__ == "__main__":
