@@ -6,7 +6,7 @@ from typing import List
 import cv2
 import zmq
 
-from fast_camera_capture import CamArgs, Camera
+from fast_camera_capture import WebcamConfig, Camera
 
 
 class CamGroupZeromqProcess:
@@ -28,7 +28,7 @@ class CamGroupZeromqProcess:
 
     @staticmethod
     def _create_cams(cam_ids: List[str]):
-        return [Camera(CamArgs(cam_id=cam)) for cam in cam_ids]
+        return [Camera(WebcamConfig(cam_id=cam)) for cam in cam_ids]
 
     @staticmethod
     def _begin(cam_ids: List[str]):

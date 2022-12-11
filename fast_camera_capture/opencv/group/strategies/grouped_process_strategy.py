@@ -1,6 +1,7 @@
 import multiprocessing
 from typing import Dict, List
 
+from fast_camera_capture import WebcamConfig
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.camera.types.camera_id import CameraId
 from fast_camera_capture.opencv.group.strategies.cam_group_queue_process import (
@@ -22,15 +23,31 @@ class GroupedProcessStrategy:
         self._processes, self._cam_id_process_map = self._create_processes(cam_ids)
 
     @property
+    def processes(self):
+        return self._processes
+
+    @property
     def is_capturing(self):
         for process in self._processes:
             if not process.is_capturing:
                 return False
         return True
 
-    def start_capture(self, exit_event: multiprocessing.Event):
+    def start_capture(
+        self,
+        event_dictionary: Dict[str, multiprocessing.Event],
+        webcam_config_dict: Dict[str, WebcamConfig],
+    ):
+
         for process in self._processes:
-            process.start_capture(exit_event=exit_event)
+            process.start_capture(
+                event_dictionary=event_dictionary, webcam_config_dict=webcam_config_dict
+            )
+
+    def check_if_camera_is_ready(self, cam_id: str) -> bool:
+        for process in self._processes:
+            if cam_id in process.camera_ids:
+                return process.check_if_camera_is_ready(cam_id)
 
     def get_by_cam_id(self, cam_id: str):
         for process in self._processes:
