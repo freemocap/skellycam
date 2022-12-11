@@ -1,4 +1,4 @@
-from fast_camera_capture.synchronized_video_recorder.synchronized_video_recorder import SynchronizedVideoRecorder
+from fast_camera_capture import SynchronizedVideoRecorder
 
 if __name__ == "__main__":
     """
