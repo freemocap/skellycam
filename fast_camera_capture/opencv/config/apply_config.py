@@ -3,15 +3,15 @@ import traceback
 
 import cv2
 
-from fast_camera_capture.opencv.camera.models.cam_args import CamArgs
+from fast_camera_capture.opencv.camera.models.camera_id import WebcamConfig
 
 logger = logging.getLogger(__name__)
 
 
-def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CamArgs):
+def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: WebcamConfig):
     # set camera stream parameters
     logger.info(
-        f"Applying configuration to Camera {config.cam_id}:"
+        f"Applying configuration to Camera {config.camera_id}:"
         f"Exposure: {config.exposure}, "
         f"Resolution width: {config.resolution_width}, "
         f"Resolution height: {config.resolution_height}, "
@@ -20,12 +20,14 @@ def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CamArgs):
     try:
         if not cv2_vid_cap.isOpened():
             logger.error(
-                f"Failed to apply configuration to Camera {config.cam_id} - camera is "
+                f"Failed to apply configuration to Camera {config.camera_id} - camera is "
                 f"not open"
             )
             return
     except Exception as e:
-        logger.error(f"Failed when trying to check if Camera {config.cam_id} is open")
+        logger.error(
+            f"Failed when trying to check if Camera {config.camera_id} is open"
+        )
         return
 
     try:
@@ -35,6 +37,6 @@ def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CamArgs):
 
         cv2_vid_cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.fourcc))
     except Exception as e:
-        logger.error(f"Problem applying configuration for camera: {config.cam_id}")
+        logger.error(f"Problem applying configuration for camera: {config.camera_id}")
         traceback.print_exc()
         raise e

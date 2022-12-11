@@ -54,7 +54,13 @@ class DetectPossibleCameras:
         for cap in caps_list:
             logger.debug(f"Releasing cap {cap}")
             cap.release()
+            logger.debug(f"Deleting cap {cap}")
+            del cap
 
+        logger.debug(f"Deleting caps_list {caps_list}")
+        del caps_list
+
+        logger.info(f"Found cameras: {cams_to_use_list}")
         return FoundCameraCache(
             number_of_cameras_found=len(cams_to_use_list),
             cameras_found_list=cams_to_use_list,
