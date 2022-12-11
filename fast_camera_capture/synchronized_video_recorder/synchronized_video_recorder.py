@@ -8,17 +8,12 @@ import cv2
 
 from fast_camera_capture import WebcamConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
-from fast_camera_capture.examples.framerate_diagnostics import (
-    calculate_camera_diagnostic_results,
-    create_timestamp_diagnostic_plots,
-)
-from fast_camera_capture.examples.record_synchronized_videos import (
-    plot_first_and_last_frames,
-)
+from fast_camera_capture.diagnostics.framerate_diagnostics import calculate_camera_diagnostic_results, \
+    create_timestamp_diagnostic_plots
+from fast_camera_capture.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
-from fast_camera_capture.opencv.video_recorder.record_synchronized_videos import (
-    save_synchronized_videos,
-)
+from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 from fast_camera_capture.utils.default_paths import (
     default_video_save_path,
