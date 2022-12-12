@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from setproctitle import setproctitle
 
-from fast_camera_capture import WebcamConfig, Camera
+from fast_camera_capture import CameraConfig, Camera
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.group.strategies.queue_communicator import (
     QueueCommunicator,
@@ -36,7 +36,7 @@ class CamGroupProcess:
     def start_capture(
         self,
         event_dictionary: Dict[str, multiprocessing.Event],
-        webcam_config_dict: Dict[str, WebcamConfig],
+        camera_config_dict: Dict[str, CameraConfig],
     ):
         """
         Start capturing frames. Only return if the underlying process is fully running.
@@ -52,7 +52,7 @@ class CamGroupProcess:
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupProcess._begin,
-            args=(self._cam_ids, self._queues, event_dictionary, webcam_config_dict),
+            args=(self._cam_ids, self._queues, event_dictionary, camera_config_dict),
         )
         self._process.start()
         while not self._process.is_alive():
@@ -71,10 +71,10 @@ class CamGroupProcess:
             logger.info(f"CamGroupProcess {self.name} terminate command executed")
 
     @staticmethod
-    def _create_cams(webcam_config_dict: Dict[str, WebcamConfig]) -> Dict[str, Camera]:
+    def _create_cams(camera_config_dict: Dict[str, CameraConfig]) -> Dict[str, Camera]:
         return {
-            webcam_config.camera_id: Camera(webcam_config)
-            for webcam_config in webcam_config_dict.values()
+            camera_config.camera_id: Camera(camera_config)
+            for camera_config in camera_config_dict.values()
         }
 
     @staticmethod
@@ -82,7 +82,7 @@ class CamGroupProcess:
         cam_ids: List[str],
         queues: Dict[str, multiprocessing.Queue],
         event_dictionary: Dict[str, multiprocessing.Event],
-        webcam_config_dict: Dict[str, WebcamConfig],
+        camera_config_dict: Dict[str, CameraConfig],
     ):
         logger.info(
             f"Starting frame loop capture in CamGroupProcess for cameras: {cam_ids}"
@@ -93,11 +93,11 @@ class CamGroupProcess:
 
         setproctitle(f"Cameras {cam_ids}")
 
-        process_webcam_config_dict = {
-            camera_id: webcam_config_dict[camera_id] for camera_id in cam_ids
+        process_camera_config_dict = {
+            camera_id: camera_config_dict[camera_id] for camera_id in cam_ids
         }
         cameras_dictionary = CamGroupProcess._create_cams(
-            webcam_config_dict=process_webcam_config_dict
+            camera_config_dict=process_camera_config_dict
         )
 
         for camera in cameras_dictionary.values():

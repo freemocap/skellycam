@@ -5,7 +5,7 @@ import time
 import traceback
 from typing import Optional, Union
 
-from fast_camera_capture.opencv.camera.models.camera_id import WebcamConfig
+from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
 from fast_camera_capture.opencv.camera.attributes import Attributes
 from fast_camera_capture.opencv.camera.internal_camera_thread import VideoCaptureThread
 from fast_camera_capture.opencv.viewer.cv_imshow.cv_cam_viewer import CvCamViewer
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class Camera:
     def __init__(
         self,
-        config: WebcamConfig,
+        config: CameraConfig,
     ):
         self._config = config
         self._capture_thread: Optional[VideoCaptureThread] = None
@@ -47,7 +47,7 @@ class Camera:
 
     def connect(self, ready_event: multiprocessing.Event = None):
         if self._capture_thread and self._capture_thread.is_capturing_frames:
-            logger.debug(f"Already capturing frames for webcam_id: {self.cam_id}")
+            logger.debug(f"Already capturing frames for camera_id: {self.cam_id}")
             return
         logger.debug(f"Camera ID: [{self._config.camera_id}] Creating thread")
         self._capture_thread = VideoCaptureThread(

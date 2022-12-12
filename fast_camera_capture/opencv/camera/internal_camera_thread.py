@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
-from fast_camera_capture.opencv.camera.models.camera_id import WebcamConfig
+from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
 from fast_camera_capture.opencv.config.determine_backend import determine_backend
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
-        config: WebcamConfig,
+        config: CameraConfig,
         ready_event: multiprocessing.Event = None,
     ):
         super().__init__()
@@ -120,7 +120,7 @@ class VideoCaptureThread(threading.Thread):
             image=image,
             timestamp_ns=retrieval_timestamp,
             frame_number=self.latest_frame_number,
-            webcam_id=str(self._config.camera_id),
+            camera_id=str(self._config.camera_id),
         )
 
     def _create_cv2_capture(self):

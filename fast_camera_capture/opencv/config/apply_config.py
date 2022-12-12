@@ -3,12 +3,12 @@ import traceback
 
 import cv2
 
-from fast_camera_capture.opencv.camera.models.camera_id import WebcamConfig
+from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
 
 logger = logging.getLogger(__name__)
 
 
-def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: WebcamConfig):
+def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConfig):
     # set camera stream parameters
     logger.info(
         f"Applying configuration to Camera {config.camera_id}:"

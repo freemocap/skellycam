@@ -6,8 +6,9 @@ from typing import Union, Dict
 
 import cv2
 
-from fast_camera_capture import WebcamConfig
+from fast_camera_capture import CameraConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
+from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.diagnostics.framerate_diagnostics import calculate_camera_diagnostic_results, \
     create_timestamp_diagnostic_plots
 from fast_camera_capture.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
@@ -29,7 +30,7 @@ class SynchronizedVideoRecorder:
     def __init__(
         self,
         video_save_folder_path: Union[str, Path] = None,
-        webcam_config_dict: Dict[str, WebcamConfig] = None,
+        camera_config_dict: Dict[str, CameraConfig] = None,
         string_tag: str = None,
     ):
         self._session_start_time_iso8601 = get_iso6201_time_string()
@@ -49,27 +50,29 @@ class SynchronizedVideoRecorder:
 
         self._shared_zero_time = time.perf_counter_ns()
 
-        if webcam_config_dict is None:
-            self._webcam_config_dict = {
-                cam_id: WebcamConfig(camera_id=cam_id)
+        if camera_config_dict is None:
+            self._camera_config_dict = {
+                cam_id: CameraConfig(camera_id=cam_id)
                 for cam_id in self._camera_ids_list
             }
         else:
-            self._webcam_config_dict = webcam_config_dict
+            self._camera_config_dict = camera_config_dict
 
         self._camera_group = CameraGroup(
-            cam_ids=self._camera_ids_list, webcam_config_dict=self._webcam_config_dict
+            cam_ids=self._camera_ids_list, camera_config_dict=self._camera_config_dict
         )
 
         self._video_recorder_dictionary = {}
+        self._qt_multi_camera_viewer = None
 
-    def run(self):
+    def run(self,
+            viewer: str = 'opencv'):
         self._camera_group.start()
 
         for camera_id in self._camera_ids_list:
             self._video_recorder_dictionary[camera_id] = VideoRecorder()
 
-        self._run_frame_loop()
+        self._run_frame_loop(viewer=viewer)
 
         # save videos
         self._synchronized_frame_list_dictionary = save_synchronized_videos(
@@ -111,7 +114,10 @@ class SynchronizedVideoRecorder:
             open_image_after_saving=True,
         )
 
-    def _run_frame_loop(self):
+    def _run_frame_loop(self, viewer: str = 'opencv'):
+
+
+
         should_continue = True
         while should_continue:
             latest_frame_payloads = self._camera_group.latest_frames()
@@ -121,9 +127,9 @@ class SynchronizedVideoRecorder:
                     self._video_recorder_dictionary[
                         cam_id
                     ].append_frame_payload_to_list(frame_payload)
-                    cv2.imshow(
-                        f"Camera {cam_id} - Press ESC to quit", frame_payload.image
-                    )
+
+                    self._show_image(frame_payload, viewer=viewer)
+
             frame_count_dictionary = {}
 
             for cam_id, video_recorder in self._video_recorder_dictionary.items():
@@ -152,10 +158,10 @@ class SynchronizedVideoRecorder:
             "timestamp_diagnostic_results": self._timestamp_diagnostics.dict(),
         }
 
-        for camera_id, webcam_config in self._webcam_config_dict.items():
+        for camera_id, camera_config in self._camera_config_dict.items():
             session_information_dictionary["camera_configurations"][
                 camera_id
-            ] = webcam_config.dict()
+            ] = camera_config.dict()
 
         return session_information_dictionary
 
@@ -174,6 +180,19 @@ class SynchronizedVideoRecorder:
             json_string = json.dumps(session_information_dictionary, indent=4)
             logger.info(f"Saving session information to {json_path}")
             file.write(json_string)
+
+    def _show_image(self, frame_payload:FramePayload, viewer:str='opencv'):
+        if viewer == 'opencv':
+            cv2.imshow(f"Camera {frame_payload.camera_id} - Press ESC to quit", frame_payload.image)
+
+        elif viewer == 'qt':
+
+            if self._qt_multi_camera_viewer is None:
+
+
+                    self._qt_multi_camera_viewer = QtMultiCameraViewer()
+
+            self._qt_multi_camera_viewer.update_images(frame_payload.image)
 
 
 if __name__ == "__main__":

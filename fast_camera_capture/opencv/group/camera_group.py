@@ -4,7 +4,7 @@ import multiprocessing
 import time
 from typing import List, Dict
 
-from fast_camera_capture import WebcamConfig
+from fast_camera_capture import CameraConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.experiments.cam_show import cam_show
 from fast_camera_capture.opencv.group.strategies.grouped_process_strategy import (
@@ -20,7 +20,7 @@ class CameraGroup:
         self,
         cam_ids: List[str],
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
-        webcam_config_dict: Dict[str, WebcamConfig] = None,
+        camera_config_dict: Dict[str, CameraConfig] = None,
     ):
         self._event_dictionary = None
         self._strategy_enum = strategy
@@ -32,12 +32,12 @@ class CameraGroup:
             cam_ids = _cams.cameras_found_list
         self._strategy_class = self._resolve_strategy(cam_ids)
 
-        if webcam_config_dict is None:
-            self._webcam_config_dict = {}
+        if camera_config_dict is None:
+            self._camera_config_dict = {}
             for cam_id in cam_ids:
-                self._webcam_config_dict[cam_id] = WebcamConfig()
+                self._camera_config_dict[cam_id] = CameraConfig()
         else:
-            self._webcam_config_dict = webcam_config_dict
+            self._camera_config_dict = camera_config_dict
 
     @property
     def is_capturing(self):
@@ -57,7 +57,7 @@ class CameraGroup:
         self._event_dictionary = {"start": self._start_event, "exit": self._exit_event}
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
-            webcam_config_dict=self._webcam_config_dict,
+            camera_config_dict=self._camera_config_dict,
         )
 
         self._wait_for_cameras_to_start()
@@ -126,7 +126,7 @@ class CameraGroup:
                 logger.info(f"Process {process.name} died! Restarting now...")
                 process.start_capture(
                     event_dictionary=self._event_dictionary,
-                    webcam_config_dict=self._webcam_config_dict,
+                    camera_config_dict=self._camera_config_dict,
                 )
 
 
