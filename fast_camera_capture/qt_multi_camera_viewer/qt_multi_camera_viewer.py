@@ -12,7 +12,7 @@ from fast_camera_capture.qt_multi_camera_viewer.qt_camera_viewer import CameraVi
 logger = logging.getLogger(__name__)
 
 
-class QtMultiCameraViewer(QWidget):
+class QtMultiCameraViewerWidget(QWidget):
     def __init__(self, camera_ids: list):
         super().__init__()
 

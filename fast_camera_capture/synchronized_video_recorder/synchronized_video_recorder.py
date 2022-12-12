@@ -6,7 +6,7 @@ from typing import Union, Dict
 
 import cv2
 
-from fast_camera_capture import CameraConfig
+from fast_camera_capture import CameraConfig, QtMultiCameraViewerWidget
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.diagnostics.framerate_diagnostics import calculate_camera_diagnostic_results, \
@@ -138,7 +138,11 @@ class SynchronizedVideoRecorder:
 
             if cv2.waitKey(1) == 27:
                 logger.info(f"ESC key pressed - shutting down")
-                cv2.destroyAllWindows()
+                if viewer == 'opencv':
+                    cv2.destroyAllWindows()
+                elif viewer == 'qt':
+                    self._qt_multi_camera_viewer.close()
+
                 should_continue = False
         self._camera_group.close()
 
@@ -188,9 +192,8 @@ class SynchronizedVideoRecorder:
         elif viewer == 'qt':
 
             if self._qt_multi_camera_viewer is None:
-
-
-                    self._qt_multi_camera_viewer = QtMultiCameraViewer()
+                self._qt_multi_camera_viewer = QtMultiCameraViewerWidget(self._camera_ids_list)
+                self._qt_multi_camera_viewer.show()
 
             self._qt_multi_camera_viewer.update_images(frame_payload.image)
 
