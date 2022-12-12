@@ -7,40 +7,12 @@ from PyQt6 import QtGui
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QLabel, QGridLayout
 
+from fast_camera_capture.qt_multi_camera_viewer.qt_camera_viewer import CameraViewWorker
+
 logger = logging.getLogger(__name__)
 
 
-class CameraViewWorker:
-    # this is a worker that handles incoming frames from a video stream
-    def __init__(self, camera_id: str):
-        self._q_label_widget = QLabel(f"Camera {camera_id}")
-
-    @property
-    def q_label_widget(self):
-        return self._q_label_widget
-
-    def update_image(self, image: np.ndarray):
-        # update the image in the video label widget
-        pixmap = self.convert_frame_to_pixmap(image)
-        self._q_label_widget.setPixmap(pixmap)
-
-    def convert_frame_to_pixmap(self, image: np.ndarray, scale: float = 1.0):
-        image_width, image_height, image_color_channels = image.shape
-
-        q_image = QtGui.QImage(
-            image, image_width, image_height, QtGui.QImage.Format.Format_RGB888
-        )
-        QtGui.QPixmap()
-        pix = QtGui.QPixmap.fromImage(q_image)
-        resized_pixmap = pix.scaled(
-            image_width / scale,
-            image_height / scale,
-            Qt.AspectRatioMode.KeepAspectRatio,
-        )
-        return resized_pixmap
-
-
-class MultiCameraViewer(QWidget):
+class QtMultiCameraViewer(QWidget):
     def __init__(self, camera_ids: list):
         super().__init__()
 
@@ -80,7 +52,7 @@ class MultiCameraViewer(QWidget):
                 column_count = 0
                 row_count += 1
 
-    def update_display(self, image_dictionary: Dict[Union[int, str], np.ndarray]):
+    def update_images(self, image_dictionary: Dict[Union[int, str], np.ndarray]):
 
         for camera_id, image in image_dictionary.items():
             try:
