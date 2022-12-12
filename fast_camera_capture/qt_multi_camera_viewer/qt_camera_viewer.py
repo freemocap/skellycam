@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 from PyQt6 import QtGui
 from PyQt6.QtCore import Qt
@@ -19,16 +20,20 @@ class CameraViewWorker:
         self._q_label_widget.setPixmap(pixmap)
 
     def convert_frame_to_pixmap(self, image: np.ndarray, scale: float = 1.0):
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_width, image_height, image_color_channels = image.shape
 
         q_image = QtGui.QImage(
-            image, image_width, image_height, QtGui.QImage.Format.Format_RGB888
+            image.data,
+            image.shape[1],
+            image.shape[0],
+            QtGui.QImage.Format.Format_RGB888
         )
-        QtGui.QPixmap()
+
         pix = QtGui.QPixmap.fromImage(q_image)
         resized_pixmap = pix.scaled(
-            image_width / scale,
-            image_height / scale,
+            int(image_width * scale),
+            int(image_height * scale),
             Qt.AspectRatioMode.KeepAspectRatio,
         )
         return resized_pixmap

@@ -6,7 +6,7 @@ from typing import Union, Dict
 
 import cv2
 
-from fast_camera_capture import CameraConfig, QtMultiCameraViewerWidget
+from fast_camera_capture import CameraConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.diagnostics.framerate_diagnostics import calculate_camera_diagnostic_results, \
@@ -16,11 +16,11 @@ from fast_camera_capture.opencv.group.camera_group import CameraGroup
 from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
+from fast_camera_capture.qt_multi_camera_viewer.qt_multi_camera_viewer import QtMultiCameraViewerThread
 from fast_camera_capture.utils.default_paths import (
     default_video_save_path,
     default_session_name,
     get_iso6201_time_string,
-    SESSION_START_TIME_FORMAT_STRING,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,10 +28,10 @@ logger = logging.getLogger(__name__)
 
 class SynchronizedVideoRecorder:
     def __init__(
-        self,
-        video_save_folder_path: Union[str, Path] = None,
-        camera_config_dict: Dict[str, CameraConfig] = None,
-        string_tag: str = None,
+            self,
+            video_save_folder_path: Union[str, Path] = None,
+            camera_config_dict: Dict[str, CameraConfig] = None,
+            string_tag: str = None,
     ):
         self._session_start_time_iso8601 = get_iso6201_time_string()
         self._session_start_time_unix_seconds = time.time()
@@ -39,7 +39,7 @@ class SynchronizedVideoRecorder:
 
         if video_save_folder_path is None:
             self._video_save_folder_path = (
-                default_video_save_path() / self._session_name
+                    default_video_save_path() / self._session_name
             )
         else:
             self._video_save_folder_path = Path(video_save_folder_path)
@@ -63,7 +63,7 @@ class SynchronizedVideoRecorder:
         )
 
         self._video_recorder_dictionary = {}
-        self._qt_multi_camera_viewer = None
+        self._qt_multi_camera_viewer_thread = None
 
     def run(self,
             viewer: str = 'opencv'):
@@ -88,7 +88,7 @@ class SynchronizedVideoRecorder:
         timestamps_dictionary = {}
         for cam_id, video_recorder in self._video_recorder_dictionary.items():
             timestamps_dictionary[cam_id] = (
-                video_recorder.timestamps - self._shared_zero_time
+                    video_recorder.timestamps - self._shared_zero_time
             )
 
         self._timestamp_diagnostics = calculate_camera_diagnostic_results(
@@ -98,7 +98,7 @@ class SynchronizedVideoRecorder:
         print(self._timestamp_diagnostics.dict())
 
         diagnostic_plot_file_path = (
-            Path(self._video_save_folder_path) / "timestamp_diagnostic_plots.png"
+                Path(self._video_save_folder_path) / "timestamp_diagnostic_plots.png"
         )
         create_timestamp_diagnostic_plots(
             raw_frame_list_dictionary=self._copy_frame_payload_lists(),
@@ -110,14 +110,12 @@ class SynchronizedVideoRecorder:
         plot_first_and_last_frames(
             synchronized_frame_list_dictionary=self._synchronized_frame_list_dictionary,
             path_to_save_plots_png=Path(self._video_save_folder_path)
-            / "first_and_last_frames.png",
+                                   / "first_and_last_frames.png",
             open_image_after_saving=True,
         )
 
     def _run_frame_loop(self, viewer: str = 'opencv'):
-
-
-
+        logger.info(f"Starting frame loop with viewer: {viewer}")
         should_continue = True
         while should_continue:
             latest_frame_payloads = self._camera_group.latest_frames()
@@ -185,17 +183,23 @@ class SynchronizedVideoRecorder:
             logger.info(f"Saving session information to {json_path}")
             file.write(json_string)
 
-    def _show_image(self, frame_payload:FramePayload, viewer:str='opencv'):
+    def _show_image(self, frame_payload: FramePayload, viewer: str = 'opencv'):
         if viewer == 'opencv':
             cv2.imshow(f"Camera {frame_payload.camera_id} - Press ESC to quit", frame_payload.image)
 
         elif viewer == 'qt':
 
-            if self._qt_multi_camera_viewer is None:
-                self._qt_multi_camera_viewer = QtMultiCameraViewerWidget(self._camera_ids_list)
-                self._qt_multi_camera_viewer.show()
+            if self._qt_multi_camera_viewer_thread is None:
+                self._initialize_qt_multi_camera_viewer_thread()
 
-            self._qt_multi_camera_viewer.update_images(frame_payload.image)
+
+            self._qt_multi_camera_viewer_thread.update_image(frame_payload)
+
+    def _initialize_qt_multi_camera_viewer_thread(self):
+        logger.info(f"Creating QT viewer app")
+        self._qt_multi_camera_viewer_thread = QtMultiCameraViewerThread(camera_ids=self._camera_ids_list)
+        self._qt_multi_camera_viewer_thread.show()
+        self._qt_multi_camera_viewer_thread.start()
 
 
 if __name__ == "__main__":

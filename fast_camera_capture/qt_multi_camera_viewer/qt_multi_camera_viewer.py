@@ -1,16 +1,34 @@
 import logging
+import time
 from typing import Dict, Union
 
-import cv2
 import numpy as np
-from PyQt6 import QtGui
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QLabel, QGridLayout
+from PyQt6.QtCore import QThread
 
+from PyQt6.QtWidgets import QWidget, QGridLayout, QMainWindow, QApplication
+
+from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.qt_multi_camera_viewer.qt_camera_viewer import CameraViewWorker
 
 logger = logging.getLogger(__name__)
 
+class QtMultiCameraViewerThread(QThread):
+    def __init__(self, camera_ids:list):
+        super().__init__()
+        self._qt_app = QApplication([])
+        self._qt_multi_camera_viewer = QtMultiCameraViewerWidget(camera_ids=camera_ids)
+
+    def show(self):
+        self._qt_multi_camera_viewer.show()
+
+    def update_image(self, frame_payload: FramePayload):
+        self._qt_multi_camera_viewer.update_image(frame_payload)
+
+    def run(self):
+        logger.info("Starting QtMultiCameraViewerThread")
+        while True:
+            self._qt_app.exec()
+            time.sleep(0.001)
 
 class QtMultiCameraViewerWidget(QWidget):
     def __init__(self, camera_ids: list):
@@ -29,7 +47,7 @@ class QtMultiCameraViewerWidget(QWidget):
         return len(self._camera_ids)
 
     def generate_camera_view_grid(self):
-
+        logger.debug("Generating camera view grid")
         for camera_id in self._camera_ids:
             self._camera_worker_dictionary[camera_id] = {}
             self._camera_worker_dictionary[camera_id] = CameraViewWorker(
@@ -39,6 +57,7 @@ class QtMultiCameraViewerWidget(QWidget):
         self.add_widgets_to_layout()
 
     def add_widgets_to_layout(self):
+        logger.debug("Adding widgets to layout")
         column_count = 0
         row_count = 0
         for camera_worker in self._camera_worker_dictionary.values():
@@ -52,12 +71,11 @@ class QtMultiCameraViewerWidget(QWidget):
                 column_count = 0
                 row_count += 1
 
-    def update_images(self, image_dictionary: Dict[Union[int, str], np.ndarray]):
+    def update_image(self, frame_payload: FramePayload):
 
-        for camera_id, image in image_dictionary.items():
-            try:
-                self._camera_worker_dictionary[camera_id].update_image(
-                    image_dictionary[camera_id]
-                )
-            except Exception as e:
-                logger.error(f"Error updating camera {camera_id} display: {e}")
+        try:
+            self._camera_worker_dictionary[frame_payload.camera_id].update_image(
+                frame_payload.image
+            )
+        except Exception as e:
+            logger.error(f"Error updating camera {frame_payload.camera_id} display: {e}")
