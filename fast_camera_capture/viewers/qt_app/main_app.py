@@ -1,10 +1,9 @@
-import signal
 import sys
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
-from fast_camera_capture.opencv.viewer.qt_app.main_window import MainWindow
+from fast_camera_capture.viewers.qt_app.main_window import MainWindow
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

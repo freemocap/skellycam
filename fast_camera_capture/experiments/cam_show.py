@@ -1,6 +1,6 @@
 import asyncio
 
-from fast_camera_capture.opencv.viewer.cv_imshow.cv_cam_viewer import CvCamViewer
+from fast_camera_capture.viewers.cv_imshow.cv_cam_viewer import CvCamViewer
 
 
 async def cam_show(cam_id, get_frame):

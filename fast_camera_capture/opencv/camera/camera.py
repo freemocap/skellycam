@@ -3,12 +3,12 @@ import logging
 import multiprocessing
 import time
 import traceback
-from typing import Optional, Union
+from typing import Optional
 
 from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
 from fast_camera_capture.opencv.camera.attributes import Attributes
 from fast_camera_capture.opencv.camera.internal_camera_thread import VideoCaptureThread
-from fast_camera_capture.opencv.viewer.cv_imshow.cv_cam_viewer import CvCamViewer
+from fast_camera_capture.viewers.cv_imshow.cv_cam_viewer import CvCamViewer
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,12 @@
 import logging
 import time
-from typing import Dict, Union
 
-import numpy as np
 from PyQt6.QtCore import QThread
 
-from PyQt6.QtWidgets import QWidget, QGridLayout, QMainWindow, QApplication
+from PyQt6.QtWidgets import QWidget, QGridLayout, QApplication
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
-from fast_camera_capture.qt_multi_camera_viewer.qt_camera_viewer import CameraViewWorker
+from fast_camera_capture.experiments.old.qt_multi_camera_viewer.qt_camera_viewer import CameraViewWorker
 
 logger = logging.getLogger(__name__)
 

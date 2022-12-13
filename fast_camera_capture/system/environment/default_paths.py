@@ -2,12 +2,14 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from fast_camera_capture.system.environment.home_dir import os_independent_home_dir
+
 DEFAULT_VIDEO_FOLDER_NAME = "fast-camera-capture-recordings"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
 
 def default_video_save_path():
-    return Path.home() / DEFAULT_VIDEO_FOLDER_NAME
+    return os_independent_home_dir / DEFAULT_VIDEO_FOLDER_NAME
 
 
 def get_gmt_offset_string():

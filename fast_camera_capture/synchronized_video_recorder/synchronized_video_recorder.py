@@ -16,8 +16,7 @@ from fast_camera_capture.opencv.group.camera_group import CameraGroup
 from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
-from fast_camera_capture.qt_multi_camera_viewer.qt_multi_camera_viewer import QtMultiCameraViewerThread
-from fast_camera_capture.utils.default_paths import (
+from fast_camera_capture.system.environment.default_paths import (
     default_video_save_path,
     default_session_name,
     get_iso6201_time_string,
@@ -65,16 +64,12 @@ class SynchronizedVideoRecorder:
         self._video_recorder_dictionary = {}
         self._qt_multi_camera_viewer_thread = None
 
-    def run(self,
-            viewer: Union[str, callable] = 'opencv'):
+    def run(self):
 
-        if viewer == 'opencv':
-            self._viewer = Cv2Viewer()
         self._camera_group.start()
 
         for camera_id in self._camera_ids_list:
             self._video_recorder_dictionary[camera_id] = VideoRecorder()
-
 
         self._run_frame_loop()
 
@@ -119,7 +114,7 @@ class SynchronizedVideoRecorder:
         )
 
     def _run_frame_loop(self):
-        logger.info(f"Starting frame loop with viewer: {self._viewer}")
+        logger.info(f"Starting frame loop")
         should_continue = True
         while should_continue:
             latest_frame_payloads = self._camera_group.latest_frames()
@@ -130,8 +125,7 @@ class SynchronizedVideoRecorder:
                         cam_id
                     ].append_frame_payload_to_list(frame_payload)
 
-                    # self._show_image(frame_payload, viewer=viewer)
-                    should_continue = self._viewer.show_image(frame_payload)
+                    self._show_image(frame_payload)
 
             frame_count_dictionary = {}
 
@@ -141,10 +135,7 @@ class SynchronizedVideoRecorder:
 
             if cv2.waitKey(1) == 27:
                 logger.info(f"ESC key pressed - shutting down")
-                if viewer == 'opencv':
-                    cv2.destroyAllWindows()
-                elif viewer == 'qt':
-                    self._qt_multi_camera_viewer.close()
+                cv2.destroyAllWindows()
 
                 should_continue = False
         self._camera_group.close()
@@ -188,22 +179,8 @@ class SynchronizedVideoRecorder:
             logger.info(f"Saving session information to {json_path}")
             file.write(json_string)
 
-    def _show_image(self, frame_payload: FramePayload, viewer: str = 'opencv'):
-        if viewer == 'opencv':
-            cv2.imshow(f"Camera {frame_payload.camera_id} - Press ESC to quit", frame_payload.image)
-
-        elif viewer == 'qt':
-
-            if self._qt_multi_camera_viewer_thread is None:
-                self._initialize_qt_multi_camera_viewer_thread()
-
-            self._qt_multi_camera_viewer_thread.update_image(frame_payload)
-
-    def _initialize_qt_multi_camera_viewer_thread(self):
-        logger.info(f"Creating QT viewer app")
-        self._qt_multi_camera_viewer_thread = QtMultiCameraViewerThread(camera_ids=self._camera_ids_list)
-        self._qt_multi_camera_viewer_thread.show()
-        self._qt_multi_camera_viewer_thread.start()
+    def _show_image(self, frame_payload: FramePayload):
+        cv2.imshow(f"Camera {frame_payload.camera_id} - Press ESC to quit", frame_payload.image)
 
 
 if __name__ == "__main__":
