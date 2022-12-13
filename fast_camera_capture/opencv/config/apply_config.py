@@ -3,7 +3,7 @@ import traceback
 
 import cv2
 
-from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
+from fast_camera_capture.opencv.camera.models.camera_config import CameraConfig
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import time
 import traceback
 from typing import Optional
 
-from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
+from fast_camera_capture.opencv.camera.models.camera_config import CameraConfig
 from fast_camera_capture.opencv.camera.attributes import Attributes
 from fast_camera_capture.opencv.camera.internal_camera_thread import VideoCaptureThread
 from fast_camera_capture.viewers.cv_imshow.cv_cam_viewer import CvCamViewer

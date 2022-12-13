@@ -1,6 +1,6 @@
 import asyncio
 
-from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
+from fast_camera_capture.opencv.camera.models.camera_config import CameraConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.opencv.camera.camera import Camera
 

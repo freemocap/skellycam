@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
-from fast_camera_capture.opencv.camera.models.camera_id import CameraConfig
+from fast_camera_capture.opencv.camera.models.camera_config import CameraConfig
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
 from fast_camera_capture.opencv.config.determine_backend import determine_backend
 
