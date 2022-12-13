@@ -10,7 +10,7 @@ from fast_camera_capture.opencv.camera.types.camera_id import CameraId
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
 
 
-class CamFrameWorker(QThread):
+class CamGroupFrameWorker(QThread):
     ImageUpdate = pyqtSignal(CameraId, QImage)
 
     def __init__(self, cam_ids: List[str]):
@@ -22,14 +22,14 @@ class CamFrameWorker(QThread):
         self._cam_group.start()
         while self._cam_group.is_capturing:
             frame_obj = self._cam_group.latest_frames()
-            for cam_id, frame in frame_obj.items():
+            for camera_id, frame in frame_obj.items():
                 if frame:
                     qimage = self._convert_frame(frame)
-                    self.ImageUpdate.emit(cam_id, qimage)
+                    self.ImageUpdate.emit(camera_id, qimage)
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
-        image = cv2.flip(image, 1)
+        # image = cv2.flip(image, 1)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         converted_frame = QImage(
             image.data,

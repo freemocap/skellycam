@@ -18,24 +18,24 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
         self,
-        cam_ids: List[str],
+        camera_ids_list: List[str],
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
         camera_config_dict: Dict[str, CameraConfig] = None,
     ):
         self._event_dictionary = None
         self._strategy_enum = strategy
-        self._cam_ids = cam_ids
+        self._cam_ids = camera_ids_list
 
         # Make optional, if a list of cams is sent then just use that
-        if not cam_ids:
+        if not camera_ids_list:
             _cams = detect_cameras()
-            cam_ids = _cams.cameras_found_list
-        self._strategy_class = self._resolve_strategy(cam_ids)
+            camera_ids_list = _cams.cameras_found_list
+        self._strategy_class = self._resolve_strategy(camera_ids_list)
 
         if camera_config_dict is None:
             self._camera_config_dict = {}
-            for cam_id in cam_ids:
-                self._camera_config_dict[cam_id] = CameraConfig()
+            for camera_id in camera_ids_list:
+                self._camera_config_dict[camera_id] = CameraConfig(camera_id=camera_id)
         else:
             self._camera_config_dict = camera_config_dict
 

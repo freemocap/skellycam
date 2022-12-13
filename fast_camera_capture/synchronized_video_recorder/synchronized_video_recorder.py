@@ -59,20 +59,24 @@ class SynchronizedVideoRecorder:
             self._camera_config_dict = camera_config_dict
 
         self._camera_group = CameraGroup(
-            cam_ids=self._camera_ids_list, camera_config_dict=self._camera_config_dict
+            camera_ids_list=self._camera_ids_list, camera_config_dict=self._camera_config_dict
         )
 
         self._video_recorder_dictionary = {}
         self._qt_multi_camera_viewer_thread = None
 
     def run(self,
-            viewer: str = 'opencv'):
+            viewer: Union[str, callable] = 'opencv'):
+
+        if viewer == 'opencv':
+            self._viewer = Cv2Viewer()
         self._camera_group.start()
 
         for camera_id in self._camera_ids_list:
             self._video_recorder_dictionary[camera_id] = VideoRecorder()
 
-        self._run_frame_loop(viewer=viewer)
+
+        self._run_frame_loop()
 
         # save videos
         self._synchronized_frame_list_dictionary = save_synchronized_videos(
@@ -114,8 +118,8 @@ class SynchronizedVideoRecorder:
             open_image_after_saving=True,
         )
 
-    def _run_frame_loop(self, viewer: str = 'opencv'):
-        logger.info(f"Starting frame loop with viewer: {viewer}")
+    def _run_frame_loop(self):
+        logger.info(f"Starting frame loop with viewer: {self._viewer}")
         should_continue = True
         while should_continue:
             latest_frame_payloads = self._camera_group.latest_frames()
@@ -126,7 +130,8 @@ class SynchronizedVideoRecorder:
                         cam_id
                     ].append_frame_payload_to_list(frame_payload)
 
-                    self._show_image(frame_payload, viewer=viewer)
+                    # self._show_image(frame_payload, viewer=viewer)
+                    should_continue = self._viewer.show_image(frame_payload)
 
             frame_count_dictionary = {}
 
@@ -191,7 +196,6 @@ class SynchronizedVideoRecorder:
 
             if self._qt_multi_camera_viewer_thread is None:
                 self._initialize_qt_multi_camera_viewer_thread()
-
 
             self._qt_multi_camera_viewer_thread.update_image(frame_payload)
 
