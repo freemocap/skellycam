@@ -5,7 +5,6 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
-from fast_camera_capture.opencv.group.camera_group import CameraGroup
 from fast_camera_capture.viewers.qt_app.workers.cam.camworker import (
     CamGroupFrameWorker,
 )
@@ -75,7 +74,7 @@ if __name__ == "__main__":
     timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
 
     main_window = QMainWindow()
-    qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget(parent=main_window)
+    qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget()
     main_window.setCentralWidget(qt_multi_camera_viewer_widget)
     main_window.show()
     error_code = app.exec()

@@ -111,6 +111,7 @@ def save_synchronized_videos(
 
     test_frame_synchronization(synchronized_frame_list_dictionary)
 
+    Path(folder_to_save_videos).mkdir(parents=True, exist_ok=True)
     for camera_id, frame_list in synchronized_frame_list_dictionary.items():
         logger.info(
             f" Saving camera {camera_id} video with {len(frame_list)} frames..."
