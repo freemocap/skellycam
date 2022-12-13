@@ -9,7 +9,7 @@ SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in 
 
 
 def default_video_save_path():
-    return os_independent_home_dir / DEFAULT_VIDEO_FOLDER_NAME
+    return Path(os_independent_home_dir()) / DEFAULT_VIDEO_FOLDER_NAME
 
 
 def get_gmt_offset_string():
