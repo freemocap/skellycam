@@ -47,3 +47,6 @@ class MainWindow(QMainWindow):
                 row_count += 1
 
         return video_label_dict
+
+    def closeEvent(self, event):
+        self._cam_group_frame_worker.close()

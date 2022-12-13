@@ -13,8 +13,8 @@ from fast_camera_capture.opencv.group.camera_group import CameraGroup
 class CamGroupFrameWorker(QThread):
     ImageUpdate = pyqtSignal(CameraId, QImage)
 
-    def __init__(self, cam_ids: List[str]):
-        super().__init__()
+    def __init__(self, cam_ids: List[str], parent=None):
+        super().__init__(parent=parent)
         self._cam_ids = cam_ids
         self._cam_group = CameraGroup(cam_ids)
 
@@ -27,6 +27,7 @@ class CamGroupFrameWorker(QThread):
                     qimage = self._convert_frame(frame)
                     self.ImageUpdate.emit(camera_id, qimage)
 
+
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
         # image = cv2.flip(image, 1)
@@ -38,3 +39,6 @@ class CamGroupFrameWorker(QThread):
             QImage.Format.Format_RGB888,
         )
         return converted_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio)
+
+    def close(self):
+        self._cam_group.close()
