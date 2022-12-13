@@ -24,7 +24,7 @@ class CameraGroup:
     ):
         self._event_dictionary = None
         self._strategy_enum = strategy
-        self._cam_ids = camera_ids_list
+        self._camera_ids = camera_ids_list
 
         # Make optional, if a list of cams is sent then just use that
         if not camera_ids_list:
@@ -47,6 +47,11 @@ class CameraGroup:
     def exit_event(self):
         return self._exit_event
 
+    @property
+    def camera_ids(self):
+        return self._camera_ids
+
+
     def start(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
@@ -63,13 +68,13 @@ class CameraGroup:
         self._wait_for_cameras_to_start()
 
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
-        logger.info(f"Waiting for cameras {self._cam_ids} to start")
+        logger.info(f"Waiting for cameras {self._camera_ids} to start")
         all_cameras_started = False
         while not all_cameras_started:
             time.sleep(0.5)
-            camera_started_dictionary = dict.fromkeys(self._cam_ids, False)
+            camera_started_dictionary = dict.fromkeys(self._camera_ids, False)
 
-            for camera_id in self._cam_ids:
+            for camera_id in self._camera_ids:
                 camera_started_dictionary[camera_id] = self.check_if_camera_is_ready(
                     camera_id
                 )
@@ -82,7 +87,7 @@ class CameraGroup:
 
             all_cameras_started = all(list(camera_started_dictionary.values()))
 
-        logger.info(f"All cameras {self._cam_ids} started!")
+        logger.info(f"All cameras {self._camera_ids} started!")
         self._start_event.set()  # start frame capture on all cameras
 
     def check_if_camera_is_ready(self, cam_id: str):
