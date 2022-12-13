@@ -31,7 +31,7 @@ def create_diagnostic_plots(video_recorder_dictionary: Dict[str, VideoRecorder],
     pprint(timestamp_diagnostics.dict())
 
 
-    raw_frame_list_dictionary = {camera_id: video_recorder.frame_payload_list.copy() for camera_id, video_recorder in video_recorder_dictionary}
+    raw_frame_list_dictionary = {camera_id: video_recorder.frame_payload_list.copy() for camera_id, video_recorder in video_recorder_dictionary.items()}
     create_timestamp_diagnostic_plots(
         raw_frame_list_dictionary=raw_frame_list_dictionary,
         synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
