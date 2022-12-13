@@ -54,7 +54,8 @@ class CamGroupFrameWorker(QThread):
                 self._video_save_folder_path = Path(default_video_save_path()) /default_session_name()
 
             save_synchronized_videos(dictionary_of_video_recorders=self._video_recorder_dictionary,
-                                     folder_to_save_videos=self._video_save_folder_path)
+                                     folder_to_save_videos=self._video_save_folder_path,
+                                     create_diagnostic_plots_bool=True, )
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
