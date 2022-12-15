@@ -14,28 +14,30 @@ from fast_camera_capture.opencv.camera.types.camera_id import CameraId
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
 from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
+from fast_camera_capture.system.environment.default_paths import default_video_save_path, default_session_name
+from fast_camera_capture.viewers.qt_app.workers.save_videos_worker import SaveVideosWorker
 
 logger = logging.getLogger(__name__)
 
 
 class CamGroupFrameWorker(QThread):
     ImageUpdate = pyqtSignal(CameraId, QImage)
-    cameras_connected_signal = pyqtSignal()
-    save_videos_signal = pyqtSignal(dict, str, bool)
+
 
     def __init__(self,
                  camera_ids: Union[List[str], None],
                  session_folder_path: Union[str, Path] = None,
                  parent=None):
 
+        self._recording_id = None
         self._video_save_process = None
         logger.info(f"Initializing camera group frame worker with camera ids: {camera_ids}")
         super().__init__(parent=parent)
 
-        try:
+        if session_folder_path is None:
+            self._session_folder_path = Path(default_video_save_path()) / default_session_name()
+        else:
             self._session_folder_path = Path(session_folder_path)
-        except TypeError:
-            self._session_folder_path = None
 
         self._should_pause_bool = False
         self._should_record_frames_bool = True
@@ -82,25 +84,25 @@ class CamGroupFrameWorker(QThread):
     def run(self):
         logger.info("Starting camera group frame worker")
         self._camera_group.start()
-        self._recording_id = self._generate_recording_id()
         should_continue = True
-        self.cameras_connected_signal.emit()
+        logger.info("Emitting `cameras_connected_signal`")
         while self._camera_group.is_capturing and should_continue:
+            if self._should_pause_bool:
+                continue
 
             frame_obj = self._camera_group.latest_frames()
             for camera_id, frame in frame_obj.items():
                 if frame:
 
-                    if self._should_pause_bool:
-                        continue
+
 
                     if self._should_record_frames_bool:
                         self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame)
 
-                    print(f"frame number: {self._video_recorder_dictionary[camera_id].number_of_frames}")
-
                     qimage = self._convert_frame(frame)
                     self.ImageUpdate.emit(camera_id, qimage)
+
+            print(f"camera:frame_count - {self._get_frame_count_dict()}")
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
@@ -116,7 +118,10 @@ class CamGroupFrameWorker(QThread):
 
     def close(self):
         logger.info("Closing camera group")
-        self._camera_group.close()
+        try:
+            self._camera_group.close()
+        except AttributeError:
+            pass
 
     def pause(self):
         logger.info("Pausing image display")
@@ -128,15 +133,15 @@ class CamGroupFrameWorker(QThread):
 
     def start_recording(self):
         logger.info("Starting recording")
+        self._recording_id = self._generate_recording_id()
         self._should_record_frames_bool = True
 
     def stop_recording(self):
         logger.info("Stopping recording")
         self._should_record_frames_bool = False
 
-        recording_folder_path_string = str(Path(self._session_folder_path / self._recording_id))
-        logger.info(f"Emitting save_videos_signal with recording_folder_path_string: {recording_folder_path_string}")
-        self.save_videos_signal.emit(self._video_recorder_dictionary, recording_folder_path_string, True)
+        self._launch_save_video_process()
+        # self._launch_save_video_thread()
 
     def _launch_save_video_process(self):
         logger.info("Launching save video process")
@@ -158,3 +163,16 @@ class CamGroupFrameWorker(QThread):
 
     def _generate_recording_id(self) -> str:
         return time.strftime("%H_%M_%S_recording")
+
+    def _get_frame_count_dict(self):
+        return {camera_id: recorder.number_of_frames for camera_id, recorder in self._video_recorder_dictionary.items()}
+
+    def _launch_save_video_thread(self):
+        recording_folder_path_string = str(Path(self._session_folder_path / self._recording_id))
+        logger.info(f"Emitting save_videos_signal with recording_folder_path_string: {recording_folder_path_string}")
+        self._save_videos_worker = SaveVideosWorker(video_recorder_dictionary=self._video_recorder_dictionary,
+                                                    save_video_path=recording_folder_path_string)
+        self._save_videos_worker.start()
+
+
+

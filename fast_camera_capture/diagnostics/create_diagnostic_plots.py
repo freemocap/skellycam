@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from pprint import pprint
 from typing import Dict, Union
@@ -8,6 +9,7 @@ from fast_camera_capture.diagnostics.plot_first_and_last_frames import plot_firs
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 
 
+logger = logging.getLogger(__name__)
 
 
 
@@ -17,6 +19,7 @@ def create_diagnostic_plots(video_recorder_dictionary: Dict[str, VideoRecorder],
                             shared_zero_time: Union[int, float] = 0,
                             show_plots_bool: bool = True,
                             ):
+    logger.info("Creating diagnostic plots...")
     # get timestamp diagnostics
     timestamps_dictionary = {}
     for cam_id, video_recorder in video_recorder_dictionary.items():

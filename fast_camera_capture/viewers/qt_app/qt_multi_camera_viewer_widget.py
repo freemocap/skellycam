@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout, QPushButt
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
-from fast_camera_capture.viewers.qt_app.workers.cam.camworker import (
+from fast_camera_capture.viewers.qt_app.workers.camera_group_frame_worker import (
     CamGroupFrameWorker,
 )
 
@@ -15,11 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class QtMultiCameraViewerWidget(QWidget):
-    cameras_connected_signal = pyqtSignal()
+
 
     def __init__(self,
                  camera_ids: List[Union[str, int]] = None,
                  parent=None):
+
+        self._video_label_dict = None
         logger.info(f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}")
         super().__init__(parent=parent)
 
@@ -28,13 +30,9 @@ class QtMultiCameraViewerWidget(QWidget):
 
         self._camera_ids = camera_ids
         self._cam_group_frame_worker = CamGroupFrameWorker(self._camera_ids)
-        self._cam_group_frame_worker.cameras_connected_signal.connect(self.cameras_connected_signal.emit)
-        self._cam_group_frame_worker.save_videos_signal.connect(save_synchronized_videos)
         if self._camera_ids is None:
-            self._detect_available_cameras_push_button = QPushButton("Detect Available Cameras")
+            self._detect_available_cameras_push_button = self._create_detect_cameras_button()
             self._layout.addWidget(self._detect_available_cameras_push_button)
-            self._detect_available_cameras_push_button.clicked.connect(self.connect_to_cameras)
-            self._detect_available_cameras_push_button.hasFocus()
         else:
             self.connect_to_cameras()
 
@@ -42,8 +40,9 @@ class QtMultiCameraViewerWidget(QWidget):
     def controller_slot_dictionary(self):
         return self._cam_group_frame_worker.slot_dictionary
 
+
     def _handle_image_update(self, camera_id, image):
-        self._video_label_dict[camera_id].setPixmap(QPixmap.fromImage(image))
+        self._video_label_dict[camera_id]["image_label"].setPixmap(QPixmap.fromImage(image))
 
     def _create_camera_view_grid_layout(self) -> dict:
         self._camera_view_grid_layout = QGridLayout()
@@ -55,9 +54,16 @@ class QtMultiCameraViewerWidget(QWidget):
 
         for camera_id in self._camera_ids:
 
-            video_label_dict[camera_id] = QLabel(f"Camera {camera_id}")
 
-            self._camera_view_grid_layout.addWidget(video_label_dict[camera_id], row_count, column_count)
+            video_label_dict[camera_id] = {}
+            video_label_dict[camera_id]["title_label"] = QLabel(f"Camera {camera_id} ")
+            video_label_dict[camera_id]["image_label"] = QLabel(f"connecting... ")
+            camera_layout = QVBoxLayout()
+            camera_layout.addWidget(video_label_dict[camera_id]["title_label"])
+            camera_layout.addWidget(video_label_dict[camera_id]["image_label"])
+
+            self._camera_view_grid_layout.addLayout(camera_layout, row_count, column_count)
+
 
             # This section is for formatting the videos in the grid nicely - it fills out two columns and then moves on to the next row
             column_count += 1
@@ -69,6 +75,7 @@ class QtMultiCameraViewerWidget(QWidget):
 
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")
+        self._detect_available_cameras_push_button.setText("Detecting Cameras...")
         self._detect_available_cameras_push_button.hide()
         if self._camera_ids is None:
             logger.info("No camera ids provided - detecting available cameras")
@@ -86,12 +93,18 @@ class QtMultiCameraViewerWidget(QWidget):
     def pause(self):
         self._cam_group_frame_worker.pause()
 
-
-
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")
         self._cam_group_frame_worker.close()
         self.close()
+
+    def _create_detect_cameras_button(self):
+        detect_available_cameras_push_button = QPushButton("Detect Available Cameras")
+        detect_available_cameras_push_button.clicked.connect(self.connect_to_cameras)
+        detect_available_cameras_push_button.hasFocus()
+        return detect_available_cameras_push_button
+
+
 
 
 if __name__ == "__main__":

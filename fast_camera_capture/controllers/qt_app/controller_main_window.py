@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout
 
-from fast_camera_capture.controllers.qt_app.qt_multi_camera_controller_widget import QtMultiCameraControllerWidget
+from fast_camera_capture.controllers.qt_app.qt_camera_controller_widget import QtCameraControllerWidget
 from fast_camera_capture.viewers.qt_app.qt_multi_camera_viewer_widget import QtMultiCameraViewerWidget
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class ControllerMainWindow(QMainWindow):
         self._qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget(parent=self)
         self._camera_view_layout.addWidget(self._qt_multi_camera_viewer_widget)
 
-        self._qt_multi_camera_controller_widget = QtMultiCameraControllerWidget(
+        self._qt_multi_camera_controller_widget = QtCameraControllerWidget(
             qt_multi_camera_viewer_widget=self._qt_multi_camera_viewer_widget,
             parent=self)
 

@@ -2,7 +2,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QMainWindow, QWidget, QGridLayout, QVBoxLayout
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
-from fast_camera_capture.viewers.qt_app.workers.cam.camworker import (
+from fast_camera_capture.viewers.qt_app.workers.camera_group_frame_worker import (
     CamGroupFrameWorker,
 )
 

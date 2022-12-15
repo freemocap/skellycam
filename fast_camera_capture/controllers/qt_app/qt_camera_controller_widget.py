@@ -8,7 +8,7 @@ from fast_camera_capture.viewers.qt_app.qt_multi_camera_viewer_widget import QtM
 logger = logging.getLogger(__name__)
 
 
-class QtMultiCameraControllerWidget(QWidget):
+class QtCameraControllerWidget(QWidget):
     def __init__(self,
                  qt_multi_camera_viewer_widget: QtMultiCameraViewerWidget,
                  parent=None):
@@ -24,7 +24,6 @@ class QtMultiCameraControllerWidget(QWidget):
 
         self._qt_multi_camera_viewer_widget = qt_multi_camera_viewer_widget
         self._slot_dictionary = self._qt_multi_camera_viewer_widget.controller_slot_dictionary
-        self._qt_multi_camera_viewer_widget.cameras_connected_signal.connect(lambda: self._button_dictionary["pause"].setEnabled(True))
         if self._slot_dictionary is not None:
             self.connect_buttons_to_slots(button_dictionary=self._button_dictionary,
                                           slot_dictionary=self._slot_dictionary)
@@ -45,28 +44,24 @@ class QtMultiCameraControllerWidget(QWidget):
         button_dictionary["play"] = play_push_button
 
         pause_push_button = QPushButton("Pause")
-        pause_push_button.setEnabled(False)
+        pause_push_button.setEnabled(True)
         pause_push_button.clicked.connect(self._pause_push_button_clicked)
         button_layout.addWidget(pause_push_button)
         button_dictionary["pause"] = pause_push_button
 
         start_recording_push_button = QPushButton("Start Recording")
-        start_recording_push_button.setEnabled(False)
-        start_recording_push_button.hide()
+        start_recording_push_button.setEnabled(True)
         start_recording_push_button.clicked.connect(self._start_recording_push_button_clicked)
         button_layout.addWidget(start_recording_push_button)
         button_dictionary["start_recording"] = start_recording_push_button
 
         stop_recording_push_button = QPushButton("Stop Recording")
         stop_recording_push_button.setEnabled(False)
-        stop_recording_push_button.hide()
         stop_recording_push_button.clicked.connect(self._stop_recording_push_button_clicked)
         button_layout.addWidget(stop_recording_push_button)
         button_dictionary["stop_recording"] = stop_recording_push_button
 
         return button_layout, button_dictionary
-
-
 
     def _play_push_button_clicked(self):
         logger.debug("Play button clicked")
@@ -87,13 +82,13 @@ class QtMultiCameraControllerWidget(QWidget):
         self._button_dictionary["play"].setEnabled(False)
         self._button_dictionary["pause"].setEnabled(False)
         self._button_dictionary["start_recording"].setEnabled(False)
-        self._button_dictionary["stop_recording"].setEnabled(False)
+        self._button_dictionary["stop_recording"].setEnabled(True)
 
     def _stop_recording_push_button_clicked(self):
         logger.debug("Stop Recording button clicked")
         self._button_dictionary["play"].setEnabled(False)
         self._button_dictionary["pause"].setEnabled(True)
-        self._button_dictionary["start_recording"].setEnabled(False)
+        self._button_dictionary["start_recording"].setEnabled(True)
         self._button_dictionary["stop_recording"].setEnabled(False)
 
     def connect_buttons_to_slots(self,
@@ -106,18 +101,6 @@ class QtMultiCameraControllerWidget(QWidget):
             else:
                 logger.warning(f"No slot found for button: {button_name} in slot dictionary: {self._slot_dictionary}")
 
-
-if __name__ == "__main__":
-    from PyQt6.QtWidgets import QApplication, QMainWindow
-    import sys
-
-    app = QApplication(sys.argv)
-    main_window = QMainWindow()
-
-    qt_multi_camera_controller_widget = QtMultiCameraControllerWidget()
-    main_window.setCentralWidget(qt_multi_camera_controller_widget)
-    main_window.show()
-    error_code = app.exec()
-    qt_multi_camera_controller_widget.close()
-
-    sys.exit()
+    def _handle_cameras_connected(self):
+        self._button_dictionary["pause"].setEnabled(True)
+        self._button_dictionary["start_recording"].setEnabled(True)
