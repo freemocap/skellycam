@@ -3,7 +3,7 @@ import time
 from copy import deepcopy
 from multiprocessing import Process
 from pathlib import Path
-from typing import List, Union, Dict
+from typing import List, Union
 
 import cv2
 from PyQt6.QtCore import QThread, Qt, pyqtSignal
@@ -15,7 +15,7 @@ from fast_camera_capture.opencv.group.camera_group import CameraGroup
 from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 from fast_camera_capture.system.environment.default_paths import default_video_save_path, default_session_name
-from fast_camera_capture.viewers.qt_app.workers.save_videos_worker import SaveVideosWorker
+from fast_camera_capture.qt_gui.workers.save_videos_worker import SaveVideosWorker
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ class CamGroupFrameWorker(QThread):
             image.shape[0],
             QImage.Format.Format_RGB888,
         )
-        return converted_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio)
+        return converted_frame.scaled(426, 240, Qt.AspectRatioMode.KeepAspectRatio)
 
     def close(self):
         logger.info("Closing camera group")

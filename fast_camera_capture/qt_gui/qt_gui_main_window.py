@@ -3,12 +3,12 @@ import multiprocessing
 
 from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout
 
-from fast_camera_capture.controllers.qt_app.qt_camera_controller_widget import QtCameraControllerWidget
-from fast_camera_capture.viewers.qt_app.qt_multi_camera_viewer_widget import QtMultiCameraViewerWidget
+from fast_camera_capture.viewers.qt.qt_camera_controller_widget import QtCameraControllerWidget
+from fast_camera_capture.viewers.qt.qt_multi_camera_viewer_widget import QtMultiCameraViewerWidget
 
 logger = logging.getLogger(__name__)
 
-class ControllerMainWindow(QMainWindow):
+class QtGUIMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     import sys
 
     app = QApplication(sys.argv)
-    main_window = ControllerMainWindow()
+    main_window = QtGUIMainWindow()
     main_window.show()
     app.exec()
     for process in multiprocessing.active_children():

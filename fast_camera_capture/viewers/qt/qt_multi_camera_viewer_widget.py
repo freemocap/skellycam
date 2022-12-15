@@ -6,8 +6,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout, QPushButton
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
-from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
-from fast_camera_capture.viewers.qt_app.workers.camera_group_frame_worker import (
+from fast_camera_capture.qt_gui.workers.camera_group_frame_worker import (
     CamGroupFrameWorker,
 )
 
@@ -68,7 +67,7 @@ class QtMultiCameraViewerWidget(QWidget):
 
             # This section is for formatting the videos in the grid nicely - it fills out two columns and then moves on to the next row
             column_count += 1
-            if column_count % 2 == 0:
+            if column_count % 3 == 0:
                 column_count = 0
                 row_count += 1
 
