@@ -7,7 +7,7 @@ from fast_camera_capture.viewers.qt_app.workers.cam.camworker import (
 )
 
 
-class MainWindow(QMainWindow):
+class ViewerMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 

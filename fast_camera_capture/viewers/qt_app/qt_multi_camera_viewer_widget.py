@@ -1,10 +1,12 @@
 import logging
 from typing import Union, List
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout
+from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout, QPushButton
 
 from fast_camera_capture.detection.detect_cameras import detect_cameras
+from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from fast_camera_capture.viewers.qt_app.workers.cam.camworker import (
     CamGroupFrameWorker,
 )
@@ -13,22 +15,32 @@ logger = logging.getLogger(__name__)
 
 
 class QtMultiCameraViewerWidget(QWidget):
+    cameras_connected_signal = pyqtSignal()
+
     def __init__(self,
                  camera_ids: List[Union[str, int]] = None,
                  parent=None):
+        logger.info(f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}")
         super().__init__(parent=parent)
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
-        if camera_ids is None:
-            camera_ids = detect_cameras().cameras_found_list
+
         self._camera_ids = camera_ids
-
         self._cam_group_frame_worker = CamGroupFrameWorker(self._camera_ids)
-        self._cam_group_frame_worker.start()
-        self._cam_group_frame_worker.ImageUpdate.connect(self._handle_image_update)
+        self._cam_group_frame_worker.cameras_connected_signal.connect(self.cameras_connected_signal.emit)
+        self._cam_group_frame_worker.save_videos_signal.connect(save_synchronized_videos)
+        if self._camera_ids is None:
+            self._detect_available_cameras_push_button = QPushButton("Detect Available Cameras")
+            self._layout.addWidget(self._detect_available_cameras_push_button)
+            self._detect_available_cameras_push_button.clicked.connect(self.connect_to_cameras)
+            self._detect_available_cameras_push_button.hasFocus()
+        else:
+            self.connect_to_cameras()
 
-        self._video_label_dict = self._create_camera_view_grid_layout()
+    @property
+    def controller_slot_dictionary(self):
+        return self._cam_group_frame_worker.slot_dictionary
 
     def _handle_image_update(self, camera_id, image):
         self._video_label_dict[camera_id].setPixmap(QPixmap.fromImage(image))
@@ -55,6 +67,27 @@ class QtMultiCameraViewerWidget(QWidget):
 
         return video_label_dict
 
+    def connect_to_cameras(self):
+        logger.info("Connecting to cameras")
+        self._detect_available_cameras_push_button.hide()
+        if self._camera_ids is None:
+            logger.info("No camera ids provided - detecting available cameras")
+            self._camera_ids = detect_cameras().cameras_found_list
+            self._cam_group_frame_worker.camera_ids = self._camera_ids
+
+        self._cam_group_frame_worker.start()
+        self._cam_group_frame_worker.ImageUpdate.connect(self._handle_image_update)
+
+        self._video_label_dict = self._create_camera_view_grid_layout()
+
+    def disconnect_from_cameras(self):
+        self._cam_group_frame_worker.close()
+
+    def pause(self):
+        self._cam_group_frame_worker.pause()
+
+
+
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")
         self._cam_group_frame_worker.close()
@@ -63,16 +96,9 @@ class QtMultiCameraViewerWidget(QWidget):
 
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication, QMainWindow
-    from PyQt6.QtCore import QTimer
-
     import sys
 
     app = QApplication(sys.argv)
-
-    timer = QTimer()
-    timer.start(500)
-    timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
-
     main_window = QMainWindow()
     qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget()
     main_window.setCentralWidget(qt_multi_camera_viewer_widget)
