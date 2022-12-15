@@ -132,7 +132,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         camera_config_to_copy_from = deepcopy(camera_config_dictionary[camera_id_to_copy_from])
 
         for camera_id in camera_config_dictionary.keys():
-            original_camera_config_dictionary = camera_config_dictionary[camera_id]
+            original_camera_config_dictionary = deepcopy(camera_config_dictionary[camera_id])
             camera_config_dictionary[camera_id] = deepcopy(camera_config_to_copy_from)
             camera_config_dictionary[camera_id].camera_id = camera_id
             camera_config_dictionary[camera_id].use_this_camera = original_camera_config_dictionary.use_this_camera
