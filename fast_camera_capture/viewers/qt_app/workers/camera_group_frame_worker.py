@@ -22,17 +22,19 @@ logger = logging.getLogger(__name__)
 
 class CamGroupFrameWorker(QThread):
     ImageUpdate = pyqtSignal(CameraId, QImage)
-
+    cameras_connected_signal = pyqtSignal()
 
     def __init__(self,
                  camera_ids: Union[List[str], None],
                  session_folder_path: Union[str, Path] = None,
                  parent=None):
 
+
         self._recording_id = None
         self._video_save_process = None
         logger.info(f"Initializing camera group frame worker with camera ids: {camera_ids}")
         super().__init__(parent=parent)
+
 
         if session_folder_path is None:
             self._session_folder_path = Path(default_video_save_path()) / default_session_name()
@@ -40,7 +42,7 @@ class CamGroupFrameWorker(QThread):
             self._session_folder_path = Path(session_folder_path)
 
         self._should_pause_bool = False
-        self._should_record_frames_bool = True
+        self._should_record_frames_bool = False
         self._camera_ids = camera_ids
 
         if self._camera_ids is not None:
@@ -85,7 +87,10 @@ class CamGroupFrameWorker(QThread):
         logger.info("Starting camera group frame worker")
         self._camera_group.start()
         should_continue = True
+
         logger.info("Emitting `cameras_connected_signal`")
+        self.cameras_connected_signal.emit()
+
         while self._camera_group.is_capturing and should_continue:
             if self._should_pause_bool:
                 continue
@@ -102,7 +107,7 @@ class CamGroupFrameWorker(QThread):
                     qimage = self._convert_frame(frame)
                     self.ImageUpdate.emit(camera_id, qimage)
 
-            print(f"camera:frame_count - {self._get_frame_count_dict()}")
+            print(f"camera:recorder_frame_count - {self._get_recorder_frame_count_dict()}")
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
@@ -164,7 +169,7 @@ class CamGroupFrameWorker(QThread):
     def _generate_recording_id(self) -> str:
         return time.strftime("%H_%M_%S_recording")
 
-    def _get_frame_count_dict(self):
+    def _get_recorder_frame_count_dict(self):
         return {camera_id: recorder.number_of_frames for camera_id, recorder in self._video_recorder_dictionary.items()}
 
     def _launch_save_video_thread(self):

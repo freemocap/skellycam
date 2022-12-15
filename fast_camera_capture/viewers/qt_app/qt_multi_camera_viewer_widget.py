@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class QtMultiCameraViewerWidget(QWidget):
-
+    cameras_connected_signal = pyqtSignal()
 
     def __init__(self,
                  camera_ids: List[Union[str, int]] = None,
@@ -30,6 +30,7 @@ class QtMultiCameraViewerWidget(QWidget):
 
         self._camera_ids = camera_ids
         self._cam_group_frame_worker = CamGroupFrameWorker(self._camera_ids)
+        self._cam_group_frame_worker.cameras_connected_signal.connect(self.cameras_connected_signal.emit)
         if self._camera_ids is None:
             self._detect_available_cameras_push_button = self._create_detect_cameras_button()
             self._layout.addWidget(self._detect_available_cameras_push_button)

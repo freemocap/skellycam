@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 
 from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout
 
@@ -43,4 +44,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     main_window = ControllerMainWindow()
     main_window.show()
-    sys.exit(app.exec())
+    app.exec()
+    for process in multiprocessing.active_children():
+        logger.info(f"Terminating process: {process}")
+        process.terminate()
+    sys.exit()
