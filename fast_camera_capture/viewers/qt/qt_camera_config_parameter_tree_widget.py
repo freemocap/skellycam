@@ -11,9 +11,34 @@ from fast_camera_capture import CameraConfig
 
 logger = logging.getLogger(__name__)
 
+# parameter_tree_stylesheet_string = """
+#                                     QTreeView {
+#                                         background-color: rgb(146, 152, 154);
+#                                         alternate-background-color: rgb(139, 144, 145);
+#                                         color: rgb(28, 28, 28);
+#                                     }
+#                                     QLabel {
+#                                         color: rgb(28, 123, 28);
+#                                     }
+#                                     QPushbutton {
+#                                         color: rgb(0, 28, 8);
+#                                     }
+#                                     QTreeView::item:has-children {
+#                                         background-color: '#212627';
+#                                         color: rgb(233, 185, 110);
+#                                     }
+#                                     QTreeView::item:selected {
+#                                         background-color: rgb(92, 53, 102);
+#                                     }
+#                                     QTreeView::item:selected:active {
+#                                         background-color: rgb(92, 53, 102);
+#                                     }
+#                                     """
+
 
 class QtCameraConfigParameterTreeWidget(QWidget):
     sending_camera_configs_signal = pyqtSignal(dict)
+
     def __init__(self):
         super().__init__()
         self._camera_parameter_group_dictionary = {}
@@ -28,6 +53,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         self._layout.addWidget(self._apply_settings_to_cameras_button)
 
         self._parameter_tree_widget = ParameterTree(parent=self)
+        # self._parameter_tree_widget.setStyleSheet(parameter_tree_stylesheet_string)
         self._layout.addWidget(self._parameter_tree_widget)
         self._parameter_tree_widget.addParameters(Parameter(name="No cameras connected...", value="", type="str"))
 
@@ -40,7 +66,8 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         self._parameter_tree_widget.clear()
 
         for camera_config in dictionary_of_webcam_configs.values():
-            self._camera_parameter_group_dictionary[camera_config.camera_id] = self._convert_camera_config_to_parameter(camera_config)
+            self._camera_parameter_group_dictionary[camera_config.camera_id] = self._convert_camera_config_to_parameter(
+                camera_config)
             self._parameter_tree_widget.addParameters(self._camera_parameter_group_dictionary[camera_config.camera_id])
 
     def _emit_camera_configs_dict(self):
@@ -68,7 +95,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
                 dict(
                     name="Rotate Image",
                     type="list",
-                    limits=["None", "90_clockwise", "90_counterclockwise", "180"],
+                    limits=["None", "90 Clockwise", "90 Counterclockwise", "180"],
                     value=rotate_video_value,
                 ),
                 dict(
@@ -98,6 +125,10 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         camera_parameter_group.sigTreeStateChanged.connect(
             lambda: self._apply_settings_to_cameras_button.setEnabled(True))
 
+        camera_parameter_group.param("Use this camera?").sigValueChanged.connect(
+            lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
+        )
+
         return camera_parameter_group
 
     def _create_apply_to_all_cameras_action_parameter(self, camera_id) -> Parameter:
@@ -108,7 +139,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         button.sigActivated.connect(lambda: self._apply_settings_to_all_cameras(camera_id))
         return button
 
-    def _extract_dictionary_of_camera_configs(self)->Dict[str, CameraConfig]:
+    def _extract_dictionary_of_camera_configs(self) -> Dict[str, CameraConfig]:
         logger.info("Extracting camera configs from parameter tree")
         camera_config_dictionary = {}
         for camera_id, camera_parameter_group in self._camera_parameter_group_dictionary.items():
@@ -139,11 +170,18 @@ class QtCameraConfigParameterTreeWidget(QWidget):
 
         self.update_camera_config_parameter_tree(camera_config_dictionary)
 
+    def _enable_or_disable_camera_settings(self, camera_config_parameter_group):
+        use_this_camera_checked = camera_config_parameter_group.param("Use this camera?").value()
+        for child_parameter in camera_config_parameter_group.children():
+            if child_parameter.name() != "Use this camera?":
+                print(f"setting {child_parameter.name()} to {use_this_camera_checked}")
+                child_parameter.setOpts(enabled=use_this_camera_checked)
+                child_parameter.setReadonly(use_this_camera_checked)
 
 
 
 def rotate_image_str_to_cv2_code(rotate_str: str):
-    if rotate_str == "90_clockwise":
+    if rotate_str == "90 Clockwise":
         return cv2.ROTATE_90_CLOCKWISE
     elif rotate_str == "90_counterclockwise":
         return cv2.ROTATE_90_COUNTERCLOCKWISE
@@ -157,7 +195,7 @@ def rotate_cv2_code_to_str(rotate_video_value):
     if rotate_video_value is None:
         return None
     elif rotate_video_value == cv2.ROTATE_90_CLOCKWISE:
-        return "90_clockwise"
+        return "90 Clockwise"
     elif rotate_video_value == cv2.ROTATE_90_COUNTERCLOCKWISE:
         return "90_counterclockwise"
     elif rotate_video_value == cv2.ROTATE_180:
