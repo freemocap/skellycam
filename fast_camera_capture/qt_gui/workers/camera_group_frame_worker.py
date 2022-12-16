@@ -31,12 +31,13 @@ class CamGroupFrameWorker(QThread):
     camera_group_created_signal = pyqtSignal(dict)
 
     def __init__(
-        self,
-        camera_ids: Union[List[str], None],
-        session_folder_path: Union[str, Path] = None,
-        parent=None,
+            self,
+            camera_ids: Union[List[str], None],
+            session_folder_path: Union[str, Path] = None,
+            parent=None,
     ):
 
+        self._updating_camera_settings_bool = False
         self._recording_id = None
         self._video_save_process = None
         logger.info(
@@ -46,7 +47,7 @@ class CamGroupFrameWorker(QThread):
 
         if session_folder_path is None:
             self._session_folder_path = (
-                Path(default_video_save_path()) / default_session_name()
+                    Path(default_video_save_path()) / default_session_name()
             )
         else:
             self._session_folder_path = Path(session_folder_path)
@@ -103,6 +104,9 @@ class CamGroupFrameWorker(QThread):
         self.cameras_connected_signal.emit()
 
         while self._camera_group.is_capturing and should_continue:
+            if self._updating_camera_settings_bool:
+                continue
+
             if self._should_pause_bool:
                 continue
 
@@ -159,6 +163,19 @@ class CamGroupFrameWorker(QThread):
         self._launch_save_video_process()
         # self._launch_save_video_thread()
 
+    def update_camera_group_configs(self, camera_config_dictionary:dict):
+        if self._camera_ids is None:
+            self._camera_ids = list(camera_config_dictionary.keys())
+
+        if self._camera_group is None:
+            self._camera_group = self._create_camera_group(camera_ids=self.camera_ids,
+                                                           camera_config_dictionary=camera_config_dictionary)
+            return
+
+        self._updating_camera_settings_bool = True
+        self._updating_camera_settings_bool = not self._update_camera_settings(camera_config_dictionary)
+
+
     def _launch_save_video_process(self):
         logger.info("Launching save video process")
         if self._video_save_process is not None:
@@ -207,8 +224,20 @@ class CamGroupFrameWorker(QThread):
         )
         self._save_videos_worker.start()
 
-    def _create_camera_group(self, camera_ids: List[Union[str, int]]):
-        logger.info(f"Creating `camera_group` for camera_ids: {camera_ids}")
-        camera_group = CameraGroup(camera_ids)
+    def _create_camera_group(self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None):
+        logger.info(
+            f"Creating `camera_group` for camera_ids: {camera_ids}, camera_config_dictionary: {camera_config_dictionary}")
+
+        camera_group = CameraGroup(camera_ids_list=camera_ids,
+                                   camera_config_dictionary=camera_config_dictionary)
         self.camera_group_created_signal.emit(camera_group.camera_config_dictionary)
         return camera_group
+
+    def _update_camera_settings(self, camera_config_dictionary: dict):
+        try:
+            self._camera_group.update_camera_configs(camera_config_dictionary)
+
+        except Exception as e:
+            logger.error(f"Problem updating camera settings: {e}")
+
+        return True

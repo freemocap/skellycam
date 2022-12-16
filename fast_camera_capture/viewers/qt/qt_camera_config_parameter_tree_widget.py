@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class QtCameraConfigParameterTreeWidget(QWidget):
-    sending_camera_configs_signal = pyqtSignal(dict)
+    emitting_camera_configs_signal = pyqtSignal(dict)
 
     def __init__(self):
         super().__init__()
@@ -81,7 +81,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
     def _emit_camera_configs_dict(self):
         camera_configs_dictionary = self._extract_dictionary_of_camera_configs()
         logger.info(f"Emitting camera configs dictionary: {camera_configs_dictionary}")
-        self.sending_camera_configs_signal.emit(camera_configs_dictionary)
+        self.emitting_camera_configs_signal.emit(camera_configs_dictionary)
 
     def _convert_camera_config_to_parameter(
             self, camera_config: CameraConfig

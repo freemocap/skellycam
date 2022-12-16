@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class QtMultiCameraViewerWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
+    incoming_camera_configs_signal = pyqtSignal(dict)
 
     def __init__(self, camera_ids: List[Union[str, int]] = None, parent=None):
 
@@ -135,11 +136,16 @@ class QtMultiCameraViewerWidget(QWidget):
 
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupFrameWorker(self._camera_ids)
+
         cam_group_frame_worker.cameras_connected_signal.connect(
             self.cameras_connected_signal.emit
         )
         cam_group_frame_worker.camera_group_created_signal.connect(
             self.camera_group_created_signal.emit
+        )
+
+        self.incoming_camera_configs_signal.connect(
+            cam_group_frame_worker.update_camera_group_configs
         )
         return cam_group_frame_worker
 

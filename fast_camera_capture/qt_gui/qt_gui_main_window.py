@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 class QtGUIMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self._central_widget = QWidget()
         self.setCentralWidget(self._central_widget)
         self._layout = QHBoxLayout()
@@ -36,9 +35,7 @@ class QtGUIMainWindow(QMainWindow):
         self._qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget(parent=self)
         self._camera_view_layout.addWidget(self._qt_multi_camera_viewer_widget)
 
-        self._qt_multi_camera_viewer_widget.camera_group_created_signal.connect(
-            self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
-        )
+        self._connect_signals_to_slots()
 
         self._qt_multi_camera_controller_widget = QtCameraControllerWidget(
             qt_multi_camera_viewer_widget=self._qt_multi_camera_viewer_widget,
@@ -47,6 +44,15 @@ class QtGUIMainWindow(QMainWindow):
 
         self._camera_view_layout.addWidget(self._qt_multi_camera_controller_widget)
 
+
+    def _connect_signals_to_slots(self):
+        self._qt_multi_camera_viewer_widget.camera_group_created_signal.connect(
+            self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
+        )
+
+        self._qt_camera_config_parameter_tree_widget.emitting_camera_configs_signal.connect(
+            self._qt_multi_camera_viewer_widget.incoming_camera_configs_signal
+        )
     def closeEvent(self, a0) -> None:
         try:
             self._qt_multi_camera_viewer_widget.close()

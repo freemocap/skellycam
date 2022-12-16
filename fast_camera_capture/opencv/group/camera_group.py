@@ -18,32 +18,35 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
         self,
-        camera_ids_list: List[str],
+        camera_ids_list: List[str]=None,
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
-        camera_config_dict: Dict[str, CameraConfig] = None,
+        camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
         logger.info(
-            f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dict}"
+            f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
         )
         self._event_dictionary = None
         self._strategy_enum = strategy
         self._camera_ids = camera_ids_list
 
         # Make optional, if a list of cams is sent then just use that
-        if not camera_ids_list:
-            _cams = detect_cameras()
-            camera_ids_list = _cams.cameras_found_list
+        if camera_ids_list is None:
+            if camera_config_dictionary is not None:
+                camera_ids_list = list(camera_config_dictionary.keys())
+            else:
+                camera_ids_list = detect_cameras().cameras_found_list
+
         self._strategy_class = self._resolve_strategy(camera_ids_list)
 
-        if camera_config_dict is None:
+        if camera_config_dictionary is None:
             logger.info(
                 f"No camera config dict passed in, using default config: {CameraConfig()}"
             )
-            self._camera_config_dict = {}
+            self._camera_config_dictionary = {}
             for camera_id in camera_ids_list:
-                self._camera_config_dict[camera_id] = CameraConfig(camera_id=camera_id)
+                self._camera_config_dictionary[camera_id] = CameraConfig(camera_id=camera_id)
         else:
-            self._camera_config_dict = camera_config_dict
+            self._camera_config_dictionary = camera_config_dictionary
 
     @property
     def is_capturing(self):
@@ -59,7 +62,12 @@ class CameraGroup:
 
     @property
     def camera_config_dictionary(self):
-        return self._camera_config_dict
+        return self._camera_config_dictionary
+
+    def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
+        logger.info(f"Updating camera configs to {camera_config_dictionary}")
+        self._camera_config_dictionary = camera_config_dictionary
+        self._strategy_class.update_camera_configs(camera_config_dictionary)
 
     def start(self):
         """
@@ -72,7 +80,7 @@ class CameraGroup:
         self._event_dictionary = {"start": self._start_event, "exit": self._exit_event}
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
-            camera_config_dict=self._camera_config_dict,
+            camera_config_dict=self._camera_config_dictionary,
         )
 
         self._wait_for_cameras_to_start()
@@ -141,7 +149,7 @@ class CameraGroup:
                 logger.info(f"Process {process.name} died! Restarting now...")
                 process.start_capture(
                     event_dictionary=self._event_dictionary,
-                    camera_config_dict=self._camera_config_dict,
+                    camera_config_dict=self._camera_config_dictionary,
                 )
 
 

@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 from typing import Dict, List
 
@@ -17,7 +18,7 @@ _DEFAULT_CAM_PER_PROCESS = 2
 
 # https://refactoring.guru/design-patterns/strategy
 
-
+logger = logging.getLogger(__name__)
 class GroupedProcessStrategy:
     def __init__(self, cam_ids: List[str]):
         self._processes, self._cam_id_process_map = self._create_processes(cam_ids)
@@ -73,3 +74,6 @@ class GroupedProcessStrategy:
             for cam_id in process.camera_ids:
                 cam_id_to_process[cam_id] = process
         return processes, cam_id_to_process
+
+    def update_camera_configs(self, camera_config_dictionary):
+        logger.info(f"TODO - Updating camera configs: {camera_config_dictionary}")
