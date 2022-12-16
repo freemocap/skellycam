@@ -15,15 +15,18 @@ from fast_camera_capture.opencv.group.strategies.queue_communicator import (
 
 logger = logging.getLogger(__name__)
 
-
+CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
 class CamGroupProcess:
     def __init__(self, cam_ids: List[str]):
         self._cameras_ready_event_dictionary = None
         self._cam_ids = cam_ids
         self._process: Process = None
         self._payload = None
-        communicator = QueueCommunicator(cam_ids)
+        queue_name_list = self._cam_ids.copy()
+        queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
+        communicator = QueueCommunicator(queue_name_list)
         self._queues = communicator.queues
+
 
     @property
     def camera_ids(self):
@@ -108,6 +111,13 @@ class CamGroupProcess:
             # This tight loop ends up 100% the process, so a sleep between framecaptures is
             # necessary. We can get away with this because we don't expect another frame for
             # awhile.
+            if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
+                logger.info("Camera config dict queue has items - updating cameras configs")
+                camera_config_dictionary = queues[CAMERA_CONFIG_DICT_QUEUE_NAME].get()
+
+                for camera_id, camera in cameras_dictionary.items():
+                    camera.update_config(camera_config_dictionary[camera_id])
+
             if start_event.is_set():
                 sleep(0.001)
                 for camera in cameras_dictionary.values():
@@ -130,6 +140,9 @@ class CamGroupProcess:
         queue = self._queues[cam_id]
         if not queue.empty():
             return queue.get(block=True)
+
+    def update_camera_configs(self, camera_config_dictionary):
+        self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME].put(camera_config_dictionary)
 
 
 if __name__ == "__main__":

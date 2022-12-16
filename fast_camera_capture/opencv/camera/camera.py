@@ -86,3 +86,7 @@ class Camera:
         while True:
             if self.new_frame_ready:
                 viewer.recv_img(self.latest_frame)
+
+    def update_config(self, camera_config: CameraConfig):
+        logger.info(f"Updating config for camera_id: {self.cam_id}  -  {camera_config}")
+        self._capture_thread.update_camera_config(camera_config)

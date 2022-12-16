@@ -168,3 +168,7 @@ class VideoCaptureThread(threading.Thread):
                 f"Releasing `opencv_video_capture_object` for Camera: {self._config.camera_id}"
             )
             self._cv2_video_capture.release()
+
+    def update_camera_config(self, new_config: CameraConfig):
+        logger.info(f"Updating Camera: {self._config.camera_id} config to {new_config}")
+        apply_configuration(self._cv2_video_capture, new_config)

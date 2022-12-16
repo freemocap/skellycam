@@ -1,6 +1,7 @@
 import logging
 from typing import Union, List
 
+import numpy as np
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout, QPushButton
@@ -61,6 +62,7 @@ class QtMultiCameraViewerWidget(QWidget):
         self._camera_view_grid_layout = QGridLayout()
         self._layout.addLayout(self._camera_view_grid_layout)
 
+        number_of_columns = np.ceil(np.sqrt(len(camera_ids)))
         video_label_dict = {}
         column_count = 0
         row_count = 0
@@ -80,7 +82,7 @@ class QtMultiCameraViewerWidget(QWidget):
 
             # This section is for formatting the videos in the grid nicely - it fills out two columns and then moves on to the next row
             column_count += 1
-            if column_count % 3 == 0:
+            if column_count % number_of_columns == 0:
                 column_count = 0
                 row_count += 1
 
