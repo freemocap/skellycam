@@ -3,15 +3,17 @@ from typing import Callable, Dict
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 
-from fast_camera_capture.viewers.qt.qt_multi_camera_viewer_widget import QtMultiCameraViewerWidget
+from fast_camera_capture.viewers.qt.qt_multi_camera_viewer_widget import (
+    QtMultiCameraViewerWidget,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class QtCameraControllerWidget(QWidget):
-    def __init__(self,
-                 qt_multi_camera_viewer_widget: QtMultiCameraViewerWidget,
-                 parent=None):
+    def __init__(
+        self, qt_multi_camera_viewer_widget: QtMultiCameraViewerWidget, parent=None
+    ):
         super().__init__(parent=parent)
 
         self._layout = QVBoxLayout()
@@ -23,11 +25,17 @@ class QtCameraControllerWidget(QWidget):
         self._layout.addLayout(self._button_layout)
 
         self._qt_multi_camera_viewer_widget = qt_multi_camera_viewer_widget
-        self._qt_multi_camera_viewer_widget.cameras_connected_signal.connect(self._show_buttons)
-        self._slot_dictionary = self._qt_multi_camera_viewer_widget.controller_slot_dictionary
+        self._qt_multi_camera_viewer_widget.cameras_connected_signal.connect(
+            self._show_buttons
+        )
+        self._slot_dictionary = (
+            self._qt_multi_camera_viewer_widget.controller_slot_dictionary
+        )
         if self._slot_dictionary is not None:
-            self.connect_buttons_to_slots(button_dictionary=self._button_dictionary,
-                                          slot_dictionary=self._slot_dictionary)
+            self.connect_buttons_to_slots(
+                button_dictionary=self._button_dictionary,
+                slot_dictionary=self._slot_dictionary,
+            )
 
     @property
     def button_dictionary(self):
@@ -55,14 +63,18 @@ class QtCameraControllerWidget(QWidget):
         start_recording_push_button = QPushButton("Start Recording")
         start_recording_push_button.setEnabled(True)
         start_recording_push_button.hide()
-        start_recording_push_button.clicked.connect(self._start_recording_push_button_clicked)
+        start_recording_push_button.clicked.connect(
+            self._start_recording_push_button_clicked
+        )
         button_layout.addWidget(start_recording_push_button)
         button_dictionary["start_recording"] = start_recording_push_button
 
         stop_recording_push_button = QPushButton("Stop Recording")
         stop_recording_push_button.setEnabled(False)
         stop_recording_push_button.hide()
-        stop_recording_push_button.clicked.connect(self._stop_recording_push_button_clicked)
+        stop_recording_push_button.clicked.connect(
+            self._stop_recording_push_button_clicked
+        )
         button_layout.addWidget(stop_recording_push_button)
         button_dictionary["stop_recording"] = stop_recording_push_button
 
@@ -100,13 +112,18 @@ class QtCameraControllerWidget(QWidget):
         self._button_dictionary["start_recording"].setEnabled(True)
         self._button_dictionary["stop_recording"].setEnabled(False)
 
-    def connect_buttons_to_slots(self,
-                                 button_dictionary: Dict[str, QPushButton],
-                                 slot_dictionary: Dict[str, Callable]):
+    def connect_buttons_to_slots(
+        self,
+        button_dictionary: Dict[str, QPushButton],
+        slot_dictionary: Dict[str, Callable],
+    ):
         for button_name, button in button_dictionary.items():
             if button_name in self._slot_dictionary:
-                logger.debug(f"Connecting {button}.clicked to {slot_dictionary[button_name]}")
+                logger.debug(
+                    f"Connecting {button}.clicked to {slot_dictionary[button_name]}"
+                )
                 button.clicked.connect(self._slot_dictionary[button_name])
             else:
-                logger.warning(f"No slot found for button: {button_name} in slot dictionary: {self._slot_dictionary}")
-
+                logger.warning(
+                    f"No slot found for button: {button_name} in slot dictionary: {self._slot_dictionary}"
+                )

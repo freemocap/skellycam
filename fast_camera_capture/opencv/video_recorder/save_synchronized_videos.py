@@ -6,7 +6,9 @@ import numpy as np
 import logging
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
-from fast_camera_capture.diagnostics.create_diagnostic_plots import create_diagnostic_plots
+from fast_camera_capture.diagnostics.create_diagnostic_plots import (
+    create_diagnostic_plots,
+)
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
@@ -28,10 +30,10 @@ def test_frame_synchronization(synchronized_frame_list_dictionary):
 
 
 def save_synchronized_videos(
-        dictionary_of_video_recorders: Dict[str, VideoRecorder],
-        folder_to_save_videos: Union[str, Path],
-        create_diagnostic_plots_bool: bool = True,
-        shared_zero_time: Union[int, float] = 0,
+    dictionary_of_video_recorders: Dict[str, VideoRecorder],
+    folder_to_save_videos: Union[str, Path],
+    create_diagnostic_plots_bool: bool = True,
+    shared_zero_time: Union[int, float] = 0,
 ):
     logger.info(f"Saving synchronized videos to folder: {str(folder_to_save_videos)}")
 
@@ -122,15 +124,16 @@ def save_synchronized_videos(
         dictionary_of_video_recorders[camera_id].save_frame_list_to_video_file(
             list_of_frames=frame_list,
             path_to_save_video_file=Path(folder_to_save_videos)
-                                    / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
+            / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
         )
     if create_diagnostic_plots_bool:
-        create_diagnostic_plots(video_recorder_dictionary=dictionary_of_video_recorders,
-                                synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
-                                folder_to_save_plots=folder_to_save_videos,
-                                shared_zero_time=shared_zero_time,
-                                show_plots_bool=True,
-                                )
+        create_diagnostic_plots(
+            video_recorder_dictionary=dictionary_of_video_recorders,
+            synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
+            folder_to_save_plots=folder_to_save_videos,
+            shared_zero_time=shared_zero_time,
+            show_plots_bool=True,
+        )
     return synchronized_frame_list_dictionary
 
 

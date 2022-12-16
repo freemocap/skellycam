@@ -22,7 +22,9 @@ class CameraGroup:
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
         camera_config_dict: Dict[str, CameraConfig] = None,
     ):
-        logger.info(f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dict}")
+        logger.info(
+            f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dict}"
+        )
         self._event_dictionary = None
         self._strategy_enum = strategy
         self._camera_ids = camera_ids_list
@@ -34,7 +36,9 @@ class CameraGroup:
         self._strategy_class = self._resolve_strategy(camera_ids_list)
 
         if camera_config_dict is None:
-            logger.info(f"No camera config dict passed in, using default config: {CameraConfig()}")
+            logger.info(
+                f"No camera config dict passed in, using default config: {CameraConfig()}"
+            )
             self._camera_config_dict = {}
             for camera_id in camera_ids_list:
                 self._camera_config_dict[camera_id] = CameraConfig(camera_id=camera_id)
@@ -53,6 +57,9 @@ class CameraGroup:
     def camera_ids(self):
         return self._camera_ids
 
+    @property
+    def camera_config_dictionary(self):
+        return self._camera_config_dict
 
     def start(self):
         """

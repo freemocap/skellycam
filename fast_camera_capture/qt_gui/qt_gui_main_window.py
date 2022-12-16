@@ -1,12 +1,20 @@
 import logging
 import multiprocessing
 
-from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QMainWindow, QVBoxLayout, QHBoxLayout
 
-from fast_camera_capture.viewers.qt.qt_camera_controller_widget import QtCameraControllerWidget
-from fast_camera_capture.viewers.qt.qt_multi_camera_viewer_widget import QtMultiCameraViewerWidget
+from fast_camera_capture.viewers.qt.qt_camera_config_parameter_tree_widget import (
+    QtCameraConfigParameterTreeWidget,
+)
+from fast_camera_capture.viewers.qt.qt_camera_controller_widget import (
+    QtCameraControllerWidget,
+)
+from fast_camera_capture.viewers.qt.qt_multi_camera_viewer_widget import (
+    QtMultiCameraViewerWidget,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class QtGUIMainWindow(QMainWindow):
     def __init__(self):
@@ -14,8 +22,13 @@ class QtGUIMainWindow(QMainWindow):
 
         self._central_widget = QWidget()
         self.setCentralWidget(self._central_widget)
-        self._layout = QVBoxLayout()
+        self._layout = QHBoxLayout()
         self._central_widget.setLayout(self._layout)
+
+        self._qt_camera_config_parameter_tree_widget = (
+            QtCameraConfigParameterTreeWidget()
+        )
+        self._layout.addWidget(self._qt_camera_config_parameter_tree_widget)
 
         self._camera_view_layout = QVBoxLayout()
         self._layout.addLayout(self._camera_view_layout)
@@ -23,9 +36,14 @@ class QtGUIMainWindow(QMainWindow):
         self._qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget(parent=self)
         self._camera_view_layout.addWidget(self._qt_multi_camera_viewer_widget)
 
+        self._qt_multi_camera_viewer_widget.camera_group_created_signal.connect(
+            self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
+        )
+
         self._qt_multi_camera_controller_widget = QtCameraControllerWidget(
             qt_multi_camera_viewer_widget=self._qt_multi_camera_viewer_widget,
-            parent=self)
+            parent=self,
+        )
 
         self._camera_view_layout.addWidget(self._qt_multi_camera_controller_widget)
 

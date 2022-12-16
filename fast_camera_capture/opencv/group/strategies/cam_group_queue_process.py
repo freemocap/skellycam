@@ -72,7 +72,7 @@ class CamGroupProcess:
 
     @staticmethod
     def _create_cams(camera_config_dict: Dict[str, CameraConfig]) -> Dict[str, Camera]:
-        cam_dict =  {
+        cam_dict = {
             camera_config.camera_id: Camera(camera_config)
             for camera_config in camera_config_dict.values()
         }

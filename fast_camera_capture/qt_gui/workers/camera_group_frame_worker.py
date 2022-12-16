@@ -12,9 +12,14 @@ from PyQt6.QtGui import QImage
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.camera.types.camera_id import CameraId
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
-from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
+    save_synchronized_videos,
+)
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
-from fast_camera_capture.system.environment.default_paths import default_video_save_path, default_session_name
+from fast_camera_capture.system.environment.default_paths import (
+    default_video_save_path,
+    default_session_name,
+)
 from fast_camera_capture.qt_gui.workers.save_videos_worker import SaveVideosWorker
 
 logger = logging.getLogger(__name__)
@@ -23,21 +28,26 @@ logger = logging.getLogger(__name__)
 class CamGroupFrameWorker(QThread):
     ImageUpdate = pyqtSignal(CameraId, QImage)
     cameras_connected_signal = pyqtSignal()
+    camera_group_created_signal = pyqtSignal(dict)
 
-    def __init__(self,
-                 camera_ids: Union[List[str], None],
-                 session_folder_path: Union[str, Path] = None,
-                 parent=None):
-
+    def __init__(
+        self,
+        camera_ids: Union[List[str], None],
+        session_folder_path: Union[str, Path] = None,
+        parent=None,
+    ):
 
         self._recording_id = None
         self._video_save_process = None
-        logger.info(f"Initializing camera group frame worker with camera ids: {camera_ids}")
+        logger.info(
+            f"Initializing camera group frame worker with camera ids: {camera_ids}"
+        )
         super().__init__(parent=parent)
 
-
         if session_folder_path is None:
-            self._session_folder_path = Path(default_video_save_path()) / default_session_name()
+            self._session_folder_path = (
+                Path(default_video_save_path()) / default_session_name()
+            )
         else:
             self._session_folder_path = Path(session_folder_path)
 
@@ -46,8 +56,10 @@ class CamGroupFrameWorker(QThread):
         self._camera_ids = camera_ids
 
         if self._camera_ids is not None:
-            self._camera_group = CameraGroup(camera_ids)
-            self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
+            self._camera_group = self._create_camera_group(self._camera_ids)
+            self._video_recorder_dictionary = (
+                self._initialize_video_recorder_dictionary()
+            )
         else:
             self._camera_group = None
             self._video_recorder_dictionary = None
@@ -66,7 +78,7 @@ class CamGroupFrameWorker(QThread):
                     self._camera_group.close()
                     time.sleep(0.1)
 
-        self._camera_group = CameraGroup(camera_ids)
+        self._camera_group = self._create_camera_group(self._camera_ids)
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     @property
@@ -80,7 +92,6 @@ class CamGroupFrameWorker(QThread):
             "pause": self.pause,
             "start_recording": self.start_recording,
             "stop_recording": self.stop_recording,
-
         }
 
     def run(self):
@@ -99,15 +110,15 @@ class CamGroupFrameWorker(QThread):
             for camera_id, frame in frame_obj.items():
                 if frame:
 
-
-
                     if self._should_record_frames_bool:
-                        self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame)
+                        self._video_recorder_dictionary[
+                            camera_id
+                        ].append_frame_payload_to_list(frame)
 
                     qimage = self._convert_frame(frame)
                     self.ImageUpdate.emit(camera_id, qimage)
 
-            print(f"camera:recorder_frame_count - {self._get_recorder_frame_count_dict()}")
+            # print(f"camera:recorder_frame_count - {self._get_recorder_frame_count_dict()}")
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
@@ -153,13 +164,21 @@ class CamGroupFrameWorker(QThread):
         if self._video_save_process is not None:
             while self._video_save_process.is_alive():
                 time.sleep(0.1)
-                logger.info(f"Waiting for video save process to finish: {self._video_save_process}")
+                logger.info(
+                    f"Waiting for video save process to finish: {self._video_save_process}"
+                )
 
-        recording_folder_path_string = str(Path(self._session_folder_path / self._recording_id))
+        recording_folder_path_string = str(
+            Path(self._session_folder_path / self._recording_id)
+        )
         self._video_save_process = Process(
             name=f"VideoSaveProcess",
             target=save_synchronized_videos,
-            args=(deepcopy(self._video_recorder_dictionary), recording_folder_path_string, True),
+            args=(
+                deepcopy(self._video_recorder_dictionary),
+                recording_folder_path_string,
+                True,
+            ),
         )
         self._video_save_process.start()
 
@@ -170,14 +189,26 @@ class CamGroupFrameWorker(QThread):
         return time.strftime("%H_%M_%S_recording")
 
     def _get_recorder_frame_count_dict(self):
-        return {camera_id: recorder.number_of_frames for camera_id, recorder in self._video_recorder_dictionary.items()}
+        return {
+            camera_id: recorder.number_of_frames
+            for camera_id, recorder in self._video_recorder_dictionary.items()
+        }
 
     def _launch_save_video_thread(self):
-        recording_folder_path_string = str(Path(self._session_folder_path / self._recording_id))
-        logger.info(f"Emitting save_videos_signal with recording_folder_path_string: {recording_folder_path_string}")
-        self._save_videos_worker = SaveVideosWorker(video_recorder_dictionary=self._video_recorder_dictionary,
-                                                    save_video_path=recording_folder_path_string)
+        recording_folder_path_string = str(
+            Path(self._session_folder_path / self._recording_id)
+        )
+        logger.info(
+            f"Emitting save_videos_signal with recording_folder_path_string: {recording_folder_path_string}"
+        )
+        self._save_videos_worker = SaveVideosWorker(
+            video_recorder_dictionary=self._video_recorder_dictionary,
+            save_video_path=recording_folder_path_string,
+        )
         self._save_videos_worker.start()
 
-
-
+    def _create_camera_group(self, camera_ids: List[Union[str, int]]):
+        logger.info(f"Creating `camera_group` for camera_ids: {camera_ids}")
+        camera_group = CameraGroup(camera_ids)
+        self.camera_group_created_signal.emit(camera_group.camera_config_dictionary)
+        return camera_group
