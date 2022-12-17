@@ -1,4 +1,4 @@
-from fast_camera_capture import SynchronizedVideoRecorder
+from fast_camera_capture import MultiCameraVideoRecorder
 
 if __name__ == "__main__":
     """
@@ -9,5 +9,5 @@ if __name__ == "__main__":
     Also creates diagnostic plots to ensure synchronization and a `session_information.json` file
 
     """
-    synchronized_video_recorder = SynchronizedVideoRecorder()
+    synchronized_video_recorder = MultiCameraVideoRecorder()
     synchronized_video_recorder.run()

@@ -3,7 +3,7 @@ import time
 from copy import deepcopy
 from multiprocessing import Process
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Dict
 
 import cv2
 from PyQt6.QtCore import QThread, Qt, pyqtSignal
@@ -17,7 +17,7 @@ from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
 )
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 from fast_camera_capture.system.environment.default_paths import (
-    default_video_save_path,
+    default_base_folder,
     default_session_name,
 )
 from fast_camera_capture.qt_gui.workers.save_videos_worker import SaveVideosWorker
@@ -47,7 +47,7 @@ class CamGroupFrameWorker(QThread):
 
         if session_folder_path is None:
             self._session_folder_path = (
-                    Path(default_video_save_path()) / default_session_name()
+                    Path(default_base_folder()) / default_session_name()
             )
         else:
             self._session_folder_path = Path(session_folder_path)
@@ -165,9 +165,8 @@ class CamGroupFrameWorker(QThread):
         self._should_record_frames_bool = False
 
         self._launch_save_video_process()
-        # self._launch_save_video_thread()
 
-    def update_camera_group_configs(self, camera_config_dictionary:dict):
+    def update_camera_group_configs(self, camera_config_dictionary: dict):
         if self._camera_ids is None:
             self._camera_ids = list(camera_config_dictionary.keys())
 
@@ -178,7 +177,6 @@ class CamGroupFrameWorker(QThread):
 
         self._updating_camera_settings_bool = True
         self._updating_camera_settings_bool = not self._update_camera_settings(camera_config_dictionary)
-
 
     def _launch_save_video_process(self):
         logger.info("Launching save video process")
@@ -195,13 +193,14 @@ class CamGroupFrameWorker(QThread):
         self._video_save_process = Process(
             name=f"VideoSaveProcess",
             target=save_synchronized_videos,
-            args=(
-                deepcopy(self._video_recorder_dictionary),
-                recording_folder_path_string,
-                True,
-            ),
+            args=(deepcopy(self._video_recorder_dictionary),
+                  recording_folder_path_string,
+                  True,
+                  ),
         )
         self._video_save_process.start()
+        del self._video_recorder_dictionary
+        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     def _initialize_video_recorder_dictionary(self):
         return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
@@ -214,19 +213,6 @@ class CamGroupFrameWorker(QThread):
             camera_id: recorder.number_of_frames
             for camera_id, recorder in self._video_recorder_dictionary.items()
         }
-
-    def _launch_save_video_thread(self):
-        recording_folder_path_string = str(
-            Path(self._session_folder_path / self._recording_id)
-        )
-        logger.info(
-            f"Emitting save_videos_signal with recording_folder_path_string: {recording_folder_path_string}"
-        )
-        self._save_videos_worker = SaveVideosWorker(
-            video_recorder_dictionary=self._video_recorder_dictionary,
-            save_video_path=recording_folder_path_string,
-        )
-        self._save_videos_worker.start()
 
     def _create_camera_group(self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None):
         logger.info(

@@ -3,7 +3,7 @@ from typing import Callable, Dict
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 
-from fast_camera_capture.viewers.qt.qt_multi_camera_viewer_widget import (
+from fast_camera_capture.qt_gui.widgets.qt_multi_camera_viewer_widget import (
     QtMultiCameraViewerWidget,
 )
 

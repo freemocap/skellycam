@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Union, List
 
 import cv2
@@ -8,7 +9,6 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout, QPushButton, QHBoxLayout
 
 from fast_camera_capture import CameraConfig
-from fast_camera_capture.qt_gui.qt_utils.clear_layout import clear_layout
 from fast_camera_capture.qt_gui.workers.camera_group_frame_worker import (
     CamGroupFrameWorker,
 )
@@ -22,15 +22,21 @@ class QtMultiCameraViewerWidget(QWidget):
     camera_group_created_signal = pyqtSignal(dict)
     incoming_camera_configs_signal = pyqtSignal(dict)
 
-    def __init__(self, camera_ids: List[Union[str, int]] = None, parent=None):
+    def __init__(self,
+                 camera_ids: List[Union[str, int]] = None,
+                 session_folder_path:Union[str,Path]=None,
+                 parent=None):
 
+        logger.info(
+            f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
+        )
+
+        self._session_folder_path = session_folder_path
         self._camera_view_layout = None
         self._camera_config_dicationary = None
         self._detect_cameras_worker = None
         self._camera_layout_dictionary = None
-        logger.info(
-            f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
-        )
+
         super().__init__(parent=parent)
 
         self._layout = QVBoxLayout()
@@ -167,7 +173,8 @@ class QtMultiCameraViewerWidget(QWidget):
         return detect_available_cameras_push_button
 
     def _create_cam_group_frame_worker(self):
-        cam_group_frame_worker = CamGroupFrameWorker(self._camera_ids)
+        cam_group_frame_worker = CamGroupFrameWorker(camera_ids=self._camera_ids,
+                                                     session_folder_path=self._session_folder_path)
 
         cam_group_frame_worker.cameras_connected_signal.connect(
             self._handle_cameras_connected

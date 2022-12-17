@@ -23,7 +23,7 @@ from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
 
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
 from fast_camera_capture.system.environment.default_paths import (
-    default_video_save_path,
+    default_base_folder,
     default_session_name,
     get_iso6201_time_string,
 )
@@ -31,7 +31,7 @@ from fast_camera_capture.system.environment.default_paths import (
 logger = logging.getLogger(__name__)
 
 
-class SynchronizedVideoRecorder:
+class MultiCameraVideoRecorder:
     def __init__(
         self,
         video_save_folder_path: Union[str, Path] = None,
@@ -44,7 +44,7 @@ class SynchronizedVideoRecorder:
 
         if video_save_folder_path is None:
             self._video_save_folder_path = (
-                default_video_save_path() / self._session_name
+                    default_base_folder() / self._session_name
             )
         else:
             self._video_save_folder_path = Path(video_save_folder_path)
@@ -193,5 +193,5 @@ class SynchronizedVideoRecorder:
 
 
 if __name__ == "__main__":
-    synchronized_video_recorder = SynchronizedVideoRecorder()
+    synchronized_video_recorder = MultiCameraVideoRecorder()
     synchronized_video_recorder.run()
