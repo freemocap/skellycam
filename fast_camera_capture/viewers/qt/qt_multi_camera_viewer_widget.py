@@ -56,7 +56,7 @@ class QtMultiCameraViewerWidget(QWidget):
 
     def _handle_image_update(self, camera_id, image):
         try:
-            self._camera_layout_dictionary[camera_id]["image_label"].setPixmap(
+            self._camera_layout_dictionary[camera_id]["image_label_widget"].setPixmap(
                 QPixmap.fromImage(image)
             )
         except Exception as e:
@@ -80,14 +80,14 @@ class QtMultiCameraViewerWidget(QWidget):
             camera_layout_dictionary[camera_id] = {}
 
             camera_layout = QVBoxLayout()
-            camera_layout_dictionary[camera_id]['camera_layout'] = camera_layout
+            camera_layout_dictionary[camera_id]['layout'] = camera_layout
             camera_layout_dictionary[camera_id]["orientation"] = self._get_landscape_or_portrait(camera_config)
-            camera_layout_dictionary[camera_id]["title_label"] = QLabel(f"Camera {camera_id}")
-            camera_layout_dictionary[camera_id]["image_label"] = QLabel(" \U0001F4F8 ... ")
-            camera_layout_dictionary[camera_id]["title_label"].setAlignment(Qt.AlignmentFlag.AlignCenter)
+            camera_layout_dictionary[camera_id]["title_label_widget"] = QLabel(f"Camera {camera_id}")
+            camera_layout_dictionary[camera_id]["image_label_widget"] = QLabel(" \U0001F4F8 ... ")
+            camera_layout_dictionary[camera_id]["title_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            camera_layout.addWidget(camera_layout_dictionary[camera_id]["title_label"])
-            camera_layout.addWidget(camera_layout_dictionary[camera_id]["image_label"])
+            camera_layout.addWidget(camera_layout_dictionary[camera_id]["title_label_widget"])
+            camera_layout.addWidget(camera_layout_dictionary[camera_id]["image_label_widget"])
 
             self._arrange_camera_layouts(camera_layout_dictionary)
 
@@ -102,7 +102,7 @@ class QtMultiCameraViewerWidget(QWidget):
         portrait_row_count = -1
 
         for camera_id, single_camera_layout_dict in camera_layout_dictionary.items():
-            camera_layout = single_camera_layout_dict['camera_layout']
+            camera_layout = single_camera_layout_dict['layout']
 
             # self._remove_camera_layout_from_grid_layouts(camera_layout,
             #                                              [self._landscape_grid_layout, self._portrait_grid_layout])
@@ -198,6 +198,14 @@ class QtMultiCameraViewerWidget(QWidget):
 
     def _update_camera_configs(self, camera_config_dictionary):
         # self._create_camera_view_grid_layout(camera_config_dictionary=camera_config_dictionary)
+        for camera_id, camera_config in camera_config_dictionary.items():
+            if camera_config.use_this_camera:
+                self._camera_layout_dictionary[camera_id]['title_label_widget'].show()
+                self._camera_layout_dictionary[camera_id]['image_label_widget'].show()
+            else:
+                self._camera_layout_dictionary[camera_id]['title_label_widget'].hide()
+                self._camera_layout_dictionary[camera_id]['image_label_widget'].hide()
+
         self._cam_group_frame_worker.update_camera_group_configs(camera_config_dictionary=camera_config_dictionary)
 
     def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:

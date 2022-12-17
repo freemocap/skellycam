@@ -8,6 +8,9 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from fast_camera_capture import CameraConfig
+from fast_camera_capture.qt_gui.qt_utils.qt_label_strings import USE_THIS_CAMERA_STRING, \
+    ROTATE_90_COUNTERCLOCKWISE_STRING, ROTATE_90_CLOCKWISE_STRING, ROTATE_180_STRING, rotate_cv2_code_to_str, \
+    COPY_SETTINGS_TO_CAMERAS_STRING, rotate_image_str_to_cv2_code, EXPAND_ALL_STRING, COLLAPSE_ALL_STRING
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +94,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
             name="Camera_" + str(camera_config.camera_id),
             type="group",
             children=[
-                dict(name="Use this camera?", type="bool", value=True),
+                dict(name=USE_THIS_CAMERA_STRING, type="bool", value=True),
                 dict(
                     name="Rotate Image",
                     type="list",
@@ -117,7 +120,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
                     type="str",
                     value=camera_config.fourcc,
                 ),
-                self._create_apply_to_all_cameras_action_parameter(
+                self._create_copy_to_all_cameras_action_parameter(
                     camera_id=camera_config.camera_id
                 ),
             ],
@@ -126,15 +129,15 @@ class QtCameraConfigParameterTreeWidget(QWidget):
             lambda: self._apply_settings_to_cameras_button.setEnabled(True)
         )
 
-        camera_parameter_group.param("Use this camera?").sigValueChanged.connect(
+        camera_parameter_group.param(USE_THIS_CAMERA_STRING).sigValueChanged.connect(
             lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
         )
 
         return camera_parameter_group
 
-    def _create_apply_to_all_cameras_action_parameter(self, camera_id) -> Parameter:
+    def _create_copy_to_all_cameras_action_parameter(self, camera_id) -> Parameter:
         button = Parameter.create(
-            name="Apply settings to all cameras",
+            name=COPY_SETTINGS_TO_CAMERAS_STRING,
             type="action",
         )
         button.sigActivated.connect(
@@ -163,7 +166,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
                     camera_parameter_group.param("Rotate Image").value()
                 ),
                 use_this_camera=camera_parameter_group.param(
-                    "Use this camera?"
+                    USE_THIS_CAMERA_STRING
                 ).value(),
             )
         return camera_config_dictionary
@@ -191,55 +194,29 @@ class QtCameraConfigParameterTreeWidget(QWidget):
 
     def _enable_or_disable_camera_settings(self, camera_config_parameter_group):
         use_this_camera_checked = camera_config_parameter_group.param(
-            "Use this camera?"
+            USE_THIS_CAMERA_STRING
         ).value()
         for child_parameter in camera_config_parameter_group.children():
-            if child_parameter.name() != "Use this camera?":
-                print(f"setting {child_parameter.name()} to {use_this_camera_checked}")
+            if child_parameter.name() != USE_THIS_CAMERA_STRING:
                 child_parameter.setOpts(enabled=use_this_camera_checked)
                 child_parameter.setReadonly(use_this_camera_checked)
 
     def _add_expand_collapse_buttons(self):
 
-        expand_all_button_parameter = Parameter.create(name="Expand All", type='action')
+        expand_all_button_parameter = Parameter.create(name=EXPAND_ALL_STRING, type='action')
         expand_all_button_parameter.sigActivated.connect(self._expand_or_collapse_all_action)
         self._parameter_tree_widget.addParameters(expand_all_button_parameter)
 
-        collapse_all_button_parameter = Parameter.create(name="Collapse All", type='action')
+        collapse_all_button_parameter = Parameter.create(name=COLLAPSE_ALL_STRING, type='action')
         collapse_all_button_parameter.sigActivated.connect(self._expand_or_collapse_all_action)
         self._parameter_tree_widget.addParameters(collapse_all_button_parameter)
 
     def _expand_or_collapse_all_action(self, action):
         for camera_parameter in self._camera_parameter_group_dictionary.values():
-            if action.name() == "Expand All":
+            if action.name() == EXPAND_ALL_STRING:
                 camera_parameter.setOpts(expanded=True)
-            elif action.name() == "Collapse All":
+            elif action.name() == COLLAPSE_ALL_STRING:
                 camera_parameter.setOpts(expanded=False)
-
-ROTATE_90_CLOCKWISE_STRING = "90 Clockwise"
-ROTATE_90_COUNTERCLOCKWISE_STRING = "90 Counterclockwise"
-ROTATE_180_STRING = "180"
-
-def rotate_image_str_to_cv2_code(rotate_str: str):
-    if rotate_str == ROTATE_90_CLOCKWISE_STRING:
-        return cv2.ROTATE_90_CLOCKWISE
-    elif rotate_str == ROTATE_90_COUNTERCLOCKWISE_STRING:
-        return cv2.ROTATE_90_COUNTERCLOCKWISE
-    elif rotate_str == ROTATE_180_STRING:
-        return cv2.ROTATE_180
-
-    return None
-
-
-def rotate_cv2_code_to_str(rotate_video_value):
-    if rotate_video_value is None:
-        return None
-    elif rotate_video_value == cv2.ROTATE_90_CLOCKWISE:
-        return ROTATE_90_CLOCKWISE_STRING
-    elif rotate_video_value == cv2.ROTATE_90_COUNTERCLOCKWISE:
-        return ROTATE_90_COUNTERCLOCKWISE_STRING
-    elif rotate_video_value == cv2.ROTATE_180:
-        return ROTATE_180_STRING
 
 
 if __name__ == "__main__":

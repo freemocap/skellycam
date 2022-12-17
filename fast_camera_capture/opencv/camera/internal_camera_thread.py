@@ -158,8 +158,8 @@ class VideoCaptureThread(threading.Thread):
         apply_configuration(capture, self._config)
 
         logger.info(f"Successfully connected to Camera: {self._config.camera_id}!")
-
-        self._ready_event.set()
+        if not self._ready_event.is_set():
+            self._ready_event.set()
 
         return capture
 

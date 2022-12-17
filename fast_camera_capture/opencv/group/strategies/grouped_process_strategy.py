@@ -6,8 +6,7 @@ from fast_camera_capture import CameraConfig
 from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.opencv.camera.types.camera_id import CameraId
 from fast_camera_capture.opencv.group.strategies.cam_group_queue_process import (
-    CamGroupProcess, CAMERA_CONFIG_DICT_QUEUE_NAME,
-)
+    CamGroupProcess, )
 from fast_camera_capture.utils.array_split_by import array_split_by
 
 ### Don't change this? Users should submit the actual value they want
