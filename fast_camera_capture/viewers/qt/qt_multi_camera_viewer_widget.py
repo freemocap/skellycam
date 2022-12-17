@@ -1,12 +1,14 @@
 import logging
 from typing import Union, List
 
+import cv2
 import numpy as np
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout, QPushButton
+from PyQt6.QtWidgets import QLabel, QWidget, QGridLayout, QVBoxLayout, QPushButton, QHBoxLayout
 
-
+from fast_camera_capture import CameraConfig
+from fast_camera_capture.qt_gui.qt_utils.clear_layout import clear_layout
 from fast_camera_capture.qt_gui.workers.camera_group_frame_worker import (
     CamGroupFrameWorker,
 )
@@ -22,9 +24,10 @@ class QtMultiCameraViewerWidget(QWidget):
 
     def __init__(self, camera_ids: List[Union[str, int]] = None, parent=None):
 
+        self._camera_view_layout = None
         self._camera_config_dicationary = None
         self._detect_cameras_worker = None
-        self._video_label_dict = None
+        self._camera_layout_dictionary = None
         logger.info(
             f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
         )
@@ -52,41 +55,74 @@ class QtMultiCameraViewerWidget(QWidget):
         return self._camera_config_dicationary
 
     def _handle_image_update(self, camera_id, image):
-        self._video_label_dict[camera_id]["image_label"].setPixmap(
-            QPixmap.fromImage(image)
-        )
+        try:
+            self._camera_layout_dictionary[camera_id]["image_label"].setPixmap(
+                QPixmap.fromImage(image)
+            )
+        except Exception as e:
+            logger.error(f"Problem in _handle_image_update for Camera {camera_id}: {e}")
 
     def _create_camera_view_grid_layout(
-        self, camera_ids: List[Union[str, int]]
+            self, camera_config_dictionary: dict
     ) -> dict:
-        self._camera_view_grid_layout = QGridLayout()
-        self._layout.addLayout(self._camera_view_grid_layout)
 
-        number_of_columns = np.ceil(np.sqrt(len(camera_ids)))
-        video_label_dict = {}
-        column_count = 0
-        row_count = 0
+        camera_view_layout = QHBoxLayout()
+        self._layout.addLayout(camera_view_layout)
 
-        for camera_id in camera_ids:
+        self._portrait_grid_layout = QGridLayout()
+        camera_view_layout.addLayout(self._portrait_grid_layout)
 
-            video_label_dict[camera_id] = {}
-            video_label_dict[camera_id]["title_label"] = QLabel(f"Camera {camera_id} ")
-            video_label_dict[camera_id]["image_label"] = QLabel(f"connecting... ")
+        self._landscape_grid_layout = QGridLayout()
+        camera_view_layout.addLayout(self._landscape_grid_layout)
+
+        camera_layout_dictionary = {}
+        for camera_id, camera_config in camera_config_dictionary.items():
+            camera_layout_dictionary[camera_id] = {}
+
             camera_layout = QVBoxLayout()
-            camera_layout.addWidget(video_label_dict[camera_id]["title_label"])
-            camera_layout.addWidget(video_label_dict[camera_id]["image_label"])
+            camera_layout_dictionary[camera_id]['camera_layout'] = camera_layout
+            camera_layout_dictionary[camera_id]["orientation"] = self._get_landscape_or_portrait(camera_config)
+            camera_layout_dictionary[camera_id]["title_label"] = QLabel(f"Camera {camera_id}")
+            camera_layout_dictionary[camera_id]["image_label"] = QLabel(" \U0001F4F8 ... ")
+            camera_layout_dictionary[camera_id]["title_label"].setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            self._camera_view_grid_layout.addLayout(
-                camera_layout, row_count, column_count
-            )
+            camera_layout.addWidget(camera_layout_dictionary[camera_id]["title_label"])
+            camera_layout.addWidget(camera_layout_dictionary[camera_id]["image_label"])
 
-            # This section is for formatting the videos in the grid nicely - it fills out two columns and then moves on to the next row
-            column_count += 1
-            if column_count % number_of_columns == 0:
-                column_count = 0
-                row_count += 1
+            self._arrange_camera_layouts(camera_layout_dictionary)
 
-        return video_label_dict
+        return camera_layout_dictionary
+
+    def _arrange_camera_layouts(self, camera_layout_dictionary: dict):
+        primary_grid_count = np.ceil(np.sqrt(len(camera_layout_dictionary)))
+
+        landscape_column_count = -1
+        landscape_row_count = -1
+        portrait_column_count = -1
+        portrait_row_count = -1
+
+        for camera_id, single_camera_layout_dict in camera_layout_dictionary.items():
+            camera_layout = single_camera_layout_dict['camera_layout']
+
+            # self._remove_camera_layout_from_grid_layouts(camera_layout,
+            #                                              [self._landscape_grid_layout, self._portrait_grid_layout])
+
+            if camera_layout_dictionary[camera_id]["orientation"] == "landscape":
+                landscape_column_count += 1
+                if landscape_column_count % primary_grid_count == 0:
+                    landscape_column_count = 0
+                    landscape_row_count += 1
+                self._landscape_grid_layout.addLayout(
+                    camera_layout, landscape_row_count, landscape_column_count
+                )
+            else:
+                portrait_column_count += 1
+                if portrait_row_count % primary_grid_count == 0:
+                    portrait_column_count = 0
+                    portrait_row_count += 1
+                self._portrait_grid_layout.addLayout(
+                    camera_layout, portrait_row_count, portrait_column_count
+                )
 
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")
@@ -105,17 +141,11 @@ class QtMultiCameraViewerWidget(QWidget):
         else:
             self._start_camera_group_frame_worker(self._camera_ids)
 
-    def _handle_detected_cameras(self, camera_ids):
-        logger.info(f"Detected cameras: {camera_ids}")
-        self._camera_ids = camera_ids
-        self._start_camera_group_frame_worker(self._camera_ids)
-
     def _start_camera_group_frame_worker(self, camera_ids):
         logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
-        self._video_label_dict = self._create_camera_view_grid_layout(
-            camera_ids=camera_ids
-        )
         self._cam_group_frame_worker.camera_ids = camera_ids
+        self._camera_layout_dictionary = self._create_camera_view_grid_layout(
+            camera_config_dictionary=self._cam_group_frame_worker.camera_config_dictionary)
         self._cam_group_frame_worker.start()
         self._cam_group_frame_worker.ImageUpdate.connect(self._handle_image_update)
 
@@ -140,16 +170,53 @@ class QtMultiCameraViewerWidget(QWidget):
         cam_group_frame_worker = CamGroupFrameWorker(self._camera_ids)
 
         cam_group_frame_worker.cameras_connected_signal.connect(
-            self.cameras_connected_signal.emit
+            self._handle_cameras_connected
         )
+
         cam_group_frame_worker.camera_group_created_signal.connect(
             self.camera_group_created_signal.emit
         )
 
         self.incoming_camera_configs_signal.connect(
-            cam_group_frame_worker.update_camera_group_configs
+            self._update_camera_configs
         )
         return cam_group_frame_worker
+
+    def _handle_detected_cameras(self, camera_ids):
+        logger.info(f"Detected cameras: {camera_ids}")
+        self._camera_ids = camera_ids
+        self._detect_available_cameras_push_button.setText(f"Connecting to Cameras {camera_ids}...")
+        self._start_camera_group_frame_worker(self._camera_ids)
+
+    def _handle_cameras_connected(self):
+        self.cameras_connected_signal.emit()
+        self._reset_detect_available_cameras_button()
+
+    def _reset_detect_available_cameras_button(self):
+        self._detect_available_cameras_push_button.setText("Detect Available Cameras")
+        self._detect_available_cameras_push_button.setEnabled(True)
+
+    def _update_camera_configs(self, camera_config_dictionary):
+        # self._create_camera_view_grid_layout(camera_config_dictionary=camera_config_dictionary)
+        self._cam_group_frame_worker.update_camera_group_configs(camera_config_dictionary=camera_config_dictionary)
+
+    def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:
+        if camera_config.rotate_video_cv2_code == cv2.ROTATE_90_CLOCKWISE \
+                or camera_config.rotate_video_cv2_code == cv2.ROTATE_90_COUNTERCLOCKWISE:
+            return "portrait"
+
+        return "landscape"
+
+    def _remove_camera_layout_from_grid_layouts(self, camera_layout, grid_layouts):
+        if not isinstance(grid_layouts, list):
+            grid_layouts = [grid_layouts]
+        for grid_layout in grid_layouts:
+            index = grid_layout.indexOf(camera_layout)
+            if index != -1:
+                logger.debug(f"Removing camera layout {camera_layout}from grid layout {grid_layout} at index {index}")
+                grid_layout.takeAt(index)
+            else:
+                logger.debug(f"Camera layout {camera_layout} not found in grid layout {grid_layout}")
 
 
 if __name__ == "__main__":

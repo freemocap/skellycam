@@ -95,6 +95,10 @@ class CamGroupFrameWorker(QThread):
             "stop_recording": self.stop_recording,
         }
 
+    @property
+    def camera_config_dictionary(self):
+        return self._camera_group.camera_config_dictionary
+
     def run(self):
         logger.info("Starting camera group frame worker")
         self._camera_group.start()

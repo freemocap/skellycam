@@ -7,7 +7,6 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
-
 from fast_camera_capture import CameraConfig
 
 logger = logging.getLogger(__name__)
@@ -36,6 +35,7 @@ logger = logging.getLogger(__name__)
 #                                         background-color: rgb(92, 53, 102);
 #                                     }
 #                                     """
+
 
 
 class QtCameraConfigParameterTreeWidget(QWidget):
@@ -86,12 +86,6 @@ class QtCameraConfigParameterTreeWidget(QWidget):
     def _convert_camera_config_to_parameter(
             self, camera_config: CameraConfig
     ) -> Parameter:
-        try:
-            rotate_video_value = rotate_cv2_code_to_str(
-                camera_config.rotate_video_cv2_code
-            )
-        except KeyError:
-            rotate_video_value = "None"
 
         camera_parameter_group = Parameter.create(
             name="Camera_" + str(camera_config.camera_id),
@@ -101,8 +95,11 @@ class QtCameraConfigParameterTreeWidget(QWidget):
                 dict(
                     name="Rotate Image",
                     type="list",
-                    limits=["None", "90 Clockwise", "90 Counterclockwise", "180"],
-                    value=rotate_video_value,
+                    limits=["None",
+                            ROTATE_90_CLOCKWISE_STRING,
+                            ROTATE_90_COUNTERCLOCKWISE_STRING,
+                            ROTATE_180_STRING],
+                    value=rotate_cv2_code_to_str(camera_config.rotate_video_cv2_code),
                 ),
                 dict(name="Exposure", type="int", value=camera_config.exposure),
                 dict(
@@ -212,22 +209,23 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         collapse_all_button_parameter.sigActivated.connect(self._expand_or_collapse_all_action)
         self._parameter_tree_widget.addParameters(collapse_all_button_parameter)
 
-
-    def _expand_or_collapse_all_action(self,action):
+    def _expand_or_collapse_all_action(self, action):
         for camera_parameter in self._camera_parameter_group_dictionary.values():
             if action.name() == "Expand All":
                 camera_parameter.setOpts(expanded=True)
             elif action.name() == "Collapse All":
                 camera_parameter.setOpts(expanded=False)
 
-
+ROTATE_90_CLOCKWISE_STRING = "90 Clockwise"
+ROTATE_90_COUNTERCLOCKWISE_STRING = "90 Counterclockwise"
+ROTATE_180_STRING = "180"
 
 def rotate_image_str_to_cv2_code(rotate_str: str):
-    if rotate_str == "90 Clockwise":
+    if rotate_str == ROTATE_90_CLOCKWISE_STRING:
         return cv2.ROTATE_90_CLOCKWISE
-    elif rotate_str == "90_counterclockwise":
+    elif rotate_str == ROTATE_90_COUNTERCLOCKWISE_STRING:
         return cv2.ROTATE_90_COUNTERCLOCKWISE
-    elif rotate_str == "180":
+    elif rotate_str == ROTATE_180_STRING:
         return cv2.ROTATE_180
 
     return None
@@ -237,11 +235,11 @@ def rotate_cv2_code_to_str(rotate_video_value):
     if rotate_video_value is None:
         return None
     elif rotate_video_value == cv2.ROTATE_90_CLOCKWISE:
-        return "90 Clockwise"
+        return ROTATE_90_CLOCKWISE_STRING
     elif rotate_video_value == cv2.ROTATE_90_COUNTERCLOCKWISE:
-        return "90_counterclockwise"
+        return ROTATE_90_COUNTERCLOCKWISE_STRING
     elif rotate_video_value == cv2.ROTATE_180:
-        return "180"
+        return ROTATE_180_STRING
 
 
 if __name__ == "__main__":

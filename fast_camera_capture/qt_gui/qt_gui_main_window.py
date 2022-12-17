@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 class QtGUIMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
         self._central_widget = QWidget()
         self.setCentralWidget(self._central_widget)
         self._layout = QHBoxLayout()

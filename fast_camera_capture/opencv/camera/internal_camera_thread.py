@@ -105,6 +105,8 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
             retrieval_timestamp = time.perf_counter_ns()
+            if self._config.rotate_video_cv2_code is not None:
+                image = cv2.rotate(image, self._config.rotate_video_cv2_code)
 
         except:
             logger.error(f"Failed to read frame from Camera: {self._config.camera_id}")
@@ -170,5 +172,6 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.release()
 
     def update_camera_config(self, new_config: CameraConfig):
+        self._config = new_config
         logger.info(f"Updating Camera: {self._config.camera_id} config to {new_config}")
         apply_configuration(self._cv2_video_capture, new_config)
