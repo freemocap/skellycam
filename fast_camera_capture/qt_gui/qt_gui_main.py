@@ -21,8 +21,8 @@ if __name__ == "__main__":
     win.show()
     error_code = app.exec()
 
-    if Path(session_folder_path).empty():
-        logger.info(f"session folder: {session_folder_path} is empty, deleting it")
+    if not any(Path(session_folder_path).iterdir()):
+        logger.info(f"Session folder: {session_folder_path} is empty, deleting it")
         Path(session_folder_path).rmdir()
 
     sys.exit()
