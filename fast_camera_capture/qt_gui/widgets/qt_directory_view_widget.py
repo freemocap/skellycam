@@ -5,7 +5,7 @@ from typing import Union
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFileSystemModel
-from PyQt6.QtWidgets import QWidget, QTreeView, QVBoxLayout, QMenu
+from PyQt6.QtWidgets import QWidget, QTreeView, QVBoxLayout, QMenu, QLabel
 from qtpy import QtGui
 
 logger = logging.getLogger(__name__)
@@ -16,17 +16,19 @@ class QtDirectoryViewWidget(QWidget):
     def __init__(self, folder_path: Union[str, Path]=None):
         logger.info("Creating QtDirectoryViewWidget")
         super().__init__()
-
+        self._minimum_width = 300
+        self.setMinimumWidth(self._minimum_width)
         self._folder_path = folder_path
 
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+        self._layout = QVBoxLayout()
+        self.setLayout(self._layout)
 
-        self.setWindowTitle("File System Viewer")
-
+        self._path_label = QLabel(str(self._folder_path))
+        self._layout.addWidget(self._path_label)
         self._file_system_model = QFileSystemModel()
         self._tree_view_widget = QTreeView()
-        layout.addWidget(self._tree_view_widget)
+
+        self._layout.addWidget(self._tree_view_widget)
 
         # self._tree_view_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self._tree_view_widget.customContextMenuRequested.connect(self._context_menu)
@@ -44,8 +46,10 @@ class QtDirectoryViewWidget(QWidget):
 
     def set_folder_as_root(self, folder_path: Union[str, Path]):
         logger.info(f"Setting root folder to {str(folder_path)}")
+        self._tree_view_widget.setWindowTitle(str(folder_path))
         self._file_system_model.setRootPath(str(folder_path))
         self._tree_view_widget.setRootIndex(self._file_system_model.index(str(folder_path)))
+        self._tree_view_widget.setColumnWidth(0, int(self._minimum_width*.9))
 
     def _context_menu(self):
         menu = QMenu()

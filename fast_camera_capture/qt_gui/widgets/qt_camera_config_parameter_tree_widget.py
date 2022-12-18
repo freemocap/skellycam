@@ -46,6 +46,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.setMinimumWidth(250)
         self._camera_parameter_group_dictionary = {}
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
@@ -126,7 +127,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
             ],
         )
         camera_parameter_group.sigTreeStateChanged.connect(
-            lambda: self._apply_settings_to_cameras_button.setEnabled(True)
+            self._handle_camera_parameter_group_changed
         )
 
         camera_parameter_group.param(USE_THIS_CAMERA_STRING).sigValueChanged.connect(
@@ -217,6 +218,11 @@ class QtCameraConfigParameterTreeWidget(QWidget):
                 camera_parameter.setOpts(expanded=True)
             elif action.name() == COLLAPSE_ALL_STRING:
                 camera_parameter.setOpts(expanded=False)
+
+    def _handle_camera_parameter_group_changed(self, parameter, changes):
+        # TODO - don't activate for the 'expand' and 'collapse' buttons
+        self._apply_settings_to_cameras_button.setEnabled(True)
+
 
 
 if __name__ == "__main__":

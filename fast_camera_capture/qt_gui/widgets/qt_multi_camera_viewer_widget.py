@@ -105,7 +105,7 @@ class QtMultiCameraViewerWidget(QWidget):
         return camera_layout_dictionary
 
     def _arrange_camera_layouts(self, camera_layout_dictionary: dict):
-        primary_grid_count = np.ceil(np.sqrt(len(camera_layout_dictionary)))
+        primary_grid_count = np.ceil(np.sqrt(len(camera_layout_dictionary)))-1
 
         landscape_column_count = -1
         landscape_row_count = -1
