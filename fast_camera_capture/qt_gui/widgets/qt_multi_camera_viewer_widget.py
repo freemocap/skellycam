@@ -72,6 +72,9 @@ class QtMultiCameraViewerWidget(QWidget):
             self, camera_config_dictionary: dict
     ) -> dict:
 
+        if self._camera_layout_dictionary is not None:
+            return self._camera_layout_dictionary
+
         camera_view_layout = QHBoxLayout()
         self._layout.addLayout(camera_view_layout)
 
@@ -207,7 +210,7 @@ class QtMultiCameraViewerWidget(QWidget):
         # self._create_camera_view_grid_layout(camera_config_dictionary=camera_config_dictionary)
         for camera_id, camera_config in camera_config_dictionary.items():
             if camera_config.use_this_camera:
-                self._camera_layout_dictionary[camera_id]['title_label_widget'].show()
+                self._camera_layout_dictionary[camera_id]['title_label_widget']
                 self._camera_layout_dictionary[camera_id]['image_label_widget'].show()
             else:
                 self._camera_layout_dictionary[camera_id]['title_label_widget'].hide()

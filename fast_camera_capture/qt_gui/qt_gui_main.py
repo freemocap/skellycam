@@ -17,8 +17,8 @@ if __name__ == "__main__":
     timer.start(500)
     timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
     session_folder_path = default_session_folder_path(create_folder=True)
-    win = QtGUIMainWindow(session_folder_path=session_folder_path)
-    win.show()
+    qt_gui_main_window = QtGUIMainWindow(session_folder_path=session_folder_path)
+    qt_gui_main_window.show()
     error_code = app.exec()
 
     if not any(Path(session_folder_path).iterdir()):
