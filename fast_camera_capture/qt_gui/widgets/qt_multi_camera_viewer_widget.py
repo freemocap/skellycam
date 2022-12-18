@@ -73,8 +73,10 @@ class QtMultiCameraViewerWidget(QWidget):
     ) -> dict:
 
         if self._camera_layout_dictionary is not None:
+            logger.info("Camera layout dictionary already exists - returning existing dictionary")
             return self._camera_layout_dictionary
 
+        logger.info(f"Creating camera view grid layout for camera config dictionary: {camera_config_dictionary}")
         camera_view_layout = QHBoxLayout()
         self._layout.addLayout(camera_view_layout)
 
@@ -98,8 +100,8 @@ class QtMultiCameraViewerWidget(QWidget):
             camera_layout.addWidget(camera_layout_dictionary[camera_id]["title_label_widget"])
             camera_layout.addWidget(camera_layout_dictionary[camera_id]["image_label_widget"])
 
-            self._arrange_camera_layouts(camera_layout_dictionary)
 
+        self._arrange_camera_layouts(camera_layout_dictionary)
         return camera_layout_dictionary
 
     def _arrange_camera_layouts(self, camera_layout_dictionary: dict):
@@ -121,6 +123,7 @@ class QtMultiCameraViewerWidget(QWidget):
                 if landscape_column_count % primary_grid_count == 0:
                     landscape_column_count = 0
                     landscape_row_count += 1
+                logger.info(f"Adding camera {camera_id} to landscape grid layout at {landscape_column_count}, {landscape_row_count}")
                 self._landscape_grid_layout.addLayout(
                     camera_layout, landscape_row_count, landscape_column_count
                 )
@@ -129,6 +132,8 @@ class QtMultiCameraViewerWidget(QWidget):
                 if portrait_row_count % primary_grid_count == 0:
                     portrait_column_count = 0
                     portrait_row_count += 1
+                    logger.info(
+                f"Adding camera {camera_id} to portrait grid layout at {portrait_column_count}, {portrait_row_count}")
                 self._portrait_grid_layout.addLayout(
                     camera_layout, portrait_row_count, portrait_column_count
                 )
