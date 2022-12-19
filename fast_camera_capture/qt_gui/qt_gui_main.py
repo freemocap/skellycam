@@ -2,6 +2,10 @@ import logging
 import sys
 from pathlib import Path
 
+base_package_path = Path(__file__).parent.parent.parent
+print(f"repo: {base_package_path}")
+sys.path.insert(0, str(base_package_path)) #add parent directory to sys.path
+
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
