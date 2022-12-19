@@ -1,4 +1,4 @@
-from fast_camera_capture import MultiCameraVideoRecorder
+from fast_camera_capture.experiments.multi_camera_recorder.multicamera_video_recorder import MultiCameraVideoRecorder
 
 if __name__ == "__main__":
     """
