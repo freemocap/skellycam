@@ -8,5 +8,5 @@ class FoundCameraCache(BaseModel):
     cameras_found_list: List[str]
 
     @property
-    def as_webcam_list(self):
+    def as_camera_list(self):
         return [cam for cam in self.cameras_found_list]

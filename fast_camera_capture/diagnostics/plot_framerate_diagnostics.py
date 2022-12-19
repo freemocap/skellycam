@@ -9,11 +9,13 @@ from fast_camera_capture.detection.models.frame_payload import FramePayload
 from fast_camera_capture.diagnostics.framerate_diagnostics import gather_timestamps
 
 logger = logging.getLogger(__name__)
+
+
 def create_timestamp_diagnostic_plots(
-        raw_frame_list_dictionary: Dict[str, List[FramePayload]],
-        synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
-        path_to_save_plots_png: Union[str, Path],
-        open_image_after_saving: bool = False,
+    raw_frame_list_dictionary: Dict[str, List[FramePayload]],
+    synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
+    path_to_save_plots_png: Union[str, Path],
+    open_image_after_saving: bool = False,
 ):
     """plot some diagnostics to assess quality of camera sync"""
 
@@ -24,17 +26,17 @@ def create_timestamp_diagnostic_plots(
 
     synchronized_timestamps_dictionary = {}
     for (
-            camera_id,
-            camera_synchronized_frame_list,
+        camera_id,
+        camera_synchronized_frame_list,
     ) in synchronized_frame_list_dictionary.items():
         synchronized_timestamps_dictionary[camera_id] = (
-                gather_timestamps(camera_synchronized_frame_list) / 1e9
+            gather_timestamps(camera_synchronized_frame_list) / 1e9
         )
 
     raw_timestamps_dictionary = {}
     for camera_id, camera_raw_frame_list in raw_frame_list_dictionary.items():
         raw_timestamps_dictionary[camera_id] = (
-                gather_timestamps(camera_raw_frame_list) / 1e9
+            gather_timestamps(camera_raw_frame_list) / 1e9
         )
 
     max_frame_duration = 0.1

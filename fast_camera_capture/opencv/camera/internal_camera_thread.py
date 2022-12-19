@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from fast_camera_capture.detection.models.frame_payload import FramePayload
-from fast_camera_capture.opencv.camera.models.camera_id import WebcamConfig
+from fast_camera_capture.opencv.camera.models.camera_config import CameraConfig
 from fast_camera_capture.opencv.config.apply_config import apply_configuration
 from fast_camera_capture.opencv.config.determine_backend import determine_backend
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
-        config: WebcamConfig,
+        config: CameraConfig,
         ready_event: multiprocessing.Event = None,
     ):
         super().__init__()
@@ -105,6 +105,8 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
             retrieval_timestamp = time.perf_counter_ns()
+            if self._config.rotate_video_cv2_code is not None:
+                image = cv2.rotate(image, self._config.rotate_video_cv2_code)
 
         except:
             logger.error(f"Failed to read frame from Camera: {self._config.camera_id}")
@@ -120,7 +122,7 @@ class VideoCaptureThread(threading.Thread):
             image=image,
             timestamp_ns=retrieval_timestamp,
             frame_number=self.latest_frame_number,
-            webcam_id=str(self._config.camera_id),
+            camera_id=str(self._config.camera_id),
         )
 
     def _create_cv2_capture(self):
@@ -156,8 +158,8 @@ class VideoCaptureThread(threading.Thread):
         apply_configuration(capture, self._config)
 
         logger.info(f"Successfully connected to Camera: {self._config.camera_id}!")
-
-        self._ready_event.set()
+        if not self._ready_event.is_set():
+            self._ready_event.set()
 
         return capture
 
@@ -168,3 +170,8 @@ class VideoCaptureThread(threading.Thread):
                 f"Releasing `opencv_video_capture_object` for Camera: {self._config.camera_id}"
             )
             self._cv2_video_capture.release()
+
+    def update_camera_config(self, new_config: CameraConfig):
+        self._config = new_config
+        logger.info(f"Updating Camera: {self._config.camera_id} config to {new_config}")
+        apply_configuration(self._cv2_video_capture, new_config)

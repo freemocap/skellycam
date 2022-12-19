@@ -4,7 +4,7 @@ from fast_camera_capture.opencv.camera.types.camera_id import CameraId
 from fast_camera_capture.system.environment.home_dir import os_independent_home_dir
 
 
-class WebcamConfig(BaseModel):
+class CameraConfig(BaseModel):
     camera_id: CameraId = 0
     exposure: int = -7
     resolution_width: int = 1280
