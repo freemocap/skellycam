@@ -11,3 +11,6 @@ matplotlib==3.6.1
 scipy==1.9.2
 rich==12.6.0
 pandas==1.5.2
+pyqtgraph==0.13.1
+qtpy==2.3.0
+

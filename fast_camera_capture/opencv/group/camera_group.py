@@ -4,7 +4,7 @@ import multiprocessing
 import time
 from typing import List, Dict
 
-from fast_camera_capture import WebcamConfig
+from fast_camera_capture import CameraConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
 from fast_camera_capture.experiments.cam_show import cam_show
 from fast_camera_capture.opencv.group.strategies.grouped_process_strategy import (
@@ -18,26 +18,35 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
         self,
-        cam_ids: List[str],
+        camera_ids_list: List[str]=None,
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
-        webcam_config_dict: Dict[str, WebcamConfig] = None,
+        camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
+        logger.info(
+            f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
+        )
         self._event_dictionary = None
         self._strategy_enum = strategy
-        self._cam_ids = cam_ids
+        self._camera_ids = camera_ids_list
 
         # Make optional, if a list of cams is sent then just use that
-        if not cam_ids:
-            _cams = detect_cameras()
-            cam_ids = _cams.cameras_found_list
-        self._strategy_class = self._resolve_strategy(cam_ids)
+        if camera_ids_list is None:
+            if camera_config_dictionary is not None:
+                camera_ids_list = list(camera_config_dictionary.keys())
+            else:
+                camera_ids_list = detect_cameras().cameras_found_list
 
-        if webcam_config_dict is None:
-            self._webcam_config_dict = {}
-            for cam_id in cam_ids:
-                self._webcam_config_dict[cam_id] = WebcamConfig()
+        self._strategy_class = self._resolve_strategy(camera_ids_list)
+
+        if camera_config_dictionary is None:
+            logger.info(
+                f"No camera config dict passed in, using default config: {CameraConfig()}"
+            )
+            self._camera_config_dictionary = {}
+            for camera_id in camera_ids_list:
+                self._camera_config_dictionary[camera_id] = CameraConfig(camera_id=camera_id)
         else:
-            self._webcam_config_dict = webcam_config_dict
+            self._camera_config_dictionary = camera_config_dictionary
 
     @property
     def is_capturing(self):
@@ -47,29 +56,43 @@ class CameraGroup:
     def exit_event(self):
         return self._exit_event
 
+    @property
+    def camera_ids(self):
+        return self._camera_ids
+
+    @property
+    def camera_config_dictionary(self):
+        return self._camera_config_dictionary
+
+    def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
+        logger.info(f"Updating camera configs to {camera_config_dictionary}")
+        self._camera_config_dictionary = camera_config_dictionary
+        self._strategy_class.update_camera_configs(camera_config_dictionary)
+
     def start(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
         :return:
         """
+        logger.info(f"Starting camera group with strategy {self._strategy_enum}")
         self._exit_event = multiprocessing.Event()
         self._start_event = multiprocessing.Event()
         self._event_dictionary = {"start": self._start_event, "exit": self._exit_event}
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
-            webcam_config_dict=self._webcam_config_dict,
+            camera_config_dict=self._camera_config_dictionary,
         )
 
         self._wait_for_cameras_to_start()
 
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
-        logger.info(f"Waiting for cameras {self._cam_ids} to start")
+        logger.info(f"Waiting for cameras {self._camera_ids} to start")
         all_cameras_started = False
         while not all_cameras_started:
             time.sleep(0.5)
-            camera_started_dictionary = dict.fromkeys(self._cam_ids, False)
+            camera_started_dictionary = dict.fromkeys(self._camera_ids, False)
 
-            for camera_id in self._cam_ids:
+            for camera_id in self._camera_ids:
                 camera_started_dictionary[camera_id] = self.check_if_camera_is_ready(
                     camera_id
                 )
@@ -82,7 +105,7 @@ class CameraGroup:
 
             all_cameras_started = all(list(camera_started_dictionary.values()))
 
-        logger.info(f"All cameras {self._cam_ids} started!")
+        logger.info(f"All cameras {self._camera_ids} started!")
         self._start_event.set()  # start frame capture on all cameras
 
     def check_if_camera_is_ready(self, cam_id: str):
@@ -126,7 +149,7 @@ class CameraGroup:
                 logger.info(f"Process {process.name} died! Restarting now...")
                 process.start_capture(
                     event_dictionary=self._event_dictionary,
-                    webcam_config_dict=self._webcam_config_dict,
+                    camera_config_dict=self._camera_config_dictionary,
                 )
 
 

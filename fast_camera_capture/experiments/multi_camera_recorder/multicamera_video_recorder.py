@@ -6,30 +6,36 @@ from typing import Union, Dict
 
 import cv2
 
-from fast_camera_capture import WebcamConfig
+from fast_camera_capture import CameraConfig
 from fast_camera_capture.detection.detect_cameras import detect_cameras
-from fast_camera_capture.diagnostics.framerate_diagnostics import calculate_camera_diagnostic_results, \
-    create_timestamp_diagnostic_plots
-from fast_camera_capture.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
+from fast_camera_capture.detection.models.frame_payload import FramePayload
+from fast_camera_capture.diagnostics.framerate_diagnostics import (
+    calculate_camera_diagnostic_results,
+    create_timestamp_diagnostic_plots,
+)
+from fast_camera_capture.diagnostics.plot_first_and_last_frames import (
+    plot_first_and_last_frames,
+)
 from fast_camera_capture.opencv.group.camera_group import CameraGroup
-from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from fast_camera_capture.opencv.video_recorder.save_synchronized_videos import (
+    save_synchronized_videos,
+)
 
 from fast_camera_capture.opencv.video_recorder.video_recorder import VideoRecorder
-from fast_camera_capture.utils.default_paths import (
-    default_video_save_path,
+from fast_camera_capture.system.environment.default_paths import (
+    default_base_folder,
     default_session_name,
     get_iso6201_time_string,
-    SESSION_START_TIME_FORMAT_STRING,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class SynchronizedVideoRecorder:
+class MultiCameraVideoRecorder:
     def __init__(
         self,
         video_save_folder_path: Union[str, Path] = None,
-        webcam_config_dict: Dict[str, WebcamConfig] = None,
+        camera_config_dict: Dict[str, CameraConfig] = None,
         string_tag: str = None,
     ):
         self._session_start_time_iso8601 = get_iso6201_time_string()
@@ -38,7 +44,7 @@ class SynchronizedVideoRecorder:
 
         if video_save_folder_path is None:
             self._video_save_folder_path = (
-                default_video_save_path() / self._session_name
+                    default_base_folder() / self._session_name
             )
         else:
             self._video_save_folder_path = Path(video_save_folder_path)
@@ -49,21 +55,24 @@ class SynchronizedVideoRecorder:
 
         self._shared_zero_time = time.perf_counter_ns()
 
-        if webcam_config_dict is None:
-            self._webcam_config_dict = {
-                cam_id: WebcamConfig(camera_id=cam_id)
+        if camera_config_dict is None:
+            self._camera_config_dict = {
+                cam_id: CameraConfig(camera_id=cam_id)
                 for cam_id in self._camera_ids_list
             }
         else:
-            self._webcam_config_dict = webcam_config_dict
+            self._camera_config_dict = camera_config_dict
 
         self._camera_group = CameraGroup(
-            cam_ids=self._camera_ids_list, webcam_config_dict=self._webcam_config_dict
+            camera_ids_list=self._camera_ids_list,
+            camera_config_dictionary=self._camera_config_dict,
         )
 
         self._video_recorder_dictionary = {}
+        self._qt_multi_camera_viewer_thread = None
 
     def run(self):
+
         self._camera_group.start()
 
         for camera_id in self._camera_ids_list:
@@ -112,6 +121,7 @@ class SynchronizedVideoRecorder:
         )
 
     def _run_frame_loop(self):
+        logger.info(f"Starting frame loop")
         should_continue = True
         while should_continue:
             latest_frame_payloads = self._camera_group.latest_frames()
@@ -121,9 +131,9 @@ class SynchronizedVideoRecorder:
                     self._video_recorder_dictionary[
                         cam_id
                     ].append_frame_payload_to_list(frame_payload)
-                    cv2.imshow(
-                        f"Camera {cam_id} - Press ESC to quit", frame_payload.image
-                    )
+
+                    self._show_image(frame_payload)
+
             frame_count_dictionary = {}
 
             for cam_id, video_recorder in self._video_recorder_dictionary.items():
@@ -133,6 +143,7 @@ class SynchronizedVideoRecorder:
             if cv2.waitKey(1) == 27:
                 logger.info(f"ESC key pressed - shutting down")
                 cv2.destroyAllWindows()
+
                 should_continue = False
         self._camera_group.close()
 
@@ -152,10 +163,10 @@ class SynchronizedVideoRecorder:
             "timestamp_diagnostic_results": self._timestamp_diagnostics.dict(),
         }
 
-        for camera_id, webcam_config in self._webcam_config_dict.items():
+        for camera_id, camera_config in self._camera_config_dict.items():
             session_information_dictionary["camera_configurations"][
                 camera_id
-            ] = webcam_config.dict()
+            ] = camera_config.dict()
 
         return session_information_dictionary
 
@@ -175,7 +186,12 @@ class SynchronizedVideoRecorder:
             logger.info(f"Saving session information to {json_path}")
             file.write(json_string)
 
+    def _show_image(self, frame_payload: FramePayload):
+        cv2.imshow(
+            f"Camera {frame_payload.camera_id} - Press ESC to quit", frame_payload.image
+        )
+
 
 if __name__ == "__main__":
-    synchronized_video_recorder = SynchronizedVideoRecorder()
+    synchronized_video_recorder = MultiCameraVideoRecorder()
     synchronized_video_recorder.run()

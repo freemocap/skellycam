@@ -10,4 +10,4 @@ class FramePayload:
     image: np.ndarray = None
     timestamp_ns: float = None
     frame_number: int = None
-    webcam_id: str = None
+    camera_id: str = None
