@@ -2,8 +2,8 @@
 <p align="center">
     <img src="https://raw.githubusercontent.com/freemocap/freemocap/main/assets/logo/freemocap-logo-black-border.svg" height="64" alt="Project Logo">
 </p>
-<h3 align="center">fast-camera-capture</h3>
-<p align="center">📝 An easy and efficient way to connect to cameras and aggregate frame data.</p>
+<h3 align="center">SkellyCam</h3>
+<p align="center">📝 An easy and efficient way to connect to one or more cameras and record synchronized videos</p>
 <p align="center">
     <a href="https://github.com/freemocap/fast-camera-capture/releases/latest">
         <img src="https://img.shields.io/github/release/freemocap/fast-camera-capture.svg" alt="Latest Release">
@@ -25,25 +25,44 @@
 
 Connecting to cameras on multiple platforms in a way that is not slow is a difficult challenge, especially for new developers.
 
-There are a bunch of tools out there, like OpenCV and other open source libraries that give just enough to support hardware manipulation,
+There are a bunch of tools out there (e.g. OpenCV) and other open source libraries that give just enough to support hardware manipulation,
 but they need to be use in concert in order to be useful.
 
 This library attempts to string those things together, and provide an interface for everyone to use in python with a simple `pip install`.
 
+The primary focus is to provide an easy method to connect to one or more cameras and provide methods for streaming/recordig synchronized frames from the connected cameras. 
+
+
+
+## Relationship with [FreeMoCap](https://github.com/freemocap/freemocap)
+
+The SkellyCam package serves as the primary camera API for the `freemocap` markeless motion capture software
+
 ---
-## Installation
+## Installation and Usage
 
+### 0. Open a terminal (ideally with a `python` virtual environment activate)
 
-### From Pip
+### 1. Install from Pip
 ```bash
-pip install fast-camera-capture
+pip install skellycam
 ```
+
+### 2. Launch GUI 
+
+### 3. Click the buttons! :sparkles:
+
+run `python qt_gui/qt_gui_main.py`
+
+## Limitation (aka TO DO)  - 
+- Currently uses `opencv` to connect to cameras, so it won't recognize hardware that can't be connected with `cv2.VideoCapture` - Support for other camera hardware (e.g. FLIR) coming soon
+- Camera streams are not synchronized at run time, but are saved and synchronized after the fact. This is time-consuming process that requres frames be saved in RAM until the recording is done. Both of these weaknesses have solutions in the works.  
 
 ### New Python developers
 
 1) Install Python 3.10
 2) Create  Virtual Environment
-3) Install `fast-camera-capture`
+3) Install `skellycam`
 
 #### To install Python 3.10
 
