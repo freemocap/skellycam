@@ -30,7 +30,7 @@ but they need to be use in concert in order to be useful.
 
 This library attempts to string those things together, and provide an interface for everyone to use in python with a simple `pip install`.
 
-The primary focus is to provide an easy method to connect to one or more cameras and provide methods for streaming/recordig synchronized frames from the connected cameras. 
+The primary focus is to provide an easy method to connect to one or more cameras and provide methods for streaming/recordig synchronized frames from the connected cameras.
 
 
 
@@ -48,15 +48,15 @@ The SkellyCam package serves as the primary camera API for the `freemocap` marke
 pip install skellycam
 ```
 
-### 2. Launch GUI 
+### 2. Launch GUI
 
 ### 3. Click the buttons! :sparkles:
 
 run `python qt_gui/qt_gui_main.py`
 
-## Limitation (aka TO DO)  - 
+## Limitation (aka TO DO)  -
 - Currently uses `opencv` to connect to cameras, so it won't recognize hardware that can't be connected with `cv2.VideoCapture` - Support for other camera hardware (e.g. FLIR) coming soon
-- Camera streams are not synchronized at run time, but are saved and synchronized after the fact. This is time-consuming process that requres frames be saved in RAM until the recording is done. Both of these weaknesses have solutions in the works.  
+- Camera streams are not synchronized at run time, but are saved and synchronized after the fact. This is time-consuming process that requres frames be saved in RAM until the recording is done. Both of these weaknesses have solutions in the works.
 
 ### New Python developers
 
@@ -76,13 +76,13 @@ run `python qt_gui/qt_gui_main.py`
 
 #### Example 1 - Connecting to a Camera
 
-[Example 1 Python Fle](fast_camera_capture/examples/example1_single_camera_connection.py) 
+[Example 1 Python Fle](skellycam/examples/example1_single_camera_connection.py)
 
 In this example, we connect a camera at index 0. Calling `show` allows us to view the cameras frames allowing us
 to see video.
 
 ```python
-from fast_camera_capture import WebcamConfig, Camera
+from skellycam import WebcamConfig, Camera
 
 if __name__ == "__main__":
     cam1 = Camera(WebcamConfig(cam_id=0))
