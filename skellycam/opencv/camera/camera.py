@@ -32,7 +32,7 @@ class Camera:
         return Attributes(self._capture_thread)
 
     @property
-    def cam_id(self):
+    def camera_id(self):
         return str(self._config.camera_id)
 
     @property
@@ -47,11 +47,15 @@ class Camera:
     def latest_frame(self):
         return self._capture_thread.latest_frame
 
-    def connect(self, ready_event: multiprocessing.Event):
-        self._ready_event = ready_event
+    def connect(self, ready_event: multiprocessing.Event = None):
+        if ready_event is None:
+            self._ready_event = multiprocessing.Event()
+            self._ready_event.set()
+        else:
+            self._ready_event = ready_event
 
         if self._capture_thread and self._capture_thread.is_capturing_frames:
-            logger.debug(f"Already capturing frames for camera_id: {self.cam_id}")
+            logger.debug(f"Already capturing frames for camera_id: {self.camera_id}")
             return
         logger.debug(f"Camera ID: [{self._config.camera_id}] Creating thread")
         self._capture_thread = VideoCaptureThread(
@@ -78,7 +82,7 @@ class Camera:
 
     async def show_async(self):
         viewer = CvCamViewer()
-        viewer.begin_viewer(self.cam_id)
+        viewer.begin_viewer(self.camera_id)
         while True:
             if self.new_frame_ready:
                 viewer.recv_img(self.latest_frame)
@@ -86,13 +90,13 @@ class Camera:
 
     def show(self):
         viewer = CvCamViewer()
-        viewer.begin_viewer(self.cam_id)
+        viewer.begin_viewer(self.camera_id)
         while True:
             if self.new_frame_ready:
                 viewer.recv_img(self.latest_frame)
 
     def update_config(self, camera_config: CameraConfig):
-        logger.info(f"Updating config for camera_id: {self.cam_id}  -  {camera_config}")
+        logger.info(f"Updating config for camera_id: {self.camera_id}  -  {camera_config}")
         if not camera_config.use_this_camera:
             self.close()
         else:

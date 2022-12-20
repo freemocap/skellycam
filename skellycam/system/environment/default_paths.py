@@ -4,7 +4,7 @@ from pathlib import Path
 
 from skellycam.system.environment.home_dir import os_independent_home_dir
 
-DEFAULT_BASE_FOLDER_NAME = "fast-camera-capture-recordings"
+DEFAULT_BASE_FOLDER_NAME = "skelly-cam-recordings"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
 

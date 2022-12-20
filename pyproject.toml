@@ -15,7 +15,7 @@ authors = [
     {name = "Endurance Idehen"},
     {name = "Jonathan Samir Matthis"},
     ]
-license = {file = "LICENSE"}
+license = "AGPL-3.0-or-later"
 classifiers = [
     "Development Status :: 3 - Alpha",
    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
