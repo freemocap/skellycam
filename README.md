@@ -1,6 +1,6 @@
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/freemocap/freemocap/main/assets/logo/freemocap-logo-black-border.svg" height="64" alt="Project Logo">
+    <img src="assets/logo/skelly-cam-logo.svg" height="128" alt="Project Logo">
 </p>
 <h3 align="center">SkellyCam</h3>
 <p align="center">📝 An easy and efficient way to connect to one or more cameras and record synchronized videos</p>
@@ -9,7 +9,7 @@
         <img src="https://img.shields.io/github/release/freemocap/fast-camera-capture.svg" alt="Latest Release">
     </a>
     <a href="https://github.com/freemocap/fast-camera-capture/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/license-AGPL-blue.svg" alt="AGPL">
+        <img src="https://img.shields.io/badge/license-AGPL-blue.svg" alt="AGPLv3+">
     </a>
     <a href="https://github.com/freemocap/fast-camera-capture/issues">
         <img src="https://img.shields.io/badge/contributions-almost-ff69b4.svg" alt="Contributions Welcome">
@@ -34,9 +34,7 @@ The primary focus is to provide an easy method to connect to one or more cameras
 
 
 
-## Relationship with [FreeMoCap](https://github.com/freemocap/freemocap)
-
-The SkellyCam package serves as the primary camera API for the `freemocap` markeless motion capture software
+> NOTE - The SkellyCam package is the primary camera backend for the `freemocap` markeless motion capture software 💀✨
 
 ---
 ## Installation and Usage
