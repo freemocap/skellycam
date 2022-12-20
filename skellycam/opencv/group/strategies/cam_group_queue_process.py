@@ -103,7 +103,7 @@ class CamGroupProcess:
         )
 
         for camera in cameras_dictionary.values():
-            camera.connect(ready_event_dictionary[camera.cam_id])
+            camera.connect(ready_event_dictionary[camera.camera_id])
 
         while not exit_event.is_set():
             # This tight loop ends up 100% the process, so a sleep between framecaptures is
@@ -120,12 +120,12 @@ class CamGroupProcess:
                 sleep(0.001)
                 for camera in cameras_dictionary.values():
                     if camera.new_frame_ready:
-                        queue = queues[camera.cam_id]
+                        queue = queues[camera.camera_id]
                         queue.put(camera.latest_frame)
 
         # close cameras on exit
         for camera in cameras_dictionary.values():
-            logger.info(f"Closing camera {camera.cam_id}")
+            logger.info(f"Closing camera {camera.camera_id}")
             camera.close()
 
     def check_if_camera_is_ready(self, cam_id: str):

@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import QApplication
 from skellycam.qt_gui.qt_gui_main_window import QtGUIMainWindow
 from skellycam.system.environment.default_paths import default_session_folder_path
 
-if __name__ == "__main__":
+def qt_gui_main():
     app = QApplication(sys.argv)
 
     timer = QTimer()
@@ -29,3 +29,6 @@ if __name__ == "__main__":
         Path(session_folder_path).rmdir()
 
     sys.exit()
+
+if __name__ == "__main__":
+    qt_gui_main()

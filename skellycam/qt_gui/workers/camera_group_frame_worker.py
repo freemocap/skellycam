@@ -106,20 +106,19 @@ class CamGroupFrameWorker(QThread):
             if self._updating_camera_settings_bool:
                 continue
 
-            if self._should_pause_bool:
-                continue
+
 
             frame_obj = self._camera_group.latest_frames()
             for camera_id, frame in frame_obj.items():
                 if frame:
+                    if not self._should_pause_bool:
+                        if self._should_record_frames_bool:
+                            self._video_recorder_dictionary[
+                                camera_id
+                            ].append_frame_payload_to_list(frame)
 
-                    if self._should_record_frames_bool:
-                        self._video_recorder_dictionary[
-                            camera_id
-                        ].append_frame_payload_to_list(frame)
-
-                    qimage = self._convert_frame(frame)
-                    self.ImageUpdate.emit(camera_id, qimage)
+                        qimage = self._convert_frame(frame)
+                        self.ImageUpdate.emit(camera_id, qimage)
 
             # print(f"camera:recorder_frame_count - {self._get_recorder_frame_count_dict()}")
 

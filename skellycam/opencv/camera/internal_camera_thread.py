@@ -25,7 +25,12 @@ class VideoCaptureThread(threading.Thread):
         super().__init__()
         self._new_frame_ready = False
         self.daemon = False
-        self._ready_event = ready_event
+
+        if ready_event is None:
+            self._ready_event = multiprocessing.Event()
+            self._ready_event.set()
+        else:
+            self._ready_event = ready_event
 
         self._config = config
         self._is_capturing_frames = False

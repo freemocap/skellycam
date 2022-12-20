@@ -1,5 +1,7 @@
 import os
 
+import cv2
+
 
 def plot_first_and_last_frames(
     synchronized_frame_list_dictionary,
@@ -13,8 +15,8 @@ def plot_first_and_last_frames(
 
     for cam_id, frame_payload_list in synchronized_frame_list_dictionary.items():
 
-        first_frame = frame_payload_list[0].image
-        last_frame = frame_payload_list[-1].image
+        first_frame = cv2.cvtColor(frame_payload_list[0].image, cv2.COLOR_BGR2RGB)
+        last_frame = cv2.cvtColor(frame_payload_list[-1].image, cv2.COLOR_BGR2RGB)
 
         first_frame_ax = fig.add_subplot(number_of_cameras, 2, (int(cam_id) * 2) + 1)
         first_frame_ax.imshow(first_frame)

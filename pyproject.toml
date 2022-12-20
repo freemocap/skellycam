@@ -15,7 +15,7 @@ authors = [
     {name = "Endurance Idehen"},
     {name = "Jonathan Samir Matthis"},
     ]
-license = {file = "LICENSE"}
+license = "AGPL-3.0-or-later"
 classifiers = [
     "Development Status :: 3 - Alpha",
    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
@@ -24,7 +24,6 @@ classifiers = [
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Science/Research",
     "Intended Audience :: End Users/Desktop",
-    "Intended Audience :: Arts/Entertainment",
     "Intended Audience :: Other Audience",
     "Natural Language :: English",
     "Operating System :: OS Independent",
@@ -59,8 +58,22 @@ keywords = [
     "computer vision"
 ]
 
-dynamic = ["dependencies"]
-
+#dynamic = ["dependencies"]
+dependencies = [
+"numpy==1.23.3",
+"opencv-contrib-python==4.6.0.66",
+"pydantic==1.10.2",
+"Pillow==9.2.0",
+"psutil==5.9.2",
+"setproctitle==1.3.2",
+"pyqt6==6.4.0",
+"matplotlib==3.6.1",
+"scipy==1.9.2",
+"rich==12.6.0",
+"pandas==1.5.2",
+"pyqtgraph==0.13.1",
+"qtpy==2.3.0",
+]
 requires-python = ">=3.8"
 
 [project.optional-dependencies]
@@ -84,8 +97,8 @@ push            = false
 "pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
 "skellycam/__init__.py" = ["{version}"]
 
-[tool.setuptools.dynamic]
-dependencies = {file = "requirements.txt"}
+#[tool.setuptools.dynamic]
+#dependencies = {file = "requirements.txt"}
 
 [tool.setuptools]
-py-modules = ["skellycam"]
+py-modules = []

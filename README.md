@@ -1,15 +1,15 @@
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/freemocap/freemocap/main/assets/logo/freemocap-logo-black-border.svg" height="64" alt="Project Logo">
+    <img src="assets/logo/skelly-cam-logo.svg" height="128" alt="Project Logo">
 </p>
 <h3 align="center">SkellyCam</h3>
-<p align="center">📝 An easy and efficient way to connect to one or more cameras and record synchronized videos</p>
+<p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>
 <p align="center">
     <a href="https://github.com/freemocap/fast-camera-capture/releases/latest">
         <img src="https://img.shields.io/github/release/freemocap/fast-camera-capture.svg" alt="Latest Release">
     </a>
     <a href="https://github.com/freemocap/fast-camera-capture/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/license-AGPL-blue.svg" alt="AGPL">
+        <img src="https://img.shields.io/badge/license-AGPLv3+-blue.svg" alt="AGPLv3+">
     </a>
     <a href="https://github.com/freemocap/fast-camera-capture/issues">
         <img src="https://img.shields.io/badge/contributions-almost-ff69b4.svg" alt="Contributions Welcome">
@@ -34,25 +34,35 @@ The primary focus is to provide an easy method to connect to one or more cameras
 
 
 
-## Relationship with [FreeMoCap](https://github.com/freemocap/freemocap)
-
-The SkellyCam package serves as the primary camera API for the `freemocap` markeless motion capture software
+> **NOTE** - The SkellyCam package is the primary camera backend for the `freemocap` markeless motion capture software 💀✨
+> 
+> [https:github.com/freemocap/freemocap](https:github.com/freemocap/freemocap)
+> 
+>[https://freemocap.org](https://freemocap.org)
 
 ---
 ## Installation and Usage
 
-### 0. Open a terminal (ideally with a `python` virtual environment activate)
+### 0. Open a terminal (ideally with a `python` virtual environment activate) 
 
 ### 1. Install from Pip
+Enter the command below and press 'Enter'
 ```bash
 pip install skellycam
 ```
 
-### 2. Launch GUI
+### 2. Launch SkellyCam GUI
+Enter the command below and press 'Enter'
+```bash
+skellycam
+```
 
-### 3. Click the buttons! :sparkles:
 
-run `python qt_gui/qt_gui_main.py`
+### 3. Success! 💀📸✨
+Hopefully a bunch of text scrolled by and a GUI popped up! 
+
+If not, please [open an issue on the github repo](https://github.com/freemocap/skellycam/issues) and we'll try to help you out :) 
+
 
 ## Limitation (aka TO DO)  -
 - Currently uses `opencv` to connect to cameras, so it won't recognize hardware that can't be connected with `cv2.VideoCapture` - Support for other camera hardware (e.g. FLIR) coming soon
@@ -74,22 +84,46 @@ run `python qt_gui/qt_gui_main.py`
 
 ### How to use
 
-#### Example 1 - Connecting to a Camera
+#### RECOMMENDED -  Use the GUI!
+
+Launch the GUI by running `skellycam` in a terminal. 
+
+This is currently the most tested method for interacting with the cameras.
+
+
+#### Example 1 - Connecting to a single Camera and showing the video feed
 
 [Example 1 Python Fle](skellycam/examples/example1_single_camera_connection.py)
 
 In this example, we connect a camera at index 0. Calling `show` allows us to view the cameras frames allowing us
 to see video.
 
+> NOTE - Work in progress, no clean way to kill this window yet
+
 ```python
-from skellycam import WebcamConfig, Camera
+from skellycam import CameraConfig, Camera
 
 if __name__ == "__main__":
-    cam1 = Camera(WebcamConfig(cam_id=0))
+    cam1 = Camera(CameraConfig(cam_id=0))
     cam1.connect()
     cam1.show()
 ```
-___
+
+
+#### Example 2 - Connect to all available cameras and record synchronized videos
+
+> NOTE - Experimental and under development, might be unstable
+ 
+[Example 2 Python Fle](skellycam/examples/example1_single_camera_connection.py)
+```python
+from skellycam.experiments import MultiCameraVideoRecorder
+
+if __name__ == "__main__":
+
+    synchronized_video_recorder = MultiCameraVideoRecorder()
+    synchronized_video_recorder.run()
+
+```
 
 ### Contribution Guidelines
 
