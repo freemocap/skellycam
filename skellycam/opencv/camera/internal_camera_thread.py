@@ -39,7 +39,7 @@ class VideoCaptureThread(threading.Thread):
         self._number_of_frames_recorded: int = 0
         self._num_frames_processed = 0
 
-        self._elapsed_during_frame_grab = []
+        # self._elapsed_during_frame_grab = [] #TODO
         self._capture_timestamps = []
         self._median_framerate = None
         self._frame: FramePayload = FramePayload()

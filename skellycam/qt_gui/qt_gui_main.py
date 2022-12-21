@@ -25,7 +25,7 @@ def qt_gui_main():
     error_code = app.exec()
 
     if not any(Path(session_folder_path).iterdir()):
-        logger.info(f"Session folder: {session_folder_path} is empty, deleting it")
+        logger.info(f"Session folder: {session_folder_path} is empty, removing it")
         Path(session_folder_path).rmdir()
 
     sys.exit()

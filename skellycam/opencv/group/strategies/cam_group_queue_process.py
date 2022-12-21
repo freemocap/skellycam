@@ -3,7 +3,7 @@ import math
 import multiprocessing
 from multiprocessing import Process
 from time import perf_counter_ns, sleep
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from setproctitle import setproctitle
 
@@ -131,7 +131,7 @@ class CamGroupProcess:
     def check_if_camera_is_ready(self, cam_id: str):
         return self._cameras_ready_event_dictionary[cam_id].is_set()
 
-    def get_by_cam_id(self, cam_id) -> FramePayload | None:
+    def get_by_cam_id(self, cam_id) -> Union[FramePayload, None]:
         if cam_id not in self._queues:
             return
 

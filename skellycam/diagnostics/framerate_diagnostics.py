@@ -3,7 +3,7 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy as np
 from pydantic import BaseModel
@@ -39,7 +39,7 @@ def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
 def create_timestamp_diagnostic_plots(
     raw_frame_list_dictionary: Dict[str, List[FramePayload]],
     synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
-    path_to_save_plots_png: str | Path,
+    path_to_save_plots_png: Union[str, Path],
     open_image_after_saving: bool = False,
 ):
     """plot some diagnostics to assess quality of camera sync"""
