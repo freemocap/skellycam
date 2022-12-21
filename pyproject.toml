@@ -82,9 +82,6 @@ dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
 [project.urls]
 Homepage = "https://github.com/freemocap/skellycam"
 
-[project.scripts]
-skellycam = "skellycam.__main__:main"
-
 [tool.bumpver]
 current_version = "0.1.1"
 version_pattern = "MAJOR.MINOR.PATCH"
@@ -100,5 +97,8 @@ push            = false
 #[tool.setuptools.dynamic]
 #dependencies = {file = "requirements.txt"}
 
-[tool.setuptools]
-py-modules = []
+#[project.scripts]
+#skellycam = "skellycam.__main__:main"
+
+#[tool.setuptools]
+#py-modules = []
