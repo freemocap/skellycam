@@ -192,10 +192,12 @@ class QtMultiCameraViewerWidget(QWidget):
                                                                         background-color: #29394a;
                                                                         color: #dddddd;
                                                                         }
+                                                            QPushButton:disabled {
+                                                                        border: 2px solid #555555;
+                                                                        }
                                                             QPushButton:hover {
                                                                         background-color: #5a6a83;
                                                                         border: 3px solid #ff40aa;
-
                                                                         }
                                                             """)
 
