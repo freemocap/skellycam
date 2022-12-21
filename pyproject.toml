@@ -100,5 +100,5 @@ push            = false
 #[project.scripts]
 #skellycam = "skellycam.__main__:main"
 
-#[tool.setuptools]
-#py-modules = []
+[tool.setuptools]
+py-modules = []

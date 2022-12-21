@@ -7,6 +7,7 @@ from skellycam.system.environment.home_dir import os_independent_home_dir
 DEFAULT_BASE_FOLDER_NAME = "skelly-cam-recordings"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
+PATH_TO_SKELLY_CAM_LOGO = "assets/logo/skellycam_logo.png"
 
 def default_base_folder():
     return Path(os_independent_home_dir()) / DEFAULT_BASE_FOLDER_NAME
