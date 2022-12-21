@@ -9,6 +9,7 @@ USE_THIS_CAMERA_STRING = "Use this camera?"
 EXPAND_ALL_STRING = "Expand All"
 COLLAPSE_ALL_STRING = "Collapse All"
 
+
 def rotate_image_str_to_cv2_code(rotate_str: str):
     if rotate_str == ROTATE_90_CLOCKWISE_STRING:
         return cv2.ROTATE_90_CLOCKWISE

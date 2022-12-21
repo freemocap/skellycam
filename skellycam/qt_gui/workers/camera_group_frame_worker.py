@@ -12,10 +12,15 @@ from PyQt6.QtGui import QImage
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.camera_group import CameraGroup
-from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from skellycam.opencv.video_recorder.save_synchronized_videos import (
+    save_synchronized_videos,
+)
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.qt_gui.workers.save_videos_worker import SaveVideosWorker
-from skellycam.system.environment.default_paths import default_base_folder, default_session_name
+from skellycam.system.environment.default_paths import (
+    default_base_folder,
+    default_session_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +31,10 @@ class CamGroupFrameWorker(QThread):
     camera_group_created_signal = pyqtSignal(dict)
 
     def __init__(
-            self,
-            camera_ids: Union[List[str], None],
-            session_folder_path: Union[str, Path] = None,
-            parent=None,
+        self,
+        camera_ids: Union[List[str], None],
+        session_folder_path: Union[str, Path] = None,
+        parent=None,
     ):
 
         self._updating_camera_settings_bool = False
@@ -42,7 +47,7 @@ class CamGroupFrameWorker(QThread):
 
         if session_folder_path is None:
             self._session_folder_path = (
-                    Path(default_base_folder()) / default_session_name()
+                Path(default_base_folder()) / default_session_name()
             )
         else:
             self._session_folder_path = Path(session_folder_path)
@@ -106,8 +111,6 @@ class CamGroupFrameWorker(QThread):
             if self._updating_camera_settings_bool:
                 continue
 
-
-
             frame_obj = self._camera_group.latest_frames()
             for camera_id, frame in frame_obj.items():
                 if frame:
@@ -165,12 +168,16 @@ class CamGroupFrameWorker(QThread):
             self._camera_ids = list(camera_config_dictionary.keys())
 
         if self._camera_group is None:
-            self._camera_group = self._create_camera_group(camera_ids=self.camera_ids,
-                                                           camera_config_dictionary=camera_config_dictionary)
+            self._camera_group = self._create_camera_group(
+                camera_ids=self.camera_ids,
+                camera_config_dictionary=camera_config_dictionary,
+            )
             return
 
         self._updating_camera_settings_bool = True
-        self._updating_camera_settings_bool = not self._update_camera_settings(camera_config_dictionary)
+        self._updating_camera_settings_bool = not self._update_camera_settings(
+            camera_config_dictionary
+        )
 
     def _launch_save_video_process(self):
         logger.info("Launching save video process")
@@ -187,10 +194,11 @@ class CamGroupFrameWorker(QThread):
         self._video_save_process = Process(
             name=f"VideoSaveProcess",
             target=save_synchronized_videos,
-            args=(deepcopy(self._video_recorder_dictionary),
-                  recording_folder_path_string,
-                  True,
-                  ),
+            args=(
+                deepcopy(self._video_recorder_dictionary),
+                recording_folder_path_string,
+                True,
+            ),
         )
         self._video_save_process.start()
         del self._video_recorder_dictionary
@@ -208,12 +216,17 @@ class CamGroupFrameWorker(QThread):
             for camera_id, recorder in self._video_recorder_dictionary.items()
         }
 
-    def _create_camera_group(self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None):
+    def _create_camera_group(
+        self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None
+    ):
         logger.info(
-            f"Creating `camera_group` for camera_ids: {camera_ids}, camera_config_dictionary: {camera_config_dictionary}")
+            f"Creating `camera_group` for camera_ids: {camera_ids}, camera_config_dictionary: {camera_config_dictionary}"
+        )
 
-        camera_group = CameraGroup(camera_ids_list=camera_ids,
-                                   camera_config_dictionary=camera_config_dictionary)
+        camera_group = CameraGroup(
+            camera_ids_list=camera_ids,
+            camera_config_dictionary=camera_config_dictionary,
+        )
         self.camera_group_created_signal.emit(camera_group.camera_config_dictionary)
         return camera_group
 

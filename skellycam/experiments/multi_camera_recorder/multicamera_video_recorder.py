@@ -15,7 +15,9 @@ from skellycam.diagnostics.framerate_diagnostics import (
 )
 from skellycam.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
 from skellycam.opencv.group.camera_group import CameraGroup
-from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from skellycam.opencv.video_recorder.save_synchronized_videos import (
+    save_synchronized_videos,
+)
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.system.environment.default_paths import (
     default_base_folder,
@@ -38,9 +40,7 @@ class MultiCameraVideoRecorder:
         self._session_name = default_session_name(string_tag=string_tag)
 
         if video_save_folder_path is None:
-            self._video_save_folder_path = (
-                    default_base_folder() / self._session_name
-            )
+            self._video_save_folder_path = default_base_folder() / self._session_name
         else:
             self._video_save_folder_path = Path(video_save_folder_path)
         self._video_save_folder_path.mkdir(parents=True, exist_ok=True)

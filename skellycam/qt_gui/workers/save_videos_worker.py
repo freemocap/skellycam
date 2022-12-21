@@ -4,7 +4,9 @@ from typing import Union
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from skellycam.opencv.video_recorder.save_synchronized_videos import (
+    save_synchronized_videos,
+)
 
 logger = logging.getLogger(__name__)
 

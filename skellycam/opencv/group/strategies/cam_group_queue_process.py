@@ -14,6 +14,8 @@ from skellycam.opencv.group.strategies.queue_communicator import QueueCommunicat
 logger = logging.getLogger(__name__)
 
 CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
+
+
 class CamGroupProcess:
     def __init__(self, cam_ids: List[str]):
         self._cameras_ready_event_dictionary = None
@@ -24,7 +26,6 @@ class CamGroupProcess:
         queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
         communicator = QueueCommunicator(queue_name_list)
         self._queues = communicator.queues
-
 
     @property
     def camera_ids(self):
@@ -110,7 +111,9 @@ class CamGroupProcess:
             # necessary. We can get away with this because we don't expect another frame for
             # awhile.
             if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
-                logger.info("Camera config dict queue has items - updating cameras configs")
+                logger.info(
+                    "Camera config dict queue has items - updating cameras configs"
+                )
                 camera_config_dictionary = queues[CAMERA_CONFIG_DICT_QUEUE_NAME].get()
 
                 for camera_id, camera in cameras_dictionary.items():

@@ -24,8 +24,10 @@ while should_continue:
     timestamps.append(time.perf_counter() - start_time)
     median_framerate = np.median(np.diff(timestamps)) ** -1
 
-    print(f"read image success: {success} , image.shape: {image.shape}, median_framerate: {median_framerate}")
-    cv2.imshow(f'Camera {camera_id} - Press ESC to exit', image)
+    print(
+        f"read image success: {success} , image.shape: {image.shape}, median_framerate: {median_framerate}"
+    )
+    cv2.imshow(f"Camera {camera_id} - Press ESC to exit", image)
 
     if cv2.waitKey(1) == 27:
         print(f"ESC key pressed - shutting down")

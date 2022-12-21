@@ -5,13 +5,14 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 base_package_path = Path(__file__).parent.parent.parent
 logger.info(f"Adding base package path to `sys.path`: {base_package_path}")
-sys.path.insert(0, str(base_package_path)) #add parent directory to sys.path
+sys.path.insert(0, str(base_package_path))  # add parent directory to sys.path
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
 from skellycam.qt_gui.qt_gui_main_window import QtGUIMainWindow
 from skellycam.system.environment.default_paths import default_session_folder_path
+
 
 def qt_gui_main():
     app = QApplication(sys.argv)
@@ -29,6 +30,7 @@ def qt_gui_main():
         Path(session_folder_path).rmdir()
 
     sys.exit()
+
 
 if __name__ == "__main__":
     qt_gui_main()

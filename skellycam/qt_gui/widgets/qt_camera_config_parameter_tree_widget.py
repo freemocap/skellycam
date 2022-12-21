@@ -48,7 +48,6 @@ logger = logging.getLogger(__name__)
 #                                     """
 
 
-
 class QtCameraConfigParameterTreeWidget(QWidget):
     emitting_camera_configs_signal = pyqtSignal(dict)
 
@@ -76,7 +75,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         )
 
     def update_camera_config_parameter_tree(
-            self, dictionary_of_camera_configs: Dict[str, CameraConfig]
+        self, dictionary_of_camera_configs: Dict[str, CameraConfig]
     ):
         logger.info("Updating camera configs in parameter tree")
 
@@ -96,7 +95,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         self.emitting_camera_configs_signal.emit(camera_configs_dictionary)
 
     def _convert_camera_config_to_parameter(
-            self, camera_config: CameraConfig
+        self, camera_config: CameraConfig
     ) -> Parameter:
 
         camera_parameter_group = Parameter.create(
@@ -107,10 +106,12 @@ class QtCameraConfigParameterTreeWidget(QWidget):
                 dict(
                     name="Rotate Image",
                     type="list",
-                    limits=["None",
-                            ROTATE_90_CLOCKWISE_STRING,
-                            ROTATE_90_COUNTERCLOCKWISE_STRING,
-                            ROTATE_180_STRING],
+                    limits=[
+                        "None",
+                        ROTATE_90_CLOCKWISE_STRING,
+                        ROTATE_90_COUNTERCLOCKWISE_STRING,
+                        ROTATE_180_STRING,
+                    ],
                     value=rotate_cv2_code_to_str(camera_config.rotate_video_cv2_code),
                 ),
                 dict(name="Exposure", type="int", value=camera_config.exposure),
@@ -158,8 +159,8 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         logger.info("Extracting camera configs from parameter tree")
         camera_config_dictionary = {}
         for (
-                camera_id,
-                camera_parameter_group,
+            camera_id,
+            camera_parameter_group,
         ) in self._camera_parameter_group_dictionary.items():
             camera_config_dictionary[camera_id] = CameraConfig(
                 camera_id=camera_id,
@@ -212,12 +213,20 @@ class QtCameraConfigParameterTreeWidget(QWidget):
 
     def _add_expand_collapse_buttons(self):
 
-        expand_all_button_parameter = Parameter.create(name=EXPAND_ALL_STRING, type='action')
-        expand_all_button_parameter.sigActivated.connect(self._expand_or_collapse_all_action)
+        expand_all_button_parameter = Parameter.create(
+            name=EXPAND_ALL_STRING, type="action"
+        )
+        expand_all_button_parameter.sigActivated.connect(
+            self._expand_or_collapse_all_action
+        )
         self._parameter_tree_widget.addParameters(expand_all_button_parameter)
 
-        collapse_all_button_parameter = Parameter.create(name=COLLAPSE_ALL_STRING, type='action')
-        collapse_all_button_parameter.sigActivated.connect(self._expand_or_collapse_all_action)
+        collapse_all_button_parameter = Parameter.create(
+            name=COLLAPSE_ALL_STRING, type="action"
+        )
+        collapse_all_button_parameter.sigActivated.connect(
+            self._expand_or_collapse_all_action
+        )
         self._parameter_tree_widget.addParameters(collapse_all_button_parameter)
 
     def _expand_or_collapse_all_action(self, action):
@@ -230,7 +239,6 @@ class QtCameraConfigParameterTreeWidget(QWidget):
     def _handle_camera_parameter_group_changed(self, parameter, changes):
         # TODO - don't activate for the 'expand' and 'collapse' buttons
         self._apply_settings_to_cameras_button.setEnabled(True)
-
 
 
 if __name__ == "__main__":

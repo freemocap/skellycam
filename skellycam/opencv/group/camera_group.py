@@ -5,7 +5,9 @@ from typing import Dict, List
 
 from skellycam import CameraConfig
 from skellycam.detection.detect_cameras import detect_cameras
-from skellycam.opencv.group.strategies.grouped_process_strategy import GroupedProcessStrategy
+from skellycam.opencv.group.strategies.grouped_process_strategy import (
+    GroupedProcessStrategy,
+)
 from skellycam.opencv.group.strategies.strategies import Strategy
 
 logger = logging.getLogger(__name__)
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
         self,
-        camera_ids_list: List[str]=None,
+        camera_ids_list: List[str] = None,
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
         camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
@@ -40,7 +42,9 @@ class CameraGroup:
             )
             self._camera_config_dictionary = {}
             for camera_id in camera_ids_list:
-                self._camera_config_dictionary[camera_id] = CameraConfig(camera_id=camera_id)
+                self._camera_config_dictionary[camera_id] = CameraConfig(
+                    camera_id=camera_id
+                )
         else:
             self._camera_config_dictionary = camera_config_dictionary
 

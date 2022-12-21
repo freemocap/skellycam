@@ -3,7 +3,9 @@ from typing import Callable, Dict
 
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from skellycam.qt_gui.widgets.qt_multi_camera_viewer_widget import QtMultiCameraViewerWidget
+from skellycam.qt_gui.widgets.qt_multi_camera_viewer_widget import (
+    QtMultiCameraViewerWidget,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class QtDirectoryViewWidget(QWidget):
-
-    def __init__(self, folder_path: Union[str, Path]=None):
+    def __init__(self, folder_path: Union[str, Path] = None):
         logger.info("Creating QtDirectoryViewWidget")
         super().__init__()
         self._minimum_width = 300
@@ -42,14 +41,14 @@ class QtDirectoryViewWidget(QWidget):
         if self._folder_path is not None:
             self.set_folder_as_root(self._folder_path)
 
-
-
     def set_folder_as_root(self, folder_path: Union[str, Path]):
         logger.info(f"Setting root folder to {str(folder_path)}")
         self._tree_view_widget.setWindowTitle(str(folder_path))
         self._file_system_model.setRootPath(str(folder_path))
-        self._tree_view_widget.setRootIndex(self._file_system_model.index(str(folder_path)))
-        self._tree_view_widget.setColumnWidth(0, int(self._minimum_width*.9))
+        self._tree_view_widget.setRootIndex(
+            self._file_system_model.index(str(folder_path))
+        )
+        self._tree_view_widget.setColumnWidth(0, int(self._minimum_width * 0.9))
 
     def _context_menu(self):
         menu = QMenu()
@@ -66,6 +65,7 @@ class QtDirectoryViewWidget(QWidget):
         file_path = self._file_system_model.filePath(index)
         logger.info(f"Opening file from file_system_view_widget: {file_path}")
         os.startfile(file_path)
+
 
 if __name__ == "__main__":
     import sys

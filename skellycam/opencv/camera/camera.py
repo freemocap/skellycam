@@ -96,7 +96,9 @@ class Camera:
                 viewer.recv_img(self.latest_frame)
 
     def update_config(self, camera_config: CameraConfig):
-        logger.info(f"Updating config for camera_id: {self.camera_id}  -  {camera_config}")
+        logger.info(
+            f"Updating config for camera_id: {self.camera_id}  -  {camera_config}"
+        )
         if not camera_config.use_this_camera:
             self.close()
         else:
@@ -104,5 +106,3 @@ class Camera:
                 self.connect(self._ready_event)
 
             self._capture_thread.update_camera_config(camera_config)
-
-

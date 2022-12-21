@@ -8,18 +8,21 @@ from skellycam.system.environment.home_dir import os_independent_home_dir
 DEFAULT_BASE_FOLDER_NAME = "skelly-cam-recordings"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
-PATH_TO_SKELLY_CAM_LOGO_SVG = str(Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.svg")
+PATH_TO_SKELLY_CAM_LOGO_SVG = str(
+    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.svg"
+)
 
 
 def default_base_folder():
     return Path(os_independent_home_dir()) / DEFAULT_BASE_FOLDER_NAME
 
-def default_session_folder_path(create_folder:bool=False,
-                                string_tag: str = None):
-    folder_path =  default_base_folder() / default_session_name(string_tag=string_tag)
+
+def default_session_folder_path(create_folder: bool = False, string_tag: str = None):
+    folder_path = default_base_folder() / default_session_name(string_tag=string_tag)
     if create_folder:
         folder_path.mkdir(parents=True, exist_ok=True)
     return str(folder_path)
+
 
 def get_gmt_offset_string():
     # from - https://stackoverflow.com/a/53860920/14662833

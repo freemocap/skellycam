@@ -17,6 +17,8 @@ _DEFAULT_CAM_PER_PROCESS = 2
 # https://refactoring.guru/design-patterns/strategy
 
 logger = logging.getLogger(__name__)
+
+
 class GroupedProcessStrategy:
     def __init__(self, cam_ids: List[str]):
         self._processes, self._cam_id_process_map = self._create_processes(cam_ids)
@@ -61,8 +63,7 @@ class GroupedProcessStrategy:
         }
 
     def _create_processes(
-        self, cam_ids: List[str],
-        cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
+        self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
     ):
         camera_subarrays = array_split_by(cam_ids, cameras_per_process)
         processes = [

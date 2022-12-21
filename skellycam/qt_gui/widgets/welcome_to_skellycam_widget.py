@@ -25,11 +25,13 @@ class WelcomeToSkellyCamWidget(QWidget):
         skellycam_text_label.setText("Welcome to Skelly Cam!")
         skellycam_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        skellycam_text_label.setStyleSheet("""
+        skellycam_text_label.setStyleSheet(
+            """
         font-size: 24px;
         font-weight: bold;
         font-family: "Dosis", sans-serif;
-        """)
+        """
+        )
 
         self.resize(skellycam_logo_pixmap.width(), skellycam_logo_pixmap.height())
 
