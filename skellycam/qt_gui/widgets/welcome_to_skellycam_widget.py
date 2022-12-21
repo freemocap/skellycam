@@ -1,7 +1,8 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
 
-from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO
+from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG
 
 
 class WelcomeToSkellyCamWidget(QWidget):
@@ -11,18 +12,26 @@ class WelcomeToSkellyCamWidget(QWidget):
         self.setLayout(self._layout)
 
         skellycam_logo_label = QLabel(self)
-        skellycam_logo_pixmap = QPixmap(PATH_TO_SKELLY_CAM_LOGO)
-        skellycam_logo_label.setPixmap(skellycam_logo_pixmap)
         self._layout.addWidget(skellycam_logo_label)
 
+        skellycam_logo_pixmap = QPixmap(PATH_TO_SKELLY_CAM_LOGO_SVG)
+        skellycam_logo_pixmap = skellycam_logo_pixmap.scaledToWidth(300)
+        skellycam_logo_label.setPixmap(skellycam_logo_pixmap)
+        skellycam_logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         skellycam_text_label = QLabel(self)
-        skellycam_text_label.setText("Welcome to Skelly Cam \U0001F480 \U0001F4F8")
         self._layout.addWidget(skellycam_text_label)
 
+        skellycam_text_label.setText("Welcome to Skelly Cam!")
+        skellycam_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        skellycam_text_label.setStyleSheet("""
+        font-size: 24px;
+        font-weight: bold;
+        font-family: "Dosis", sans-serif;
+        """)
+
         self.resize(skellycam_logo_pixmap.width(), skellycam_logo_pixmap.height())
-
-
-
 
 
 if __name__ == "__main__":
@@ -34,5 +43,3 @@ if __name__ == "__main__":
     welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
     welcome_to_skellycam_widget.show()
     sys.exit(app.exec())
-
-
