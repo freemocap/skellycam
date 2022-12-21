@@ -10,6 +10,7 @@ from skellycam.qt_gui.widgets.qt_camera_config_parameter_tree_widget import QtCa
 from skellycam.qt_gui.widgets.qt_camera_controller_widget import QtCameraControllerWidget
 from skellycam.qt_gui.widgets.qt_directory_view_widget import QtDirectoryViewWidget
 from skellycam.qt_gui.widgets.qt_multi_camera_viewer_widget import QtMultiCameraViewerWidget
+from skellycam.qt_gui.widgets.welcome_to_skellycam_widget import WelcomeToSkellyCamWidget
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,9 @@ class QtGUIMainWindow(QMainWindow):
         self.setCentralWidget(self._central_widget)
         self._layout = QVBoxLayout()
         self._central_widget.setLayout(self._layout)
+
+        self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
+        self._layout.addWidget(self._welcome_to_skellycam_widget)
 
         self._qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget(session_folder_path=self._session_folder_path,
                                                                         parent=self)
@@ -57,6 +61,10 @@ class QtGUIMainWindow(QMainWindow):
     def _connect_signals_to_slots(self):
         self._qt_multi_camera_viewer_widget.camera_group_created_signal.connect(
             self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
+        )
+
+        self._qt_multi_camera_viewer_widget.camera_group_created_signal.connect(
+            self._welcome_to_skellycam_widget.hide
         )
 
         self._qt_camera_config_parameter_tree_widget.emitting_camera_configs_signal.connect(

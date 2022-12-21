@@ -1,6 +1,6 @@
 
 <p align="center">
-    <img src="assets/logo/skelly-cam-logo.svg" height="128" alt="Project Logo">
+    <img src="skellycam/assets/logo/skelly-cam-logo.svg" height="128" alt="Project Logo">
 </p>
 <h3 align="center">SkellyCam</h3>
 <p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>

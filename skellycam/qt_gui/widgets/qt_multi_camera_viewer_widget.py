@@ -22,7 +22,7 @@ class QtMultiCameraViewerWidget(QWidget):
 
     def __init__(self,
                  camera_ids: List[Union[str, int]] = None,
-                 session_folder_path:Union[str,Path]=None,
+                 session_folder_path: Union[str, Path] = None,
                  parent=None):
 
         logger.info(
@@ -92,18 +92,23 @@ class QtMultiCameraViewerWidget(QWidget):
             camera_layout_dictionary[camera_id]['layout'] = camera_layout
             camera_layout_dictionary[camera_id]["orientation"] = self._get_landscape_or_portrait(camera_config)
             camera_layout_dictionary[camera_id]["title_label_widget"] = QLabel(f"Camera {camera_id}")
-            camera_layout_dictionary[camera_id]["image_label_widget"] = QLabel(" \U0001F4F8 ... ")
+            camera_layout_dictionary[camera_id]["title_label_widget"].setStyleSheet("""
+                                                                                    font-size: 18px;
+                                                                                    font-weight: bold;
+                                                                                    font-family: "Dosis", sans-serif;
+                                                                                    """
+                                                                                    )
+            camera_layout_dictionary[camera_id]["image_label_widget"] = QLabel("\U0001F4F8 Connecting... ")
             camera_layout_dictionary[camera_id]["title_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             camera_layout.addWidget(camera_layout_dictionary[camera_id]["title_label_widget"])
             camera_layout.addWidget(camera_layout_dictionary[camera_id]["image_label_widget"])
 
-
         self._arrange_camera_layouts(camera_layout_dictionary)
         return camera_layout_dictionary
 
     def _arrange_camera_layouts(self, camera_layout_dictionary: dict):
-        primary_grid_count = np.ceil(np.sqrt(len(camera_layout_dictionary)))-1
+        primary_grid_count = np.ceil(np.sqrt(len(camera_layout_dictionary))) - 1
 
         landscape_column_count = -1
         landscape_row_count = -1
@@ -121,7 +126,8 @@ class QtMultiCameraViewerWidget(QWidget):
                 if landscape_column_count % primary_grid_count == 0:
                     landscape_column_count = 0
                     landscape_row_count += 1
-                logger.info(f"Adding camera {camera_id} to landscape grid layout at {landscape_column_count}, {landscape_row_count}")
+                logger.info(
+                    f"Adding camera {camera_id} to landscape grid layout at {landscape_column_count}, {landscape_row_count}")
                 self._landscape_grid_layout.addLayout(
                     camera_layout, landscape_row_count, landscape_column_count
                 )
@@ -131,7 +137,7 @@ class QtMultiCameraViewerWidget(QWidget):
                     portrait_column_count = 0
                     portrait_row_count += 1
                     logger.info(
-                f"Adding camera {camera_id} to portrait grid layout at {portrait_column_count}, {portrait_row_count}")
+                        f"Adding camera {camera_id} to portrait grid layout at {portrait_column_count}, {portrait_row_count}")
                 self._portrait_grid_layout.addLayout(
                     camera_layout, portrait_row_count, portrait_column_count
                 )
@@ -176,6 +182,25 @@ class QtMultiCameraViewerWidget(QWidget):
         detect_available_cameras_push_button = QPushButton("Detect Available Cameras")
         detect_available_cameras_push_button.clicked.connect(self.connect_to_cameras)
         detect_available_cameras_push_button.hasFocus()
+        detect_available_cameras_push_button.setStyleSheet("""
+                                                            QPushButton {
+                                                                        font-size: 18px;
+                                                                        font-weight: bold;
+                                                                        font-family: "Dosis", sans-serif;
+                                                                        border-radius: 4px;
+                                                                        border: 2px solid #ff40aa;
+                                                                        background-color: #29394a;
+                                                                        color: #dddddd;
+                                                                        }
+                                                            QPushButton:disabled {
+                                                                        border: 2px solid #555555;
+                                                                        }
+                                                            QPushButton:hover {
+                                                                        background-color: #5a6a83;
+                                                                        border: 3px solid #ff40aa;
+                                                                        }
+                                                            """)
+
         return detect_available_cameras_push_button
 
     def _create_cam_group_frame_worker(self):
