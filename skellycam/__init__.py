@@ -2,7 +2,7 @@
 
 __author__ = """Skelly FreeMoCap"""
 __email__ = 'info@freemocap.org'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 import logging
 import sys
