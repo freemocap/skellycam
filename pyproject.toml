@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skellycam"
-version = "v2022.12.22.1007"
+version = "v2022.12.22.1008"
 description = "A simple python API for efficiently watching camera streams 💀📸"
 readme = "README.md"
 authors = [
@@ -83,7 +83,7 @@ dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
 Homepage = "https://github.com/freemocap/skellycam"
 
 [tool.bumpver]
-current_version = "v2022.12.22.1007"
+current_version = "v2022.12.22.1008"
 version_pattern = "vYYYY.0M.0D.BUILD[-TAG]"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true
