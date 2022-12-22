@@ -26,7 +26,10 @@ def qt_gui_main():
         logger.info(f"Session folder: {session_folder_path} is empty, removing it")
         Path(session_folder_path).rmdir()
 
+    logger.info(f"Exiting with code: {error_code}")
+    logger.info(f"Thank you for using SkellyCam ✨")
     sys.exit()
+
 
 
 if __name__ == "__main__":
