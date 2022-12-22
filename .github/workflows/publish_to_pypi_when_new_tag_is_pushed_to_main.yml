@@ -9,9 +9,9 @@
 name: Upload Python Package
 
 on:
-  create:
-    tags:
-      - v*
+  push:
+    branches: [ main ]
+    tags: [ v* ]
 
 permissions:
   contents: read
