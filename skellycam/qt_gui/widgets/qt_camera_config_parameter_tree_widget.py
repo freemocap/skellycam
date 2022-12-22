@@ -23,11 +23,12 @@ from skellycam.qt_gui.qt_utils.qt_label_strings import (
 logger = logging.getLogger(__name__)
 
 
+#
 # parameter_tree_stylesheet_string = """
 #                                     QTreeView {
-#                                         background-color: rgb(146, 152, 154);
+#                                         background-color: rgb(0, 152, 154);
 #                                         alternate-background-color: rgb(139, 144, 145);
-#                                         color: rgb(28, 28, 28);
+#                                         color: rgb(28, 100, 28);
 #                                     }
 #                                     QLabel {
 #                                         color: rgb(28, 123, 28);
@@ -53,6 +54,13 @@ class QtCameraConfigParameterTreeWidget(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        self.setStyleSheet("""
+        QPushButton{
+        border-width: 2px;
+        font-size: 15px;
+        }
+        """)
         self.setMinimumWidth(250)
         self._camera_parameter_group_dictionary = {}
         self._layout = QVBoxLayout()
@@ -75,7 +83,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         )
 
     def update_camera_config_parameter_tree(
-        self, dictionary_of_camera_configs: Dict[str, CameraConfig]
+            self, dictionary_of_camera_configs: Dict[str, CameraConfig]
     ):
         logger.info("Updating camera configs in parameter tree")
 
@@ -95,7 +103,7 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         self.emitting_camera_configs_signal.emit(camera_configs_dictionary)
 
     def _convert_camera_config_to_parameter(
-        self, camera_config: CameraConfig
+            self, camera_config: CameraConfig
     ) -> Parameter:
 
         camera_parameter_group = Parameter.create(
@@ -159,8 +167,8 @@ class QtCameraConfigParameterTreeWidget(QWidget):
         logger.info("Extracting camera configs from parameter tree")
         camera_config_dictionary = {}
         for (
-            camera_id,
-            camera_parameter_group,
+                camera_id,
+                camera_parameter_group,
         ) in self._camera_parameter_group_dictionary.items():
             camera_config_dictionary[camera_id] = CameraConfig(
                 camera_id=camera_id,

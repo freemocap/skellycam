@@ -6,6 +6,7 @@ from typing import Union
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
+from skellycam.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.qt_gui.widgets.qt_camera_config_parameter_tree_widget import (
     QtCameraConfigParameterTreeWidget,
 )
@@ -24,11 +25,16 @@ logger = logging.getLogger(__name__)
 
 
 class QtGUIMainWindow(QMainWindow):
+    _welcome_to_skellycam_widget: WelcomeToSkellyCamWidget
+
     def __init__(self, session_folder_path: Union[str, Path], parent=None):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
-        self.resize(1444, 720)
+        self.setGeometry(100, 100, 1600, 900)
+
         self._session_folder_path = session_folder_path
+
+        self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
 
         self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
         self._central_widget = QWidget()
@@ -63,6 +69,7 @@ class QtGUIMainWindow(QMainWindow):
         self._qt_camera_config_parameter_tree_widget = (
             QtCameraConfigParameterTreeWidget()
         )
+
         # self._layout.addWidget(self._qt_camera_config_parameter_tree_widget)
         self._parameter_tree_dock_widget.setWidget(
             self._qt_camera_config_parameter_tree_widget

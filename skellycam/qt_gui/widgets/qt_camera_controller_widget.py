@@ -16,6 +16,7 @@ class QtCameraControllerWidget(QWidget):
     ):
         super().__init__(parent=parent)
 
+
         self._layout = QVBoxLayout()
 
         self._layout = QHBoxLayout()

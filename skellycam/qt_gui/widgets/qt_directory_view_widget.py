@@ -27,6 +27,8 @@ class QtDirectoryViewWidget(QWidget):
         self._file_system_model = QFileSystemModel()
         self._tree_view_widget = QTreeView()
 
+
+
         self._layout.addWidget(self._tree_view_widget)
 
         # self._tree_view_widget.setContextMenuPolicy(Qt.CustomContextMenu)

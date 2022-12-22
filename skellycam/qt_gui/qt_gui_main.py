@@ -3,9 +3,6 @@ import sys
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-base_package_path = Path(__file__).parent.parent.parent
-logger.info(f"Adding base package path to `sys.path`: {base_package_path}")
-sys.path.insert(0, str(base_package_path))  # add parent directory to sys.path
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
