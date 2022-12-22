@@ -209,26 +209,12 @@ class QtMultiCameraViewerWidget(QWidget):
         detect_available_cameras_push_button = QPushButton("Detect Available Cameras")
         detect_available_cameras_push_button.clicked.connect(self.connect_to_cameras)
         detect_available_cameras_push_button.hasFocus()
-        detect_available_cameras_push_button.setStyleSheet(
-            """
-                                                            QPushButton {
-                                                                        font-size: 18px;
-                                                                        font-weight: bold;
-                                                                        font-family: "Dosis", sans-serif;
-                                                                        border-radius: 4px;
-                                                                        border: 2px solid #ff40aa;
-                                                                        background-color: #29394a;
-                                                                        color: #dddddd;
-                                                                        }
-                                                            QPushButton:disabled {
-                                                                        border: 2px solid #555555;
-                                                                        }
-                                                            QPushButton:hover {
-                                                                        background-color: #5a6a83;
-                                                                        border: 3px solid #ff40aa;
-                                                                        }
-                                                            """
-        )
+        detect_available_cameras_push_button.setStyleSheet("""
+                                                            border-width: 2px;
+                                                           font-size: 42px;
+                                                           border-radius: 10px;
+                                                           """ )
+
 
         return detect_available_cameras_push_button
 
@@ -263,6 +249,7 @@ class QtMultiCameraViewerWidget(QWidget):
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")
         self._detect_available_cameras_push_button.setEnabled(True)
+        self._detect_available_cameras_push_button.setStyleSheet("font-size: 36px;")
 
     def _update_camera_configs(self, camera_config_dictionary):
         # self._create_camera_view_grid_layout(camera_config_dictionary=camera_config_dictionary)
