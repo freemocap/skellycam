@@ -97,8 +97,8 @@ push            = true
 #[tool.setuptools.dynamic]
 #dependencies = {file = "requirements.txt"}
 
-#[project.scripts]
-#skellycam = "skellycam.__main__:main"
+[project.scripts]
+skellycam = "skellycam.__main__:main"
 
 [tool.setuptools]
 py-modules = ["skellycam"]
