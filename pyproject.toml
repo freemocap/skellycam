@@ -101,4 +101,4 @@ push            = true
 #skellycam = "skellycam.__main__:main"
 
 [tool.setuptools]
-py-modules = []
+py-modules = [skellycam]
