@@ -3,6 +3,7 @@
 __author__ = """Skelly FreeMoCap"""
 __email__ = "info@freemocap.org"
 __version__ = "v2022.12.1012"
+__description__ = "A simple python API for efficiently watching camera streams 💀📸"
 
 import logging
 import sys
