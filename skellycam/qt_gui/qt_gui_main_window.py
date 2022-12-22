@@ -6,6 +6,7 @@ from typing import Union
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
+from skellycam.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.qt_gui.widgets.qt_camera_config_parameter_tree_widget import (
     QtCameraConfigParameterTreeWidget,
 )
@@ -21,67 +22,11 @@ from skellycam.qt_gui.widgets.welcome_to_skellycam_widget import (
 )
 
 logger = logging.getLogger(__name__)
-QT_CSS_STYLE_SHEET_STRING = """
-                            QMainWindow {
-                                background-color: #5a6283;                                
-                            } 
 
-               
-                            QPushButton {
-                                        font-size: 24px;
-                                        font-weight: bold;
-                                        font-family: "Dosis", sans-serif;
-                                        border-radius: 4px;
-                                        border: 2px solid #29394a;
-                                        background-color: #29394a;
-                                        color: #dddddd;
-                                        border-width: 2px;                                                                                
-                                        }
-                            QPushButton:focus {
-                                        border: 2px solid #ff40aa;
-                                        }
-                            QPushButton:disabled {
-                                        border: 2px solid #444444;
-                                        background-color: #414C58;
-                                        color: #aaaaaa;
-                                        }
-                            QPushButton:hover {
-                                        background-color: #29696a;
-                                        border: 3px solid #ff40aa;
-                                        }
-
-                            QParameterTreeWidget {
-                                background-color: #ff0000;
-                                color: #ffffff;
-                   
-                            }
-                            QTreeView {
-                                        background-color: #6b749c;
-                                        alternate-background-color: #a8b7f5;
-                                        color: #222222;
-                                        font-weight: bold;
-                            }                            
-                            QTreeView::item:has-children {
-                                background-color: '#05100f';
-                                color: #ffffff;
-                            }
-                            QTreeView::item:selected {
-                                background-color: #18294a;
-                            }
-                            QTreeView::item:selected:active {
-                                background-color: rgb(92, 53, 102);
-                            }                        
-                            QTreeView::item:hover {
-                                background-color: #378e90;
-                            }    
-                            """
-                            # font-size: 42px;
-                            #
-                            # font-family: "Roboto", sans-serif;
-                            #
-                            # """
 
 class QtGUIMainWindow(QMainWindow):
+    _welcome_to_skellycam_widget: WelcomeToSkellyCamWidget
+
     def __init__(self, session_folder_path: Union[str, Path], parent=None):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
