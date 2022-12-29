@@ -14,7 +14,7 @@ from skellycam.opencv.group.synchronizer import Synchronizer
 logger = logging.getLogger(__name__)
 
 
-async def show_synched_frames(camera_ids_list: list = None):
+def show_synched_frames(camera_ids_list: list = None):
 
     if camera_ids_list is None:
         camera_ids_list = [0]
@@ -41,6 +41,7 @@ async def show_synched_frames(camera_ids_list: list = None):
         print(f"before big frame loop - found child process: {p}")
 
     # wait for all cameras to begin delivering frames before trying to synchronize
+    # this takes awhile and appears to have some false reads before things really get going
     payload_count = 0
     while payload_count < len(camera_ids_list):
         payload_count = 0
@@ -68,17 +69,17 @@ async def show_synched_frames(camera_ids_list: list = None):
                 frame_times["frame_time"].append(frame_payload.timestamp_ns)
 
         if not bundle_q.empty():
-            # when a synched bundle is available, the synchronizer pushes it out to subscribers
 
+            # when a synched bundle is available, the synchronizer pushes it out to subscribed queues
+            # if there is something on the queue, grab it...
             new_bundle = bundle_q.get()
 
+            # the section below is just for display and summary output
             bundle_data["Bundle"].append(bundle_index)
             bundle_index += 1
-
-            # the block below is just for display and summary output
             for port, frame_data in new_bundle.items():
                 if frame_data:
-                    cv2.imshow(f"Port {port}", frame_data["frame"])
+                    cv2.imshow(f"Port {port}", frame_data["frame"]) #display frames just to make sure it's working
                     bundle_data[f"Port_{port}_Time"].append(frame_data["frame_time"])
                 else:
                     bundle_data[f"Port_{port}_Time"].append("dropped")
@@ -106,6 +107,7 @@ if __name__ == "__main__":
     found_camera_response = detect_cameras()
     camera_ids_list_in = found_camera_response.cameras_found_list
 
-    asyncio.run(show_synched_frames(camera_ids_list_in))
+    # asyncio.run(show_synched_frames(camera_ids_list_in))
+    show_synched_frames(camera_ids_list_in)
 
     print("done!")
