@@ -4,15 +4,15 @@ from typing import Callable, Dict
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 from skellycam.qt_gui.widgets.qt_multi_camera_viewer_widget import (
-    QtMultiCameraViewerWidget,
+    SkellyCamViewerWidget,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class QtCameraControllerWidget(QWidget):
+class SkellyCamControllerWidget(QWidget):
     def __init__(
-        self, qt_multi_camera_viewer_widget: QtMultiCameraViewerWidget, parent=None
+        self, qt_multi_camera_viewer_widget: SkellyCamViewerWidget, parent=None
     ):
         super().__init__(parent=parent)
 

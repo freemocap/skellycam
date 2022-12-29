@@ -22,7 +22,7 @@ from skellycam.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
 logger = logging.getLogger(__name__)
 
 
-class QtMultiCameraViewerWidget(QWidget):
+class SkellyCamViewerWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
     incoming_camera_configs_signal = pyqtSignal(dict)
@@ -297,7 +297,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     main_window = QMainWindow()
-    qt_multi_camera_viewer_widget = QtMultiCameraViewerWidget()
+    qt_multi_camera_viewer_widget = SkellyCamViewerWidget()
     main_window.setCentralWidget(qt_multi_camera_viewer_widget)
     main_window.show()
     error_code = app.exec()

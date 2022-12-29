@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 #                                     """
 
 
-class QtCameraConfigParameterTreeWidget(QWidget):
+class SkellyCamParameterTreeWidget(QWidget):
     emitting_camera_configs_signal = pyqtSignal(dict)
 
     def __init__(self):
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qt_camera_config_parameter_tree_widget = QtCameraConfigParameterTreeWidget()
+    qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget()
     qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree(
         {"0": CameraConfig(camera_id=0), "1": CameraConfig(camera_id=1)}
     )
