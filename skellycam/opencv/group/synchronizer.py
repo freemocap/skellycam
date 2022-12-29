@@ -28,12 +28,6 @@ class Synchronizer:
         self.stop_event = Event()
 
         self.ports = ports
-        # for port, stream in self.streams.items():
-        #     self.ports.append(port)
-
-        # self.fps_target = fps_target
-        # if fps_target is not None:
-            # self.fps = fps_target
 
         self.initialize_ledgers()
         self.spin_up() 
@@ -54,14 +48,6 @@ class Synchronizer:
     
     def spin_up(self):
 
-        # logging.info("About to submit Threadpool of frame Harvesters")
-        # self.threads = []
-        # for port, stream in self.streams.items():
-        #     t = Thread(target=self.harvest_frames, args=(stream,), daemon=True)
-        #     t.start()
-        #     self.threads.append(t)
-        # logging.info("Frame harvesters just submitted")
-
         logging.info("Starting frame bundler...")
         self.bundler = Thread(target=self.bundle_frames, args=(), daemon=True)
         self.bundler.start()
@@ -81,35 +67,6 @@ class Synchronizer:
         logging.info("Releasing record queue")
         self.bundle_subscribers.remove(q)
 
-    # def harvest_frames(self, stream):
-    #     port = stream.port
-    #     stream.push_to_reel = True
-
-    #     logging.info(f"Beginning to collect data generated at port {port}")
-
-    #     while not self.stop_event.is_set():
-    #         frame_index = self.port_frame_count[port] 
-
-    #         (
-    #             frame_time,
-    #             frame,
-    #         ) = stream.reel.get()
-
-    #         if frame_time == -1: # signal from recorded stream that end of file reached
-    #             break
-    #         # once toggled, keep pushing the poison pill
-            
-    #         self.frame_data[f"{port}_{frame_index}"] = {
-    #             "port": port,
-    #             "frame": frame,
-    #             "frame_index": frame_index,
-    #             "frame_time": frame_time,
-    #         }
-
-    #         logging.debug(f"Frame data harvested from reel {port} with index {frame_index} and frame time of {frame_time}")
-    #         self.port_frame_count[port] += 1
-
-    #     logging.info(f"Frame harvester for port {port} completed")
 
     def add_frame_payload(self, payload:FramePayload):
         
@@ -184,30 +141,8 @@ class Synchronizer:
 
     def bundle_frames(self):
 
-        # logging.info(f"Waiting for all ports to begin harvesting corners...")
-
-        # need to have 2 frames to assess bundling
-        # for port in self.ports:
-        #     self.streams[port].shutter_sync.put("fire")
-        #     self.streams[port].shutter_sync.put("fire")
-
-
-        sync_time = time.perf_counter()
-
         logging.info("About to start bundling frames...")
         while not self.stop_event.is_set():
-
-            # Enforce a wait period to hit target FPS, unless you have excess slack
-            # if self.frame_slack() < 2:
-            #     # Trigger device to proceed with reading frame and pushing to reel
-            #     if self.fps_target is not None:
-            #         wait_time = 1 / self.fps_target
-            #         while time.perf_counter() < sync_time + wait_time:
-            #             time.sleep(0.001)
-
-            #     sync_time = time.perf_counter()
-            #     for port in self.ports:
-            #         self.streams[port].shutter_sync.put("fire")
 
             # need to wait for data to populate before synchronization can begin
             while self.frame_slack() < 2:
@@ -271,53 +206,3 @@ class Synchronizer:
             self.fps = self.average_fps()
 
         logging.info("Frame bundler successfully ended")
-
-if __name__ == "__main__":
-
-    # DON"T DEAL WITH THE SESSION OBJECT IN TESTS...ONLY MORE FOUNDATIONAL ELEMENTS
-    # from src.cameras.camera import Camera
-    # from src.cameras.live_stream import LiveStream
-    # from src.session import Session
-    # import pandas as pd
-
-    repo = Path(__file__).parent.parent.parent
-    config_path = Path(repo, "sessions", "high_res_session")
-
-    # session = Session(config_path)
-
-    # session.load_cameras()
-    # session.load_streams()
-    # session.adjust_resolutions()
-
-    # syncr = Synchronizer(session.streams, fps_target=None)
-
-    # notification_q = Queue()
-
-    # syncr.subscribe_to_notice(notification_q)
-    
-    # bundle_data = {"Bundle":[],
-    #                "Port_0_Time":[],
-    #                "Port_1_Time":[],
-    #                "Port_2_Time":[]}
-    # bundle_index = 0
-    # while True:
-    #     frame_bundle_notice = notification_q.get()
-    #     bundle_data["Bundle"].append(bundle_index)
-    #     bundle_index += 1
-
-    #     for port, frame_data in syncr.current_bundle.items():
-            
-    #         if frame_data:
-    #             cv2.imshow(f"Port {port}", frame_data["frame"])
-    #             bundle_data[f"Port_{port}_Time"].append(frame_data["frame_time"])
-    #         else:
-    #             bundle_data[f"Port_{port}_Time"].append("dropped")
-                
-    #     key = cv2.waitKey(1)
-
-    #     if key == ord("q"):
-    #         cv2.destroyAllWindows()
-    #         break
-
-    # SynchData = pd.DataFrame(bundle_data)
-    # SynchData.to_csv(Path(config_path,"synch_data.csv"))
