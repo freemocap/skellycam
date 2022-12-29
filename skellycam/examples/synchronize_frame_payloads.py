@@ -31,10 +31,10 @@ async def show_synched_frames(camera_ids_list: list = None):
     syncr.subscribe_to_bundle(bundle_q)
      
     bundle_index = 0
-    bundle_data = {"Bundle":[],
-                   "Port_0_Time":[],
-                   "Port_1_Time":[],
-                   "Port_2_Time":[]}
+    bundle_data = {"Bundle":[]}
+
+    for port in camera_ids_list:
+        bundle_data[f"Port_{port}_Time"] = []
 
     frame_times = {"port": [],
                    "frame_index": [],
