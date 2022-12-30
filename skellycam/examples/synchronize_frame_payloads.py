@@ -1,3 +1,10 @@
+# This module provides an example for how the Synchronizer class can interface with the 
+# CameraGroup class in order to produce synchronized frame bundles in (almost) real-time.
+
+# Much of this code is just overhead to produced two .csv files in the default session folder:
+#   `frame_times.csv`: the actual ports/frame times as they came in from the camera group. 
+#   `bundle_data.csv`: shows frame_times associated with the ports in each bundle, making dropped frames explicit
+
 import asyncio
 import logging
 import time
@@ -66,7 +73,9 @@ def show_synched_frames(camera_ids_list: list = None):
             bundle_index += 1
             for port, frame_data in new_bundle.items():
                 if frame_data:
-                    cv2.imshow(f"Port {port}", frame_data["frame"]) #display frames just to make sure it's working
+                    cv2.imshow(
+                        f"Port {port}", frame_data["frame"]
+                    )  # display frames just to make sure it's working
                     bundle_data[f"Port_{port}_Time"].append(frame_data["frame_time"])
                 else:
                     bundle_data[f"Port_{port}_Time"].append("dropped")
@@ -78,12 +87,13 @@ def show_synched_frames(camera_ids_list: list = None):
 
     camera_group.close()
 
-    # export summary output
+    # export summary frame_time output
     frame_times = pd.DataFrame(frame_times)
     frame_times.to_csv(
         Path(default_session_folder_path(create_folder=True), "frame_times.csv")
     )
 
+    # export summary bundle_data output
     bundle_data = pd.DataFrame(bundle_data)
     bundle_data.to_csv(
         Path(default_session_folder_path(create_folder=True), "bundle_data.csv")
@@ -94,7 +104,6 @@ if __name__ == "__main__":
     found_camera_response = detect_cameras()
     camera_ids_list_in = found_camera_response.cameras_found_list
 
-    # asyncio.run(show_synched_frames(camera_ids_list_in))
     show_synched_frames(camera_ids_list_in)
 
     print("done!")

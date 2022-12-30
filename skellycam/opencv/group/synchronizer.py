@@ -29,7 +29,12 @@ class Synchronizer:
 
         self.ports = ports
 
-        self.initialize_ledgers()
+        self.frame_data = (
+            {}
+        )  # {port_frame_number: {port:, frame: frame_number:,frame_time: }
+        self.port_frame_count = {port: 0 for port in self.ports}
+        self.port_current_frame = {port: 0 for port in self.ports}
+        self.mean_frame_times = []
         self.spin_up()
 
     def stop(self):
@@ -37,14 +42,6 @@ class Synchronizer:
         self.bundler.join()
         for t in self.threads:
             t.join()
-
-    def initialize_ledgers(self):
-        # note, these starting values will get overwritten once frames start coming in
-        # the first frame number to actually come in will not be zero based on current testing
-        self.frame_data = {} # {port_frame_number: {port:, frame: frame_number:,frame_time: }
-        self.port_frame_count = {port: 0 for port in self.ports}
-        self.port_current_frame = {port: 0 for port in self.ports}
-        self.mean_frame_times = []
 
     def spin_up(self):
 
@@ -55,7 +52,8 @@ class Synchronizer:
     def subscribe_to_bundle(self, q):
         # subscribers are notified via the queue that a new frame bundle is available
         # this is intended to avoid issues with latency due to multiple iterations
-        # of frames being passed from one queue to another
+        # of frames being passed from one queue to another; subscribers can just reference
+        # self.current_bundle if dropped frames are not a concern (i.e. GUI frames)
         logging.info("Adding queue to receive notice of bundle update")
         self.notice_subscribers.append(q)
 
@@ -69,15 +67,6 @@ class Synchronizer:
 
     def add_frame_payload(self, payload: FramePayload):
 
-        # once frames actually start coming in, need to set it to the correct
-        # starting point
-        # if self.port_current_frame[payload.camera_id] == 0:
-        #     self.port_current_frame[payload.camera_id] = payload.frame_number
-        #     self.port_frame_count[payload.camera_id] = payload.frame_number
-
-        # print(
-        #     f"{payload.camera_id}: {payload.frame_number} @ {payload.timestamp_ns/(10^9)}"
-        # )
         frame_index = self.port_frame_count[payload.camera_id]
         key = f"{payload.camera_id}_{frame_index}"
         self.frame_data[key] = {
@@ -88,15 +77,15 @@ class Synchronizer:
         }
         self.port_frame_count[payload.camera_id] += 1
 
-    # get minimum value of frame_time for next layer
     def earliest_next_frame(self, port):
         """Looks at next unassigned frame across the ports to determine
         the earliest time at which each of them was read"""
         times_of_next_frames = []
         for p in self.ports:
 
-            next_index = self.port_current_frame[p] + 1 # note that this is no longer true if skellycam drops a frame
-            
+            next_index = (
+                self.port_current_frame[p] + 1
+            )  # note that this is no longer true if skellycam drops a frame
 
             frame_data_key = f"{p}_{next_index}"
 
@@ -142,9 +131,9 @@ class Synchronizer:
             self.port_frame_count[port] - self.port_current_frame[port]
             for port in self.ports
         ]
-        
+
         logging.debug(f"Max frame slack is {max(slack)}")
-        
+
         return max(slack)
 
     def average_fps(self):
@@ -162,10 +151,6 @@ class Synchronizer:
 
         logging.info("About to start bundling frames...")
         while not self.stop_event.is_set():
-
-            # experimenting with this as a way to avoid major issues with delay in frames being read in
-            if self.max_frame_slack()>5:
-                self.initialize_ledgers()
 
             # need to wait for data to populate before synchronization can begin
             while self.min_frame_slack() < 2:
@@ -233,5 +218,4 @@ class Synchronizer:
 
             self.fps = self.average_fps()
 
-                
         logging.info("Frame bundler successfully ended")
