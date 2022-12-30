@@ -22,21 +22,16 @@ class Synchronizer:
         # self.streams = streams
         self.current_bundle = None
 
-        self.notice_subscribers = []  # queues that will be notified of new bundles
-        self.bundle_subscribers = []  # queues that will receive actual frame data
-
         self.stop_event = Event()
-
         self.ports = ports
+        self.frame_data = {}
 
-        self.frame_data = (
-            {}
-        )  # {port_frame_number: {port:, frame: frame_number:,frame_time: }
         self.port_frame_count = {port: 0 for port in self.ports}
         self.port_current_frame = {port: 0 for port in self.ports}
         self.mean_frame_times = []
+        self.bundle_out_q = Queue()
         self.spin_up()
-
+        
     def stop(self):
         self.stop_event.set()
         self.bundler.join()
@@ -48,22 +43,6 @@ class Synchronizer:
         logging.info("Starting frame bundler...")
         self.bundler = Thread(target=self.bundle_frames, args=(), daemon=True)
         self.bundler.start()
-
-    def subscribe_to_bundle(self, q):
-        # subscribers are notified via the queue that a new frame bundle is available
-        # this is intended to avoid issues with latency due to multiple iterations
-        # of frames being passed from one queue to another; subscribers can just reference
-        # self.current_bundle if dropped frames are not a concern (i.e. GUI frames)
-        logging.info("Adding queue to receive notice of bundle update")
-        self.notice_subscribers.append(q)
-
-    def subscribe_to_bundle(self, q):
-        logging.info("Adding queue to receive frame bundle")
-        self.bundle_subscribers.append(q)
-
-    def release_bundle_q(self, q):
-        logging.info("Releasing record queue")
-        self.bundle_subscribers.remove(q)
 
     def add_frame_payload(self, payload: FramePayload):
 
@@ -136,16 +115,6 @@ class Synchronizer:
 
         return max(slack)
 
-    def average_fps(self):
-        """"""
-        # only look at the most recent layers
-        if len(self.mean_frame_times) > 10:
-            self.mean_frame_times = self.mean_frame_times[-10:]
-
-        delta_t = np.diff(self.mean_frame_times)
-        mean_delta_t = np.mean(delta_t)
-
-        return 1 / mean_delta_t
 
     def bundle_frames(self):
 
@@ -205,17 +174,6 @@ class Synchronizer:
             self.mean_frame_times.append(np.mean(layer_frame_times))
 
             self.current_bundle = next_layer
-            # notify other processes that the current bundle is ready for processing
-            # only for tasks that can risk missing a frame bundle
-            for q in self.notice_subscribers:
-                logging.debug(f"Giving notice of new bundle via {q}")
-                q.put("new bundle available")
-
-            for q in self.bundle_subscribers:
-                logging.debug(f"Placing new bundle on queue: {q}")
-                logging.debug("Placing bundle on subscribers queue")
-                q.put(self.current_bundle)
-
-            self.fps = self.average_fps()
+            self.bundle_out_q.put(self.current_bundle)
 
         logging.info("Frame bundler successfully ended")

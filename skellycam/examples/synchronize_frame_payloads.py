@@ -33,8 +33,6 @@ def show_synched_frames(camera_ids_list: list = None):
 
     # will be receiving a bundle of synched frames via queue
     syncr = Synchronizer(camera_ids_list)
-    bundle_q = Queue()
-    syncr.subscribe_to_bundle(bundle_q)
 
     # bundle data and frame times are just for summary reporting...saved to csv in default session folder path
     bundle_index = 0
@@ -62,11 +60,10 @@ def show_synched_frames(camera_ids_list: list = None):
                 frame_times["skellycam_index"].append(frame_payload.frame_number)
                 frame_times["frame_time"].append(frame_payload.timestamp_ns)
 
-        if not bundle_q.empty():
+        if not syncr.bundle_out_q.empty():
 
-            # when a synched bundle is available, the synchronizer pushes it out to subscribed queues
-            # if there is something on the queue, grab it...
-            new_bundle = bundle_q.get()
+            # if there is something on the synched bundle queue, grab it...
+            new_bundle = syncr.bundle_out_q.get()
 
             # the section below is just for display and summary output
             bundle_data["Bundle"].append(bundle_index)
