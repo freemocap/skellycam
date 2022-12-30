@@ -71,21 +71,21 @@ class Synchronizer:
 
         # once frames actually start coming in, need to set it to the correct
         # starting point
-        if self.port_current_frame[payload.camera_id] == 0:
-            self.port_current_frame[payload.camera_id] = payload.frame_number
-            self.port_frame_count[payload.camera_id] = payload.frame_number
+        # if self.port_current_frame[payload.camera_id] == 0:
+        #     self.port_current_frame[payload.camera_id] = payload.frame_number
+        #     self.port_frame_count[payload.camera_id] = payload.frame_number
 
         # print(
         #     f"{payload.camera_id}: {payload.frame_number} @ {payload.timestamp_ns/(10^9)}"
         # )
-        key = f"{payload.camera_id}_{payload.frame_number}"
+        frame_index = self.port_frame_count[payload.camera_id]
+        key = f"{payload.camera_id}_{frame_index}"
         self.frame_data[key] = {
             "port": payload.camera_id,
             "frame": payload.image,
-            "frame_index": self.port_frame_count[payload.camera_id],
+            "frame_index": frame_index,
             "frame_time": payload.timestamp_ns,
         }
-
         self.port_frame_count[payload.camera_id] += 1
 
     # get minimum value of frame_time for next layer
@@ -96,6 +96,8 @@ class Synchronizer:
         for p in self.ports:
 
             next_index = self.port_current_frame[p] + 1 # note that this is no longer true if skellycam drops a frame
+            
+
             frame_data_key = f"{p}_{next_index}"
 
             # problem with outpacing the threads reading data in, so wait if need be

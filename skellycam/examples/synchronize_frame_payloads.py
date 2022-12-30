@@ -36,7 +36,7 @@ def show_synched_frames(camera_ids_list: list = None):
     for port in camera_ids_list:
         bundle_data[f"Port_{port}_Time"] = []
 
-    frame_times = {"port": [], "frame_index": [], "frame_time": []}
+    frame_times = {"port": [], "skellycam_index": [], "frame_time": []}
 
     for p in multiprocessing.active_children():
         print(f"before big frame loop - found child process: {p}")
@@ -52,7 +52,7 @@ def show_synched_frames(camera_ids_list: list = None):
 
                 # dictionary below is just to create summary output
                 frame_times["port"].append(frame_payload.camera_id)
-                frame_times["frame_index"].append(frame_payload.frame_number)
+                frame_times["skellycam_index"].append(frame_payload.frame_number)
                 frame_times["frame_time"].append(frame_payload.timestamp_ns)
 
         if not bundle_q.empty():
