@@ -30,6 +30,17 @@ class WelcomeToSkellyCamWidget(QWidget):
                                            color: #1b1e28;
                                             """)
 
+        subtitle_text_label = QLabel(self)
+        self._layout.addWidget(subtitle_text_label)
+
+        subtitle_text_label.setText("The camera back-end for the FreeMoCap Project \U00002728")
+        subtitle_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle_text_label.setStyleSheet("""
+                                            font-size: 24px;
+                                           font-family: 'Dosis', sans-serif;
+                                           color: #2b2e38;
+                                            """)
+
 
 
         self.resize(skellycam_logo_pixmap.width(), skellycam_logo_pixmap.height())
