@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 import multiprocessing
 import pandas as pd
 from queue import Queue
@@ -39,20 +40,6 @@ def show_synched_frames(camera_ids_list: list = None):
 
     for p in multiprocessing.active_children():
         print(f"before big frame loop - found child process: {p}")
-
-    # wait for all cameras to begin delivering frames before trying to synchronize
-    # this takes awhile and appears to have some false reads before things really get going
-    payload_count = 0
-    while payload_count < len(camera_ids_list):
-        payload_count = 0
-        latest_frame_payloads = camera_group.latest_frames()
-        for cam_id, frame_payload in latest_frame_payloads.items():
-            if frame_payload is not None:
-                payload_count += 1
-
-    print(
-        "------------------------------------------------------------------------------"
-    )
 
     while should_continue:
         latest_frame_payloads = camera_group.latest_frames()

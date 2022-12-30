@@ -25,7 +25,6 @@ class Synchronizer:
         self.notice_subscribers = []  # queues that will be notified of new bundles
         self.bundle_subscribers = []  # queues that will receive actual frame data
 
-        self.frame_data = {}
         self.stop_event = Event()
 
         self.ports = ports
@@ -42,6 +41,7 @@ class Synchronizer:
     def initialize_ledgers(self):
         # note, these starting values will get overwritten once frames start coming in
         # the first frame number to actually come in will not be zero based on current testing
+        self.frame_data = {} # {port_frame_number: {port:, frame: frame_number:,frame_time: }
         self.port_frame_count = {port: 0 for port in self.ports}
         self.port_current_frame = {port: 0 for port in self.ports}
         self.mean_frame_times = []
@@ -75,9 +75,9 @@ class Synchronizer:
             self.port_current_frame[payload.camera_id] = payload.frame_number
             self.port_frame_count[payload.camera_id] = payload.frame_number
 
-        print(
-            f"{payload.camera_id}: {payload.frame_number} @ {payload.timestamp_ns/(10^9)}"
-        )
+        # print(
+        #     f"{payload.camera_id}: {payload.frame_number} @ {payload.timestamp_ns/(10^9)}"
+        # )
         key = f"{payload.camera_id}_{payload.frame_number}"
         self.frame_data[key] = {
             "port": payload.camera_id,
@@ -94,7 +94,8 @@ class Synchronizer:
         the earliest time at which each of them was read"""
         times_of_next_frames = []
         for p in self.ports:
-            next_index = self.port_current_frame[p] + 1
+
+            next_index = self.port_current_frame[p] + 1 # note that this is no longer true if skellycam drops a frame
             frame_data_key = f"{p}_{next_index}"
 
             # problem with outpacing the threads reading data in, so wait if need be
@@ -121,15 +122,28 @@ class Synchronizer:
 
         return max(times_of_current_frames)
 
-    def frame_slack(self):
+    def min_frame_slack(self):
         """Determine how many unassigned frames are sitting in self.dataframe"""
 
         slack = [
             self.port_frame_count[port] - self.port_current_frame[port]
             for port in self.ports
         ]
+        # logging.debug(f"Min slack in frames is {min(slack)}")
         logging.debug(f"Slack in frames is {slack}")
         return min(slack)
+
+    def max_frame_slack(self):
+        """Determine how many unassigned frames are sitting in self.dataframe"""
+
+        slack = [
+            self.port_frame_count[port] - self.port_current_frame[port]
+            for port in self.ports
+        ]
+        
+        logging.debug(f"Max frame slack is {max(slack)}")
+        
+        return max(slack)
 
     def average_fps(self):
         """"""
@@ -147,8 +161,13 @@ class Synchronizer:
         logging.info("About to start bundling frames...")
         while not self.stop_event.is_set():
 
+            # experimenting with this as a way to avoid major issues with delay in frames being read in
+            if self.max_frame_slack()>5:
+                self.initialize_ledgers()
+
             # need to wait for data to populate before synchronization can begin
-            while self.frame_slack() < 2:
+            while self.min_frame_slack() < 2:
+                logging.debug("Waiting for all ports to fully populate")
                 time.sleep(0.01)
 
             next_layer = {}
@@ -212,4 +231,5 @@ class Synchronizer:
 
             self.fps = self.average_fps()
 
+                
         logging.info("Frame bundler successfully ended")
