@@ -23,9 +23,10 @@ from skellycam.qt_gui.widgets.welcome_to_skellycam_widget import (
 
 logger = logging.getLogger(__name__)
 
+
 class QtGUIMainWindow(QMainWindow):
 
-    def  __init__(self, session_folder_path: Union[str, Path], parent=None):
+    def __init__(self, session_folder_path: Union[str, Path], parent=None):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
         self.setGeometry(100, 100, 1600, 900)
@@ -47,20 +48,14 @@ class QtGUIMainWindow(QMainWindow):
             session_folder_path=self._session_folder_path, parent=self
         )
         self._qt_multi_camera_viewer_widget.resize(1280, 720)
-        self._layout.addWidget(self._qt_multi_camera_viewer_widget)
 
-        self._qt_camera_controller_dock_widget = QDockWidget("Camera Controller", self)
         self._qt_camera_controller_widget = SkellyCamControllerWidget(
             qt_multi_camera_viewer_widget=self._qt_multi_camera_viewer_widget,
             parent=self,
         )
-        self._qt_camera_controller_dock_widget.setWidget(
-            self._qt_camera_controller_widget
-        )
-        self.addDockWidget(
-            Qt.DockWidgetArea.BottomDockWidgetArea,
-            self._qt_camera_controller_dock_widget,
-        )
+
+        self._layout.addWidget(self._qt_camera_controller_widget)
+        self._layout.addWidget(self._qt_multi_camera_viewer_widget)
 
         self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
         self._parameter_tree_dock_widget.setFloating(False)

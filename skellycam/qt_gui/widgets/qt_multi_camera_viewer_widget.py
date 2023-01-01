@@ -39,7 +39,6 @@ class SkellyCamViewerWidget(QWidget):
         )
 
         self._session_folder_path = session_folder_path
-        self._camera_view_layout = None
         self._camera_config_dicationary = None
         self._detect_cameras_worker = None
         self._camera_layout_dictionary = None
@@ -48,6 +47,9 @@ class SkellyCamViewerWidget(QWidget):
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
+
+        self._camera_view_layout = QHBoxLayout()
+        self._layout.addLayout(self._camera_view_layout)
 
         self._camera_ids = camera_ids
         self._cam_group_frame_worker = self._create_cam_group_frame_worker()
@@ -86,14 +88,13 @@ class SkellyCamViewerWidget(QWidget):
         logger.info(
             f"Creating camera view grid layout for camera config dictionary: {camera_config_dictionary}"
         )
-        camera_view_layout = QHBoxLayout()
-        self._layout.addLayout(camera_view_layout)
+
 
         self._portrait_grid_layout = QGridLayout()
-        camera_view_layout.addLayout(self._portrait_grid_layout)
+        self._camera_view_layout.addLayout(self._portrait_grid_layout)
 
         self._landscape_grid_layout = QGridLayout()
-        camera_view_layout.addLayout(self._landscape_grid_layout)
+        self._camera_view_layout.addLayout(self._landscape_grid_layout)
 
         camera_layout_dictionary = {}
         for camera_id, camera_config in camera_config_dictionary.items():
@@ -273,21 +274,6 @@ class SkellyCamViewerWidget(QWidget):
             return "portrait"
 
         return "landscape"
-
-    def _remove_camera_layout_from_grid_layouts(self, camera_layout, grid_layouts):
-        if not isinstance(grid_layouts, list):
-            grid_layouts = [grid_layouts]
-        for grid_layout in grid_layouts:
-            index = grid_layout.indexOf(camera_layout)
-            if index != -1:
-                logger.debug(
-                    f"Removing camera layout {camera_layout}from grid layout {grid_layout} at index {index}"
-                )
-                grid_layout.takeAt(index)
-            else:
-                logger.debug(
-                    f"Camera layout {camera_layout} not found in grid layout {grid_layout}"
-                )
 
 
 if __name__ == "__main__":
