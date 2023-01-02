@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class SkellyCamControllerWidget(QWidget):
     def __init__(
-        self, qt_multi_camera_viewer_widget: SkellyCamViewerWidget, parent=None
+        self, camera_viewer_widget: SkellyCamViewerWidget, parent=None
     ):
         super().__init__(parent=parent)
 
@@ -25,12 +25,12 @@ class SkellyCamControllerWidget(QWidget):
         self._button_layout, self._button_dictionary = self._create_button_dictionary()
         self._layout.addLayout(self._button_layout)
 
-        self._qt_multi_camera_viewer_widget = qt_multi_camera_viewer_widget
-        self._qt_multi_camera_viewer_widget.cameras_connected_signal.connect(
+        self._camera_viewer_widget = camera_viewer_widget
+        self._camera_viewer_widget.cameras_connected_signal.connect(
             self._show_buttons
         )
         self._slot_dictionary = (
-            self._qt_multi_camera_viewer_widget.controller_slot_dictionary
+            self._camera_viewer_widget.controller_slot_dictionary
         )
         if self._slot_dictionary is not None:
             self.connect_buttons_to_slots(
@@ -51,14 +51,14 @@ class SkellyCamControllerWidget(QWidget):
         play_push_button.setEnabled(False)
         play_push_button.clicked.connect(self._play_push_button_clicked)
         play_push_button.hide()
-        button_layout.addWidget(play_push_button)
+        # button_layout.addWidget(play_push_button)
         button_dictionary["play"] = play_push_button
 
         pause_push_button = QPushButton("Pause")
         pause_push_button.setEnabled(True)
         pause_push_button.hide()
         pause_push_button.clicked.connect(self._pause_push_button_clicked)
-        button_layout.addWidget(pause_push_button)
+        # button_layout.addWidget(pause_push_button)
         button_dictionary["pause"] = pause_push_button
 
         start_recording_push_button = QPushButton("Start Recording")

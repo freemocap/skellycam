@@ -7,7 +7,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-from skellycam import CameraConfig
+from skellycam import CameraConfig, SkellyCamViewerWidget
 from skellycam.qt_gui.qt_utils.qt_label_strings import (
     COLLAPSE_ALL_STRING,
     COPY_SETTINGS_TO_CAMERAS_STRING,
@@ -52,7 +52,9 @@ logger = logging.getLogger(__name__)
 class SkellyCamParameterTreeWidget(QWidget):
     emitting_camera_configs_signal = pyqtSignal(dict)
 
-    def __init__(self):
+    def __init__(self,
+                 camera_viewer_widget: SkellyCamViewerWidget):
+
         super().__init__()
 
         self.setStyleSheet("""
@@ -61,6 +63,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         font-size: 15px;
         }
         """)
+
         self.setMinimumWidth(250)
         self._camera_parameter_group_dictionary = {}
         self._layout = QVBoxLayout()
@@ -80,6 +83,17 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._layout.addWidget(self._parameter_tree_widget)
         self._parameter_tree_widget.addParameters(
             Parameter(name="No cameras connected...", value="", type="str")
+        )
+
+        self._connect_signals_to_slots(camera_viewer_widget)
+
+    def _connect_signals_to_slots(self, camera_viewer_widget:SkellyCamViewerWidget):
+        camera_viewer_widget.camera_group_created_signal.connect(
+            self.update_camera_config_parameter_tree
+        )
+
+        self.emitting_camera_configs_signal.connect(
+            camera_viewer_widget.incoming_camera_configs_signal
         )
 
     def update_camera_config_parameter_tree(
@@ -247,6 +261,8 @@ class SkellyCamParameterTreeWidget(QWidget):
     def _handle_camera_parameter_group_changed(self, parameter, changes):
         # TODO - don't activate for the 'expand' and 'collapse' buttons
         self._apply_settings_to_cameras_button.setEnabled(True)
+
+
 
 
 if __name__ == "__main__":

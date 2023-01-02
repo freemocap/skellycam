@@ -44,18 +44,18 @@ class QtGUIMainWindow(QMainWindow):
         self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
         self._layout.addWidget(self._welcome_to_skellycam_widget)
 
-        self._qt_multi_camera_viewer_widget = SkellyCamViewerWidget(
+        self._camera_viewer_widget = SkellyCamViewerWidget(
             session_folder_path=self._session_folder_path, parent=self
         )
-        self._qt_multi_camera_viewer_widget.resize(1280, 720)
+        self._camera_viewer_widget.resize(1280, 720)
 
         self._qt_camera_controller_widget = SkellyCamControllerWidget(
-            qt_multi_camera_viewer_widget=self._qt_multi_camera_viewer_widget,
+            camera_viewer_widget=self._camera_viewer_widget,
             parent=self,
         )
 
         self._layout.addWidget(self._qt_camera_controller_widget)
-        self._layout.addWidget(self._qt_multi_camera_viewer_widget)
+        self._layout.addWidget(self._camera_viewer_widget)
 
         self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
         self._parameter_tree_dock_widget.setFloating(False)
@@ -83,21 +83,21 @@ class QtGUIMainWindow(QMainWindow):
         self._connect_signals_to_slots()
 
     def _connect_signals_to_slots(self):
-        self._qt_multi_camera_viewer_widget.camera_group_created_signal.connect(
+        self._camera_viewer_widget.camera_group_created_signal.connect(
             self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
         )
 
-        self._qt_multi_camera_viewer_widget.camera_group_created_signal.connect(
+        self._camera_viewer_widget.camera_group_created_signal.connect(
             self._welcome_to_skellycam_widget.hide
         )
 
         self._qt_camera_config_parameter_tree_widget.emitting_camera_configs_signal.connect(
-            self._qt_multi_camera_viewer_widget.incoming_camera_configs_signal
+            self._camera_viewer_widget.incoming_camera_configs_signal
         )
 
     def closeEvent(self, a0) -> None:
         try:
-            self._qt_multi_camera_viewer_widget.close()
+            self._camera_viewer_widget.close()
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
