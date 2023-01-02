@@ -46,20 +46,20 @@ class SkellyCamControllerWidget(QWidget):
         button_layout = QHBoxLayout()
 
         button_dictionary = {}
-
-        play_push_button = QPushButton("Play")
-        play_push_button.setEnabled(False)
-        play_push_button.clicked.connect(self._play_push_button_clicked)
-        play_push_button.hide()
+        #
+        # play_push_button = QPushButton("Play")
+        # play_push_button.setEnabled(False)
+        # play_push_button.clicked.connect(self._play_push_button_clicked)
+        # play_push_button.hide()
         # button_layout.addWidget(play_push_button)
-        button_dictionary["play"] = play_push_button
+        # button_dictionary["play"] = play_push_button
 
-        pause_push_button = QPushButton("Pause")
-        pause_push_button.setEnabled(True)
-        pause_push_button.hide()
-        pause_push_button.clicked.connect(self._pause_push_button_clicked)
+        # pause_push_button = QPushButton("Pause")
+        # pause_push_button.setEnabled(True)
+        # pause_push_button.hide()
+        # pause_push_button.clicked.connect(self._pause_push_button_clicked)
         # button_layout.addWidget(pause_push_button)
-        button_dictionary["pause"] = pause_push_button
+        # button_dictionary["pause"] = pause_push_button
 
         start_recording_push_button = QPushButton("Start Recording")
         start_recording_push_button.setEnabled(True)
@@ -87,29 +87,29 @@ class SkellyCamControllerWidget(QWidget):
 
     def _play_push_button_clicked(self):
         logger.debug("Play button clicked")
-        self._button_dictionary["play"].setEnabled(False)
-        self._button_dictionary["pause"].setEnabled(True)
+        # self._button_dictionary["play"].setEnabled(False)
+        # self._button_dictionary["pause"].setEnabled(True)
         self._button_dictionary["start_recording"].setEnabled(True)
         self._button_dictionary["stop_recording"].setEnabled(False)
 
     def _pause_push_button_clicked(self):
         logger.debug("Pause button clicked")
-        self._button_dictionary["play"].setEnabled(True)
-        self._button_dictionary["pause"].setEnabled(False)
+        # self._button_dictionary["play"].setEnabled(True)
+        # self._button_dictionary["pause"].setEnabled(False)
         self._button_dictionary["start_recording"].setEnabled(False)
         self._button_dictionary["stop_recording"].setEnabled(False)
 
     def _start_recording_push_button_clicked(self):
         logger.debug("Start Recording button clicked")
-        self._button_dictionary["play"].setEnabled(False)
-        self._button_dictionary["pause"].setEnabled(False)
+        # self._button_dictionary["play"].setEnabled(False)
+        # self._button_dictionary["pause"].setEnabled(False)
         self._button_dictionary["start_recording"].setEnabled(False)
         self._button_dictionary["stop_recording"].setEnabled(True)
 
     def _stop_recording_push_button_clicked(self):
         logger.debug("Stop Recording button clicked")
-        self._button_dictionary["play"].setEnabled(False)
-        self._button_dictionary["pause"].setEnabled(True)
+        # self._button_dictionary["play"].setEnabled(False)
+        # self._button_dictionary["pause"].setEnabled(True)
         self._button_dictionary["start_recording"].setEnabled(True)
         self._button_dictionary["stop_recording"].setEnabled(False)
 
