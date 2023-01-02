@@ -25,4 +25,4 @@ configure_logging()
 
 from skellycam.qt_gui.widgets.qt_camera_config_parameter_tree_widget import SkellyCamParameterTreeWidget
 from skellycam.qt_gui.widgets.qt_camera_controller_widget import SkellyCamControllerWidget
-from skellycam.qt_gui.widgets.qt_multi_camera_viewer_widget import SkellyCamViewerWidget
+from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import SkellyCamViewerWidget
