@@ -221,7 +221,8 @@ class SkellyCamViewerWidget(QWidget):
 
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupFrameWorker(
-            camera_ids=self._camera_ids, session_folder_path=self._session_folder_path
+            camera_ids=self._camera_ids,
+            session_folder_path=self._session_folder_path
         )
 
         cam_group_frame_worker.cameras_connected_signal.connect(

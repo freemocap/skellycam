@@ -39,8 +39,12 @@ class SkellyCamControllerWidget(QWidget):
             )
 
     @property
-    def button_dictionary(self):
-        return self._button_dictionary
+    def stop_recording_button(self):
+        return self._button_dictionary["stop_recording"]
+
+    @property
+    def start_recording_button(self):
+        return self._button_dictionary["start_recording"]
 
     def _create_button_dictionary(self):
         button_layout = QHBoxLayout()
