@@ -202,10 +202,13 @@ class CamGroupFrameWorker(QThread):
                 deepcopy(self._video_recorder_dictionary),
                 recording_folder_path_string,
                 True,
-                self._videos_saved_signal,
             ),
         )
         self._video_save_process.start()
+        logger.info(f"Launched video save process: {self._video_save_process}")
+
+        self._videos_saved_signal.emit(recording_folder_path_string)
+
         del self._video_recorder_dictionary
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 

@@ -95,6 +95,10 @@ class QtGUIMainWindow(QMainWindow):
             self._camera_viewer_widget.incoming_camera_configs_signal
         )
 
+        self._camera_viewer_widget.videos_saved_signal.connect(
+            lambda x: logger.info(f"(emitted signal) Videos saved to : {x}")
+        )
+
     def closeEvent(self, a0) -> None:
         try:
             self._camera_viewer_widget.close()

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
+from PyQt6.QtCore import pyqtSignal
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.diagnostics.create_diagnostic_plots import create_diagnostic_plots
@@ -31,7 +32,6 @@ def save_synchronized_videos(
     folder_to_save_videos: Union[str, Path],
     create_diagnostic_plots_bool: bool = True,
     shared_zero_time: Union[int, float] = 0,
-    videos_saved_signal:pyqtSignal = None,
 ):
     logger.info(f"Saving synchronized videos to folder: {str(folder_to_save_videos)}")
 
@@ -133,8 +133,6 @@ def save_synchronized_videos(
             show_plots_bool=True,
         )
 
-    if videos_saved_signal is not None:
-        videos_saved_signal.emit(str(folder_to_save_videos))
 
     return synchronized_frame_list_dictionary
 
