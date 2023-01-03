@@ -34,17 +34,16 @@ class CamGroupFrameWorker(QThread):
         self,
         camera_ids: Union[List[str], None],
         session_folder_path: Union[str, Path] = None,
+        videos_saved_signal:pyqtSignal = None,
         parent=None,
     ):
 
-        self._updating_camera_settings_bool = False
-        self._recording_id = None
-        self._video_save_process = None
+
         logger.info(
             f"Initializing camera group frame worker with camera ids: {camera_ids}"
         )
         super().__init__(parent=parent)
-
+        self._camera_ids = camera_ids
         if session_folder_path is None:
             self._session_folder_path = (
                 Path(default_base_folder()) / default_session_name()
@@ -52,9 +51,14 @@ class CamGroupFrameWorker(QThread):
         else:
             self._session_folder_path = Path(session_folder_path)
 
+        self._videos_saved_signal = videos_saved_signal
+
         self._should_pause_bool = False
         self._should_record_frames_bool = False
-        self._camera_ids = camera_ids
+
+        self._updating_camera_settings_bool = False
+        self._recording_id = None
+        self._video_save_process = None
 
         if self._camera_ids is not None:
             self._camera_group = self._create_camera_group(self._camera_ids)
@@ -198,6 +202,7 @@ class CamGroupFrameWorker(QThread):
                 deepcopy(self._video_recorder_dictionary),
                 recording_folder_path_string,
                 True,
+                self._videos_saved_signal,
             ),
         )
         self._video_save_process.start()

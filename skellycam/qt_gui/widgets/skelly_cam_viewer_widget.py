@@ -26,6 +26,7 @@ class SkellyCamViewerWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
     incoming_camera_configs_signal = pyqtSignal(dict)
+    videos_saved_signal = pyqtSignal(str)
 
     def __init__(
         self,
@@ -222,7 +223,8 @@ class SkellyCamViewerWidget(QWidget):
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupFrameWorker(
             camera_ids=self._camera_ids,
-            session_folder_path=self._session_folder_path
+            session_folder_path=self._session_folder_path,
+            videos_saved_signal=self.videos_saved_signal,
         )
 
         cam_group_frame_worker.cameras_connected_signal.connect(
