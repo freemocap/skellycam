@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QThread
 
 from skellycam.detection.detect_cameras import detect_cameras
 

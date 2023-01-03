@@ -3,7 +3,6 @@ from multiprocessing import Process
 from time import perf_counter_ns, sleep
 from typing import List
 
-import cv2
 import zmq
 
 from skellycam import Camera, CameraConfig

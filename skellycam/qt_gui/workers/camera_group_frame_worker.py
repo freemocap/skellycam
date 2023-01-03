@@ -3,10 +3,10 @@ import time
 from copy import deepcopy
 from multiprocessing import Process
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import List, Union
 
 import cv2
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt, QThread
 from PyQt6.QtGui import QImage
 
 from skellycam.detection.models.frame_payload import FramePayload
@@ -16,7 +16,6 @@ from skellycam.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,
 )
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.qt_gui.workers.save_videos_worker import SaveVideosWorker
 from skellycam.system.environment.default_paths import (
     default_base_folder,
     default_session_name,

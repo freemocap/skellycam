@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import Union
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QThread
 
 from skellycam.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,

@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 from typing import Union
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFileSystemModel
 from PyQt6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget
 from qtpy import QtGui

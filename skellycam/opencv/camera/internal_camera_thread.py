@@ -3,7 +3,6 @@ import multiprocessing
 import threading
 import time
 import traceback
-from typing import Union
 
 import cv2
 import numpy as np
