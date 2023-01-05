@@ -70,6 +70,26 @@ class VideoRecorder:
         self._save_timestamps(timestamps_npy=self._timestamps_npy)
         self._cv2_video_writer.release()
 
+    def save_image_list_to_disk(
+        self,
+        image_list: List[np.ndarray],
+        path_to_save_video_file: Union[str, Path],
+        frames_per_second: float,
+    ):
+
+        self._path_to_save_video_file = path_to_save_video_file
+
+        if len(image_list) == 0:
+            logging.error(f"No frames to save for : {self._path_to_save_video_file}")
+            return
+
+        self._cv2_video_writer = self._initialize_video_writer(
+            image_height=image_list[0].shape[0],
+            image_width=image_list[0].shape[1],
+            frames_per_second=frames_per_second,
+        )
+        self._write_image_list_to_video_file(image_list)
+
     def _initialize_video_writer(
         self,
         image_height: Union[int, float],
