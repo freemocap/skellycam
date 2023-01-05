@@ -5,6 +5,7 @@ from typing import Union
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
+from PyQt6.uic.properties import QtGui
 
 from skellycam.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.qt_gui.widgets.qt_camera_config_parameter_tree_widget import (
@@ -20,18 +21,26 @@ from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import (
 from skellycam.qt_gui.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
+from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)
 
 
 class QtGUIMainWindow(QMainWindow):
 
-    def __init__(self, session_folder_path: Union[str, Path], parent=None):
+    def __init__(self,
+                 session_folder_path: Union[str, Path] = None,
+                 parent=None):
         logger.info("Initializing QtGUIMainWindow")
-        super().__init__()
+        super().__init__(parent=parent)
         self.setGeometry(100, 100, 1600, 900)
 
         self._session_folder_path = session_folder_path
+
+
+        self._session_folder_path = session_folder_path
+
+        self._base_folder_path =  get_default_skellycam_base_folder_path()
 
         self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
 
@@ -58,7 +67,8 @@ class QtGUIMainWindow(QMainWindow):
         self._layout.addWidget(self._camera_viewer_widget)
 
         self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
-        self._parameter_tree_dock_widget.setFloating(False)
+
+
         self._qt_camera_config_parameter_tree_widget = (
             SkellyCamParameterTreeWidget(self._camera_viewer_widget)
         )
@@ -73,7 +83,7 @@ class QtGUIMainWindow(QMainWindow):
 
         self._directory_view_dock_widget = QDockWidget("Directory View", self)
         self._qt_directory_view_widget = QtDirectoryViewWidget(
-            folder_path=self._session_folder_path
+            folder_path=self._base_folder_path
         )
         self._directory_view_dock_widget.setWidget(self._qt_directory_view_widget)
         self.addDockWidget(
@@ -100,6 +110,11 @@ class QtGUIMainWindow(QMainWindow):
         )
 
     def closeEvent(self, a0) -> None:
+
+        if not any(Path(self._session_folder_path).iterdir()):
+            logger.info(f"Session folder: {self._session_folder_path} is empty, removing it")
+            Path(self._session_folder_path).rmdir()
+
         try:
             self._camera_viewer_widget.close()
         except Exception as e:

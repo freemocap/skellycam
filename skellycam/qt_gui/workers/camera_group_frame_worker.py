@@ -17,8 +17,7 @@ from skellycam.opencv.video_recorder.save_synchronized_videos import (
 )
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.system.environment.default_paths import (
-    default_base_folder,
-    default_session_name,
+    get_default_session_folder_path, SYNCHRONIZED_VIDEOS_FOLDER_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,25 +29,20 @@ class CamGroupFrameWorker(QThread):
     camera_group_created_signal = pyqtSignal(dict)
 
     def __init__(
-        self,
-        camera_ids: Union[List[str], None],
-        session_folder_path: Union[str, Path] = None,
-        videos_saved_signal:pyqtSignal = None,
-        parent=None,
+            self,
+            camera_ids: Union[List[str], None],
+            session_folder_path: Union[str, Path] = None,
+            videos_saved_signal: pyqtSignal = None,
+            parent=None,
     ):
-
 
         logger.info(
             f"Initializing camera group frame worker with camera ids: {camera_ids}"
         )
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
-        if session_folder_path is None:
-            self._session_folder_path = (
-                Path(default_base_folder()) / default_session_name()
-            )
-        else:
-            self._session_folder_path = Path(session_folder_path)
+
+        self._session_folder_path = session_folder_path
 
         self._videos_saved_signal = videos_saved_signal
 
@@ -191,9 +185,11 @@ class CamGroupFrameWorker(QThread):
                     f"Waiting for video save process to finish: {self._video_save_process}"
                 )
 
-        recording_folder_path_string = str(
-            Path(self._session_folder_path / self._recording_id)
-        )
+        if self._session_folder_path is None:
+            self._session_folder_path = get_default_session_folder_path()
+
+        recording_folder_path_string = str(Path(self._session_folder_path) / self._recording_id / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
+
         self._video_save_process = Process(
             name=f"VideoSaveProcess",
             target=save_synchronized_videos,
@@ -224,7 +220,7 @@ class CamGroupFrameWorker(QThread):
         }
 
     def _create_camera_group(
-        self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None
+            self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None
     ):
         logger.info(
             f"Creating `camera_group` for camera_ids: {camera_ids}, camera_config_dictionary: {camera_config_dictionary}"

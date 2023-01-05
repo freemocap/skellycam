@@ -5,7 +5,10 @@ from pathlib import Path
 import skellycam
 from skellycam.system.environment.home_dir import os_independent_home_dir
 
-DEFAULT_BASE_FOLDER_NAME = "skelly-cam-recordings"
+DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skelly-cam-recordings"
+SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
+TIMESTAMPS_FOLDER_NAME = "timestamps"
+
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
 PATH_TO_SKELLY_CAM_LOGO_SVG = str(
@@ -13,12 +16,12 @@ PATH_TO_SKELLY_CAM_LOGO_SVG = str(
 )
 
 
-def default_base_folder():
-    return Path(os_independent_home_dir()) / DEFAULT_BASE_FOLDER_NAME
+def get_default_skellycam_base_folder_path():
+    return Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME
 
 
-def default_session_folder_path(create_folder: bool = False, string_tag: str = None):
-    folder_path = default_base_folder() / default_session_name(string_tag=string_tag)
+def get_default_session_folder_path(create_folder: bool = True, string_tag: str = None):
+    folder_path = get_default_skellycam_base_folder_path() / default_session_name(string_tag=string_tag)
     if create_folder:
         folder_path.mkdir(parents=True, exist_ok=True)
     return str(folder_path)
@@ -43,4 +46,4 @@ def default_session_name(string_tag: str = None):
     else:
         string_tag = ""
 
-    return time.strftime("%m-%d-%Y_%H_%M_%S" + string_tag)
+    return time.strftime("%Y-%m-%d_%H_%M_%S" + string_tag)

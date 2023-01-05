@@ -40,7 +40,7 @@ class MultiCameraVideoRecorder:
         self._session_name = default_session_name(string_tag=string_tag)
 
         if video_save_folder_path is None:
-            self._video_save_folder_path = default_base_folder() / self._session_name
+            self._video_save_folder_path = default_base_folder() / self._session_name / SYNCHRONIZED_VIDEOS_FOLDER_NAME
         else:
             self._video_save_folder_path = Path(video_save_folder_path)
         self._video_save_folder_path.mkdir(parents=True, exist_ok=True)
