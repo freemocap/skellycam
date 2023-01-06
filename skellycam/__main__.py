@@ -17,4 +17,7 @@ def main():
 
 
 if __name__ == "__main__":
+    from skellycam.system.log_config.logsetup import configure_logging
+
+    configure_logging()
     main()
