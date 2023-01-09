@@ -7,23 +7,12 @@ import numpy as np
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.diagnostics.create_diagnostic_plots import create_diagnostic_plots
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.tests.test_frame_synchronization import test_frame_synchronization
+from skellycam.tests.test_synchronized_videos import test_synchronized_videos
 
 logger = logging.getLogger(__name__)
 
 
-def test_frame_synchronization(synchronized_frame_list_dictionary):
-    frame_count_list = []
-
-    for frame_list in synchronized_frame_list_dictionary.values():
-        frame_count_list.append(len(frame_list))
-
-    logger.info(f"frame_count_list: {frame_count_list}")
-
-    assert np.all(
-        np.diff(frame_count_list) == 0
-    ), "Frame count is not the same for all cameras"
-
-    logger.info("Test passed: Frame count is the same for all cameras :D")
 
 
 def save_synchronized_videos(
@@ -132,6 +121,7 @@ def save_synchronized_videos(
             show_plots_bool=True,
         )
 
+    test_synchronized_videos(video_folder_path=folder_to_save_videos)
 
     return synchronized_frame_list_dictionary
 

@@ -34,3 +34,4 @@ def configure_logging(log_file_path: Optional[str] = ""):
     handlers = get_logging_handlers(log_file_path)
     logging.getLogger("").handlers.extend(handlers)
     logging.root.setLevel(logging.DEBUG)
+    logging.propagate = False
