@@ -15,6 +15,7 @@ def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConfig):
         f"Exposure: {config.exposure}, "
         f"Resolution width: {config.resolution_width}, "
         f"Resolution height: {config.resolution_height}, "
+        f"Framerate: {config.framerate}, "
         f"Fourcc: {config.fourcc}"
     )
     try:
@@ -34,7 +35,7 @@ def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConfig):
         cv2_vid_cap.set(cv2.CAP_PROP_EXPOSURE, config.exposure)
         cv2_vid_cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution_width)
         cv2_vid_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution_height)
-
+        cv2_vid_cap.set(cv2.CAP_PROP_FPS, config.framerate)
         cv2_vid_cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.fourcc))
     except Exception as e:
         logger.error(f"Problem applying configuration for camera: {config.camera_id}")

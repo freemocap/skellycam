@@ -146,6 +146,12 @@ class SkellyCamParameterTreeWidget(QWidget):
                     type="str",
                     value=camera_config.fourcc,
                 ),
+                dict(
+                    name="Framerate",
+                    type="int",
+                    value=camera_config.framerate,
+                    tip="Framerate in frames per second",
+                ),
                 self._create_copy_to_all_cameras_action_parameter(
                     camera_id=camera_config.camera_id
                 ),
@@ -187,6 +193,7 @@ class SkellyCamParameterTreeWidget(QWidget):
                 resolution_height=camera_parameter_group.param(
                     "Resolution Height"
                 ).value(),
+                framerate=camera_parameter_group.param("Framerate").value(),
                 fourcc=camera_parameter_group.param("FourCC").value(),
                 rotate_video_cv2_code=rotate_image_str_to_cv2_code(
                     camera_parameter_group.param("Rotate Image").value()
@@ -265,7 +272,7 @@ if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget()
+    qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget(camera_viewer_widget=SkellyCamViewerWidget())
     qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree(
         {"0": CameraConfig(camera_id=0), "1": CameraConfig(camera_id=1)}
     )

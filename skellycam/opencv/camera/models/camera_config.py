@@ -8,6 +8,7 @@ class CameraConfig(BaseModel):
     exposure: int = -7
     resolution_width: int = 1280
     resolution_height: int = 720
+    framerate: int = 30
     # fourcc: str = "MP4V"
     fourcc: str = "MJPG"
     rotate_video_cv2_code: int = None
