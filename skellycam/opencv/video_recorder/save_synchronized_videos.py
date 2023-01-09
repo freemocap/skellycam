@@ -7,8 +7,8 @@ import numpy as np
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.diagnostics.create_diagnostic_plots import create_diagnostic_plots
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.tests.test_frame_synchronization import test_frame_synchronization
-from skellycam.tests.test_synchronized_videos import test_synchronized_videos
+from skellycam.tests.test_frame_timestamp_synchronization import test_frame_timestamp_synchronization
+from skellycam.tests.test_synchronized_video_frame_counts import test_synchronized_video_frame_counts
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ def save_synchronized_videos(
 
     logger.info(f"np.diff(final_frame_timestamps): {np.diff(final_frame_timestamps)}")
 
-    test_frame_synchronization(synchronized_frame_list_dictionary)
+    test_frame_timestamp_synchronization(synchronized_frame_list_dictionary=synchronized_frame_list_dictionary)
 
     Path(folder_to_save_videos).mkdir(parents=True, exist_ok=True)
     for camera_id, frame_list in synchronized_frame_list_dictionary.items():
@@ -121,7 +121,7 @@ def save_synchronized_videos(
             show_plots_bool=True,
         )
 
-    test_synchronized_videos(video_folder_path=folder_to_save_videos)
+    test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
 
     return synchronized_frame_list_dictionary
 
