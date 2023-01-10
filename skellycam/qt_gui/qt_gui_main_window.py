@@ -20,7 +20,8 @@ from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import (
 from skellycam.qt_gui.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
-from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path
+from skellycam.system.environment.default_paths import get_default_session_folder_path, \
+    get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +35,10 @@ class QtGUIMainWindow(QMainWindow):
         super().__init__(parent=parent)
         self.setGeometry(100, 100, 1600, 900)
 
-        self._session_folder_path = session_folder_path
-
-
-        self._session_folder_path = session_folder_path
+        if session_folder_path is None:
+            self._session_folder_path = get_default_session_folder_path()
+        else:
+            self._session_folder_path = session_folder_path
 
         self._base_folder_path =  get_default_skellycam_base_folder_path()
 
