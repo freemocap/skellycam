@@ -19,10 +19,19 @@ def get_number_of_frames_of_videos_in_a_folder(folder_path: Union[str, Path]):
         return None
 
     frame_count = []
+
     for video_path in list_of_video_paths:
         cap = cv2.VideoCapture(str(video_path))
-        frame_count.append(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+        #Note: cap.get(cv2.CAP_PROP_FRAME_COUNT) may not always be accurate - https://stackoverflow.com/a/47796468/14662833
+        success = True
+        count = 0
+        while success:
+            success, frame = cap.read()
+            if not success:
+                break
+            count += 1
         cap.release()
+        frame_count.append(count)
 
     logger.info(f"Number of frames is - {frame_count} - for videos in {folder_path}")
     return frame_count

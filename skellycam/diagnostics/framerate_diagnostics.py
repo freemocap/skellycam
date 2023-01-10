@@ -128,7 +128,7 @@ def create_timestamp_diagnostic_plots(
 
     fig_save_path = Path(path_to_save_plots_png)
     plt.savefig(str(fig_save_path))
-    logger.info(f"Saving diagnostic figure as png")
+    logger.info(f"Saving diagnostic figure tp: {fig_save_path}")
 
     if open_image_after_saving:
         os.startfile(path_to_save_plots_png, "open")

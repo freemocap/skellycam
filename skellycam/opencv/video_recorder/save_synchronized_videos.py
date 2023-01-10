@@ -72,14 +72,15 @@ def save_synchronized_videos(
     reference_frame_list = each_cam_clipped_frame_list[
         index_of_the_camera_with_fewest_frames
     ]
-
+    logger.info(
+        f" (clipped) number_of_frames_per_camera: {number_of_frames_per_camera_clipped}, min:{min_number_of_frames}"
+    )
     logger.info(
         "Creating synchronized frame list by matching each camera's timestamps to the timestamps of the camera with the fewest frames"
     )
     logger.info(
         "TODO - Make a reference timestamp list based on the desired/measured framerate (while ensuring we won't throw away good frames...)"
     )
-    logger.info("NOTE - this is a slow process, I think it's like O(n^2) or something")
     synchronized_frame_list_dictionary = {}
     for camera_id, camera_frame_list in enumerate(each_cam_clipped_frame_list):
         logger.info(f"Creating synchronized frame list for camera {camera_id}...")
@@ -89,12 +90,10 @@ def save_synchronized_videos(
             cam_synchronized_frame_list.append(closest_frame)
         synchronized_frame_list_dictionary[str(camera_id)] = cam_synchronized_frame_list
 
-    logger.info(
-        f" (clipped) number_of_frames_per_camera: {number_of_frames_per_camera_clipped}, min:{min_number_of_frames}"
-    )
+
 
     final_frame_timestamps = [
-        frame_list[-1].timestamp_ns
+        frame_list[-1].timestamp_ns /1e9
         for frame_list in synchronized_frame_list_dictionary.values()
     ]
 
@@ -107,10 +106,10 @@ def save_synchronized_videos(
         logger.info(
             f" Saving camera {camera_id} video with {len(frame_list)} frames..."
         )
-        dictionary_of_video_recorders[camera_id].save_frame_list_to_video_file(
-            list_of_frames=frame_list,
-            path_to_save_video_file=Path(folder_to_save_videos)
-            / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
+        VideoRecorder().save_frame_list_to_video_file(
+            frame_payload_list=frame_list,
+            video_file_save_path=Path(folder_to_save_videos)
+                                 / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
         )
     if create_diagnostic_plots_bool:
         create_diagnostic_plots(

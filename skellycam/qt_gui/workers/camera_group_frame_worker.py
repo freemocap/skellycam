@@ -199,10 +199,10 @@ class CamGroupFrameWorker(QThread):
                 True,
             ),
         )
+        logger.info(f"Launching video save process: {self._video_save_process}")
         self._video_save_process.start()
-        logger.info(f"Launched video save process: {self._video_save_process}")
 
-        self._videos_saved_signal.emit(recording_folder_path_string)
+        # self._videos_saved_signal.emit(recording_folder_path_string)
 
         del self._video_recorder_dictionary
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
