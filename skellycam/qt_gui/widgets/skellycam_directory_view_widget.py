@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Union
 
+from PyQt6.QtCore import QFileSystemWatcher
 from PyQt6.QtGui import QFileSystemModel
 from PyQt6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget
 from qtpy import QtGui
@@ -10,7 +11,7 @@ from qtpy import QtGui
 logger = logging.getLogger(__name__)
 
 
-class QtDirectoryViewWidget(QWidget):
+class SkellyCamDirectoryViewWidget(QWidget):
     def __init__(self, folder_path: Union[str, Path] = None):
         logger.info("Creating QtDirectoryViewWidget")
         super().__init__()
@@ -41,6 +42,18 @@ class QtDirectoryViewWidget(QWidget):
 
         if self._folder_path is not None:
             self.set_folder_as_root(self._folder_path)
+
+    def expand_directory_to_path(self, directory_path: Union[str, Path]):
+        try:
+            parent_path = Path(directory_path).parent
+            logger.info(f"Expanding directories under path: {str(parent_path)}")
+            parent_index = self._file_system_model.index(str(parent_path))
+            self._tree_view_widget.expandRecursively(parent_index)
+            index = self._file_system_model.index(str(directory_path))
+            self._tree_view_widget.setCurrentIndex(index)
+
+        except Exception as e:
+            logger.error(e)
 
     def set_folder_as_root(self, folder_path: Union[str, Path]):
         logger.info(f"Setting root folder to {str(folder_path)}")
@@ -74,7 +87,7 @@ if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qt_directory_view_widget = QtDirectoryViewWidget(folder_path=Path.home())
+    skellycam_directory_view_widget = SkellyCamDirectoryViewWidget(folder_path=Path.home())
 
-    qt_directory_view_widget.show()
+    skellycam_directory_view_widget.show()
     sys.exit(app.exec())

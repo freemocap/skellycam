@@ -17,7 +17,8 @@ from skellycam.opencv.video_recorder.save_synchronized_videos import (
 )
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.system.environment.default_paths import (
-    get_default_session_folder_path, SYNCHRONIZED_VIDEOS_FOLDER_NAME,
+    create_new_recording_folder, get_default_recording_name, get_default_session_folder_path,
+    SYNCHRONIZED_VIDEOS_FOLDER_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class CamGroupFrameWorker(QThread):
             self,
             camera_ids: Union[List[str], None],
             session_folder_path: Union[str, Path] = None,
-            videos_saved_signal: pyqtSignal = None,
+            new_recording_folder_created_signal: pyqtSignal  = None,
             parent=None,
     ):
 
@@ -43,14 +44,12 @@ class CamGroupFrameWorker(QThread):
         self._camera_ids = camera_ids
 
         self._session_folder_path = session_folder_path
-
-        self._videos_saved_signal = videos_saved_signal
-
+        self._new_recording_folder_created_signal = new_recording_folder_created_signal
         self._should_pause_bool = False
         self._should_record_frames_bool = False
 
         self._updating_camera_settings_bool = False
-        self._recording_id = None
+        self._recording_name = None
         self._video_save_process = None
 
         if self._camera_ids is not None:
@@ -151,7 +150,7 @@ class CamGroupFrameWorker(QThread):
 
     def start_recording(self):
         logger.info("Starting recording")
-        self._recording_id = self._generate_recording_id()
+        self.recording_id()  # initialize recording name on record start
         self._should_record_frames_bool = True
 
     def stop_recording(self):
@@ -188,7 +187,8 @@ class CamGroupFrameWorker(QThread):
         if self._session_folder_path is None:
             self._session_folder_path = get_default_session_folder_path()
 
-        recording_folder_path_string = str(Path(self._session_folder_path) / self._recording_id / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
+        recording_folder_path_string = create_new_recording_folder(session_folder_path=self._session_folder_path,
+                                                                   recording_name=self._recording_name)
 
         self._video_save_process = Process(
             name=f"VideoSaveProcess",
@@ -202,7 +202,9 @@ class CamGroupFrameWorker(QThread):
         logger.info(f"Launching video save process: {self._video_save_process}")
         self._video_save_process.start()
 
-        # self._videos_saved_signal.emit(recording_folder_path_string)
+        if self._new_recording_folder_created_signal is not None:
+            logger.info(f"Emitting `new_recording_folder_created` signal with path: {recording_folder_path_string}")
+            self._new_recording_folder_created_signal.emit(recording_folder_path_string)
 
         del self._video_recorder_dictionary
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
@@ -210,8 +212,12 @@ class CamGroupFrameWorker(QThread):
     def _initialize_video_recorder_dictionary(self):
         return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
 
-    def _generate_recording_id(self) -> str:
-        return time.strftime("%H_%M_%S_recording")
+    def recording_id(self) -> str:
+
+        if self._recording_name is None:
+            self._recording_name = get_default_recording_name(string_tag="")
+            logger.info(f"Generating recording name: {self._recording_name}")
+        return self._recording_name
 
     def _get_recorder_frame_count_dict(self):
         return {

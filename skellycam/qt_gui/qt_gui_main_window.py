@@ -13,7 +13,7 @@ from skellycam.qt_gui.widgets.qt_camera_config_parameter_tree_widget import (
 from skellycam.qt_gui.widgets.qt_camera_controller_widget import (
     SkellyCamControllerWidget,
 )
-from skellycam.qt_gui.widgets.qt_directory_view_widget import QtDirectoryViewWidget
+from skellycam.qt_gui.widgets.skellycam_directory_view_widget import SkellyCamDirectoryViewWidget
 from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import (
     SkellyCamViewerWidget,
 )
@@ -82,10 +82,10 @@ class QtGUIMainWindow(QMainWindow):
         )
 
         self._directory_view_dock_widget = QDockWidget("Directory View", self)
-        self._qt_directory_view_widget = QtDirectoryViewWidget(
+        self._directory_view_widget = SkellyCamDirectoryViewWidget(
             folder_path=self._base_folder_path
         )
-        self._directory_view_dock_widget.setWidget(self._qt_directory_view_widget)
+        self._directory_view_dock_widget.setWidget(self._directory_view_widget)
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock_widget
         )
@@ -105,15 +105,13 @@ class QtGUIMainWindow(QMainWindow):
             self._camera_viewer_widget.incoming_camera_configs_signal
         )
 
-        # self._camera_viewer_widget.videos_saved_signal.connect(
-        #     lambda x: logger.info(f"(emitted signal) Videos saved to : {x}")
-        # )
+        self._camera_viewer_widget.new_recording_folder_created_signal.connect(
+            self._directory_view_widget.expand_directory_to_path
+        )
 
     def closeEvent(self, a0) -> None:
 
-        if not any(Path(self._session_folder_path).iterdir()):
-            logger.info(f"Session folder: {self._session_folder_path} is empty, removing it")
-            Path(self._session_folder_path).rmdir()
+        remove_empty_directories(get_default_skellycam_base_folder_path())
 
         try:
             self._camera_viewer_widget.close()
@@ -121,6 +119,19 @@ class QtGUIMainWindow(QMainWindow):
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
 
+def remove_empty_directories(root_dir: Union[str, Path]):
+    """
+    Recursively remove empty directories from the root directory
+    :param root_dir: The root directory to start removing empty directories from
+    """
+    for path in Path(root_dir).rglob("*"):
+        if path.is_dir() and not any(path.iterdir()):
+            logger.info(f"Removing empty directory: {path}")
+            path.rmdir()
+        elif path.is_dir() and any(path.iterdir()):
+            remove_empty_directories(path)
+        else:
+            continue
 
 if __name__ == "__main__":
     import sys

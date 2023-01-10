@@ -8,6 +8,8 @@ __description__ = "A simple python API for efficiently watching camera streams ð
 import sys
 from pathlib import Path
 
+from skellycam.system.environment.default_paths import get_log_file_path
+
 print(f"This is printing from {__file__}")
 
 base_package_path = Path(__file__).parent
@@ -16,7 +18,7 @@ sys.path.insert(0, str(base_package_path))  # add parent directory to sys.path
 
 from skellycam.system.log_config.logsetup import configure_logging
 
-configure_logging()
+configure_logging(log_file_path=get_log_file_path())
 
 from skellycam.opencv.camera.camera import Camera
 from skellycam.opencv.camera.models.camera_config import CameraConfig

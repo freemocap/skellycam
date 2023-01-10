@@ -25,7 +25,7 @@ def qt_gui_main():
 
 
     logger.info(f"Exiting with code: {error_code}")
-    logger.info(f"Thank you for using SkellyCam ✨")
+    print("Thank you for using Skelly Cam \U0001F480 \U0001F4F8")
     sys.exit()
 
 
