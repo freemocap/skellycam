@@ -50,7 +50,7 @@ class CamGroupFrameWorker(QThread):
         self._should_record_frames_bool = False
 
         self._updating_camera_settings_bool = False
-        self._recording_name = None
+        self._current_recording_name = None
         self._video_save_process = None
 
         if self._camera_ids is not None:
@@ -151,7 +151,8 @@ class CamGroupFrameWorker(QThread):
 
     def start_recording(self):
         logger.info("Starting recording")
-        self.recording_id()  # initialize recording name on record start
+        self._generate_new_recording_id()
+
         self._should_record_frames_bool = True
 
     def stop_recording(self):
@@ -186,10 +187,11 @@ class CamGroupFrameWorker(QThread):
                 )
 
         if self._session_folder_path is None:
+
             self._session_folder_path = get_default_session_folder_path()
 
         recording_folder_path_string = create_new_recording_folder(session_folder_path=self._session_folder_path,
-                                                                   recording_name=self._recording_name)
+                                                                   recording_name=self._current_recording_name)
 
         self._video_save_process = Process(
             name=f"VideoSaveProcess",
@@ -213,12 +215,12 @@ class CamGroupFrameWorker(QThread):
     def _initialize_video_recorder_dictionary(self):
         return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
 
-    def recording_id(self) -> str:
+    def _generate_new_recording_id(self) -> str:
 
-        if self._recording_name is None:
-            self._recording_name = get_default_recording_name(string_tag="")
-            logger.info(f"Generating recording name: {self._recording_name}")
-        return self._recording_name
+        self._current_recording_name = get_default_recording_name(string_tag="")
+        logger.info(f"Generating recording name: {self._current_recording_name}")
+
+        return self._current_recording_name
 
     def _get_recorder_frame_count_dict(self):
         return {

@@ -1,5 +1,6 @@
 import logging
 import os
+from copy import copy
 from pathlib import Path
 from typing import Union
 
@@ -43,17 +44,22 @@ class SkellyCamDirectoryViewWidget(QWidget):
         if self._folder_path is not None:
             self.set_folder_as_root(self._folder_path)
 
-    def expand_directory_to_path(self, directory_path: Union[str, Path]):
-        try:
-            parent_path = Path(directory_path).parent
-            logger.info(f"Expanding directories under path: {str(parent_path)}")
-            parent_index = self._file_system_model.index(str(parent_path))
-            self._tree_view_widget.expandRecursively(parent_index)
-            index = self._file_system_model.index(str(directory_path))
-            self._tree_view_widget.setCurrentIndex(index)
+    def expand_directory_to_path(self, directory_path: Union[str, Path], collapse_other_directories: bool = True):
+        logger.info(f"Expanding directory at  path: {str(directory_path)}")
+        if collapse_other_directories:
+            logger.info("Collapsing other directories")
+            self._tree_view_widget.collapseAll()
 
-        except Exception as e:
-            logger.error(e)
+        index = self._file_system_model.index(str(directory_path))
+        self._tree_view_widget.scrollTo(index)
+        path = copy(directory_path)
+        while index.isValid() and Path(self._file_system_model.rootPath()) in Path(path).parents:
+            self._tree_view_widget.expand(index)
+            path = Path(path).parent
+            index = self._file_system_model.index(str(path))
+            self._tree_view_widget.expand(index)
+
+
 
     def set_folder_as_root(self, folder_path: Union[str, Path]):
         logger.info(f"Setting root folder to {str(folder_path)}")
