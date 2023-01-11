@@ -127,7 +127,7 @@ class SkellyCamViewerWidget(QWidget):
                                                                                     """
             )
             camera_layout_dictionary[camera_id]["image_label_widget"] = QLabel(
-                "\U0001F4F8 Connecting... "
+                "\U0001F4F8 Connecting... ", alignment=Qt.AlignmentFlag.AlignCenter
             )
             camera_layout_dictionary[camera_id]["title_label_widget"].setAlignment(
                 Qt.AlignmentFlag.AlignCenter

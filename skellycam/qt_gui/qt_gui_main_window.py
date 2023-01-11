@@ -7,13 +7,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
 from skellycam.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.qt_gui.widgets.qt_camera_config_parameter_tree_widget import (
+from skellycam.qt_gui.widgets.skelly_cam_config_parameter_tree_widget import (
     SkellyCamParameterTreeWidget,
 )
-from skellycam.qt_gui.widgets.qt_camera_controller_widget import (
+from skellycam.qt_gui.widgets.skelly_cam_controller_widget import (
     SkellyCamControllerWidget,
 )
-from skellycam.qt_gui.widgets.skellycam_directory_view_widget import SkellyCamDirectoryViewWidget
+from skellycam.qt_gui.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
 from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import (
     SkellyCamViewerWidget,
 )
