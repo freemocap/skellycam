@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 class CamGroupFrameWorker(QThread):
     ImageUpdate = pyqtSignal(CameraId, QImage)
     cameras_connected_signal = pyqtSignal()
+    cameras_closed_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
 
     def __init__(
@@ -136,7 +137,7 @@ class CamGroupFrameWorker(QThread):
     def close(self):
         logger.info("Closing camera group")
         try:
-            self._camera_group.close()
+            self._camera_group.close(cameras_closed_signal= self.cameras_closed_signal)
         except AttributeError:
             pass
 

@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 from typing import List, Union
 
@@ -54,6 +55,8 @@ class SkellyCamViewerWidget(QWidget):
 
         self._camera_ids = camera_ids
         self._cam_group_frame_worker = self._create_cam_group_frame_worker()
+        self._cam_group_frame_worker.cameras_closed_signal.connect(self._show_cameras_disconnected)
+
         if self._camera_ids is None:
             self._detect_available_cameras_push_button = (
                 self._create_detect_cameras_button()
@@ -61,6 +64,8 @@ class SkellyCamViewerWidget(QWidget):
             self._layout.addWidget(self._detect_available_cameras_push_button)
         else:
             self.connect_to_cameras()
+
+        self._layout.addStretch()
 
     @property
     def controller_slot_dictionary(self):
@@ -77,6 +82,11 @@ class SkellyCamViewerWidget(QWidget):
             )
         except Exception as e:
             logger.error(f"Problem in _handle_image_update for Camera {camera_id}: {e}")
+
+    def _show_cameras_disconnected(self):
+        for key, value in self._camera_layout_dictionary.items():
+            value["image_label_widget"].setText("\U0001F4F8 Disconnected")
+            value["image_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def _create_camera_view_grid_layout(self, camera_config_dictionary: dict) -> dict:
 
@@ -198,6 +208,7 @@ class SkellyCamViewerWidget(QWidget):
 
     def disconnect_from_cameras(self):
         self._cam_group_frame_worker.close()
+
 
     def pause(self):
         self._cam_group_frame_worker.pause()

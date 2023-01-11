@@ -50,7 +50,7 @@ class SkellyCamParameterTreeWidget(QWidget):
                  camera_viewer_widget: SkellyCamViewerWidget):
 
         super().__init__()
-
+        self._camera_viewer_widget = camera_viewer_widget
         self.setStyleSheet("""
         QPushButton{
         border-width: 2px;
@@ -62,6 +62,11 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._camera_parameter_group_dictionary = {}
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
+
+        self._close_cameras_button = QPushButton("Close Cameras")
+        self._layout.addWidget(self._close_cameras_button)
+
+        self._close_cameras_button.setEnabled(False)
 
         self._apply_settings_to_cameras_button = QPushButton(
             "Apply settings to cameras",
@@ -79,7 +84,7 @@ class SkellyCamParameterTreeWidget(QWidget):
             Parameter(name="No cameras connected...", value="", type="str")
         )
 
-        self._connect_signals_to_slots(camera_viewer_widget)
+        self._connect_signals_to_slots(self._camera_viewer_widget)
 
     def _connect_signals_to_slots(self, camera_viewer_widget:SkellyCamViewerWidget):
         camera_viewer_widget.camera_group_created_signal.connect(
@@ -88,6 +93,13 @@ class SkellyCamParameterTreeWidget(QWidget):
 
         self.emitting_camera_configs_signal.connect(
             camera_viewer_widget.incoming_camera_configs_signal
+        )
+
+        self._close_cameras_button.clicked.connect(
+            self._camera_viewer_widget.disconnect_from_cameras
+        )
+        self._camera_viewer_widget.cameras_connected_signal.connect(
+            lambda: self._close_cameras_button.setEnabled(True)
         )
 
     def update_camera_config_parameter_tree(
@@ -261,6 +273,7 @@ class SkellyCamParameterTreeWidget(QWidget):
 
     def _handle_camera_parameter_group_changed(self, parameter, changes):
         # TODO - don't activate for the 'expand' and 'collapse' buttons
+
         self._apply_settings_to_cameras_button.setEnabled(True)
 
 
