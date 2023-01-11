@@ -65,8 +65,11 @@ class SkellyCamParameterTreeWidget(QWidget):
 
         self._close_cameras_button = QPushButton("Close Cameras")
         self._layout.addWidget(self._close_cameras_button)
-
         self._close_cameras_button.setEnabled(False)
+
+        self._detect_available_cameras_button = QPushButton("Detect Available Cameras")
+        self._layout.addWidget(self._detect_available_cameras_button)
+        self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.connect_to_cameras)
 
         self._apply_settings_to_cameras_button = QPushButton(
             "Apply settings to cameras",
@@ -96,7 +99,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         )
 
         self._close_cameras_button.clicked.connect(
-            self._camera_viewer_widget.disconnect_from_cameras
+            self._handle_close_cameras_button_clicked
         )
         self._camera_viewer_widget.cameras_connected_signal.connect(
             lambda: self._close_cameras_button.setEnabled(True)
@@ -275,6 +278,9 @@ class SkellyCamParameterTreeWidget(QWidget):
         # TODO - don't activate for the 'expand' and 'collapse' buttons
 
         self._apply_settings_to_cameras_button.setEnabled(True)
+
+    def _handle_close_cameras_button_clicked(self):
+        self._camera_viewer_widget.disconnect_from_cameras()
 
 
 

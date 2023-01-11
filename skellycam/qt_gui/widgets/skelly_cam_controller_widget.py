@@ -46,6 +46,7 @@ class SkellyCamControllerWidget(QWidget):
     def start_recording_button(self):
         return self._button_dictionary["start_recording"]
 
+
     def _create_button_dictionary(self):
         button_layout = QHBoxLayout()
 
@@ -105,10 +106,11 @@ class SkellyCamControllerWidget(QWidget):
 
     def _start_recording_push_button_clicked(self):
         logger.debug("Start Recording button clicked")
-        # self._button_dictionary["play"].setEnabled(False)
-        # self._button_dictionary["pause"].setEnabled(False)
-        self._button_dictionary["start_recording"].setEnabled(False)
-        self._button_dictionary["stop_recording"].setEnabled(True)
+        if self._camera_viewer_widget.cameras_connected:
+            # self._button_dictionary["play"].setEnabled(False)
+            # self._button_dictionary["pause"].setEnabled(False)
+            self._button_dictionary["start_recording"].setEnabled(False)
+            self._button_dictionary["stop_recording"].setEnabled(True)
 
     def _stop_recording_push_button_clicked(self):
         logger.debug("Stop Recording button clicked")

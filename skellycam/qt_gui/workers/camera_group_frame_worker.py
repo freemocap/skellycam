@@ -17,7 +17,7 @@ from skellycam.opencv.video_recorder.save_synchronized_videos import (
 )
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.system.environment.default_paths import (
-    create_new_recording_folder, get_default_recording_name, get_default_session_folder_path,
+    create_new_recording_video_folder, get_default_recording_name, get_default_session_folder_path,
     SYNCHRONIZED_VIDEOS_FOLDER_NAME,
 )
 
@@ -34,7 +34,7 @@ class CamGroupFrameWorker(QThread):
             self,
             camera_ids: Union[List[str], None],
             session_folder_path: Union[str, Path] = None,
-            new_recording_folder_created_signal: pyqtSignal  = None,
+            new_recording_video_folder_created_signal: pyqtSignal  = None,
             parent=None,
     ):
 
@@ -45,7 +45,7 @@ class CamGroupFrameWorker(QThread):
         self._camera_ids = camera_ids
 
         self._session_folder_path = session_folder_path
-        self._new_recording_folder_created_signal = new_recording_folder_created_signal
+        self._new_recording_video_folder_created_signal = new_recording_video_folder_created_signal
         self._should_pause_bool = False
         self._should_record_frames_bool = False
 
@@ -95,6 +95,10 @@ class CamGroupFrameWorker(QThread):
     @property
     def camera_config_dictionary(self):
         return self._camera_group.camera_config_dictionary
+
+    @property
+    def cameras_connected(self):
+        return self._camera_group.is_capturing
 
     def run(self):
         logger.info("Starting camera group frame worker")
@@ -151,9 +155,12 @@ class CamGroupFrameWorker(QThread):
 
     def start_recording(self):
         logger.info("Starting recording")
-        self._generate_new_recording_id()
+        if self.cameras_connected:
+            self._generate_new_recording_id()
+            self._should_record_frames_bool = True
+        else:
+            logger.warning("Cannot start recording - cameras not connected")
 
-        self._should_record_frames_bool = True
 
     def stop_recording(self):
         logger.info("Stopping recording")
@@ -190,24 +197,25 @@ class CamGroupFrameWorker(QThread):
 
             self._session_folder_path = get_default_session_folder_path()
 
-        recording_folder_path_string = create_new_recording_folder(session_folder_path=self._session_folder_path,
-                                                                   recording_name=self._current_recording_name)
+        recording_video_folder_path_string = str(Path(create_new_recording_video_folder(session_folder_path=self._session_folder_path,
+                                                                                        recording_name=self._current_recording_name)))
+
 
         self._video_save_process = Process(
             name=f"VideoSaveProcess",
             target=save_synchronized_videos,
             args=(
                 deepcopy(self._video_recorder_dictionary),
-                recording_folder_path_string,
+                recording_video_folder_path_string,
                 True,
             ),
         )
         logger.info(f"Launching video save process: {self._video_save_process}")
         self._video_save_process.start()
 
-        if self._new_recording_folder_created_signal is not None:
-            logger.info(f"Emitting `new_recording_folder_created` signal with path: {recording_folder_path_string}")
-            self._new_recording_folder_created_signal.emit(recording_folder_path_string)
+        if self._new_recording_video_folder_created_signal is not None:
+            logger.info(f"Emitting `new_recording_folder_created` signal with path: {recording_video_folder_path_string}")
+            self._new_recording_video_folder_created_signal.emit(recording_video_folder_path_string)
 
         del self._video_recorder_dictionary
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()

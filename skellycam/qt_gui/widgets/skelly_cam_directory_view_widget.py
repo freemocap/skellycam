@@ -45,20 +45,22 @@ class SkellyCamDirectoryViewWidget(QWidget):
             self.set_folder_as_root(self._folder_path)
 
     def expand_directory_to_path(self, directory_path: Union[str, Path], collapse_other_directories: bool = True):
-        logger.info(f"Expanding directory at  path: {str(directory_path)}")
         if collapse_other_directories:
             logger.info("Collapsing other directories")
             self._tree_view_widget.collapseAll()
+        logger.info(f"Expanding directory at  path: {str(directory_path)}")
+        og_index = self._file_system_model.index(str(directory_path))
+        self._tree_view_widget.expand(og_index)
 
-        index = self._file_system_model.index(str(directory_path))
-        self._tree_view_widget.scrollTo(index)
-        path = copy(directory_path)
-        while index.isValid() and Path(self._file_system_model.rootPath()) in Path(path).parents:
-            self._tree_view_widget.expand(index)
-            path = Path(path).parent
-            index = self._file_system_model.index(str(path))
+        parent_path = copy(directory_path)
+        while Path(self._file_system_model.rootPath()) in Path(parent_path).parents:
+
+            parent_path = Path(parent_path).parent
+            index = self._file_system_model.index(str(parent_path))
+            logger.info(f"Expanding parent directory at  path: {str(parent_path)}")
             self._tree_view_widget.expand(index)
 
+        self._tree_view_widget.scrollTo(og_index)
 
 
     def set_folder_as_root(self, folder_path: Union[str, Path]):
@@ -94,6 +96,6 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     skellycam_directory_view_widget = SkellyCamDirectoryViewWidget(folder_path=Path.home())
-
+    skellycam_directory_view_widget.expand_directory_to_path(Path.home()/"Downloads")
     skellycam_directory_view_widget.show()
     sys.exit(app.exec())

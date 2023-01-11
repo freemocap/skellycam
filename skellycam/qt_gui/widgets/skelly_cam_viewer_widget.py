@@ -17,23 +17,30 @@ from PyQt6.QtWidgets import (
 )
 
 from skellycam import CameraConfig
+from skellycam.qt_gui.qt_utils.clear_layout import clear_layout
 from skellycam.qt_gui.workers.camera_group_frame_worker import CamGroupFrameWorker
 from skellycam.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
 
 logger = logging.getLogger(__name__)
+
+title_label_style_string = """
+                           font-size: 18px;
+                           font-weight: bold;
+                           font-family: "Dosis", sans-serif;
+                           """
 
 
 class SkellyCamViewerWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
     incoming_camera_configs_signal = pyqtSignal(dict)
-    new_recording_folder_created_signal = pyqtSignal(str)
+    new_recording_video_folder_created_signal = pyqtSignal(str)
 
     def __init__(
-        self,
-        camera_ids: List[Union[str, int]] = None,
-        session_folder_path: Union[str, Path] = None,
-        parent=None,
+            self,
+            camera_ids: List[Union[str, int]] = None,
+            session_folder_path: Union[str, Path] = None,
+            parent=None,
     ):
 
         logger.info(
@@ -57,6 +64,13 @@ class SkellyCamViewerWidget(QWidget):
         self._cam_group_frame_worker = self._create_cam_group_frame_worker()
         self._cam_group_frame_worker.cameras_closed_signal.connect(self._show_cameras_disconnected)
 
+        self._cameras_disconnected_label = QLabel(" - No Cameras Connected - ")
+        self._layout.addWidget(self._cameras_disconnected_label)
+        self._cameras_disconnected_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._cameras_disconnected_label.setStyleSheet(title_label_style_string)
+        self._cameras_disconnected_label.hide()
+        self.cameras_connected_signal.connect(self._cameras_disconnected_label.hide)
+
         if self._camera_ids is None:
             self._detect_available_cameras_push_button = (
                 self._create_detect_cameras_button()
@@ -75,6 +89,10 @@ class SkellyCamViewerWidget(QWidget):
     def camera_config_dicationary(self):
         return self._camera_config_dicationary
 
+    @property
+    def cameras_connected(self):
+        return self._cam_group_frame_worker.cameras_connected
+
     def _handle_image_update(self, camera_id, image):
         try:
             self._camera_layout_dictionary[camera_id]["image_label_widget"].setPixmap(
@@ -84,22 +102,19 @@ class SkellyCamViewerWidget(QWidget):
             logger.error(f"Problem in _handle_image_update for Camera {camera_id}: {e}")
 
     def _show_cameras_disconnected(self):
-        for key, value in self._camera_layout_dictionary.items():
-            value["image_label_widget"].setText("\U0001F4F8 Disconnected")
-            value["image_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logger.info("Showing `cameras disconnected` message")
+        self._clear_camera_layout_dictionary(self._camera_layout_dictionary)
+        self._cameras_disconnected_label.show()
+        self._detect_available_cameras_push_button.show()
 
     def _create_camera_view_grid_layout(self, camera_config_dictionary: dict) -> dict:
 
         if self._camera_layout_dictionary is not None:
-            logger.info(
-                "Camera layout dictionary already exists - returning existing dictionary"
-            )
-            return self._camera_layout_dictionary
+            self._clear_camera_layout_dictionary(self._camera_layout_dictionary)
 
         logger.info(
             f"Creating camera view grid layout for camera config dictionary: {camera_config_dictionary}"
         )
-
 
         self._portrait_grid_layout = QGridLayout()
         self._camera_view_layout.addLayout(self._portrait_grid_layout)
@@ -119,26 +134,15 @@ class SkellyCamViewerWidget(QWidget):
             camera_layout_dictionary[camera_id]["title_label_widget"] = QLabel(
                 f"Camera {camera_id}"
             )
-            camera_layout_dictionary[camera_id]["title_label_widget"].setStyleSheet(
-                """
-                                                                                    font-size: 18px;
-                                                                                    font-weight: bold;
-                                                                                    font-family: "Dosis", sans-serif;
-                                                                                    """
-            )
-            camera_layout_dictionary[camera_id]["image_label_widget"] = QLabel(
-                "\U0001F4F8 Connecting... ", alignment=Qt.AlignmentFlag.AlignCenter
-            )
-            camera_layout_dictionary[camera_id]["title_label_widget"].setAlignment(
-                Qt.AlignmentFlag.AlignCenter
-            )
+            camera_layout_dictionary[camera_id]["title_label_widget"].setStyleSheet(title_label_style_string)
 
-            camera_layout.addWidget(
-                camera_layout_dictionary[camera_id]["title_label_widget"]
-            )
-            camera_layout.addWidget(
-                camera_layout_dictionary[camera_id]["image_label_widget"]
-            )
+            camera_layout_dictionary[camera_id]["image_label_widget"] = QLabel("\U0001F4F8 Connecting... ")
+            camera_layout_dictionary[camera_id]["image_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            camera_layout_dictionary[camera_id]["title_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            camera_layout.addWidget(camera_layout_dictionary[camera_id]["title_label_widget"])
+            camera_layout.addWidget(camera_layout_dictionary[camera_id]["image_label_widget"])
 
         self._arrange_camera_layouts(camera_layout_dictionary)
         return camera_layout_dictionary
@@ -183,19 +187,15 @@ class SkellyCamViewerWidget(QWidget):
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")
 
-        if self._camera_ids is None:
-            logger.info("No camera ids provided - detecting available cameras")
-            self._detect_available_cameras_push_button.setText("Detecting Cameras...")
-            self._detect_available_cameras_push_button.setEnabled(False)
+        self._detect_available_cameras_push_button.setText("Detecting Cameras...")
+        self._detect_available_cameras_push_button.setEnabled(False)
+        self._cameras_disconnected_label.hide()
 
-            self._detect_cameras_worker = DetectCamerasWorker()
-            self._detect_cameras_worker.cameras_detected_signal.connect(
-                self._handle_detected_cameras
-            )
-            self._detect_cameras_worker.start()
-
-        else:
-            self._start_camera_group_frame_worker(self._camera_ids)
+        self._detect_cameras_worker = DetectCamerasWorker()
+        self._detect_cameras_worker.cameras_detected_signal.connect(
+            self._handle_detected_cameras
+        )
+        self._detect_cameras_worker.start()
 
     def _start_camera_group_frame_worker(self, camera_ids):
         logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
@@ -207,8 +207,8 @@ class SkellyCamViewerWidget(QWidget):
         self._cam_group_frame_worker.ImageUpdate.connect(self._handle_image_update)
 
     def disconnect_from_cameras(self):
+        logger.info("Disconnecting from cameras")
         self._cam_group_frame_worker.close()
-
 
     def pause(self):
         self._cam_group_frame_worker.pause()
@@ -226,8 +226,8 @@ class SkellyCamViewerWidget(QWidget):
                                                             border-width: 2px;
                                                            font-size: 42px;
                                                            border-radius: 10px;
-                                                           """ )
-
+                                                           """)
+        detect_available_cameras_push_button.setProperty("recommended_next", True)
 
         return detect_available_cameras_push_button
 
@@ -235,7 +235,7 @@ class SkellyCamViewerWidget(QWidget):
         cam_group_frame_worker = CamGroupFrameWorker(
             camera_ids=self._camera_ids,
             session_folder_path=self._session_folder_path,
-            new_recording_folder_created_signal=self.new_recording_folder_created_signal,
+            new_recording_video_folder_created_signal=self.new_recording_video_folder_created_signal,
         )
 
         cam_group_frame_worker.cameras_connected_signal.connect(
@@ -251,6 +251,7 @@ class SkellyCamViewerWidget(QWidget):
 
     def _handle_detected_cameras(self, camera_ids):
         logger.info(f"Detected cameras: {camera_ids}")
+        self._detect_available_cameras_push_button.hide()
         self._camera_ids = camera_ids
         self._detect_available_cameras_push_button.setText(
             f"Connecting to Cameras {camera_ids}..."
@@ -282,12 +283,20 @@ class SkellyCamViewerWidget(QWidget):
 
     def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:
         if (
-            camera_config.rotate_video_cv2_code == cv2.ROTATE_90_CLOCKWISE
-            or camera_config.rotate_video_cv2_code == cv2.ROTATE_90_COUNTERCLOCKWISE
+                camera_config.rotate_video_cv2_code == cv2.ROTATE_90_CLOCKWISE
+                or camera_config.rotate_video_cv2_code == cv2.ROTATE_90_COUNTERCLOCKWISE
         ):
             return "portrait"
 
         return "landscape"
+
+    def _clear_camera_layout_dictionary(self, camera_layout_dictionary: dict):
+        logger.info("Clearing camera layout dictionary")
+        try:
+            for camera_id, camera_layout_dictionary in camera_layout_dictionary.items():
+                clear_layout(camera_layout_dictionary["layout"])
+        except Exception as e:
+            logger.error(f"Error clearing camera layout dictionary: {e}")
 
 
 if __name__ == "__main__":

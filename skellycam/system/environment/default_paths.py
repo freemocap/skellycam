@@ -81,9 +81,9 @@ def get_default_recording_name(string_tag: str = None):
     return just_hours_minutes_seconds + string_tag
 
 
-def create_new_recording_folder(session_folder_path: Union[str, Path],
-                                recording_name: str,
-                                ):
-    folder_path = Path(session_folder_path) / recording_name
+def create_new_recording_video_folder(session_folder_path: Union[str, Path],
+                                      recording_name: str,
+                                      ):
+    folder_path = Path(session_folder_path) / recording_name / SYNCHRONIZED_VIDEOS_FOLDER_NAME
     folder_path.mkdir(parents=True, exist_ok=True)
     return str(folder_path)

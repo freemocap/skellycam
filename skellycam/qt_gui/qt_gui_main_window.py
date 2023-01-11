@@ -105,7 +105,7 @@ class QtGUIMainWindow(QMainWindow):
             self._camera_viewer_widget.incoming_camera_configs_signal
         )
 
-        self._camera_viewer_widget.new_recording_folder_created_signal.connect(
+        self._camera_viewer_widget.new_recording_video_folder_created_signal.connect(
             self._directory_view_widget.expand_directory_to_path
         )
 

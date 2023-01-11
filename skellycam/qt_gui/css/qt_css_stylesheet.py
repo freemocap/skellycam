@@ -15,7 +15,7 @@ QT_CSS_STYLE_SHEET_STRING = """
                                         border-width: 2px;                                                                                
                                         }
                             QPushButton:focus {
-                                        border: 2px solid #ff40aa;
+                                        border: 2px solid #378e90;
                                         }
                             QPushButton:disabled {
                                         border: 2px solid #444444;
@@ -24,13 +24,10 @@ QT_CSS_STYLE_SHEET_STRING = """
                                         }
                             QPushButton:hover {
                                         background-color: #29696a;
-                                        border: 3px solid #ff40aa;
                                         }
-
                             QParameterTreeWidget {
                                 background-color: #ff0000;
                                 color: #ffffff;
-
                             }
                             QTreeView {
                                         background-color: #7983b1;
