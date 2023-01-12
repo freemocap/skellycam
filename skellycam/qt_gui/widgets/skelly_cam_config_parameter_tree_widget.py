@@ -69,7 +69,7 @@ class SkellyCamParameterTreeWidget(QWidget):
 
         self._detect_available_cameras_button = QPushButton("Detect Available Cameras")
         self._layout.addWidget(self._detect_available_cameras_button)
-        self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.connect_to_cameras)
+        self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.detect_available_cameras)
 
         self._apply_settings_to_cameras_button = QPushButton(
             "Apply settings to cameras",

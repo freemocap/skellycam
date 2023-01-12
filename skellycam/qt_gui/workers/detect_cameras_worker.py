@@ -15,5 +15,5 @@ class DetectCamerasWorker(QThread):
 
     def run(self):
         logger.info("Starting detect cameras thread worker")
-        camera_ids = detect_cameras().cameras_found_list
+        camera_ids = detect_cameras(use_cache=False).cameras_found_list
         self.cameras_detected_signal.emit(camera_ids)

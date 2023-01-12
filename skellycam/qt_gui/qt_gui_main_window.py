@@ -97,7 +97,7 @@ class QtGUIMainWindow(QMainWindow):
             self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
         )
 
-        self._camera_viewer_widget.camera_group_created_signal.connect(
+        self._camera_viewer_widget.detect_available_cameras_push_button.clicked.connect(
             self._welcome_to_skellycam_widget.hide
         )
 
