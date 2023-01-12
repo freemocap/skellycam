@@ -65,6 +65,9 @@ class SkellyCamViewerWidget(QWidget):
         self._cam_group_frame_worker = self._create_cam_group_frame_worker()
         self._cam_group_frame_worker.cameras_closed_signal.connect(self._show_cameras_disconnected_message)
 
+        self._detect_available_cameras_push_button = self._create_detect_cameras_button()
+        self._layout.addWidget(self._detect_available_cameras_push_button)
+
         self._cameras_disconnected_label = QLabel(" - No Cameras Connected - ")
         self._layout.addWidget(self._cameras_disconnected_label)
         self._cameras_disconnected_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -78,10 +81,9 @@ class SkellyCamViewerWidget(QWidget):
         self._no_cameras_found_label.setStyleSheet(title_label_style_string)
         self._no_cameras_found_label.hide()
         self.cameras_connected_signal.connect(self._no_cameras_found_label.hide)
+        self._detect_available_cameras_push_button.clicked.connect(self._no_cameras_found_label.hide)
 
-        self._detect_available_cameras_push_button = self._create_detect_cameras_button()
 
-        self._layout.addWidget(self._detect_available_cameras_push_button)
 
         self._layout.addStretch()
 
@@ -277,6 +279,7 @@ class SkellyCamViewerWidget(QWidget):
     def _handle_detected_cameras(self, camera_ids):
         if len(camera_ids) == 0:
             logger.info("No cameras detected")
+            self._reset_detect_available_cameras_button()
             self._show_no_cameras_found_message()
             return
 
@@ -295,7 +298,7 @@ class SkellyCamViewerWidget(QWidget):
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")
         self._detect_available_cameras_push_button.setEnabled(True)
-        self._detect_available_cameras_push_button.setStyleSheet("font-size: 36px;")
+
 
     def _update_camera_configs(self, camera_config_dictionary):
         # self._create_camera_view_grid_layout(camera_config_dictionary=camera_config_dictionary)
