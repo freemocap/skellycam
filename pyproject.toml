@@ -71,6 +71,7 @@ dependencies = [
 "pandas",
 "pyqtgraph",
 "qtpy",
+"toml",
 ]
 requires-python = ">=3.8"
 
