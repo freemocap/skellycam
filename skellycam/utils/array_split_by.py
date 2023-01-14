@@ -10,6 +10,9 @@ def array_split_by(some_array: List, split_by: int):
     :param split_by:
     :return:
     """
+    if len(some_array) == 1:
+        return [some_array]
+
     as_nparray = np.array(some_array)
     splitted_arrays = np.array_split(as_nparray, split_by)
     # convert back to lists.
