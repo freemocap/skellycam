@@ -65,6 +65,8 @@ class GroupedProcessStrategy:
     def _create_processes(
         self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
     ):
+        if len(cam_ids) == 0:
+            raise ValueError("No cameras were provided")
         camera_subarrays = array_split_by(cam_ids, cameras_per_process)
         processes = [
             CamGroupProcess(cam_id_subarray) for cam_id_subarray in camera_subarrays

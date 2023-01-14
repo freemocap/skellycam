@@ -1,7 +1,7 @@
 import logging
 import time
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Dict
 
 import cv2
 import numpy as np
@@ -19,10 +19,12 @@ from PyQt6.QtWidgets import (
 from skellycam import CameraConfig
 from skellycam.qt_gui.qt_utils.clear_layout import clear_layout
 from skellycam.qt_gui.qt_utils.qt_label_strings import no_cameras_found_message_string
+from skellycam.qt_gui.widgets.SingleCameraViewWidget import SingleCameraViewWidget
 from skellycam.qt_gui.workers.camera_group_frame_worker import CamGroupFrameWorker
 from skellycam.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
 
 logger = logging.getLogger(__name__)
+
 
 title_label_style_string = """
                            font-size: 18px;
@@ -30,7 +32,7 @@ title_label_style_string = """
                            font-family: "Dosis", sans-serif;
                            """
 
-
+MAX_CAMS_PER_ROW_OR_COLUMN = 3
 class SkellyCamViewerWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
@@ -51,19 +53,18 @@ class SkellyCamViewerWidget(QWidget):
         self._session_folder_path = session_folder_path
         self._camera_config_dicationary = None
         self._detect_cameras_worker = None
-        self._camera_layout_dictionary = None
+        self._dictionary_of_single_camera_view_widgets = None
 
         super().__init__(parent=parent)
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._camera_view_layout = QHBoxLayout()
-        self._layout.addLayout(self._camera_view_layout)
+        self._camera_grid_layout = QGridLayout()
+        self._layout.addLayout(self._camera_grid_layout)
 
         self._camera_ids = camera_ids
         self._cam_group_frame_worker = self._create_cam_group_frame_worker()
-        self._cam_group_frame_worker.cameras_closed_signal.connect(self._show_cameras_disconnected_message)
 
         self._detect_available_cameras_push_button = self._create_detect_cameras_button()
         self._layout.addWidget(self._detect_available_cameras_push_button)
@@ -74,6 +75,7 @@ class SkellyCamViewerWidget(QWidget):
         self._cameras_disconnected_label.setStyleSheet(title_label_style_string)
         self._cameras_disconnected_label.hide()
         self.cameras_connected_signal.connect(self._cameras_disconnected_label.hide)
+        self._cam_group_frame_worker.cameras_closed_signal.connect(self._show_cameras_disconnected_message)
 
         self._no_cameras_found_label = QLabel(no_cameras_found_message_string)
         self._layout.addWidget(self._no_cameras_found_label)
@@ -83,12 +85,7 @@ class SkellyCamViewerWidget(QWidget):
         self.cameras_connected_signal.connect(self._no_cameras_found_label.hide)
         self._detect_available_cameras_push_button.clicked.connect(self._no_cameras_found_label.hide)
 
-
-
         self._layout.addStretch()
-
-
-
 
     @property
     def controller_slot_dictionary(self):
@@ -108,7 +105,7 @@ class SkellyCamViewerWidget(QWidget):
 
     def _handle_image_update(self, camera_id, image):
         try:
-            self._camera_layout_dictionary[camera_id]["image_label_widget"].setPixmap(
+            self._dictionary_of_single_camera_view_widgets[camera_id].image_label_widget.setPixmap(
                 QPixmap.fromImage(image)
             )
         except Exception as e:
@@ -116,99 +113,43 @@ class SkellyCamViewerWidget(QWidget):
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
-        self._clear_camera_layout_dictionary(self._camera_layout_dictionary)
+        self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
         self._cameras_disconnected_label.show()
         self._detect_available_cameras_push_button.show()
 
     def _show_no_cameras_found_message(self):
         logger.info("Showing `no cameras found` message")
-        self._clear_camera_layout_dictionary(self._camera_layout_dictionary)
+        self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
         self._no_cameras_found_label.show()
         self._detect_available_cameras_push_button.show()
 
-    def _create_camera_view_grid_layout(self, camera_config_dictionary: dict) -> dict:
-
-        if self._camera_layout_dictionary is not None:
-            self._clear_camera_layout_dictionary(self._camera_layout_dictionary)
+    def _create_camera_view_widgets_and_add_them_to_grid_layout(self, camera_config_dictionary: Dict[str, CameraConfig]) -> dict:
 
         logger.info(
             f"Creating camera view grid layout for camera config dictionary: {camera_config_dictionary}"
         )
 
-        self._portrait_grid_layout = QGridLayout()
-        self._camera_view_layout.addLayout(self._portrait_grid_layout)
 
-        self._landscape_grid_layout = QGridLayout()
-        self._camera_view_layout.addLayout(self._landscape_grid_layout)
-
-        camera_layout_dictionary = {}
+        dictionary_of_single_camera_view_widgets = {}
         for camera_id, camera_config in camera_config_dictionary.items():
-            camera_layout_dictionary[camera_id] = {}
 
-            camera_layout = QVBoxLayout()
-            camera_layout_dictionary[camera_id]["layout"] = camera_layout
-            camera_layout_dictionary[camera_id][
-                "orientation"
-            ] = self._get_landscape_or_portrait(camera_config)
-            camera_layout_dictionary[camera_id]["title_label_widget"] = QLabel(
-                f"Camera {camera_id}"
-            )
-            camera_layout_dictionary[camera_id]["title_label_widget"].setStyleSheet(title_label_style_string)
+            divmod_whole, divmod_remainder = divmod(int(camera_id), MAX_CAMS_PER_ROW_OR_COLUMN-1)
+            grid_row = divmod_remainder
+            grid_column = divmod_whole
+            dictionary_of_single_camera_view_widgets[camera_id] = SingleCameraViewWidget(camera_id)
+            self._camera_grid_layout.addWidget(dictionary_of_single_camera_view_widgets[camera_id],
+                                               grid_row,
+                                                  grid_column)
 
-            camera_layout_dictionary[camera_id]["image_label_widget"] = QLabel("\U0001F4F8 Connecting... ")
-            camera_layout_dictionary[camera_id]["image_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            camera_layout_dictionary[camera_id]["title_label_widget"].setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            camera_layout.addWidget(camera_layout_dictionary[camera_id]["title_label_widget"])
-            camera_layout.addWidget(camera_layout_dictionary[camera_id]["image_label_widget"])
-
-        self._arrange_camera_layouts(camera_layout_dictionary)
-        return camera_layout_dictionary
-
-    def _arrange_camera_layouts(self, camera_layout_dictionary: dict):
-        primary_grid_count = np.ceil(np.sqrt(len(camera_layout_dictionary))) - 1
-
-        landscape_column_count = -1
-        landscape_row_count = -1
-        portrait_column_count = -1
-        portrait_row_count = -1
-
-        for camera_id, single_camera_layout_dict in camera_layout_dictionary.items():
-            camera_layout = single_camera_layout_dict["layout"]
-
-            # self._remove_camera_layout_from_grid_layouts(camera_layout,
-            #                                              [self._landscape_grid_layout, self._portrait_grid_layout])
-
-            if camera_layout_dictionary[camera_id]["orientation"] == "landscape":
-                landscape_column_count += 1
-                if landscape_column_count % primary_grid_count == 0:
-                    landscape_column_count = 0
-                    landscape_row_count += 1
-                logger.info(
-                    f"Adding camera {camera_id} to landscape grid layout at {landscape_column_count}, {landscape_row_count}"
-                )
-                self._landscape_grid_layout.addLayout(
-                    camera_layout, landscape_row_count, landscape_column_count
-                )
-            else:
-                portrait_column_count += 1
-                if portrait_row_count % primary_grid_count == 0:
-                    portrait_column_count = 0
-                    portrait_row_count += 1
-                    logger.info(
-                        f"Adding camera {camera_id} to portrait grid layout at {portrait_column_count}, {portrait_row_count}"
-                    )
-                self._portrait_grid_layout.addLayout(
-                    camera_layout, portrait_row_count, portrait_column_count
-                )
+        return dictionary_of_single_camera_view_widgets
 
     def detect_available_cameras(self):
         try:
             self.disconnect_from_cameras()
         except Exception as e:
             logger.error(f"Problem disconnecting from cameras: {e}")
-
 
         logger.info("Connecting to cameras")
 
@@ -226,7 +167,7 @@ class SkellyCamViewerWidget(QWidget):
 
         logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
         self._cam_group_frame_worker.camera_ids = camera_ids
-        self._camera_layout_dictionary = self._create_camera_view_grid_layout(
+        self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout(
             camera_config_dictionary=self._cam_group_frame_worker.camera_config_dictionary
         )
         self._cam_group_frame_worker.start()
@@ -234,7 +175,7 @@ class SkellyCamViewerWidget(QWidget):
 
     def disconnect_from_cameras(self):
         logger.info("Disconnecting from cameras")
-        self._clear_camera_layout_dictionary(self._camera_layout_dictionary)
+        self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
         self._cam_group_frame_worker.close()
 
     def pause(self):
@@ -299,16 +240,15 @@ class SkellyCamViewerWidget(QWidget):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")
         self._detect_available_cameras_push_button.setEnabled(True)
 
-
     def _update_camera_configs(self, camera_config_dictionary):
         # self._create_camera_view_grid_layout(camera_config_dictionary=camera_config_dictionary)
         for camera_id, camera_config in camera_config_dictionary.items():
             if camera_config.use_this_camera:
-                self._camera_layout_dictionary[camera_id]["title_label_widget"].show()
-                self._camera_layout_dictionary[camera_id]["image_label_widget"].show()
+                self._dictionary_of_single_camera_view_widgets[camera_id].show()
+                self._dictionary_of_single_camera_view_widgets[camera_id].show()
             else:
-                self._camera_layout_dictionary[camera_id]["title_label_widget"].hide()
-                self._camera_layout_dictionary[camera_id]["image_label_widget"].hide()
+                self._dictionary_of_single_camera_view_widgets[camera_id].hide()
+                self._dictionary_of_single_camera_view_widgets[camera_id].hide()
 
         self._cam_group_frame_worker.update_camera_group_configs(
             camera_config_dictionary=camera_config_dictionary
@@ -323,13 +263,15 @@ class SkellyCamViewerWidget(QWidget):
 
         return "landscape"
 
-    def _clear_camera_layout_dictionary(self, camera_layout_dictionary: dict):
+    def _clear_camera_gird_view(self, dictionary_of_single_camera_view_widgets: Dict[str, SingleCameraViewWidget]):
         logger.info("Clearing camera layout dictionary")
         try:
-            for camera_id, camera_layout_dictionary in camera_layout_dictionary.items():
-                clear_layout(camera_layout_dictionary["layout"])
+            for camera_id, single_camera_view_widget in dictionary_of_single_camera_view_widgets.items():
+                single_camera_view_widget.close()
+                self._camera_grid_layout.removeWidget(single_camera_view_widget)
         except Exception as e:
             logger.error(f"Error clearing camera layout dictionary: {e}")
+            raise  e
 
 
 if __name__ == "__main__":

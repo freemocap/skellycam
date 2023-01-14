@@ -18,6 +18,10 @@ CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
 
 class CamGroupProcess:
     def __init__(self, cam_ids: List[str]):
+
+        if len(cam_ids) == 0:
+            raise ValueError("CamGroupProcess must have at least one camera")
+
         self._cameras_ready_event_dictionary = None
         self._cam_ids = cam_ids
         self._process: Process = None
@@ -44,6 +48,7 @@ class CamGroupProcess:
         Start capturing frames. Only return if the underlying process is fully running.
         :return:
         """
+
         logger.info(f"Starting capture `Process` for {self._cam_ids}")
 
         self._cameras_ready_event_dictionary = {
