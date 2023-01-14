@@ -95,7 +95,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         )
 
         self.emitting_camera_configs_signal.connect(
-            camera_viewer_widget.incoming_camera_configs_signal
+            camera_viewer_widget.update_camera_configs
         )
 
         self._close_cameras_button.clicked.connect(
@@ -104,6 +104,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._camera_viewer_widget.cameras_connected_signal.connect(
             lambda: self._close_cameras_button.setEnabled(True)
         )
+
 
     def update_camera_config_parameter_tree(
             self, dictionary_of_camera_configs: Dict[str, CameraConfig]

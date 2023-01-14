@@ -25,7 +25,6 @@ from skellycam.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
 
 logger = logging.getLogger(__name__)
 
-
 title_label_style_string = """
                            font-size: 18px;
                            font-weight: bold;
@@ -33,6 +32,8 @@ title_label_style_string = """
                            """
 
 MAX_CAMS_PER_ROW_OR_COLUMN = 3
+
+
 class SkellyCamViewerWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
@@ -123,25 +124,29 @@ class SkellyCamViewerWidget(QWidget):
         self._no_cameras_found_label.show()
         self._detect_available_cameras_push_button.show()
 
-    def _create_camera_view_widgets_and_add_them_to_grid_layout(self, camera_config_dictionary: Dict[str, CameraConfig]) -> dict:
+    def _create_camera_view_widgets_and_add_them_to_grid_layout(self, camera_config_dictionary: Dict[
+        str, CameraConfig]) -> dict:
 
         logger.info(
             f"Creating camera view grid layout for camera config dictionary: {camera_config_dictionary}"
         )
 
-
         dictionary_of_single_camera_view_widgets = {}
         for camera_id, camera_config in camera_config_dictionary.items():
 
-            divmod_whole, divmod_remainder = divmod(int(camera_id), MAX_CAMS_PER_ROW_OR_COLUMN-1)
-            grid_row = divmod_remainder
-            grid_column = divmod_whole
+            divmod_whole, divmod_remainder = divmod(int(camera_id), MAX_CAMS_PER_ROW_OR_COLUMN - 1)
+
+            if self._get_landscape_or_portrait(camera_config) == "landscape":
+                grid_column = divmod_whole
+                grid_row = divmod_remainder
+            elif self._get_landscape_or_portrait(camera_config) == "portrait":
+                grid_column = divmod_remainder
+                grid_row = divmod_whole
+
             dictionary_of_single_camera_view_widgets[camera_id] = SingleCameraViewWidget(camera_id)
             self._camera_grid_layout.addWidget(dictionary_of_single_camera_view_widgets[camera_id],
                                                grid_row,
-                                                  grid_column)
-
-
+                                               grid_column)
 
         return dictionary_of_single_camera_view_widgets
 
@@ -214,7 +219,6 @@ class SkellyCamViewerWidget(QWidget):
             self.camera_group_created_signal.emit
         )
 
-        self.incoming_camera_configs_signal.connect(self._update_camera_configs)
         return cam_group_frame_worker
 
     def _handle_detected_cameras(self, camera_ids):
@@ -240,8 +244,15 @@ class SkellyCamViewerWidget(QWidget):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")
         self._detect_available_cameras_push_button.setEnabled(True)
 
-    def _update_camera_configs(self, camera_config_dictionary):
-        # self._create_camera_view_grid_layout(camera_config_dictionary=camera_config_dictionary)
+    def update_camera_configs(self, camera_config_dictionary):
+        logger.info(f"Updating camera configs: {camera_config_dictionary}")
+
+        if self._dictionary_of_single_camera_view_widgets is not None:
+            logger.info("Camera view widgets already exist - clearing them from  the camera grid view layout")
+            self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
+            self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout(
+                camera_config_dictionary=camera_config_dictionary)
+
         for camera_id, camera_config in camera_config_dictionary.items():
             if camera_config.use_this_camera:
                 self._dictionary_of_single_camera_view_widgets[camera_id].show()
@@ -271,7 +282,7 @@ class SkellyCamViewerWidget(QWidget):
                 self._camera_grid_layout.removeWidget(single_camera_view_widget)
         except Exception as e:
             logger.error(f"Error clearing camera layout dictionary: {e}")
-            raise  e
+            raise e
 
 
 if __name__ == "__main__":

@@ -101,9 +101,6 @@ class QtGUIMainWindow(QMainWindow):
             self._welcome_to_skellycam_widget.hide
         )
 
-        self._qt_camera_config_parameter_tree_widget.emitting_camera_configs_signal.connect(
-            self._camera_viewer_widget.incoming_camera_configs_signal
-        )
 
         self._camera_viewer_widget.new_recording_video_folder_created_signal.connect(
             self._directory_view_widget.expand_directory_to_path
