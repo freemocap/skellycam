@@ -2,6 +2,7 @@ import logging
 import time
 
 import cv2
+import numpy as np
 
 from skellycam.detection.private.found_camera_cache import FoundCameraCache
 from skellycam.opencv.config.determine_backend import determine_backend
@@ -19,17 +20,17 @@ class DetectPossibleCameras:
         caps_list = []
         for cam_id in range(CAM_CHECK_NUM):
             cap = cv2.VideoCapture(cam_id, cv2_backend)
-            success, image = cap.read()
+            success, image1 = cap.read()
             time0 = time.perf_counter()
 
             if not success:
                 continue
 
-            if image is None:
+            if image1 is None:
                 continue
 
             try:
-                success, image = cap.read()
+                success, image2 = cap.read()
                 time1 = time.perf_counter()
 
                 # TODO: This cant work. Needs a new solution
@@ -40,9 +41,15 @@ class DetectPossibleCameras:
                     )
                     continue  # skip to next port number
 
+                if np.mean(image2) > 10 and np.sum((image1-image2).ravel()) == 0:
+                    logger.debug(
+                        f"Camera {cam_id} appears to be return identical non-black frames -its  probably a virtual camera, skipping"
+                    )
+                    continue  # skip to next port number
+
                 logger.debug(
                     f"Camera found at port number {cam_id}: success={success}, "
-                    f"image.shape={image.shape},  cap={cap}"
+                    f"image.shape={image1.shape},  cap={cap}"
                 )
                 cams_to_use_list.append(str(cam_id))
                 caps_list.append(cap)

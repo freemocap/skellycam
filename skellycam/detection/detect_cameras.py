@@ -13,3 +13,6 @@ def detect_cameras(use_cache=True):
         _available_cameras = d.find_available_cameras()
 
     return _available_cameras
+
+if __name__ == "__main__":
+    detect_cameras()
