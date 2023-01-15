@@ -89,8 +89,8 @@ celerybeat-schedule
 .env
 
 # virtualenv
-.venv
-venv/
+.venv*
+venv*
 ENV/
 
 # Spyder project settings
@@ -112,3 +112,5 @@ ENV/
 
 # mkdocs build dir
 site/
+
+pip*
