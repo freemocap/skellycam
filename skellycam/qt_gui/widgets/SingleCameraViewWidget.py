@@ -1,14 +1,20 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget, QSizePolicy
+
+from skellycam import CameraConfig
 
 
 class SingleCameraViewWidget(QWidget):
     def __init__(self,
                  camera_id: str,
+                 camera_config: CameraConfig,
                  parent: QWidget = None):
         super().__init__(parent=parent)
 
+
         self._camera_id = camera_id
+        self._camera_config = camera_config
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
@@ -23,6 +29,8 @@ class SingleCameraViewWidget(QWidget):
         self._title_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._image_label_widget = QLabel("\U0001F4F8 Connecting... ")
+        self._image_label_widget.setStyleSheet("border: 1px solid;")
+        self._image_label_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._image_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._image_label_widget)
 
@@ -33,6 +41,22 @@ class SingleCameraViewWidget(QWidget):
     @property
     def image_label_widget(self):
         return self._image_label_widget
+    def handle_image_update(self, q_image:QImage, number_of_total_cameras:int=1):
+        pixmap = QPixmap.fromImage(q_image)
+
+        image_label_widget_width = self._image_label_widget.width()
+        image_label_widget_height = self._image_label_widget.height()
+
+        scaled_width = int(image_label_widget_width * .95)
+        scaled_height = int(image_label_widget_height * .95)
+
+        pixmap = pixmap.scaled(
+            scaled_width,
+            scaled_height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,)
+
+        self._image_label_widget.setPixmap(pixmap)
 
     def show(self):
         super().show()

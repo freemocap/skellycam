@@ -7,11 +7,11 @@ from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from skellycam.opencv.camera.models.camera_config import CameraConfig
-from skellycam.qt_gui.qt_utils.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
-                                                        EXPAND_ALL_STRING, ROTATE_180_STRING,
-                                                        ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
-                                                        rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
-                                                        USE_THIS_CAMERA_STRING)
+from skellycam.qt_gui.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
+                                                         EXPAND_ALL_STRING, ROTATE_180_STRING,
+                                                         ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
+                                                         rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
+                                                         USE_THIS_CAMERA_STRING)
 from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import SkellyCamViewerWidget
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,7 @@ class SkellyCamParameterTreeWidget(QWidget):
 
         self._detect_available_cameras_button = QPushButton("Detect Available Cameras")
         self._layout.addWidget(self._detect_available_cameras_button)
+        self._detect_available_cameras_button.setEnabled(False)
         self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.detect_available_cameras)
 
         self._apply_settings_to_cameras_button = QPushButton(
@@ -104,7 +105,13 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._camera_viewer_widget.cameras_connected_signal.connect(
             lambda: self._close_cameras_button.setEnabled(True)
         )
+        self._camera_viewer_widget.cameras_connected_signal.connect(
+            lambda: self._detect_available_cameras_button.setEnabled(True)
+        )
 
+        self._camera_viewer_widget.cameras_connected_signal.connect(
+            lambda: self._apply_settings_to_cameras_button.setEnabled(True)
+        )
 
     def update_camera_config_parameter_tree(
             self, dictionary_of_camera_configs: Dict[str, CameraConfig]
@@ -172,9 +179,6 @@ class SkellyCamParameterTreeWidget(QWidget):
                     camera_id=camera_config.camera_id
                 ),
             ],
-        )
-        camera_parameter_group.sigTreeStateChanged.connect(
-            self._handle_camera_parameter_group_changed
         )
 
         camera_parameter_group.param(USE_THIS_CAMERA_STRING).sigValueChanged.connect(
@@ -275,10 +279,7 @@ class SkellyCamParameterTreeWidget(QWidget):
             elif action.name() == COLLAPSE_ALL_STRING:
                 camera_parameter.setOpts(expanded=False)
 
-    def _handle_camera_parameter_group_changed(self, parameter, changes):
-        # TODO - don't activate for the 'expand' and 'collapse' buttons
 
-        self._apply_settings_to_cameras_button.setEnabled(True)
 
     def _handle_close_cameras_button_clicked(self):
         self._camera_viewer_widget.disconnect_from_cameras()

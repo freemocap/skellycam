@@ -1,4 +1,5 @@
 QT_CSS_STYLE_SHEET_STRING = """
+                            
                             QMainWindow {
                                 background-color: #5a6283;                                
                             } 

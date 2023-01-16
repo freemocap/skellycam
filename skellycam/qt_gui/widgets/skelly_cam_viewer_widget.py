@@ -1,15 +1,12 @@
 import logging
-import time
 from pathlib import Path
 from typing import List, Union, Dict
 
 import cv2
-import numpy as np
 from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import (
     QGridLayout,
-    QHBoxLayout,
     QLabel,
     QPushButton,
     QVBoxLayout,
@@ -17,8 +14,7 @@ from PyQt6.QtWidgets import (
 )
 
 from skellycam import CameraConfig
-from skellycam.qt_gui.qt_utils.clear_layout import clear_layout
-from skellycam.qt_gui.qt_utils.qt_label_strings import no_cameras_found_message_string
+from skellycam.qt_gui.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.qt_gui.widgets.SingleCameraViewWidget import SingleCameraViewWidget
 from skellycam.qt_gui.workers.camera_group_frame_worker import CamGroupFrameWorker
 from skellycam.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
@@ -58,6 +54,7 @@ class SkellyCamViewerWidget(QWidget):
 
         super().__init__(parent=parent)
 
+
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
@@ -86,7 +83,7 @@ class SkellyCamViewerWidget(QWidget):
         self.cameras_connected_signal.connect(self._no_cameras_found_label.hide)
         self._detect_available_cameras_push_button.clicked.connect(self._no_cameras_found_label.hide)
 
-        self._layout.addStretch()
+        # self._layout.addStretch()
 
     @property
     def controller_slot_dictionary(self):
@@ -104,13 +101,7 @@ class SkellyCamViewerWidget(QWidget):
     def detect_available_cameras_push_button(self):
         return self._detect_available_cameras_push_button
 
-    def _handle_image_update(self, camera_id, image):
-        try:
-            self._dictionary_of_single_camera_view_widgets[camera_id].image_label_widget.setPixmap(
-                QPixmap.fromImage(image)
-            )
-        except Exception as e:
-            logger.error(f"Problem in _handle_image_update for Camera {camera_id}: {e}")
+
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
@@ -143,7 +134,7 @@ class SkellyCamViewerWidget(QWidget):
                 grid_column = divmod_remainder
                 grid_row = divmod_whole
 
-            dictionary_of_single_camera_view_widgets[camera_id] = SingleCameraViewWidget(camera_id)
+            dictionary_of_single_camera_view_widgets[camera_id] = SingleCameraViewWidget(camera_id=camera_id,camera_config=camera_config, parent=self)
             self._camera_grid_layout.addWidget(dictionary_of_single_camera_view_widgets[camera_id],
                                                grid_row,
                                                grid_column)
@@ -176,7 +167,7 @@ class SkellyCamViewerWidget(QWidget):
             camera_config_dictionary=self._cam_group_frame_worker.camera_config_dictionary
         )
         self._cam_group_frame_worker.start()
-        self._cam_group_frame_worker.ImageUpdate.connect(self._handle_image_update)
+        self._cam_group_frame_worker.new_image_signal.connect(self._handle_image_update)
 
     def disconnect_from_cameras(self):
         logger.info("Disconnecting from cameras")
@@ -185,11 +176,6 @@ class SkellyCamViewerWidget(QWidget):
 
     def pause(self):
         self._cam_group_frame_worker.pause()
-
-    def closeEvent(self, event):
-        logger.info("Close event detected - closing camera group frame worker")
-        self._cam_group_frame_worker.close()
-        self.close()
 
     def _create_detect_cameras_button(self):
         detect_available_cameras_push_button = QPushButton("Detect Available Cameras")
@@ -239,7 +225,8 @@ class SkellyCamViewerWidget(QWidget):
     def _handle_cameras_connected(self):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
-
+    def _handle_image_update(self, camera_id:str, q_image:QImage):
+        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image, number_of_total_cameras=len(self._dictionary_of_single_camera_view_widgets))
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")
         self._detect_available_cameras_push_button.setEnabled(True)
@@ -283,6 +270,11 @@ class SkellyCamViewerWidget(QWidget):
         except Exception as e:
             logger.error(f"Error clearing camera layout dictionary: {e}")
             raise e
+
+    def closeEvent(self, event):
+        logger.info("Close event detected - closing camera group frame worker")
+        self._cam_group_frame_worker.close()
+        self.close()
 
 
 if __name__ == "__main__":

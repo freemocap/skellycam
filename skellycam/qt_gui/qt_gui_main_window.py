@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Union
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget, QSizePolicy
+from PyQt6.uic.properties import QtGui
 
 from skellycam.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.qt_gui.widgets.skelly_cam_config_parameter_tree_widget import (
@@ -34,6 +35,7 @@ class QtGUIMainWindow(QMainWindow):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__(parent=parent)
         self.setGeometry(100, 100, 1600, 900)
+
 
         if session_folder_path is None:
             self._session_folder_path = get_default_session_folder_path()
@@ -105,6 +107,7 @@ class QtGUIMainWindow(QMainWindow):
         self._camera_viewer_widget.new_recording_video_folder_created_signal.connect(
             self._directory_view_widget.expand_directory_to_path
         )
+
 
     def closeEvent(self, a0) -> None:
 

@@ -1,16 +1,17 @@
 import logging
 import sys
 
+from skellycam.qt_gui.utilities.get_qt_app import get_qt_app
+
 logger = logging.getLogger(__name__)
 
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QApplication
 
 from skellycam.qt_gui.qt_gui_main_window import QtGUIMainWindow
 
 
 def qt_gui_main():
-    app = QApplication(sys.argv)
+    app = get_qt_app(sys.argv)
 
     timer = QTimer()
     timer.start(500)

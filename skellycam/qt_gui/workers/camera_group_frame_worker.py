@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class CamGroupFrameWorker(QThread):
-    ImageUpdate = pyqtSignal(CameraId, QImage)
+    new_image_signal = pyqtSignal(CameraId, QImage)
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
@@ -121,8 +121,8 @@ class CamGroupFrameWorker(QThread):
                                 camera_id
                             ].append_frame_payload_to_list(frame)
 
-                        qimage = self._convert_frame(frame)
-                        self.ImageUpdate.emit(camera_id, qimage)
+                        q_image = self._convert_frame(frame)
+                        self.new_image_signal.emit(camera_id, q_image)
 
             # print(f"camera:recorder_frame_count - {self._get_recorder_frame_count_dict()}")
 
@@ -136,7 +136,8 @@ class CamGroupFrameWorker(QThread):
             image.shape[0],
             QImage.Format.Format_RGB888,
         )
-        return converted_frame.scaled(426, 240, Qt.AspectRatioMode.KeepAspectRatio)
+
+        return converted_frame.scaled(int(image.shape[1]/2),int(image.shape[0]/2), Qt.AspectRatioMode.KeepAspectRatio)
 
     def close(self):
         logger.info("Closing camera group")
