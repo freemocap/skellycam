@@ -123,9 +123,10 @@ class SkellyCamViewerWidget(QWidget):
         )
 
         dictionary_of_single_camera_view_widgets = {}
+        camera_count = -1
         for camera_id, camera_config in camera_config_dictionary.items():
-
-            divmod_whole, divmod_remainder = divmod(int(camera_id), MAX_CAMS_PER_ROW_OR_COLUMN - 1)
+            camera_count += 1
+            divmod_whole, divmod_remainder = divmod(int(camera_count), MAX_CAMS_PER_ROW_OR_COLUMN - 1)
 
             if self._get_landscape_or_portrait(camera_config) == "landscape":
                 grid_column = divmod_whole
@@ -262,6 +263,10 @@ class SkellyCamViewerWidget(QWidget):
         return "landscape"
 
     def _clear_camera_gird_view(self, dictionary_of_single_camera_view_widgets: Dict[str, SingleCameraViewWidget]):
+        if dictionary_of_single_camera_view_widgets is None:
+            logger.info("No camera view widgets to clear")
+            return
+
         logger.info("Clearing camera layout dictionary")
         try:
             for camera_id, single_camera_view_widget in dictionary_of_single_camera_view_widgets.items():
