@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import List, Union, Dict
+from typing import Dict, List, Union
 
 import cv2
 from PyQt6.QtCore import pyqtSignal, Qt
@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 
 from skellycam import CameraConfig
 from skellycam.qt_gui.utilities.qt_label_strings import no_cameras_found_message_string
-from skellycam.qt_gui.widgets.SingleCameraViewWidget import SingleCameraViewWidget
+from skellycam.qt_gui.widgets.single_camera_view_widget import SingleCameraViewWidget
 from skellycam.qt_gui.workers.camera_group_frame_worker import CamGroupFrameWorker
 from skellycam.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
 
@@ -126,7 +126,7 @@ class SkellyCamViewerWidget(QWidget):
         camera_count = -1
         for camera_id, camera_config in camera_config_dictionary.items():
             camera_count += 1
-            divmod_whole, divmod_remainder = divmod(int(camera_count), MAX_CAMS_PER_ROW_OR_COLUMN - 1)
+            divmod_whole, divmod_remainder = divmod(int(camera_count), MAX_CAMS_PER_ROW_OR_COLUMN)
 
             if self._get_landscape_or_portrait(camera_config) == "landscape":
                 grid_column = divmod_whole
@@ -135,7 +135,10 @@ class SkellyCamViewerWidget(QWidget):
                 grid_column = divmod_remainder
                 grid_row = divmod_whole
 
-            dictionary_of_single_camera_view_widgets[camera_id] = SingleCameraViewWidget(camera_id=camera_id,camera_config=camera_config, parent=self)
+            dictionary_of_single_camera_view_widgets[camera_id] = SingleCameraViewWidget(camera_id=camera_id,
+                                                                                         camera_config=camera_config,
+                                                                                         parent=self)
+
             self._camera_grid_layout.addWidget(dictionary_of_single_camera_view_widgets[camera_id],
                                                grid_row,
                                                grid_column)

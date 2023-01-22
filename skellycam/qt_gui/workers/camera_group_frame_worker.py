@@ -18,7 +18,6 @@ from skellycam.opencv.video_recorder.save_synchronized_videos import (
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.system.environment.default_paths import (
     create_new_recording_video_folder, get_default_recording_name, get_default_session_folder_path,
-    SYNCHRONIZED_VIDEOS_FOLDER_NAME,
 )
 
 logger = logging.getLogger(__name__)

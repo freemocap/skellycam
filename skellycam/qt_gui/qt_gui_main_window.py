@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Union
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget, QSizePolicy
-from PyQt6.uic.properties import QtGui
+from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
 from skellycam.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.qt_gui.widgets.skelly_cam_config_parameter_tree_widget import (
