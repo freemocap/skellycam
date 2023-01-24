@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import cv2
 
@@ -12,6 +13,10 @@ def plot_first_and_last_frames(
 
     number_of_cameras = len(synchronized_frame_list_dictionary)
     fig = plt.Figure(figsize=(10, 10))
+
+    session_name = Path(path_to_save_plots_png).parent.parent.parent.stem
+    recording_name = Path(path_to_save_plots_png).parent.parent.stem
+    fig.suptitle(f"Timestamps of synchronized frames\nsession: {session_name}, recording: {recording_name}")
 
     for cam_id, frame_payload_list in synchronized_frame_list_dictionary.items():
 

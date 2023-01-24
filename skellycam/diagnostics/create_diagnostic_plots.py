@@ -3,7 +3,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, Union
 
-from skellycam.diagnostics.framerate_diagnostics import (
+from skellycam.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
 )

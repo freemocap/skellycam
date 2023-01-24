@@ -1,14 +1,38 @@
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
+from pydantic import BaseModel
+from rich import print
+from scipy.stats import median_abs_deviation
 
+from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.diagnostics.framerate_diagnostics import gather_timestamps
+from skellycam.opencv.group.camera_group import CameraGroup
 
 logger = logging.getLogger(__name__)
+
+
+class TimestampDiagnosticsDataClass(BaseModel):
+    mean_framerates_per_camera: dict
+    standard_deviation_framerates_per_camera: dict
+    median_framerates_per_camera: dict
+    median_absolute_deviation_per_camera: dict
+    mean_mean_framerate: float
+    mean_standard_deviation_framerates: float
+    mean_median_framerates: float
+    mean_median_absolute_deviation_per_camera: float
+
+
+def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
+    timestamps_npy = np.empty(0)
+
+    for frame in list_of_frames:
+        timestamps_npy = np.append(timestamps_npy, frame.timestamp_ns)
+    return timestamps_npy
 
 
 def create_timestamp_diagnostic_plots(
@@ -40,7 +64,11 @@ def create_timestamp_diagnostic_plots(
         )
 
     max_frame_duration = 0.1
-    fig = plt.figure(figsize=(18, 10))
+    fig = plt.figure(figsize=(18, 12))
+    session_name = Path(path_to_save_plots_png).parent.parent.parent.stem
+    recording_name = Path(path_to_save_plots_png).parent.parent.stem
+    fig.suptitle(f"Timestamps of synchronized frames\nsession: {session_name}, recording: {recording_name}")
+
     ax1 = plt.subplot(
         231,
         title="(Raw) Camera Frame Timestamp vs Frame#",
@@ -104,7 +132,87 @@ def create_timestamp_diagnostic_plots(
 
     fig_save_path = Path(path_to_save_plots_png)
     plt.savefig(str(fig_save_path))
-    logger.info(f"Saving diagnostic figure as png")
+    logger.info(f"Saving diagnostic figure tp: {fig_save_path}")
 
     if open_image_after_saving:
         os.startfile(path_to_save_plots_png, "open")
+
+
+def calculate_camera_diagnostic_results(
+    timestamps_dictionary,
+) -> TimestampDiagnosticsDataClass:
+    mean_framerates_per_camera = {}
+    standard_deviation_framerates_per_camera = {}
+    median_framerates_per_camera = {}
+    median_absolute_deviation_per_camera = {}
+
+    for cam_id, timestamps in timestamps_dictionary.items():
+        timestamps_formatted = (np.asarray(timestamps) - timestamps[0]) / 1e9
+        frame_durations = np.diff(timestamps_formatted)
+        framerate_per_frame = 1 / frame_durations
+        mean_framerates_per_camera[cam_id] = np.nanmean(framerate_per_frame)
+        median_framerates_per_camera[cam_id] = np.nanmedian(framerate_per_frame)
+        standard_deviation_framerates_per_camera[cam_id] = np.nanstd(
+            framerate_per_frame
+        )
+        median_absolute_deviation_per_camera[cam_id] = median_abs_deviation(
+            framerate_per_frame
+        )
+
+    mean_mean_framerate = np.nanmean(list(mean_framerates_per_camera.values()))
+    mean_standard_deviation_framerates = np.nanmean(
+        list(standard_deviation_framerates_per_camera.values())
+    )
+    mean_median_framerates = np.nanmean(list(median_framerates_per_camera.values()))
+    mean_median_absolute_deviation_per_camera = np.nanmean(
+        list(median_absolute_deviation_per_camera.values())
+    )
+
+    return TimestampDiagnosticsDataClass(
+        mean_framerates_per_camera=mean_framerates_per_camera,
+        standard_deviation_framerates_per_camera=standard_deviation_framerates_per_camera,
+        median_framerates_per_camera=median_framerates_per_camera,
+        median_absolute_deviation_per_camera=median_absolute_deviation_per_camera,
+        mean_mean_framerate=float(mean_mean_framerate),
+        mean_standard_deviation_framerates=float(mean_standard_deviation_framerates),
+        mean_median_framerates=float(mean_median_framerates),
+        mean_median_absolute_deviation_per_camera=float(
+            mean_median_absolute_deviation_per_camera
+        ),
+    )
+
+
+if __name__ == "__main__":
+    found_camera_response = detect_cameras()
+    cam_ids = found_camera_response.cameras_found_list
+    g = CameraGroup(cam_ids)
+    g.start()
+
+    timestamps_dictionary_in = {key: [] for key in cam_ids}
+
+    loop_time = time.perf_counter_ns()
+
+    break_after_n_frames = 200
+    shared_zero_time_in = time.perf_counter_ns()
+    should_continue = True
+    while should_continue:
+        prev_loop_time = loop_time
+        loop_time = time.perf_counter_ns()
+        loop_duration = (loop_time - prev_loop_time) / 1e6
+
+        for cam_id in cam_ids:
+            frame_payload = g.get_by_cam_id(cam_id)
+            if frame_payload is not None:
+                if frame_payload.success:
+                    timestamps_dictionary_in[cam_id].append(frame_payload.timestamp_ns)
+            if len(timestamps_dictionary_in[cam_id]) > break_after_n_frames:
+                should_continue = False
+
+        print(
+            f"Loop duration: {loop_duration:.3f} ms: Timestamps: {[len(val) for val in timestamps_dictionary_in.values()]}"
+        )
+
+    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(
+        timestamps_dictionary_in
+    )
+    print(timestamp_diagnostic_data_class.__dict__)
