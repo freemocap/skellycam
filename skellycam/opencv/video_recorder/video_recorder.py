@@ -6,6 +6,7 @@ from typing import List, Union
 import cv2
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from skellycam.detection.models.frame_payload import FramePayload
 
@@ -113,7 +114,14 @@ class VideoRecorder:
     def _write_frame_list_to_video_file(self, frame_payload_list: List[FramePayload]):
 
         try:
-            for frame in frame_payload_list:
+            for frame in tqdm(
+                    frame_payload_list,
+                    desc=f"Saving video: {self._path_to_save_video_file}",
+                    total=len(frame_payload_list),
+                    colour="cyan",
+                    unit="frames",
+                    dynamic_ncols=True,
+            ):
                 self._cv2_video_writer.write(frame.image)
 
         except Exception as e:

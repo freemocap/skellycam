@@ -16,9 +16,9 @@ from skellycam.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,
 )
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.qt_gui.workers.video_save_thread_worker import VideoSaveThreadWorker
 from skellycam.system.environment.default_paths import (
-    create_new_recording_video_folder, get_default_recording_name, get_default_session_folder_path,
-)
+    create_new_synchronized_video_folder, get_default_recording_name, )
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +28,12 @@ class CamGroupFrameWorker(QThread):
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
+    videos_saved_to_this_folder_signal = pyqtSignal(str)
 
     def __init__(
             self,
             camera_ids: Union[List[str], None],
-            session_folder_path: Union[str, Path] = None,
-            new_recording_video_folder_created_signal: pyqtSignal  = None,
+            session_folder_path: Union[str, Path],
             parent=None,
     ):
 
@@ -43,8 +43,7 @@ class CamGroupFrameWorker(QThread):
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
 
-        self._session_folder_path = session_folder_path
-        self._new_recording_video_folder_created_signal = new_recording_video_folder_created_signal
+        self._session_folder_path = Path(session_folder_path)
         self._should_pause_bool = False
         self._should_record_frames_bool = False
 
@@ -136,12 +135,13 @@ class CamGroupFrameWorker(QThread):
             QImage.Format.Format_RGB888,
         )
 
-        return converted_frame.scaled(int(image.shape[1]/2),int(image.shape[0]/2), Qt.AspectRatioMode.KeepAspectRatio)
+        return converted_frame.scaled(int(image.shape[1] / 2), int(image.shape[0] / 2),
+                                      Qt.AspectRatioMode.KeepAspectRatio)
 
     def close(self):
         logger.info("Closing camera group")
         try:
-            self._camera_group.close(cameras_closed_signal= self.cameras_closed_signal)
+            self._camera_group.close(cameras_closed_signal=self.cameras_closed_signal)
         except AttributeError:
             pass
 
@@ -156,17 +156,19 @@ class CamGroupFrameWorker(QThread):
     def start_recording(self):
         logger.info("Starting recording")
         if self.cameras_connected:
-            self._generate_new_recording_id()
+            self._current_recording_name = get_default_recording_name(string_tag=None)
             self._should_record_frames_bool = True
         else:
             logger.warning("Cannot start recording - cameras not connected")
-
 
     def stop_recording(self):
         logger.info("Stopping recording")
         self._should_record_frames_bool = False
 
-        self._launch_save_video_process()
+        self._launch_save_video_thread_worker()
+        del self._video_recorder_dictionary
+        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
+
 
     def update_camera_group_configs(self, camera_config_dictionary: dict):
         if self._camera_ids is None:
@@ -184,51 +186,54 @@ class CamGroupFrameWorker(QThread):
             camera_config_dictionary
         )
 
-    def _launch_save_video_process(self):
-        logger.info("Launching save video process")
-        if self._video_save_process is not None:
-            while self._video_save_process.is_alive():
-                time.sleep(0.1)
-                logger.info(
-                    f"Waiting for video save process to finish: {self._video_save_process}"
-                )
+    def _launch_save_video_thread_worker(self):
+        logger.info("Launching save video thread worker")
 
-        if self._session_folder_path is None:
+        synchronized_videos_folder = create_new_synchronized_video_folder(
+            self._session_folder_path / self._current_recording_name)
 
-            self._session_folder_path = get_default_session_folder_path()
-
-        recording_video_folder_path_string = str(Path(create_new_recording_video_folder(session_folder_path=self._session_folder_path,
-                                                                                        recording_name=self._current_recording_name)))
-
-
-        self._video_save_process = Process(
-            name=f"VideoSaveProcess",
-            target=save_synchronized_videos,
-            args=(
-                deepcopy(self._video_recorder_dictionary),
-                recording_video_folder_path_string,
-                True,
-            ),
+        self._video_save_thread_worker = VideoSaveThreadWorker(
+            dictionary_of_video_recorders=deepcopy(self._video_recorder_dictionary),
+            folder_to_save_videos=str(synchronized_videos_folder),
+            create_diagnostic_plots_bool=True,
         )
-        logger.info(f"Launching video save process: {self._video_save_process}")
-        self._video_save_process.start()
+        self._video_save_thread_worker.start()
+        self._video_save_thread_worker.finished_signal.connect(
+            lambda: self.videos_saved_to_this_folder_signal.emit(str(synchronized_videos_folder))
+        )
 
-        if self._new_recording_video_folder_created_signal is not None:
-            logger.info(f"Emitting `new_recording_folder_created` signal with path: {recording_video_folder_path_string}")
-            self._new_recording_video_folder_created_signal.emit(recording_video_folder_path_string)
 
-        del self._video_recorder_dictionary
-        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
+    # def _launch_save_video_process(self):
+    #     logger.info("Launching save video process")
+    #     if self._video_save_process is not None:
+    #         while self._video_save_process.is_alive():
+    #             time.sleep(0.1)
+    #             logger.info(
+    #                 f"Waiting for video save process to finish: {self._video_save_process}"
+    #             )
+    #
+    #     self._video_save_process = Process(
+    #         name=f"VideoSaveProcess",
+    #         target=save_synchronized_videos,
+    #         args=(
+    #             deepcopy(self._video_recorder_dictionary),
+    #             self._get_new_recording_folder_path(),
+    #             True,
+    #         ),
+    #     )
+    #     logger.info(f"Launching video save process: {self._video_save_process}")
+    #     self._video_save_process.start()
+    #
+    #     if self._new_recording_video_folder_created_signal is not None:
+    #         logger.info(
+    #             f"Emitting `new_recording_folder_created` signal with path: {recording_video_folder_path_string}")
+    #         self._new_recording_video_folder_created_signal.emit(recording_video_folder_path_string)
+    #
+    #     del self._video_recorder_dictionary
+    #     self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     def _initialize_video_recorder_dictionary(self):
         return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
-
-    def _generate_new_recording_id(self) -> str:
-
-        self._current_recording_name = get_default_recording_name(string_tag="")
-        logger.info(f"Generating recording name: {self._current_recording_name}")
-
-        return self._current_recording_name
 
     def _get_recorder_frame_count_dict(self):
         return {

@@ -20,7 +20,6 @@ def save_synchronized_videos(
     dictionary_of_video_recorders: Dict[str, VideoRecorder],
     folder_to_save_videos: Union[str, Path],
     create_diagnostic_plots_bool: bool = True,
-    videos_saved_signal: pyqtSignal = None,
 ):
     logger.info(f"Saving synchronized videos to folder: {str(folder_to_save_videos)}")
 
@@ -122,8 +121,7 @@ def save_synchronized_videos(
 
     test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
 
-    if videos_saved_signal is not None:
-        videos_saved_signal.emit()
+
 
     return synchronized_frame_list_dictionary
 
