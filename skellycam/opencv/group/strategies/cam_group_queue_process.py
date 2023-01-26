@@ -112,9 +112,12 @@ class CamGroupProcess:
             camera.connect(ready_event_dictionary[camera.camera_id])
 
         while not exit_event.is_set():
-            # This tight loop ends up 100% the process, so a sleep between framecaptures is
-            # necessary. We can get away with this because we don't expect another frame for
-            # awhile.
+            if not multiprocessing.parent_process().is_alive():
+                logger.info(
+                    f"Parent process is no longer alive. Exiting {cam_ids} process"
+                )
+                break
+
             if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
                 logger.info(
                     "Camera config dict queue has items - updating cameras configs"
@@ -125,6 +128,9 @@ class CamGroupProcess:
                     camera.update_config(camera_config_dictionary[camera_id])
 
             if start_event.is_set():
+                # This tight loop ends up 100% the process, so a sleep between framecaptures is
+                # necessary. We can get away with this because we don't expect another frame for
+                # awhile.
                 sleep(0.001)
                 for camera in cameras_dictionary.values():
                     if camera.new_frame_ready:
