@@ -105,13 +105,13 @@ class SkellyCamViewerWidget(QWidget):
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
-        self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
+        self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
         self._cameras_disconnected_label.show()
         self._detect_available_cameras_push_button.show()
 
     def _show_no_cameras_found_message(self):
         logger.info("Showing `no cameras found` message")
-        self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
+        self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
         self._no_cameras_found_label.show()
         self._detect_available_cameras_push_button.show()
 
@@ -175,7 +175,7 @@ class SkellyCamViewerWidget(QWidget):
 
     def disconnect_from_cameras(self):
         logger.info("Disconnecting from cameras")
-        self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
+        self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
         self._cam_group_frame_worker.close()
 
     def pause(self):
@@ -243,7 +243,7 @@ class SkellyCamViewerWidget(QWidget):
 
         if self._dictionary_of_single_camera_view_widgets is not None:
             logger.info("Camera view widgets already exist - clearing them from  the camera grid view layout")
-            self._clear_camera_gird_view(self._dictionary_of_single_camera_view_widgets)
+            self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
             self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout(
                 camera_config_dictionary=camera_config_dictionary)
 
@@ -268,7 +268,7 @@ class SkellyCamViewerWidget(QWidget):
 
         return "landscape"
 
-    def _clear_camera_gird_view(self, dictionary_of_single_camera_view_widgets: Dict[str, SingleCameraViewWidget]):
+    def _clear_camera_grid_view(self, dictionary_of_single_camera_view_widgets: Dict[str, SingleCameraViewWidget]):
         if dictionary_of_single_camera_view_widgets is None:
             logger.info("No camera view widgets to clear")
             return
