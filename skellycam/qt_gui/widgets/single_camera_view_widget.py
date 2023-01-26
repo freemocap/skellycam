@@ -42,7 +42,7 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def handle_image_update(self, q_image:QImage, ):
+    def handle_image_update(self, q_image:QImage):
         pixmap = QPixmap.fromImage(q_image)
 
         image_label_widget_width = self._image_label_widget.width()

@@ -232,8 +232,10 @@ class SkellyCamViewerWidget(QWidget):
     def _handle_cameras_connected(self):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
+
     def _handle_image_update(self, camera_id:str, q_image:QImage):
-        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image, number_of_total_cameras=len(self._dictionary_of_single_camera_view_widgets))
+        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image)
+
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")
         self._detect_available_cameras_push_button.setEnabled(True)

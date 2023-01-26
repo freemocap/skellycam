@@ -118,11 +118,12 @@ class CamGroupFrameWorker(QThread):
                             self._video_recorder_dictionary[
                                 camera_id
                             ].append_frame_payload_to_list(frame)
+                            logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
 
                         q_image = self._convert_frame(frame)
                         self.new_image_signal.emit(camera_id, q_image)
 
-            # print(f"camera:recorder_frame_count - {self._get_recorder_frame_count_dict()}")
+
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
