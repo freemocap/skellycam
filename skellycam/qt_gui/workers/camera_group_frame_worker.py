@@ -194,7 +194,7 @@ class CamGroupFrameWorker(QThread):
         )
         self._video_save_thread_worker.start()
         self._video_save_thread_worker.finished_signal.connect(
-            lambda: self.videos_saved_to_this_folder_signal.emit(str(synchronized_videos_folder))
+            lambda: self.videos_saved_to_this_folder_signal.emit
         )
 
 
