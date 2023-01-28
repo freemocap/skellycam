@@ -9,7 +9,7 @@ import cv2
 from skellycam import CameraConfig
 from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
+from skellycam.diagnostics.plot_first_middle_and_last_frames import plot_first_middle_and_last_frames
 from skellycam.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
@@ -108,7 +108,7 @@ class MultiCameraVideoRecorder:
             open_image_after_saving=True,
         )
 
-        plot_first_and_last_frames(
+        plot_first_middle_and_last_frames(
             synchronized_frame_list_dictionary=self._synchronized_frame_list_dictionary,
             path_to_save_plots_png=Path(self._video_save_folder_path)
             / "first_and_last_frames.png",

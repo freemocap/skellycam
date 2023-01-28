@@ -3,7 +3,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, Union
 
-from skellycam.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
+from skellycam.diagnostics.plot_first_middle_and_last_frames import plot_first_middle_and_last_frames
 from skellycam.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
@@ -42,7 +42,7 @@ def create_diagnostic_plots(
         open_image_after_saving=show_plots_bool,
     )
 
-    plot_first_and_last_frames(
+    plot_first_middle_and_last_frames(
         synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
         path_to_save_plots_png=Path(folder_to_save_plots) / "first_and_last_frames.png",
         open_image_after_saving=show_plots_bool,

@@ -71,7 +71,7 @@ def create_timestamp_diagnostic_plots(
 
     ax1 = plt.subplot(
         231,
-        title="(Raw) Camera Frame Timestamp vs Frame#",
+        title="(Raw) Camera Frame Timestamp vs Frame#\n(Lines should have same slope)",
         xlabel="Frame#",
         ylabel="Timestamp (sec)",
     )
@@ -91,7 +91,7 @@ def create_timestamp_diagnostic_plots(
     )
     ax4 = plt.subplot(
         234,
-        title="(Synchronized) Camera Frame Timestamp vs Frame#",
+        title="(Synchronized) Camera Frame Timestamp vs Frame#\n(Lines should be on top of each other)",
         xlabel="Frame#",
         ylabel="Timestamp (sec)",
     )
@@ -129,6 +129,8 @@ def create_timestamp_diagnostic_plots(
             bins=np.arange(0, max_frame_duration, 0.0025),
             alpha=0.5,
         )
+
+    plt.tight_layout()
 
     fig_save_path = Path(path_to_save_plots_png)
     plt.savefig(str(fig_save_path))

@@ -16,7 +16,7 @@ class VideoSaveThreadWorker(QThread):
             dictionary_of_video_recorders: Dict[str, VideoRecorder],
             folder_to_save_videos: Union[str, Path],
             create_diagnostic_plots_bool: bool = True,
-            videos_saved_signal: pyqtSignal = None,
+
 
     ):
         super().__init__()
@@ -31,4 +31,5 @@ class VideoSaveThreadWorker(QThread):
             folder_to_save_videos=self._folder_to_save_videos,
             create_diagnostic_plots_bool=self._create_diagnostic_plots_bool,
         )
+
         self.finished_signal.emit(str(self._folder_to_save_videos))
