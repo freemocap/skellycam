@@ -1,8 +1,6 @@
 import logging
 import time
 from copy import deepcopy
-from multiprocessing import Process
-from pathlib import Path
 from typing import List, Union
 
 import cv2
@@ -12,13 +10,8 @@ from PyQt6.QtGui import QImage
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.camera_group import CameraGroup
-from skellycam.opencv.video_recorder.save_synchronized_videos import (
-    save_synchronized_videos,
-)
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.qt_gui.workers.video_save_thread_worker import VideoSaveThreadWorker
-from skellycam.system.environment.default_paths import (
-    create_new_synchronized_video_folder, get_default_recording_name, )
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +26,18 @@ class CamGroupFrameWorker(QThread):
     def __init__(
             self,
             camera_ids: Union[List[str], None],
-            session_folder_path: Union[str, Path],
+            get_new_synchronized_videos_folder_callable: callable,
             parent=None,
     ):
 
+        self._synchronized_video_folder_path = None
         logger.info(
             f"Initializing camera group frame worker with camera ids: {camera_ids}"
         )
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
+        self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
 
-        self._session_folder_path = Path(session_folder_path)
         self._should_pause_bool = False
         self._should_record_frames_bool = False
 
@@ -157,7 +151,7 @@ class CamGroupFrameWorker(QThread):
     def start_recording(self):
         logger.info("Starting recording")
         if self.cameras_connected:
-            self._current_recording_name = get_default_recording_name(string_tag=None)
+            self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
             self._should_record_frames_bool = True
         else:
             logger.warning("Cannot start recording - cameras not connected")
@@ -190,8 +184,8 @@ class CamGroupFrameWorker(QThread):
     def _launch_save_video_thread_worker(self):
         logger.info("Launching save video thread worker")
 
-        synchronized_videos_folder = create_new_synchronized_video_folder(
-            self._session_folder_path / self._current_recording_name)
+        synchronized_videos_folder = self._synchronized_video_folder_path
+        self._synchronized_video_folder_path = None
 
         self._video_save_thread_worker = VideoSaveThreadWorker(
             dictionary_of_video_recorders=deepcopy(self._video_recorder_dictionary),

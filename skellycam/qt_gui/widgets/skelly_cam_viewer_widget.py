@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from typing import Dict, List, Union
 
 import cv2
@@ -38,8 +37,8 @@ class SkellyCamViewerWidget(QWidget):
 
     def __init__(
             self,
+            get_new_synchronized_videos_folder_callable: callable,
             camera_ids: List[Union[str, int]] = None,
-            session_folder_path: Union[str, Path] = None,
             parent=None,
     ):
 
@@ -47,7 +46,8 @@ class SkellyCamViewerWidget(QWidget):
             f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
         )
 
-        self._session_folder_path = session_folder_path
+        self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
+
         self._camera_config_dicationary = None
         self._detect_cameras_worker = None
         self._dictionary_of_single_camera_view_widgets = None
@@ -197,7 +197,7 @@ class SkellyCamViewerWidget(QWidget):
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupFrameWorker(
             camera_ids=self._camera_ids,
-            session_folder_path=self._session_folder_path,
+            get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
         )
 
         cam_group_frame_worker.cameras_connected_signal.connect(

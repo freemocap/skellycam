@@ -3,11 +3,11 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, Union
 
+from skellycam.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
 from skellycam.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
 )
-from skellycam.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)

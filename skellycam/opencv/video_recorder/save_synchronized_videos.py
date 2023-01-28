@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
-from PyQt6.QtCore import pyqtSignal
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.diagnostics.create_diagnostic_plots import create_diagnostic_plots

@@ -21,7 +21,7 @@ from skellycam.qt_gui.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
 from skellycam.system.environment.default_paths import get_default_session_folder_path, \
-    get_default_skellycam_base_folder_path
+    get_default_skellycam_base_folder_path, create_new_synchronized_videos_folder, get_default_recording_name
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +35,12 @@ class QtGUIMainWindow(QMainWindow):
         super().__init__(parent=parent)
         self.setGeometry(100, 100, 1600, 900)
 
-
         if session_folder_path is None:
             self._session_folder_path = get_default_session_folder_path()
         else:
             self._session_folder_path = session_folder_path
 
-        self._base_folder_path =  get_default_skellycam_base_folder_path()
+        self._base_folder_path = get_default_skellycam_base_folder_path()
 
         self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
 
@@ -55,7 +54,11 @@ class QtGUIMainWindow(QMainWindow):
         self._layout.addWidget(self._welcome_to_skellycam_widget)
 
         self._camera_viewer_widget = SkellyCamViewerWidget(
-            session_folder_path=self._session_folder_path, parent=self
+            get_new_synchronized_videos_folder_callable=
+            lambda: create_new_synchronized_videos_folder(
+                Path(self._session_folder_path) / get_default_recording_name()
+            ),
+            parent=self
         )
         self._camera_viewer_widget.resize(1280, 720)
 
@@ -68,7 +71,6 @@ class QtGUIMainWindow(QMainWindow):
         self._layout.addWidget(self._camera_viewer_widget)
 
         self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
-
 
         self._qt_camera_config_parameter_tree_widget = (
             SkellyCamParameterTreeWidget(self._camera_viewer_widget)
@@ -102,11 +104,9 @@ class QtGUIMainWindow(QMainWindow):
             self._welcome_to_skellycam_widget.hide
         )
 
-
         self._camera_viewer_widget.videos_saved_to_this_folder_signal.connect(
             self._directory_view_widget.expand_directory_to_path
         )
-
 
     def closeEvent(self, a0) -> None:
 
@@ -117,6 +117,7 @@ class QtGUIMainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
+
 
 def remove_empty_directories(root_dir: Union[str, Path]):
     """
@@ -131,6 +132,7 @@ def remove_empty_directories(root_dir: Union[str, Path]):
             remove_empty_directories(path)
         else:
             continue
+
 
 if __name__ == "__main__":
     import sys

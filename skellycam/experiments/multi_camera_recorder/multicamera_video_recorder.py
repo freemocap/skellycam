@@ -9,11 +9,11 @@ import cv2
 from skellycam import CameraConfig
 from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
+from skellycam.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
 from skellycam.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
 )
-from skellycam.diagnostics.plot_first_and_last_frames import plot_first_and_last_frames
 from skellycam.opencv.group.camera_group import CameraGroup
 from skellycam.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,

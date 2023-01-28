@@ -89,8 +89,8 @@ def get_default_recording_name(string_tag: str = None):
 
 
 
-def create_new_synchronized_video_folder(recording_folder_path: Union[str, Path],
-                                         ):
+def create_new_synchronized_videos_folder(recording_folder_path: Union[str, Path],
+                                          ):
 
     folder_path = Path(recording_folder_path) /  SYNCHRONIZED_VIDEOS_FOLDER_NAME
     folder_path.mkdir(parents=True, exist_ok=True)
