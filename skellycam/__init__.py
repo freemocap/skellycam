@@ -8,10 +8,8 @@ __package_name__ = "skellycam"
 __repo_url__ = f"https://github.com/freemocap/{__package_name__}/"
 __repo_issues_url__ = f"{__repo_url__}issues"
 
-
 import sys
 from pathlib import Path
-
 
 print(f"This is printing from {__file__}")
 
@@ -27,4 +25,7 @@ configure_logging(log_file_path=get_log_file_path())
 from skellycam.opencv.camera.camera import Camera
 from skellycam.opencv.camera.models.camera_config import CameraConfig
 
-
+from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import SkellyCamParameterTreeWidget
+from skellycam.gui.qt.widgets.skelly_cam_controller_widget import SkellyCamControllerWidget
+from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import SkellyCamViewerWidget
+from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
