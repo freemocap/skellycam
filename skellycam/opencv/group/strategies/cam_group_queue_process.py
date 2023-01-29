@@ -155,6 +155,8 @@ class CamGroupProcess:
                 return queue.get(block=True)
         except Exception as e:
             logger.exception(f"Problem when grabbing a frame from: Camera {cam_id} - {e}")
+            logger.info("Setting `exit` event")
+            self._cameras_ready_event_dictionary["exit"].set()
             return
 
     def update_camera_configs(self, camera_config_dictionary):
