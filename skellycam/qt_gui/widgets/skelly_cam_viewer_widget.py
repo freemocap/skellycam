@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QVBoxLayout,
-    QWidget,
+    QWidget, QHBoxLayout,
 )
 
 from skellycam import CameraConfig
@@ -26,8 +26,8 @@ title_label_style_string = """
                            font-family: "Dosis", sans-serif;
                            """
 
-MAX_CAMS_PER_ROW_OR_COLUMN = 3
-
+MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
+MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 3
 
 class SkellyCamViewerWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
@@ -54,12 +54,15 @@ class SkellyCamViewerWidget(QWidget):
 
         super().__init__(parent=parent)
 
-
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._camera_grid_layout = QGridLayout()
-        self._layout.addLayout(self._camera_grid_layout)
+        self._camera_views_layout = QHBoxLayout()
+        self._camera_landscape_grid_layout = QGridLayout()
+        self._camera_views_layout.addLayout(self._camera_landscape_grid_layout)
+        self._camera_portrait_grid_layout = QGridLayout()
+        self._camera_views_layout.addLayout(self._camera_portrait_grid_layout)
+        self._layout.addLayout(self._camera_views_layout)
 
         self._camera_ids = camera_ids
         self._cam_group_frame_worker = self._create_cam_group_frame_worker()
@@ -101,8 +104,6 @@ class SkellyCamViewerWidget(QWidget):
     def detect_available_cameras_push_button(self):
         return self._detect_available_cameras_push_button
 
-
-
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
         self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
@@ -123,25 +124,30 @@ class SkellyCamViewerWidget(QWidget):
         )
 
         dictionary_of_single_camera_view_widgets = {}
-        camera_count = -1
+        landscape_camera_number = -1
+        portrait_camera_number = -1
         for camera_id, camera_config in camera_config_dictionary.items():
-            camera_count += 1
-            divmod_whole, divmod_remainder = divmod(int(camera_count), MAX_CAMS_PER_ROW_OR_COLUMN)
+
+
+            single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
+                                                        camera_config=camera_config,
+                                                        parent=self)
 
             if self._get_landscape_or_portrait(camera_config) == "landscape":
-                grid_column = divmod_whole
-                grid_row = divmod_remainder
-            elif self._get_landscape_or_portrait(camera_config) == "portrait":
-                grid_column = divmod_remainder
+                landscape_camera_number += 1
+                divmod_whole, divmod_remainder = divmod(int(landscape_camera_number), MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS)
                 grid_row = divmod_whole
+                grid_column = divmod_remainder
+                self._camera_landscape_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
 
-            dictionary_of_single_camera_view_widgets[camera_id] = SingleCameraViewWidget(camera_id=camera_id,
-                                                                                         camera_config=camera_config,
-                                                                                         parent=self)
+            elif self._get_landscape_or_portrait(camera_config) == "portrait":
+                portrait_camera_number += 1
+                divmod_whole, divmod_remainder = divmod(int(portrait_camera_number), MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS)
+                grid_row = divmod_whole
+                grid_column = divmod_remainder
+                self._camera_portrait_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
 
-            self._camera_grid_layout.addWidget(dictionary_of_single_camera_view_widgets[camera_id],
-                                               grid_row,
-                                               grid_column)
+            dictionary_of_single_camera_view_widgets[camera_id] = single_camera_view
 
         return dictionary_of_single_camera_view_widgets
 
@@ -233,7 +239,7 @@ class SkellyCamViewerWidget(QWidget):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
 
-    def _handle_image_update(self, camera_id:str, q_image:QImage):
+    def _handle_image_update(self, camera_id: str, q_image: QImage):
         self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image)
 
     def _reset_detect_available_cameras_button(self):
@@ -279,7 +285,8 @@ class SkellyCamViewerWidget(QWidget):
         try:
             for camera_id, single_camera_view_widget in dictionary_of_single_camera_view_widgets.items():
                 single_camera_view_widget.close()
-                self._camera_grid_layout.removeWidget(single_camera_view_widget)
+                self._camera_portrait_grid_layout.removeWidget(single_camera_view_widget)
+                self._camera_landscape_grid_layout.removeWidget(single_camera_view_widget)
         except Exception as e:
             logger.error(f"Error clearing camera layout dictionary: {e}")
             raise e
