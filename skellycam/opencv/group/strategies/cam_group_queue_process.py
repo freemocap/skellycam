@@ -146,12 +146,16 @@ class CamGroupProcess:
         return self._cameras_ready_event_dictionary[cam_id].is_set()
 
     def get_by_cam_id(self, cam_id) -> Union[FramePayload, None]:
-        if cam_id not in self._queues:
-            return
+        try:
+            if cam_id not in self._queues:
+                return
 
-        queue = self._queues[cam_id]
-        if not queue.empty():
-            return queue.get(block=True)
+            queue = self._queues[cam_id]
+            if not queue.empty():
+                return queue.get(block=True)
+        except Exception as e:
+            logger.exception(f"Problem when grabbing a frame from: Camera {cam_id} - {e}")
+            return
 
     def update_camera_configs(self, camera_config_dictionary):
         self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME].put(camera_config_dictionary)
