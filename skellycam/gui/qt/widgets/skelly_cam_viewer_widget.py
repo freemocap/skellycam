@@ -215,10 +215,13 @@ class SkellyCamViewerWidget(QWidget):
         )
 
         cam_group_frame_worker.videos_saved_to_this_folder_signal.connect(
-            self.videos_saved_to_this_folder_signal.emit
+            self._handle_cam_group_frame_worker_videos_saved_to_this_folder
         )
 
         return cam_group_frame_worker
+    def _handle_cam_group_frame_worker_videos_saved_to_this_folder(self, folder_path:str):
+        logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
+        self.videos_saved_to_this_folder_signal.emit(folder_path)
 
     def _handle_detected_cameras(self, camera_ids):
         if len(camera_ids) == 0:

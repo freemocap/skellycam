@@ -119,8 +119,6 @@ class CamGroupFrameWorker(QThread):
                         q_image = self._convert_frame(frame)
                         self.new_image_signal.emit(camera_id, q_image)
 
-
-
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
         # image = cv2.flip(image, 1)
@@ -167,7 +165,6 @@ class CamGroupFrameWorker(QThread):
         del self._video_recorder_dictionary
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
-
     def update_camera_group_configs(self, camera_config_dictionary: dict):
         if self._camera_ids is None:
             self._camera_ids = list(camera_config_dictionary.keys())
@@ -197,8 +194,12 @@ class CamGroupFrameWorker(QThread):
         )
         self._video_save_thread_worker.start()
         self._video_save_thread_worker.finished_signal.connect(
-            lambda: self.videos_saved_to_this_folder_signal.emit
+            self._handle_videos_save_thread_worker_finished
         )
+
+    def _handle_videos_save_thread_worker_finished(self, folder_path: str):
+        logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
+        self.videos_saved_to_this_folder_signal.emit(folder_path)
 
     #
     # def _launch_save_video_process(self):

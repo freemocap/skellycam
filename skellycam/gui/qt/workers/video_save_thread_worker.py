@@ -32,4 +32,5 @@ class VideoSaveThreadWorker(QThread):
             create_diagnostic_plots_bool=self._create_diagnostic_plots_bool,
         )
 
+        logger.info(f"`VideoSaveThreadWorker` finished saving synchronized videos to folder: {str(self._folder_to_save_videos)}")
         self.finished_signal.emit(str(self._folder_to_save_videos))
