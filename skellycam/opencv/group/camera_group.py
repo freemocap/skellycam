@@ -79,7 +79,8 @@ class CameraGroup:
         logger.info(f"Starting camera group with strategy {self._strategy_enum}")
         self._exit_event = multiprocessing.Event()
         self._start_event = multiprocessing.Event()
-        self._event_dictionary = {"start": self._start_event, "exit": self._exit_event}
+        self._event_dictionary = {"start": self._start_event,
+                                  "exit": self._exit_event}
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
             camera_config_dict=self._camera_config_dictionary,

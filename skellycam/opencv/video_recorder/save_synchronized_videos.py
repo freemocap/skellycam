@@ -91,13 +91,6 @@ def save_synchronized_videos(
 
 
 
-    final_frame_timestamps = [
-        frame_list[-1].timestamp_ns /1e9
-        for frame_list in synchronized_frame_list_dictionary.values()
-    ]
-
-    logger.info(f"np.diff(final_frame_timestamps): {np.diff(final_frame_timestamps)}")
-
     test_frame_timestamp_synchronization(synchronized_frame_list_dictionary=synchronized_frame_list_dictionary)
 
     Path(folder_to_save_videos).mkdir(parents=True, exist_ok=True)
