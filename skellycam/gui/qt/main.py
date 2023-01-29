@@ -1,13 +1,13 @@
 import logging
 import sys
 
-from skellycam.qt_gui.utilities.get_qt_app import get_qt_app
+from skellycam.gui.qt.skelly_cam_main_window import SkellyCamMainWindow
+from skellycam.gui.qt.utilities.get_qt_app import get_qt_app
 
 logger = logging.getLogger(__name__)
 
 from PyQt6.QtCore import QTimer
 
-from skellycam.qt_gui.qt_gui_main_window import QtGUIMainWindow
 
 
 def qt_gui_main():
@@ -19,8 +19,8 @@ def qt_gui_main():
 
 
 
-    qt_gui_main_window = QtGUIMainWindow()
-    qt_gui_main_window.show()
+    main_window = SkellyCamMainWindow()
+    main_window.show()
     error_code = app.exec()
 
 

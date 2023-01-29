@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
+from PyQt6.QtCore import pyqtSignal
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.diagnostics.create_diagnostic_plots import create_diagnostic_plots
@@ -19,6 +20,7 @@ def save_synchronized_videos(
     dictionary_of_video_recorders: Dict[str, VideoRecorder],
     folder_to_save_videos: Union[str, Path],
     create_diagnostic_plots_bool: bool = True,
+    videos_saved_to_this_folder_signal: pyqtSignal(str) = None,
 ):
     logger.info(f"Saving synchronized videos to folder: {str(folder_to_save_videos)}")
 
@@ -113,9 +115,12 @@ def save_synchronized_videos(
 
     test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
 
+    if videos_saved_to_this_folder_signal is not None:
+        logger.info(f"Emitting videos_saved_to_this_folder_signal with - {str(folder_to_save_videos)}")
+        videos_saved_to_this_folder_signal.emit(str(folder_to_save_videos))
 
+    logger.info(f"Done!")
 
-    return synchronized_frame_list_dictionary
 
 
 def get_nearest_frame(frame_list, reference_frame) -> FramePayload:

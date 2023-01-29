@@ -4,29 +4,31 @@ from pathlib import Path
 from typing import Union
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.qt_gui.widgets.skelly_cam_config_parameter_tree_widget import (
+from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
+from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import (
     SkellyCamParameterTreeWidget,
 )
-from skellycam.qt_gui.widgets.skelly_cam_controller_widget import (
+from skellycam.gui.qt.widgets.skelly_cam_controller_widget import (
     SkellyCamControllerWidget,
 )
-from skellycam.qt_gui.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
-from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import (
+from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
+from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import (
     SkellyCamViewerWidget,
 )
-from skellycam.qt_gui.widgets.welcome_to_skellycam_widget import (
+from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
 from skellycam.system.environment.default_paths import get_default_session_folder_path, \
-    get_default_skellycam_base_folder_path, create_new_synchronized_videos_folder, get_default_recording_name
+    get_default_skellycam_base_folder_path, create_new_synchronized_videos_folder, get_default_recording_name, \
+    PATH_TO_SKELLY_CAM_LOGO_SVG
 
 logger = logging.getLogger(__name__)
 
 
-class QtGUIMainWindow(QMainWindow):
+class SkellyCamMainWindow(QMainWindow):
 
     def __init__(self,
                  session_folder_path: Union[str, Path] = None,
@@ -34,6 +36,8 @@ class QtGUIMainWindow(QMainWindow):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__(parent=parent)
         self.setGeometry(100, 100, 1600, 900)
+        self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
+
 
         if session_folder_path is None:
             self._session_folder_path = get_default_session_folder_path()
@@ -140,7 +144,7 @@ if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    main_window = QtGUIMainWindow()
+    main_window = SkellyCamMainWindow()
     main_window.show()
     app.exec()
     for process in multiprocessing.active_children():

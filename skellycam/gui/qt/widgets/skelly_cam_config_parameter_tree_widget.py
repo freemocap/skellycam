@@ -7,12 +7,12 @@ from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from skellycam.opencv.camera.models.camera_config import CameraConfig
-from skellycam.qt_gui.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
+from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          EXPAND_ALL_STRING, ROTATE_180_STRING,
                                                          ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
                                                          rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
-from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import SkellyCamViewerWidget
+from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import SkellyCamViewerWidget
 
 logger = logging.getLogger(__name__)
 

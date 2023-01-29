@@ -3,7 +3,7 @@ from typing import Callable, Dict
 
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from skellycam.qt_gui.widgets.skelly_cam_viewer_widget import (
+from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import (
     SkellyCamViewerWidget,
 )
 

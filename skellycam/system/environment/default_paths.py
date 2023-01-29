@@ -18,7 +18,7 @@ TIMESTAMPS_FOLDER_NAME = "timestamps"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
 PATH_TO_SKELLY_CAM_LOGO_SVG = str(
-    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.svg"
+    Path(skellycam.__file__).parent.parent / "assets/logo/skelly-cam-logo.svg"
 )
 
 

@@ -13,10 +13,10 @@ from PyQt6.QtWidgets import (
 )
 
 from skellycam import CameraConfig
-from skellycam.qt_gui.utilities.qt_label_strings import no_cameras_found_message_string
-from skellycam.qt_gui.widgets.single_camera_view_widget import SingleCameraViewWidget
-from skellycam.qt_gui.workers.camera_group_frame_worker import CamGroupFrameWorker
-from skellycam.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
+from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
+from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
+from skellycam.gui.qt.workers.camera_group_frame_worker import CamGroupFrameWorker
+from skellycam.gui.qt.workers.detect_cameras_worker import DetectCamerasWorker
 
 logger = logging.getLogger(__name__)
 

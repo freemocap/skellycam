@@ -1,6 +1,7 @@
 import logging
 import time
 from copy import deepcopy
+from multiprocessing import Process
 from typing import List, Union
 
 import cv2
@@ -10,8 +11,9 @@ from PyQt6.QtGui import QImage
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.camera_group import CameraGroup
+from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.qt_gui.workers.video_save_thread_worker import VideoSaveThreadWorker
+from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +163,7 @@ class CamGroupFrameWorker(QThread):
         self._should_record_frames_bool = False
 
         self._launch_save_video_thread_worker()
+        # self._launch_save_video_process()
         del self._video_recorder_dictionary
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
@@ -198,34 +201,33 @@ class CamGroupFrameWorker(QThread):
         )
 
 
-    # def _launch_save_video_process(self):
-    #     logger.info("Launching save video process")
-    #     if self._video_save_process is not None:
-    #         while self._video_save_process.is_alive():
-    #             time.sleep(0.1)
-    #             logger.info(
-    #                 f"Waiting for video save process to finish: {self._video_save_process}"
-    #             )
-    #
-    #     self._video_save_process = Process(
-    #         name=f"VideoSaveProcess",
-    #         target=save_synchronized_videos,
-    #         args=(
-    #             deepcopy(self._video_recorder_dictionary),
-    #             self._get_new_recording_folder_path(),
-    #             True,
-    #         ),
-    #     )
-    #     logger.info(f"Launching video save process: {self._video_save_process}")
-    #     self._video_save_process.start()
-    #
-    #     if self._new_recording_video_folder_created_signal is not None:
-    #         logger.info(
-    #             f"Emitting `new_recording_folder_created` signal with path: {recording_video_folder_path_string}")
-    #         self._new_recording_video_folder_created_signal.emit(recording_video_folder_path_string)
-    #
-    #     del self._video_recorder_dictionary
-    #     self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
+    def _launch_save_video_process(self):
+        logger.info("Launching save video process")
+        if self._video_save_process is not None:
+            while self._video_save_process.is_alive():
+                time.sleep(0.1)
+                logger.info(
+                    f"Waiting for video save process to finish: {self._video_save_process}"
+                )
+
+        synchronized_videos_folder = self._synchronized_video_folder_path
+        self._synchronized_video_folder_path = None
+        self._video_save_process = Process(
+            name=f"VideoSaveProcess",
+            target=save_synchronized_videos,
+            args=(
+                deepcopy(self._video_recorder_dictionary),
+                synchronized_videos_folder,
+                True,
+                self.videos_saved_to_this_folder_signal
+            ),
+        )
+        logger.info(f"Launching video save process: {self._video_save_process}")
+
+        self._video_save_process.start()
+        self._video_save_thread_worker.finished_signal.connect(
+            lambda: self.videos_saved_to_this_folder_signal.emit
+        )
 
     def _initialize_video_recorder_dictionary(self):
         return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
