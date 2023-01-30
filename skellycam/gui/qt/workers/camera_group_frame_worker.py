@@ -32,13 +32,13 @@ class CamGroupFrameWorker(QThread):
             parent=None,
     ):
 
-        self._synchronized_video_folder_path = None
         logger.info(
             f"Initializing camera group frame worker with camera ids: {camera_ids}"
         )
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
+        self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
 
         self._should_pause_bool = False
         self._should_record_frames_bool = False
@@ -151,7 +151,8 @@ class CamGroupFrameWorker(QThread):
     def start_recording(self):
         logger.info("Starting recording")
         if self.cameras_connected:
-            self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
+            if self._synchronized_video_folder_path is None:
+                self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
             self._should_record_frames_bool = True
         else:
             logger.warning("Cannot start recording - cameras not connected")
