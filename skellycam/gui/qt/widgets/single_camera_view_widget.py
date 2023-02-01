@@ -12,14 +12,13 @@ class SingleCameraViewWidget(QWidget):
                  parent: QWidget = None):
         super().__init__(parent=parent)
 
-
         self._camera_id = camera_id
         self._camera_config = camera_config
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
-
-        self._title_label_widget = QLabel(f"Camera {self._camera_id}")
+        self._camera_name_string = f"Camera {self._camera_id}"
+        self._title_label_widget = QLabel(self._camera_name_string)
         self._layout.addWidget(self._title_label_widget)
         self._title_label_widget.setStyleSheet("""
                            font-size: 18px;
@@ -42,7 +41,7 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def handle_image_update(self, q_image:QImage):
+    def handle_image_update(self, q_image: QImage, frame_diagnostics_dictionary: dict):
         pixmap = QPixmap.fromImage(q_image)
 
         image_label_widget_width = self._image_label_widget.width()
@@ -55,9 +54,17 @@ class SingleCameraViewWidget(QWidget):
             scaled_width,
             scaled_height,
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,)
+            Qt.TransformationMode.SmoothTransformation, )
 
         self._image_label_widget.setPixmap(pixmap)
+
+        q_size = frame_diagnostics_dictionary['queue_size']
+        frames_recorded = frame_diagnostics_dictionary['frames_recorded']
+        if frames_recorded is None:
+            frames_recorded = 0
+        self._title_label_widget.setText(
+            self._camera_name_string + f"\nQueue Size:{q_size} | "
+                                       f"Frames Recorded#{str(frames_recorded)}".ljust(38))
 
     def show(self):
         super().show()

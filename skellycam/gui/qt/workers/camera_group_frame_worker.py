@@ -2,7 +2,7 @@ import logging
 import time
 from copy import deepcopy
 from multiprocessing import Process
-from typing import List, Union
+from typing import List, Union, Dict
 
 import cv2
 from PyQt6.QtCore import pyqtSignal, Qt, QThread
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class CamGroupFrameWorker(QThread):
-    new_image_signal = pyqtSignal(CameraId, QImage)
+    new_image_signal = pyqtSignal(CameraId, QImage, dict)
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
@@ -107,18 +107,23 @@ class CamGroupFrameWorker(QThread):
             if self._updating_camera_settings_bool:
                 continue
 
-            frame_obj = self._camera_group.latest_frames()
-            for camera_id, frame in frame_obj.items():
-                if frame:
+            frame_payload_dictionary = self._camera_group.latest_frames()
+            for camera_id, frame_payload in frame_payload_dictionary.items():
+                if frame_payload:
                     if not self._should_pause_bool:
                         if self._should_record_frames_bool:
-                            self._video_recorder_dictionary[
-                                camera_id
-                            ].append_frame_payload_to_list(frame)
+                            self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-                        logger.debug(f"queue size: {self._camera_group.queue_size}")
-                        q_image = self._convert_frame(frame)
-                        self.new_image_signal.emit(camera_id, q_image)
+                        q_image = self._convert_frame(frame_payload)
+
+                        frame_diagnostic_dictionary = {
+                            "mean_frames_per_second": frame_payload.mean_frames_per_second,
+                            "frames_received": frame_payload.number_of_frames_received,
+                            "frames_recorded": self._video_recorder_dictionary[camera_id].number_of_frames,
+                            "queue_size": self._camera_group.queue_size[camera_id]
+                        }
+
+                        self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image

@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Union
 
 import cv2
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, pyqtSlot
 from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import (
     QGridLayout,
@@ -242,8 +242,9 @@ class SkellyCamWidget(QWidget):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
 
-    def _handle_image_update(self, camera_id: str, q_image: QImage):
-        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image)
+    @pyqtSlot(str, QImage, dict)
+    def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary:Dict):
+        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image, frame_diagnostics_dictionary=frame_diagnostics_dictionary)
 
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")

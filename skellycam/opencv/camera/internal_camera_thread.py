@@ -17,11 +17,12 @@ logger = logging.getLogger(__name__)
 
 class VideoCaptureThread(threading.Thread):
     def __init__(
-        self,
-        config: CameraConfig,
-        ready_event: multiprocessing.Event = None,
+            self,
+            config: CameraConfig,
+            ready_event: multiprocessing.Event = None,
     ):
         super().__init__()
+        self._previous_frame_timestamp_ns = None
         self._new_frame_ready = False
         self.daemon = False
 
@@ -35,12 +36,11 @@ class VideoCaptureThread(threading.Thread):
         self._is_capturing_frames = False
         self._is_recording_frames = False
 
-        self._number_of_frames_recorded: int = 0
-        self._num_frames_processed = 0
+        self._number_of_frames_received: int = 0
 
         # self._elapsed_during_frame_grab = [] #TODO
         self._capture_timestamps = []
-        self._median_framerate = None
+        self._mean_frames_per_second = None
         self._frame: FramePayload = FramePayload()
         self._cv2_video_capture = self._create_cv2_capture()
 
@@ -49,27 +49,31 @@ class VideoCaptureThread(threading.Thread):
         if len(self._capture_timestamps) > 0:
             return self._capture_timestamps[0]
         return None
-
-    @property
-    def median_framerate(self):
-        if self._num_frames_processed == 0:
-            logger.warning(
-                f"No Frames processed yet, cannot calculate median_framerate"
-            )
-        else:
-            self._median_framerate = np.nanmedian(
-                (np.diff(self._capture_timestamps) ** -1) / 1e9
-            )
-
-        return self._median_framerate
-
-    @property
-    def latest_frame_number(self):
-        return self._number_of_frames_recorded
+    #
+    # @property
+    # def mean_frames_per_second(self):
+    #     return self._mean_frames_per_second
+    #
+    # def update_mean_frames_per_second(self, latest_frame_timestamp_ns: float):
+    #
+    #     if self._previous_frame_timestamp_ns is None:
+    #         self._previous_frame_timestamp_ns = latest_frame_timestamp_ns
+    #         return 0
+    #
+    #     frame_duration_in_seconds = ((latest_frame_timestamp_ns - self._previous_frame_timestamp_ns) / 1e9) ** -1
+    #
+    #     if self._mean_frames_per_second is None:
+    #         self._mean_frames_per_second = frame_duration_in_seconds
+    #         return self._mean_frames_per_second
+    #
+    #     self._mean_frames_per_second = (self._mean_frames_per_second + frame_duration_in_seconds) / 2
+    #
+    #     return self._mean_frames_per_second
 
     @property
     def latest_frame(self) -> FramePayload:
         self._new_frame_ready = False
+        self._frame.number_of_frames_recorded = self._frame.number_of_frames_recorded
         return self._frame
 
     @property
@@ -92,7 +96,7 @@ class VideoCaptureThread(threading.Thread):
         try:
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
-                self._num_frames_processed += 1
+
 
         except:
             logger.error(
@@ -119,13 +123,13 @@ class VideoCaptureThread(threading.Thread):
             self._new_frame_ready = success
 
         if success:
-            self._number_of_frames_recorded += 1
+            self._number_of_frames_received += 1
 
         return FramePayload(
             success=success,
             image=image,
             timestamp_ns=retrieval_timestamp,
-            frame_number=self.latest_frame_number,
+            number_of_frames_received=self._number_of_frames_received,
             camera_id=str(self._config.camera_id),
         )
 

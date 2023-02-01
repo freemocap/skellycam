@@ -7,6 +7,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from skellycam import CameraConfig
 from skellycam.detection.detect_cameras import detect_cameras
+from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
@@ -67,7 +68,7 @@ class CameraGroup:
         return self._camera_config_dictionary
 
     @property
-    def queue_size(self)-> List[int]:
+    def queue_size(self)-> Dict[str, int]:
         return self._strategy_class.queue_size
 
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
@@ -121,7 +122,7 @@ class CameraGroup:
     def get_by_cam_id(self, cam_id: str):
         return self._strategy_class.get_current_frame_by_cam_id(cam_id)
 
-    def latest_frames(self):
+    def latest_frames(self)-> Dict[str, FramePayload]:
         return self._strategy_class.get_latest_frames()
 
     def _resolve_strategy(self, cam_ids: List[str]):

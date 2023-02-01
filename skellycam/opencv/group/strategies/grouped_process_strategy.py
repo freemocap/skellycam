@@ -36,8 +36,8 @@ class GroupedProcessStrategy:
         return True
 
     @property
-    def queue_size(self)-> List[int]:
-        return [self._get_queue_size_by_camera_id(camera_id) for camera_id in self._camera_ids]
+    def queue_size(self)-> Dict[str, int]:
+        return {camera_id: self._get_queue_size_by_camera_id(camera_id) for camera_id in self._camera_ids}
 
     def start_capture(
         self,
@@ -66,7 +66,7 @@ class GroupedProcessStrategy:
             if camera_ids in process.camera_ids:
                 return process.get_queue_size_by_camera_id(camera_ids)
 
-    def get_latest_frames(self) -> Dict[CameraId, FramePayload]:
+    def get_latest_frames(self) -> Dict[str, FramePayload]:
         return {
             cam_id: process.get_current_frame_by_camera_id(cam_id)
             for cam_id, process in self._cam_id_process_map.items()
