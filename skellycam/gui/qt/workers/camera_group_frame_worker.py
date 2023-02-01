@@ -116,12 +116,17 @@ class CamGroupFrameWorker(QThread):
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
                         q_image = self._convert_frame(frame_payload)
 
-                        frame_diagnostic_dictionary = {
-                            "mean_frames_per_second": frame_payload.mean_frames_per_second,
-                            "frames_received": frame_payload.number_of_frames_received,
-                            "frames_recorded": self._video_recorder_dictionary[camera_id].number_of_frames,
-                            "queue_size": self._camera_group.queue_size[camera_id]
-                        }
+                        frame_diagnostic_dictionary = {}
+                        frame_diagnostic_dictionary["mean_frames_per_second"] =  frame_payload.mean_frames_per_second,
+                        frame_diagnostic_dictionary["frames_received"] =  frame_payload.number_of_frames_received,
+                        frame_diagnostic_dictionary["queue_size"] =  self._camera_group.queue_size[camera_id]
+
+                        try:
+                            frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
+                                                                                 camera_id].number_of_frames
+                        except Exception as e:
+                            frame_diagnostic_dictionary["frames_recorded"] = 0
+
 
                         self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
 
