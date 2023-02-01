@@ -116,7 +116,7 @@ class CamGroupFrameWorker(QThread):
                                 camera_id
                             ].append_frame_payload_to_list(frame)
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-
+                        logger.debug(f"queue size: {self._camera_group.queue_size}")
                         q_image = self._convert_frame(frame)
                         self.new_image_signal.emit(camera_id, q_image)
 

@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 class GroupedProcessStrategy:
-    def __init__(self, cam_ids: List[str]):
-        self._processes, self._cam_id_process_map = self._create_processes(cam_ids)
+    def __init__(self, camera_ids: List[str]):
+        self._camera_ids = camera_ids
+        self._processes, self._cam_id_process_map = self._create_processes(self._camera_ids)
 
     @property
     def processes(self):
@@ -33,6 +34,10 @@ class GroupedProcessStrategy:
             if not process.is_capturing:
                 return False
         return True
+
+    @property
+    def queue_size(self)-> List[int]:
+        return [self._get_queue_size_by_camera_id(camera_id) for camera_id in self._camera_ids]
 
     def start_capture(
         self,
@@ -50,15 +55,20 @@ class GroupedProcessStrategy:
             if cam_id in process.camera_ids:
                 return process.check_if_camera_is_ready(cam_id)
 
-    def get_by_cam_id(self, cam_id: str):
+    def get_current_frame_by_cam_id(self, camera_id: str):
         for process in self._processes:
-            curr = process.get_by_cam_id(cam_id)
-            if curr:
-                return curr
+            current_frame = process.get_current_frame_by_camera_id(camera_id)
+            if current_frame:
+                return current_frame
+
+    def _get_queue_size_by_camera_id(self, camera_ids: str)-> int:
+        for process in self._processes:
+            if camera_ids in process.camera_ids:
+                return process.get_queue_size_by_camera_id(camera_ids)
 
     def get_latest_frames(self) -> Dict[CameraId, FramePayload]:
         return {
-            cam_id: process.get_by_cam_id(cam_id)
+            cam_id: process.get_current_frame_by_camera_id(cam_id)
             for cam_id, process in self._cam_id_process_map.items()
         }
 

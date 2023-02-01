@@ -66,6 +66,10 @@ class CameraGroup:
     def camera_config_dictionary(self):
         return self._camera_config_dictionary
 
+    @property
+    def queue_size(self)-> List[int]:
+        return self._strategy_class.queue_size
+
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_config_dictionary}")
         self._camera_config_dictionary = camera_config_dictionary
@@ -115,7 +119,7 @@ class CameraGroup:
         return self._strategy_class.check_if_camera_is_ready(cam_id)
 
     def get_by_cam_id(self, cam_id: str):
-        return self._strategy_class.get_by_cam_id(cam_id)
+        return self._strategy_class.get_current_frame_by_cam_id(cam_id)
 
     def latest_frames(self):
         return self._strategy_class.get_latest_frames()
@@ -161,8 +165,8 @@ class CameraGroup:
 
 # async def getall(g: CameraGroup):
 #     await asyncio.gather(
-#         cam_show("0", lambda: g.get_by_cam_id("0")),
-#         cam_show("2", lambda: g.get_by_cam_id("2")),
+#         cam_show("0", lambda: g.get_current_frame_by_cam_id("0")),
+#         cam_show("2", lambda: g.get_current_frame_by_cam_id("2")),
 #     )
 #
 #

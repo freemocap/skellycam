@@ -151,17 +151,23 @@ class CamGroupProcess:
     def check_if_camera_is_ready(self, cam_id: str):
         return self._cameras_ready_event_dictionary[cam_id].is_set()
 
-    def get_by_cam_id(self, cam_id) -> Union[FramePayload, None]:
+    def _get_queue_by_camera_id(self, camera_id: str) -> multiprocessing.Queue:
+        return self._queues[camera_id]
+
+    def get_current_frame_by_camera_id(self, camera_id) -> Union[FramePayload, None]:
         try:
-            if cam_id not in self._queues:
+            if camera_id not in self._queues:
                 return
 
-            queue = self._queues[cam_id]
+            queue = self._get_queue_by_camera_id(camera_id)
             if not queue.empty():
                 return queue.get(block=True)
         except Exception as e:
-            logger.exception(f"Problem when grabbing a frame from: Camera {cam_id} - {e}")
+            logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
             return
+
+    def get_queue_size_by_camera_id(self, camera_id: str) -> int:
+        return self._queues[camera_id].qsize()
 
     def update_camera_configs(self, camera_config_dictionary):
         self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME].put(camera_config_dictionary)
@@ -177,7 +183,7 @@ if __name__ == "__main__":
     while True:
         # print("Queue size: ", p.queue_size("0"))
         curr = perf_counter_ns() * 1e-6
-        frames = p.get_by_cam_id("0")
+        frames = p.get_current_frame_by_camera_id("0")
         if frames:
             end = perf_counter_ns() * 1e-6
             frame_count_in_ms = f"{math.trunc(end - curr)}"
