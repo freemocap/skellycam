@@ -29,7 +29,7 @@ title_label_style_string = """
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
 MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 3
 
-class SkellyCamViewerWidget(QWidget):
+class SkellyCamWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
     incoming_camera_configs_signal = pyqtSignal(dict)
@@ -307,7 +307,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     main_window = QMainWindow()
-    qt_multi_camera_viewer_widget = SkellyCamViewerWidget()
+    qt_multi_camera_viewer_widget = SkellyCamWidget()
     main_window.setCentralWidget(qt_multi_camera_viewer_widget)
     main_window.show()
     error_code = app.exec()

@@ -3,8 +3,8 @@ from typing import Callable, Dict
 
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import (
-    SkellyCamViewerWidget,
+from skellycam.gui.qt.widgets.skelly_cam_widget import (
+    SkellyCamWidget,
 )
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class SkellyCamControllerWidget(QWidget):
     def __init__(
-        self, camera_viewer_widget: SkellyCamViewerWidget, parent=None
+        self, camera_viewer_widget: SkellyCamWidget, parent=None
     ):
         super().__init__(parent=parent)
 

@@ -32,5 +32,5 @@ from skellycam.opencv.camera.models.camera_config import CameraConfig
 
 from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import SkellyCamParameterTreeWidget
 from skellycam.gui.qt.widgets.skelly_cam_controller_widget import SkellyCamControllerWidget
-from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import SkellyCamViewerWidget
+from skellycam.gui.qt.widgets.skelly_cam_widget import SkellyCamWidget
 from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget

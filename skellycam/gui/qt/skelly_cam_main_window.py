@@ -15,8 +15,8 @@ from skellycam.gui.qt.widgets.skelly_cam_controller_widget import (
     SkellyCamControllerWidget,
 )
 from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
-from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import (
-    SkellyCamViewerWidget,
+from skellycam.gui.qt.widgets.skelly_cam_widget import (
+    SkellyCamWidget,
 )
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
@@ -57,7 +57,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
         self._layout.addWidget(self._welcome_to_skellycam_widget)
 
-        self._camera_viewer_widget = SkellyCamViewerWidget(
+        self._camera_viewer_widget = SkellyCamWidget(
             get_new_synchronized_videos_folder_callable=
             lambda: create_new_synchronized_videos_folder(
                 Path(self._session_folder_path) / get_default_recording_name()

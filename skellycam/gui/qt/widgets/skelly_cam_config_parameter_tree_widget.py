@@ -12,7 +12,7 @@ from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, CO
                                                          ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
                                                          rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
-from skellycam.gui.qt.widgets.skelly_cam_viewer_widget import SkellyCamViewerWidget
+from skellycam.gui.qt.widgets.skelly_cam_widget import SkellyCamWidget
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class SkellyCamParameterTreeWidget(QWidget):
     emitting_camera_configs_signal = pyqtSignal(dict)
 
     def __init__(self,
-                 camera_viewer_widget: SkellyCamViewerWidget):
+                 camera_viewer_widget: SkellyCamWidget):
 
         super().__init__()
         self._camera_viewer_widget = camera_viewer_widget
@@ -90,7 +90,7 @@ class SkellyCamParameterTreeWidget(QWidget):
 
         self._connect_signals_to_slots(self._camera_viewer_widget)
 
-    def _connect_signals_to_slots(self, camera_viewer_widget:SkellyCamViewerWidget):
+    def _connect_signals_to_slots(self, camera_viewer_widget:SkellyCamWidget):
         camera_viewer_widget.camera_group_created_signal.connect(
             self.update_camera_config_parameter_tree
         )
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget(camera_viewer_widget=SkellyCamViewerWidget())
+    qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget(camera_viewer_widget=SkellyCamWidget())
     qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree(
         {"0": CameraConfig(camera_id=0), "1": CameraConfig(camera_id=1)}
     )
