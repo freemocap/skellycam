@@ -138,7 +138,7 @@ def create_timestamp_diagnostic_plots(
     logger.info(f"Saving diagnostic figure tp: {fig_save_path}")
 
     if open_image_after_saving:
-        open_file(path_to_save_plots_png, "open")
+        open_file(path_to_save_plots_png)
 
 
 def calculate_camera_diagnostic_results(
