@@ -17,12 +17,15 @@ RESOLUTION_CHECK_STEPS = 10 # the number of 'slices" between the minimum and max
 
 class DetectPossibleCameras:
     def find_available_cameras(self) -> FoundCameraCache:
-        cv2_backend = determine_backend()
+        # cv2_backend = determine_backend()
 
         cams_to_use_list = []
         caps_list = []
+        resolutions_dict = {}
+        
         for cam_id in range(CAM_CHECK_NUM):
-            cap = cv2.VideoCapture(cam_id, cv2_backend)
+            # cap = cv2.VideoCapture(cam_id, cv2_backend)
+            cap = cv2.VideoCapture(cam_id)
             success, image1 = cap.read()
             time0 = time.perf_counter()
 
@@ -31,36 +34,22 @@ class DetectPossibleCameras:
 
             if image1 is None:
                 continue
+            possible_resolutions = self.get_possible_resolutions(cap, cam_id)
 
-            try:
-                success, image2 = cap.read()
-                time1 = time.perf_counter()
-
-                # TODO: This cant work. Needs a new solution
-                if time1 - time0 > 0.5:
-                    logger.debug(
-                        f"Camera {cam_id} took {time1 - time0} seconds to produce a 2nd "
-                        f"frame. It might be a virtual camera Skipping it."
-                    )
-                    continue  # skip to next port number
-
-                if np.mean(image2) > 10 and np.sum((image1-image2).ravel()) == 0:
-                    logger.debug(
-                        f"Camera {cam_id} appears to be return identical non-black frames -its  probably a virtual camera, skipping"
-                    )
-                    continue  # skip to next port number
-
+            if len(possible_resolutions) == 1:
+                logger.debug(
+                    f"Camera {cam_id} has only one possible resolution...likely virtual"
+                )
+            else: 
                 logger.debug(
                     f"Camera found at port number {cam_id}: success={success}, "
                     f"image.shape={image1.shape},  cap={cap}"
                 )
+            
                 cams_to_use_list.append(str(cam_id))
                 caps_list.append(cap)
-            except Exception as e:
-                logger.error(
-                    f"Exception raised when looking for a camera at port{cam_id}: {e}"
-                )
-
+                resolutions_dict[cam_id] = possible_resolutions
+            
         for cap in caps_list:
             logger.debug(f"Releasing cap {cap}")
             cap.release()
@@ -74,6 +63,7 @@ class DetectPossibleCameras:
         return FoundCameraCache(
             number_of_cameras_found=len(cams_to_use_list),
             cameras_found_list=cams_to_use_list,
+            possible_resolutions=resolutions_dict
         )
 
     def get_nearest_resolution(self, video_capture, target_width):
@@ -81,16 +71,16 @@ class DetectPossibleCameras:
         returns the resolution nearest the target width for a given cv2.VideoCapture object
         """
         
-        # 1. store the current resolution of the VideoCapture object
-        current_width = video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-        current_height = video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        # 1. store the current resolution of the VideoCapture object to reset it later
+        current_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        current_height =int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
-        # 2. attempt to set its width to the provided width argument
-        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, target_width)
+        # 2. attempt to set its width to the provided target_width
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, int(target_width))
         
-        # 3. determine which resolution the VideoCapture object goes to
-        nearest_width = video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-        nearest_height = video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        # 3. determine which resolution the VideoCapture object is actually able to attain
+        nearest_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        nearest_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
         # 4. reset the VideoCapture object to the original resolution
         video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, current_width)
@@ -99,12 +89,41 @@ class DetectPossibleCameras:
         # 5. return the resolution as a tuple of (width, height)
         return (nearest_width, nearest_height) 
 
-    def get_possible_resolutions(self, video_capture):
-        pass
+    def get_possible_resolutions(self, video_capture, cam_id):
         
+        min_res = self.get_nearest_resolution(video_capture, MIN_RESOLUTION_CHECK)
+        max_res = self.get_nearest_resolution(video_capture, MAX_RESOLUTION_CHECK)
+        logger.info(f"Minimum resolution of camera at port {cam_id} is {min_res}")
+        logger.info(f"Maximum resolution of camera at port {cam_id} is {max_res}")
+
+        min_width = min_res[0]
+        max_width = max_res[0]
+
+        STEPS_TO_CHECK = 10  # fast to check so cover your bases
+
+        # the size of jump to make before checking on the resolution
+        step_size = int((max_width - min_width) / STEPS_TO_CHECK)
+
+        resolutions = {min_res, max_res}
+
+        if max_width > min_width:  # i.e. only one size avaialable
+            for test_width in range(
+                int(min_width + step_size), int(max_width - step_size), int(step_size)
+            ):
+                new_res = self.get_nearest_resolution(video_capture, test_width)
+                # print(new_res)
+                resolutions.add(new_res)
+            resolutions = list(resolutions)
+            resolutions.sort()
+            possible_resolutions = resolutions
+        else:
+            possible_resolutions = [min_res]
+
+        logger.info(f"At port {cam_id} the possible resolutions are {possible_resolutions}")
+        
+        return possible_resolutions
 
 if __name__ == "__main__":
     detector = DetectPossibleCameras()
     camera_cache = detector.find_available_cameras()
-    print("hello world")
     
