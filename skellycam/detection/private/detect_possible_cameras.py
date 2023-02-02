@@ -11,6 +11,9 @@ CAM_CHECK_NUM = 20  # please give me a reason to increase this number ;D
 
 logger = logging.getLogger(__name__)
 
+MIN_RESOLUTION_CHECK = 0   # the lowest width value that will be used to determine the minimum resolution of the camera
+MAX_RESOLUTION_CHECK = 10000   # the highest width value that will be used to determine the maximum resolution of the camera
+RESOLUTION_CHECK_STEPS = 10 # the number of 'slices" between the minimum and maximum resolutions that will be checked to determine the possible resolutions
 
 class DetectPossibleCameras:
     def find_available_cameras(self) -> FoundCameraCache:
@@ -72,3 +75,36 @@ class DetectPossibleCameras:
             number_of_cameras_found=len(cams_to_use_list),
             cameras_found_list=cams_to_use_list,
         )
+
+    def get_nearest_resolution(self, video_capture, target_width):
+        """
+        returns the resolution nearest the target width for a given cv2.VideoCapture object
+        """
+        
+        # 1. store the current resolution of the VideoCapture object
+        current_width = video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        current_height = video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        
+        # 2. attempt to set its width to the provided width argument
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, target_width)
+        
+        # 3. determine which resolution the VideoCapture object goes to
+        nearest_width = video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        nearest_height = video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        
+        # 4. reset the VideoCapture object to the original resolution
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, current_width)
+        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, current_height)
+
+        # 5. return the resolution as a tuple of (width, height)
+        return (nearest_width, nearest_height) 
+
+    def get_possible_resolutions(self, video_capture):
+        pass
+        
+
+if __name__ == "__main__":
+    detector = DetectPossibleCameras()
+    camera_cache = detector.find_available_cameras()
+    print("hello world")
+    
