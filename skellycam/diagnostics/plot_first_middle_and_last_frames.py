@@ -3,6 +3,8 @@ from pathlib import Path
 
 import cv2
 
+from skellycam.utils.start_file import open_file
+
 
 def plot_first_middle_and_last_frames(
         synchronized_frame_list_dictionary,
@@ -59,4 +61,4 @@ def plot_first_middle_and_last_frames(
     fig.savefig(path_to_save_plots_png)
 
     if open_image_after_saving:
-        os.startfile(path_to_save_plots_png, "open")
+        open_file(path_to_save_plots_png, "open")
