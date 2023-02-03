@@ -16,6 +16,8 @@ MAX_RESOLUTION_CHECK = 10000   # the highest width value that will be used to de
 RESOLUTION_CHECK_STEPS = 10 # the number of 'slices" between the minimum and maximum resolutions that will be checked to determine the possible resolutions
 
 class DetectPossibleCameras:
+    
+    
     def find_available_cameras(self) -> FoundCameraCache:
         # cv2_backend = determine_backend()
 
@@ -86,6 +88,8 @@ class DetectPossibleCameras:
         video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, current_width)
         video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, current_height)
 
+        logger.info(f"Resolution with a width nearest {target_width} is {(nearest_width,nearest_height)}")
+
         # 5. return the resolution as a tuple of (width, height)
         return (nearest_width, nearest_height) 
 
@@ -125,5 +129,8 @@ class DetectPossibleCameras:
 
 if __name__ == "__main__":
     detector = DetectPossibleCameras()
+    start_time = time.perf_counter()
     camera_cache = detector.find_available_cameras()
+    elapsed_time = time.perf_counter()-start_time
     
+    print(f"Elapsed time for camera detection is {round(elapsed_time,2)} seconds")
