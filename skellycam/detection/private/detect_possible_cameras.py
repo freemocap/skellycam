@@ -1,5 +1,6 @@
 import logging
 import time
+from threading import Thread
 
 import cv2
 import numpy as np
@@ -21,53 +22,65 @@ class DetectPossibleCameras:
     def find_available_cameras(self) -> FoundCameraCache:
         # cv2_backend = determine_backend()
 
-        cams_to_use_list = []
-        caps_list = []
-        resolutions_dict = {}
+        self.cams_to_use_list = []
+        self.caps_list = []
+        self.resolutions_dict = {}
+        self.assess_camera_threads = {}
         
         for cam_id in range(CAM_CHECK_NUM):
-            # cap = cv2.VideoCapture(cam_id, cv2_backend)
-            cap = cv2.VideoCapture(cam_id)
-            success, image1 = cap.read()
-            time0 = time.perf_counter()
-
-            if not success:
-                continue
-
-            if image1 is None:
-                continue
-            possible_resolutions = self.get_possible_resolutions(cap, cam_id)
-
-            if len(possible_resolutions) == 1:
-                logger.debug(
-                    f"Camera {cam_id} has only one possible resolution...likely virtual"
-                )
-            else: 
-                logger.debug(
-                    f"Camera found at port number {cam_id}: success={success}, "
-                    f"image.shape={image1.shape},  cap={cap}"
-                )
-            
-                cams_to_use_list.append(str(cam_id))
-                caps_list.append(cap)
-                resolutions_dict[cam_id] = possible_resolutions
-            
-        for cap in caps_list:
+            self.assess_camera_threads[cam_id] = Thread(target=self.assess_camera, args=[cam_id,], daemon=True)
+            self.assess_camera_threads[cam_id].start()
+        
+        for key, thread in self.assess_camera_threads.items():
+            thread.join()
+               
+        self.cams_to_use_list.sort(key=int) # due to threads, cam_ids not returned in order, so reorder
+        
+        for cap in self.caps_list:
             logger.debug(f"Releasing cap {cap}")
             cap.release()
             logger.debug(f"Deleting cap {cap}")
             del cap
 
-        logger.debug(f"Deleting caps_list {caps_list}")
-        del caps_list
+        logger.debug(f"Deleting caps_list {self.caps_list}")
+        del self.caps_list
+        
 
-        logger.info(f"Found cameras: {cams_to_use_list}")
+        logger.info(f"Found cameras: {self.cams_to_use_list}")
         return FoundCameraCache(
-            number_of_cameras_found=len(cams_to_use_list),
-            cameras_found_list=cams_to_use_list,
-            possible_resolutions=resolutions_dict
+            number_of_cameras_found=len(self.cams_to_use_list),
+            cameras_found_list=self.cams_to_use_list,
+            possible_resolutions=self.resolutions_dict
         )
 
+    def assess_camera(self,cam_id):
+        # cap = cv2.VideoCapture(cam_id, cv2_backend)
+        cap = cv2.VideoCapture(cam_id)
+        success, image1 = cap.read()
+        time0 = time.perf_counter()
+
+        if not success:
+            return
+
+        if image1 is None:
+            return
+        
+        possible_resolutions = self.get_possible_resolutions(cap, cam_id)
+
+        if len(possible_resolutions) == 1:
+            logger.debug(
+                f"Camera {cam_id} has only one possible resolution...likely virtual"
+            )
+        else: 
+            logger.debug(
+                f"Camera found at port number {cam_id}: success={success}, "
+                f"image.shape={image1.shape},  cap={cap}"
+            )
+            
+            self.cams_to_use_list.append(str(cam_id))
+            self.caps_list.append(cap)
+            self.resolutions_dict[cam_id] = possible_resolutions
+        
     def get_nearest_resolution(self, video_capture, target_width):
         """
         returns the resolution nearest the target width for a given cv2.VideoCapture object
