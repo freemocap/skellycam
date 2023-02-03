@@ -12,6 +12,7 @@ from scipy.stats import median_abs_deviation
 from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.camera_group import CameraGroup
+from skellycam.utils.start_file import open_file
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ def create_timestamp_diagnostic_plots(
     logger.info(f"Saving diagnostic figure tp: {fig_save_path}")
 
     if open_image_after_saving:
-        os.startfile(path_to_save_plots_png, "open")
+        open_file(path_to_save_plots_png)
 
 
 def calculate_camera_diagnostic_results(

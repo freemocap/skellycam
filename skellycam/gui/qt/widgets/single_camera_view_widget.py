@@ -21,7 +21,7 @@ class SingleCameraViewWidget(QWidget):
         self._title_label_widget = QLabel(self._camera_name_string)
         self._layout.addWidget(self._title_label_widget)
         self._title_label_widget.setStyleSheet("""
-                           font-size: 18px;
+                           font-size: 12px;
                            font-weight: bold;
                            font-family: "Dosis", sans-serif;
                            """)
