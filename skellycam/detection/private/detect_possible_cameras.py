@@ -20,21 +20,23 @@ class DetectPossibleCameras:
     
     
     def find_available_cameras(self) -> FoundCameraCache:
-        # cv2_backend = determine_backend()
 
         self.cams_to_use_list = []
         self.caps_list = []
         self.resolutions_dict = {}
         self.assess_camera_threads = {}
-        
+       
+        # create a dictionary of threads that will check each port for a real camera 
         for cam_id in range(CAM_CHECK_NUM):
             self.assess_camera_threads[cam_id] = Thread(target=self.assess_camera, args=[cam_id,], daemon=True)
             self.assess_camera_threads[cam_id].start()
         
+        # wait for all the threads to finish
         for key, thread in self.assess_camera_threads.items():
             thread.join()
-               
-        self.cams_to_use_list.sort(key=int) # due to threads, cam_ids not returned in order, so reorder
+
+        # due to threads, cam_ids not returned in order, so reorder       
+        self.cams_to_use_list.sort(key=int) 
         
         for cap in self.caps_list:
             logger.debug(f"Releasing cap {cap}")
@@ -54,7 +56,7 @@ class DetectPossibleCameras:
         )
 
     def assess_camera(self,cam_id):
-        # cap = cv2.VideoCapture(cam_id, cv2_backend)
+        """A worker that can be spun up on it's own thread to sort out whether or not a given port connects to a legitimate camera"""
         cap = cv2.VideoCapture(cam_id)
         success, image1 = cap.read()
         time0 = time.perf_counter()
