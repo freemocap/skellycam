@@ -6,13 +6,13 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-from skellycam.opencv.camera.models.camera_config import CameraConfig
+from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          EXPAND_ALL_STRING, ROTATE_180_STRING,
                                                          ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
                                                          rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
-from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
+from skellycam.opencv.camera.models.camera_config import CameraConfig
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class SkellyCamParameterTreeWidget(QWidget):
 
         self._connect_signals_to_slots(self._camera_viewer_widget)
 
-    def _connect_signals_to_slots(self, camera_viewer_widget:SkellyCamWidget):
+    def _connect_signals_to_slots(self, camera_viewer_widget: SkellyCamWidget):
         camera_viewer_widget.camera_group_created_signal.connect(
             self.update_camera_config_parameter_tree
         )
@@ -279,12 +279,8 @@ class SkellyCamParameterTreeWidget(QWidget):
             elif action.name() == COLLAPSE_ALL_STRING:
                 camera_parameter.setOpts(expanded=False)
 
-
-
     def _handle_close_cameras_button_clicked(self):
         self._camera_viewer_widget.disconnect_from_cameras()
-
-
 
 
 if __name__ == "__main__":

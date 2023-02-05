@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import cv2
@@ -33,7 +32,7 @@ def plot_first_middle_and_last_frames(
 
         first_frame = cv2.cvtColor(frame_payload_list[first_frame_number].image, cv2.COLOR_BGR2RGB)
         mid_frame = cv2.cvtColor(frame_payload_list[middle_frame_number].image, cv2.COLOR_BGR2RGB)
-        last_frame = cv2.cvtColor(frame_payload_list[end_frame_number-1].image, cv2.COLOR_BGR2RGB)
+        last_frame = cv2.cvtColor(frame_payload_list[end_frame_number - 1].image, cv2.COLOR_BGR2RGB)
 
         number_of_columns = 3
         first_frame_ax = fig.add_subplot(number_of_cameras, number_of_columns, (camera_number * number_of_columns) + 1)
@@ -56,7 +55,7 @@ def plot_first_middle_and_last_frames(
         last_frame_ax.set_xticks([])
         last_frame_ax.set_yticks([])
         if camera_number == 0:
-            last_frame_ax.set_title(f"Last frame (frame number: {end_frame_number-1})")
+            last_frame_ax.set_title(f"Last frame (frame number: {end_frame_number - 1})")
     fig.tight_layout()
     fig.savefig(path_to_save_plots_png)
 

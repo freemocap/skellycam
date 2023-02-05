@@ -12,10 +12,9 @@ logger = logging.getLogger(__name__)
 
 class SkellyCamControllerWidget(QWidget):
     def __init__(
-        self, camera_viewer_widget: SkellyCamWidget, parent=None
+            self, camera_viewer_widget: SkellyCamWidget, parent=None
     ):
         super().__init__(parent=parent)
-
 
         self._layout = QVBoxLayout()
 
@@ -45,7 +44,6 @@ class SkellyCamControllerWidget(QWidget):
     @property
     def start_recording_button(self):
         return self._button_dictionary["start_recording"]
-
 
     def _create_button_dictionary(self):
         button_layout = QHBoxLayout()
@@ -122,9 +120,9 @@ class SkellyCamControllerWidget(QWidget):
         self._button_dictionary["stop_recording"].setEnabled(False)
 
     def connect_buttons_to_slots(
-        self,
-        button_dictionary: Dict[str, QPushButton],
-        slot_dictionary: Dict[str, Callable],
+            self,
+            button_dictionary: Dict[str, QPushButton],
+            slot_dictionary: Dict[str, Callable],
     ):
         for button_name, button in button_dictionary.items():
             if button_name in self._slot_dictionary:

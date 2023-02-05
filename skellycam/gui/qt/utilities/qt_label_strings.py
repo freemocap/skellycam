@@ -34,13 +34,13 @@ def rotate_cv2_code_to_str(rotate_video_value):
         return ROTATE_180_STRING
 
 
-no_cameras_found_message_string =  "\n\n"
+no_cameras_found_message_string = "\n\n"
 no_cameras_found_message_string += "No cameras found! \n \n"
 no_cameras_found_message_string += "Please check your camera connections and try again. \n"
 no_cameras_found_message_string += "\n"
-no_cameras_found_message_string +=  "  - If you are using a USB hub, try connecting your cameras directly to a USB port on your computer (move your mouse/keyboard/etc peripherals to the USB hub to free up ports). \n"
-no_cameras_found_message_string +=  "  - If that doesn't work, try (in order of increasing escalation): \n"
-no_cameras_found_message_string +=  "    - Unplug and re-plug your cameras \n"
+no_cameras_found_message_string += "  - If you are using a USB hub, try connecting your cameras directly to a USB port on your computer (move your mouse/keyboard/etc peripherals to the USB hub to free up ports). \n"
+no_cameras_found_message_string += "  - If that doesn't work, try (in order of increasing escalation): \n"
+no_cameras_found_message_string += "    - Unplug and re-plug your cameras \n"
 no_cameras_found_message_string += f"    - Restart your the `{skellycam.__package_name__}` application \n"
-no_cameras_found_message_string +=  "    - Restart your computer \n"
+no_cameras_found_message_string += "    - Restart your computer \n"
 no_cameras_found_message_string += f"    - Submit an Issue on the Github: {skellycam.__repo_issues_url__}  (include a copy of the `log` file from this session)\n"

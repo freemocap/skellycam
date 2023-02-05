@@ -5,7 +5,6 @@ import time
 import traceback
 
 import cv2
-import numpy as np
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.camera.models.camera_config import CameraConfig
@@ -49,6 +48,7 @@ class VideoCaptureThread(threading.Thread):
         if len(self._capture_timestamps) > 0:
             return self._capture_timestamps[0]
         return None
+
     #
     # @property
     # def mean_frames_per_second(self):

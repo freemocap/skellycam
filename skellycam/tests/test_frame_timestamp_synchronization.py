@@ -3,6 +3,8 @@ import logging
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
 def test_frame_timestamp_synchronization(synchronized_frame_list_dictionary):
     frame_count_list = []
 

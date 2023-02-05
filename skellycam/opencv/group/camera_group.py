@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 class CameraGroup:
     def __init__(
-        self,
-        camera_ids_list: List[str] = None,
-        strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
-        camera_config_dictionary: Dict[str, CameraConfig] = None,
+            self,
+            camera_ids_list: List[str] = None,
+            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
         logger.info(
             f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
@@ -68,7 +68,7 @@ class CameraGroup:
         return self._camera_config_dictionary
 
     @property
-    def queue_size(self)-> Dict[str, int]:
+    def queue_size(self) -> Dict[str, int]:
         return self._strategy_class.queue_size
 
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
@@ -107,7 +107,7 @@ class CameraGroup:
 
             logger.debug(f"Camera started? {camera_started_dictionary}")
 
-            logger.debug(f"Active processes { multiprocessing.active_children()}")
+            logger.debug(f"Active processes {multiprocessing.active_children()}")
             if restart_process_if_it_dies:
                 self._restart_dead_processes()
 
@@ -122,14 +122,14 @@ class CameraGroup:
     def get_by_cam_id(self, cam_id: str):
         return self._strategy_class.get_current_frame_by_cam_id(cam_id)
 
-    def latest_frames(self)-> Dict[str, FramePayload]:
+    def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.get_latest_frames()
 
     def _resolve_strategy(self, cam_ids: List[str]):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
             return GroupedProcessStrategy(cam_ids)
 
-    def close(self, wait_for_exit: bool = True, cameras_closed_signal:pyqtSignal = None):
+    def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
         logger.info("Closing camera group")
         self._set_exit_event()
         self._terminate_processes()
@@ -140,7 +140,6 @@ class CameraGroup:
                 time.sleep(0.1)
         if cameras_closed_signal is not None:
             cameras_closed_signal.emit()
-
 
     def _set_exit_event(self):
         logger.info("Setting exit event")
@@ -162,7 +161,6 @@ class CameraGroup:
                     event_dictionary=self._event_dictionary,
                     camera_config_dict=self._camera_config_dictionary,
                 )
-
 
 # async def getall(g: CameraGroup):
 #     await asyncio.gather(

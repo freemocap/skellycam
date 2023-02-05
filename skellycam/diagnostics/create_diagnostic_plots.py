@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 def create_diagnostic_plots(
-    video_recorder_dictionary: Dict[str, VideoRecorder],
-    synchronized_frame_list_dictionary: Dict[str, list],
-    folder_to_save_plots: Union[str, Path],
-    shared_zero_time: Union[int, float] = 0,
-    show_plots_bool: bool = True,
+        video_recorder_dictionary: Dict[str, VideoRecorder],
+        synchronized_frame_list_dictionary: Dict[str, list],
+        folder_to_save_plots: Union[str, Path],
+        shared_zero_time: Union[int, float] = 0,
+        show_plots_bool: bool = True,
 ):
     logger.info("Creating diagnostic plots...")
     # get timestamp diagnostics
@@ -38,7 +38,7 @@ def create_diagnostic_plots(
         raw_frame_list_dictionary=raw_frame_list_dictionary,
         synchronized_frame_list_dictionary=synchronized_frame_list_dictionary,
         path_to_save_plots_png=Path(folder_to_save_plots)
-        / "timestamp_diagnostic_plots.png",
+                               / "timestamp_diagnostic_plots.png",
         open_image_after_saving=show_plots_bool,
     )
 

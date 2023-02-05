@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 class Camera:
     def __init__(
-        self,
-        config: CameraConfig,
+            self,
+            config: CameraConfig,
     ):
 
         self._ready_event = None

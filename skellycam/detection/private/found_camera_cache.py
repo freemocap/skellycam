@@ -7,7 +7,7 @@ class FoundCameraCache(BaseModel):
     number_of_cameras_found: int
     cameras_found_list: List[str]
     possible_resolutions: dict
-    
+
     @property
     def as_camera_list(self):
         return [cam for cam in self.cameras_found_list]

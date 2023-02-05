@@ -9,14 +9,15 @@ from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
 
+
 class VideoSaveThreadWorker(QThread):
     finished_signal = pyqtSignal(str)
+
     def __init__(
             self,
             dictionary_of_video_recorders: Dict[str, VideoRecorder],
             folder_to_save_videos: Union[str, Path],
             create_diagnostic_plots_bool: bool = True,
-
 
     ):
         super().__init__()
@@ -32,5 +33,6 @@ class VideoSaveThreadWorker(QThread):
             create_diagnostic_plots_bool=self._create_diagnostic_plots_bool,
         )
 
-        logger.info(f"`VideoSaveThreadWorker` finished saving synchronized videos to folder: {str(self._folder_to_save_videos)}")
+        logger.info(
+            f"`VideoSaveThreadWorker` finished saving synchronized videos to folder: {str(self._folder_to_save_videos)}")
         self.finished_signal.emit(str(self._folder_to_save_videos))

@@ -4,7 +4,6 @@ from typing import Dict, List
 
 from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.strategies.cam_group_queue_process import CamGroupQueueProcess
 from skellycam.utils.array_split_by import array_split_by
 
@@ -12,7 +11,6 @@ from skellycam.utils.array_split_by import array_split_by
 ### this is our library default.
 ### This should only change based off of real world experimenting with CPUs
 _DEFAULT_CAM_PER_PROCESS = 2
-
 
 # https://refactoring.guru/design-patterns/strategy
 
@@ -36,13 +34,13 @@ class GroupedProcessStrategy:
         return True
 
     @property
-    def queue_size(self)-> Dict[str, int]:
+    def queue_size(self) -> Dict[str, int]:
         return {camera_id: self._get_queue_size_by_camera_id(camera_id) for camera_id in self._camera_ids}
 
     def start_capture(
-        self,
-        event_dictionary: Dict[str, multiprocessing.Event],
-        camera_config_dict: Dict[str, CameraConfig],
+            self,
+            event_dictionary: Dict[str, multiprocessing.Event],
+            camera_config_dict: Dict[str, CameraConfig],
     ):
 
         for process in self._processes:
@@ -61,7 +59,7 @@ class GroupedProcessStrategy:
             if current_frame:
                 return current_frame
 
-    def _get_queue_size_by_camera_id(self, camera_ids: str)-> int:
+    def _get_queue_size_by_camera_id(self, camera_ids: str) -> int:
         for process in self._processes:
             if camera_ids in process.camera_ids:
                 return process.get_queue_size_by_camera_id(camera_ids)
@@ -73,7 +71,7 @@ class GroupedProcessStrategy:
         }
 
     def _create_processes(
-        self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
+            self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
     ):
         if len(cam_ids) == 0:
             raise ValueError("No cameras were provided")

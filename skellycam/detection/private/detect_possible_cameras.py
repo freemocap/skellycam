@@ -4,17 +4,14 @@ from threading import Thread
 from typing import Union
 
 import cv2
-import numpy as np
 
 from skellycam.detection.private.found_camera_cache import FoundCameraCache
-from skellycam.opencv.config.determine_backend import determine_backend
-
 
 logger = logging.getLogger(__name__)
 
 NUMBER_OF_CAMERAS_TO_CHECK = 20  # please give me a reason to increase this number ;D
 MIN_RESOLUTION_CHECK = 0  # the lowest width value that will be used to determine the minimum resolution of the camera
-MAX_RESOLUTION_CHECK = 10000  # the highest width value that will be used to determine the maximum resolution of the camera
+MAX_RESOLUTION_CHECK = 5000  # the highest width value that will be used to determine the maximum resolution of the camera
 RESOLUTION_CHECK_STEPS = 10  # the number of 'slices" between the minimum and maximum resolutions that will be checked to determine the possible resolutions
 
 

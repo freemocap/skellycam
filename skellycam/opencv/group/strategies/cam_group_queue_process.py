@@ -40,9 +40,9 @@ class CamGroupQueueProcess:
         return self._process.name
 
     def start_capture(
-        self,
-        event_dictionary: Dict[str, multiprocessing.Event],
-        camera_config_dict: Dict[str, CameraConfig],
+            self,
+            event_dictionary: Dict[str, multiprocessing.Event],
+            camera_config_dict: Dict[str, CameraConfig],
     ):
         """
         Start capturing frames. Only return if the underlying process is fully running.
@@ -87,10 +87,10 @@ class CamGroupQueueProcess:
 
     @staticmethod
     def _begin(
-        cam_ids: List[str],
-        queues: Dict[str, multiprocessing.Queue],
-        event_dictionary: Dict[str, multiprocessing.Event],
-        camera_config_dict: Dict[str, CameraConfig],
+            cam_ids: List[str],
+            queues: Dict[str, multiprocessing.Queue],
+            event_dictionary: Dict[str, multiprocessing.Event],
+            camera_config_dict: Dict[str, CameraConfig],
     ):
         logger.info(
             f"Starting frame loop capture in CamGroupProcess for cameras: {cam_ids}"

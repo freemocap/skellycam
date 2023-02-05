@@ -27,8 +27,6 @@ class SkellyCamDirectoryViewWidget(QWidget):
         self._file_system_model = QFileSystemModel()
         self._tree_view_widget = QTreeView()
 
-
-
         self._layout.addWidget(self._tree_view_widget)
 
         # self._tree_view_widget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -53,14 +51,12 @@ class SkellyCamDirectoryViewWidget(QWidget):
 
         parent_path = copy(directory_path)
         while Path(self._file_system_model.rootPath()) in Path(parent_path).parents:
-
             parent_path = Path(parent_path).parent
             index = self._file_system_model.index(str(parent_path))
             logger.info(f"Expanding parent directory at  path: {str(parent_path)}")
             self._tree_view_widget.expand(index)
 
         self._tree_view_widget.scrollTo(og_index)
-
 
     def set_folder_as_root(self, folder_path: Union[str, Path]):
         logger.info(f"Setting root folder to {str(folder_path)}")
@@ -95,6 +91,6 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     skellycam_directory_view_widget = SkellyCamDirectoryViewWidget(folder_path=Path.home())
-    skellycam_directory_view_widget.expand_directory_to_path(Path.home()/"Downloads")
+    skellycam_directory_view_widget.expand_directory_to_path(Path.home() / "Downloads")
     skellycam_directory_view_widget.show()
     sys.exit(app.exec())

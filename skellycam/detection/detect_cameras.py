@@ -14,5 +14,6 @@ def detect_cameras(use_cache=True):
 
     return _available_cameras
 
+
 if __name__ == "__main__":
     detect_cameras()

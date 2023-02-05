@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from pathlib import Path
 from typing import Dict, List, Union
@@ -37,10 +36,10 @@ def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
 
 
 def create_timestamp_diagnostic_plots(
-    raw_frame_list_dictionary: Dict[str, List[FramePayload]],
-    synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
-    path_to_save_plots_png: Union[str, Path],
-    open_image_after_saving: bool = False,
+        raw_frame_list_dictionary: Dict[str, List[FramePayload]],
+        synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
+        path_to_save_plots_png: Union[str, Path],
+        open_image_after_saving: bool = False,
 ):
     """plot some diagnostics to assess quality of camera sync"""
 
@@ -51,17 +50,17 @@ def create_timestamp_diagnostic_plots(
 
     synchronized_timestamps_dictionary = {}
     for (
-        camera_id,
-        camera_synchronized_frame_list,
+            camera_id,
+            camera_synchronized_frame_list,
     ) in synchronized_frame_list_dictionary.items():
         synchronized_timestamps_dictionary[camera_id] = (
-            gather_timestamps(camera_synchronized_frame_list) / 1e9
+                gather_timestamps(camera_synchronized_frame_list) / 1e9
         )
 
     raw_timestamps_dictionary = {}
     for camera_id, camera_raw_frame_list in raw_frame_list_dictionary.items():
         raw_timestamps_dictionary[camera_id] = (
-            gather_timestamps(camera_raw_frame_list) / 1e9
+                gather_timestamps(camera_raw_frame_list) / 1e9
         )
 
     max_frame_duration = 0.1
@@ -142,7 +141,7 @@ def create_timestamp_diagnostic_plots(
 
 
 def calculate_camera_diagnostic_results(
-    timestamps_dictionary,
+        timestamps_dictionary,
 ) -> TimestampDiagnosticsDataClass:
     mean_framerates_per_camera = {}
     standard_deviation_framerates_per_camera = {}

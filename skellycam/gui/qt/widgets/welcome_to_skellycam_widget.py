@@ -41,8 +41,6 @@ class WelcomeToSkellyCamWidget(QWidget):
                                            color: #2b2e38;
                                             """)
 
-
-
         self.resize(skellycam_logo_pixmap.width(), skellycam_logo_pixmap.height())
 
 

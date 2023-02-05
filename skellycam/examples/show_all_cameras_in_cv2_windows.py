@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 async def show_all_cameras_in_cv2_windows(camera_ids_list: list = None):
-
     if camera_ids_list is None:
         camera_ids_list = [0]
 

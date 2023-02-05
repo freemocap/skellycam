@@ -1,19 +1,17 @@
 import logging
 import time
 from copy import deepcopy
-from multiprocessing import Process
-from typing import List, Union, Dict
+from typing import List, Union
 
 import cv2
 from PyQt6.QtCore import pyqtSignal, Qt, QThread
 from PyQt6.QtGui import QImage
 
 from skellycam.detection.models.frame_payload import FramePayload
+from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
 from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.camera_group import CameraGroup
-from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
 
 logger = logging.getLogger(__name__)
 

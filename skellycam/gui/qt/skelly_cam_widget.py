@@ -29,6 +29,7 @@ title_label_style_string = """
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
 MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 3
 
+
 class SkellyCamWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
@@ -128,21 +129,22 @@ class SkellyCamWidget(QWidget):
         portrait_camera_number = -1
         for camera_id, camera_config in camera_config_dictionary.items():
 
-
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
                                                         camera_config=camera_config,
                                                         parent=self)
 
             if self._get_landscape_or_portrait(camera_config) == "landscape":
                 landscape_camera_number += 1
-                divmod_whole, divmod_remainder = divmod(int(landscape_camera_number), MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS)
+                divmod_whole, divmod_remainder = divmod(int(landscape_camera_number),
+                                                        MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS)
                 grid_row = divmod_whole
                 grid_column = divmod_remainder
                 self._camera_landscape_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
 
             elif self._get_landscape_or_portrait(camera_config) == "portrait":
                 portrait_camera_number += 1
-                divmod_whole, divmod_remainder = divmod(int(portrait_camera_number), MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS)
+                divmod_whole, divmod_remainder = divmod(int(portrait_camera_number),
+                                                        MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS)
                 grid_row = divmod_whole
                 grid_column = divmod_remainder
                 self._camera_portrait_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
@@ -219,7 +221,8 @@ class SkellyCamWidget(QWidget):
         )
 
         return cam_group_frame_worker
-    def _handle_cam_group_frame_worker_videos_saved_to_this_folder(self, folder_path:str):
+
+    def _handle_cam_group_frame_worker_videos_saved_to_this_folder(self, folder_path: str):
         logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
         self.videos_saved_to_this_folder_signal.emit(folder_path)
 
@@ -243,8 +246,9 @@ class SkellyCamWidget(QWidget):
         self._reset_detect_available_cameras_button()
 
     @pyqtSlot(str, QImage, dict)
-    def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary:Dict):
-        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image, frame_diagnostics_dictionary=frame_diagnostics_dictionary)
+    def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary: Dict):
+        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image,
+                                                                                      frame_diagnostics_dictionary=frame_diagnostics_dictionary)
 
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")

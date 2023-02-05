@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 
 class MultiCameraVideoRecorder:
     def __init__(
-        self,
-        video_save_folder_path: Union[str, Path] = None,
-        camera_config_dict: Dict[str, CameraConfig] = None,
-        string_tag: str = None,
+            self,
+            video_save_folder_path: Union[str, Path] = None,
+            camera_config_dict: Dict[str, CameraConfig] = None,
+            string_tag: str = None,
     ):
         self._session_start_time_iso8601 = get_iso6201_time_string()
         self._session_start_time_unix_seconds = time.time()
@@ -89,7 +89,7 @@ class MultiCameraVideoRecorder:
         timestamps_dictionary = {}
         for cam_id, video_recorder in self._video_recorder_dictionary.items():
             timestamps_dictionary[cam_id] = (
-                video_recorder.timestamps - self._shared_zero_time
+                    video_recorder.timestamps - self._shared_zero_time
             )
 
         self._timestamp_diagnostics = calculate_camera_diagnostic_results(
@@ -99,7 +99,7 @@ class MultiCameraVideoRecorder:
         print(self._timestamp_diagnostics.dict())
 
         diagnostic_plot_file_path = (
-            Path(self._video_save_folder_path) / "timestamp_diagnostic_plots.png"
+                Path(self._video_save_folder_path) / "timestamp_diagnostic_plots.png"
         )
         create_timestamp_diagnostic_plots(
             raw_frame_list_dictionary=self._copy_frame_payload_lists(),
@@ -111,7 +111,7 @@ class MultiCameraVideoRecorder:
         plot_first_middle_and_last_frames(
             synchronized_frame_list_dictionary=self._synchronized_frame_list_dictionary,
             path_to_save_plots_png=Path(self._video_save_folder_path)
-            / "first_and_last_frames.png",
+                                   / "first_and_last_frames.png",
             open_image_after_saving=True,
         )
 

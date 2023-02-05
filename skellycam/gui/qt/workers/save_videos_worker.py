@@ -15,7 +15,7 @@ class SaveVideosWorker(QThread):
     done_saving_videos_signal = pyqtSignal()
 
     def __init__(
-        self, video_recorder_dictionary: dict, save_video_path: Union[str, Path]
+            self, video_recorder_dictionary: dict, save_video_path: Union[str, Path]
     ):
         logger.info(
             f"Initializing save videos worker with session folder path: {save_video_path}"

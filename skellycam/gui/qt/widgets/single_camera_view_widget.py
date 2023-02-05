@@ -18,13 +18,15 @@ class SingleCameraViewWidget(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
         self._camera_name_string = f"Camera {self._camera_id}"
-        self._title_label_widget = QLabel(self._camera_name_string)
+        self._title_label_widget = QLabel(self._camera_name_string, parent=self)
         self._layout.addWidget(self._title_label_widget)
         self._title_label_widget.setStyleSheet("""
                            font-size: 12px;
                            font-weight: bold;
                            font-family: "Dosis", sans-serif;
+                           color: #000000;
                            """)
+
         self._title_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._image_label_widget = QLabel("\U0001F4F8 Connecting... ")

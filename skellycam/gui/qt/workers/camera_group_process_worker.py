@@ -4,19 +4,18 @@ import time
 from copy import deepcopy
 from multiprocessing import Process
 from pathlib import Path
-from typing import List, Union, Dict
+from typing import List, Union
 
 import cv2
-from PyQt6.QtCore import pyqtSignal, Qt, QThread
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import QWidget
 
 from skellycam.detection.models.frame_payload import FramePayload
+from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
 from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.camera_group import CameraGroup
-from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +118,6 @@ class CamGroupProcessWorker(QWidget):
             logger.info("Emitting `cameras_connected_signal`")
             cameras_connected_signal.emit()
 
-
             while camera_group.is_capturing and should_continue:
                 if self._updating_camera_settings_bool:
                     continue
@@ -133,7 +131,8 @@ class CamGroupProcessWorker(QWidget):
                             q_image = self._convert_frame(frame_payload)
 
                             frame_diagnostic_dictionary = {}
-                            frame_diagnostic_dictionary["mean_frames_per_second"] = frame_payload.mean_frames_per_second,
+                            frame_diagnostic_dictionary[
+                                "mean_frames_per_second"] = frame_payload.mean_frames_per_second,
                             frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
                             frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
 
@@ -265,8 +264,6 @@ class CamGroupProcessWorker(QWidget):
 
     def _initialize_video_recorder_dictionary(self):
         return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
-
-
 
     def _create_camera_group(
             self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None
