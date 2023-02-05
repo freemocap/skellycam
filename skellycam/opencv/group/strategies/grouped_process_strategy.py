@@ -5,7 +5,7 @@ from typing import Dict, List
 from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.camera.types.camera_id import CameraId
-from skellycam.opencv.group.strategies.cam_group_queue_process import CamGroupProcess
+from skellycam.opencv.group.strategies.cam_group_queue_process import CamGroupQueueProcess
 from skellycam.utils.array_split_by import array_split_by
 
 ### Don't change this? Users should submit the actual value they want
@@ -79,7 +79,7 @@ class GroupedProcessStrategy:
             raise ValueError("No cameras were provided")
         camera_subarrays = array_split_by(cam_ids, cameras_per_process)
         processes = [
-            CamGroupProcess(cam_id_subarray) for cam_id_subarray in camera_subarrays
+            CamGroupQueueProcess(cam_id_subarray) for cam_id_subarray in camera_subarrays
         ]
         cam_id_to_process = {}
         for process in processes:

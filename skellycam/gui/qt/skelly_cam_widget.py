@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from skellycam import CameraConfig
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
-from skellycam.gui.qt.workers.camera_group_frame_worker import CamGroupFrameWorker
+from skellycam.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
 from skellycam.gui.qt.workers.detect_cameras_worker import DetectCamerasWorker
 
 logger = logging.getLogger(__name__)
@@ -201,7 +201,7 @@ class SkellyCamWidget(QWidget):
         return detect_available_cameras_push_button
 
     def _create_cam_group_frame_worker(self):
-        cam_group_frame_worker = CamGroupFrameWorker(
+        cam_group_frame_worker = CamGroupThreadWorker(
             camera_ids=self._camera_ids,
             get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
         )
