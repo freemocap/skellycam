@@ -99,7 +99,6 @@ class CamGroupThreadWorker(QThread):
 
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
-        self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
 
         while self._camera_group.is_capturing and should_continue:
             if self._updating_camera_settings_bool:
