@@ -92,6 +92,10 @@ class CamGroupThreadWorker(QThread):
     def cameras_connected(self):
         return self._camera_group.is_capturing
 
+    @property
+    def is_recording(self):
+        return self._should_record_frames_bool
+
     def run(self):
         logger.info("Starting camera group thread worker")
         self._camera_group.start()
