@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
 
 
-class CamGroupProcess:
+class CamGroupQueueProcess:
     def __init__(self, cam_ids: List[str]):
 
         if len(cam_ids) == 0:
@@ -58,7 +58,7 @@ class CamGroupProcess:
 
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
-            target=CamGroupProcess._begin,
+            target=CamGroupQueueProcess._begin,
             args=(self._cam_ids, self._queues, event_dictionary, camera_config_dict),
         )
         self._process.start()
@@ -104,7 +104,7 @@ class CamGroupProcess:
         process_camera_config_dict = {
             camera_id: camera_config_dict[camera_id] for camera_id in cam_ids
         }
-        cameras_dictionary = CamGroupProcess._create_cams(
+        cameras_dictionary = CamGroupQueueProcess._create_cams(
             camera_config_dict=process_camera_config_dict
         )
 
@@ -174,7 +174,7 @@ class CamGroupProcess:
 
 
 if __name__ == "__main__":
-    p = CamGroupProcess(
+    p = CamGroupQueueProcess(
         [
             "0",
         ]

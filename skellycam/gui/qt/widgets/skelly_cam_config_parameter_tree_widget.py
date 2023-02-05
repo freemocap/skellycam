@@ -12,7 +12,7 @@ from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, CO
                                                          ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
                                                          rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
-from skellycam.gui.qt.widgets.skelly_cam_widget import SkellyCamWidget
+from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
 
 logger = logging.getLogger(__name__)
 

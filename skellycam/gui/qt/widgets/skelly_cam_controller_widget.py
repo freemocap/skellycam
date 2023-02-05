@@ -3,7 +3,7 @@ from typing import Callable, Dict
 
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from skellycam.gui.qt.widgets.skelly_cam_widget import (
+from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
 
@@ -68,7 +68,7 @@ class SkellyCamControllerWidget(QWidget):
 
         start_recording_push_button = QPushButton("Start Recording")
         start_recording_push_button.setEnabled(True)
-        start_recording_push_button.hide()
+        # start_recording_push_button.hide()
         start_recording_push_button.clicked.connect(
             self._start_recording_push_button_clicked
         )
@@ -77,7 +77,7 @@ class SkellyCamControllerWidget(QWidget):
 
         stop_recording_push_button = QPushButton("Stop Recording")
         stop_recording_push_button.setEnabled(False)
-        stop_recording_push_button.hide()
+        # stop_recording_push_button.hide()
         stop_recording_push_button.clicked.connect(
             self._stop_recording_push_button_clicked
         )

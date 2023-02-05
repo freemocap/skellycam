@@ -15,7 +15,7 @@ from skellycam.gui.qt.widgets.skelly_cam_controller_widget import (
     SkellyCamControllerWidget,
 )
 from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
-from skellycam.gui.qt.widgets.skelly_cam_widget import (
+from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
