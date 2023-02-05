@@ -102,6 +102,10 @@ class SkellyCamWidget(QWidget):
         return self._cam_group_frame_worker.cameras_connected
 
     @property
+    def is_recording(self):
+        return self._cam_group_frame_worker.is_recording
+
+    @property
     def detect_available_cameras_push_button(self):
         return self._detect_available_cameras_push_button
 
