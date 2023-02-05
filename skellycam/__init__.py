@@ -2,7 +2,7 @@
 
 __author__ = """Skelly FreeMoCap"""
 __email__ = "info@freemocap.org"
-__version__ = "v2023.02.1067"
+__version__ = "v2023.02.1068"
 
 __description__ = "A simple python API for efficiently watching camera streams 💀📸"
 __package_name__ = "skellycam"
