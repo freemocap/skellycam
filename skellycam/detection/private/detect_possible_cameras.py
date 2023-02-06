@@ -72,3 +72,6 @@ class DetectPossibleCameras:
             number_of_cameras_found=len(cams_to_use_list),
             cameras_found_list=cams_to_use_list,
         )
+
+if __name__ == '__main__':
+    DetectPossibleCameras().find_available_cameras()
