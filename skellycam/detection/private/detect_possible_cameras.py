@@ -6,13 +6,14 @@ from typing import Union
 import cv2
 
 from skellycam.detection.private.found_camera_cache import FoundCameraCache
+from skellycam.opencv.config.determine_backend import determine_backend
 
 logger = logging.getLogger(__name__)
 
 NUMBER_OF_CAMERAS_TO_CHECK = 20  # please give me a reason to increase this number ;D
-MIN_RESOLUTION_CHECK = 0  # the lowest width value that will be used to determine the minimum resolution of the camera
-MAX_RESOLUTION_CHECK = 5000  # the highest width value that will be used to determine the maximum resolution of the camera
-RESOLUTION_CHECK_STEPS = 10  # the number of 'slices" between the minimum and maximum resolutions that will be checked to determine the possible resolutions
+# MIN_RESOLUTION_CHECK = 0  # the lowest width value that will be used to determine the minimum resolution of the camera
+# MAX_RESOLUTION_CHECK = 5000  # the highest width value that will be used to determine the maximum resolution of the camera
+# RESOLUTION_CHECK_STEPS = 10  # the number of 'slices" between the minimum and maximum resolutions that will be checked to determine the possible resolutions
 
 
 class DetectPossibleCameras:
@@ -22,18 +23,26 @@ class DetectPossibleCameras:
         self._camera_resolutions_dictionary = {}
         self._assess_camera_threads = {}
 
+        self.backend = determine_backend()
+
     def find_available_cameras(self) -> FoundCameraCache:
 
         # create a dictionary of threads that will check each port for a real camera
         for camera_id in range(NUMBER_OF_CAMERAS_TO_CHECK):
-            self._assess_camera_threads[camera_id] = Thread(target=self._assess_camera, args=[camera_id, ], daemon=True)
+            self._assess_camera_threads[camera_id] = Thread(
+                target=self._assess_camera,
+                args=[
+                    camera_id,
+                ],
+                daemon=True,
+            )
             self._assess_camera_threads[camera_id].start()
 
         # wait for all the threads to finish
         for key, thread in self._assess_camera_threads.items():
             thread.join()
 
-        # due to threads, cam_ids not returned in order, so reorder       
+        # due to threads, cam_ids not returned in order, so reorder
         self._cameras_to_use_list.sort(key=int)
 
         for video_capture_object in self._video_capture_objects_list:
@@ -49,12 +58,13 @@ class DetectPossibleCameras:
         return FoundCameraCache(
             number_of_cameras_found=len(self._cameras_to_use_list),
             cameras_found_list=self._cameras_to_use_list,
-            possible_resolutions=self._camera_resolutions_dictionary
+            possible_resolutions=self._camera_resolutions_dictionary,
         )
 
     def _assess_camera(self, camera_id: Union[str, int]):
         """A worker that can be spun up on it's own thread to sort out whether or not a given port connects to a legitimate camera"""
-        video_capture_object = cv2.VideoCapture(camera_id)
+        video_capture_object = cv2.VideoCapture(camera_id, self.backend)
+        # video_capture_object = cv2.VideoCapture(camera_id)
         success, image1 = video_capture_object.read()
 
         if not success:
@@ -62,8 +72,8 @@ class DetectPossibleCameras:
 
         if image1 is None:
             return
-
-        possible_resolutions = self._get_possible_resolutions(video_capture_object, camera_id)
+        self.default_resolution = (image1.shape[1],image1.shape[0])
+        possible_resolutions = self._set_possible_resolutions(video_capture_object, camera_id)
 
         if len(possible_resolutions) == 1:
             logger.debug(
@@ -79,9 +89,14 @@ class DetectPossibleCameras:
             self._video_capture_objects_list.append(video_capture_object)
             self._camera_resolutions_dictionary[camera_id] = possible_resolutions
 
-    def _get_nearest_resolution(self, video_capture: cv2.VideoCapture, target_width: float):
+    def _check_resolution(
+        self, video_capture: cv2.VideoCapture, cam_id: int, target_resolution: tuple
+    ):
         """
-        returns the resolution nearest the target width for a given cv2.VideoCapture object
+        Determine if a given width is viable for a video capture object.
+        Returns a tuple:
+            - First return: Bool: indicating whether or not the width is viable
+            - Second return: if viable, returns (width,height) combo, otherwise second return value is None
         """
 
         # 1. store the current resolution of the VideoCapture object to reset it later
@@ -89,55 +104,74 @@ class DetectPossibleCameras:
         current_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         # 2. attempt to set its width to the provided target_width
-        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, int(target_width))
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, int(target_resolution[0]))
+        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, int(target_resolution[1]))
 
         # 3. determine which resolution the VideoCapture object is actually able to attain
-        nearest_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        nearest_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        new_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        new_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         # 4. reset the VideoCapture object to the original resolution
         video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, current_width)
         video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, current_height)
 
-        logger.info(f"Resolution with a width nearest {target_width} is {(nearest_width, nearest_height)}")
+        if new_width == target_resolution:
+            logger.info(
+                f"At port {cam_id}, camera has a possible resolution of {(new_width, new_height)}"
+            )
 
-        # 5. return the resolution as a tuple of (width, height)
-        return (nearest_width, nearest_height)
-
-    def _get_possible_resolutions(self, video_capture: cv2.VideoCapture, cam_id: Union[str, int]):
-
-        minimum_resolution = self._get_nearest_resolution(video_capture, MIN_RESOLUTION_CHECK)
-        maximum_resolution = self._get_nearest_resolution(video_capture, MAX_RESOLUTION_CHECK)
-        logger.info(f"Minimum resolution of camera at port {cam_id} is {minimum_resolution}")
-        logger.info(f"Maximum resolution of camera at port {cam_id} is {maximum_resolution}")
-
-        minimum_width = minimum_resolution[0]
-        maximum_width = maximum_resolution[0]
-
-        steps_to_check = 10  # fast to check so cover your bases
-
-        # the size of jump to make before checking on the resolution
-        step_size = int((maximum_width - minimum_width) / steps_to_check)
-
-        resolutions = {minimum_resolution, maximum_resolution}
-
-        if maximum_width > minimum_width:  # i.e. only one size avaialable
-            for test_width in range(
-                    int(minimum_width + step_size), int(maximum_width - step_size), int(step_size)
-            ):
-                new_res = self._get_nearest_resolution(video_capture, test_width)
-                # print(new_res)
-                resolutions.add(new_res)
-            resolutions = list(resolutions)
-            resolutions.sort()
-            possible_resolutions = resolutions
+            return True, (new_width, new_height)
         else:
-            possible_resolutions = [minimum_resolution]
+            logger.info(
+                f"At port {cam_id}, the resolution width of {target_resolution} is not supported"
+            )
+            return False, None
 
-        logger.info(f"At port {cam_id} the possible resolutions are {possible_resolutions}")
+    def _set_possible_resolutions(
+        self, video_capture: cv2.VideoCapture, cam_id: Union[str, int]
+    ):
+        possible_resolutions = []
 
+        for width in RESOLUTIONS_TO_CHECK:
+            # check if width is viable
+            width_possible, resolution = self._check_resolution(
+                video_capture, cam_id, target_resolution=width
+            )
+            if width_possible:
+                possible_resolutions.append(resolution)
+
+        logger.info(
+            f"At port {cam_id} the possible resolutions are {possible_resolutions}"
+        )
         return possible_resolutions
 
+RESOLUTIONS_TO_CHECK = [
+    (352, 240),
+    (352, 288),
+    (352, 480),
+    (352, 576),
+    (352, 480),
+    (480, 480),
+    (480, 576),
+    (480, 480),
+    (480, 576),
+    (528, 480),
+    (544, 480),
+    (544, 576),
+    (640, 480),
+    (704, 480),
+    (704, 576),
+    (720, 480),
+    (720, 576),
+    (720, 480),
+    (720, 576),
+    (1280, 720),
+    (1280, 1080),
+    (1440, 1080),
+    (1920, 1080),
+    (3840, 2160),
+    (7680, 4320),
+]
 
 if __name__ == "__main__":
     detector = DetectPossibleCameras()
