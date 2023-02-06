@@ -134,3 +134,9 @@ class SkellyCamControllerWidget(QWidget):
                 logger.warning(
                     f"No slot found for button: {button_name} in slot dictionary: {self._slot_dictionary}"
                 )
+
+    def set_calibration_recordings_button_label(self, boolean: bool):
+        if boolean:
+            self._button_dictionary["start_recording"].setText("Start Recording (Calibration Videos)")
+        else:
+            self._button_dictionary["start_recording"].setText("Start Recording")
