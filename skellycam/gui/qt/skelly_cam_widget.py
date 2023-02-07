@@ -87,6 +87,9 @@ class SkellyCamWidget(QWidget):
         self.cameras_connected_signal.connect(self._no_cameras_found_label.hide)
         self._detect_available_cameras_push_button.clicked.connect(self._no_cameras_found_label.hide)
 
+        self.sizePolicy().setHorizontalStretch(1)
+        self.sizePolicy().setVerticalStretch(1)
+
         # self._layout.addStretch()
 
     @property

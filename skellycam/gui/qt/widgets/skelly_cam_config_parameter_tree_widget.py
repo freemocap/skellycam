@@ -50,6 +50,12 @@ class SkellyCamParameterTreeWidget(QWidget):
                  camera_viewer_widget: SkellyCamWidget):
 
         super().__init__()
+
+        # self.setMinimumWidth(250)
+        self.sizePolicy().setVerticalStretch(1)
+        self.sizePolicy().setHorizontalStretch(1)
+
+
         self._camera_viewer_widget = camera_viewer_widget
         self.setStyleSheet("""
         QPushButton{
@@ -58,7 +64,6 @@ class SkellyCamParameterTreeWidget(QWidget):
         }
         """)
 
-        self.setMinimumWidth(250)
         self._camera_parameter_group_dictionary = {}
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)

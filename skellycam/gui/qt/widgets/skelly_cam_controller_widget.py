@@ -16,6 +16,9 @@ class SkellyCamControllerWidget(QWidget):
     ):
         super().__init__(parent=parent)
 
+        self.sizePolicy().setVerticalStretch(1)
+        self.sizePolicy().setHorizontalStretch(1)
+
         self._layout = QVBoxLayout()
 
         self._layout = QHBoxLayout()
