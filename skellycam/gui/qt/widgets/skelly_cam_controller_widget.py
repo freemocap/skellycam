@@ -64,7 +64,7 @@ class SkellyCamControllerWidget(QWidget):
         # button_layout.addWidget(pause_push_button)
         # button_dictionary["pause"] = pause_push_button
 
-        start_recording_push_button = QPushButton("Start Recording")
+        start_recording_push_button = QPushButton("\U0001F534 Start Recording")
         start_recording_push_button.setEnabled(True)
         start_recording_push_button.hide()
         start_recording_push_button.clicked.connect(
@@ -73,7 +73,7 @@ class SkellyCamControllerWidget(QWidget):
         button_layout.addWidget(start_recording_push_button)
         button_dictionary["start_recording"] = start_recording_push_button
 
-        stop_recording_push_button = QPushButton("Stop Recording")
+        stop_recording_push_button = QPushButton("\U00002B1B Stop Recording")
         stop_recording_push_button.setEnabled(False)
         stop_recording_push_button.hide()
         stop_recording_push_button.clicked.connect(
@@ -108,7 +108,7 @@ class SkellyCamControllerWidget(QWidget):
             # self._button_dictionary["play"].setEnabled(False)
             # self._button_dictionary["pause"].setEnabled(False)
             self._button_dictionary["start_recording"].setEnabled(False)
-            self._button_dictionary["start_recording"].setText("Recording...")
+            self._button_dictionary["start_recording"].setText("\U0001F534 \U000021BB Recording...")
             self._button_dictionary["stop_recording"].setEnabled(True)
 
     def _stop_recording_push_button_clicked(self):
@@ -116,7 +116,7 @@ class SkellyCamControllerWidget(QWidget):
         # self._button_dictionary["play"].setEnabled(False)
         # self._button_dictionary["pause"].setEnabled(True)
         self._button_dictionary["start_recording"].setEnabled(True)
-        self._button_dictionary["start_recording"].setText("Start Recording")
+        self._button_dictionary["start_recording"].setText("\U0001F534 Start Recording")
         self._button_dictionary["stop_recording"].setEnabled(False)
 
     def connect_buttons_to_slots(
@@ -137,6 +137,6 @@ class SkellyCamControllerWidget(QWidget):
 
     def set_calibration_recordings_button_label(self, boolean: bool):
         if boolean:
-            self._button_dictionary["start_recording"].setText("Start Recording (Calibration Videos)")
+            self._button_dictionary["start_recording"].setText("\U0001F534 \U0001F4D0 Start Recording (Calibration Videos)")
         else:
-            self._button_dictionary["start_recording"].setText("Start Recording")
+            self._button_dictionary["start_recording"].setText("\U0001F534 Start Recording")

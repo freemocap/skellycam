@@ -48,6 +48,7 @@ class SkellyCamMainWindow(QMainWindow):
         self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
 
         self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
+
         self._central_widget = QWidget()
         self.setCentralWidget(self._central_widget)
         self._layout = QVBoxLayout()
