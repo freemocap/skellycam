@@ -27,7 +27,7 @@ title_label_style_string = """
                            """
 
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
-MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 3
+MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class SkellyCamWidget(QWidget):
