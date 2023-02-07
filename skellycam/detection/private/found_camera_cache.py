@@ -6,7 +6,6 @@ from pydantic import BaseModel
 class FoundCameraCache(BaseModel):
     number_of_cameras_found: int
     cameras_found_list: List[str]
-    verified_resolutions: dict
 
     @property
     def as_camera_list(self):

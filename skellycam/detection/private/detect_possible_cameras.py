@@ -11,10 +11,6 @@ from skellycam.opencv.config.determine_backend import determine_backend
 logger = logging.getLogger(__name__)
 
 NUMBER_OF_CAMERAS_TO_CHECK = 20  # please give me a reason to increase this number ;D
-# MIN_RESOLUTION_CHECK = 0  # the lowest width value that will be used to determine the minimum resolution of the camera
-# MAX_RESOLUTION_CHECK = 5000  # the highest width value that will be used to determine the maximum resolution of the camera
-# RESOLUTION_CHECK_STEPS = 10  # the number of 'slices" between the minimum and maximum resolutions that will be checked to determine the possible resolutions
-
 
 class DetectPossibleCameras:
     def __init__(self):
@@ -57,13 +53,10 @@ class DetectPossibleCameras:
 
         logger.info(f"Found cameras: {self._cameras_to_use_list}")
 
-        logger.info(
-            f"Verified Resolutions Dictionary: {self._verified_resolutions_dictionary}"
-        )
+
         return FoundCameraCache(
             number_of_cameras_found=len(self._cameras_to_use_list),
             cameras_found_list=self._cameras_to_use_list,
-            verified_resolutions=self._verified_resolutions_dictionary,
         )
 
     def _assess_camera(self, camera_id: Union[str, int]):
@@ -84,6 +77,7 @@ class DetectPossibleCameras:
         is_virtual, new_resolution = self._check_resolution(
             video_capture_object, camera_id, (599, 599)
         )
+        
         if is_virtual:
             logger.info(f"Camera at port {camera_id} is likely virtual")
             return
@@ -104,7 +98,6 @@ class DetectPossibleCameras:
 
         self._cameras_to_use_list.append(str(camera_id))
         self._video_capture_objects_list.append(video_capture_object)
-        # self._verified_resolutions_dictionary[camera_id] = verified_resolutions
 
     def _check_resolution(
         self, video_capture: cv2.VideoCapture, cam_id: int, target_resolution: tuple
@@ -136,52 +129,6 @@ class DetectPossibleCameras:
             )
             return False, None
 
-    def _get_verified_resolutions(
-        self, video_capture: cv2.VideoCapture, cam_id: Union[str, int]
-    ):
-        verified_resolutions = []
-
-        for resolution in RESOLUTIONS_TO_CHECK:
-            # check if resolution is viable
-            width_possible, resolution = self._check_resolution(
-                video_capture, cam_id, target_resolution=resolution
-            )
-            if width_possible:
-                verified_resolutions.append(resolution)
-
-        logger.info(
-            f"At port {cam_id} the following resolutions have been verified {verified_resolutions}"
-        )
-        return verified_resolutions
-
-
-RESOLUTIONS_TO_CHECK = [
-    # (352, 240),
-    # (352, 288),
-    # (352, 480),
-    # (352, 576),
-    # (352, 480),
-    # (480, 480),
-    # (480, 576),
-    # (480, 480),
-    # (480, 576),
-    # (528, 480),
-    # (544, 480),
-    # (544, 576),
-    (640, 480),
-    # (704, 480),
-    # (704, 576),
-    # (720, 480),
-    # (720, 576),
-    # (720, 480),
-    # (720, 576),
-    (1280, 720),
-    (1280, 1080),
-    (1440, 1080),
-    (1920, 1080),
-    # (3840, 2160),
-    # (7680, 4320),
-]
 
 if __name__ == "__main__":
     detector = DetectPossibleCameras()
