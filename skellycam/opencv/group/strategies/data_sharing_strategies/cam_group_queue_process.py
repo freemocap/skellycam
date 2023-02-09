@@ -9,7 +9,7 @@ from setproctitle import setproctitle
 
 from skellycam import Camera, CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.group.strategies.queue_communicator import QueueCommunicator
+from skellycam.opencv.group.strategies.data_sharing_strategies.utilities.queue_communicator import QueueCommunicator
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ class CamGroupQueueProcess:
     def _get_queue_by_camera_id(self, camera_id: str) -> multiprocessing.Queue:
         return self._queues[camera_id]
 
-    def get_current_frame_by_camera_id(self, camera_id) -> Union[FramePayload, None]:
+    def get_latest_frame_by_camera_id(self, camera_id) -> Union[FramePayload, None]:
         try:
             if camera_id not in self._queues:
                 return
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     while True:
         # print("Queue size: ", p.queue_size("0"))
         curr = perf_counter_ns() * 1e-6
-        frames = p.get_current_frame_by_camera_id("0")
+        frames = p.get_latest_frame_by_camera_id("0")
         if frames:
             end = perf_counter_ns() * 1e-6
             frame_count_in_ms = f"{math.trunc(end - curr)}"

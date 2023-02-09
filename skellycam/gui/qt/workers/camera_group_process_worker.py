@@ -97,57 +97,74 @@ class CamGroupProcessWorker(QWidget):
         return self._camera_group.is_capturing
 
     def start(self):
-        self._camera_group_process = Process(target=self._run_camera_group_process)
+        self._camera_group_process = Process(target=self._run_camera_group_process,
+                                             args=(
+                                                 self._camera_group,
+                                                 self._synchronized_video_folder_path,
+                                                 # self.new_image_signal,
+                                                 # self.cameras_connected_signal,
+                                                 # self.cameras_closed_signal,
+                                                 # self._camera_configs_queue,
+                                             ))
         self._camera_group_process.start()
 
     @staticmethod
     def _run_camera_group_process(
             camera_group: CameraGroup,
             synchronized_video_folder_path: Union[str, Path],
-            new_image_signal: pyqtSignal,
-            cameras_connected_signal: pyqtSignal,
-            cameras_closed_signal: pyqtSignal,
-            camera_configs_queue: multiprocessing.Queue
+            # new_image_signal: pyqtSignal,
+            # cameras_connected_signal: pyqtSignal,
+            # cameras_closed_signal: pyqtSignal,
+            # camera_configs_queue: multiprocessing.Queue
     ):
         logger.info("Starting camera group process")
         try:
             camera_group.start()
 
             should_continue = True
+            updating_camera_settings_bool = False
+            should_pause_bool = False
+            should_record_frames_bool = False
 
             logger.info("Emitting `cameras_connected_signal`")
-            cameras_connected_signal.emit()
+            # cameras_connected_signal.emit()
 
             while camera_group.is_capturing and should_continue:
-                if self._updating_camera_settings_bool:
+                if updating_camera_settings_bool:
                     continue
 
                 multi_frame_payload_dictionary = camera_group.latest_frames()
                 for camera_id, frame_payload in multi_frame_payload_dictionary.items():
                     if frame_payload:
-                        if not self._should_pause_bool:
-                            if self._should_record_frames_bool:
-                                self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
-                            q_image = self._convert_frame(frame_payload)
-
+                        if not should_pause_bool:
+                            # if should_record_frames_bool:
+                                # self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
+                            # image = cv2.flip(image, 1)
+                            image = cv2.cvtColor(frame_payload.image, cv2.COLOR_BGR2RGB)
+                            q_image = QImage(
+                                image.data,
+                                image.shape[1],
+                                image.shape[0],
+                                QImage.Format.Format_RGB888,
+                            )
                             frame_diagnostic_dictionary = {}
                             frame_diagnostic_dictionary[
                                 "mean_frames_per_second"] = frame_payload.mean_frames_per_second,
                             frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
-                            frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
+                            # frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
 
-                            try:
-                                frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
-                                    camera_id].number_of_frames
-                            except KeyError:
-                                frame_diagnostic_dictionary["frames_recorded"] = 0
-                            except Exception as e:
-                                logger.error(f"Error getting frame count for camera {camera_id}: {e}")
+                            # try:
+                            #     frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
+                            #         camera_id].number_of_frames
+                            # except KeyError:
+                            #     frame_diagnostic_dictionary["frames_recorded"] = 0
+                            # except Exception as e:
+                            #     logger.error(f"Error getting frame count for camera {camera_id}: {e}")
 
-                            new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
+                            # new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
         finally:
             logger.info("Closing camera group process")
-            camera_group.close(cameras_closed_signal=cameras_closed_signal)
+            # camera_group.close(cameras_closed_signal=cameras_closed_signal)
 
     @staticmethod
     def _convert_frame(frame: FramePayload):

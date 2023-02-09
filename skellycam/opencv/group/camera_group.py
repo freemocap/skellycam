@@ -11,7 +11,7 @@ from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
-from skellycam.opencv.group.strategies.strategies import Strategy
+from skellycam.opencv.group.strategies.strategies import CameraManagementStrategy, DataSharingStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +20,18 @@ class CameraGroup:
     def __init__(
             self,
             camera_ids_list: List[str] = None,
-            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            camera_management_strategy: CameraManagementStrategy = CameraManagementStrategy.X_CAM_PER_PROCESS,
+            data_sharing_strategy: DataSharingStrategy = DataSharingStrategy.QUEUE,
             camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
         logger.info(
-            f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
+            f"Creating camera group for cameras: {camera_ids_list} with camera management strategy "
+            f"{camera_management_strategy} and data sharing strategy {data_sharing_strategy} "
+            f"and camera configs {camera_config_dictionary}"
         )
         self._event_dictionary = None
-        self._strategy_enum = strategy
+        self._camera_management_strategy = camera_management_strategy
+        self._data_sharing_strategy = data_sharing_strategy
         self._camera_ids = camera_ids_list
 
         # Make optional, if a list of cams is sent then just use that
@@ -81,7 +85,7 @@ class CameraGroup:
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
         :return:
         """
-        logger.info(f"Starting camera group with strategy {self._strategy_enum}")
+        logger.info(f"Starting camera group with camera management strategy  {self._camera_management_strategy} and data sharing strategy {self._data_sharing_strategy}")
         self._exit_event = multiprocessing.Event()
         self._start_event = multiprocessing.Event()
         self._event_dictionary = {"start": self._start_event,
@@ -126,8 +130,8 @@ class CameraGroup:
         return self._strategy_class.get_latest_frames()
 
     def _resolve_strategy(self, cam_ids: List[str]):
-        if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
-            return GroupedProcessStrategy(cam_ids)
+        if self._camera_management_strategy == CameraManagementStrategy.X_CAM_PER_PROCESS:
+            return GroupedProcessStrategy(cam_ids, data_sharing_strategy=self._data_sharing_strategy)
 
     def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
         logger.info("Closing camera group")

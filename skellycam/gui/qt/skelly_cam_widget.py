@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 from skellycam import CameraConfig
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
+from skellycam.gui.qt.workers.camera_group_process_worker import CamGroupProcessWorker
 from skellycam.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
 from skellycam.gui.qt.workers.detect_cameras_worker import DetectCamerasWorker
 
@@ -214,6 +215,10 @@ class SkellyCamWidget(QWidget):
             camera_ids=self._camera_ids,
             get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
         )
+        # cam_group_frame_worker = CamGroupProcessWorker(
+        #     camera_ids=self._camera_ids,
+        #     get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
+        # )
 
         cam_group_frame_worker.cameras_connected_signal.connect(
             self._handle_cameras_connected

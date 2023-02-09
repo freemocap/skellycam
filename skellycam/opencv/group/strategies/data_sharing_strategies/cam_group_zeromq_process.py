@@ -1,7 +1,8 @@
 import math
+import multiprocessing
 from multiprocessing import Process
 from time import perf_counter_ns, sleep
-from typing import List
+from typing import List, Dict
 
 import zmq
 
@@ -9,29 +10,36 @@ from skellycam import Camera, CameraConfig
 
 
 class CamGroupZeromqProcess:
-    def __init__(self, cam_ids: List[str]):
-        self._cam_ids = cam_ids
+    def __init__(self, camera_ids: List[str]):
+        self._camera_ids = camera_ids
         self._process: Process = None
         self._payload = None
         parent_zmq = zmq.Context()
         self._parent_recv = parent_zmq.socket(zmq.PULL)
         self._parent_recv.connect("tcp://127.0.0.1:5556")
 
-    def start_capture(self):
+    @property
+    def camera_ids(self):
+        return self._camera_ids
+
+    def start_capture(self,
+                      event_dictionary: Dict[str, multiprocessing.Event],
+                      camera_config_dict: Dict[str, CameraConfig],
+                      ):
         self._process = Process(
-            target=CamGroupZeromqProcess._begin, args=(self._cam_ids,)
+            target=CamGroupZeromqProcess._begin, args=(self._camera_ids,)
         )
         self._process.start()
         while not self._process.is_alive():
             sleep(0.01)
 
     @staticmethod
-    def _create_cams(cam_ids: List[str]):
-        return [Camera(CameraConfig(cam_id=cam)) for cam in cam_ids]
+    def _create_cams(camera_ids: List[str]):
+        return [Camera(CameraConfig(cam_id=cam)) for cam in camera_ids]
 
     @staticmethod
-    def _begin(cam_ids: List[str]):
-        cameras = CamGroupZeromqProcess._create_cams(cam_ids)
+    def _begin(camera_ids: List[str]):
+        cameras = CamGroupZeromqProcess._create_cams(camera_ids)
         child_zmq = zmq.Context()
         send = child_zmq.socket(zmq.PUSH)
         send.bind("tcp://127.0.0.1:5556")

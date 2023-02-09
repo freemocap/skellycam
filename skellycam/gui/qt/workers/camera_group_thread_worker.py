@@ -104,33 +104,44 @@ class CamGroupThreadWorker(QThread):
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
 
+        logger.info("Starting camera group frame worker loop")
         while self._camera_group.is_capturing and should_continue:
             if self._updating_camera_settings_bool:
+                logger.debug("Updating camera settings, skip this loop")
                 continue
 
+            logger.debug("Getting latest frames")
             frame_payload_dictionary = self._camera_group.latest_frames()
             for camera_id, frame_payload in frame_payload_dictionary.items():
-                if frame_payload:
-                    if not self._should_pause_bool:
-                        if self._should_record_frames_bool:
-                            self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
-                            logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-                        q_image = self._convert_frame(frame_payload)
+                if not frame_payload:
+                    logger.debug(f"Camera {camera_id} has no frame payload")
+                    continue
+                logger.debug(f"Camera {camera_id} has frame payload: {frame_payload.success}")
 
-                        frame_diagnostic_dictionary = {}
-                        frame_diagnostic_dictionary["mean_frames_per_second"] = frame_payload.mean_frames_per_second,
-                        frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
-                        frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
+                if self._should_pause_bool:
+                    logger.debug(f"Camera {camera_id} is paused")
+                    continue
 
-                        try:
-                            frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
-                                camera_id].number_of_frames
-                        except KeyError:
-                            frame_diagnostic_dictionary["frames_recorded"] = 0
-                        except Exception as e:
-                            logger.error(f"Error getting frame count for camera {camera_id}: {e}")
+                if self._should_record_frames_bool:
+                    self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
+                    logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
 
-                        self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
+                q_image = self._convert_frame(frame_payload)
+
+                frame_diagnostic_dictionary = {}
+                frame_diagnostic_dictionary["mean_frames_per_second"] = frame_payload.mean_frames_per_second,
+                frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
+                # frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
+
+                try:
+                    frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
+                        camera_id].number_of_frames
+                except KeyError:
+                    frame_diagnostic_dictionary["frames_recorded"] = 0
+                except Exception as e:
+                    logger.error(f"Error getting frame count for camera {camera_id}: {e}")
+
+                    self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image

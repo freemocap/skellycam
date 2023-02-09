@@ -73,7 +73,6 @@ class VideoCaptureThread(threading.Thread):
     @property
     def latest_frame(self) -> FramePayload:
         self._new_frame_ready = False
-        self._frame.number_of_frames_recorded = self._frame.number_of_frames_recorded
         return self._frame
 
     @property
@@ -128,6 +127,7 @@ class VideoCaptureThread(threading.Thread):
         return FramePayload(
             success=success,
             image=image,
+            image_shape=image.shape,
             timestamp_ns=retrieval_timestamp,
             number_of_frames_received=self._number_of_frames_received,
             camera_id=str(self._config.camera_id),
