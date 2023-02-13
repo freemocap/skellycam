@@ -11,7 +11,7 @@ from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
-from skellycam.opencv.group.strategies.strategies import Strategy
+from skellycam.opencv.group.strategies.strategies import CameraGroupingStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class CameraGroup:
     def __init__(
             self,
             camera_ids_list: List[str] = None,
-            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            strategy: CameraGroupingStrategy = CameraGroupingStrategy.X_CAM_PER_PROCESS,
             camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
         logger.info(
@@ -125,9 +125,9 @@ class CameraGroup:
     def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.get_latest_frames()
 
-    def _resolve_strategy(self, cam_ids: List[str]):
-        if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
-            return GroupedProcessStrategy(cam_ids)
+    def _resolve_strategy(self, camera_ids: List[str]):
+        if self._strategy_enum == CameraGroupingStrategy.X_CAM_PER_PROCESS:
+            return GroupedProcessStrategy(camera_ids)
 
     def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
         logger.info("Closing camera group")
