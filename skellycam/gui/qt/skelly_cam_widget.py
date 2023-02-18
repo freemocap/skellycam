@@ -17,6 +17,7 @@ from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
 from skellycam.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
 from skellycam.gui.qt.workers.detect_cameras_worker import DetectCamerasWorker
+from skellycam.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +198,7 @@ class SkellyCamWidget(QWidget):
         self._cam_group_frame_worker.pause()
 
     def _create_detect_cameras_button(self):
-        detect_available_cameras_push_button = QPushButton("Detect Available Cameras")
+        detect_available_cameras_push_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         detect_available_cameras_push_button.clicked.connect(self.detect_available_cameras)
         detect_available_cameras_push_button.hasFocus()
         detect_available_cameras_push_button.setStyleSheet("""

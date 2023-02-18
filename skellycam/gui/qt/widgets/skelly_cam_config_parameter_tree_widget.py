@@ -13,6 +13,8 @@ from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, CO
                                                          rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
 from skellycam.opencv.camera.models.camera_config import CameraConfig
+from skellycam.system.environment.default_paths import RED_X_EMOJI_STRING, MAGNIFYING_GLASS_EMOJI_STRING, \
+    CAMERA_WITH_FLASH_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
 
 logger = logging.getLogger(__name__)
 
@@ -68,17 +70,17 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._close_cameras_button = QPushButton("Close Cameras")
+        self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
         self._layout.addWidget(self._close_cameras_button)
         self._close_cameras_button.setEnabled(False)
 
-        self._detect_available_cameras_button = QPushButton("Detect Available Cameras")
+        self._detect_available_cameras_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         self._layout.addWidget(self._detect_available_cameras_button)
         self._detect_available_cameras_button.setEnabled(False)
         self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.detect_available_cameras)
 
         self._apply_settings_to_cameras_button = QPushButton(
-            "Apply settings to cameras",
+            f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
         )
         self._apply_settings_to_cameras_button.clicked.connect(
             self._emit_camera_configs_dict

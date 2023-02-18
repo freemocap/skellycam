@@ -74,8 +74,14 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout.addWidget(self._qt_camera_controller_widget)
         self._layout.addWidget(self._camera_viewer_widget)
 
-        self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
 
+
+
+        self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
+        self._parameter_tree_dock_widget.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable,
+        )
         self._qt_camera_config_parameter_tree_widget = (
             SkellyCamParameterTreeWidget(self._camera_viewer_widget)
         )
@@ -85,7 +91,7 @@ class SkellyCamMainWindow(QMainWindow):
             self._qt_camera_config_parameter_tree_widget
         )
         self.addDockWidget(
-            Qt.DockWidgetArea.LeftDockWidgetArea, self._parameter_tree_dock_widget
+            Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_tree_dock_widget
         )
 
         self._directory_view_dock_widget = QDockWidget("Directory View", self)
@@ -93,8 +99,17 @@ class SkellyCamMainWindow(QMainWindow):
             folder_path=self._base_folder_path
         )
         self._directory_view_dock_widget.setWidget(self._directory_view_widget)
+        self._directory_view_dock_widget.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable,
+        )
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock_widget
+        )
+
+        self.tabifyDockWidget(
+            self._directory_view_dock_widget,
+            self._parameter_tree_dock_widget,
         )
 
         self._connect_signals_to_slots()
