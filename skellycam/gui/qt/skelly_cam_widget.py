@@ -27,6 +27,7 @@ title_label_style_string = """
                            font-family: "Dosis", sans-serif;
                            """
 
+DETECT_CAMERAS_BUTTON_TEXT = f"Detect Cameras {MAGNIFYING_GLASS_EMOJI_STRING}"
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
 MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
@@ -198,7 +199,7 @@ class SkellyCamWidget(QWidget):
         self._cam_group_frame_worker.pause()
 
     def _create_detect_cameras_button(self):
-        detect_available_cameras_push_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
+        detect_available_cameras_push_button = QPushButton(DETECT_CAMERAS_BUTTON_TEXT)
         detect_available_cameras_push_button.clicked.connect(self.detect_available_cameras)
         detect_available_cameras_push_button.hasFocus()
         detect_available_cameras_push_button.setStyleSheet("""
@@ -259,7 +260,7 @@ class SkellyCamWidget(QWidget):
                                                                                       frame_diagnostics_dictionary=frame_diagnostics_dictionary)
 
     def _reset_detect_available_cameras_button(self):
-        self._detect_available_cameras_push_button.setText("Detect Available Cameras")
+        self._detect_available_cameras_push_button.setText(DETECT_CAMERAS_BUTTON_TEXT)
         self._detect_available_cameras_push_button.setEnabled(True)
 
     def update_camera_configs(self, camera_config_dictionary):

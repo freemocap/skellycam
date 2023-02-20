@@ -71,6 +71,12 @@ class CameraGroup:
     def queue_size(self) -> Dict[str, int]:
         return self._strategy_class.queue_size
 
+    def start_recording(self):
+        self._strategy_class.start_recording()
+
+    def stop_recording(self):
+        self._strategy_class.stop_recording()
+
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_config_dictionary}")
         self._camera_config_dictionary = camera_config_dictionary

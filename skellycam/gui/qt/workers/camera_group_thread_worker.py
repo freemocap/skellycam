@@ -47,12 +47,10 @@ class CamGroupThreadWorker(QThread):
 
         if self._camera_ids is not None:
             self._camera_group = self._create_camera_group(self._camera_ids)
-            self._video_recorder_dictionary = (
-                self._initialize_video_recorder_dictionary()
-            )
+
         else:
             self._camera_group = None
-            self._video_recorder_dictionary = None
+
 
     @property
     def camera_ids(self):
@@ -69,7 +67,6 @@ class CamGroupThreadWorker(QThread):
                     time.sleep(0.1)
 
         self._camera_group = self._create_camera_group(self._camera_ids)
-        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     @property
     def slot_dictionary(self):
@@ -112,23 +109,12 @@ class CamGroupThreadWorker(QThread):
             for camera_id, frame_payload in frame_payload_dictionary.items():
                 if frame_payload:
                     if not self._should_pause_bool:
-                        if self._should_record_frames_bool:
-                            self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
-                            logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
                         q_image = self._convert_frame(frame_payload)
 
                         frame_diagnostic_dictionary = {}
                         frame_diagnostic_dictionary["mean_frames_per_second"] = frame_payload.mean_frames_per_second,
                         frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
-                        frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
-
-                        try:
-                            frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
-                                camera_id].number_of_frames
-                        except KeyError:
-                            frame_diagnostic_dictionary["frames_recorded"] = 0
-                        except Exception as e:
-                            logger.error(f"Error getting frame count for camera {camera_id}: {e}")
+                        frame_diagnostic_dictionary["frames_recorded"] =frame_payload.number_of_frames_recorded,
 
                         self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
 
@@ -163,21 +149,20 @@ class CamGroupThreadWorker(QThread):
 
     def start_recording(self):
         logger.info("Starting recording")
+
         if self.cameras_connected:
             if self._synchronized_video_folder_path is None:
                 self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
-            self._should_record_frames_bool = True
-        else:
-            logger.warning("Cannot start recording - cameras not connected")
+                self._camera_group.start_recording()
+            else:
+                logger.warning("Cannot start recording - cameras not connected")
 
     def stop_recording(self):
         logger.info("Stopping recording")
-        self._should_record_frames_bool = False
-
+        self._camera_group.stop_recording()
         self._launch_save_video_thread_worker()
-        # self._launch_save_video_process()
-        del self._video_recorder_dictionary
-        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
+
+
 
     def update_camera_group_configs(self, camera_config_dictionary: dict):
         if self._camera_ids is None:

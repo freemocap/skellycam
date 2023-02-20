@@ -32,7 +32,8 @@ class CamGroupQueueProcess:
         queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
         communicator = QueueCommunicator(queue_name_list)
         self._queues = communicator.queues
-        self._shared_dictionary = communicator.shared_dictionary
+        self._latest_frames_shared_dictionary = communicator.shared_dictionary
+        self._should_record_frames_bool = communicator.shared_boolean
 
     @property
     def camera_ids(self):
@@ -41,6 +42,12 @@ class CamGroupQueueProcess:
     @property
     def name(self):
         return self._process.name
+
+    @property
+    def is_capturing(self):
+        if self._process:
+            return self._process.is_alive()
+        return False
 
     def start_capture(
             self,
@@ -62,18 +69,20 @@ class CamGroupQueueProcess:
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupQueueProcess._begin,
-            args=(self._cam_ids, self._queues, self._shared_dictionary,  event_dictionary, camera_config_dict),
+            args=(self._cam_ids, self._queues, self._latest_frames_shared_dictionary, self._should_record_frames_bool,
+                  event_dictionary, camera_config_dict),
         )
         self._process.start()
         while not self._process.is_alive():
             logger.debug(f"Waiting for Process {self._process.name} to start")
             sleep(0.25)
 
-    @property
-    def is_capturing(self):
-        if self._process:
-            return self._process.is_alive()
-        return False
+    def start_recording(self):
+        self._should_record_frames_bool.value = True
+
+    def stop_recording(self):
+        self._should_record_frames_bool.value = False
+
 
     def terminate(self):
         if self._process:
@@ -92,7 +101,8 @@ class CamGroupQueueProcess:
     def _begin(
             camera_ids: List[str],
             queues: Dict[str, multiprocessing.Queue],
-            shared_dictionary: Dict[str, Union[FramePayload, CameraConfig]],
+            latest_frames_shared_dictionary: Dict[str, Union[FramePayload, CameraConfig]],
+            should_record_frames_bool: multiprocessing.Value,
             event_dictionary: Dict[str, multiprocessing.Event],
             camera_config_dict: Dict[str, CameraConfig],
     ):
@@ -112,8 +122,6 @@ class CamGroupQueueProcess:
             camera_config_dict=process_camera_config_dict
         )
         video_recorder_dictionary = {camera_id: VideoRecorder() for camera_id in camera_ids}
-
-
 
         for camera in cameras_dictionary.values():
             camera.connect(ready_event_dictionary[camera.camera_id])
@@ -143,13 +151,19 @@ class CamGroupQueueProcess:
                     if camera.new_frame_ready:
                         try:
                             latest_frame = camera.latest_frame
+                            if should_record_frames_bool.value:
+                                video_recorder_dictionary[camera.camera_id].append_frame_payload_to_list(latest_frame)
+
+                            latest_frame.number_of_frames_recorded = video_recorder_dictionary[
+                                camera.camera_id].number_of_frames
+                            print(f" Camera {camera.camera_id}:  #frames recorded: {latest_frame.number_of_frames_recorded}")
                             latest_frame_no_image = copy(latest_frame)
                             latest_frame_no_image.image = None
-                            queue = queues[camera.camera_id]
 
+                            queue = queues[camera.camera_id]
                             queue.put(latest_frame_no_image)
-                            video_recorder_dictionary[camera.camera_id].append_frame_payload_to_list(latest_frame)
-                            shared_dictionary[camera.camera_id] = latest_frame
+
+                            latest_frames_shared_dictionary[camera.camera_id] = latest_frame
 
                         except Exception as e:
                             logger.exception(
@@ -177,7 +191,7 @@ class CamGroupQueueProcess:
             # if not queue.empty():
             #     return queue.get(block=True)
 
-            return self._shared_dictionary[camera_id]
+            return self._latest_frames_shared_dictionary[camera_id]
 
         except Exception as e:
             logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")

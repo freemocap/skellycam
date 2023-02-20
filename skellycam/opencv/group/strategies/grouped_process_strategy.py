@@ -48,6 +48,14 @@ class GroupedProcessStrategy:
                 event_dictionary=event_dictionary, camera_config_dict=camera_config_dict
             )
 
+    def start_recording(self):
+        for process in self._processes:
+            process.start_recording()
+
+    def stop_recording(self):
+        for process in self._processes:
+            process.stop_recording()
+
     def check_if_camera_is_ready(self, cam_id: str) -> bool:
         for process in self._processes:
             if cam_id in process.camera_ids:
@@ -89,3 +97,4 @@ class GroupedProcessStrategy:
         logger.info(f"Updating camera configs: {camera_config_dictionary}")
         for process in self._processes:
             process.update_camera_configs(camera_config_dictionary)
+
