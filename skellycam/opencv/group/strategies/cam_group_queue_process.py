@@ -1,6 +1,7 @@
 import logging
 import math
 import multiprocessing
+from copy import copy
 from multiprocessing import Process
 from time import perf_counter_ns, sleep
 from typing import Dict, List, Union
@@ -10,6 +11,7 @@ from setproctitle import setproctitle
 from skellycam import Camera, CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.queue_communicator import QueueCommunicator
+from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ class CamGroupQueueProcess:
         queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
         communicator = QueueCommunicator(queue_name_list)
         self._queues = communicator.queues
+        self._shared_dictionary = communicator.shared_dictionary
 
     @property
     def camera_ids(self):
@@ -59,7 +62,7 @@ class CamGroupQueueProcess:
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupQueueProcess._begin,
-            args=(self._cam_ids, self._queues, event_dictionary, camera_config_dict),
+            args=(self._cam_ids, self._queues, self._shared_dictionary,  event_dictionary, camera_config_dict),
         )
         self._process.start()
         while not self._process.is_alive():
@@ -87,26 +90,30 @@ class CamGroupQueueProcess:
 
     @staticmethod
     def _begin(
-            cam_ids: List[str],
+            camera_ids: List[str],
             queues: Dict[str, multiprocessing.Queue],
+            shared_dictionary: Dict[str, Union[FramePayload, CameraConfig]],
             event_dictionary: Dict[str, multiprocessing.Event],
             camera_config_dict: Dict[str, CameraConfig],
     ):
         logger.info(
-            f"Starting frame loop capture in CamGroupProcess for cameras: {cam_ids}"
+            f"Starting frame loop capture in CamGroupProcess for cameras: {camera_ids}"
         )
         ready_event_dictionary = event_dictionary["ready"]
         start_event = event_dictionary["start"]
         exit_event = event_dictionary["exit"]
 
-        setproctitle(f"Cameras {cam_ids}")
+        setproctitle(f"Cameras {camera_ids}")
 
         process_camera_config_dict = {
-            camera_id: camera_config_dict[camera_id] for camera_id in cam_ids
+            camera_id: camera_config_dict[camera_id] for camera_id in camera_ids
         }
         cameras_dictionary = CamGroupQueueProcess._create_cams(
             camera_config_dict=process_camera_config_dict
         )
+        video_recorder_dictionary = {camera_id: VideoRecorder() for camera_id in camera_ids}
+
+
 
         for camera in cameras_dictionary.values():
             camera.connect(ready_event_dictionary[camera.camera_id])
@@ -114,7 +121,7 @@ class CamGroupQueueProcess:
         while not exit_event.is_set():
             if not multiprocessing.parent_process().is_alive():
                 logger.info(
-                    f"Parent process is no longer alive. Exiting {cam_ids} process"
+                    f"Parent process is no longer alive. Exiting {camera_ids} process"
                 )
                 break
 
@@ -135,8 +142,15 @@ class CamGroupQueueProcess:
                 for camera in cameras_dictionary.values():
                     if camera.new_frame_ready:
                         try:
+                            latest_frame = camera.latest_frame
+                            latest_frame_no_image = copy(latest_frame)
+                            latest_frame_no_image.image = None
                             queue = queues[camera.camera_id]
-                            queue.put(camera.latest_frame)
+
+                            queue.put(latest_frame_no_image)
+                            video_recorder_dictionary[camera.camera_id].append_frame_payload_to_list(latest_frame)
+                            shared_dictionary[camera.camera_id] = latest_frame
+
                         except Exception as e:
                             logger.exception(
                                 f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
@@ -154,14 +168,17 @@ class CamGroupQueueProcess:
     def _get_queue_by_camera_id(self, camera_id: str) -> multiprocessing.Queue:
         return self._queues[camera_id]
 
-    def get_current_frame_by_camera_id(self, camera_id) -> Union[FramePayload, None]:
+    def get_latest_frame_by_camera_id(self, camera_id) -> Union[FramePayload, None]:
         try:
             if camera_id not in self._queues:
-                return
+                raise ValueError(f"Camera {camera_id} not in queues")
 
-            queue = self._get_queue_by_camera_id(camera_id)
-            if not queue.empty():
-                return queue.get(block=True)
+            # queue = self._get_queue_by_camera_id(camera_id)
+            # if not queue.empty():
+            #     return queue.get(block=True)
+
+            return self._shared_dictionary[camera_id]
+
         except Exception as e:
             logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
             return
@@ -183,7 +200,7 @@ if __name__ == "__main__":
     while True:
         # print("Queue size: ", p.queue_size("0"))
         curr = perf_counter_ns() * 1e-6
-        frames = p.get_current_frame_by_camera_id("0")
+        frames = p.get_latest_frame_by_camera_id("0")
         if frames:
             end = perf_counter_ns() * 1e-6
             frame_count_in_ms = f"{math.trunc(end - curr)}"

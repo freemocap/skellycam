@@ -55,7 +55,7 @@ class GroupedProcessStrategy:
 
     def get_current_frame_by_cam_id(self, camera_id: str):
         for process in self._processes:
-            current_frame = process.get_current_frame_by_camera_id(camera_id)
+            current_frame = process.get_latest_frame_by_camera_id(camera_id)
             if current_frame:
                 return current_frame
 
@@ -66,7 +66,7 @@ class GroupedProcessStrategy:
 
     def get_latest_frames(self) -> Dict[str, FramePayload]:
         return {
-            cam_id: process.get_current_frame_by_camera_id(cam_id)
+            cam_id: process.get_latest_frame_by_camera_id(cam_id)
             for cam_id, process in self._cam_id_process_map.items()
         }
 
