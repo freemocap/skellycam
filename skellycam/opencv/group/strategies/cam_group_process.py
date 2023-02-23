@@ -9,62 +9,42 @@ from setproctitle import setproctitle
 
 from skellycam import Camera, CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.group.strategies.queue_communicator import QueueCommunicator
 
 logger = logging.getLogger(__name__)
 
-CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
 
+class CamGroupProcess:
+    def __init__(self,
+                 camera_ids: List[str],
+                 latest_frames: Dict[str, FramePayload],
+                 frame_dictionaries: Dict[str, Dict[str, Union[str, List[FramePayload]]]],
+                 incoming_camera_configs: Dict[str, CameraConfig],
+                 recording_frames: multiprocessing.Value,
+                 ):
+        self._latest_frames = latest_frames
+        self._frame_dictionaries = frame_dictionaries
+        self._incoming_camera_configs = incoming_camera_configs
+        self._recording_frames = recording_frames
 
-class CamGroupQueueProcess:
-    def __init__(self, cam_ids: List[str]):
-
-        if len(cam_ids) == 0:
+        if len(camera_ids) == 0:
             raise ValueError("CamGroupProcess must have at least one camera")
 
         self._cameras_ready_event_dictionary = None
-        self._cam_ids = cam_ids
+        self._camera_ids = camera_ids
         self._process: Process = None
         self._payload = None
-        queue_name_list = self._cam_ids.copy()
-        queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
-        communicator = QueueCommunicator(queue_name_list)
-        self._queues = communicator.queues
 
     @property
     def camera_ids(self):
-        return self._cam_ids
+        return self._camera_ids
 
     @property
     def name(self):
         return self._process.name
 
-    def start_capture(
-            self,
-            event_dictionary: Dict[str, multiprocessing.Event],
-            camera_config_dict: Dict[str, CameraConfig],
-    ):
-        """
-        Start capturing frames. Only return if the underlying process is fully running.
-        :return:
-        """
-
-        logger.info(f"Starting capture `Process` for {self._cam_ids}")
-
-        self._cameras_ready_event_dictionary = {
-            camera_id: multiprocessing.Event() for camera_id in self._cam_ids
-        }
-        event_dictionary["ready"] = self._cameras_ready_event_dictionary
-
-        self._process = Process(
-            name=f"Cameras {self._cam_ids}",
-            target=CamGroupQueueProcess._begin,
-            args=(self._cam_ids, self._queues, event_dictionary, camera_config_dict),
-        )
-        self._process.start()
-        while not self._process.is_alive():
-            logger.debug(f"Waiting for Process {self._process.name} to start")
-            sleep(0.25)
+    @property
+    def recording_frames(self) -> multiprocessing.Value:
+        return self._recording_frames
 
     @property
     def is_capturing(self):
@@ -77,6 +57,38 @@ class CamGroupQueueProcess:
             self._process.terminate()
             logger.info(f"CamGroupProcess {self.name} terminate command executed")
 
+    def start_capture(
+            self,
+            event_dictionary: Dict[str, multiprocessing.Event],
+            camera_config_dict: Dict[str, CameraConfig],
+    ):
+        """
+        Start capturing frames. Only return if the underlying process is fully running.
+        :return:
+        """
+
+        logger.info(f"Starting capture `Process` for {self._camera_ids}")
+
+        self._cameras_ready_event_dictionary = {
+            camera_id: multiprocessing.Event() for camera_id in self._camera_ids
+        }
+        event_dictionary["ready"] = self._cameras_ready_event_dictionary
+
+        self._process = Process(
+            name=f"Cameras {self._camera_ids}",
+            target=CamGroupProcess._begin,
+            args=(self._camera_ids,
+                  self._frame_dictionaries,
+                  self._latest_frames,
+                  self._recording_frames,
+                  event_dictionary,
+                  camera_config_dict),
+        )
+        self._process.start()
+        while not self._process.is_alive():
+            logger.debug(f"Waiting for Process {self._process.name} to start")
+            sleep(0.25)
+
     @staticmethod
     def _create_cams(camera_config_dict: Dict[str, CameraConfig]) -> Dict[str, Camera]:
         cam_dict = {
@@ -88,7 +100,9 @@ class CamGroupQueueProcess:
     @staticmethod
     def _begin(
             cam_ids: List[str],
-            queues: Dict[str, multiprocessing.Queue],
+            frame_list_by_camera: List[FramePayload],
+            latest_frames: Dict[str, Union[FramePayload, None]],
+            recording_frames: multiprocessing.Value,
             event_dictionary: Dict[str, multiprocessing.Event],
             camera_config_dict: Dict[str, CameraConfig],
     ):
@@ -104,7 +118,7 @@ class CamGroupQueueProcess:
         process_camera_config_dict = {
             camera_id: camera_config_dict[camera_id] for camera_id in cam_ids
         }
-        cameras_dictionary = CamGroupQueueProcess._create_cams(
+        cameras_dictionary = CamGroupProcess._create_cams(
             camera_config_dict=process_camera_config_dict
         )
 
@@ -118,14 +132,14 @@ class CamGroupQueueProcess:
                 )
                 break
 
-            if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
-                logger.info(
-                    "Camera config dict queue has items - updating cameras configs"
-                )
-                camera_config_dictionary = queues[CAMERA_CONFIG_DICT_QUEUE_NAME].get()
-
-                for camera_id, camera in cameras_dictionary.items():
-                    camera.update_config(camera_config_dictionary[camera_id])
+            # if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
+            #     logger.info(
+            #         "Camera config dict queue has items - updating cameras configs"
+            #     )
+            #     camera_config_dictionary = queues[CAMERA_CONFIG_DICT_QUEUE_NAME].get()
+            # 
+            #     for camera_id, camera in cameras_dictionary.items():
+            #         camera.update_config(camera_config_dictionary[camera_id])
 
             if start_event.is_set():
                 # This tight loop ends up 100% the process, so a sleep between framecaptures is
@@ -135,8 +149,13 @@ class CamGroupQueueProcess:
                 for camera in cameras_dictionary.values():
                     if camera.new_frame_ready:
                         try:
-                            queue = queues[camera.camera_id]
-                            queue.put(camera.latest_frame)
+                            latest_frame = camera.latest_frame
+                            latest_frames[camera.camera_id] = latest_frame
+
+                            if recording_frames.value:
+                                frames_list = frame_list_by_camera[camera.camera_id]
+                                frames_list.append(latest_frame)
+
                         except Exception as e:
                             logger.exception(
                                 f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
@@ -151,30 +170,13 @@ class CamGroupQueueProcess:
     def check_if_camera_is_ready(self, cam_id: str):
         return self._cameras_ready_event_dictionary[cam_id].is_set()
 
-    def _get_queue_by_camera_id(self, camera_id: str) -> multiprocessing.Queue:
-        return self._queues[camera_id]
-
-    def get_current_frame_by_camera_id(self, camera_id) -> Union[FramePayload, None]:
-        try:
-            if camera_id not in self._queues:
-                return
-
-            queue = self._get_queue_by_camera_id(camera_id)
-            if not queue.empty():
-                return queue.get(block=True)
-        except Exception as e:
-            logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
-            return
-
-    def get_queue_size_by_camera_id(self, camera_id: str) -> int:
-        return self._queues[camera_id].qsize()
-
     def update_camera_configs(self, camera_config_dictionary):
-        self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME].put(camera_config_dictionary)
+        for camera_id, camera_config in camera_config_dictionary.items():
+            self._incoming_camera_configs[camera_id] = camera_config
 
 
 if __name__ == "__main__":
-    p = CamGroupQueueProcess(
+    p = CamGroupProcess(
         [
             "0",
         ]
@@ -183,7 +185,7 @@ if __name__ == "__main__":
     while True:
         # print("Queue size: ", p.queue_size("0"))
         curr = perf_counter_ns() * 1e-6
-        frames = p.get_current_frame_by_camera_id("0")
+        frames = p.get_latest_frame_by_camera("0")
         if frames:
             end = perf_counter_ns() * 1e-6
             frame_count_in_ms = f"{math.trunc(end - curr)}"

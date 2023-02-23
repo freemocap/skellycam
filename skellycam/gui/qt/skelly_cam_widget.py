@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from skellycam import CameraConfig
+from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
 from skellycam.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
@@ -253,10 +254,12 @@ class SkellyCamWidget(QWidget):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
 
-    @pyqtSlot(str, QImage, dict)
-    def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary: Dict):
-        self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image,
-                                                                                      frame_diagnostics_dictionary=frame_diagnostics_dictionary)
+    @pyqtSlot(dict, dict)
+    def _handle_image_update(self, latest_frames: Dict[str, FramePayload], frame_list_sizes: Dict[str, int]):
+        for camera_id, frame_payload in latest_frames.items():
+            if frame_payload:
+                self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(frame_payload=frame_payload,
+                                                                                              frame_list_size = frame_list_sizes[camera_id])
 
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")

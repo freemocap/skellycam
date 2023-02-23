@@ -1,9 +1,15 @@
+import logging
+
+import cv2
+import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from skellycam import CameraConfig
+from skellycam.detection.models.frame_payload import FramePayload
 
+logger = logging.getLogger(__name__)
 
 class SingleCameraViewWidget(QWidget):
     def __init__(self,
@@ -43,7 +49,8 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def handle_image_update(self, q_image: QImage, frame_diagnostics_dictionary: dict):
+    def handle_image_update(self, frame_payload: FramePayload, frame_list_size: int):
+        q_image = self._convert_to_q_image(frame_payload.image)
         pixmap = QPixmap.fromImage(q_image)
 
         image_label_widget_width = self._image_label_widget.width()
@@ -60,13 +67,25 @@ class SingleCameraViewWidget(QWidget):
 
         self._image_label_widget.setPixmap(pixmap)
 
-        q_size = frame_diagnostics_dictionary['queue_size']
-        frames_recorded = frame_diagnostics_dictionary['frames_recorded']
+        frames_recorded = frame_payload.number_of_frames_recorded
         if frames_recorded is None:
             frames_recorded = 0
         self._title_label_widget.setText(
-            self._camera_name_string + f"\nQueue Size:{q_size} | "
+            self._camera_name_string + f"\nFrame list size:{frame_list_size} | "
                                        f"Frames Recorded#{str(frames_recorded)}".ljust(38))
+
+    def _convert_to_q_image(self, image: np.ndarray):
+        # image = cv2.flip(image, 1)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        converted_frame = QImage(
+            image.data,
+            image.shape[1],
+            image.shape[0],
+            QImage.Format.Format_RGB888,
+        )
+
+        return converted_frame.scaled(int(image.shape[1]/2), int(image.shape[0]/2),
+                                      Qt.AspectRatioMode.KeepAspectRatio)
 
     def show(self):
         super().show()

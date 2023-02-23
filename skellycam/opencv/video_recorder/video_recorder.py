@@ -14,12 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class VideoRecorder:
-    def __init__(self):
+
+    def __init__(self, path_to_save_video_file: Union[str, Path] = None):
 
         self._cv2_video_writer = None
-        self._path_to_save_video_file = None
+        self._path_to_save_video_file = path_to_save_video_file
         self._frame_payload_list: List[FramePayload] = []
         self._timestamps_npy = np.empty(0)
+        self._frames_per_second = None
 
     @property
     def timestamps(self) -> np.ndarray:
@@ -38,6 +40,31 @@ class VideoRecorder:
 
     def append_frame_payload_to_list(self, frame_payload: FramePayload):
         self._frame_payload_list.append(frame_payload)
+
+    def save_frame_chunk_to_video_file(self, frame_chunk: List[FramePayload], final_chunk: bool = False):
+
+        # Initialize if necessary
+        if self._timestamps_npy is None:
+            self._timestamps_npy = self._gather_timestamps(frame_chunk)
+
+        if self._cv2_video_writer is None:
+            self._frames_per_second = np.nanmedian((np.diff(self._timestamps_npy) ** -1)) * 1e9
+
+            self._cv2_video_writer = self._initialize_video_writer(
+                image_height=frame_chunk[0].image.shape[0],
+                image_width=frame_chunk[0].image.shape[1],
+                frames_per_second=self._frames_per_second,
+                path_to_save_video_file=self._path_to_save_video_file
+            )
+
+        # save this chunk to the file
+        self._write_frame_list_to_video_file(frame_payload_list=frame_chunk, release_writer=False)
+
+        # finalize if this is the last chunk we're gonna get
+        if final_chunk:
+            self._save_timestamps(timestamps_npy=self._timestamps_npy,
+                                  video_file_save_path=self._path_to_save_video_file)
+            self._cv2_video_writer.release()
 
     def save_frame_list_to_video_file(
             self,
@@ -111,7 +138,7 @@ class VideoRecorder:
 
         return video_writer_object
 
-    def _write_frame_list_to_video_file(self, frame_payload_list: List[FramePayload]):
+    def _write_frame_list_to_video_file(self, frame_payload_list: List[FramePayload], release_writer: bool = True):
 
         try:
             for frame in tqdm(
@@ -130,8 +157,9 @@ class VideoRecorder:
             )
             traceback.print_exc()
             raise e
-        finally:
-            logger.info(f"Saved video to path: {self._path_to_save_video_file}")
+
+        if release_writer:
+            logger.debug(f"Releasing video writer for {self._path_to_save_video_file}")
             self._cv2_video_writer.release()
 
     def _write_image_list_to_video_file(self, image_list: List[np.ndarray]):

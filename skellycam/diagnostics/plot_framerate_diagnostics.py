@@ -203,7 +203,7 @@ if __name__ == "__main__":
         loop_duration = (loop_time - prev_loop_time) / 1e6
 
         for cam_id in cam_ids:
-            frame_payload = g.get_by_cam_id(cam_id)
+            frame_payload = g.get_latest_frame_by_camera_id(cam_id)
             if frame_payload is not None:
                 if frame_payload.success:
                     timestamps_dictionary_in[cam_id].append(frame_payload.timestamp_ns)

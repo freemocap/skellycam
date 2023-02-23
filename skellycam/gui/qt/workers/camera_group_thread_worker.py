@@ -1,15 +1,11 @@
 import logging
 import time
 from copy import deepcopy
-from typing import List, Union
+from typing import List, Union, Dict
 
-import cv2
-from PyQt6.QtCore import pyqtSignal, Qt, QThread
-from PyQt6.QtGui import QImage
+from PyQt6.QtCore import pyqtSignal, QThread
 
-from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
-from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.camera_group import CameraGroup
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
@@ -17,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class CamGroupThreadWorker(QThread):
-    new_image_signal = pyqtSignal(CameraId, QImage, dict)
+    new_image_signal = pyqtSignal(dict, dict)
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
@@ -96,6 +92,10 @@ class CamGroupThreadWorker(QThread):
     def is_recording(self):
         return self._should_record_frames_bool
 
+    @property
+    def frame_list_lengths(self) -> Dict[str, int]:
+        return self._camera_group.frame_list_lengths
+
     def run(self):
         logger.info("Starting camera group thread worker")
         self._camera_group.start()
@@ -108,43 +108,8 @@ class CamGroupThreadWorker(QThread):
             if self._updating_camera_settings_bool:
                 continue
 
-            frame_payload_dictionary = self._camera_group.latest_frames()
-            for camera_id, frame_payload in frame_payload_dictionary.items():
-                if frame_payload:
-                    if not self._should_pause_bool:
-                        if self._should_record_frames_bool:
-                            self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
-                            logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-                        q_image = self._convert_frame(frame_payload)
-
-                        frame_diagnostic_dictionary = {}
-                        frame_diagnostic_dictionary["mean_frames_per_second"] = frame_payload.mean_frames_per_second,
-                        frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
-                        frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
-
-                        try:
-                            frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
-                                camera_id].number_of_frames
-                        except KeyError:
-                            frame_diagnostic_dictionary["frames_recorded"] = 0
-                        except Exception as e:
-                            logger.error(f"Error getting frame count for camera {camera_id}: {e}")
-
-                        self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
-
-    def _convert_frame(self, frame: FramePayload):
-        image = frame.image
-        # image = cv2.flip(image, 1)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        converted_frame = QImage(
-            image.data,
-            image.shape[1],
-            image.shape[0],
-            QImage.Format.Format_RGB888,
-        )
-
-        return converted_frame.scaled(int(image.shape[1] / 2), int(image.shape[0] / 2),
-                                      Qt.AspectRatioMode.KeepAspectRatio)
+            frame_payload_dictionary = dict(self._camera_group.latest_frames)
+            self.new_image_signal.emit(frame_payload_dictionary, self.frame_list_lengths)
 
     def close(self):
         logger.info("Closing camera group")

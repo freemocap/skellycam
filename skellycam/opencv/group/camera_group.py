@@ -12,6 +12,7 @@ from skellycam.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
 from skellycam.opencv.group.strategies.strategies import Strategy
+from skellycam.opencv.video_recorder.video_save_background_process import VideoSaveBackgroundProcess
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,12 @@ class CameraGroup:
         return self._camera_config_dictionary
 
     @property
-    def queue_size(self) -> Dict[str, int]:
-        return self._strategy_class.queue_size
+    def frame_list_lengths(self) -> Dict[str, int]:
+        return self._strategy_class.frame_list_lengths
+
+    @property
+    def latest_frames(self) -> Dict[str, FramePayload]:
+        return self._strategy_class.latest_frames
 
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_config_dictionary}")
@@ -91,7 +96,19 @@ class CameraGroup:
             camera_config_dict=self._camera_config_dictionary,
         )
 
+        logger.info("Starting VideoSaveBackgroundProcess")
+        self._video_save_background_process = VideoSaveBackgroundProcess(
+            frame_dictionaries=self._strategy_class.frame_dictionaries,
+            currently_recording_frames=self._strategy_class.recording_frames, )
+
         self._wait_for_cameras_to_start()
+
+    def get_latest_frame_by_camera_id(self, camera_id: str):
+        return self._strategy_class.latest_frames[camera_id]
+
+    def _resolve_strategy(self, cam_ids: List[str]):
+        if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
+            return GroupedProcessStrategy(cam_ids)
 
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.info(f"Waiting for cameras {self._camera_ids} to start")
@@ -118,16 +135,6 @@ class CameraGroup:
 
     def check_if_camera_is_ready(self, cam_id: str):
         return self._strategy_class.check_if_camera_is_ready(cam_id)
-
-    def get_by_cam_id(self, cam_id: str):
-        return self._strategy_class.get_current_frame_by_cam_id(cam_id)
-
-    def latest_frames(self) -> Dict[str, FramePayload]:
-        return self._strategy_class.get_latest_frames()
-
-    def _resolve_strategy(self, cam_ids: List[str]):
-        if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
-            return GroupedProcessStrategy(cam_ids)
 
     def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
         logger.info("Closing camera group")
@@ -164,8 +171,8 @@ class CameraGroup:
 
 # async def getall(g: CameraGroup):
 #     await asyncio.gather(
-#         cam_show("0", lambda: g.get_current_frame_by_cam_id("0")),
-#         cam_show("2", lambda: g.get_current_frame_by_cam_id("2")),
+#         cam_show("0", lambda: g.get_latest_frame_by_camera_id("0")),
+#         cam_show("2", lambda: g.get_latest_frame_by_camera_id("2")),
 #     )
 #
 #
