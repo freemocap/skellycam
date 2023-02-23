@@ -3,7 +3,6 @@ from typing import Dict, List, Union
 
 import cv2
 from PyQt6.QtCore import pyqtSignal, Qt, pyqtSlot
-from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import (
     QGridLayout,
     QLabel,
@@ -199,7 +198,8 @@ class SkellyCamWidget(QWidget):
         self._cam_group_frame_worker.pause()
 
     def _create_detect_cameras_button(self):
-        detect_available_cameras_push_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
+        detect_available_cameras_push_button = QPushButton(
+            f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         detect_available_cameras_push_button.clicked.connect(self.detect_available_cameras)
         detect_available_cameras_push_button.hasFocus()
         detect_available_cameras_push_button.setStyleSheet("""
@@ -254,12 +254,12 @@ class SkellyCamWidget(QWidget):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
 
-    @pyqtSlot(dict, dict)
-    def _handle_image_update(self, latest_frames: Dict[str, FramePayload], frame_list_sizes: Dict[str, int]):
+    @pyqtSlot(dict)
+    def _handle_image_update(self, latest_frames: Dict[str, FramePayload]):
         for camera_id, frame_payload in latest_frames.items():
             if frame_payload:
-                self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(frame_payload=frame_payload,
-                                                                                              frame_list_size = frame_list_sizes[camera_id])
+                self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(
+                    frame_payload=frame_payload)
 
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")

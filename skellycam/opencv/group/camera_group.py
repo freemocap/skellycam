@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import time
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from PyQt6.QtCore import pyqtSignal
 
@@ -68,13 +68,22 @@ class CameraGroup:
     def camera_config_dictionary(self):
         return self._camera_config_dictionary
 
-    @property
-    def frame_list_lengths(self) -> Dict[str, int]:
-        return self._strategy_class.frame_list_lengths
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.latest_frames
+
+    @property
+    def video_save_paths_by_camera(self) -> Dict[str, str]:
+        return self._strategy_class.video_save_paths_by_camera
+
+    @property
+    def recording_frames(self) -> bool:
+        return self._strategy_class.recording_frames.value
+
+    @recording_frames.setter
+    def recording_frames(self, value: bool):
+        self._strategy_class.recording_frames.value = value
 
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_config_dictionary}")
@@ -93,13 +102,14 @@ class CameraGroup:
                                   "exit": self._exit_event}
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
-            camera_config_dict=self._camera_config_dictionary,
         )
 
         logger.info("Starting VideoSaveBackgroundProcess")
         self._video_save_background_process = VideoSaveBackgroundProcess(
-            frame_dictionaries=self._strategy_class.frame_dictionaries,
+            frame_lists_by_camera=self._strategy_class.frame_lists_by_camera,
+            video_save_paths_by_camera=self._strategy_class.video_save_paths_by_camera,
             currently_recording_frames=self._strategy_class.recording_frames, )
+        self._video_save_background_process.start()
 
         self._wait_for_cameras_to_start()
 
@@ -157,6 +167,9 @@ class CameraGroup:
         for cam_group_process in self._strategy_class._processes:
             logger.info(f"Terminating process - {cam_group_process.name}")
             cam_group_process.terminate()
+
+        logger.info("Terminating VideoSaveBackgroundProcess")
+        self._video_save_background_process.terminate()
 
     def _restart_dead_processes(self):
         active_processes = multiprocessing.active_children()

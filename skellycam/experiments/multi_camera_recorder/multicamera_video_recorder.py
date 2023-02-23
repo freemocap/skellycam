@@ -89,7 +89,7 @@ class MultiCameraVideoRecorder:
         timestamps_dictionary = {}
         for cam_id, video_recorder in self._video_recorder_dictionary.items():
             timestamps_dictionary[cam_id] = (
-                    video_recorder.timestamps - self._shared_zero_time
+                    np.ndarray(video_recorder.timestamps) - self._shared_zero_time
             )
 
         self._timestamp_diagnostics = calculate_camera_diagnostic_results(

@@ -1,15 +1,18 @@
 import multiprocessing
-from typing import List
+from copy import deepcopy
+from typing import List, Any
 
 
 class SharedCameraMemoryManager:
     def __init__(self):
         self._mr_manager = multiprocessing.Manager()
 
-    def create_dictionary(self, keys: List[str], initial_value=None):
+    def create_dictionary(self, keys: List[str], initial_value: Any = None):
         dictionary = self._mr_manager.dict()
+
         for key in keys:
-            dictionary.update({key: initial_value})
+            dictionary.update({key: deepcopy(initial_value)})
+
         return dictionary
 
     def create_value(self, type: str, initial_value=None):

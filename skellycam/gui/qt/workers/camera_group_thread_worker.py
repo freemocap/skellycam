@@ -1,6 +1,7 @@
 import logging
 import time
 from copy import deepcopy
+from pathlib import Path
 from typing import List, Union, Dict
 
 from PyQt6.QtCore import pyqtSignal, QThread
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class CamGroupThreadWorker(QThread):
-    new_image_signal = pyqtSignal(dict, dict)
+    new_image_signal = pyqtSignal(dict)
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)
@@ -33,9 +34,6 @@ class CamGroupThreadWorker(QThread):
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
-
-        self._should_pause_bool = False
-        self._should_record_frames_bool = False
 
         self._updating_camera_settings_bool = False
         self._current_recording_name = None
@@ -75,7 +73,6 @@ class CamGroupThreadWorker(QThread):
         """
         return {
             "play": self.play,
-            "pause": self.pause,
             "start_recording": self.start_recording,
             "stop_recording": self.stop_recording,
         }
@@ -90,7 +87,7 @@ class CamGroupThreadWorker(QThread):
 
     @property
     def is_recording(self):
-        return self._should_record_frames_bool
+        return self._camera_group.recording_frames
 
     @property
     def frame_list_lengths(self) -> Dict[str, int]:
@@ -109,7 +106,7 @@ class CamGroupThreadWorker(QThread):
                 continue
 
             frame_payload_dictionary = dict(self._camera_group.latest_frames)
-            self.new_image_signal.emit(frame_payload_dictionary, self.frame_list_lengths)
+            self.new_image_signal.emit(frame_payload_dictionary)
 
     def close(self):
         logger.info("Closing camera group")
@@ -117,10 +114,6 @@ class CamGroupThreadWorker(QThread):
             self._camera_group.close(cameras_closed_signal=self.cameras_closed_signal)
         except AttributeError:
             pass
-
-    def pause(self):
-        logger.info("Pausing image display")
-        self._should_pause_bool = True
 
     def play(self):
         logger.info("Resuming image display")
@@ -131,18 +124,20 @@ class CamGroupThreadWorker(QThread):
         if self.cameras_connected:
             if self._synchronized_video_folder_path is None:
                 self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
-            self._should_record_frames_bool = True
+
+
+            for camera_id in self._camera_group.video_save_paths_by_camera.keys():
+                video_file_name = str(Path(self._synchronized_video_folder_path) / f"Camera_{camera_id}_synchronized.mp4")
+                self._camera_group.video_save_paths_by_camera[camera_id] = video_file_name
+
+            self._camera_group.recording_frames = True
         else:
             logger.warning("Cannot start recording - cameras not connected")
 
     def stop_recording(self):
         logger.info("Stopping recording")
-        self._should_record_frames_bool = False
+        self._camera_group.recording_frames = False
 
-        self._launch_save_video_thread_worker()
-        # self._launch_save_video_process()
-        del self._video_recorder_dictionary
-        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     def update_camera_group_configs(self, camera_config_dictionary: dict):
         if self._camera_ids is None:

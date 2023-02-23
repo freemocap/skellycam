@@ -24,7 +24,7 @@ def create_diagnostic_plots(
     # get timestamp diagnostics
     timestamps_dictionary = {}
     for cam_id, video_recorder in video_recorder_dictionary.items():
-        timestamps_dictionary[cam_id] = video_recorder.timestamps - shared_zero_time
+        timestamps_dictionary[cam_id] = np.ndarray(video_recorder.timestamps) - shared_zero_time
 
     timestamp_diagnostics = calculate_camera_diagnostic_results(timestamps_dictionary)
 

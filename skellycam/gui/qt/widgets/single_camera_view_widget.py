@@ -49,7 +49,7 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def handle_image_update(self, frame_payload: FramePayload, frame_list_size: int):
+    def handle_image_update(self, frame_payload: FramePayload):
         q_image = self._convert_to_q_image(frame_payload.image)
         pixmap = QPixmap.fromImage(q_image)
 
@@ -68,10 +68,11 @@ class SingleCameraViewWidget(QWidget):
         self._image_label_widget.setPixmap(pixmap)
 
         frames_recorded = frame_payload.number_of_frames_recorded
-        if frames_recorded is None:
-            frames_recorded = 0
+        current_chunk_size = frame_payload.current_chunk_size
+
+
         self._title_label_widget.setText(
-            self._camera_name_string + f"\nFrame list size:{frame_list_size} | "
+            self._camera_name_string + f"\nFrame list size:{current_chunk_size} | "
                                        f"Frames Recorded#{str(frames_recorded)}".ljust(38))
 
     def _convert_to_q_image(self, image: np.ndarray):

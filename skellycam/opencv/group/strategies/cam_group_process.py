@@ -17,12 +17,12 @@ class CamGroupProcess:
     def __init__(self,
                  camera_ids: List[str],
                  latest_frames: Dict[str, FramePayload],
-                 frame_dictionaries: Dict[str, Dict[str, Union[str, List[FramePayload]]]],
+                 frame_lists_by_camera: Dict[str, List[FramePayload]],
                  incoming_camera_configs: Dict[str, CameraConfig],
                  recording_frames: multiprocessing.Value,
                  ):
         self._latest_frames = latest_frames
-        self._frame_dictionaries = frame_dictionaries
+        self._frame_lists_by_camera = frame_lists_by_camera
         self._incoming_camera_configs = incoming_camera_configs
         self._recording_frames = recording_frames
 
@@ -74,15 +74,19 @@ class CamGroupProcess:
         }
         event_dictionary["ready"] = self._cameras_ready_event_dictionary
 
+        #pull out just the camrea configs that exist on this process
+        camera_configs = {camera_id: camera_config_dict[camera_id] for camera_id in self._camera_ids}
+
         self._process = Process(
             name=f"Cameras {self._camera_ids}",
             target=CamGroupProcess._begin,
             args=(self._camera_ids,
-                  self._frame_dictionaries,
+                  self._frame_lists_by_camera,
                   self._latest_frames,
                   self._recording_frames,
                   event_dictionary,
-                  camera_config_dict),
+                  camera_configs,
+                  ),
         )
         self._process.start()
         while not self._process.is_alive():
@@ -99,47 +103,36 @@ class CamGroupProcess:
 
     @staticmethod
     def _begin(
-            cam_ids: List[str],
-            frame_list_by_camera: List[FramePayload],
+            camera_ids: List[str],
+            frame_lists_by_camera: Dict[str, List[FramePayload]],
             latest_frames: Dict[str, Union[FramePayload, None]],
             recording_frames: multiprocessing.Value,
             event_dictionary: Dict[str, multiprocessing.Event],
-            camera_config_dict: Dict[str, CameraConfig],
+            camera_configs: Dict[str, CameraConfig],
     ):
         logger.info(
-            f"Starting frame loop capture in CamGroupProcess for cameras: {cam_ids}"
+            f"Starting frame loop capture in CamGroupProcess for cameras: {camera_ids}"
         )
         ready_event_dictionary = event_dictionary["ready"]
         start_event = event_dictionary["start"]
         exit_event = event_dictionary["exit"]
 
-        setproctitle(f"Cameras {cam_ids}")
+        setproctitle(f"Cameras {camera_ids}")
 
-        process_camera_config_dict = {
-            camera_id: camera_config_dict[camera_id] for camera_id in cam_ids
-        }
         cameras_dictionary = CamGroupProcess._create_cams(
-            camera_config_dict=process_camera_config_dict
+            camera_config_dict=camera_configs
         )
 
         for camera in cameras_dictionary.values():
             camera.connect(ready_event_dictionary[camera.camera_id])
 
+        number_of_recorded_frames = 0
         while not exit_event.is_set():
             if not multiprocessing.parent_process().is_alive():
                 logger.info(
-                    f"Parent process is no longer alive. Exiting {cam_ids} process"
+                    f"Parent process is no longer alive. Exiting {camera_ids} process"
                 )
                 break
-
-            # if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
-            #     logger.info(
-            #         "Camera config dict queue has items - updating cameras configs"
-            #     )
-            #     camera_config_dictionary = queues[CAMERA_CONFIG_DICT_QUEUE_NAME].get()
-            # 
-            #     for camera_id, camera in cameras_dictionary.items():
-            #         camera.update_config(camera_config_dictionary[camera_id])
 
             if start_event.is_set():
                 # This tight loop ends up 100% the process, so a sleep between framecaptures is
@@ -150,11 +143,15 @@ class CamGroupProcess:
                     if camera.new_frame_ready:
                         try:
                             latest_frame = camera.latest_frame
-                            latest_frames[camera.camera_id] = latest_frame
+                            latest_frame.current_chunk_size = len(frame_lists_by_camera[camera.camera_id])
+                            latest_frame.number_of_frames_recorded = number_of_recorded_frames
+                            latest_frames[camera.camera_id] = latest_frame #where the displayed images come from
 
                             if recording_frames.value:
-                                frames_list = frame_list_by_camera[camera.camera_id]
-                                frames_list.append(latest_frame)
+                                number_of_recorded_frames += 1
+                                frame_lists_by_camera[camera.camera_id].append(latest_frame) #will be saved to video files
+                            else:
+                                number_of_recorded_frames = 0
 
                         except Exception as e:
                             logger.exception(

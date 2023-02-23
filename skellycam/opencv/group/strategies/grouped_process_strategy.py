@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
@@ -22,13 +22,7 @@ class GroupedProcessStrategy:
     def __init__(self, camera_ids: List[str]):
         self._camera_ids = camera_ids
 
-        shared_memory_manager = SharedCameraMemoryManager()
-        self._latest_frames = shared_memory_manager.create_dictionary(keys=self._camera_ids)
-        self._frame_dictionaries = shared_memory_manager.create_dictionary(keys=self._camera_ids, initial_value={})
-        self._incoming_camera_configs = shared_memory_manager.create_dictionary(keys=self._camera_ids,
-                                                                                initial_value=CameraConfig())
-        self._recording_frames = shared_memory_manager.create_value(type='b', initial_value=False)
-
+        self._create_shared_memory_objects()
         self._processes, self._cam_id_process_map = self._create_processes(self._camera_ids)
 
     @property
@@ -43,19 +37,15 @@ class GroupedProcessStrategy:
         return True
 
     @property
-    def frame_dictionaries(self) -> Dict[str, Dict[str, Union[str, List[FramePayload]]]]:
-        return self._frame_dictionaries
+    def frame_lists_by_camera(self) -> Dict[str, List[FramePayload]]:
+        return self._frame_lists_by_camera
 
     @property
-    def frame_list_lengths(self) -> Dict[str, int]:
-        try:
-            return {camera_id: len(self._frame_dictionaries[camera_id]["frames_list"]) for camera_id in self._camera_ids}
-        except KeyError:
-            return {camera_id: 0 for camera_id in self._camera_ids}
-
+    def video_save_paths_by_camera(self) -> Dict[str, str]:
+        return self._video_save_paths_by_camera
 
     @property
-    def recording_frames(self):
+    def recording_frames(self) -> multiprocessing.Value:
         return self._recording_frames
 
     @property
@@ -67,16 +57,14 @@ class GroupedProcessStrategy:
             if cam_id in process.camera_ids:
                 return process.check_if_camera_is_ready(cam_id)
 
-
     def start_capture(
             self,
             event_dictionary: Dict[str, multiprocessing.Event],
-            camera_config_dict: Dict[str, CameraConfig],
     ):
-
         for process in self._processes:
             process.start_capture(
-                event_dictionary=event_dictionary, camera_config_dict=camera_config_dict
+                event_dictionary=event_dictionary,
+                camera_config_dict=self._incoming_camera_configs
             )
 
     def _create_processes(
@@ -88,7 +76,7 @@ class GroupedProcessStrategy:
         processes = [
             CamGroupProcess(camera_ids=cam_id_subarray,
                             latest_frames=self._latest_frames,
-                            frame_dictionaries=self._frame_dictionaries,
+                            frame_lists_by_camera=self._frame_lists_by_camera,
                             incoming_camera_configs=self._incoming_camera_configs,
                             recording_frames=self._recording_frames,
                             ) for cam_id_subarray in camera_subarrays
@@ -103,3 +91,18 @@ class GroupedProcessStrategy:
         logger.info(f"Updating camera configs: {camera_config_dictionary}")
         for process in self._processes:
             process.update_camera_configs(camera_config_dictionary)
+
+    def _create_shared_memory_objects(self):
+        self._shared_memory_manager = SharedCameraMemoryManager()
+        self._latest_frames = self._shared_memory_manager.create_dictionary(keys=self._camera_ids)
+        self._frame_lists_by_camera = self._shared_memory_manager.create_dictionary(keys=self._camera_ids,
+                                                                                    initial_value=[])
+        self._video_save_paths_by_camera = self._shared_memory_manager.create_dictionary(keys=self._camera_ids,
+                                                                                         initial_value=None)
+        self._recording_frames = self._shared_memory_manager.create_value(type='b', initial_value=False)
+
+        self._incoming_camera_configs = self._shared_memory_manager.create_dictionary(keys=self._camera_ids,
+                                                                                      initial_value={})
+
+        for camera_id in self._camera_ids:
+            self._incoming_camera_configs[camera_id] = CameraConfig(camera_id=camera_id)
