@@ -20,7 +20,7 @@ class VideoRecorder:
         self._cv2_video_writer = None
         self._video_file_save_path = video_file_save_path
         self._frame_payload_list: List[FramePayload] = []
-        self._timestamps_npy = []
+        self._timestamps = []
         self._frames_per_second = None
 
     @property
@@ -43,10 +43,10 @@ class VideoRecorder:
 
     def save_frame_chunk_to_video_file(self, frame_chunk: List[FramePayload], final_chunk: bool = False):
 
-        self._timestamps_npy.append(self._gather_timestamps(frame_chunk))
+        self._timestamps.extend(self._gather_timestamps(frame_chunk))
 
         if self._cv2_video_writer is None:
-            self._frames_per_second = np.nanmedian((np.diff(self._timestamps_npy) ** -1)) * 1e9
+            self._frames_per_second = np.nanmedian((np.diff(np.asarray(self._timestamps, 'float')) ** -1)) * 1e9
 
             self._cv2_video_writer = self._initialize_video_writer(
                 image_height=frame_chunk[0].image.shape[0],
@@ -60,7 +60,7 @@ class VideoRecorder:
 
         if final_chunk:
             logger.info("This is the final chunk of frames we're going to get -  saving timestamps and releasing video writer")
-            self._save_timestamps(timestamps_npy=self._timestamps_npy,
+            self._save_timestamps(timestamps_npy=self._timestamps,
                                   video_file_save_path=self._video_file_save_path)
             self._cv2_video_writer.release()
 
@@ -72,10 +72,10 @@ class VideoRecorder:
     ):
 
         if frames_per_second is None:
-            self._timestamps_npy = self._gather_timestamps(frame_payload_list)
+            self._timestamps = self._gather_timestamps(frame_payload_list)
             try:
                 frames_per_second = (
-                        np.nanmedian((np.diff(self._timestamps_npy) ** -1)) * 1e9
+                        np.nanmedian((np.diff(self._timestamps) ** -1)) * 1e9
                 )
             except Exception as e:
                 logger.debug("Error calculating frames per second")
@@ -89,7 +89,7 @@ class VideoRecorder:
             path_to_save_video_file=video_file_save_path,
         )
         self._write_frame_list_to_video_file(frame_payload_list=frame_payload_list)
-        self._save_timestamps(timestamps_npy=self._timestamps_npy, video_file_save_path=video_file_save_path)
+        self._save_timestamps(timestamps_npy=self._timestamps, video_file_save_path=video_file_save_path)
         self._cv2_video_writer.release()
 
     def save_image_list_to_disk(
@@ -174,18 +174,19 @@ class VideoRecorder:
             self._cv2_video_writer.release()
 
     def _gather_timestamps(self, frame_payload_list: List[FramePayload]) -> List[Union[int, float]]:
-        timestamps_npy = []
+        timestamps = []
 
         for frame_payload in frame_payload_list:
-            timestamps_npy = timestamps_npy.append(frame_payload.timestamp_ns)
+            timestamps.append(frame_payload.timestamp_ns)
 
-        return list(timestamps_npy)
+        return timestamps
 
     def _save_timestamps(self,
                          timestamps_npy: List[Union[float, int]],
                          video_file_save_path: Union[str, Path]):
 
-        timestamp_folder_path = video_file_save_path.parent / "timestamps"
+        video_file_save_path = Path(video_file_save_path)
+        timestamp_folder_path = Path(video_file_save_path).parent / "timestamps"
         timestamp_folder_path.mkdir(parents=True, exist_ok=True)
 
         base_timestamp_path_str = str(
@@ -194,7 +195,7 @@ class VideoRecorder:
 
         # save timestamps to npy (binary) file (via numpy.ndarray)
         path_to_save_timestamps_npy = base_timestamp_path_str + "_binary.npy"
-        np.save(str(path_to_save_timestamps_npy), np.ndarray(timestamps_npy))
+        np.save(str(path_to_save_timestamps_npy), np.asarray(timestamps_npy, 'float'))
 
         logger.info(f"Saved timestamps to path: {str(path_to_save_timestamps_npy)}")
 

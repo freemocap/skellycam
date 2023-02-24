@@ -95,14 +95,11 @@ class GroupedProcessStrategy:
     def _create_shared_memory_objects(self):
         self._shared_memory_manager = SharedCameraMemoryManager()
         self._latest_frames = self._shared_memory_manager.create_dictionary(keys=self._camera_ids)
-        self._frame_lists_by_camera = self._shared_memory_manager.create_dictionary(keys=self._camera_ids,
-                                                                                    initial_value=[])
-        self._video_save_paths_by_camera = self._shared_memory_manager.create_dictionary(keys=self._camera_ids,
-                                                                                         initial_value=None)
+        self._frame_lists_by_camera = self._shared_memory_manager.create_dictionary_of_lists(keys=self._camera_ids)
+        self._video_save_paths_by_camera = self._shared_memory_manager.create_dictionary_of_strings(keys=self._camera_ids)
         self._recording_frames = self._shared_memory_manager.create_value(type='b', initial_value=False)
 
-        self._incoming_camera_configs = self._shared_memory_manager.create_dictionary(keys=self._camera_ids,
-                                                                                      initial_value={})
+        self._incoming_camera_configs = self._shared_memory_manager.create_dictionary(keys=self._camera_ids)
 
         for camera_id in self._camera_ids:
             self._incoming_camera_configs[camera_id] = CameraConfig(camera_id=camera_id)
