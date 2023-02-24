@@ -10,7 +10,7 @@ from scipy.stats import median_abs_deviation
 
 from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.group.camera_group import CameraGroup
+
 from skellycam.utils.start_file import open_file
 
 logger = logging.getLogger(__name__)
@@ -185,6 +185,7 @@ def calculate_camera_diagnostic_results(
 
 
 if __name__ == "__main__":
+    from skellycam.opencv.group.camera_group import CameraGroup
     found_camera_response = detect_cameras()
     cam_ids = found_camera_response.cameras_found_list
     g = CameraGroup(cam_ids)

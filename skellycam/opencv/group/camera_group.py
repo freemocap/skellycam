@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import time
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from PyQt6.QtCore import pyqtSignal
 

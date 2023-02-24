@@ -1,6 +1,5 @@
 import multiprocessing
-from copy import deepcopy
-from typing import List, Any
+from typing import List
 
 
 class SharedCameraMemoryManager:

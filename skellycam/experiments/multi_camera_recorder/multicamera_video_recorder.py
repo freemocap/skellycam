@@ -147,7 +147,7 @@ class MultiCameraVideoRecorder:
         for camera_id, video_recorder in self._video_recorder_dictionary.items():
             raw_frame_list_dictionary[
                 camera_id
-            ] = video_recorder._frame_payload_list.copy()
+            ] = video_recorder._frame_list.copy()
         return raw_frame_list_dictionary
 
     def _create_session_information_dict(self):

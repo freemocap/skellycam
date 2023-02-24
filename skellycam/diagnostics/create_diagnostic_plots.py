@@ -3,6 +3,8 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, Union
 
+import numpy as np
+
 from skellycam.diagnostics.plot_first_middle_and_last_frames import plot_first_middle_and_last_frames
 from skellycam.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
@@ -24,14 +26,14 @@ def create_diagnostic_plots(
     # get timestamp diagnostics
     timestamps_dictionary = {}
     for cam_id, video_recorder in video_recorder_dictionary.items():
-        timestamps_dictionary[cam_id] = np.ndarray(video_recorder.timestamps) - shared_zero_time
+        timestamps_dictionary[cam_id] = np.asarray(video_recorder.timestamps, 'float') - shared_zero_time
 
     timestamp_diagnostics = calculate_camera_diagnostic_results(timestamps_dictionary)
 
     pprint(timestamp_diagnostics.dict())
 
     raw_frame_list_dictionary = {
-        camera_id: video_recorder.frame_payload_list.copy()
+        camera_id: video_recorder.frame_list.copy()
         for camera_id, video_recorder in video_recorder_dictionary.items()
     }
     create_timestamp_diagnostic_plots(

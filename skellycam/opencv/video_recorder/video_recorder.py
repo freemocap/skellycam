@@ -19,27 +19,31 @@ class VideoRecorder:
 
         self._cv2_video_writer = None
         self._video_file_save_path = video_file_save_path
-        self._frame_payload_list: List[FramePayload] = []
+        self._frame_list: List[FramePayload] = []
         self._timestamps = []
         self._frames_per_second = None
 
     @property
     def timestamps(self) -> List[Union[int, float]]:
-        return self._gather_timestamps(self._frame_payload_list)
+        return self._gather_timestamps(self._frame_list)
 
     @property
     def number_of_frames(self) -> int:
-        return len(self._frame_payload_list)
+        return len(self._frame_list)
 
     @property
-    def frame_payload_list(self) -> List[FramePayload]:
-        return self._frame_payload_list
+    def frame_list(self) -> List[FramePayload]:
+        return self._frame_list
+
+    @frame_list.setter
+    def frame_list(self, frame_list: List[FramePayload]):
+        self._frame_list = frame_list
 
     def close(self):
         self._cv2_video_writer.release()
 
     def append_frame_payload_to_list(self, frame_payload: FramePayload):
-        self._frame_payload_list.append(frame_payload)
+        self._frame_list.append(frame_payload)
 
     def save_frame_chunk_to_video_file(self, frame_chunk: List[FramePayload], final_chunk: bool = False):
 
@@ -75,7 +79,7 @@ class VideoRecorder:
             self._timestamps = self._gather_timestamps(frame_payload_list)
             try:
                 frames_per_second = (
-                        np.nanmedian((np.diff(self._timestamps) ** -1)) * 1e9
+                        np.nanmedian((np.diff(np.asarray(self._timestamps,'float')) ** -1)) * 1e9
                 )
             except Exception as e:
                 logger.debug("Error calculating frames per second")

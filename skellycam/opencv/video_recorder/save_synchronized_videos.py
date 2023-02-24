@@ -25,7 +25,7 @@ def save_synchronized_videos(
     final_frame_timestamps = []
 
     for video_recoder in dictionary_of_video_recorders.values():
-        camera_frame_list = video_recoder.frame_payload_list
+        camera_frame_list = video_recoder.frame_list
         first_frame_timestamps.append(camera_frame_list[0].timestamp_ns)
         final_frame_timestamps.append(camera_frame_list[-1].timestamp_ns)
 
