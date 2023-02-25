@@ -1,6 +1,7 @@
 import logging
 import math
 import multiprocessing
+from copy import deepcopy
 from multiprocessing import Process
 from time import perf_counter_ns, sleep
 from typing import Dict, List, Union
@@ -74,9 +75,6 @@ class CamGroupProcess:
         }
         event_dictionary["ready"] = self._cameras_ready_event_dictionary
 
-        #pull out just the camrea configs that exist on this process
-        camera_configs = {camera_id: camera_config_dict[camera_id] for camera_id in self._camera_ids}
-
         self._process = Process(
             name=f"Cameras {self._camera_ids}",
             target=CamGroupProcess._begin,
@@ -85,7 +83,7 @@ class CamGroupProcess:
                   self._latest_frames,
                   self._recording_frames,
                   event_dictionary,
-                  camera_configs,
+                  {camera_id: camera_config_dict[camera_id] for camera_id in self._camera_ids},
                   ),
         )
         self._process.start()
@@ -145,11 +143,12 @@ class CamGroupProcess:
                             latest_frame = camera.latest_frame
                             latest_frame.current_chunk_size = len(frame_lists_by_camera[camera.camera_id])
                             latest_frame.number_of_frames_recorded = number_of_recorded_frames
-                            latest_frames[camera.camera_id] = latest_frame #where the displayed images come from
+                            latest_frames[camera.camera_id]= latest_frame   # where the displayed images come from
 
                             if recording_frames.value:
                                 number_of_recorded_frames += 1
-                                frame_lists_by_camera[camera.camera_id].append(latest_frame) #will be saved to video files
+                                frame_lists_by_camera[camera.camera_id].append(
+                                    latest_frame)  # will be saved to video files
                             else:
                                 number_of_recorded_frames = 0
 

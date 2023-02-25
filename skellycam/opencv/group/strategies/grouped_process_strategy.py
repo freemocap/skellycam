@@ -76,8 +76,11 @@ class GroupedProcessStrategy:
         processes = [
             CamGroupProcess(camera_ids=cam_id_subarray,
                             latest_frames=self._latest_frames,
-                            frame_lists_by_camera=self._frame_lists_by_camera,
-                            incoming_camera_configs=self._incoming_camera_configs,
+                            frame_lists_by_camera={camera_id: self._frame_lists_by_camera[camera_id] for camera_id in
+                                                   cam_id_subarray},
+                            incoming_camera_configs={camera_id: self._incoming_camera_configs[camera_id] for camera_id
+                                                     in
+                                                     cam_id_subarray},
                             recording_frames=self._recording_frames,
                             ) for cam_id_subarray in camera_subarrays
         ]
@@ -94,12 +97,14 @@ class GroupedProcessStrategy:
 
     def _create_shared_memory_objects(self):
         self._shared_memory_manager = SharedCameraMemoryManager()
+
         self._latest_frames = self._shared_memory_manager.create_dictionary(keys=self._camera_ids)
         self._frame_lists_by_camera = self._shared_memory_manager.create_dictionary_of_lists(keys=self._camera_ids)
-        self._video_save_paths_by_camera = self._shared_memory_manager.create_dictionary_of_strings(keys=self._camera_ids)
-        self._recording_frames = self._shared_memory_manager.create_value(type='b', initial_value=False)
 
-        self._incoming_camera_configs = self._shared_memory_manager.create_dictionary(keys=self._camera_ids)
+        self._incoming_camera_configs = self._shared_memory_manager.create_dictionary( keys=self._camera_ids)
+        self._video_save_paths_by_camera = self._shared_memory_manager.create_dictionary_of_strings(
+            keys=self._camera_ids)
+        self._recording_frames = self._shared_memory_manager.create_value(type='b', initial_value=False)
 
         for camera_id in self._camera_ids:
             self._incoming_camera_configs[camera_id] = CameraConfig(camera_id=camera_id)

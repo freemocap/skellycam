@@ -1,6 +1,9 @@
 import logging
+import multiprocessing
 import time
 from copy import deepcopy
+from multiprocessing.managers import DictProxy
+
 from pathlib import Path
 from typing import List, Union, Dict
 
