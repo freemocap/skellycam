@@ -6,7 +6,7 @@ from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.cam_group_process import CamGroupProcess
 from skellycam.opencv.group.strategies.shared_camera_memory_manager import SharedCameraMemoryManager
-from skellycam.utils.array_split_by import array_split_by
+from skellycam.utilities.array_split_by import array_split_by
 
 ### Don't change this? Users should submit the actual value they want
 ### this is our library default.
@@ -50,7 +50,13 @@ class GroupedProcessStrategy:
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
-        return self._latest_frames
+        # if not self._recording_frames.value:
+        #     return {camera_id: self._frame_lists_by_camera[camera_id].pop() for camera_id in self._camera_ids}
+        # else:
+        try:
+            return {camera_id: (self._frame_lists_by_camera[camera_id][-1]) for camera_id in self._camera_ids}
+        except:
+            return {camera_id: None for camera_id in self._camera_ids}
 
     def check_if_camera_is_ready(self, cam_id: str) -> bool:
         for process in self._processes:
@@ -72,17 +78,18 @@ class GroupedProcessStrategy:
     ):
         if len(camera_ids) == 0:
             raise ValueError("No cameras were provided")
-        camera_subarrays = array_split_by(camera_ids, cameras_per_process)
+        camera_group_subarrays = array_split_by(camera_ids, cameras_per_process)
+
         processes = [
             CamGroupProcess(camera_ids=cam_id_subarray,
-                            latest_frames=self._latest_frames,
+                            # latest_frames=self._latest_frames,
                             frame_lists_by_camera={camera_id: self._frame_lists_by_camera[camera_id] for camera_id in
                                                    cam_id_subarray},
                             incoming_camera_configs={camera_id: self._incoming_camera_configs[camera_id] for camera_id
                                                      in
                                                      cam_id_subarray},
                             recording_frames=self._recording_frames,
-                            ) for cam_id_subarray in camera_subarrays
+                            ) for cam_id_subarray in camera_group_subarrays
         ]
         cam_id_to_process = {}
         for process in processes:
@@ -98,11 +105,11 @@ class GroupedProcessStrategy:
     def _create_shared_memory_objects(self):
         self._shared_memory_manager = SharedCameraMemoryManager()
 
-        self._latest_frames = self._shared_memory_manager.create_dictionary(keys=self._camera_ids)
-        self._frame_lists_by_camera = self._shared_memory_manager.create_dictionary_of_lists(keys=self._camera_ids)
+        # self._latest_frames = self._shared_memory_manager.create_camera_config_dictionary(keys=self._camera_ids)
+        self._frame_lists_by_camera = self._shared_memory_manager.create_frame_lists_by_camera(keys=self._camera_ids)
 
-        self._incoming_camera_configs = self._shared_memory_manager.create_dictionary( keys=self._camera_ids)
-        self._video_save_paths_by_camera = self._shared_memory_manager.create_dictionary_of_strings(
+        self._incoming_camera_configs = self._shared_memory_manager.create_camera_config_dictionary(keys=self._camera_ids)
+        self._video_save_paths_by_camera = self._shared_memory_manager.create_video_save_path_dictionary(
             keys=self._camera_ids)
         self._recording_frames = self._shared_memory_manager.create_value(type='b', initial_value=False)
 

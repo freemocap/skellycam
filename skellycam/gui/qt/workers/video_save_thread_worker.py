@@ -21,14 +21,14 @@ class VideoSaveThreadWorker(QThread):
 
     ):
         super().__init__()
-        self._dictionary_of_video_recorders = dictionary_of_video_recorders
+        self._video_recorders = dictionary_of_video_recorders
         self._folder_to_save_videos = folder_to_save_videos
         self._create_diagnostic_plots_bool = create_diagnostic_plots_bool
 
     def run(self):
         logger.info(f"Saving synchronized videos to folder: {str(self._folder_to_save_videos)}")
         save_synchronized_videos(
-            dictionary_of_video_recorders=self._dictionary_of_video_recorders,
+            raw_video_recorders=self._video_recorders,
             folder_to_save_videos=self._folder_to_save_videos,
             create_diagnostic_plots_bool=self._create_diagnostic_plots_bool,
         )

@@ -12,7 +12,7 @@ from skellycam.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
 from skellycam.opencv.group.strategies.strategies import Strategy
-from skellycam.opencv.video_recorder.video_save_background_process import VideoSaveBackgroundProcess
+from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import VideoSaveBackgroundProcess
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,10 @@ class CameraGroup:
         self._camera_config_dictionary = camera_config_dictionary
         self._strategy_class.update_camera_configs(camera_config_dictionary)
 
+    def ensure_video_save_process_running(self):
+        if not self._video_save_background_process.is_alive:
+            self._start_video_save_background_process()
+
     def start(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
@@ -104,12 +108,7 @@ class CameraGroup:
             event_dictionary=self._event_dictionary,
         )
 
-        logger.info("Starting VideoSaveBackgroundProcess")
-        self._video_save_background_process = VideoSaveBackgroundProcess(
-            frame_lists_by_camera=self._strategy_class.frame_lists_by_camera,
-            video_save_paths_by_camera=self._strategy_class.video_save_paths_by_camera,
-            currently_recording_frames=self._strategy_class.recording_frames, )
-        self._video_save_background_process.start()
+        self._start_video_save_background_process()
 
         self._wait_for_cameras_to_start()
 
@@ -181,6 +180,17 @@ class CameraGroup:
                     event_dictionary=self._event_dictionary,
                     camera_config_dict=self._camera_config_dictionary,
                 )
+
+    def _start_video_save_background_process(self):
+        logger.info("Starting VideoSaveBackgroundProcess")
+        print(f"self._strategy_class.frame_lists_by_camera {self._strategy_class.frame_lists_by_camera}")
+        print(f"self._strategy_class.video_save_paths_by_camera {self._strategy_class.video_save_paths_by_camera}")
+        print(f"self._strategy_class.recording_frames {self._strategy_class.recording_frames}")
+        self._video_save_background_process = VideoSaveBackgroundProcess(
+            frame_lists_by_camera=self._strategy_class.frame_lists_by_camera,
+            video_save_paths_by_camera=self._strategy_class.video_save_paths_by_camera,
+            currently_recording_frames=self._strategy_class.recording_frames, )
+        self._video_save_background_process.start()
 
 # async def getall(g: CameraGroup):
 #     await asyncio.gather(

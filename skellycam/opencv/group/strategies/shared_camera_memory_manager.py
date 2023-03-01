@@ -8,23 +8,24 @@ class SharedCameraMemoryManager:
     def __init__(self):
         self._mr_manager = multiprocessing.Manager()
 
-
-    def create_dictionary_of_lists(self, keys: List[str]):
+    def create_frame_lists_by_camera(self, keys: List[str]):
         dictionary = self._mr_manager.dict()
 
         for key in keys:
-            dictionary.update({key: self._mr_manager.list()})
+            list = self._mr_manager.list()
+            list.append(FramePayload())
+            dictionary.update({key: list})
 
         return dictionary
 
-    def create_dictionary_of_strings(self, keys: List[str]):
+    def create_video_save_path_dictionary(self, keys: List[str]):
         dictionary = self._mr_manager.dict()
 
         for key in keys:
             dictionary.update({key: self._mr_manager.Value('s', '')})
         return dictionary
 
-    def create_dictionary(self, keys: List[str]):
+    def create_camera_config_dictionary(self, keys: List[str]):
         dictionary = self._mr_manager.dict()
         for key in keys:
             dictionary.update({key: None})

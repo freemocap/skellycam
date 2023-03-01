@@ -139,7 +139,9 @@ class CamGroupThreadWorker(QThread):
 
     def stop_recording(self):
         logger.info("Stopping recording")
+        self._camera_group.ensure_video_save_process_running()
         self._camera_group.recording_frames = False
+
 
 
     def update_camera_group_configs(self, camera_config_dictionary: dict):
