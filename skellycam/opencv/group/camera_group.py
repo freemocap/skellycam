@@ -1,7 +1,8 @@
 import logging
 import multiprocessing
 import time
-from typing import Dict, List
+from pathlib import Path
+from typing import Dict, List, Union
 
 from PyQt6.QtCore import pyqtSignal
 
@@ -12,7 +13,8 @@ from skellycam.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
 from skellycam.opencv.group.strategies.strategies import Strategy
-from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import VideoSaveBackgroundProcess
+from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import \
+    VideoSaveBackgroundProcess
 
 logger = logging.getLogger(__name__)
 
@@ -57,18 +59,16 @@ class CameraGroup:
     def is_capturing(self):
         return self._strategy_class.is_capturing
 
-
-
     @property
     def exit_event(self):
         return self._exit_event
 
     @property
-    def should_record_frames_event(self)-> multiprocessing.Event:
+    def should_record_frames_event(self) -> multiprocessing.Event:
         return self._should_record_frames_event
 
     @property
-    def dump_frames_to_video_event(self)-> multiprocessing.Event:
+    def dump_frames_to_video_event(self) -> multiprocessing.Event:
         return self._dump_frames_to_video_event
 
     @property
@@ -79,14 +79,13 @@ class CameraGroup:
     def camera_config_dictionary(self):
         return self._camera_config_dictionary
 
-
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.latest_frames
 
-    @property
-    def video_save_paths_by_camera(self) -> Dict[str, str]:
-        return self._strategy_class.video_save_paths_by_camera
+    def set_folder_to_record_videos(self, path: Union[str, Path]):
+        logger.info(f"Setting folder to record videos to {path}")
+        self._strategy_class.folder_to_save_videos = str(path)
 
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_config_dictionary}")
@@ -106,7 +105,6 @@ class CameraGroup:
         self._exit_event = multiprocessing.Event()
         self._start_event = multiprocessing.Event()
         self._should_record_frames_event = multiprocessing.Event()
-
 
         self._event_dictionary = {"start": self._start_event,
                                   "exit": self._exit_event,
@@ -192,7 +190,7 @@ class CameraGroup:
         logger.info("Starting VideoSaveBackgroundProcess")
         self._video_save_background_process = VideoSaveBackgroundProcess(
             frame_lists_by_camera=self._strategy_class.frame_lists_by_camera,
-            video_save_paths_by_camera=self._strategy_class.video_save_paths_by_camera,
+            folder_to_save_videos=self._strategy_class.folder_to_save_videos,
             dump_frames_to_video_event=self._dump_frames_to_video_event, )
         self._video_save_background_process.start()
 

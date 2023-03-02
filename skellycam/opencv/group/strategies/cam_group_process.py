@@ -141,13 +141,15 @@ class CamGroupProcess:
                                 frame_lists_by_camera[camera.camera_id].append(
                                     latest_frame)  # will be saved to video files
                             else:
-                                try:
-                                    frame_lists_by_camera[camera.camera_id][0] = latest_frame
-                                except IndexError:
+                                if len(frame_lists_by_camera[camera.camera_id]) == 0:
                                     # TODO - I don't understand why the frame lists show up empty after initialized with
                                     #  a blank FramePayload.
                                     #  Need to figure this out someday, but this hack works so.. yay tech debt lol
+
+                                    logger.debug(f"Camera {camera.camera_id} frame list is empty - appending this frame")
                                     frame_lists_by_camera[camera.camera_id].append(latest_frame)
+
+                                frame_lists_by_camera[camera.camera_id][0] = latest_frame
 
                                 number_of_recorded_frames = {camera_id: 0 for camera_id in camera_ids}
 

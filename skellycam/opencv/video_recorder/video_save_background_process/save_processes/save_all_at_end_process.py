@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import time
 from copy import deepcopy
 from pathlib import Path
 from time import sleep
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]],
-                            video_save_paths_by_camera: Dict[str, str],
+                            folder_to_save_videos: multiprocessing.Value,
                             dump_frames_to_video_event: multiprocessing.Event,
                             ):
     logger.info("Starting VideoSaveBackgroundProcess")
@@ -34,8 +35,13 @@ def save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]]
                 frame_list_length = len(frame_list)
                 logger.info(f"VIDEO SAVE PROCESS - {camera_id} has {frame_list_length} frames in the list")
 
-                frames_to_save = deepcopy(frame_list[1:-1])
-                del frame_list[1:-1]
+                tik = time.perf_counter()
+                frames_to_save = deepcopy(frame_list[1:])
+                deepcopy_duration = time.perf_counter()- tik
+                tik = time.perf_counter()
+                del frame_list[1:]
+                del_duration = time.perf_counter() - tik
+                logger.debug(f" {camera_id} - deepcopy_duration: {deepcopy_duration:.4f}, del_duration: {del_duration:.4f} (seconds)")
 
                 if not frames_to_save:
                     logger.error(f"VIDEO SAVE PROCESS - {camera_id} has no frames to save")
@@ -47,7 +53,7 @@ def save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]]
             logger.debug(
                 f"Saving frames to video files - {[video_recorder.number_of_frames for video_recorder in video_recorders.values()]}...")
 
-            folder_to_save_videos = str(Path(video_save_paths_by_camera['0']).parent)
+            folder_to_save_videos = str(Path(folder_to_save_videos[0]).parent)
 
             save_synchronized_videos(
                 raw_video_recorders=video_recorders,

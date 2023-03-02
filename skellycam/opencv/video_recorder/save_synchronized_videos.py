@@ -22,6 +22,7 @@ def save_synchronized_videos(
 ):
     logger.info(f"Saving synchronized videos to folder: {str(folder_to_save_videos)}")
 
+
     raw_timestamps_by_cameras = {camera_id: video_recorder.timestamps for camera_id, video_recorder in raw_video_recorders.items()}
     first_frame_timestamps = np.asarray(
         [video_recorder.frame_list[0].timestamp_ns for video_recorder in raw_video_recorders.values()])

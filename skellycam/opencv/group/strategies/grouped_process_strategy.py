@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
-from typing import Dict, List
+from pathlib import Path
+from typing import Dict, List, Union
 
 from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
@@ -41,20 +42,18 @@ class GroupedProcessStrategy:
         return self._frame_lists_by_camera
 
     @property
-    def video_save_paths_by_camera(self) -> Dict[str, str]:
-        return self._video_save_paths_by_camera
+    def folder_to_save_videos(self) -> List[str]:
+        return self._folder_to_save_videos
 
-    @property
-    def dump_frames_to_video(self) -> multiprocessing.Event:
-        return self._dump_frames_to_video
-
-
+    @folder_to_save_videos.setter
+    def folder_to_save_videos(self, path: Union[str, Path]):
+        if len(self._folder_to_save_videos) == 0:
+            self._folder_to_save_videos.append(str(path))
+        else:
+            self._folder_to_save_videos[0] = str(path)
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
-        # if not self._recording_frames.value:
-        #     return {camera_id: self._frame_lists_by_camera[camera_id].pop() for camera_id in self._camera_ids}
-        # else:
         try:
             return {camera_id: (self._frame_lists_by_camera[camera_id][-1]) for camera_id in self._camera_ids}
         except:
@@ -109,9 +108,9 @@ class GroupedProcessStrategy:
         # self._latest_frames = self._shared_memory_manager.create_camera_config_dictionary(keys=self._camera_ids)
         self._frame_lists_by_camera = self._shared_memory_manager.create_frame_lists_by_camera(keys=self._camera_ids)
 
-        self._incoming_camera_configs = self._shared_memory_manager.create_camera_config_dictionary(keys=self._camera_ids)
-        self._video_save_paths_by_camera = self._shared_memory_manager.create_video_save_path_dictionary(
+        self._incoming_camera_configs = self._shared_memory_manager.create_camera_config_dictionary(
             keys=self._camera_ids)
+        self._folder_to_save_videos = self._shared_memory_manager.create_video_save_folder_list()
 
         for camera_id in self._camera_ids:
             self._incoming_camera_configs[camera_id] = CameraConfig(camera_id=camera_id)

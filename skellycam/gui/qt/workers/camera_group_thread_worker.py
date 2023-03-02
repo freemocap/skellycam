@@ -21,17 +21,16 @@ class CamGroupThreadWorker(QThread):
     def __init__(
             self,
             camera_ids: Union[List[str], None],
-            get_new_synchronized_videos_folder_callable: callable,
+            get_new_synchronized_videos_folder: callable,
             parent=None,
     ):
 
-        self._synchronized_video_folder_path = None
         logger.info(
             f"Initializing camera group frame worker with camera ids: {camera_ids}"
         )
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
-        self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
+        self._get_new_synchronized_videos_folder = get_new_synchronized_videos_folder
 
         self._updating_camera_settings_bool = False
         self._current_recording_name = None
@@ -116,14 +115,9 @@ class CamGroupThreadWorker(QThread):
     def start_recording(self):
         logger.info("Starting recording")
         if self.cameras_connected:
-            if self._synchronized_video_folder_path is None:
-                self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
-
-
-            for camera_id in self._camera_group.video_save_paths_by_camera.keys():
-                video_file_name = str(Path(self._synchronized_video_folder_path) / f"Camera_{camera_id}_synchronized.mp4")
-                self._camera_group.video_save_paths_by_camera[camera_id] = video_file_name
-
+            folder_to_save_videos = self._get_new_synchronized_videos_folder()
+            logger.info(f"Setting `folder_to_save_videos` to: {folder_to_save_videos}")
+            self._camera_group.set_folder_to_record_videos(path=folder_to_save_videos)
             logger.debug("Setting `should_record_frames_event`")
             self._camera_group.should_record_frames_event.set()
         else:

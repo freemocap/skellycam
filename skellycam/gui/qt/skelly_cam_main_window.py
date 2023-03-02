@@ -58,7 +58,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout.addWidget(self._welcome_to_skellycam_widget)
 
         self._camera_viewer_widget = SkellyCamWidget(
-            get_new_synchronized_videos_folder_callable=
+            get_new_synchronized_videos_folder=
             lambda: create_new_synchronized_videos_folder(
                 Path(self._session_folder_path) / get_default_recording_name()
             ),

@@ -14,30 +14,28 @@ class VideoSaveBackgroundProcess:
 
     def __init__(self,
                  frame_lists_by_camera: Dict[str, List[FramePayload]],
-                 video_save_paths_by_camera: Dict[str, str],
+                 folder_to_save_videos: List[str],
                  dump_frames_to_video_event: multiprocessing.Event,
 
                  ):
-        self._frame_lists_by_camera = frame_lists_by_camera
-        self._video_save_paths_by_camera = video_save_paths_by_camera
-        self._dump_frames_to_video_event = dump_frames_to_video_event
+
         self._process = Process(
             name="VideoSaveBackgroundProcess",
             # target=save_per_chunk_process,
             target=self._start_save_all_at_end_process,
-            args=(self._frame_lists_by_camera,
-                  self._video_save_paths_by_camera,
-                  self._dump_frames_to_video_event),
+            args=(frame_lists_by_camera,
+                  folder_to_save_videos,
+                  dump_frames_to_video_event),
         )
 
     @staticmethod
     def _start_save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]],
-                                       video_save_paths_by_camera: Dict[str, str],
+                                       folder_to_save_videos: multiprocessing.Value,
                                        dump_frames_to_video_event: multiprocessing.Event,
                                        ):
         save_all_at_end_process(
             frame_lists_by_camera=frame_lists_by_camera,
-            video_save_paths_by_camera=video_save_paths_by_camera,
+            folder_to_save_videos=folder_to_save_videos,
             dump_frames_to_video_event=dump_frames_to_video_event,
         )
 

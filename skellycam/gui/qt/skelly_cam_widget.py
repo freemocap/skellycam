@@ -39,7 +39,7 @@ class SkellyCamWidget(QWidget):
 
     def __init__(
             self,
-            get_new_synchronized_videos_folder_callable: callable,
+            get_new_synchronized_videos_folder: callable,
             camera_ids: List[Union[str, int]] = None,
             parent=None,
     ):
@@ -48,7 +48,7 @@ class SkellyCamWidget(QWidget):
             f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
         )
 
-        self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
+        self._get_new_synchronized_videos_folder = get_new_synchronized_videos_folder
 
         self._camera_config_dicationary = None
         self._detect_cameras_worker = None
@@ -214,7 +214,7 @@ class SkellyCamWidget(QWidget):
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupThreadWorker(
             camera_ids=self._camera_ids,
-            get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
+            get_new_synchronized_videos_folder=self._get_new_synchronized_videos_folder,
         )
 
         cam_group_frame_worker.cameras_connected_signal.connect(

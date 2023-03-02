@@ -31,5 +31,8 @@ class SharedCameraMemoryManager:
             dictionary.update({key: None})
         return dictionary
 
+    def create_video_save_folder_list(self):
+        return self._mr_manager.list()
+
     def create_value(self, type: str, initial_value=None):
         return self._mr_manager.Value(type, initial_value)
