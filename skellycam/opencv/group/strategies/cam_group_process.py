@@ -16,15 +16,12 @@ logger = logging.getLogger(__name__)
 class CamGroupProcess:
     def __init__(self,
                  camera_ids: List[str],
-                 # latest_frames: Dict[str, FramePayload],
                  frame_lists_by_camera: Dict[str, List[FramePayload]],
                  incoming_camera_configs: Dict[str, CameraConfig],
-                 recording_frames: multiprocessing.Value,
                  ):
         # self._latest_frames = latest_frames
         self._frame_lists_by_camera = frame_lists_by_camera
         self._incoming_camera_configs = incoming_camera_configs
-        self._recording_frames = recording_frames
 
         if len(camera_ids) == 0:
             raise ValueError("CamGroupProcess must have at least one camera")
@@ -41,10 +38,6 @@ class CamGroupProcess:
     @property
     def name(self):
         return self._process.name
-
-    @property
-    def recording_frames(self) -> multiprocessing.Value:
-        return self._recording_frames
 
     @property
     def is_capturing(self):
@@ -79,8 +72,6 @@ class CamGroupProcess:
             target=CamGroupProcess._begin,
             args=(self._camera_ids,
                   self._frame_lists_by_camera,
-                  # self._latest_frames,
-                  self._recording_frames,
                   event_dictionary,
                   {camera_id: camera_config_dict[camera_id] for camera_id in self._camera_ids},
                   ),
@@ -102,8 +93,6 @@ class CamGroupProcess:
     def _begin(
             camera_ids: List[str],
             frame_lists_by_camera: Dict[str, List[FramePayload]],
-            # latest_frames: Dict[str, Union[FramePayload, None]],
-            recording_frames: multiprocessing.Value,
             event_dictionary: Dict[str, multiprocessing.Event],
             camera_configs: Dict[str, CameraConfig],
     ):
@@ -113,6 +102,7 @@ class CamGroupProcess:
         ready_event_dictionary = event_dictionary["ready"]
         start_event = event_dictionary["start"]
         exit_event = event_dictionary["exit"]
+        should_record_frames_event = event_dictionary["should_record_frames"]
 
         setproctitle(f"Cameras {camera_ids}")
 
@@ -123,7 +113,8 @@ class CamGroupProcess:
         for camera in cameras_dictionary.values():
             camera.connect(ready_event_dictionary[camera.camera_id])
 
-        number_of_recorded_frames = 0
+        number_of_recorded_frames = {camera_id: 0 for camera_id in camera_ids}
+
         while not exit_event.is_set():
             if not multiprocessing.parent_process().is_alive():
                 logger.info(
@@ -141,11 +132,12 @@ class CamGroupProcess:
                         try:
                             latest_frame = camera.latest_frame
                             latest_frame.current_chunk_size = len(frame_lists_by_camera[camera.camera_id])
-                            latest_frame.number_of_frames_recorded = number_of_recorded_frames
+                            latest_frame.number_of_frames_recorded = number_of_recorded_frames[camera.camera_id]
+
                             # latest_frames[camera.camera_id]= latest_frame   # where the displayed images come from
 
-                            if recording_frames.value:
-                                number_of_recorded_frames += 1
+                            if should_record_frames_event.is_set():
+                                number_of_recorded_frames[camera.camera_id] += 1
                                 frame_lists_by_camera[camera.camera_id].append(
                                     latest_frame)  # will be saved to video files
                             else:
@@ -157,11 +149,11 @@ class CamGroupProcess:
                                     #  Need to figure this out someday, but this hack works so.. yay tech debt lol
                                     frame_lists_by_camera[camera.camera_id].append(latest_frame)
 
-                                number_of_recorded_frames = 0
+                                number_of_recorded_frames = {camera_id: 0 for camera_id in camera_ids}
 
                         except Exception as e:
                             logger.exception(
-                                f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
+                                f"Problem when saving a frame from Camera {camera.camera_id} - {e}"
                             )
                             break
 

@@ -24,6 +24,7 @@ class CameraGroup:
             strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
             camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
+        self._dump_frames_to_video_event = multiprocessing.Event()
         logger.info(
             f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
         )
@@ -56,9 +57,19 @@ class CameraGroup:
     def is_capturing(self):
         return self._strategy_class.is_capturing
 
+
+
     @property
     def exit_event(self):
         return self._exit_event
+
+    @property
+    def should_record_frames_event(self)-> multiprocessing.Event:
+        return self._should_record_frames_event
+
+    @property
+    def dump_frames_to_video_event(self)-> multiprocessing.Event:
+        return self._dump_frames_to_video_event
 
     @property
     def camera_ids(self):
@@ -77,14 +88,6 @@ class CameraGroup:
     def video_save_paths_by_camera(self) -> Dict[str, str]:
         return self._strategy_class.video_save_paths_by_camera
 
-    @property
-    def recording_frames(self) -> bool:
-        return self._strategy_class.recording_frames.value
-
-    @recording_frames.setter
-    def recording_frames(self, value: bool):
-        self._strategy_class.recording_frames.value = value
-
     def update_camera_configs(self, camera_config_dictionary: Dict[str, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_config_dictionary}")
         self._camera_config_dictionary = camera_config_dictionary
@@ -102,8 +105,12 @@ class CameraGroup:
         logger.info(f"Starting camera group with strategy {self._strategy_enum}")
         self._exit_event = multiprocessing.Event()
         self._start_event = multiprocessing.Event()
+        self._should_record_frames_event = multiprocessing.Event()
+
+
         self._event_dictionary = {"start": self._start_event,
-                                  "exit": self._exit_event}
+                                  "exit": self._exit_event,
+                                  "should_record_frames": self._should_record_frames_event}
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
         )
@@ -183,13 +190,10 @@ class CameraGroup:
 
     def _start_video_save_background_process(self):
         logger.info("Starting VideoSaveBackgroundProcess")
-        print(f"self._strategy_class.frame_lists_by_camera {self._strategy_class.frame_lists_by_camera}")
-        print(f"self._strategy_class.video_save_paths_by_camera {self._strategy_class.video_save_paths_by_camera}")
-        print(f"self._strategy_class.recording_frames {self._strategy_class.recording_frames}")
         self._video_save_background_process = VideoSaveBackgroundProcess(
             frame_lists_by_camera=self._strategy_class.frame_lists_by_camera,
             video_save_paths_by_camera=self._strategy_class.video_save_paths_by_camera,
-            currently_recording_frames=self._strategy_class.recording_frames, )
+            dump_frames_to_video_event=self._dump_frames_to_video_event, )
         self._video_save_background_process.start()
 
 # async def getall(g: CameraGroup):

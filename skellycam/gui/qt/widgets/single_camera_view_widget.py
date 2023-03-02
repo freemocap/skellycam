@@ -1,4 +1,5 @@
 import logging
+import time
 
 import cv2
 import numpy as np
@@ -25,7 +26,10 @@ class SingleCameraViewWidget(QWidget):
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+
         self._camera_name_string = f"Camera {self._camera_id}"
+
         # self._title_label_widget = QLabel(self._camera_name_string, parent=self)
         # self._layout.addWidget(self._title_label_widget)
         # self._title_label_widget.setStyleSheet("""
@@ -38,14 +42,15 @@ class SingleCameraViewWidget(QWidget):
         # self._title_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._image_label_widget = QLabel("\U0001F4F8 Connecting... ")
-        self._image_label_widget.setStyleSheet("border: 1px solid;")
+        self._layout.addWidget(self._image_label_widget)
         self._image_label_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._image_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._layout.addWidget(self._image_label_widget)
 
     @property
     def camera_id(self):
         return self._camera_id
+
+
 
     def handle_image_update(self, frame_payload: FramePayload):
         if frame_payload.image is None:
@@ -64,21 +69,21 @@ class SingleCameraViewWidget(QWidget):
                                           line_thickness=8,
                                           color=(0, 0, 0))
         image = ImageAnnotator().annotate(image=image,
-                                         text=f"Frames received : {frame_payload.number_of_frames_received}",
+                                          text=f"Frames received : {frame_payload.number_of_frames_received}",
                                           x=50,
                                           y=130,
                                           scale=1,
                                           line_thickness=8,
                                           color=(0, 0, 0))
         image = ImageAnnotator().annotate(image=image,
-                                         text=f"Frames recorded: {frame_payload.number_of_frames_recorded}",
+                                          text=f"Frames recorded: {frame_payload.number_of_frames_recorded}",
                                           x=50,
                                           y=160,
                                           scale=1,
                                           line_thickness=8,
                                           color=(0, 0, 0))
         image = ImageAnnotator().annotate(image=image,
-                                         text=f"Current chunk size: {frame_payload.current_chunk_size}",
+                                          text=f"Current chunk size: {frame_payload.current_chunk_size}",
                                           x=50,
                                           y=190,
                                           scale=1,
@@ -91,8 +96,8 @@ class SingleCameraViewWidget(QWidget):
         image_label_widget_width = self._image_label_widget.width()
         image_label_widget_height = self._image_label_widget.height()
 
-        scaled_width = int(image_label_widget_width * .95)
-        scaled_height = int(image_label_widget_height * .95)
+        scaled_width = int(image_label_widget_width * .99)
+        scaled_height = int(image_label_widget_height * .99)
 
         pixmap = pixmap.scaled(
             scaled_width,

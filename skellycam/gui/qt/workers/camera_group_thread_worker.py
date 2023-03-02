@@ -1,15 +1,10 @@
 import logging
-import multiprocessing
 import time
-from copy import deepcopy
-from multiprocessing.managers import DictProxy
-
 from pathlib import Path
 from typing import List, Union, Dict
 
 from PyQt6.QtCore import pyqtSignal, QThread
 
-from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
 from skellycam.opencv.group.camera_group import CameraGroup
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
@@ -44,12 +39,9 @@ class CamGroupThreadWorker(QThread):
 
         if self._camera_ids is not None:
             self._camera_group = self._create_camera_group(self._camera_ids)
-            self._video_recorder_dictionary = (
-                self._initialize_video_recorder_dictionary()
-            )
         else:
             self._camera_group = None
-            self._video_recorder_dictionary = None
+
 
     @property
     def camera_ids(self):
@@ -66,7 +58,6 @@ class CamGroupThreadWorker(QThread):
                     time.sleep(0.1)
 
         self._camera_group = self._create_camera_group(self._camera_ids)
-        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     @property
     def slot_dictionary(self):
@@ -133,15 +124,20 @@ class CamGroupThreadWorker(QThread):
                 video_file_name = str(Path(self._synchronized_video_folder_path) / f"Camera_{camera_id}_synchronized.mp4")
                 self._camera_group.video_save_paths_by_camera[camera_id] = video_file_name
 
-            self._camera_group.recording_frames = True
+            logger.debug("Setting `should_record_frames_event`")
+            self._camera_group.should_record_frames_event.set()
         else:
             logger.warning("Cannot start recording - cameras not connected")
 
     def stop_recording(self):
         logger.info("Stopping recording")
         self._camera_group.ensure_video_save_process_running()
-        self._camera_group.recording_frames = False
 
+        logger.debug("Clearing `should_record_frames_event`")
+        self._camera_group.should_record_frames_event.clear()
+
+        logger.debug("Setting `dump_frames_to_video_event`")
+        self._camera_group.dump_frames_to_video_event.set()
 
 
     def update_camera_group_configs(self, camera_config_dictionary: dict):
@@ -160,63 +156,6 @@ class CamGroupThreadWorker(QThread):
             camera_config_dictionary
         )
 
-    def _launch_save_video_thread_worker(self):
-        logger.info("Launching save video thread worker")
-
-        synchronized_videos_folder = self._synchronized_video_folder_path
-        self._synchronized_video_folder_path = None
-
-        self._video_save_thread_worker = VideoSaveThreadWorker(
-            dictionary_of_video_recorders=deepcopy(self._video_recorder_dictionary),
-            folder_to_save_videos=str(synchronized_videos_folder),
-            create_diagnostic_plots_bool=True,
-        )
-        self._video_save_thread_worker.start()
-        self._video_save_thread_worker.finished_signal.connect(
-            self._handle_videos_save_thread_worker_finished
-        )
-
-    def _handle_videos_save_thread_worker_finished(self, folder_path: str):
-        logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
-        self.videos_saved_to_this_folder_signal.emit(folder_path)
-
-    #
-    # def _launch_save_video_process(self):
-    #     logger.info("Launching save video process")
-    #     if self._video_save_process is not None:
-    #         while self._video_save_process.is_alive():
-    #             time.sleep(0.1)
-    #             logger.info(
-    #                 f"Waiting for video save process to finish: {self._video_save_process}"
-    #             )
-    #
-    #     synchronized_videos_folder = self._synchronized_video_folder_path
-    #     self._synchronized_video_folder_path = None
-    #     self._video_save_process = Process(
-    #         name=f"VideoSaveProcess",
-    #         target=save_synchronized_videos,
-    #         args=(
-    #             deepcopy(self._video_recorder_dictionary),
-    #             synchronized_videos_folder,
-    #             True,
-    #             self.videos_saved_to_this_folder_signal
-    #         ),
-    #     )
-    #     logger.info(f"Launching video save process: {self._video_save_process}")
-    #
-    #     self._video_save_process.start()
-    #     self._video_save_thread_worker.finished_signal.connect(
-    #         lambda: self.videos_saved_to_this_folder_signal.emit
-    #     )
-
-    def _initialize_video_recorder_dictionary(self):
-        return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
-
-    def _get_recorder_frame_count_dict(self):
-        return {
-            camera_id: recorder.number_of_frames
-            for camera_id, recorder in self._video_recorder_dictionary.items()
-        }
 
     def _create_camera_group(
             self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None

@@ -29,6 +29,7 @@ class VideoRecorder:
 
     @property
     def frames_per_second(self) -> float:
+
         return float(np.nanmedian((np.diff(self.timestamps) ** -1) * 1e9))
 
     @property
@@ -93,6 +94,7 @@ class VideoRecorder:
         height = frame_payload_list[0].image.shape[0]
         width = frame_payload_list[0].image.shape[1]
         frames_per_second = self.frames_per_second
+
         logging.info(f"Saving {len(frame_payload_list)} frames to {video_file_save_path}, "
                      f"video height : {height}, "
                      f"video width : {width}, "
@@ -195,6 +197,9 @@ class VideoRecorder:
 
         for frame_payload in frame_payload_list:
             timestamps.append(frame_payload.timestamp_ns)
+
+        if len(timestamps) == 0:
+            raise Exception("No timestamps found in frame payload list.")
 
         return timestamps
 

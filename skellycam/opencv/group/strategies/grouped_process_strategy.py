@@ -45,8 +45,10 @@ class GroupedProcessStrategy:
         return self._video_save_paths_by_camera
 
     @property
-    def recording_frames(self) -> multiprocessing.Value:
-        return self._recording_frames
+    def dump_frames_to_video(self) -> multiprocessing.Event:
+        return self._dump_frames_to_video
+
+
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
@@ -88,7 +90,6 @@ class GroupedProcessStrategy:
                             incoming_camera_configs={camera_id: self._incoming_camera_configs[camera_id] for camera_id
                                                      in
                                                      cam_id_subarray},
-                            recording_frames=self._recording_frames,
                             ) for cam_id_subarray in camera_group_subarrays
         ]
         cam_id_to_process = {}
@@ -111,7 +112,6 @@ class GroupedProcessStrategy:
         self._incoming_camera_configs = self._shared_memory_manager.create_camera_config_dictionary(keys=self._camera_ids)
         self._video_save_paths_by_camera = self._shared_memory_manager.create_video_save_path_dictionary(
             keys=self._camera_ids)
-        self._recording_frames = self._shared_memory_manager.create_value(type='b', initial_value=False)
 
         for camera_id in self._camera_ids:
             self._incoming_camera_configs[camera_id] = CameraConfig(camera_id=camera_id)

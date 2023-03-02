@@ -98,6 +98,7 @@ def create_timestamp_diagnostic_plots(
     )
 
     for camera_id, timestamps in raw_timestamps_dictionary.items():
+        timestamps = timestamps/ 1e9
         ax1.plot(timestamps, label=f"Camera# {str(camera_id)}")
         ax1.legend()
         ax2.plot(np.diff(timestamps), ".")
@@ -108,6 +109,7 @@ def create_timestamp_diagnostic_plots(
         )
 
     for camera_id, timestamps in synchronized_timestamps_dictionary.items():
+        timestamps = timestamps / 1e9
         ax4.plot(timestamps, label=f"Camera# {str(camera_id)}")
         ax4.legend()
         ax5.plot(np.diff(timestamps), ".")
