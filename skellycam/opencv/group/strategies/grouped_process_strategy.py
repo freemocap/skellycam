@@ -50,7 +50,7 @@ class GroupedProcessStrategy:
         if len(self._folder_to_save_videos) == 0:
             self._folder_to_save_videos.append(str(path))
         else:
-            self._folder_to_save_videos[0] = str(path)
+            raise Exception("Folder to save videos already set!")
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:

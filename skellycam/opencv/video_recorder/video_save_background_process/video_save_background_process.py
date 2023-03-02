@@ -30,7 +30,7 @@ class VideoSaveBackgroundProcess:
 
     @staticmethod
     def _start_save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]],
-                                       folder_to_save_videos: multiprocessing.Value,
+                                       folder_to_save_videos: List[str],
                                        dump_frames_to_video_event: multiprocessing.Event,
                                        ):
         save_all_at_end_process(

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]],
-                            folder_to_save_videos: multiprocessing.Value,
+                            folder_to_save_videos: List[str],
                             dump_frames_to_video_event: multiprocessing.Event,
                             ):
     logger.info("Starting VideoSaveBackgroundProcess")
@@ -53,11 +53,11 @@ def save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]]
             logger.debug(
                 f"Saving frames to video files - {[video_recorder.number_of_frames for video_recorder in video_recorders.values()]}...")
 
-            folder_to_save_videos = str(Path(folder_to_save_videos[0]).parent)
+            folder_to_save_videos_path = str(Path(folder_to_save_videos.pop()))
 
             save_synchronized_videos(
                 raw_video_recorders=video_recorders,
-                folder_to_save_videos=folder_to_save_videos,
+                folder_to_save_videos=folder_to_save_videos_path,
                 create_diagnostic_plots_bool=True,
             )
 
