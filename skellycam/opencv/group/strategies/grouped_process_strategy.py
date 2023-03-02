@@ -20,11 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 class GroupedProcessStrategy:
-    def __init__(self, camera_ids: List[str]):
+    def __init__(self,
+                 camera_ids: List[str],
+                 camera_configs: Dict[str, CameraConfig]):
         self._camera_ids = camera_ids
 
         self._create_shared_memory_objects()
-        self._processes, self._cam_id_process_map = self._create_processes(self._camera_ids)
+        self._processes, self._cam_id_process_map = self._create_processes(camera_ids = self._camera_ids,
+                                                                           camera_configs= camera_configs)
 
     @property
     def processes(self):
@@ -71,11 +74,13 @@ class GroupedProcessStrategy:
         for process in self._processes:
             process.start_capture(
                 event_dictionary=event_dictionary,
-                camera_config_dict=self._incoming_camera_configs
             )
 
     def _create_processes(
-            self, camera_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
+            self,
+            camera_ids: List[str],
+            camera_configs: Dict[str, CameraConfig],
+            cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
     ):
         if len(camera_ids) == 0:
             raise ValueError("No cameras were provided")
@@ -86,9 +91,8 @@ class GroupedProcessStrategy:
                             # latest_frames=self._latest_frames,
                             frame_lists_by_camera={camera_id: self._frame_lists_by_camera[camera_id] for camera_id in
                                                    cam_id_subarray},
-                            incoming_camera_configs={camera_id: self._incoming_camera_configs[camera_id] for camera_id
-                                                     in
-                                                     cam_id_subarray},
+                            camera_config_queues={camera_id: self._camera_config_queues[camera_id] for camera_id in
+                                                  cam_id_subarray},
                             ) for cam_id_subarray in camera_group_subarrays
         ]
         cam_id_to_process = {}
@@ -97,20 +101,19 @@ class GroupedProcessStrategy:
                 cam_id_to_process[cam_id] = process
         return processes, cam_id_to_process
 
-    def update_camera_configs(self, camera_config_dictionary):
-        logger.info(f"Updating camera configs: {camera_config_dictionary}")
-        for process in self._processes:
-            process.update_camera_configs(camera_config_dictionary)
+
 
     def _create_shared_memory_objects(self):
         self._shared_memory_manager = SharedCameraMemoryManager()
 
-        # self._latest_frames = self._shared_memory_manager.create_camera_config_dictionary(keys=self._camera_ids)
+        # self._latest_frames = self._shared_memory_manager.create_camera_config_dictionary(camera_ids=self._camera_ids)
         self._frame_lists_by_camera = self._shared_memory_manager.create_frame_lists_by_camera(keys=self._camera_ids)
 
-        self._incoming_camera_configs = self._shared_memory_manager.create_camera_config_dictionary(
-            keys=self._camera_ids)
         self._folder_to_save_videos = self._shared_memory_manager.create_video_save_folder_list()
 
-        for camera_id in self._camera_ids:
-            self._incoming_camera_configs[camera_id] = CameraConfig(camera_id=camera_id)
+        self._camera_config_queues = self._shared_memory_manager.create_camera_config_queues(
+            camera_ids=self._camera_ids)
+
+    def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
+        for camera_id, camera_config_queue in self._camera_config_queues.items():
+            camera_config_queue.put(camera_configs[camera_id])

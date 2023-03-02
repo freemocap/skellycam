@@ -17,17 +17,22 @@ class CamGroupProcess:
     def __init__(self,
                  camera_ids: List[str],
                  frame_lists_by_camera: Dict[str, List[FramePayload]],
-                 incoming_camera_configs: Dict[str, CameraConfig],
+                 camera_config_queues: Dict[str, multiprocessing.Queue],
                  ):
-        # self._latest_frames = latest_frames
+
+        self._camera_ids = camera_ids
+        assert all([camera_id in frame_lists_by_camera.keys() for camera_id in
+                    self._camera_ids]), "We should only have frame lists for cameras in this group"
+        assert all([camera_id in camera_config_queues.keys() for camera_id in
+                    self._camera_ids]), "We should only have configs for cameras in this group"
+
         self._frame_lists_by_camera = frame_lists_by_camera
-        self._incoming_camera_configs = incoming_camera_configs
+        self._camera_config_queues = camera_config_queues
 
         if len(camera_ids) == 0:
             raise ValueError("CamGroupProcess must have at least one camera")
 
         self._cameras_ready_event_dictionary = None
-        self._camera_ids = camera_ids
         self._process: Process = None
         self._payload = None
 
@@ -53,7 +58,6 @@ class CamGroupProcess:
     def start_capture(
             self,
             event_dictionary: Dict[str, multiprocessing.Event],
-            camera_config_dict: Dict[str, CameraConfig],
     ):
         """
         Start capturing frames. Only return if the underlying process is fully running.
@@ -73,7 +77,7 @@ class CamGroupProcess:
             args=(self._camera_ids,
                   self._frame_lists_by_camera,
                   event_dictionary,
-                  {camera_id: camera_config_dict[camera_id] for camera_id in self._camera_ids},
+                  self._camera_config_queues,
                   ),
         )
         self._process.start()
@@ -82,19 +86,19 @@ class CamGroupProcess:
             sleep(0.25)
 
     @staticmethod
-    def _create_cams(camera_config_dict: Dict[str, CameraConfig]) -> Dict[str, Camera]:
-        cam_dict = {
-            camera_config.camera_id: Camera(camera_config)
-            for camera_config in camera_config_dict.values()
-        }
-        return cam_dict
+    def _create_cameras(camera_configs: Dict[str, CameraConfig]) -> Dict[str, Camera]:
+        cameras = {}
+        for camera_config in camera_configs.values():
+            if camera_config.use_this_camera:
+                cameras[camera_config.camera_id] = Camera(camera_config)
+        return cameras
 
     @staticmethod
     def _begin(
             camera_ids: List[str],
             frame_lists_by_camera: Dict[str, List[FramePayload]],
             event_dictionary: Dict[str, multiprocessing.Event],
-            camera_configs: Dict[str, CameraConfig],
+            camera_config_queues: Dict[str, multiprocessing.Queue],
     ):
         logger.info(
             f"Starting frame loop capture in CamGroupProcess for cameras: {camera_ids}"
@@ -106,8 +110,9 @@ class CamGroupProcess:
 
         setproctitle(f"Cameras {camera_ids}")
 
-        cameras_dictionary = CamGroupProcess._create_cams(
-            camera_config_dict=camera_configs
+        current_camera_configs = {camera_id: camera_config_queues[camera_id].get() for camera_id in camera_ids}
+        cameras_dictionary = CamGroupProcess._create_cameras(
+            camera_configs=current_camera_configs
         )
 
         for camera in cameras_dictionary.values():
@@ -127,6 +132,13 @@ class CamGroupProcess:
                 # necessary. We can get away with this because we don't expect another frame for
                 # awhile.
                 sleep(0.001)
+
+                current_camera_configs = CamGroupProcess._check_for_new_camera_configs(
+                    cameras_dictionary=cameras_dictionary,
+                    camera_config_queues=camera_config_queues,
+                    current_camera_configs=current_camera_configs
+                )
+
                 for camera in cameras_dictionary.values():
                     if camera.new_frame_ready:
                         try:
@@ -146,7 +158,8 @@ class CamGroupProcess:
                                     #  a blank FramePayload.
                                     #  Need to figure this out someday, but this hack works so.. yay tech debt lol
 
-                                    logger.debug(f"Camera {camera.camera_id} frame list is empty - appending this frame")
+                                    logger.debug(
+                                        f"Camera {camera.camera_id} frame list is empty - appending this frame")
                                     frame_lists_by_camera[camera.camera_id].append(latest_frame)
 
                                 frame_lists_by_camera[camera.camera_id][0] = latest_frame
@@ -167,9 +180,20 @@ class CamGroupProcess:
     def check_if_camera_is_ready(self, cam_id: str):
         return self._cameras_ready_event_dictionary[cam_id].is_set()
 
-    def update_camera_configs(self, camera_config_dictionary):
-        for camera_id, camera_config in camera_config_dictionary.items():
-            self._incoming_camera_configs[camera_id] = camera_config
+    @staticmethod
+    def _check_for_new_camera_configs(cameras_dictionary: Dict[str, Camera],
+                                      camera_config_queues: Dict[str, multiprocessing.Queue],
+                                      current_camera_configs: Dict[str, CameraConfig] = None):
+        for camera_id, queue in camera_config_queues.items():
+            if not queue.empty():
+                new_config = queue.get()
+                if current_camera_configs[camera_id] != new_config:
+                    logger.info(
+                        f"Received new config for camera {camera_id}: {new_config}, Old config: {current_camera_configs[camera_id]}")
+                    cameras_dictionary[camera_id].update_config(camera_config=new_config)
+                    current_camera_configs[camera_id] = new_config
+
+        return current_camera_configs
 
 
 if __name__ == "__main__":
