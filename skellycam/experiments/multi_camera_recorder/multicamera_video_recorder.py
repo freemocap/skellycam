@@ -77,7 +77,7 @@ class MultiCameraVideoRecorder:
 
         # save videos
         self._synchronized_frame_list_dictionary = save_synchronized_videos(
-            dictionary_of_video_recorders=self._video_recorder_dictionary,
+            raw_video_recorders=self._video_recorder_dictionary,
             folder_to_save_videos=self._video_save_folder_path,
         )
 
@@ -89,12 +89,10 @@ class MultiCameraVideoRecorder:
         timestamps_dictionary = {}
         for cam_id, video_recorder in self._video_recorder_dictionary.items():
             timestamps_dictionary[cam_id] = (
-                    video_recorder.timestamps - self._shared_zero_time
+                    np.ndarray(video_recorder.timestamps) - self._shared_zero_time
             )
 
-        self._timestamp_diagnostics = calculate_camera_diagnostic_results(
-            timestamps_dictionary
-        )
+        self._timestamp_diagnostics = calculate_camera_diagnostic_results(timestamps_dictionary)
 
         print(self._timestamp_diagnostics.dict())
 
@@ -147,7 +145,7 @@ class MultiCameraVideoRecorder:
         for camera_id, video_recorder in self._video_recorder_dictionary.items():
             raw_frame_list_dictionary[
                 camera_id
-            ] = video_recorder._frame_payload_list.copy()
+            ] = video_recorder._frame_list.copy()
         return raw_frame_list_dictionary
 
     def _create_session_information_dict(self):
