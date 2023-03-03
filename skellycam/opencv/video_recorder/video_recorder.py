@@ -25,12 +25,20 @@ class VideoRecorder:
 
     @property
     def timestamps(self) -> np.ndarray:
+        assert len(self._frame_list) > 0, "There are no frames in the frame list"
         return np.asarray(self._gather_timestamps(self._frame_list), 'float')
 
     @property
     def frames_per_second(self) -> float:
+        try:
+            fps = float(np.nanmedian((np.diff(self.timestamps) ** -1) * 1e9))
+        except Warning as w:
+            raise Exception(f"Warning: {w}")
 
-        return float(np.nanmedian((np.diff(self.timestamps) ** -1) * 1e9))
+
+        assert not np.isinf(fps), "frames_per_second is inf"
+
+        return fps
 
     @property
     def median_frame_duration_ns(self) -> np.ndarray:
@@ -100,6 +108,17 @@ class VideoRecorder:
                      f"video width : {width}, "
                      f"frames per second : {frames_per_second}")
 
+        try:
+            assert not np.isnan(height) and not np.isinf(height), f"Height is: { height }"
+            assert not np.isnan(width) and not np.isinf(width), f"Width is: { width }"
+            assert not np.isnan(frames_per_second) and not np.isinf(frames_per_second), f"Frames per second is: { frames_per_second }"
+        except AssertionError as e:
+            logger.error(f"Assertion error: {e}")
+            logger.error(traceback.format_exc())
+            raise e
+
+
+
         self._cv2_video_writer = self._initialize_video_writer(
             image_height=height,
             image_width=width,
@@ -109,25 +128,6 @@ class VideoRecorder:
         self._write_frame_list_to_video_file(frame_payload_list=frame_payload_list)
         self._save_timestamps(timestamps_npy=self.timestamps, video_file_save_path=video_file_save_path)
         self._cv2_video_writer.release()
-
-    def save_image_list_to_disk(
-            self,
-            image_list: List[np.ndarray],
-            path_to_save_video_file: Union[str, Path],
-            frames_per_second: float,
-    ):
-
-        if len(image_list) == 0:
-            logging.error(f"No frames to save for : {path_to_save_video_file}")
-            return
-
-        self._cv2_video_writer = self._initialize_video_writer(
-            image_height=image_list[0].shape[0],
-            image_width=image_list[0].shape[1],
-            frames_per_second=frames_per_second,
-            path_to_save_video_file=path_to_save_video_file,
-        )
-        self._write_image_list_to_video_file(image_list)
 
     def _initialize_video_writer(
             self,
