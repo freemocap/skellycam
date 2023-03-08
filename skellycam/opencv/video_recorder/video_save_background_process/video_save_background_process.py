@@ -40,11 +40,16 @@ class VideoSaveBackgroundProcess:
         dump_frames_to_video_event: multiprocessing.Event,
     ):
         sa = SaveAll(
-            frame_lists_by_camera, folder_to_save_videos, dump_frames_to_video_event
+            frame_lists_by_camera,
+            folder_to_save_videos,
         )
         while True:
             sleep(1)
-            sa.run()
+            if dump_frames_to_video_event.is_set():
+                dump_frames_to_video_event.clear()
+                logger.info("Video Save Process - There are frames to save!")
+                sa.run()
+
             # TODO: Processes should be managed by the parent.
             #  We can set up the SIGINT signal in children to ensure daemon processes
             #  respond appropriately.

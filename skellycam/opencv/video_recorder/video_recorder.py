@@ -30,13 +30,11 @@ class VideoRecorder:
 
     @property
     def frames_per_second(self) -> float:
-        try:
-            fps = float(np.nanmedian((np.diff(self.timestamps) ** -1) * 1e9))
-        except Warning as w:
-            raise Exception(f"Warning: {w}")
 
+        fps = 1 / (self.median_frame_duration_ns / 1e9)
 
-        assert not np.isinf(fps), "frames_per_second is inf"
+        if np.isinf(fps):
+            raise Exception("frames_per_second is inf...")
 
         return fps
 

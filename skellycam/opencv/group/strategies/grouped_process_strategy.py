@@ -7,7 +7,6 @@ from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.cam_group_process import CamGroupProcess
 from skellycam.opencv.group.strategies.shared_camera_memory_manager import SharedCameraMemoryManager
-from skellycam.utilities.array_split_by import array_split_by
 
 ### Don't change this? Users should submit the actual value they want
 ### this is our library default.
@@ -84,7 +83,14 @@ class GroupedProcessStrategy:
     ):
         if len(camera_ids) == 0:
             raise ValueError("No cameras were provided")
-        camera_group_subarrays = array_split_by(camera_ids, cameras_per_process)
+        # camera_group_subarrays = array_split_by(camera_ids, cameras_per_process)
+
+        camera_group_subarrays: list[list[str]] = []
+        for camera_number in range(0, len(camera_ids)):
+            if camera_number % cameras_per_process == 0:
+                sub_array_list: list[str] = []
+                camera_group_subarrays.append(sub_array_list)
+            sub_array_list.append(str(camera_number))
 
         processes = [
             CamGroupProcess(camera_ids=cam_id_subarray,
