@@ -84,6 +84,8 @@ class SkellyCamWidget(QWidget):
 
     @property
     def is_recording(self):
+        if self._cam_group_frame_worker is None:
+            return False
         return self._cam_group_frame_worker.is_recording
 
     @property
