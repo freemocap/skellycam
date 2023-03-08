@@ -85,7 +85,7 @@ dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
 Homepage = "https://github.com/freemocap/skellycam"
 
 [tool.bumpver]
-current_version = "v2023.03.1078"
+current_version = "v2023.03.1079"
 
 version_pattern = "vYYYY.0M.BUILD[-TAG]"
 commit_message  = "Bump version {old_version} -> {new_version}"
