@@ -58,6 +58,8 @@ def save_synchronized_videos(
 
     # plot_inter_camera_timestamp_differences(inter_camera_timestamp_differences)
 
+    Path(folder_to_save_videos).mkdir(parents=True, exist_ok=True)
+
     if create_diagnostic_plots_bool:
         create_diagnostic_plots(
             raw_timestamps=raw_timestamps,
@@ -66,8 +68,6 @@ def save_synchronized_videos(
             folder_to_save_plots=folder_to_save_videos,
             show_plots_bool=True,
         )
-
-    Path(folder_to_save_videos).mkdir(parents=True, exist_ok=True)
 
     for camera_id, synchronized_video_recorder in synchronized_video_recorders.items():
 
