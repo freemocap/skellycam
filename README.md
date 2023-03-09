@@ -5,7 +5,7 @@
 <h3 align="center">SkellyCam: The camera backend for the FreeMoCap Project</h3>
 <p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>
 <p align="center">
-    <a href="https://doi.org/10.5281/zenodo.7233714">
+    <a href="https://doi.org/10.5281/zenodo.7713260">
         <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.7713260.svg" alt=DOI-via-Zenodo.org>
       </a>      
     <a href="https://github.com/freemocap/fast-camera-capture/releases/latest">
