@@ -1,20 +1,23 @@
 
 <p align="center">
-    <img src="https://github.com/freemocap/skellycam/blob/main/skellycam/assets/logo/skelly-cam-logo.svg" height="128" alt="Project Logo">
+    <img src="https://raw.githubusercontent.com/freemocap/skellycam/main/assets/logo/skelly-cam-logo.svg" height="128" alt="Project Logo">
 </p>
-<h3 align="center">SkellyCam</h3>
+<h3 align="center">SkellyCam: The camera backend for the FreeMoCap Project</h3>
 <p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>
 <p align="center">
+    <a href="https://doi.org/10.5281/zenodo.7233714">
+        <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.7713260.svg" alt=DOI-via-Zenodo.org>
+      </a>      
     <a href="https://github.com/freemocap/fast-camera-capture/releases/latest">
         <img src="https://img.shields.io/github/release/freemocap/fast-camera-capture.svg" alt="Latest Release">
-    </a>
+    </a>    
     <a href="https://github.com/freemocap/fast-camera-capture/blob/main/LICENSE">
         <img src="https://img.shields.io/badge/license-AGPLv3+-blue.svg" alt="AGPLv3+">
-    </a>
+    </a>    
     <a href="https://github.com/freemocap/fast-camera-capture/issues">
         <img src="https://img.shields.io/badge/contributions-almost-ff69b4.svg" alt="Contributions Welcome">
-    </a>
-  <a href="https://github.com/psf/black">
+    </a>    
+    <a href="https://github.com/psf/black">
     <img alt="https://img.shields.io/badge/code%20style-black-000000.svg" src="https://img.shields.io/badge/code%20style-black-000000.svg">
   </a>
 </p>
