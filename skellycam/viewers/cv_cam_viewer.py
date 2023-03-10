@@ -1,4 +1,5 @@
 import multiprocessing
+import time
 from multiprocessing import Process
 from typing import Union
 
@@ -27,6 +28,7 @@ class CvCamViewer:
 def _begin(shared_value, cam_id):
     setproctitle(f"Viewer {cam_id}")
     while True:
+        time.sleep(0.001)
         if "frame" not in shared_value:
             continue
         payload = shared_value["frame"]

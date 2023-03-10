@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import time
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from PyQt6.QtCore import pyqtSignal
 
@@ -12,33 +12,36 @@ from skellycam.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
 from skellycam.opencv.group.strategies.strategies import Strategy
-from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import \
-    VideoSaveBackgroundProcess
+from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import (
+    VideoSaveBackgroundProcess,
+)
+from skellycam.viewers.cv_cam_viewer import CvCamViewer
 
 logger = logging.getLogger(__name__)
 
 
 class CameraGroup:
     def __init__(
-            self,
-            camera_ids_list: List[str],
-            camera_configs: Dict[str, CameraConfig],
-            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
-
+        self,
+        camera_ids_list: List[str],
+        camera_configs: Optional[Dict[str, CameraConfig]] = None,
+        strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
     ):
         self._dump_frames_to_video_event = multiprocessing.Event()
-        logger.info(
-            f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_configs}"
-        )
+        self._camera_configs = camera_configs
+        if camera_configs:
+            logger.info(
+                f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_configs}"
+            )
+
         self._event_dictionary = None
         self._strategy_enum = strategy
         self._camera_ids = camera_ids_list
-        self._camera_configs = camera_configs
 
-        self._strategy_class = self._resolve_strategy(camera_ids=self._camera_ids,
-                                                      camera_configs=self._camera_configs,
-                                                      )
-
+        self._strategy_class = self._resolve_strategy(
+            camera_ids=self._camera_ids,
+            camera_configs=self._camera_configs,
+        )
 
     @property
     def is_capturing(self):
@@ -60,7 +63,6 @@ class CameraGroup:
     def camera_ids(self):
         return self._camera_ids
 
-
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.latest_frames
@@ -73,6 +75,23 @@ class CameraGroup:
         if not self._video_save_background_process.is_alive:
             self._start_video_save_background_process()
 
+    def check_if_camera_is_ready(self, cam_id: str):
+        return self._strategy_class.check_if_camera_is_ready(cam_id)
+
+    def close(
+        self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None
+    ):
+        logger.info("Closing camera group")
+        self._set_exit_event()
+        self._terminate_processes()
+
+        if wait_for_exit:
+            while self.is_capturing:
+                logger.debug("waiting for camera group to stop....")
+                time.sleep(0.1)
+        if cameras_closed_signal is not None:
+            cameras_closed_signal.emit()
+
     def start(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
@@ -83,12 +102,13 @@ class CameraGroup:
         self._start_event = multiprocessing.Event()
         self._should_record_frames_event = multiprocessing.Event()
 
-        self._event_dictionary = {"start": self._start_event,
-                                  "exit": self._exit_event,
-                                  "should_record_frames": self._should_record_frames_event}
+        self._event_dictionary = {
+            "start": self._start_event,
+            "exit": self._exit_event,
+            "should_record_frames": self._should_record_frames_event,
+        }
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
-
         )
 
         self._start_video_save_background_process()
@@ -98,10 +118,14 @@ class CameraGroup:
     def get_latest_frame_by_camera_id(self, camera_id: str):
         return self._strategy_class.latest_frames[camera_id]
 
-    def _resolve_strategy(self, camera_ids: List[str], camera_configs: Dict[str, CameraConfig]):
+    def _resolve_strategy(
+        self, camera_ids: List[str], camera_configs: Dict[str, CameraConfig]
+    ):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
-            return GroupedProcessStrategy(camera_ids = camera_ids,
-                                          camera_configs = camera_configs,)
+            return GroupedProcessStrategy(
+                camera_ids=camera_ids,
+                camera_configs=camera_configs,
+            )
 
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.info(f"Waiting for cameras {self._camera_ids} to start")
@@ -125,21 +149,6 @@ class CameraGroup:
 
         logger.info(f"All cameras {self._camera_ids} started!")
         self._start_event.set()  # start frame capture on all cameras
-
-    def check_if_camera_is_ready(self, cam_id: str):
-        return self._strategy_class.check_if_camera_is_ready(cam_id)
-
-    def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
-        logger.info("Closing camera group")
-        self._set_exit_event()
-        self._terminate_processes()
-
-        if wait_for_exit:
-            while self.is_capturing:
-                logger.debug("waiting for camera group to stop....")
-                time.sleep(0.1)
-        if cameras_closed_signal is not None:
-            cameras_closed_signal.emit()
 
     def _set_exit_event(self):
         logger.info("Setting exit event")
@@ -170,24 +179,26 @@ class CameraGroup:
         self._video_save_background_process = VideoSaveBackgroundProcess(
             frame_lists_by_camera=self._strategy_class.frame_lists_by_camera,
             folder_to_save_videos=self._strategy_class.folder_to_save_videos,
-            dump_frames_to_video_event=self._dump_frames_to_video_event, )
+            dump_frames_to_video_event=self._dump_frames_to_video_event,
+        )
         self._video_save_background_process.start()
 
     def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
-        logger.info(f"Updating camera configs to {camera_configs} - old configs were: {self._camera_configs}")
+        logger.info(
+            f"Updating camera configs to {camera_configs} - old configs were: {self._camera_configs}"
+        )
         self._camera_configs = camera_configs
         self._strategy_class.update_camera_configs(self._camera_configs)
 
-# async def getall(g: CameraGroup):
-#     await asyncio.gather(
-#         cam_show("0", lambda: g.get_latest_frame_by_camera_id("0")),
-#         cam_show("2", lambda: g.get_latest_frame_by_camera_id("2")),
-#     )
-#
-#
-# if __name__ == "__main__":
-#     cams = ["0"]
-#     g = CameraGroup(cams)
-#     g.start()
-#
-#     asyncio.run(getall(g))
+
+if __name__ == "__main__":
+    cams = ["0"]
+    g = CameraGroup(cams)
+    g.start()
+    viewer = CvCamViewer()
+    viewer.begin_viewer("0")
+
+    while True:
+        time.sleep(0.001)
+        frame = g.get_latest_frame_by_camera_id("0")
+        viewer.recv_img(frame)

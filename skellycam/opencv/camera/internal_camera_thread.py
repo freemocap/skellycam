@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 class VideoCaptureThread(threading.Thread):
     def __init__(
-            self,
-            config: CameraConfig,
-            ready_event: multiprocessing.Event = None,
+        self,
+        config: CameraConfig,
+        ready_event: multiprocessing.Event = None,
     ):
         super().__init__()
         self._previous_frame_timestamp_ns = None
@@ -133,11 +133,12 @@ class VideoCaptureThread(threading.Thread):
             self._number_of_frames_received += 1
 
         return FramePayload(
+            camera_id=str(self._config.camera_id),
             success=success,
             image=image,
             timestamp_ns=retrieval_timestamp,
+            # TODO: remove
             number_of_frames_received=self._number_of_frames_received,
-            camera_id=str(self._config.camera_id),
         )
 
     def _create_cv2_capture(self):
