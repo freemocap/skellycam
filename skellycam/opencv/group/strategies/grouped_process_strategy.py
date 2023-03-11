@@ -1,15 +1,17 @@
 import logging
-import multiprocessing
-from pathlib import Path
-from typing import Dict, List, Optional, Union
+import math
+from time import perf_counter_ns
+from typing import Dict, List
 
-from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.group.strategies.cam_group_process import CamGroupProcess
+from skellycam.opencv.group.strategies.cam_group_process.cam_group_process import (
+    CamGroupProcess,
+)
 from skellycam.opencv.group.strategies.shared_camera_memory_manager import (
     SharedCameraMemoryManager,
 )
 from skellycam.utilities.array_split_by import array_split_by
+from skellycam.viewers.cv_cam_viewer import CvCamViewer
 
 ### Don't change this? Users should submit the actual value they want
 ### this is our library default.
@@ -22,19 +24,14 @@ logger = logging.getLogger(__name__)
 
 
 class GroupedProcessStrategy:
-    def __init__(
-        self, camera_ids: List[str], camera_configs: Optional[Dict[str, CameraConfig]]
-    ):
+    def __init__(self, camera_ids: List[str]):
         self._camera_ids = camera_ids
+        self._shared_memory_manager = SharedCameraMemoryManager()
 
         self._create_shared_memory_objects()
         self._processes, self._cam_id_process_map = self._create_processes(
-            camera_ids=self._camera_ids, camera_configs=camera_configs
+            camera_ids=self._camera_ids
         )
-
-    @property
-    def processes(self):
-        return self._processes
 
     @property
     def is_capturing(self):
@@ -48,69 +45,38 @@ class GroupedProcessStrategy:
         return self._frame_lists_by_camera
 
     @property
-    def folder_to_save_videos(self) -> List[str]:
-        return self._folder_to_save_videos
-
-    @folder_to_save_videos.setter
-    def folder_to_save_videos(self, path: Union[str, Path]):
-        if len(self._folder_to_save_videos) == 0:
-            self._folder_to_save_videos.append(str(path))
-        else:
-            raise Exception("Folder to save videos already set!")
-
-    @property
     def latest_frames(self) -> Dict[str, FramePayload]:
-        try:
-            return {
-                camera_id: (self._frame_lists_by_camera[camera_id][-1])
-                for camera_id in self._camera_ids
-            }
-        except:
-            return {camera_id: None for camera_id in self._camera_ids}
+        return {
+            camera_id: (self._frame_lists_by_camera[camera_id][-1])
+            for camera_id in self._camera_ids
+        }
+
+    def latest_frames_by_camera_id(self, camera_id: str):
+        frames = self._frame_lists_by_camera[camera_id]
+        return frames[-1]
 
     def check_if_camera_is_ready(self, cam_id: str) -> bool:
         for process in self._processes:
             if cam_id in process.camera_ids:
                 return process.check_if_camera_is_ready(cam_id)
 
-    def start_capture(
-        self,
-        event_dictionary: Dict[str, multiprocessing.Event],
-    ):
+    def start_capture(self):
         for process in self._processes:
-            process.start_capture(
-                event_dictionary=event_dictionary,
-            )
+            process.start_capture()
 
     def _create_processes(
         self,
         camera_ids: List[str],
-        camera_configs: Optional[Dict[str, CameraConfig]] = None,
         cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS,
     ):
         if len(camera_ids) == 0:
             raise ValueError("No cameras were provided")
         camera_group_subarrays = array_split_by(camera_ids, cameras_per_process)
 
-        # camera_group_subarrays: list[list[str]] = []
-        # for camera_number in range(0, len(camera_ids)):
-        #     if camera_number % cameras_per_process == 0:
-        #         sub_array_list: list[str] = []
-        #         camera_group_subarrays.append(sub_array_list)
-        #     sub_array_list.append(str(camera_number))
-
         processes = [
             CamGroupProcess(
                 camera_ids=cam_id_subarray,
-                # latest_frames=self._latest_frames,
-                frame_lists_by_camera={
-                    camera_id: self._frame_lists_by_camera[camera_id]
-                    for camera_id in cam_id_subarray
-                },
-                camera_config_queues={
-                    camera_id: self._camera_config_queues[camera_id]
-                    for camera_id in cam_id_subarray
-                },
+                frame_repository=self._frame_lists_by_camera,
             )
             for cam_id_subarray in camera_group_subarrays
         ]
@@ -121,25 +87,24 @@ class GroupedProcessStrategy:
         return processes, cam_id_to_process
 
     def _create_shared_memory_objects(self):
-        self._shared_memory_manager = SharedCameraMemoryManager()
-
-        # self._latest_frames = self._shared_memory_manager.create_camera_config_dictionary(camera_ids=self._camera_ids)
         self._frame_lists_by_camera = (
             self._shared_memory_manager.create_frame_lists_by_camera(
                 keys=self._camera_ids
             )
         )
 
-        self._folder_to_save_videos = (
-            self._shared_memory_manager.create_video_save_folder_list()
-        )
 
-        self._camera_config_queues = (
-            self._shared_memory_manager.create_camera_config_queues(
-                camera_ids=self._camera_ids
-            )
-        )
+if __name__ == "__main__":
+    p = GroupedProcessStrategy(camera_ids=["0"])
+    p.start_capture()
 
-    def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
-        for camera_id, camera_config_queue in self._camera_config_queues.items():
-            camera_config_queue.put(camera_configs[camera_id])
+    cv = CvCamViewer()
+    cv.begin_viewer("0")
+    while True:
+        curr = perf_counter_ns() * 1e-6
+        frame = p.latest_frames["0"]
+        cv.recv_img(frame)
+        if frame:
+            end = perf_counter_ns() * 1e-6
+            frame_count_in_ms = f"{math.trunc(end - curr)}"
+            print(f"{frame_count_in_ms}ms for this frame")

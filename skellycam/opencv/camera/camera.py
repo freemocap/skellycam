@@ -15,10 +15,9 @@ logger = logging.getLogger(__name__)
 
 class Camera:
     def __init__(
-            self,
-            config: CameraConfig,
+        self,
+        config: CameraConfig,
     ):
-
         self._ready_event = None
         self._config = config
         self._capture_thread: Optional[VideoCaptureThread] = None
@@ -47,22 +46,29 @@ class Camera:
     def latest_frame(self):
         return self._capture_thread.latest_frame
 
-    def connect(self, ready_event: multiprocessing.Event = None):
-        if ready_event is None:
-            self._ready_event = multiprocessing.Event()
-            self._ready_event.set()
-        else:
-            self._ready_event = ready_event
+    def wait_for_next_frame(self):
+        while True:
+            if not self.new_frame_ready:
+                time.sleep(0.001)
+            return self.latest_frame
 
+    def connect(self, wait_for_capture: bool = False):
         if self._capture_thread and self._capture_thread.is_capturing_frames:
             logger.debug(f"Already capturing frames for camera_id: {self.camera_id}")
             return
+
         logger.debug(f"Camera ID: [{self._config.camera_id}] Creating thread")
-        self._capture_thread = VideoCaptureThread(
-            config=self._config,
-            ready_event=self._ready_event,
-        )
+        self._capture_thread = VideoCaptureThread(config=self._config)
         self._capture_thread.start()
+        if not wait_for_capture:
+            return
+
+        # connect may wait for the thread to grab frames.
+        while (
+            self._capture_thread.is_alive()
+            and not self._capture_thread.is_capturing_frames
+        ):
+            time.sleep(0.1)
 
     def stop_frame_capture(self):
         self._capture_thread.stop()

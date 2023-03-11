@@ -18,18 +18,11 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
         config: CameraConfig,
-        ready_event: multiprocessing.Event = None,
     ):
         super().__init__()
         self._previous_frame_timestamp_ns = None
         self._new_frame_ready = False
         self.daemon = False
-
-        if ready_event is None:
-            self._ready_event = multiprocessing.Event()
-            self._ready_event.set()
-        else:
-            self._ready_event = ready_event
 
         self._config = config
         self._is_capturing_frames = False
@@ -73,11 +66,6 @@ class VideoCaptureThread(threading.Thread):
     @property
     def latest_frame(self) -> FramePayload:
         self._new_frame_ready = False
-        # TODO: keeping count of number of frames recorded by when latest_frame was last accessed
-        #  is an inconsistent way to know this.
-        #  When we attempt to grab a frame,
-        #  thats when we can keep track of "Grab Attempts" vs "Grab Success" as numbers
-        self._frame.number_of_frames_recorded = self._frame.number_of_frames_recorded
         return self._frame
 
     @property
@@ -137,8 +125,6 @@ class VideoCaptureThread(threading.Thread):
             success=success,
             image=image,
             timestamp_ns=retrieval_timestamp,
-            # TODO: remove
-            number_of_frames_received=self._number_of_frames_received,
         )
 
     def _create_cv2_capture(self):
@@ -174,8 +160,6 @@ class VideoCaptureThread(threading.Thread):
         apply_configuration(capture, self._config)
 
         logger.info(f"Successfully connected to Camera: {self._config.camera_id}!")
-        if not self._ready_event.is_set():
-            self._ready_event.set()
 
         return capture
 
