@@ -36,4 +36,4 @@ class StartSynchronizer:
         return False
 
     def _check_if_camera_is_ready(self, cam_id: str):
-        return self._strategy.check_if_camera_is_ready(cam_id)
+        return self._strategy.is_camera_ready(cam_id)

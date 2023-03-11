@@ -18,13 +18,12 @@ class CamGroupThreadWorker(QThread):
     videos_saved_to_this_folder_signal = pyqtSignal(str)
 
     def __init__(
-            self,
-            camera_ids: List[str],
-            camera_configs: Dict[str, CameraConfig],
-            get_new_synchronized_videos_folder: callable,
-            parent=None,
+        self,
+        camera_ids: List[str],
+        camera_configs: Dict[str, CameraConfig],
+        get_new_synchronized_videos_folder: callable,
+        parent=None,
     ):
-
         logger.info(
             f"Initializing camera group frame worker with camera ids: {camera_ids}"
         )
@@ -35,9 +34,9 @@ class CamGroupThreadWorker(QThread):
         self._current_recording_name = None
         self._video_save_process = None
 
-        self._camera_group = self._create_camera_group(camera_ids= self._camera_ids,
-                                                       camera_configs=camera_configs)
-
+        self._camera_group = self._create_camera_group(
+            camera_ids=self._camera_ids, camera_configs=camera_configs
+        )
 
     @property
     def camera_ids(self):
@@ -50,7 +49,6 @@ class CamGroupThreadWorker(QThread):
     @property
     def is_recording(self):
         return self._camera_group.should_record_frames_event.is_set()
-
 
     def run(self):
         logger.info("Starting camera group thread worker")
@@ -96,13 +94,11 @@ class CamGroupThreadWorker(QThread):
         logger.debug("Setting `dump_frames_to_video_event`")
         self._camera_group.dump_frames_to_video_event.set()
 
-    def update_camera_configs(self,
-                             camera_configs: Dict[str, CameraConfig]):
-
+    def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
         self._camera_group.update_camera_configs(camera_configs=camera_configs)
 
     def _create_camera_group(
-            self, camera_ids: List[Union[str, int]], camera_configs: dict
+        self, camera_ids: List[Union[str, int]], camera_configs: dict
     ):
         logger.info(
             f"Creating `camera_group` for camera_ids: {camera_ids}, camera_config_dictionary: {camera_configs}"

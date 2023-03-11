@@ -1,4 +1,5 @@
 import logging
+import traceback
 from multiprocessing import Process
 from typing import Any, Callable, Dict, Iterable, List, Mapping
 
@@ -24,7 +25,7 @@ class InternalCaptureProcess(Process):
             f"Starting frame loop capture in CamGroupProcess for cameras: {camera_ids}"
         )
 
-        setproctitle(f"Cameras {camera_ids}")
+        setproctitle(self.name)
         cam_by_ids = self._create_cameras(camera_ids)
         just_cameras = cam_by_ids.values()
         for camera in just_cameras:
@@ -37,7 +38,9 @@ class InternalCaptureProcess(Process):
                     frame = camera.wait_for_next_frame()
                     frame_lists_by_camera[camera.camera_id].append(frame)
         except Exception as e:
-            print(e)
+            logger.error(f"Camera IDs {camera_ids} Internal Capture Process Failed")
+            traceback.print_exc()
+            raise e
         finally:
             # close cameras on exit
             for camera in just_cameras:

@@ -30,8 +30,8 @@ def get_logging_handlers(log_file_path: Optional[str] = ""):
 
 
 def configure_logging(log_file_path: Optional[str] = ""):
-    print(f"Setting up skellycam logging {__file__}")
     if len(logging.getLogger().handlers) == 0:
+        print(f"Setting up skellycam logging {__file__}")
         handlers = get_logging_handlers(log_file_path)
         logging.getLogger("").handlers.extend(handlers)
         logging.root.setLevel(logging.DEBUG)
