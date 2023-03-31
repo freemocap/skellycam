@@ -33,10 +33,9 @@ class CameraGroup:
         self._event_dictionary = None
         self._strategy_enum = strategy
         self._camera_ids = camera_ids_list
-        self._camera_configs = camera_configs
 
         self._strategy_class = self._resolve_strategy(camera_ids=self._camera_ids,
-                                                      camera_configs=self._camera_configs,
+                                                        camera_configs=camera_configs,
                                                       )
 
 
@@ -174,9 +173,7 @@ class CameraGroup:
         self._video_save_background_process.start()
 
     def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
-        logger.info(f"Updating camera configs to {camera_configs} - old configs were: {self._camera_configs}")
-        self._camera_configs = camera_configs
-        self._strategy_class.update_camera_configs(self._camera_configs)
+        self._strategy_class.update_camera_configs(camera_configs)
 
 # async def getall(g: CameraGroup):
 #     await asyncio.gather(

@@ -11,6 +11,7 @@ from scipy.stats import median_abs_deviation
 from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+
 from skellycam.utilities.start_file import open_file
 
 logger = logging.getLogger(__name__)
@@ -38,17 +39,16 @@ def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
 def create_timestamp_diagnostic_plots(
         raw_timestamps_dictionary: Dict[str, np.ndarray],
         synchronized_timestamps_dictionary: Dict[str, np.ndarray],
-        inter_camera_timestamp_differences: Dict[str, List[float]],
         path_to_save_plots_png: Union[str, Path],
         open_image_after_saving: bool = False,
 ):
     """plot some diagnostics to assess quality of camera sync"""
 
     # opportunistic load of matplotlib to avoid startup time costs
-    import matplotlib
     from matplotlib import pyplot as plt
-    matplotlib.use("QtAgg")
+
     plt.set_loglevel("warning")
+
 
     max_frame_duration = 0.1
     fig = plt.figure(figsize=(18, 12))
@@ -65,7 +65,7 @@ def create_timestamp_diagnostic_plots(
     ax2 = plt.subplot(
         232,
         ylim=(0, max_frame_duration),
-        title="(Raw) Camera Frame Durations",
+        title="(Raw) Camera Frame Duration Trace",
         xlabel="Frame#",
         ylabel="Duration (sec)",
     )
@@ -85,7 +85,7 @@ def create_timestamp_diagnostic_plots(
     ax5 = plt.subplot(
         235,
         ylim=(0, max_frame_duration),
-        title="(Synchronized) Camera Frame Durations",
+        title="(Synchronized) Camera Frame Duration Trace",
         xlabel="Frame#",
         ylabel="Duration (sec)",
     )
@@ -98,7 +98,7 @@ def create_timestamp_diagnostic_plots(
     )
 
     for camera_id, timestamps in raw_timestamps_dictionary.items():
-        timestamps = timestamps / 1e9
+        timestamps = timestamps/ 1e9
         ax1.plot(timestamps, label=f"Camera# {str(camera_id)}")
         ax1.legend()
         ax2.plot(np.diff(timestamps), ".")
@@ -112,17 +112,12 @@ def create_timestamp_diagnostic_plots(
         timestamps = timestamps / 1e9
         ax4.plot(timestamps, label=f"Camera# {str(camera_id)}")
         ax4.legend()
-        ax5.plot(np.diff(timestamps), ".", label=f"Camera# {str(camera_id)} - frame durations")
+        ax5.plot(np.diff(timestamps), ".")
         ax6.hist(
             np.diff(timestamps),
             bins=np.arange(0, max_frame_duration, 0.0025),
             alpha=0.5,
         )
-
-    for camera_id, time_differences in inter_camera_timestamp_differences.items():
-        ax5.plot(np.abs(np.asarray(time_differences)) / 1e9, "x",
-                 label=f"Camera# {str(camera_id)} - timestamp difference from reference")
-        ax5.legend()
 
     plt.tight_layout()
 
@@ -132,8 +127,6 @@ def create_timestamp_diagnostic_plots(
 
     if open_image_after_saving:
         open_file(path_to_save_plots_png)
-
-
 
 
 def calculate_camera_diagnostic_results(
@@ -148,7 +141,6 @@ def calculate_camera_diagnostic_results(
         timestamps = video_recorder.timestamps
         timestamps_formatted = (timestamps - timestamps[0]) / 1e9
         frame_durations = np.diff(timestamps_formatted)
-        frame_durations[frame_durations == 0] = 1e-9
         framerate_per_frame = 1 / frame_durations
         mean_framerates_per_camera[camera_id] = np.nanmean(framerate_per_frame)
         median_framerates_per_camera[camera_id] = np.nanmedian(framerate_per_frame)
@@ -184,7 +176,6 @@ def calculate_camera_diagnostic_results(
 
 if __name__ == "__main__":
     from skellycam.opencv.group.camera_group import CameraGroup
-
     found_camera_response = detect_cameras()
     cam_ids = found_camera_response.cameras_found_list
     g = CameraGroup(cam_ids)

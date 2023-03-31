@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from pprint import pprint
-from typing import Dict, Union, List
+from typing import Dict, Union
 
 import numpy as np
 
@@ -18,25 +18,24 @@ logger = logging.getLogger(__name__)
 
 
 def create_diagnostic_plots(
-        raw_timestamps: Dict[str, np.ndarray],
+        raw_timestamps_by_camera: Dict[str, np.ndarray],
         synchronized_video_recorders: Dict[str, VideoRecorder],
-        inter_camera_timestamp_differences: Dict[str, List[float]],
         folder_to_save_plots: Union[str, Path],
         shared_zero_time: Union[int, float] = 0,
         show_plots_bool: bool = True,
 ):
     logger.info("Creating diagnostic plots...")
 
-
+    # raw_timestamp_diagnostics = calculate_camera_diagnostic_results(raw_timestamps_by_cameras)
+    # pprint(f"`Raw timestamp diagnostics`: \n {raw_timestamp_diagnostics.dict()}\n")
 
     synchronized_timestamp_diagnostics = calculate_camera_diagnostic_results(synchronized_video_recorders)
     pprint(f"`Synchronized timestamp diagnostics`: \n {synchronized_timestamp_diagnostics.dict()}\n")
 
     create_timestamp_diagnostic_plots(
-        raw_timestamps_dictionary=raw_timestamps,
+        raw_timestamps_dictionary=raw_timestamps_by_camera,
         synchronized_timestamps_dictionary={camera_id: v.timestamps for camera_id, v in
                                             synchronized_video_recorders.items()},
-        inter_camera_timestamp_differences=inter_camera_timestamp_differences,
         path_to_save_plots_png=Path(folder_to_save_plots) / TIMESTAMP_DIAGNOSTIC_PLOTS_FILE_NAME,
         open_image_after_saving=show_plots_bool,
     )

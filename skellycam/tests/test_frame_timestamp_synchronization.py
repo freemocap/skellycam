@@ -1,17 +1,14 @@
 import logging
-from typing import List, Dict
 
 import numpy as np
-
-from skellycam.detection.models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
 
-def test_frame_counts_equal(frame_lists: Dict[str, List[FramePayload]]):
+def test_frame_timestamp_synchronization(synchronized_frame_list_dictionary):
     frame_count_list = []
 
-    for frame_list in frame_lists.values():
+    for frame_list in synchronized_frame_list_dictionary.values():
         frame_count_list.append(len(frame_list))
 
     logger.info(f"frame_count_list: {frame_count_list}")
@@ -21,5 +18,3 @@ def test_frame_counts_equal(frame_lists: Dict[str, List[FramePayload]]):
     ), "Frame count is not the same for all cameras"
 
     logger.info("Test passed: Frame count is the same for all cameras :D")
-
-    return True

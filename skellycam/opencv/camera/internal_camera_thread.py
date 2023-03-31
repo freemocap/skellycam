@@ -73,10 +73,6 @@ class VideoCaptureThread(threading.Thread):
     @property
     def latest_frame(self) -> FramePayload:
         self._new_frame_ready = False
-        # TODO: keeping count of number of frames recorded by when latest_frame was last accessed
-        #  is an inconsistent way to know this.
-        #  When we attempt to grab a frame,
-        #  thats when we can keep track of "Grab Attempts" vs "Grab Success" as numbers
         self._frame.number_of_frames_recorded = self._frame.number_of_frames_recorded
         return self._frame
 
@@ -86,9 +82,7 @@ class VideoCaptureThread(threading.Thread):
 
     @property
     def is_capturing_frames(self) -> bool:
-        """
-        Is the thread capturing frames from the cameras
-        """
+        """Is the thread capturing frames from the cameras (but not necessarily recording them, that's handled by `is_recording_frames`)"""
         return self._is_capturing_frames
 
     def run(self):
@@ -102,6 +96,8 @@ class VideoCaptureThread(threading.Thread):
         try:
             while self._is_capturing_frames:
                 self._frame = self._get_next_frame()
+
+
         except:
             logger.error(
                 f"Camera ID: [{self._config.camera_id}] Frame loop thread exited due to error"
@@ -114,9 +110,6 @@ class VideoCaptureThread(threading.Thread):
 
     def _get_next_frame(self):
         try:
-            # TODO: just call `read`. We're not going to implement a multi grab/multi retrieve algorithm
-            #  in Camera  because we've proven that its unnecessary.
-            #  If we want that, we'll implement a lowlevel Multicam class.
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
             retrieval_timestamp = time.perf_counter_ns()

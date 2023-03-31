@@ -1,79 +1,70 @@
 import logging
+import multiprocessing
 import time
+from copy import deepcopy
 from pathlib import Path
+from time import sleep
 from typing import List, Dict
 
-import numpy as np
-
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.camera.types.camera_id import CameraId
-from skellycam.opencv.video_recorder.save_synchronized_videos import (
-    save_synchronized_videos,
-)
+from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+
 
 logger = logging.getLogger(__name__)
 
 
-class SaveAll:
-    def __init__(
-            self,
-            frame_lists_by_camera: Dict[str, List[FramePayload]],
-            folder_to_save_videos: List[str],
-    ):
-        self._frame_lists_by_camera = frame_lists_by_camera
-        self._folder_to_save_videos = folder_to_save_videos
-        self._video_recorders: Dict[CameraId, VideoRecorder] = {}
+def save_all_at_end_process(frame_lists_by_camera: Dict[str, List[FramePayload]],
+                            folder_to_save_videos: List[str],
+                            dump_frames_to_video_event: multiprocessing.Event,
+                            ):
+    logger.info("Starting VideoSaveBackgroundProcess")
+    video_recorders = {}
 
-    def run(self):
+    while True:
+        sleep(1)
+        # logger.debug("Video Save Process - Checking if frames need to be saved...")
+        if dump_frames_to_video_event.is_set():
 
-        for camera_id, frame_list in self._frame_lists_by_camera.items():
-            logger.info(
-                f"Camera {camera_id} has {len(frame_list)} frames in the list"
+            logger.info("Video Save Process - There are frames to save!")
+
+            logger.debug("Clearing dump_frames_to_video_event...")
+            dump_frames_to_video_event.clear()
+
+            for camera_id, frame_list in frame_lists_by_camera.items():
+                frame_list_length = len(frame_list)
+                logger.info(f"VIDEO SAVE PROCESS - {camera_id} has {frame_list_length} frames in the list")
+
+                tik = time.perf_counter()
+                frames_to_save = deepcopy(frame_list[1:])
+                deepcopy_duration = time.perf_counter()- tik
+                tik = time.perf_counter()
+                del frame_list[1:]
+                del_duration = time.perf_counter() - tik
+                logger.debug(f" {camera_id} - deepcopy_duration: {deepcopy_duration:.4f}, del_duration: {del_duration:.4f} (seconds)")
+
+                if not frames_to_save:
+                    logger.error(f"VIDEO SAVE PROCESS - {camera_id} has no frames to save")
+                    raise Exception(f"VIDEO SAVE PROCESS - {camera_id} has no frames to save")
+
+                video_recorders[camera_id] = VideoRecorder()
+                video_recorders[camera_id].frame_list = frames_to_save
+
+            logger.debug(
+                f"Saving frames to video files - {[video_recorder.number_of_frames for video_recorder in video_recorders.values()]}...")
+
+            folder_to_save_videos_path = str(Path(folder_to_save_videos.pop()))
+
+            save_synchronized_videos(
+                raw_video_recorders=video_recorders,
+                folder_to_save_videos=folder_to_save_videos_path,
+                create_diagnostic_plots_bool=True,
             )
 
-            self._video_recorders[camera_id] = VideoRecorder()
-
-            tik = time.perf_counter()
-            while len(frame_list) > 1:
-                self._video_recorders[camera_id].append_frame_payload_to_list(
-                    frame_list.pop(1))  # leave the first element in place
-
-            tok = time.perf_counter()
-            logger.info(f"Camera {camera_id} took {tok - tik:0.4f} seconds to pop frames")
-
-            if len(self._video_recorders[camera_id].frame_list) == 0:
-                logger.error(
-                    f"Camera {camera_id} has no frames to save"
-                )
-                raise Exception(
-                    f"Camera {camera_id} has no frames to save"
-                )
-
-            if np.isinf(self._video_recorders[camera_id].frames_per_second):
-                raise Exception(
-                    f"Camera {camera_id} frames_per_second is inf"
-                )
-
             logger.info(
-                f"VideoRecorder {camera_id} - "
-                f"{self._video_recorders[camera_id].number_of_frames} "
-                f"frames at {self._video_recorders[camera_id].frames_per_second} fps"
-            )
+                f"`Saved synchronized videos to folder: {str(folder_to_save_videos)}")
 
-        logger.debug(
-            f"Saving frames to video files - "
-            f"{[video_recorder.number_of_frames for video_recorder in self._video_recorders.values()]}..."
-        )
 
-        folder_to_save_videos_path = str(Path(self._folder_to_save_videos.pop()))
-
-        save_synchronized_videos(
-            raw_video_recorders=self._video_recorders,
-            folder_to_save_videos=folder_to_save_videos_path,
-            create_diagnostic_plots_bool=True,
-        )
-
-        logger.info(
-            f"`Saved synchronized videos to folder: {folder_to_save_videos_path}"
-        )
+        if not multiprocessing.parent_process().is_alive():
+            logger.info("Parent process is dead. Exiting")
+            break

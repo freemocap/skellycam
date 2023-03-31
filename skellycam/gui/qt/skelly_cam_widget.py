@@ -27,6 +27,9 @@ title_label_style_string = """
                            font-family: "Dosis", sans-serif;
                            """
 
+MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 3
+MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
+
 
 class SkellyCamWidget(QWidget):
     cameras_connected_signal = pyqtSignal()
@@ -84,8 +87,6 @@ class SkellyCamWidget(QWidget):
 
     @property
     def is_recording(self):
-        if self._cam_group_frame_worker is None:
-            return False
         return self._cam_group_frame_worker.is_recording
 
     @property
@@ -122,18 +123,6 @@ class SkellyCamWidget(QWidget):
         dictionary_of_single_camera_view_widgets = {}
         landscape_camera_number = -1
         portrait_camera_number = -1
-
-        number_of_cameras = len(camera_configs)
-
-        if number_of_cameras < 3:
-            max_num_columns_for_landscape_camera_views = 1
-        elif number_of_cameras < 6:
-            max_num_columns_for_landscape_camera_views = 2
-        else:
-            max_num_columns_for_landscape_camera_views = 3
-
-        max_num_columns_for_portrait_camera_views = 5
-
         for camera_id, camera_config in camera_configs.items():
 
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
@@ -142,18 +131,16 @@ class SkellyCamWidget(QWidget):
 
             if self._get_landscape_or_portrait(camera_config) == "landscape":
                 landscape_camera_number += 1
-
                 divmod_whole, divmod_remainder = divmod(int(landscape_camera_number),
-                                                        max_num_columns_for_landscape_camera_views)
+                                                        MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS)
                 grid_row = divmod_whole
                 grid_column = divmod_remainder
-
                 self._camera_landscape_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
 
             elif self._get_landscape_or_portrait(camera_config) == "portrait":
                 portrait_camera_number += 1
                 divmod_whole, divmod_remainder = divmod(int(portrait_camera_number),
-                                                        max_num_columns_for_portrait_camera_views)
+                                                        MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS)
                 grid_row = divmod_whole
                 grid_column = divmod_remainder
                 self._camera_portrait_grid_layout.addWidget(single_camera_view, grid_row, grid_column)

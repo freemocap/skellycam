@@ -12,11 +12,7 @@ def plot_first_middle_and_last_frames(
         end_frame_number: int = -1,
         open_image_after_saving: bool = False,
 ):
-    # opportunistic load of matplotlib to avoid startup time costs
-    import matplotlib
-    from matplotlib import pyplot as plt
-    matplotlib.use("Agg")
-    plt.set_loglevel("warning")
+    import matplotlib.pyplot as plt
 
     if end_frame_number == -1:
         end_frame_number = len(list(synchronized_frame_list_dictionary.values())[0])
