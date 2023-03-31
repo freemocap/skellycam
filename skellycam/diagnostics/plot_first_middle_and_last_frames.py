@@ -2,7 +2,7 @@ from pathlib import Path
 
 import cv2
 
-from skellycam.utilities.start_file import open_file
+from skellycam.utils.start_file import open_file
 
 
 def plot_first_middle_and_last_frames(

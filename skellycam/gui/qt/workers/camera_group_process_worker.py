@@ -1,11 +1,15 @@
 import logging
+import multiprocessing
 import time
 from copy import deepcopy
+from multiprocessing import Process
+from pathlib import Path
 from typing import List, Union
 
 import cv2
-from PyQt6.QtCore import pyqtSignal, Qt, QThread
+from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QImage
+from PyQt6.QtWidgets import QWidget
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
@@ -16,7 +20,7 @@ from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 logger = logging.getLogger(__name__)
 
 
-class CamGroupThreadWorker(QThread):
+class CamGroupProcessWorker(QWidget):
     new_image_signal = pyqtSignal(CameraId, QImage, dict)
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
@@ -92,47 +96,61 @@ class CamGroupThreadWorker(QThread):
     def cameras_connected(self):
         return self._camera_group.is_capturing
 
-    @property
-    def is_recording(self):
-        return self._should_record_frames_bool
+    def start(self):
+        self._camera_group_process = Process(target=self._run_camera_group_process)
+        self._camera_group_process.start()
 
-    def run(self):
-        logger.info("Starting camera group thread worker")
-        self._camera_group.start()
-        should_continue = True
+    @staticmethod
+    def _run_camera_group_process(
+            camera_group: CameraGroup,
+            synchronized_video_folder_path: Union[str, Path],
+            new_image_signal: pyqtSignal,
+            cameras_connected_signal: pyqtSignal,
+            cameras_closed_signal: pyqtSignal,
+            camera_configs_queue: multiprocessing.Queue
+    ):
+        logger.info("Starting camera group process")
+        try:
+            camera_group.start()
 
-        logger.info("Emitting `cameras_connected_signal`")
-        self.cameras_connected_signal.emit()
+            should_continue = True
 
-        while self._camera_group.is_capturing and should_continue:
-            if self._updating_camera_settings_bool:
-                continue
+            logger.info("Emitting `cameras_connected_signal`")
+            cameras_connected_signal.emit()
 
-            frame_payload_dictionary = self._camera_group.latest_frames()
-            for camera_id, frame_payload in frame_payload_dictionary.items():
-                if frame_payload:
-                    if not self._should_pause_bool:
-                        if self._should_record_frames_bool:
-                            self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
-                            logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-                        q_image = self._convert_frame(frame_payload)
+            while camera_group.is_capturing and should_continue:
+                if self._updating_camera_settings_bool:
+                    continue
 
-                        frame_diagnostic_dictionary = {}
-                        frame_diagnostic_dictionary["mean_frames_per_second"] = frame_payload.mean_frames_per_second,
-                        frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
-                        frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
+                multi_frame_payload_dictionary = camera_group.latest_frames()
+                for camera_id, frame_payload in multi_frame_payload_dictionary.items():
+                    if frame_payload:
+                        if not self._should_pause_bool:
+                            if self._should_record_frames_bool:
+                                self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
+                            q_image = self._convert_frame(frame_payload)
 
-                        try:
-                            frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
-                                camera_id].number_of_frames
-                        except KeyError:
-                            frame_diagnostic_dictionary["frames_recorded"] = 0
-                        except Exception as e:
-                            logger.error(f"Error getting frame count for camera {camera_id}: {e}")
+                            frame_diagnostic_dictionary = {}
+                            frame_diagnostic_dictionary[
+                                "mean_frames_per_second"] = frame_payload.mean_frames_per_second,
+                            frame_diagnostic_dictionary["frames_received"] = frame_payload.number_of_frames_received,
+                            frame_diagnostic_dictionary["queue_size"] = self._camera_group.queue_size[camera_id]
 
-                        self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
+                            try:
+                                frame_diagnostic_dictionary["frames_recorded"] = self._video_recorder_dictionary[
+                                    camera_id].number_of_frames
+                            except KeyError:
+                                frame_diagnostic_dictionary["frames_recorded"] = 0
+                            except Exception as e:
+                                logger.error(f"Error getting frame count for camera {camera_id}: {e}")
 
-    def _convert_frame(self, frame: FramePayload):
+                            new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
+        finally:
+            logger.info("Closing camera group process")
+            camera_group.close(cameras_closed_signal=cameras_closed_signal)
+
+    @staticmethod
+    def _convert_frame(frame: FramePayload):
         image = frame.image
         # image = cv2.flip(image, 1)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -246,12 +264,6 @@ class CamGroupThreadWorker(QThread):
 
     def _initialize_video_recorder_dictionary(self):
         return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
-
-    def _get_recorder_frame_count_dict(self):
-        return {
-            camera_id: recorder.number_of_frames
-            for camera_id, recorder in self._video_recorder_dictionary.items()
-        }
 
     def _create_camera_group(
             self, camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None

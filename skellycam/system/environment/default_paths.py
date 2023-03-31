@@ -9,17 +9,11 @@ from skellycam.system.environment.home_dir import os_independent_home_dir
 
 logger = logging.getLogger(__name__)
 
-# folder names
 DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skelly-cam-recordings"
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
 LOGS_INFO_AND_SETTINGS_FOLDER_NAME = "logs_info_and_settings"
 LOG_FILE_FOLDER_NAME = "logs"
 TIMESTAMPS_FOLDER_NAME = "timestamps"
-
-# file names
-TIMESTAMP_DIAGNOSTIC_PLOTS_FILE_NAME = "timestamp_diagnostic_plots.png"
-FIRST_MIDDLE_AND_LAST_FRAMES_FILE_NAME = "first_and_last_frames.png"
-
 
 #Emoji strings
 RED_X_EMOJI_STRING = "\U0000274C"

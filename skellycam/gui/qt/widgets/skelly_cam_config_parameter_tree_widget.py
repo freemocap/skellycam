@@ -98,7 +98,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._connect_signals_to_slots(self._camera_viewer_widget)
 
     def _connect_signals_to_slots(self, camera_viewer_widget: SkellyCamWidget):
-        camera_viewer_widget.new_camera_configs_signal.connect(
+        camera_viewer_widget.camera_group_created_signal.connect(
             self.update_camera_config_parameter_tree
         )
 

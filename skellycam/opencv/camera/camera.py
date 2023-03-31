@@ -101,9 +101,8 @@ class Camera:
         )
         if not camera_config.use_this_camera:
             self.close()
-            return
+        else:
+            if not self._capture_thread.is_capturing_frames:
+                self.connect(self._ready_event)
 
-        if camera_config.use_this_camera and not self._capture_thread.is_alive():
-            self.connect()
-
-        self._capture_thread.update_camera_config(camera_config)
+            self._capture_thread.update_camera_config(camera_config)

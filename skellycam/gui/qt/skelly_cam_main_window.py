@@ -58,7 +58,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout.addWidget(self._welcome_to_skellycam_widget)
 
         self._camera_viewer_widget = SkellyCamWidget(
-            get_new_synchronized_videos_folder=
+            get_new_synchronized_videos_folder_callable=
             lambda: create_new_synchronized_videos_folder(
                 Path(self._session_folder_path) / get_default_recording_name()
             ),
@@ -67,7 +67,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._camera_viewer_widget.resize(1280, 720)
 
         self._qt_camera_controller_widget = SkellyCamControllerWidget(
-            skelly_cam_widget=self._camera_viewer_widget,
+            camera_viewer_widget=self._camera_viewer_widget,
             parent=self,
         )
 
@@ -115,6 +115,10 @@ class SkellyCamMainWindow(QMainWindow):
         self._connect_signals_to_slots()
 
     def _connect_signals_to_slots(self):
+        self._camera_viewer_widget.camera_group_created_signal.connect(
+            self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
+        )
+
         self._camera_viewer_widget.detect_available_cameras_push_button.clicked.connect(
             self._welcome_to_skellycam_widget.hide
         )

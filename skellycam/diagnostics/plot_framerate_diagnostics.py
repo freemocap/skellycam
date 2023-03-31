@@ -10,9 +10,8 @@ from scipy.stats import median_abs_deviation
 
 from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
-
-from skellycam.utilities.start_file import open_file
+from skellycam.opencv.group.camera_group import CameraGroup
+from skellycam.utils.start_file import open_file
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +36,8 @@ def gather_timestamps(list_of_frames: List[FramePayload]) -> np.ndarray:
 
 
 def create_timestamp_diagnostic_plots(
-        raw_timestamps_dictionary: Dict[str, np.ndarray],
-        synchronized_timestamps_dictionary: Dict[str, np.ndarray],
+        raw_frame_list_dictionary: Dict[str, List[FramePayload]],
+        synchronized_frame_list_dictionary: Dict[str, List[FramePayload]],
         path_to_save_plots_png: Union[str, Path],
         open_image_after_saving: bool = False,
 ):
@@ -49,6 +48,20 @@ def create_timestamp_diagnostic_plots(
 
     plt.set_loglevel("warning")
 
+    synchronized_timestamps_dictionary = {}
+    for (
+            camera_id,
+            camera_synchronized_frame_list,
+    ) in synchronized_frame_list_dictionary.items():
+        synchronized_timestamps_dictionary[camera_id] = (
+                gather_timestamps(camera_synchronized_frame_list) / 1e9
+        )
+
+    raw_timestamps_dictionary = {}
+    for camera_id, camera_raw_frame_list in raw_frame_list_dictionary.items():
+        raw_timestamps_dictionary[camera_id] = (
+                gather_timestamps(camera_raw_frame_list) / 1e9
+        )
 
     max_frame_duration = 0.1
     fig = plt.figure(figsize=(18, 12))
@@ -98,7 +111,6 @@ def create_timestamp_diagnostic_plots(
     )
 
     for camera_id, timestamps in raw_timestamps_dictionary.items():
-        timestamps = timestamps/ 1e9
         ax1.plot(timestamps, label=f"Camera# {str(camera_id)}")
         ax1.legend()
         ax2.plot(np.diff(timestamps), ".")
@@ -109,7 +121,6 @@ def create_timestamp_diagnostic_plots(
         )
 
     for camera_id, timestamps in synchronized_timestamps_dictionary.items():
-        timestamps = timestamps / 1e9
         ax4.plot(timestamps, label=f"Camera# {str(camera_id)}")
         ax4.legend()
         ax5.plot(np.diff(timestamps), ".")
@@ -130,24 +141,23 @@ def create_timestamp_diagnostic_plots(
 
 
 def calculate_camera_diagnostic_results(
-        video_recorder_dictionary: Dict[str, VideoRecorder],
+        timestamps_dictionary,
 ) -> TimestampDiagnosticsDataClass:
     mean_framerates_per_camera = {}
     standard_deviation_framerates_per_camera = {}
     median_framerates_per_camera = {}
     median_absolute_deviation_per_camera = {}
 
-    for camera_id, video_recorder in video_recorder_dictionary.items():
-        timestamps = video_recorder.timestamps
-        timestamps_formatted = (timestamps - timestamps[0]) / 1e9
+    for cam_id, timestamps in timestamps_dictionary.items():
+        timestamps_formatted = (np.asarray(timestamps) - timestamps[0]) / 1e9
         frame_durations = np.diff(timestamps_formatted)
         framerate_per_frame = 1 / frame_durations
-        mean_framerates_per_camera[camera_id] = np.nanmean(framerate_per_frame)
-        median_framerates_per_camera[camera_id] = np.nanmedian(framerate_per_frame)
-        standard_deviation_framerates_per_camera[camera_id] = np.nanstd(
+        mean_framerates_per_camera[cam_id] = np.nanmean(framerate_per_frame)
+        median_framerates_per_camera[cam_id] = np.nanmedian(framerate_per_frame)
+        standard_deviation_framerates_per_camera[cam_id] = np.nanstd(
             framerate_per_frame
         )
-        median_absolute_deviation_per_camera[camera_id] = median_abs_deviation(
+        median_absolute_deviation_per_camera[cam_id] = median_abs_deviation(
             framerate_per_frame
         )
 
@@ -175,7 +185,6 @@ def calculate_camera_diagnostic_results(
 
 
 if __name__ == "__main__":
-    from skellycam.opencv.group.camera_group import CameraGroup
     found_camera_response = detect_cameras()
     cam_ids = found_camera_response.cameras_found_list
     g = CameraGroup(cam_ids)
@@ -194,7 +203,7 @@ if __name__ == "__main__":
         loop_duration = (loop_time - prev_loop_time) / 1e6
 
         for cam_id in cam_ids:
-            frame_payload = g.get_latest_frame_by_camera_id(cam_id)
+            frame_payload = g.get_by_cam_id(cam_id)
             if frame_payload is not None:
                 if frame_payload.success:
                     timestamps_dictionary_in[cam_id].append(frame_payload.timestamp_ns)
@@ -205,5 +214,7 @@ if __name__ == "__main__":
             f"Loop duration: {loop_duration:.3f} ms: Timestamps: {[len(val) for val in timestamps_dictionary_in.values()]}"
         )
 
-    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(timestamps_dictionary_in)
+    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(
+        timestamps_dictionary_in
+    )
     print(timestamp_diagnostic_data_class.__dict__)
