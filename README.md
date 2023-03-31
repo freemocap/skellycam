@@ -36,7 +36,7 @@ The primary focus is to provide an easy method to connect to one or more cameras
 
 > **NOTE** - The SkellyCam package is the primary camera backend for the `freemocap` markeless motion capture software 💀✨
 > 
-> [https://github.com/freemocap/freemocap](https://github.com/freemocap/freemocap)
+> [https:github.com/freemocap/freemocap](https:github.com/freemocap/freemocap)
 > 
 >[https://freemocap.org](https://freemocap.org)
 
