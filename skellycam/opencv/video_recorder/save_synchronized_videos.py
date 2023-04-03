@@ -1,4 +1,5 @@
 import logging
+import platform
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -99,6 +100,9 @@ def save_synchronized_videos(
             video_file_save_path=Path(folder_to_save_videos)
                                  / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
         )
+    if platform.system() == "Darwin":
+        create_diagnostic_plots_bool = False
+        
     if create_diagnostic_plots_bool:
         create_diagnostic_plots(
             video_recorder_dictionary=dictionary_of_video_recorders,
