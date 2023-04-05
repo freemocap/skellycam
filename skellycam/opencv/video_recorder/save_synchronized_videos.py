@@ -104,7 +104,7 @@ def save_synchronized_videos(
     test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
 
     if not platform.system() == "Windows":
-        logger.info("Darwin (Mac) system detected, diagnostic plots for webcams will not be displayed")
+        logger.info("Non-Windows system detected, diagnostic plots for webcams will not be displayed")
         logger.info(f"Done!")
         return
         
