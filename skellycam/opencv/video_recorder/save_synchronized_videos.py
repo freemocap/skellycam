@@ -100,10 +100,13 @@ def save_synchronized_videos(
             video_file_save_path=Path(folder_to_save_videos)
                                  / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
         )
-    if platform.system() == "Darwin":
+
+    test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
+
+    if not platform.system() == "Windows":
         logger.info("Darwin (Mac) system detected, diagnostic plots for webcams will not be displayed")
-        print("\n\n Diagnostic plots are currently not supported on Mac \n\n")
-        create_diagnostic_plots_bool = False
+        logger.info(f"Done!")
+        return
         
     if create_diagnostic_plots_bool:
         create_diagnostic_plots(
@@ -112,8 +115,6 @@ def save_synchronized_videos(
             folder_to_save_plots=folder_to_save_videos,
             show_plots_bool=True,
         )
-
-    test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
 
     logger.info(f"Done!")
 
