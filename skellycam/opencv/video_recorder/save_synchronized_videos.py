@@ -1,4 +1,5 @@
 import logging
+import platform
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -99,6 +100,14 @@ def save_synchronized_videos(
             video_file_save_path=Path(folder_to_save_videos)
                                  / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4",
         )
+
+    test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
+
+    if not platform.system() == "Windows":
+        logger.info("Non-Windows system detected, diagnostic plots for webcams will not be displayed")
+        logger.info(f"Done!")
+        return
+        
     if create_diagnostic_plots_bool:
         create_diagnostic_plots(
             video_recorder_dictionary=dictionary_of_video_recorders,
@@ -106,8 +115,6 @@ def save_synchronized_videos(
             folder_to_save_plots=folder_to_save_videos,
             show_plots_bool=True,
         )
-
-    test_synchronized_video_frame_counts(video_folder_path=folder_to_save_videos)
 
     logger.info(f"Done!")
 
