@@ -64,7 +64,7 @@ class CameraGroup:
         return self._camera_ids
 
     @property
-    def camera_config_dictionary(self):
+    def camera_config_dictionary(self) -> Dict[str, CameraConfig]:
         return self._camera_config_dictionary
 
     @property
