@@ -190,6 +190,7 @@ class CamGroupThreadWorker(QThread):
             )
             return
 
+        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
         self._updating_camera_settings_bool = True
         self._updating_camera_settings_bool = not self._update_camera_settings(
             camera_config_dictionary
@@ -200,6 +201,7 @@ class CamGroupThreadWorker(QThread):
 
         synchronized_videos_folder = self._synchronized_video_folder_path
         self._synchronized_video_folder_path = None
+
 
         self._video_save_thread_worker = VideoSaveThreadWorker(
             dictionary_of_video_recorders=deepcopy(self._video_recorder_dictionary),
@@ -215,37 +217,12 @@ class CamGroupThreadWorker(QThread):
         logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
         self.videos_saved_to_this_folder_signal.emit(folder_path)
 
-    #
-    # def _launch_save_video_process(self):
-    #     logger.info("Launching save video process")
-    #     if self._video_save_process is not None:
-    #         while self._video_save_process.is_alive():
-    #             time.sleep(0.1)
-    #             logger.info(
-    #                 f"Waiting for video save process to finish: {self._video_save_process}"
-    #             )
-    #
-    #     synchronized_videos_folder = self._synchronized_video_folder_path
-    #     self._synchronized_video_folder_path = None
-    #     self._video_save_process = Process(
-    #         name=f"VideoSaveProcess",
-    #         target=save_synchronized_videos,
-    #         args=(
-    #             deepcopy(self._video_recorder_dictionary),
-    #             synchronized_videos_folder,
-    #             True,
-    #             self.videos_saved_to_this_folder_signal
-    #         ),
-    #     )
-    #     logger.info(f"Launching video save process: {self._video_save_process}")
-    #
-    #     self._video_save_process.start()
-    #     self._video_save_thread_worker.finished_signal.connect(
-    #         lambda: self.videos_saved_to_this_folder_signal.emit
-    #     )
-
     def _initialize_video_recorder_dictionary(self):
-        return {camera_id: VideoRecorder() for camera_id in self._camera_ids}
+        video_recorder_dictionary = {}
+        for camera_id, config in self._camera_group.camera_config_dictionary.items():
+            if config.use_this_camera:
+                video_recorder_dictionary[camera_id] = VideoRecorder()
+        return video_recorder_dictionary
 
     def _get_recorder_frame_count_dict(self):
         return {
