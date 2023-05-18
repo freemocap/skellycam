@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import List, Union, Dict
 
 from PyQt6.QtCore import pyqtSignal, QThread
@@ -52,7 +51,7 @@ class CamGroupThreadWorker(QThread):
 
     def run(self):
         logger.info("Starting camera group thread worker")
-        self._camera_group.start()
+        self._camera_group.start_capture()
         should_continue = True
 
         logger.info("Emitting `cameras_connected_signal`")
@@ -105,8 +104,7 @@ class CamGroupThreadWorker(QThread):
         )
 
         camera_group = CameraGroup(
-            camera_ids_list=camera_ids,
-            camera_configs=camera_configs,
+            camera_ids=camera_ids,
         )
 
         return camera_group

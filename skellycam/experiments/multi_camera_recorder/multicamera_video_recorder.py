@@ -59,7 +59,7 @@ class MultiCameraVideoRecorder:
             self._camera_config_dict = camera_config_dict
 
         self._camera_group = CameraGroup(
-            camera_ids_list=self._camera_ids_list,
+            camera_ids=self._camera_ids_list,
             camera_config_dictionary=self._camera_config_dict,
         )
 

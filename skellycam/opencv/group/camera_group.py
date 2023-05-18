@@ -1,19 +1,13 @@
 import logging
-import multiprocessing
 import time
-from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List
 
-from PyQt6.QtCore import pyqtSignal
-
-from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
 from skellycam.opencv.group.strategies.strategies import Strategy
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
-from skellycam.opencv.group.wait_for_all_cameras import StartSynchronizer, WaitArgs
 from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import (
     VideoSaveBackgroundProcess,
 )
@@ -24,12 +18,12 @@ logger = logging.getLogger(__name__)
 
 class CameraGroup:
     def __init__(
-        self,
-        camera_ids_list: List[str],
-        strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            self,
+            camera_ids: List[str],
+            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
     ):
         self._selected_strategy = strategy
-        self._camera_ids = camera_ids_list
+        self._camera_ids = camera_ids
 
         self._strategy_class = self._resolve_strategy(camera_ids=self._camera_ids)
 

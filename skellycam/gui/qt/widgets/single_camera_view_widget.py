@@ -1,5 +1,4 @@
 import logging
-import time
 
 import cv2
 import numpy as np
@@ -66,27 +65,6 @@ class SingleCameraViewWidget(QWidget):
                                           x=50,
                                           y=100,
                                           scale=2,
-                                          line_thickness=8,
-                                          color=(0, 0, 0))
-        image = ImageAnnotator().annotate(image=image,
-                                          text=f"Frames received : {frame_payload.number_of_frames_received}",
-                                          x=50,
-                                          y=130,
-                                          scale=1,
-                                          line_thickness=8,
-                                          color=(0, 0, 0))
-        image = ImageAnnotator().annotate(image=image,
-                                          text=f"Frames recorded: {frame_payload.number_of_frames_recorded}",
-                                          x=50,
-                                          y=160,
-                                          scale=1,
-                                          line_thickness=8,
-                                          color=(0, 0, 0))
-        image = ImageAnnotator().annotate(image=image,
-                                          text=f"Current chunk size: {frame_payload.current_chunk_size}",
-                                          x=50,
-                                          y=190,
-                                          scale=1,
                                           line_thickness=8,
                                           color=(0, 0, 0))
 
