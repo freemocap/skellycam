@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Dict, List
 
+from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.grouped_process_strategy import (
     GroupedProcessStrategy,
@@ -70,6 +71,11 @@ class CameraGroup:
             )
 
         raise Exception("No strategy found")
+    def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
+        # TODO - implement this
+        pass
+
+
 
 
 if __name__ == "__main__":

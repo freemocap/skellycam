@@ -182,37 +182,3 @@ def calculate_camera_diagnostic_results(
     )
 
 
-if __name__ == "__main__":
-    from skellycam.opencv.group.camera_group import CameraGroup
-
-    found_camera_response = detect_cameras()
-    cam_ids = found_camera_response.cameras_found_list
-    g = CameraGroup(cam_ids)
-    g.start()
-
-    timestamps_dictionary_in = {key: [] for key in cam_ids}
-
-    loop_time = time.perf_counter_ns()
-
-    break_after_n_frames = 200
-    shared_zero_time_in = time.perf_counter_ns()
-    should_continue = True
-    while should_continue:
-        prev_loop_time = loop_time
-        loop_time = time.perf_counter_ns()
-        loop_duration = (loop_time - prev_loop_time) / 1e6
-
-        for cam_id in cam_ids:
-            frame_payload = g.get_latest_frame_by_camera_id(cam_id)
-            if frame_payload is not None:
-                if frame_payload.success:
-                    timestamps_dictionary_in[cam_id].append(frame_payload.timestamp_ns)
-            if len(timestamps_dictionary_in[cam_id]) > break_after_n_frames:
-                should_continue = False
-
-        print(
-            f"Loop duration: {loop_duration:.3f} ms: Timestamps: {[len(val) for val in timestamps_dictionary_in.values()]}"
-        )
-
-    timestamp_diagnostic_data_class = calculate_camera_diagnostic_results(timestamps_dictionary_in)
-    print(timestamp_diagnostic_data_class.__dict__)

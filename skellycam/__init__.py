@@ -12,6 +12,7 @@ __repo_issues_url__ = f"{__repo_url__}issues"
 import sys
 from pathlib import Path
 
+
 base_package_path = Path(__file__).parent
 # print(f"adding base_package_path: {base_package_path} : to sys.path")
 sys.path.insert(0, str(base_package_path))  # add parent directory to sys.path
@@ -27,7 +28,7 @@ import logging
 # logger.info(f"Initializing {__package_name__} package, version: {__version__}, from file: {__file__}")
 
 from skellycam.opencv.camera.camera import Camera
-from skellycam.opencv.camera.models.camera_config import CameraConfig
+from skellycam.opencv.camera.config.camera_config import CameraConfig
 
 from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import (
     SkellyCamParameterTreeWidget,

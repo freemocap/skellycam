@@ -7,9 +7,9 @@ import traceback
 import cv2
 
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.camera.models.camera_config import CameraConfig
-from skellycam.opencv.config.apply_config import apply_configuration
-from skellycam.opencv.config.determine_backend import determine_backend
+from skellycam.opencv.camera.config.apply_config import apply_configuration
+from skellycam.opencv.camera.config.camera_config import CameraConfig
+from skellycam.opencv.camera.config.determine_backend import determine_backend
 
 logger = logging.getLogger(__name__)
 

@@ -38,6 +38,7 @@ class GroupedProcessStrategy(StrategyABC):
         """
         TODO: setup as coroutines or threadpool to parallelize the firing.
         """
+
         for process in self._processes:
             process.start_capture()
 

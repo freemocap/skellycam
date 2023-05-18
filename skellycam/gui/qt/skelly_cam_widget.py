@@ -17,6 +17,7 @@ from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
 from skellycam.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
 from skellycam.gui.qt.workers.detect_cameras_worker import DetectCamerasWorker
+from skellycam.opencv.camera.config.camera_config_manager import CameraConfigManager
 from skellycam.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,8 @@ class SkellyCamWidget(QWidget):
     ):
 
         super().__init__(parent=parent)
+
+        self.camera_config_manager = CameraConfigManager()
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
