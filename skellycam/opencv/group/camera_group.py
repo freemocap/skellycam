@@ -132,7 +132,7 @@ class CameraGroup:
     def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
         logger.info("Closing camera group")
         self._set_exit_event()
-        self._terminate_processes()
+        # self._terminate_processes()
 
         if wait_for_exit:
             while self.is_capturing:

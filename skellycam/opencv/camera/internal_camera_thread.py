@@ -95,7 +95,10 @@ class VideoCaptureThread(threading.Thread):
         )
         try:
             while self._is_capturing_frames:
-                self._frame = self._get_next_frame()
+                try:
+                    self._frame = self._get_next_frame()
+                except Exception as e:
+                    logger.error(e)
 
 
         except:
