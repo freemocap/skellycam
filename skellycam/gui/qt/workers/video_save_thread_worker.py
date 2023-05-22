@@ -27,6 +27,7 @@ class VideoSaveThreadWorker(QThread):
 
     def run(self):
         logger.info(f"Saving synchronized videos to folder: {str(self._folder_to_save_videos)}")
+
         save_synchronized_videos(
             dictionary_of_video_recorders=self._dictionary_of_video_recorders,
             folder_to_save_videos=self._folder_to_save_videos,

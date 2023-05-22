@@ -202,9 +202,13 @@ class CamGroupThreadWorker(QThread):
         synchronized_videos_folder = self._synchronized_video_folder_path
         self._synchronized_video_folder_path = None
 
+        video_recorders_to_save = {}
+        for camera_id, video_recorder in self._video_recorder_dictionary.items():
+            if video_recorder.number_of_frames > 0:
+                video_recorders_to_save[camera_id] = deepcopy(video_recorder)
 
         self._video_save_thread_worker = VideoSaveThreadWorker(
-            dictionary_of_video_recorders=deepcopy(self._video_recorder_dictionary),
+            dictionary_of_video_recorders=video_recorders_to_save,
             folder_to_save_videos=str(synchronized_videos_folder),
             create_diagnostic_plots_bool=True,
         )
