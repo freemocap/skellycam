@@ -128,8 +128,5 @@ def get_nearest_frame(frame_list, reference_frame) -> FramePayload:
 
 
 def gather_timestamps(frame_list: List[FramePayload]) -> np.ndarray:
-    timestamps_npy = np.empty(0)
-    for frame in frame_list:
-        timestamps_npy = np.append(timestamps_npy, frame.timestamp_ns)
-
-    return timestamps_npy
+    timestamps = [frame.timestamp_ns for frame in frame_list]
+    return np.array(timestamps)
