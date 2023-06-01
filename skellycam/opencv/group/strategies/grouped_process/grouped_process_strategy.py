@@ -79,6 +79,10 @@ class GroupedProcessStrategy(StrategyABC):
                 keys=self._camera_ids
             )
         )
+        self._should_record_controller = (
+            self._shared_memory_manager.create_value(type="b", initial_value=False)
+        )
+
 
     def _create_processes(
         self,
@@ -89,10 +93,12 @@ class GroupedProcessStrategy(StrategyABC):
             raise ValueError("No cameras were provided")
         camera_group_subarrays = array_split_by(camera_ids, cameras_per_process)
 
+
         processes = [
             CamGroupProcess(
                 camera_ids=cam_id_subarray,
                 frame_repository=self._frame_lists_by_camera,
+                should_record_controller=self._should_record_controller,
             )
             for cam_id_subarray in camera_group_subarrays
         ]
