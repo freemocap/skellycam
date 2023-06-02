@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import time
 from typing import Dict, List
 
@@ -25,6 +26,7 @@ class CameraGroup:
     ):
         self._selected_strategy = strategy
         self._camera_ids = camera_ids
+        self._stop_recording_event = multiprocessing.Event()
 
         self._strategy_class = self._resolve_strategy(camera_ids=self._camera_ids)
 
@@ -36,7 +38,7 @@ class CameraGroup:
         """
         logger.info(f"Starting camera group with strategy {self._selected_strategy}")
         self._strategy_class.start_capture()
-        # self._start_video_save_background_process()
+        self._start_video_save_background_process()
         logger.info(f"All cameras {self._camera_ids} started!")
 
     def stop_capture(self):
@@ -47,12 +49,15 @@ class CameraGroup:
     def is_capturing(self):
         return self._strategy_class.is_capturing
 
-    def start_recording(self):
+    def start_recording(self, video_save_paths: Dict[str, str]):
         logger.info("Starting recording")
+        self._stop_recording_event.clear()
+        self._save_folder_path_pipe_parent.send(video_save_paths)
         self._strategy_class.start_recording()
 
     def stop_recording(self):
         logger.info("Stopping recording")
+        self._stop_recording_event.set()
         self._strategy_class.stop_recording()
 
     def is_recording(self):
@@ -71,9 +76,15 @@ class CameraGroup:
 
     def _start_video_save_background_process(self):
         logger.info("Starting VideoSaveBackgroundProcess")
+        self._save_folder_path_pipe_parent,\
+            self._save_folder_path_pipe_child = multiprocessing.Pipe()
+
         self._video_save_background_process = VideoSaveBackgroundProcess(
             frame_lists_by_camera=self._strategy_class.known_frames_by_camera,
+            save_folder_path_pipe_connection=self._save_folder_path_pipe_child,
+            stop_recording_event=self._stop_recording_event
         )
+
         self._video_save_background_process.start()
 
     def _resolve_strategy(self, camera_ids: List[str]) -> StrategyABC:
@@ -87,8 +98,6 @@ class CameraGroup:
         # TODO - implement this
         pass
 
-    def set_folder_to_record_videos(self, path):
-        pass
 
 
 if __name__ == "__main__":

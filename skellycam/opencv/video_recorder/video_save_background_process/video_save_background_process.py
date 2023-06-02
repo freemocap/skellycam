@@ -17,58 +17,66 @@ logger = logging.getLogger(__name__)
 
 class VideoSaveBackgroundProcess:
     def __init__(
-        self,
-        frame_lists_by_camera: Dict[str, List[FramePayload]],
-        folder_to_save_videos: List[str],
-        dump_frames_to_video_event: multiprocessing.Event,
+            self,
+            frame_lists_by_camera: Dict[str, List[FramePayload]],
+            save_folder_path_pipe_connection: multiprocessing.Pipe,
+            stop_recording_event: multiprocessing.Event,
     ):
         self._process = Process(
             name="VideoSaveBackgroundProcess",
-            # target=self._start_save_chunk,
-            target=self._start_save_all_at_end_process,
+            # target=self._start_save_all_at_end_process,
+            target=self._start_save_chunk,
             args=(
                 frame_lists_by_camera,
-                folder_to_save_videos,
-                dump_frames_to_video_event,
+                save_folder_path_pipe_connection,
+                stop_recording_event,
             ),
         )
 
-    @staticmethod
-    def _start_save_all_at_end_process(
-        frame_lists_by_camera: Dict[str, List[FramePayload]],
-        folder_to_save_videos: List[str],
-        dump_frames_to_video_event: multiprocessing.Event,
-    ):
-        sa = SaveAll(
-            frame_lists_by_camera,
-            folder_to_save_videos,
-        )
-        while True:
-            sleep(1)
-            if dump_frames_to_video_event.is_set():
-                dump_frames_to_video_event.clear()
-                logger.info("Video Save Process - There are frames to save!")
-                sa.run()
-
-            # TODO: Processes should be managed by the parent.
-            #  We can set up the SIGINT signal in children to ensure daemon processes
-            #  respond appropriately.
-            if not multiprocessing.parent_process().is_alive():
-                logger.info("Parent process is dead. Exiting")
-                break
+    # @staticmethod
+    # def _start_save_all_at_end_process(
+    #         frame_lists_by_camera: Dict[str, List[FramePayload]],
+    #         save_folder_path_pipe_connection: multiprocessing.Pipe,
+    # ):
+    #     sa = SaveAll(
+    #         frame_lists_by_camera,
+    #         save_folder_path_pipe_connection,
+    #     )
+    #     while True:
+    #         sleep(1)
+    #         if dump_frames_to_video_event.is_set():
+    #             dump_frames_to_video_event.clear()
+    #             logger.info("Video Save Process - There are frames to save!")
+    #             sa.run()
+    #
+    #         # TODO: Processes should be managed by the parent.
+    #         #  We can set up the SIGINT signal in children to ensure daemon processes
+    #         #  respond appropriately.
+    #         if not multiprocessing.parent_process().is_alive():
+    #             logger.info("Parent process is dead. Exiting")
+    #             break
 
     @staticmethod
     def _start_save_chunk(
-        frame_lists_by_camera: Dict[str, List[FramePayload]],
-        folder_to_save_videos: List[str],
-        dump_frames_to_video_event: multiprocessing.Event,
+            frame_lists_by_camera: Dict[str, List[FramePayload]],
+            save_folder_path_pipe_connection: multiprocessing.Pipe,
+            stop_recording_event: multiprocessing.Event,
+
     ):
         cs = ChunkSave(
-            frame_lists_by_camera, folder_to_save_videos, dump_frames_to_video_event
+            frame_lists_by_camera,
+            save_folder_path_pipe_connection,
+            stop_recording_event
         )
         while True:
             sleep(1)
-            cs.run()
+            print("Checking for frames to save...")
+            if save_folder_path_pipe_connection.poll():
+                logger.info("Video Save Process - There are frames to save!")
+                video_file_paths = save_folder_path_pipe_connection.recv()
+                cs.run(video_file_paths=video_file_paths,
+                       stop_recording_event=stop_recording_event)
+
 
     @property
     def is_alive(self):

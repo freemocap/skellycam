@@ -1,4 +1,6 @@
 import logging
+import multiprocessing
+from pathlib import Path
 from typing import List, Union, Dict
 
 from PyQt6.QtCore import pyqtSignal, QThread
@@ -74,12 +76,12 @@ class CamGroupThreadWorker(QThread):
 
     def start_recording(self):
         logger.info("Starting recording")
+        video_file_paths = {camera_id: str(Path(self._get_new_synchronized_videos_folder()) / f"camera_{camera_id}.mp4")
+                            for camera_id in self._camera_ids}
+
         if self.cameras_connected:
-            folder_to_save_videos = self._get_new_synchronized_videos_folder()
-            logger.info(f"Setting `folder_to_save_videos` to: {folder_to_save_videos}")
-            self._camera_group.set_folder_to_record_videos(path=folder_to_save_videos)
             logger.debug("Starting recording")
-            self._camera_group.start_recording()
+            self._camera_group.start_recording(video_save_paths=video_file_paths)
         else:
             logger.warning("Cannot start recording - cameras not connected")
 

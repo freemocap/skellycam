@@ -49,7 +49,6 @@ class GroupedProcessStrategy(StrategyABC):
         for process in self._processes:
             process.stop()
 
-
     def start_recording(self):
         logger.info("Starting recording")
         for process in self._processes:
@@ -62,7 +61,6 @@ class GroupedProcessStrategy(StrategyABC):
 
     def is_recording(self):
         return all([process.is_recording for process in self._processes])
-
 
     def latest_frames_by_camera_id(self, camera_id: str):
         frames = self._frame_lists_by_camera[camera_id]
@@ -98,12 +96,10 @@ class GroupedProcessStrategy(StrategyABC):
             )
         )
 
-
-
     def _create_processes(
-        self,
-        camera_ids: List[str],
-        cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS,
+            self,
+            camera_ids: List[str],
+            cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS,
     ):
         if len(camera_ids) == 0:
             raise ValueError("No cameras were provided")

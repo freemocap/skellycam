@@ -2,7 +2,6 @@ import logging
 import multiprocessing
 from copy import deepcopy
 from pathlib import Path
-from time import sleep
 from typing import List, Dict
 
 from skellycam.detection.models.frame_payload import FramePayload
@@ -13,7 +12,7 @@ from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
 FRAMES_TO_SAVE_PER_CHUNK = 100
 NUMBER_OF_FRAMES_NEEDED_TO_TRIGGER_SAVE = (
-    FRAMES_TO_SAVE_PER_CHUNK * 1.2
+        FRAMES_TO_SAVE_PER_CHUNK * 1.2
 )  # how large the list
 # must be before we start saving
 
@@ -24,19 +23,23 @@ class ChunkSave:
     _video_recorders = {}
 
     def __init__(
-        self,
-        frame_lists_by_camera: Dict[str, List[FramePayload]],
-        video_save_paths: Dict[str, str],
-        currently_recording_frames: multiprocessing.Value,
-        save_all_at_the_end: bool = False,
+            self,
+            frame_lists_by_camera: Dict[str, List[FramePayload]],
+            save_folder_path_pipe_connection: multiprocessing.connection.Connection,
+            stop_recording_event: multiprocessing.Event,
     ):
         self._frame_lists_by_camera = frame_lists_by_camera
-        self._video_save_paths = video_save_paths
-        self._currently_recording_frames = currently_recording_frames
-        self._save_all_at_the_end = save_all_at_the_end
+        self._save_folder_path_pipe_connection = save_folder_path_pipe_connection
+        self._stop_recording_event = stop_recording_event
 
-    def run(self):
+    def run(self,
+            video_file_paths: Dict[str, str],
+            stop_recording_event: multiprocessing.Event,
+            ):
+        print("VIDEO SAVE PROCESS - Starting (dummy)")
+        return
         final_chunk = False
+
         for camera_id, frame_list in self._frame_lists_by_camera.items():
             frame_list_length = len(frame_list)
             print(
@@ -45,9 +48,6 @@ class ChunkSave:
 
             frame_chunk = self._get_frame_chunk(frame_list)
 
-            # This logic isn't ideal. i stopped the refactor here.
-            # We need to know when recording has been stopped, not when we're no longer recording.
-            # These are 2 different events that allows us to do more specific, less vague save logic.
             if not self._currently_recording_frames.value and frame_list_length > 1:
                 logger.debug(
                     f"Grabbing {len(frame_list)} frames from Camera {camera_id} to save to video "

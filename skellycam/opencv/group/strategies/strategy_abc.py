@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Dict
 
 
 class StrategyABC(ABC):
@@ -23,7 +24,7 @@ class StrategyABC(ABC):
     @abstractmethod
     def start_recording(self):
         """
-        Start saving frames (usually to save to video via some method or another)
+       Hold on to frames as they come in (usually to save to video via some method or another)
 
         """
         raise NotImplementedError()
