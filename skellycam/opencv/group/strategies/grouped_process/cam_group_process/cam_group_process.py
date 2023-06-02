@@ -40,9 +40,13 @@ class CamGroupProcess:
     @property
     def is_recording(self)->bool:
         return self._should_record_controller.value
+    def start_recording(self):
+        logger.info(f"Starting recording for {self._camera_ids}")
+        self._should_record_controller.value = True
+    def stop_recording(self):
+        logger.info(f"Stopping recording for {self._camera_ids}")
+        self._should_record_controller.value = False
 
-    def should_record(self, should_record: bool):
-        self._should_record_controller.value = should_record
     def _create_shared_memories(self, frame_repository:dict, should_record_controller:multiprocessing.Value): #aww
         self._frame_repo_manager = multiprocessing.Manager()
         self._frame_repository = frame_repository or self._create_frame_watcher()  # <- this is where the frames are stored in shared memory

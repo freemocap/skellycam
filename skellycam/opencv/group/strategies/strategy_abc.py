@@ -20,10 +20,36 @@ class StrategyABC(ABC):
         """
         raise NotImplementedError()
 
+    @abstractmethod
+    def start_recording(self):
+        """
+        Start saving frames (usually to save to video via some method or another)
+
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def stop_recording(self):
+        """
+        Stop saving frames
+        """
+        raise NotImplementedError()
+
+
+    @property
+    @abstractmethod
+    def is_recording(self):
+        """
+        Returns True if the strategy is currently recording frames.
+        """
+        raise NotImplementedError()
+
+
     @property
     @abstractmethod
     def is_capturing(self):
         raise NotImplementedError()
+
 
     @property
     @abstractmethod
@@ -48,3 +74,6 @@ class StrategyABC(ABC):
     def known_frames_by_camera(self):
         """"""
         raise NotImplementedError()
+
+
+

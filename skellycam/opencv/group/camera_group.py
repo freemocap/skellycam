@@ -28,6 +28,7 @@ class CameraGroup:
 
         self._strategy_class = self._resolve_strategy(camera_ids=self._camera_ids)
 
+
     def start_capture(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
@@ -38,16 +39,27 @@ class CameraGroup:
         # self._start_video_save_background_process()
         logger.info(f"All cameras {self._camera_ids} started!")
 
-    def get_latest_frame_by_camera_id(self, camera_id: str):
-        return self._strategy_class.latest_frames_by_camera_id(camera_id)
-
-    def stop(self):
+    def stop_capture(self):
         self._strategy_class.stop_capture()
         # self._video_save_background_process.terminate()
 
     @property
     def is_capturing(self):
         return self._strategy_class.is_capturing
+
+    def start_recording(self):
+        logger.info("Starting recording")
+        self._strategy_class.start_recording()
+
+    def stop_recording(self):
+        logger.info("Stopping recording")
+        self._strategy_class.stop_recording()
+
+    def is_recording(self):
+        return self._strategy_class.is_recording
+
+    def get_latest_frame_by_camera_id(self, camera_id: str):
+        return self._strategy_class.latest_frames_by_camera_id(camera_id)
 
     @property
     def camera_ids(self):
@@ -75,7 +87,8 @@ class CameraGroup:
         # TODO - implement this
         pass
 
-
+    def set_folder_to_record_videos(self, path):
+        pass
 
 
 if __name__ == "__main__":

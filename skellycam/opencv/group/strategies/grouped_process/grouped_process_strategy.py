@@ -36,6 +36,7 @@ class GroupedProcessStrategy(StrategyABC):
 
     def start_capture(self):
         """
+        Connect to cameras and start reading frames.
         TODO: setup as coroutines or threadpool to parallelize the firing.
         """
 
@@ -43,8 +44,25 @@ class GroupedProcessStrategy(StrategyABC):
             process.start_capture()
 
     def stop_capture(self):
+        """Shut down camera processes (and disconnect from cameras)"""
+        logger.info("Stopping capture")
         for process in self._processes:
             process.stop()
+
+
+    def start_recording(self):
+        logger.info("Starting recording")
+        for process in self._processes:
+            process.start_recording()
+
+    def stop_recording(self):
+        logger.info("Stopping recording")
+        for process in self._processes:
+            process.stop_recording()
+
+    def is_recording(self):
+        return all([process.is_recording for process in self._processes])
+
 
     def latest_frames_by_camera_id(self, camera_id: str):
         frames = self._frame_lists_by_camera[camera_id]
@@ -79,9 +97,7 @@ class GroupedProcessStrategy(StrategyABC):
                 keys=self._camera_ids
             )
         )
-        self._should_record_controller = (
-            self._shared_memory_manager.create_value(type="b", initial_value=False)
-        )
+
 
 
     def _create_processes(
@@ -91,16 +107,21 @@ class GroupedProcessStrategy(StrategyABC):
     ):
         if len(camera_ids) == 0:
             raise ValueError("No cameras were provided")
+
         camera_group_subarrays = array_split_by(camera_ids, cameras_per_process)
 
+        self._should_record_controllers = [
+            self._shared_memory_manager.create_value(type="b", initial_value=False)
+            for _ in camera_group_subarrays
+        ]
 
         processes = [
             CamGroupProcess(
                 camera_ids=cam_id_subarray,
                 frame_repository=self._frame_lists_by_camera,
-                should_record_controller=self._should_record_controller,
+                should_record_controller=self._should_record_controllers[subarray_number],
             )
-            for cam_id_subarray in camera_group_subarrays
+            for subarray_number, cam_id_subarray in enumerate(camera_group_subarrays)
         ]
         cam_id_to_process = {}
         for process in processes:
