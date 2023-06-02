@@ -40,12 +40,14 @@ class InternalCaptureProcess(Process):
                 record_frames = should_record_controller.value #only check this once per loop because its shared? Is that right?
                 for camera in just_cameras:
                     frame = camera.wait_for_next_frame()
-                    if record_frames: #I know this violates the "keep the frame loop as leeeeean as possible" rule, but I think it has to be here to avoid frame accumulation
+                    if record_frames:
+
+                        #TODO - I know this violates the "keep the frame loop as lean as possible" rule, but this was the best way I could come up with  has to be here to avoid frame accumulation while making as few calls to external processes as possible. I think the og plan was to control 'recording' at the place that pulls frames off these shared_memory lists, but I had issues when I tried implementing that so I'm doing this for now. Mea culpa, forgive me - I'll fix it once I've got something working -_-
+
                         frame_lists_by_camera[camera.camera_id].append(frame)
                     else:
                         frame_lists_by_camera[camera.camera_id][-1] = frame if len(frame_lists_by_camera[camera.camera_id]) > 0 else None
-                    frame_counts[camera.camera_id] = len(frame_lists_by_camera[camera.camera_id])#debug, delete when done
-                print(f"Frame Counts: {frame_counts}")#debug, delete when done
+
         except Exception as e:
             logger.error(f"Camera IDs {camera_ids} Internal Capture Process Failed")
             traceback.print_exc()
