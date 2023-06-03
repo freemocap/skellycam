@@ -66,9 +66,9 @@ class InternalCaptureProcess(Process):
         if self._frame_list_index >= len(frame_database["frames"]):
             self._frame_list_index = 0
 
-        to_be_overwritten = frame_database["frames"][self._frame_list_index]
-        if to_be_overwritten.accessed == True:
-            logger.warning("Frame was not accessed before being overwritten!")
+        # to_be_overwritten = frame_database["frames"][self._frame_list_index]
+        # if to_be_overwritten.accessed == True:
+        #     logger.warning("Frame was not accessed before being overwritten!")
 
         frame_database["frames"][self._frame_list_index] = frame
         frame_database["latest_frame_index"].value = self._frame_list_index
