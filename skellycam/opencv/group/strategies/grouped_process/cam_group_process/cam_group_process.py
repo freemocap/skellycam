@@ -20,18 +20,18 @@ class CamGroupProcess:
     def __init__(
         self,
         camera_ids: List[str],
-        frame_repository: Dict[str, List[FramePayload]],
+        frame_databases_by_camera: Dict[str, List[FramePayload]],
         should_record_controller: multiprocessing.Value,
     ):
         if len(camera_ids) == 0:
             raise ValueError("CamGroupProcess must have at least one camera")
 
         self._camera_ids = camera_ids
-        self._frame_repository = frame_repository   # <- this is where the frames are stored in shared memory
+        self._frame_databases_by_camera = frame_databases_by_camera   # <- this is where the frames are stored in shared memory
         self._should_record_controller = should_record_controller
 
         assert all(
-            [camera_id in self._frame_repository.keys() for camera_id in camera_ids]
+            [camera_id in self._frame_databases_by_camera.keys() for camera_id in camera_ids]
         ), "We should only have frame lists for cameras in this group"
 
         self._cam_ready_manager = CameraReadyChecker(camera_ids)
@@ -43,13 +43,6 @@ class CamGroupProcess:
         return self._should_record_controller.value
 
 
-
-    def start_recording(self):
-        logger.info(f"Starting recording for {self._camera_ids}")
-        self._should_record_controller.value = True
-    def stop_recording(self):
-        logger.info(f"Stopping recording for {self._camera_ids}")
-        self._should_record_controller.value = False
 
 
 
@@ -68,7 +61,7 @@ class CamGroupProcess:
             name=f"Python - InternalCaptureProcess - Cameras {self._camera_ids}",
             args=(
                 self._camera_ids,
-                self._frame_repository,
+                self._frame_databases_by_camera,
                 self._cam_ready_manager.cam_ready_ipc,
                 self._should_record_controller,
             ),
@@ -81,8 +74,8 @@ class CamGroupProcess:
         logger.debug(f"{self._camera_ids} are now capturing frames.")
 
     def get_latest_frame_by_camera(self, cam_id: str):
-        if self._frame_repository[cam_id]:
-            return self._frame_repository[cam_id][-1]
+        if self._frame_databases_by_camera[cam_id]:
+            return self._frame_databases_by_camera[cam_id][-1]
 
     def check_if_all_cameras_are_ready(self):
         return self._cam_ready_manager.all_ready()

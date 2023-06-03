@@ -1,9 +1,7 @@
 import logging
 import math
-from time import perf_counter_ns, sleep
-from typing import Dict, List
-
-import numpy as np
+from time import perf_counter_ns
+from typing import Dict, List, Union
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.cam_group_process.cam_group_process import (
@@ -36,10 +34,6 @@ class GroupedProcessStrategy(StrategyABC):
             camera_ids=self._camera_ids
         )
 
-    @property
-    def estimated_framerate(self):
-        return np.mean([process.estimated_framerate for process in  self._processes])
-
     def start_capture(self):
         """
         Connect to cameras and start reading frames.
@@ -49,7 +43,6 @@ class GroupedProcessStrategy(StrategyABC):
         for process in self._processes:
             process.start_capture()
 
-
     def stop_capture(self):
         """Shut down camera processes (and disconnect from cameras)"""
         logger.info("Stopping capture")
@@ -58,23 +51,30 @@ class GroupedProcessStrategy(StrategyABC):
 
     def start_recording(self):
         logger.info("Starting recording")
-        for process in self._processes:
-            process.start_recording()
+
+        for should_record in self._should_record_controllers:
+            should_record.value = True
 
     def stop_recording(self):
         logger.info("Stopping recording")
-        for process in self._processes:
-            process.stop_recording()
+        for should_record_controller in self._should_record_controllers:
+            should_record_controller.value = False
 
     def is_recording(self):
         return all([process.is_recording for process in self._processes])
 
-    def latest_frames_by_camera_id(self, camera_id: str):
+    def latest_frames_by_camera_id(self, camera_id: str) -> Union[FramePayload, None]:
         try:
-            frames = self._frame_lists_by_camera[camera_id]
-            if len(frames) == 0:
+            frame_database = self._frame_databases_by_camera[camera_id]
+            latest_frame_index = frame_database["latest_frame_index"]
+            if latest_frame_index == None:
                 return None
-            return frames[-1]
+            latest_frame_index = latest_frame_index.value
+
+            frame = frame_database["frames"][latest_frame_index]
+            assert frame.__class__ == FramePayload, f"Frame is not a FramePayload: {frame.__class__}"
+            return frame
+
         except Exception as e:
             logger.error(f"Error getting latest frames for camera {camera_id}: {e}")
             return None
@@ -93,7 +93,7 @@ class GroupedProcessStrategy(StrategyABC):
 
     @property
     def known_frames_by_camera(self) -> Dict[str, List[FramePayload]]:
-        return self._frame_lists_by_camera
+        return self._frame_databases_by_camera
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
@@ -103,9 +103,13 @@ class GroupedProcessStrategy(StrategyABC):
         }
 
     def _create_shared_memory_objects(self):
-        self._frame_lists_by_camera = (
-            self._shared_memory_manager.create_frame_lists_by_camera(
-                keys=self._camera_ids
+        # self._frame_lists_by_camera = (
+        # self._shared_memory_manager.create_frame_lists_by_camera(
+        #     keys=self._camera_ids
+        # )
+        self._frame_databases_by_camera = (
+            self._shared_memory_manager.create_frame_database_by_camera(
+                camera_ids=self._camera_ids
             )
         )
 
@@ -127,7 +131,7 @@ class GroupedProcessStrategy(StrategyABC):
         processes = [
             CamGroupProcess(
                 camera_ids=cam_id_subarray,
-                frame_repository=self._frame_lists_by_camera,
+                frame_databases_by_camera=self._frame_databases_by_camera,
                 should_record_controller=self._should_record_controllers[subarray_number],
             )
             for subarray_number, cam_id_subarray in enumerate(camera_group_subarrays)

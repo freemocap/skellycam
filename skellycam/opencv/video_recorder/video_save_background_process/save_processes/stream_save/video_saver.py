@@ -49,11 +49,12 @@ class VideoSaver:
             self._video_writer = self._initialize_video_writer(example_image=frame.image,
                                                                fourcc="mp4v")
 
+        self._timestamp_manager.receive_new_timestamp(timestamp_ns=frame.timestamp_ns)
+
         assert self._video_writer is not None, "Video writer is not initialized"
         assert self._video_writer.isOpened(), "Video writer is not opened"
         self._video_writer.write(frame.image)
 
-        self._timestamp_manager.receive_new_timestamp(timestamp_ns=frame.timestamp_ns)
 
     def _initialize_video_writer(
             self,
@@ -63,10 +64,16 @@ class VideoSaver:
     ) -> cv2.VideoWriter:
 
         image_height, image_width, _ = example_image.shape
+        frame_rate = self._estimate_framerate()
+        print(f"image_height: {image_height}")
+        print(f"image_width: {image_width}")
+        print(f"fourcc: {fourcc}")
+        print(f"frame_rate: {frame_rate}")
+
         video_writer_object = cv2.VideoWriter(
             str(self._video_file_save_path),
             cv2.VideoWriter_fourcc(*fourcc),
-            self._estimate_framerate(),
+            frame_rate,
             (int(image_width), int(image_height)),
         )
         if not video_writer_object.isOpened():
@@ -80,5 +87,5 @@ class VideoSaver:
         self._video_writer.release()
         self._timestamp_manager.close()
 
-    def _estimate_framerate(self):
-        self._timestamp_manager.estimate_framerate()
+    def _estimate_framerate(self)->float:
+        return self._timestamp_manager.estimate_framerate()
