@@ -43,7 +43,7 @@ class SkellyCamWidget(QWidget):
 
         super().__init__(parent=parent)
 
-        self.camera_config_manager = CameraConfigManager()
+        # self.camera_config_manager = CameraConfigManager()
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)

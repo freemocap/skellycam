@@ -10,7 +10,7 @@ from skellycam.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
 )
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.opencv.video_recorder.old_video_recorder import OldVideoRecorder
 from skellycam.system.environment.default_paths import FIRST_MIDDLE_AND_LAST_FRAMES_FILE_NAME, \
     TIMESTAMP_DIAGNOSTIC_PLOTS_FILE_NAME
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def create_diagnostic_plots(
         raw_timestamps: Dict[str, np.ndarray],
-        synchronized_video_recorders: Dict[str, VideoRecorder],
+        synchronized_video_recorders: Dict[str, OldVideoRecorder],
         inter_camera_timestamp_differences: Dict[str, List[float]],
         folder_to_save_plots: Union[str, Path],
         shared_zero_time: Union[int, float] = 0,

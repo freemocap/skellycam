@@ -18,7 +18,7 @@ from skellycam.opencv.group.camera_group import CameraGroup
 from skellycam.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,
 )
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.opencv.video_recorder.old_video_recorder import OldVideoRecorder
 from skellycam.system.environment.default_paths import (
     default_base_folder,
     default_session_name,
@@ -71,7 +71,7 @@ class MultiCameraVideoRecorder:
         self._camera_group.start()
 
         for camera_id in self._camera_ids_list:
-            self._video_recorder_dictionary[camera_id] = VideoRecorder()
+            self._video_recorder_dictionary[camera_id] = OldVideoRecorder()
 
         self._run_frame_loop()
 

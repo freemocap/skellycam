@@ -13,7 +13,7 @@ from skellycam.detection.models.frame_payload import FramePayload
 logger = logging.getLogger(__name__)
 
 
-class VideoRecorder:
+class OldVideoRecorder:
 
     def __init__(self, video_file_save_path: Union[str, Path] = None):
 
@@ -23,24 +23,6 @@ class VideoRecorder:
         self._timestamps = []
         self._frames_per_second = None
 
-    @property
-    def timestamps(self) -> np.ndarray:
-        assert len(self._frame_list) > 0, "There are no frames in the frame list"
-        return np.asarray(self._gather_timestamps(self._frame_list), 'float')
-
-    @property
-    def frames_per_second(self) -> float:
-
-        fps = 1 / (self.median_frame_duration_ns / 1e9)
-
-        if np.isinf(fps):
-            raise Exception("frames_per_second is inf...")
-
-        return fps
-
-    @property
-    def median_frame_duration_ns(self) -> np.ndarray:
-        return np.nanmedian(np.diff(self.timestamps))
 
     @property
     def number_of_frames(self) -> int:
@@ -190,16 +172,7 @@ class VideoRecorder:
         finally:
             self._cv2_video_writer.release()
 
-    def _gather_timestamps(self, frame_payload_list: List[FramePayload]) -> List[Union[int, float]]:
-        timestamps = []
 
-        for frame_payload in frame_payload_list:
-            timestamps.append(frame_payload.timestamp_ns)
-
-        if len(timestamps) == 0:
-            raise Exception("No timestamps found in frame payload list.")
-
-        return timestamps
 
     def _save_timestamps(self,
                          timestamps_npy: np.ndarray,

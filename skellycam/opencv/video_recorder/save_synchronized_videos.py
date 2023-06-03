@@ -6,7 +6,7 @@ import numpy as np
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.diagnostics.create_diagnostic_plots import create_diagnostic_plots
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.opencv.video_recorder.old_video_recorder import OldVideoRecorder
 from skellycam.tests.test_frame_counts_equal import test_frame_counts_equal
 from skellycam.tests.test_synchronized_video_frame_counts import test_synchronized_video_frame_counts
 from skellycam.utilities.is_monotonic import is_monotonic
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def save_synchronized_videos(
-        raw_video_recorders: Dict[str, VideoRecorder],
+        raw_video_recorders: Dict[str, OldVideoRecorder],
         folder_to_save_videos: Union[str, Path],
         create_diagnostic_plots_bool: bool = True,
 ):
@@ -97,7 +97,7 @@ def plot_inter_camera_timestamp_differences(inter_camera_timestamp_differences: 
     plt.show()
 
 
-def clip_frame_lists(raw_video_recorders: Dict[str, VideoRecorder]) -> Tuple[Dict[str, List[FramePayload]],
+def clip_frame_lists(raw_video_recorders: Dict[str, OldVideoRecorder]) -> Tuple[Dict[str, List[FramePayload]],
 float,
 float,
 float]:
@@ -160,7 +160,7 @@ def initialize_synchronized_video_recorders(folder_to_save_videos: Union[str, Pa
     for camera_id, frame_list in frame_lists.items():
 
         synchronized_video_path = Path(folder_to_save_videos) / f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4"
-        synchronized_video_recorders[camera_id] = VideoRecorder(video_file_save_path=synchronized_video_path)
+        synchronized_video_recorders[camera_id] = OldVideoRecorder(video_file_save_path=synchronized_video_path)
         synchronized_video_recorders[camera_id].append_frame_payload_to_list(frame_list.pop(0))
 
         difference_from_reference = reference_first_timestamp_ns - \

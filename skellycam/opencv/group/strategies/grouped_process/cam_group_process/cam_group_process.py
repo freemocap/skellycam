@@ -20,14 +20,15 @@ class CamGroupProcess:
     def __init__(
         self,
         camera_ids: List[str],
-        frame_repository: Dict[str, List[FramePayload]] = None,
-        should_record_controller: multiprocessing.Value = None,
+        frame_repository: Dict[str, List[FramePayload]],
+        should_record_controller: multiprocessing.Value,
     ):
         if len(camera_ids) == 0:
             raise ValueError("CamGroupProcess must have at least one camera")
 
         self._camera_ids = camera_ids
-        self._create_shared_memories(frame_repository, should_record_controller)
+        self._frame_repository = frame_repository   # <- this is where the frames are stored in shared memory
+        self._should_record_controller = should_record_controller
 
         assert all(
             [camera_id in self._frame_repository.keys() for camera_id in camera_ids]
@@ -40,6 +41,9 @@ class CamGroupProcess:
     @property
     def is_recording(self)->bool:
         return self._should_record_controller.value
+
+
+
     def start_recording(self):
         logger.info(f"Starting recording for {self._camera_ids}")
         self._should_record_controller.value = True
@@ -47,10 +51,7 @@ class CamGroupProcess:
         logger.info(f"Stopping recording for {self._camera_ids}")
         self._should_record_controller.value = False
 
-    def _create_shared_memories(self, frame_repository:dict, should_record_controller:multiprocessing.Value): #aww
-        self._frame_repo_manager = multiprocessing.Manager()
-        self._frame_repository = frame_repository or self._create_frame_watcher()  # <- this is where the frames are stored in shared memory
-        self._should_record_controller = should_record_controller or self._frame_repo_manager.Value("b", False)
+
 
     """
     CORE API
@@ -112,17 +113,6 @@ class CamGroupProcess:
             return False
         return self.check_if_all_cameras_are_ready()
 
-    def _create_frame_watcher(self):
-        v = self._frame_repo_manager.dict()
-        for cam in self.camera_ids:
-            v[cam] = self._frame_repo_manager.list()
-        return v
-
-    def _create_recording_controllers(self):
-        rec = self._frame_repo_manager.dict()
-        for cam in self.camera_ids:
-            rec[cam] = self._frame_repo_manager.Value("b", False)
-        return rec
 
 
 if __name__ == "__main__":

@@ -49,6 +49,7 @@ class CameraGroup:
     def is_capturing(self):
         return self._strategy_class.is_capturing
 
+
     def start_recording(self, video_save_paths: Dict[str, str]):
         logger.info("Starting recording")
         self._stop_recording_event.clear()
@@ -76,8 +77,11 @@ class CameraGroup:
 
     def _start_video_save_background_process(self):
         logger.info("Starting VideoSaveBackgroundProcess")
+
+        #this is how we'll send the video save paths to the background process
         self._save_folder_path_pipe_parent,\
             self._save_folder_path_pipe_child = multiprocessing.Pipe()
+
 
         self._video_save_background_process = VideoSaveBackgroundProcess(
             frame_lists_by_camera=self._strategy_class.known_frames_by_camera,

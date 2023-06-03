@@ -1,7 +1,9 @@
 import logging
 import math
-from time import perf_counter_ns
+from time import perf_counter_ns, sleep
 from typing import Dict, List
+
+import numpy as np
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.cam_group_process.cam_group_process import (
@@ -34,6 +36,10 @@ class GroupedProcessStrategy(StrategyABC):
             camera_ids=self._camera_ids
         )
 
+    @property
+    def estimated_framerate(self):
+        return np.mean([process.estimated_framerate for process in  self._processes])
+
     def start_capture(self):
         """
         Connect to cameras and start reading frames.
@@ -42,6 +48,7 @@ class GroupedProcessStrategy(StrategyABC):
 
         for process in self._processes:
             process.start_capture()
+
 
     def stop_capture(self):
         """Shut down camera processes (and disconnect from cameras)"""
@@ -63,8 +70,14 @@ class GroupedProcessStrategy(StrategyABC):
         return all([process.is_recording for process in self._processes])
 
     def latest_frames_by_camera_id(self, camera_id: str):
-        frames = self._frame_lists_by_camera[camera_id]
-        return frames[-1]
+        try:
+            frames = self._frame_lists_by_camera[camera_id]
+            if len(frames) == 0:
+                return None
+            return frames[-1]
+        except Exception as e:
+            logger.error(f"Error getting latest frames for camera {camera_id}: {e}")
+            return None
 
     def is_camera_ready(self, cam_id: str) -> bool:
         for process in self._processes:

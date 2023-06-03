@@ -10,7 +10,7 @@ from scipy.stats import median_abs_deviation
 
 from skellycam.detection.detect_cameras import detect_cameras
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.opencv.video_recorder.old_video_recorder import OldVideoRecorder
 from skellycam.utilities.start_file import open_file
 
 logger = logging.getLogger(__name__)
@@ -137,7 +137,7 @@ def create_timestamp_diagnostic_plots(
 
 
 def calculate_camera_diagnostic_results(
-        video_recorder_dictionary: Dict[str, VideoRecorder],
+        video_recorder_dictionary: Dict[str, OldVideoRecorder],
 ) -> TimestampDiagnosticsDataClass:
     mean_framerates_per_camera = {}
     standard_deviation_framerates_per_camera = {}
