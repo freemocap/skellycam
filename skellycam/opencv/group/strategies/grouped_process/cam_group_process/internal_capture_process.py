@@ -1,7 +1,8 @@
 import logging
+import multiprocessing
 import traceback
 from multiprocessing import Process
-from typing import Any, Callable, Dict, Iterable, List, Mapping
+from typing import Any, Dict, List, Union
 
 from setproctitle import setproctitle
 
@@ -16,18 +17,22 @@ class InternalCaptureProcess(Process):
         self._start_capture(*self._args)
 
     def _start_capture(
-        self,
-        camera_ids: List[str],
-        frame_lists_by_camera: Dict[str, List[FramePayload]],
-        cam_ready_ipc: Dict[str, bool],
+            self,
+            camera_ids: List[str],
+            frame_databases_per_camera: Dict[str, Dict[Union[str, int], Any]],
+            cam_ready_ipc: Dict[str, bool],
+            should_record_controller: multiprocessing.Value,
     ):
         logger.info(
             f"Starting frame loop capture in CamGroupProcess for cameras: {camera_ids}"
         )
 
         setproctitle(self.name)
+
         cam_by_ids = self._create_cameras(camera_ids)
         just_cameras = cam_by_ids.values()
+        self._frame_list_index = 0
+        self._database_size =  len(frame_databases_per_camera['0']["frames"])
         for camera in just_cameras:
             camera.connect()
             cam_ready_ipc[camera.camera_id] = True
@@ -36,7 +41,9 @@ class InternalCaptureProcess(Process):
             while True:
                 for camera in just_cameras:
                     frame = camera.wait_for_next_frame()
-                    frame_lists_by_camera[camera.camera_id].append(frame)
+                    frame_database = frame_databases_per_camera[camera.camera_id]
+                    self._add_frame_to_database(frame, frame_database)
+
         except Exception as e:
             logger.error(f"Camera IDs {camera_ids} Internal Capture Process Failed")
             traceback.print_exc()
@@ -52,3 +59,14 @@ class InternalCaptureProcess(Process):
         for camera_id in camera_ids:
             cameras[camera_id] = Camera(CameraConfig(camera_id=camera_id))
         return cameras
+
+    def _add_frame_to_database(self,
+                               frame: FramePayload,
+                               frame_database: Dict[str, Union[multiprocessing.Value, List[FramePayload]]],
+                               ):
+        self._frame_list_index += 1
+        database_index = self._frame_list_index % self._database_size
+
+        frame_database["frames"][database_index] = frame
+        frame_database["total_frame_write_count"].value = self._frame_list_index
+        frame_database["latest_frame_index"].value = database_index

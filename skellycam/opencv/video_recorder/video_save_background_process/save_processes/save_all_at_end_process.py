@@ -10,7 +10,7 @@ from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,
 )
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.opencv.video_recorder.old_video_recorder import OldVideoRecorder
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class SaveAll:
     ):
         self._frame_lists_by_camera = frame_lists_by_camera
         self._folder_to_save_videos = folder_to_save_videos
-        self._video_recorders: Dict[CameraId, VideoRecorder] = {}
+        self._video_recorders: Dict[CameraId, OldVideoRecorder] = {}
 
     def run(self):
 
@@ -32,7 +32,7 @@ class SaveAll:
                 f"Camera {camera_id} has {len(frame_list)} frames in the list"
             )
 
-            self._video_recorders[camera_id] = VideoRecorder()
+            self._video_recorders[camera_id] = OldVideoRecorder()
 
             tik = time.perf_counter()
             while len(frame_list) > 1:

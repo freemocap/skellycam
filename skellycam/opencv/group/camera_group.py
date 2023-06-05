@@ -1,10 +1,7 @@
 import logging
 import multiprocessing
 import time
-from pathlib import Path
-from typing import Dict, List, Optional, Union
-
-from PyQt6.QtCore import pyqtSignal
+from typing import Dict, List
 
 from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
@@ -13,7 +10,6 @@ from skellycam.opencv.group.strategies.grouped_process.grouped_process_strategy 
 )
 from skellycam.opencv.group.strategies.strategies import Strategy
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
-from skellycam.opencv.group.wait_for_all_cameras import StartSynchronizer, WaitArgs
 from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import (
     VideoSaveBackgroundProcess,
 )
@@ -24,14 +20,16 @@ logger = logging.getLogger(__name__)
 
 class CameraGroup:
     def __init__(
-        self,
-        camera_ids_list: List[str],
-        strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            self,
+            camera_ids: List[str],
+            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
     ):
         self._selected_strategy = strategy
-        self._camera_ids = camera_ids_list
+        self._camera_ids = camera_ids
+
 
         self._strategy_class = self._resolve_strategy(camera_ids=self._camera_ids)
+
 
     def start_capture(self):
         """
@@ -40,19 +38,31 @@ class CameraGroup:
         """
         logger.info(f"Starting camera group with strategy {self._selected_strategy}")
         self._strategy_class.start_capture()
-        # self._start_video_save_background_process()
         logger.info(f"All cameras {self._camera_ids} started!")
 
-    def get_latest_frame_by_camera_id(self, camera_id: str):
-        return self._strategy_class.latest_frames_by_camera_id(camera_id)
-
-    def stop(self):
+    def stop_capture(self):
         self._strategy_class.stop_capture()
         # self._video_save_background_process.terminate()
 
     @property
     def is_capturing(self):
         return self._strategy_class.is_capturing
+
+
+    def start_recording(self, video_save_paths: Dict[str, str]):
+        logger.info("Starting recording")
+
+        self._strategy_class.start_recording(video_save_paths=video_save_paths)
+
+    def stop_recording(self):
+        logger.info("Stopping recording")
+        self._strategy_class.stop_recording()
+
+    def is_recording(self):
+        return self._strategy_class.is_recording
+
+    def get_latest_frame_by_camera_id(self, camera_id: str):
+        return self._strategy_class.latest_frames_by_camera_id(camera_id)
 
     @property
     def camera_ids(self):
@@ -62,12 +72,8 @@ class CameraGroup:
     def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.latest_frames
 
-    def _start_video_save_background_process(self):
-        logger.info("Starting VideoSaveBackgroundProcess")
-        self._video_save_background_process = VideoSaveBackgroundProcess(
-            frame_lists_by_camera=self._strategy_class.known_frames_by_camera,
-        )
-        self._video_save_background_process.start()
+
+
 
     def _resolve_strategy(self, camera_ids: List[str]) -> StrategyABC:
         if self._selected_strategy == Strategy.X_CAM_PER_PROCESS:
@@ -76,6 +82,10 @@ class CameraGroup:
             )
 
         raise Exception("No strategy found")
+    def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
+        # TODO - implement this
+        pass
+
 
 
 if __name__ == "__main__":

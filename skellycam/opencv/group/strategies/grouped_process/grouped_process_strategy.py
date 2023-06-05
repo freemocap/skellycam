@@ -1,16 +1,20 @@
 import logging
 import math
+import multiprocessing
 from time import perf_counter_ns
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.cam_group_process.cam_group_process import (
     CamGroupProcess,
 )
+from skellycam.opencv.group.strategies.grouped_process.multi_frame_emitter import MultiFrameEmitter
 from skellycam.opencv.group.strategies.grouped_process.shared_camera_memory_manager import (
     SharedCameraMemoryManager,
 )
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
+from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import \
+    VideoSaveBackgroundProcess
 from skellycam.utilities.array_split_by import array_split_by
 from skellycam.viewers.cv_cam_viewer import CvCamViewer
 
@@ -27,27 +31,90 @@ logger = logging.getLogger(__name__)
 class GroupedProcessStrategy(StrategyABC):
     def __init__(self, camera_ids: List[str]):
         self._camera_ids = camera_ids
-        self._shared_memory_manager = SharedCameraMemoryManager()
 
-        self._create_shared_memory_objects()
+        self._shared_memory_manager = SharedCameraMemoryManager()
+        self._frame_databases_by_camera = (
+            self._shared_memory_manager.create_frame_database_by_camera(
+                camera_ids=self._camera_ids
+            )
+        )
+        self._multi_frame_emitter = MultiFrameEmitter(frame_databases_by_camera=self._frame_databases_by_camera)
+
         self._processes, self._cam_id_process_map = self._create_processes(
             camera_ids=self._camera_ids
         )
 
+        self._video_save_process =  self._create_video_save_background_process()
+
+
+    def _create_video_save_background_process(self):
+        logger.info("Starting VideoSaveBackgroundProcess")
+
+        # this is how we'll send the video save paths to the background process
+
+        self._save_folder_path_pipe_parent,\
+            self._save_folder_path_pipe_child = multiprocessing.Pipe()
+        self._stop_recording_event = multiprocessing.Event()
+
+        return VideoSaveBackgroundProcess(
+            camera_ids=self._camera_ids,
+            multi_frame_pipe_connection=self._multi_frame_emitter.multi_frame_pipe_child,
+            save_folder_path_pipe_connection=self._save_folder_path_pipe_child,
+            stop_recording_event=self._stop_recording_event
+    )
+
+
+
     def start_capture(self):
         """
+        Connect to cameras and start reading frames.
         TODO: setup as coroutines or threadpool to parallelize the firing.
         """
+
         for process in self._processes:
             process.start_capture()
+        self._multi_frame_emitter.start()
+        self._video_save_process.start()
 
     def stop_capture(self):
+        """Shut down camera processes (and disconnect from cameras)"""
+        logger.info("Stopping capture")
         for process in self._processes:
             process.stop()
 
-    def latest_frames_by_camera_id(self, camera_id: str):
-        frames = self._frame_lists_by_camera[camera_id]
-        return frames[-1]
+    def start_recording(self, video_save_paths: Dict[str, str]):
+        logger.info("Starting recording")
+        self._stop_recording_event.clear()
+        self._save_folder_path_pipe_parent.send(video_save_paths)
+        for should_record in self._should_record_controllers:
+            should_record.value = True
+
+    def stop_recording(self):
+        logger.info("Stopping recording")
+        self._stop_recording_event.set()
+        for should_record_controller in self._should_record_controllers:
+            should_record_controller.value = False
+
+    def is_recording(self):
+        return all([process.is_recording for process in self._processes])
+
+    def latest_frames_by_camera_id(self, camera_id: str) -> Union[FramePayload, None]:
+        try:
+            frame_database = self._frame_databases_by_camera[camera_id]
+            latest_frame_index = frame_database["latest_frame_index"]
+            frames = frame_database["frames"]
+
+            if latest_frame_index == None:
+                return None
+            latest_frame_index = latest_frame_index.value
+
+            frame = frames[latest_frame_index]
+            assert frame.__class__ == FramePayload, f"Frame is not a FramePayload: {frame.__class__}"
+            return frame
+
+        except Exception as e:
+            logger.error(f"Error getting latest frames for camera {camera_id}: {e}")
+            return None
 
     def is_camera_ready(self, cam_id: str) -> bool:
         for process in self._processes:
@@ -63,7 +130,7 @@ class GroupedProcessStrategy(StrategyABC):
 
     @property
     def known_frames_by_camera(self) -> Dict[str, List[FramePayload]]:
-        return self._frame_lists_by_camera
+        return self._frame_databases_by_camera
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
@@ -72,28 +139,29 @@ class GroupedProcessStrategy(StrategyABC):
             for camera_id in self._camera_ids
         }
 
-    def _create_shared_memory_objects(self):
-        self._frame_lists_by_camera = (
-            self._shared_memory_manager.create_frame_lists_by_camera(
-                keys=self._camera_ids
-            )
-        )
 
     def _create_processes(
-        self,
-        camera_ids: List[str],
-        cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS,
+            self,
+            camera_ids: List[str],
+            cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS,
     ):
         if len(camera_ids) == 0:
             raise ValueError("No cameras were provided")
+
         camera_group_subarrays = array_split_by(camera_ids, cameras_per_process)
+
+        self._should_record_controllers = [
+            self._shared_memory_manager.create_value(type="b", initial_value=False)
+            for _ in camera_group_subarrays
+        ]
 
         processes = [
             CamGroupProcess(
                 camera_ids=cam_id_subarray,
-                frame_repository=self._frame_lists_by_camera,
+                frame_databases_by_camera=self._frame_databases_by_camera,
+                should_record_controller=self._should_record_controllers[subarray_number],
             )
-            for cam_id_subarray in camera_group_subarrays
+            for subarray_number, cam_id_subarray in enumerate(camera_group_subarrays)
         ]
         cam_id_to_process = {}
         for process in processes:
@@ -110,9 +178,9 @@ if __name__ == "__main__":
     cv.begin_viewer("0")
     while True:
         curr = perf_counter_ns() * 1e-6
-        frame = p.latest_frames["0"]
-        cv.recv_img(frame)
-        if frame:
+        frame_ = p.latest_frames["0"]
+        cv.recv_img(frame_)
+        if frame_:
             end = perf_counter_ns() * 1e-6
             frame_count_in_ms = f"{math.trunc(end - curr)}"
             print(f"{frame_count_in_ms}ms for this frame")

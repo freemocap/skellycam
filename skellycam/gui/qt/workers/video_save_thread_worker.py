@@ -5,7 +5,7 @@ from typing import Dict, Union
 from PyQt6.QtCore import pyqtSignal, QThread
 
 from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.opencv.video_recorder.old_video_recorder import OldVideoRecorder
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class VideoSaveThreadWorker(QThread):
 
     def __init__(
             self,
-            dictionary_of_video_recorders: Dict[str, VideoRecorder],
+            dictionary_of_video_recorders: Dict[str, OldVideoRecorder],
             folder_to_save_videos: Union[str, Path],
             create_diagnostic_plots_bool: bool = True,
 

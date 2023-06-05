@@ -1,5 +1,6 @@
 import logging
-import time
+import multiprocessing
+from pathlib import Path
 from typing import List, Union, Dict
 
 from PyQt6.QtCore import pyqtSignal, QThread
@@ -52,14 +53,17 @@ class CamGroupThreadWorker(QThread):
 
     def run(self):
         logger.info("Starting camera group thread worker")
-        self._camera_group.start()
+        self._camera_group.start_capture()
         should_continue = True
 
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
 
         while self._camera_group.is_capturing and should_continue:
-            frame_payload_dictionary = dict(self._camera_group.latest_frames)
+            frame_payload_dictionary = self._camera_group.latest_frames
+            if frame_payload_dictionary is None:
+                logger.warning("No frames received from camera group")
+                continue
             self.new_image_signal.emit(frame_payload_dictionary)
 
     def close(self):
@@ -75,24 +79,22 @@ class CamGroupThreadWorker(QThread):
 
     def start_recording(self):
         logger.info("Starting recording")
+        video_file_paths = {camera_id: str(Path(self._get_new_synchronized_videos_folder()) / f"camera_{camera_id}.mp4")
+                            for camera_id in self._camera_ids}
+
         if self.cameras_connected:
-            folder_to_save_videos = self._get_new_synchronized_videos_folder()
-            logger.info(f"Setting `folder_to_save_videos` to: {folder_to_save_videos}")
-            self._camera_group.set_folder_to_record_videos(path=folder_to_save_videos)
-            logger.debug("Setting `should_record_frames_event`")
-            self._camera_group.should_record_frames_event.set()
+            logger.debug("Starting recording")
+            self._camera_group.start_recording(video_save_paths=video_file_paths)
         else:
             logger.warning("Cannot start recording - cameras not connected")
 
     def stop_recording(self):
         logger.info("Stopping recording")
-        self._camera_group.ensure_video_save_process_running()
+        if self.cameras_connected:
+            self._camera_group.stop_recording()
+        else:
+            logger.warning("Cannot stop recording - cameras not connected")
 
-        logger.debug("Clearing `should_record_frames_event`")
-        self._camera_group.should_record_frames_event.clear()
-
-        logger.debug("Setting `dump_frames_to_video_event`")
-        self._camera_group.dump_frames_to_video_event.set()
 
     def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
         self._camera_group.update_camera_configs(camera_configs=camera_configs)
@@ -105,8 +107,7 @@ class CamGroupThreadWorker(QThread):
         )
 
         camera_group = CameraGroup(
-            camera_ids_list=camera_ids,
-            camera_configs=camera_configs,
+            camera_ids=camera_ids,
         )
 
         return camera_group
