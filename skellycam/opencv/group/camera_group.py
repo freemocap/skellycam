@@ -26,7 +26,7 @@ class CameraGroup:
     ):
         self._selected_strategy = strategy
         self._camera_ids = camera_ids
-        self._stop_recording_event = multiprocessing.Event()
+
 
         self._strategy_class = self._resolve_strategy(camera_ids=self._camera_ids)
 
@@ -38,7 +38,6 @@ class CameraGroup:
         """
         logger.info(f"Starting camera group with strategy {self._selected_strategy}")
         self._strategy_class.start_capture()
-        self._start_video_save_background_process()
         logger.info(f"All cameras {self._camera_ids} started!")
 
     def stop_capture(self):
@@ -52,9 +51,8 @@ class CameraGroup:
 
     def start_recording(self, video_save_paths: Dict[str, str]):
         logger.info("Starting recording")
-        self._stop_recording_event.clear()
-        self._save_folder_path_pipe_parent.send(video_save_paths)
-        self._strategy_class.start_recording()
+
+        self._strategy_class.start_recording(video_save_paths=video_save_paths)
 
     def stop_recording(self):
         logger.info("Stopping recording")
@@ -75,21 +73,8 @@ class CameraGroup:
     def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.latest_frames
 
-    def _start_video_save_background_process(self):
-        logger.info("Starting VideoSaveBackgroundProcess")
-
-        #this is how we'll send the video save paths to the background process
-        self._save_folder_path_pipe_parent,\
-            self._save_folder_path_pipe_child = multiprocessing.Pipe()
 
 
-        self._video_save_background_process = VideoSaveBackgroundProcess(
-            frame_lists_by_camera=self._strategy_class.known_frames_by_camera,
-            save_folder_path_pipe_connection=self._save_folder_path_pipe_child,
-            stop_recording_event=self._stop_recording_event
-        )
-
-        self._video_save_background_process.start()
 
     def _resolve_strategy(self, camera_ids: List[str]) -> StrategyABC:
         if self._selected_strategy == Strategy.X_CAM_PER_PROCESS:

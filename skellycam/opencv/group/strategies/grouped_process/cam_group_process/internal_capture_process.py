@@ -28,9 +28,11 @@ class InternalCaptureProcess(Process):
         )
 
         setproctitle(self.name)
+
         cam_by_ids = self._create_cameras(camera_ids)
         just_cameras = cam_by_ids.values()
         self._frame_list_index = 0
+        self._database_size =  len(frame_databases_per_camera['0']["frames"])
         for camera in just_cameras:
             camera.connect()
             cam_ready_ipc[camera.camera_id] = True
@@ -63,12 +65,8 @@ class InternalCaptureProcess(Process):
                                frame_database: Dict[str, Union[multiprocessing.Value, List[FramePayload]]],
                                ):
         self._frame_list_index += 1
-        if self._frame_list_index >= len(frame_database["frames"]):
-            self._frame_list_index = 0
+        database_index = self._frame_list_index % self._database_size
 
-        # to_be_overwritten = frame_database["frames"][self._frame_list_index]
-        # if to_be_overwritten.accessed == True:
-        #     logger.warning("Frame was not accessed before being overwritten!")
-
-        frame_database["frames"][self._frame_list_index] = frame
-        frame_database["latest_frame_index"].value = self._frame_list_index
+        frame_database["frames"][database_index] = frame
+        frame_database["total_frame_write_count"].value = self._frame_list_index
+        frame_database["latest_frame_index"].value = database_index

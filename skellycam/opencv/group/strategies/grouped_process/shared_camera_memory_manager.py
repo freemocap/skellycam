@@ -21,10 +21,12 @@ class SharedCameraMemoryManager:
         for camera_id in camera_ids:
             camera_database = self._mr_manager.dict()
             camera_database["latest_frame_index"] = self._mr_manager.Value('i', 0)
-            camera_database["frames"]  = self._mr_manager.list()
+            camera_database["read_frame_index"] = self._mr_manager.Value('i', 0)
+            camera_database["total_frame_write_count"] = self._mr_manager.Value('i', 0)
+            camera_database["total_frame_read_count"] = self._mr_manager.Value('i', 0)
+            camera_database["frames"] = self._mr_manager.list()
             for frame_number in range(number_of_frames_in_list):
                 dummy_frame = FramePayload()
-                dummy_frame.accessed = True
                 camera_database["frames"].append(dummy_frame)
             frame_databases[camera_id] = camera_database
 

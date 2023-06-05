@@ -1,14 +1,11 @@
 import logging
 import multiprocessing
 from copy import deepcopy
-from pathlib import Path
-from time import sleep
 from typing import List, Dict
 
-from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.video_recorder.save_synchronized_videos import (
-    save_synchronized_videos,
-)
+import numpy as np
+
+from skellycam.opencv.group.strategies.grouped_process.multi_frame_emitter import MultiFrameEmitter
 from skellycam.opencv.video_recorder.video_save_background_process.save_processes.stream_save.video_saver import \
     VideoSaver
 
@@ -22,51 +19,63 @@ class StreamSave:
 
     def __init__(
             self,
-            frame_databases_by_camera_id: Dict[str, Dict[multiprocessing.Value, List[FramePayload]]],
-
-    ):
-
-        self._frame_databases_by_camera_id = frame_databases_by_camera_id
-
-    def run(self,
-            video_file_paths: Dict[str, str],
+            camera_ids: List[str],
+            multi_frame_pipe_connection: multiprocessing.Pipe,
             stop_recording_event: multiprocessing.Event,
-            ):
-        logger.info(f"Saving frames to video files:\n{video_file_paths}\n")
+            save_folder_path_pipe_connection: multiprocessing.Pipe,
+    ):
+        self._camera_ids = camera_ids
+        self._multi_frame_pipe_connection = multi_frame_pipe_connection
+        self._stop_recording_event = stop_recording_event
+        self._save_folder_path_pipe_connection = save_folder_path_pipe_connection
 
-        assert all([camera_id in video_file_paths.keys() for camera_id in self._frame_databases_by_camera_id.keys()]),\
-            "Mis-match between camera IDs and video file paths!"
-
-        self._video_savers = {camera_id: VideoSaver(
-            video_file_save_path=video_save_path,
-        ) for camera_id, video_save_path in video_file_paths.items()}
-
-        self._save_frame_index = -1
+    def run(self):
+        recording_in_progress = False
+        unsaved_timestamps = {camera_id: [] for camera_id in self._camera_ids}
         while True:
-            for camera_id, frame_database in self._frame_databases_by_camera_id.items():
-                self._save_frame_index +=1
-                if self._save_frame_index >= len(frame_database["frames"]):
-                    self._save_frame_index = 0
+            if self._save_folder_path_pipe_connection.poll():
+                recording_in_progress = True
 
-                shared_memory_frame = frame_database["frames"][self._save_frame_index]
-                shared_memory_frame.accessed = True
-                frame_to_save = deepcopy(shared_memory_frame)
-                self._video_savers[camera_id].save_frame_to_video_file(frame=frame_to_save)
+                video_save_paths = self._save_folder_path_pipe_connection.recv()
+                logger.info(f"Saving frames to video files:\n{video_save_paths}\n")
+                self._video_savers = {camera_id: VideoSaver(
+                    video_file_save_path=video_save_path,
+                    estimated_framerate=30,
+                ) for camera_id, video_save_path in video_save_paths.items()}
 
-            if stop_recording_event.is_set():
+            if self._multi_frame_pipe_connection.poll():
+                multi_frame = self._multi_frame_pipe_connection.recv()
+                for camera_id, frame in multi_frame.items():
+                    unsaved_timestamps[camera_id].append(frame.timestamp_ns)
+
+                    if recording_in_progress:
+                        self._video_savers[camera_id].save_frame_to_video_file(frame=frame)
+
+            if self._stop_recording_event.is_set() and recording_in_progress:
                 logger.info("Stop recording event is set, draining remaining frames.")
                 self._save_remaining_frames()
 
     def _save_remaining_frames(self):
-        for camera_id, frame_database in self._frame_databases_by_camera_id.items():
-            while True:
-                shared_memory_frame = frame_database["frames"][self._save_frame_index]
+        while self._multi_frame_pipe_connection.poll():
+            multi_frame = self._multi_frame_pipe_connection.recv()
+            for camera_id, frame in multi_frame.items():
+                self._video_savers[camera_id].save_frame_to_video_file(frame=frame)
 
-                if shared_memory_frame.accessed:
-                    break
+    def _estimate_framerate(self,
+                            timestamps_by_camera: Dict[str, List[float]],
+                            max_variability_ratio: float = .1) -> float:
+        mean_fps_per_camera = []
+        for timestamps in timestamps_by_camera.values():
+            assert len(timestamps) > 0, "No timestamps to estimate framerate from!"
+            timestamps = np.asarray(timestamps)
+            timestamps = timestamps / 1e9  # convert to seconds
+            frame_durations = np.diff(timestamps)
+            frames_per_second = 1 / frame_durations
+            mean_fps_per_camera.append(np.mean(frames_per_second))
+        mean_fps = np.mean(mean_fps_per_camera)
+        std_fps = np.std(mean_fps_per_camera)
 
-                shared_memory_frame.accessed = True
+        assert std_fps < mean_fps * max_variability_ratio, f"Framerate variability is greater than {max_variability_ratio * 100}% of the framerate!"
+        logger.info(f"Estimated framerate: {mean_fps:.2f} +/- {std_fps:.2f} fps")
 
-                frame_to_save = deepcopy(shared_memory_frame)
-                self._video_savers[camera_id].save_frame_to_video_file(frame=frame_to_save)
-
+        return mean_fps

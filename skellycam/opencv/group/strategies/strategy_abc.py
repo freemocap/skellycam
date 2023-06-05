@@ -22,7 +22,7 @@ class StrategyABC(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def start_recording(self):
+    def start_recording(self, video_save_paths: Dict[str, str]):
         """
        Hold on to frames as they come in (usually to save to video via some method or another)
 

@@ -17,9 +17,10 @@ class VideoSaver:
 
     def __init__(self,
                  video_file_save_path: Union[str, Path],
+                 estimated_framerate: float,
                  ):
 
-        self._estimated_framerate = None
+        self._estimated_framerate = estimated_framerate
         self._video_file_save_path = video_file_save_path
 
         self._frames_to_save = []

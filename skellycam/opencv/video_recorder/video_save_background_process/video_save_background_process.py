@@ -5,6 +5,7 @@ from time import sleep
 from typing import Dict, List
 
 from skellycam.detection.models.frame_payload import FramePayload
+from skellycam.opencv.group.strategies.grouped_process.multi_frame_emitter import MultiFrameEmitter
 from skellycam.opencv.video_recorder.video_save_background_process.save_processes.stream_save.stream_save import (
     StreamSave,
 )
@@ -17,7 +18,8 @@ SECONDS_TO_WAIT_BEFORE_STARTING_STREAM_SAVE = 3  # number of seconds to wait bef
 class VideoSaveBackgroundProcess:
     def __init__(
             self,
-            frame_lists_by_camera: Dict[str, List[FramePayload]],
+            camera_ids: List[str],
+            multi_frame_pipe_connection: multiprocessing.Pipe,
             save_folder_path_pipe_connection: multiprocessing.Pipe,
             stop_recording_event: multiprocessing.Event,
     ):
@@ -26,7 +28,8 @@ class VideoSaveBackgroundProcess:
             # target=self._start_save_all_at_end_process,
             target=self._start_stream_save,
             args=(
-                frame_lists_by_camera,
+                camera_ids,
+                multi_frame_pipe_connection,
                 save_folder_path_pipe_connection,
                 stop_recording_event,
             ),
@@ -57,31 +60,20 @@ class VideoSaveBackgroundProcess:
 
     @staticmethod
     def _start_stream_save(
-            frame_databases_by_camera_id: Dict[str, Dict[multiprocessing.Value, List[FramePayload]]],
+            camera_ids: List[str],
+            multi_frame_pipe_connection: multiprocessing.Pipe,
             save_folder_path_pipe_connection: multiprocessing.Pipe,
             stop_recording_event: multiprocessing.Event,
 
     ):
         stream_save = StreamSave(
-            frame_databases_by_camera_id,
+            camera_ids=camera_ids,
+            multi_frame_pipe_connection=multi_frame_pipe_connection,
+            stop_recording_event=stop_recording_event,
+            save_folder_path_pipe_connection=save_folder_path_pipe_connection,
         )
+        stream_save.run()
 
-        while True:
-            sleep(1)
-            print("Video Save Process - Checking for frames to save")
-
-            frame_count_by_camera = {camera_id: {"frame_count": len(frame_database["frames"]),
-                                                 "frame_index": frame_database["latest_frame_index"].value} for
-                                     camera_id, frame_database in frame_databases_by_camera_id.items()}
-            print(f"Frame counts: {frame_count_by_camera}")
-
-            if save_folder_path_pipe_connection.poll():
-                print("Video Save Process - There are frames to save!")
-                video_file_paths = save_folder_path_pipe_connection.recv()
-                sleep(SECONDS_TO_WAIT_BEFORE_STARTING_STREAM_SAVE)
-                stream_save.run(video_file_paths=video_file_paths,
-                                stop_recording_event=stop_recording_event,
-                                )
 
     @property
     def is_alive(self):

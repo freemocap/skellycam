@@ -34,12 +34,10 @@ class FramePayload:
          Divide by `1e9` to get seconds (default is None).
     camera_id : str
         The ID of the camera (default is None).
-    accessed : bool
-        A flag indicating if the frame has been accessed (default is False).
 
     """
 
-    __slots__ = ['success', 'image', 'timestamp_ns', 'camera_id', 'accessed']
+    __slots__ = ['success', 'image', 'timestamp_ns', 'camera_id']
 
     def __init__(self, success: bool = False, image: np.ndarray = None, timestamp_ns: int = None,
                  camera_id: str = None):
@@ -47,4 +45,3 @@ class FramePayload:
         self.image = image
         self.timestamp_ns = timestamp_ns
         self.camera_id = camera_id
-        self.accessed = False

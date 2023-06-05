@@ -102,11 +102,7 @@ class VideoCaptureThread(threading.Thread):
 
     def _get_next_frame(self):
         try:
-            # TODO: just call `read`. We're not going to implement a multi grab/multi retrieve algorithm
-            #  in Camera  because we've proven that its unnecessary.
-            #  If we want that, we'll implement a lowlevel Multicam class.
-            self._cv2_video_capture.grab()
-            success, image = self._cv2_video_capture.retrieve()
+            success, image = self._cv2_video_capture.read()
             retrieval_timestamp = time.perf_counter_ns()
             if self._config.rotate_video_cv2_code is not None:
                 image = cv2.rotate(image, self._config.rotate_video_cv2_code)

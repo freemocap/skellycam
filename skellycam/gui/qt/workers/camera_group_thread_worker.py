@@ -60,7 +60,10 @@ class CamGroupThreadWorker(QThread):
         self.cameras_connected_signal.emit()
 
         while self._camera_group.is_capturing and should_continue:
-            frame_payload_dictionary = dict(self._camera_group.latest_frames)
+            frame_payload_dictionary = self._camera_group.latest_frames
+            if frame_payload_dictionary is None:
+                logger.warning("No frames received from camera group")
+                continue
             self.new_image_signal.emit(frame_payload_dictionary)
 
     def close(self):
