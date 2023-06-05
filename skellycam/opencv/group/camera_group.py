@@ -56,7 +56,6 @@ class CameraGroup:
 
     def stop_recording(self):
         logger.info("Stopping recording")
-        self._stop_recording_event.set()
         self._strategy_class.stop_recording()
 
     def is_recording(self):
