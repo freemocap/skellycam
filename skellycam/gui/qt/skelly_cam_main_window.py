@@ -18,6 +18,7 @@ from skellycam.gui.qt.widgets.skelly_cam_controller_widget import (
     SkellyCamControllerWidget,
 )
 from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
+from skellycam.gui.qt.widgets.system_monitor_widget import SystemMonitor
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
@@ -57,25 +58,22 @@ class SkellyCamMainWindow(QMainWindow):
         self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
         self._layout.addWidget(self._welcome_to_skellycam_widget)
 
-        self._camera_viewer_widget = SkellyCamWidget(
+        self._skelly_cam_widget = SkellyCamWidget(
             get_new_synchronized_videos_folder=
             lambda: create_new_synchronized_videos_folder(
                 Path(self._session_folder_path) / get_default_recording_name()
             ),
             parent=self
         )
-        self._camera_viewer_widget.resize(1280, 720)
+        self._skelly_cam_widget.resize(1280, 720)
 
         self._qt_camera_controller_widget = SkellyCamControllerWidget(
-            skelly_cam_widget=self._camera_viewer_widget,
+            skelly_cam_widget=self._skelly_cam_widget,
             parent=self,
         )
 
         self._layout.addWidget(self._qt_camera_controller_widget)
-        self._layout.addWidget(self._camera_viewer_widget)
-
-
-
+        self._layout.addWidget(self._skelly_cam_widget)
 
         self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
         self._parameter_tree_dock_widget.setFeatures(
@@ -83,7 +81,7 @@ class SkellyCamMainWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
         self._qt_camera_config_parameter_tree_widget = (
-            SkellyCamParameterTreeWidget(self._camera_viewer_widget)
+            SkellyCamParameterTreeWidget(self._skelly_cam_widget)
         )
 
         # self._layout.addWidget(self._qt_camera_config_parameter_tree_widget)
@@ -107,19 +105,34 @@ class SkellyCamMainWindow(QMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock_widget
         )
 
+        self._system_monitor_widget = SystemMonitor()
+        self._system_monitor_dock_widget = QDockWidget("System View", self)
+        self._system_monitor_dock_widget.setWidget(self._system_monitor_widget)
+        self._system_monitor_dock_widget.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable,
+        )
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea, self._system_monitor_dock_widget
+        )
+
         self.tabifyDockWidget(
             self._directory_view_dock_widget,
             self._parameter_tree_dock_widget,
         )
 
+        self.tabifyDockWidget(
+            self._parameter_tree_dock_widget,
+            self._system_monitor_dock_widget,
+        )
         self._connect_signals_to_slots()
 
     def _connect_signals_to_slots(self):
-        self._camera_viewer_widget.detect_available_cameras_push_button.clicked.connect(
+        self._skelly_cam_widget.detect_available_cameras_push_button.clicked.connect(
             self._welcome_to_skellycam_widget.hide
         )
 
-        self._camera_viewer_widget.videos_saved_to_this_folder_signal.connect(
+        self._skelly_cam_widget.videos_saved_to_this_folder_signal.connect(
             self._handle_videos_saved_to_this_folder
         )
 
@@ -132,7 +145,7 @@ class SkellyCamMainWindow(QMainWindow):
         remove_empty_directories(get_default_skellycam_base_folder_path())
 
         try:
-            self._camera_viewer_widget.close()
+            self._skelly_cam_widget.close()
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
