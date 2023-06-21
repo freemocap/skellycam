@@ -3,6 +3,9 @@ import time
 from multiprocessing import Process
 from typing import List, Tuple
 
+import numpy as np
+
+from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.grouped_process_strategy import GroupedProcessStrategy
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
 
@@ -50,8 +53,14 @@ class MothershipProcessStrategy(StrategyABC):
     def is_recording(self):
         pass
 
+    @property
     def latest_frames(self):
-        pass
+        dummy_frames  = {}
+        for camera_id in self._camera_ids:
+            dummy_frames[camera_id] = FramePayload(
+                image = np.random.randint(0, 255, (640, 480, 3), dtype=np.uint8),
+            )
+        return dummy_frames
 
     def latest_frames_by_camera_id(self, camera_id: str):
         pass

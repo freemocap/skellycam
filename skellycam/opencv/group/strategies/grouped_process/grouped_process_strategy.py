@@ -44,6 +44,9 @@ class GroupedProcessStrategy(StrategyABC):
             camera_ids=self._camera_ids
         )
 
+    @property
+    def frame_databases_by_camera(self):
+        return self._frame_databases_by_camera
 
     def start_capture(self):
         """

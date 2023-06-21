@@ -41,8 +41,7 @@ class InternalCaptureProcess(Process):
             while True:
                 for camera in just_cameras:
                     frame = camera.wait_for_next_frame()
-                    frame_database = frame_databases_per_camera[camera.camera_id]
-                    self._add_frame_to_database(frame, frame_database)
+                    self._add_frame_to_database(frame, frame_databases_per_camera[camera.camera_id])
 
         except Exception as e:
             logger.error(f"Camera IDs {camera_ids} Internal Capture Process Failed")
