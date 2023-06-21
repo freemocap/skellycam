@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import time
 from typing import Dict, List
 
@@ -8,11 +7,9 @@ from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
+from skellycam.opencv.group.strategies.motership_process.mothership_process_strategy import MothershipProcessStrategy
 from skellycam.opencv.group.strategies.strategies import Strategy
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
-from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import (
-    VideoSaveBackgroundProcess,
-)
 from skellycam.viewers.cv_cam_viewer import CvCamViewer
 
 logger = logging.getLogger(__name__)
@@ -22,7 +19,8 @@ class CameraGroup:
     def __init__(
             self,
             camera_ids: List[str],
-            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            # strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            strategy: Strategy = Strategy.MOTHERSHIP_PROCESS,
     ):
         self._selected_strategy = strategy
         self._camera_ids = camera_ids
@@ -78,6 +76,11 @@ class CameraGroup:
     def _resolve_strategy(self, camera_ids: List[str]) -> StrategyABC:
         if self._selected_strategy == Strategy.X_CAM_PER_PROCESS:
             return GroupedProcessStrategy(
+                camera_ids=camera_ids,
+            )
+
+        if self._selected_strategy == Strategy.MOTHERSHIP_PROCESS:
+            return MothershipProcessStrategy(
                 camera_ids=camera_ids,
             )
 

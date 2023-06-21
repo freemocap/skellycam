@@ -43,9 +43,6 @@ class CamGroupProcess:
         return self._should_record_controller.value
 
 
-
-
-
     """
     CORE API
     """

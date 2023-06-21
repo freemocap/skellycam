@@ -72,7 +72,7 @@ class StrategyABC(ABC):
 
     @property
     @abstractmethod
-    def known_frames_by_camera(self):
+    def frame_databases_by_camera(self):
         """"""
         raise NotImplementedError()
 

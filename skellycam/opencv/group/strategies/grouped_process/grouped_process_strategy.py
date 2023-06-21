@@ -1,6 +1,7 @@
 import logging
 import math
 import multiprocessing
+from copy import deepcopy
 from time import perf_counter_ns
 from typing import Dict, List, Union
 
@@ -38,31 +39,10 @@ class GroupedProcessStrategy(StrategyABC):
                 camera_ids=self._camera_ids
             )
         )
-        self._multi_frame_emitter = MultiFrameEmitter(frame_databases_by_camera=self._frame_databases_by_camera)
 
         self._processes, self._cam_id_process_map = self._create_processes(
             camera_ids=self._camera_ids
         )
-
-        self._video_save_process =  self._create_video_save_background_process()
-
-
-    def _create_video_save_background_process(self):
-        logger.info("Starting VideoSaveBackgroundProcess")
-
-        # this is how we'll send the video save paths to the background process
-
-        self._save_folder_path_pipe_parent,\
-            self._save_folder_path_pipe_child = multiprocessing.Pipe()
-        self._stop_recording_event = multiprocessing.Event()
-
-        return VideoSaveBackgroundProcess(
-            camera_ids=self._camera_ids,
-            multi_frame_pipe_connection=self._multi_frame_emitter.multi_frame_pipe_child,
-            save_folder_path_pipe_connection=self._save_folder_path_pipe_child,
-            stop_recording_event=self._stop_recording_event
-    )
-
 
 
     def start_capture(self):
@@ -73,8 +53,8 @@ class GroupedProcessStrategy(StrategyABC):
 
         for process in self._processes:
             process.start_capture()
-        self._multi_frame_emitter.start()
-        self._video_save_process.start()
+        # self._multi_frame_emitter.start()
+        # self._video_save_process.start()
 
     def stop_capture(self):
         """Shut down camera processes (and disconnect from cameras)"""
@@ -102,13 +82,11 @@ class GroupedProcessStrategy(StrategyABC):
         try:
             frame_database = self._frame_databases_by_camera[camera_id]
             latest_frame_index = frame_database["latest_frame_index"]
-            frames = frame_database["frames"]
 
             if latest_frame_index == None:
                 return None
-            latest_frame_index = latest_frame_index.value
 
-            frame = frames[latest_frame_index]
+            frame = frame_database["frames"][latest_frame_index.value]
             assert frame.__class__ == FramePayload, f"Frame is not a FramePayload: {frame.__class__}"
             return frame
 
