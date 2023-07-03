@@ -1,11 +1,12 @@
 import inspect
 import logging
 import multiprocessing
+import time
+
 from typing import List, Dict
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.motership_process.mothership_process import MothershipProcess
-from skellycam.opencv.group.strategies.motership_process.multi_frame_payload_model import MultiFramePayload
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
 
 logger = logging.getLogger(__name__)
@@ -43,14 +44,12 @@ class MothershipProcessStrategy(StrategyABC):
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
-        print("Getting latest frames")
+
+        self.tic = time.perf_counter()
         if not self._queue.empty():
             multi_frame_payload = self._queue.get()
-            assert isinstance(multi_frame_payload,
-                              MultiFramePayload), f"Expected MultiFramePayload, got {type(multi_frame_payload)}"
-            print(f"Multi frame payload {multi_frame_payload}")
+            print(f"Getting multi frame payload  # {multi_frame_payload.multi_frame_number} - seconds per loop {time.perf_counter() - self.tic:.4f} - Queue size {self._queue.qsize()}")
             return multi_frame_payload.frames
-        logger.debug(f"Latest frames not available")
 
     def latest_frames_by_camera_id(self, camera_id: str):
             print(inspect.currentframe().f_code.co_name)

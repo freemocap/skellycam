@@ -37,12 +37,12 @@ class MothershipProcess(Process):
             tic = time.perf_counter()
             latest_frames = self._grouped_process_strategy.latest_frames
 
-            mutli_frame_payload = MultiFramePayload(
+            multi_frame_payload = MultiFramePayload(
                 frames=latest_frames,
                 multi_frame_number=multi_frame_count,
             )
-            self._queue.put(mutli_frame_payload)
+            self._queue.put(multi_frame_payload)
 
             multi_frame_count += 1
             print(
-                f"Sending multi frame payload  # {mutli_frame_payload.multi_frame_number} - seconds per loop {time.perf_counter() - tic} - Queue size {self._queue.qsize()}")
+                f"Sending multi frame payload  # {multi_frame_payload.multi_frame_number} - seconds per loop {time.perf_counter() - tic:.4f} - Queue size {self._queue.qsize()}")

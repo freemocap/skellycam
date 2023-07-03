@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 from pathlib import Path
+from time import sleep
 from typing import List, Union, Dict
 
 from PyQt6.QtCore import pyqtSignal, QThread
@@ -59,10 +60,10 @@ class CamGroupThreadWorker(QThread):
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
 
-        while  should_continue:
+        while should_continue:
             frame_payload_dictionary = self._camera_group.latest_frames
             if frame_payload_dictionary is None:
-                print("No frames received from camera group")
+                sleep(0.01)
                 continue
             self.new_image_signal.emit(frame_payload_dictionary)
 
