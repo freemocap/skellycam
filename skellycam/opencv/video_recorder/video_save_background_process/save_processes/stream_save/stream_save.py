@@ -1,11 +1,9 @@
 import logging
 import multiprocessing
-from copy import deepcopy
 from typing import List, Dict
 
 import numpy as np
 
-from skellycam.opencv.group.strategies.grouped_process.multi_frame_emitter import MultiFrameEmitter
 from skellycam.opencv.video_recorder.video_save_background_process.save_processes.stream_save.video_saver import \
     VideoSaver
 

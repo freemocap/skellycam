@@ -12,7 +12,7 @@ from skellycam.detection.models.frame_payload import FramePayload
 logger = logging.getLogger(__name__)
 
 
-class InternalCaptureProcess(Process):
+class InternalCaptureSharedMemoryProcess(Process):
     def run(self):
         self._start_capture(*self._args)
 

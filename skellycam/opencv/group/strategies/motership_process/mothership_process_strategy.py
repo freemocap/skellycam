@@ -1,6 +1,7 @@
 import inspect
 import logging
 import multiprocessing
+import threading
 import time
 
 from typing import List, Dict
@@ -16,24 +17,26 @@ class MothershipProcessStrategy(StrategyABC):
     def __init__(self,
                  camera_ids: List[str], ):
         self._camera_ids = camera_ids
-        self._queue = multiprocessing.Queue()
+        self._incoming_frames_queues_by_camera = {camera_id: multiprocessing.Queue() for camera_id in self._camera_ids}
+        self._outgoing_frames_queues_by_camera = {camera_id: multiprocessing.Queue() for camera_id in self._camera_ids}
+        self._stop_event = multiprocessing.Event()
 
         self._mothership_process = MothershipProcess(
             name=f"Camera Mothership Process - Cameras {self._camera_ids}",
             camera_ids=self._camera_ids,
-            queue=self._queue,
+            incoming_frames_queues_by_camera=self._incoming_frames_queues_by_camera,
+            outgoing_frames_queues_by_camera=self._outgoing_frames_queues_by_camera,
+            stop_event=self._stop_event,
         )
 
     def start_capture(self):
-        print(f"Starting mothership process")
+        logger.info(f"Starting mothership process")
         self._mothership_process.start()
 
     def stop_capture(self):
-        print(f"Stopping mothership process")
-        self._mothership_process.terminate()
+        logger.info(f"Stopping mothership process")
+        self._stop_event.set()
 
-    def frame_databases_by_camera(self):
-        pass
 
     @property
     def is_capturing(self):
@@ -44,12 +47,12 @@ class MothershipProcessStrategy(StrategyABC):
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
+        latest_frames = {camera_id: None for camera_id in self._camera_ids}
+        for camera_id, queue in self._outgoing_frames_queues_by_camera.items():
+            if not queue.empty():
+                latest_frames[camera_id] = queue.get()
 
-        self.tic = time.perf_counter()
-        if not self._queue.empty():
-            multi_frame_payload = self._queue.get()
-            print(f"Getting multi frame payload  # {multi_frame_payload.multi_frame_number} - seconds per loop {time.perf_counter() - self.tic:.4f} - Queue size {self._queue.qsize()}")
-            return multi_frame_payload.frames
+        return latest_frames
 
     def latest_frames_by_camera_id(self, camera_id: str):
             print(inspect.currentframe().f_code.co_name)

@@ -47,6 +47,11 @@ class Camera:
     def latest_frame(self):
         return self._capture_thread.latest_frame
 
+    def get_latest_frame(self):
+        if not self.new_frame_ready:
+            return None
+        return self.latest_frame
+
     def wait_for_next_frame(self):
         while True:
             if not self.new_frame_ready:

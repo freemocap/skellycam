@@ -1,21 +1,16 @@
 import logging
 import math
-import multiprocessing
-from copy import deepcopy
 from time import perf_counter_ns
 from typing import Dict, List, Union
 
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.group.strategies.grouped_process.cam_group_process.cam_group_process import (
-    CamGroupProcess,
+from skellycam.opencv.group.strategies.grouped_process.cam_group_process.shared_memory.cam_group_shared_memory_process import (
+    CamGroupSharedMemoryProcess,
 )
-from skellycam.opencv.group.strategies.grouped_process.multi_frame_emitter import MultiFrameEmitter
-from skellycam.opencv.group.strategies.grouped_process.shared_camera_memory_manager import (
+from skellycam.opencv.group.strategies.grouped_process.cam_group_process.shared_memory.shared_camera_memory_manager import (
     SharedCameraMemoryManager,
 )
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
-from skellycam.opencv.video_recorder.video_save_background_process.video_save_background_process import \
-    VideoSaveBackgroundProcess
 from skellycam.utilities.array_split_by import array_split_by
 from skellycam.viewers.cv_cam_viewer import CvCamViewer
 
@@ -29,7 +24,7 @@ _DEFAULT_CAM_PER_PROCESS = 2
 logger = logging.getLogger(__name__)
 
 
-class GroupedProcessStrategy(StrategyABC):
+class GroupedProcessSharedMemoryStrategy(StrategyABC):
     def __init__(self, camera_ids: List[str]):
         self._camera_ids = camera_ids
 
@@ -137,7 +132,7 @@ class GroupedProcessStrategy(StrategyABC):
         ]
 
         processes = [
-            CamGroupProcess(
+            CamGroupSharedMemoryProcess(
                 camera_ids=cam_id_subarray,
                 frame_databases_by_camera=self._frame_databases_by_camera,
                 should_record_controller=self._should_record_controllers[subarray_number],
@@ -152,7 +147,7 @@ class GroupedProcessStrategy(StrategyABC):
 
 
 if __name__ == "__main__":
-    p = GroupedProcessStrategy(camera_ids=["0"])
+    p = GroupedProcessSharedMemoryStrategy(camera_ids=["0"])
     p.start_capture()
 
     cv = CvCamViewer()

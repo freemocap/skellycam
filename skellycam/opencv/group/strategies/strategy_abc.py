@@ -21,7 +21,6 @@ class StrategyABC(ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def start_recording(self, video_save_paths: Dict[str, str]):
         """
        Hold on to frames as they come in (usually to save to video via some method or another)
@@ -29,7 +28,6 @@ class StrategyABC(ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def stop_recording(self):
         """
         Stop saving frames
@@ -38,7 +36,6 @@ class StrategyABC(ABC):
 
 
     @property
-    @abstractmethod
     def is_recording(self):
         """
         Returns True if the strategy is currently recording frames.
@@ -53,14 +50,12 @@ class StrategyABC(ABC):
 
 
     @property
-    @abstractmethod
     def latest_frames(self):
         """
         Grab the latest frame, usually for viewing.
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def latest_frames_by_camera_id(self, camera_id: str):
         """
         Grab the latest frame, usually for viewing.
@@ -70,11 +65,6 @@ class StrategyABC(ABC):
         """
         raise NotImplementedError()
 
-    @property
-    @abstractmethod
-    def frame_databases_by_camera(self):
-        """"""
-        raise NotImplementedError()
 
 
 

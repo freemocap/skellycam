@@ -4,8 +4,8 @@ from typing import Dict, List
 
 from skellycam import CameraConfig
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.group.strategies.grouped_process.grouped_process_strategy import (
-    GroupedProcessStrategy,
+from skellycam.opencv.group.strategies.grouped_process.cam_group_process.shared_memory.grouped_process_shared_memory_strategy import (
+    GroupedProcessSharedMemoryStrategy,
 )
 from skellycam.opencv.group.strategies.motership_process.mothership_process_strategy import MothershipProcessStrategy
 from skellycam.opencv.group.strategies.strategies import Strategy
@@ -75,7 +75,7 @@ class CameraGroup:
 
     def _resolve_strategy(self, camera_ids: List[str]) -> StrategyABC:
         if self._selected_strategy == Strategy.X_CAM_PER_PROCESS:
-            return GroupedProcessStrategy(
+            return GroupedProcessSharedMemoryStrategy(
                 camera_ids=camera_ids,
             )
 
