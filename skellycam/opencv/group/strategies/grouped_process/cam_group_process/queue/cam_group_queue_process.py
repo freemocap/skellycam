@@ -5,6 +5,7 @@ from multiprocessing import Process
 from time import perf_counter_ns, sleep
 from typing import Dict, List, Optional
 
+from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.cam_group_process.camera_ready_checker import (
     CameraReadyChecker,
 )
@@ -19,6 +20,7 @@ class CamGroupQueueProcess:
             self,
             camera_ids: List[str],
             frame_queues_by_camera: Dict[str, multiprocessing.Queue],
+            latest_frame_by_camera: Dict[str, FramePayload],
             stop_event: multiprocessing.Event,
     ):
         if len(camera_ids) == 0:
@@ -26,6 +28,7 @@ class CamGroupQueueProcess:
 
         self._camera_ids = camera_ids
         self._frame_queues_by_camera = frame_queues_by_camera
+        self._latest_frame_by_camera = latest_frame_by_camera
         self._stop_event = stop_event
 
         assert all(
@@ -52,6 +55,7 @@ class CamGroupQueueProcess:
             args=(
                 self._camera_ids,
                 self._frame_queues_by_camera,
+                self._latest_frame_by_camera,
                 self._cam_ready_manager.cam_ready_ipc,
                 self._stop_event,
             ),

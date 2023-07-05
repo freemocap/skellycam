@@ -21,6 +21,7 @@ class InternalCaptureQueueProcess(Process):
             self,
             camera_ids: List[str],
             frame_queues_by_camera: Dict[str, multiprocessing.Queue],
+            latest_frame_by_camera: Dict[str, Union[FramePayload, None]],
             cam_ready_ipc: Dict[str, bool],
             stop_event: multiprocessing.Event,
     ):
@@ -37,6 +38,14 @@ class InternalCaptureQueueProcess(Process):
             camera.connect()
             cam_ready_ipc[camera_id] = True
 
+        if not all(cam_ready_ipc.values()):
+            logger.info(f"Waiting for all cameras to be ready: {cam_ready_ipc}")
+
+        while not all(cam_ready_ipc.values()):
+            sleep(.1)
+
+        logger.info(f"Process {self.name} says: All cameras ready! {cam_ready_ipc}")
+
         try:
             while not stop_event.is_set():
                 sleep(0.01)
@@ -44,6 +53,7 @@ class InternalCaptureQueueProcess(Process):
                     frame = camera.get_latest_frame()
                     if frame is not None:
                         frame_queues_by_camera[camera_id].put(frame)
+                        latest_frame_by_camera[camera_id] = frame
 
 
 

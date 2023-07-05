@@ -3,11 +3,14 @@ import logging
 import multiprocessing
 import threading
 import time
+from copy import deepcopy
 
 from typing import List, Dict
 
 from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.group.strategies.motership_process.mothership_process import MothershipProcess
+from skellycam.opencv.group.strategies.grouped_process.cam_group_process.shared_memory.shared_camera_memory_manager import \
+    SharedCameraMemoryManager
+from skellycam.opencv.group.strategies.mothership_process.mothership_process import MothershipProcess
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
 
 logger = logging.getLogger(__name__)
@@ -17,15 +20,18 @@ class MothershipProcessStrategy(StrategyABC):
     def __init__(self,
                  camera_ids: List[str], ):
         self._camera_ids = camera_ids
+        self._shared_memory_manager = SharedCameraMemoryManager()
+        self._received_frames_lists_by_camera = self._shared_memory_manager.create_frame_lists_by_camera(self._camera_ids)
         self._incoming_frames_queues_by_camera = {camera_id: multiprocessing.Queue() for camera_id in self._camera_ids}
-        self._outgoing_frames_queues_by_camera = {camera_id: multiprocessing.Queue() for camera_id in self._camera_ids}
+        self._latest_frame_by_camera = self._shared_memory_manager.create_latest_frames_by_camera_dictionary(self._camera_ids)
+
         self._stop_event = multiprocessing.Event()
 
         self._mothership_process = MothershipProcess(
             name=f"Camera Mothership Process - Cameras {self._camera_ids}",
             camera_ids=self._camera_ids,
             incoming_frames_queues_by_camera=self._incoming_frames_queues_by_camera,
-            outgoing_frames_queues_by_camera=self._outgoing_frames_queues_by_camera,
+            latest_frame_by_camera=self._latest_frame_by_camera,
             stop_event=self._stop_event,
         )
 
@@ -47,10 +53,12 @@ class MothershipProcessStrategy(StrategyABC):
 
     @property
     def latest_frames(self) -> Dict[str, FramePayload]:
-        latest_frames = {camera_id: None for camera_id in self._camera_ids}
-        for camera_id, queue in self._outgoing_frames_queues_by_camera.items():
-            if not queue.empty():
-                latest_frames[camera_id] = queue.get()
+        latest_frames = {}
+        for camera_id in self._camera_ids:
+            try:
+                latest_frames[camera_id] = deepcopy(self._latest_frame_by_camera[camera_id])
+            except Exception as e:
+                latest_frames[camera_id] = None
 
         return latest_frames
 

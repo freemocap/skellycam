@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class CamGroupThreadWorker(QThread):
-    new_image_signal = pyqtSignal(dict)
+    new_image_signal = pyqtSignal(object)
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
     camera_group_created_signal = pyqtSignal(dict)

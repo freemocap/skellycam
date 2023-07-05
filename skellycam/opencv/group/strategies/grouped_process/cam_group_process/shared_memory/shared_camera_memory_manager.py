@@ -42,6 +42,15 @@ class SharedCameraMemoryManager:
 
         return dictionary
 
+    def create_latest_frames_by_camera_dictionary(self, keys: List[str])->Dict[str, FramePayload]:
+        dictionary = self._mr_manager.dict()
+
+        for key in keys:
+            dictionary.update({key: FramePayload()})
+
+        return dictionary
+
+
     def create_video_save_path_dictionary(self, keys: List[str]):
         dictionary = self._mr_manager.dict()
 

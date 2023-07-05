@@ -7,7 +7,7 @@ from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.cam_group_process.shared_memory.grouped_process_shared_memory_strategy import (
     GroupedProcessSharedMemoryStrategy,
 )
-from skellycam.opencv.group.strategies.motership_process.mothership_process_strategy import MothershipProcessStrategy
+from skellycam.opencv.group.strategies.mothership_process.mothership_process_strategy import MothershipProcessStrategy
 from skellycam.opencv.group.strategies.strategies import Strategy
 from skellycam.opencv.group.strategies.strategy_abc import StrategyABC
 from skellycam.viewers.cv_cam_viewer import CvCamViewer

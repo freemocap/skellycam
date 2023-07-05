@@ -295,7 +295,6 @@ class SkellyCamWidget(QWidget):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
 
-    @pyqtSlot(dict)
     def _handle_image_update(self, latest_frames: Dict[str, FramePayload]):
         for camera_id, frame_payload in latest_frames.items():
             if frame_payload:

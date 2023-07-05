@@ -2,7 +2,7 @@ import logging
 import math
 import multiprocessing
 from time import perf_counter_ns
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.opencv.group.strategies.grouped_process.cam_group_process.queue.cam_group_queue_process import \
@@ -25,11 +25,13 @@ class GroupedProcessQueueStrategy(StrategyABC):
     def __init__(self,
                  camera_ids: List[str],
                  frame_queues_by_camera: Dict[str, multiprocessing.Queue],
+                 latest_frame_by_camera: Dict[str, FramePayload],
                  stop_event: multiprocessing.Event, ):
         self._camera_ids = camera_ids
         self._stop_event = stop_event
 
         self._frame_queues_by_camera = frame_queues_by_camera
+        self._latest_frame_by_camera = latest_frame_by_camera
 
         self._processes, self._cam_id_process_map = self._create_processes(
             camera_ids=self._camera_ids
@@ -51,8 +53,6 @@ class GroupedProcessQueueStrategy(StrategyABC):
         logger.info("Stopping capture by setting stop event")
         self._stop_event.set()
 
-
-
     def is_camera_ready(self, cam_id: str) -> bool:
         for process in self._processes:
             if cam_id in process.camera_ids:
@@ -64,7 +64,6 @@ class GroupedProcessQueueStrategy(StrategyABC):
             if not process.is_capturing:
                 return False
         return True
-
 
     def _create_processes(
             self,
@@ -80,6 +79,7 @@ class GroupedProcessQueueStrategy(StrategyABC):
             CamGroupQueueProcess(
                 camera_ids=cam_id_subarray,
                 frame_queues_by_camera=self._frame_queues_by_camera,
+                latest_frame_by_camera=self._latest_frame_by_camera,
                 stop_event=self._stop_event,
             )
             for subarray_number, cam_id_subarray in enumerate(camera_group_subarrays)
