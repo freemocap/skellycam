@@ -56,7 +56,7 @@ class MothershipProcessStrategy(StrategyABC):
         latest_frames = {}
         for camera_id in self._camera_ids:
             try:
-                latest_frames[camera_id] = deepcopy(self._latest_frame_by_camera[camera_id])
+                latest_frames[camera_id] = self._latest_frame_by_camera[camera_id]
             except Exception as e:
                 latest_frames[camera_id] = None
 

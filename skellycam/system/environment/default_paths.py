@@ -31,7 +31,7 @@ HAMMER_AND_WRENCH_EMOJI_STRING = "\U0001F6E0"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
 PATH_TO_SKELLY_CAM_LOGO_SVG = str(
-    Path(skellycam.__file__).parent.parent / "assets/logo/skelly-cam-logo.svg"
+    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.svg"
 )
 
 
