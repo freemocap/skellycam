@@ -29,6 +29,7 @@ class CamGroupThreadWorker(QThread):
             self,
             camera_ids: Union[List[str], None],
             get_new_synchronized_videos_folder_callable: callable,
+            annotate_images: bool = False,
             parent=None,
     ):
 
@@ -39,6 +40,7 @@ class CamGroupThreadWorker(QThread):
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
+        self.annotate_images = annotate_images
 
         self._should_pause_bool = False
         self._should_record_frames_bool = False
@@ -98,7 +100,7 @@ class CamGroupThreadWorker(QThread):
     def is_recording(self):
         return self._should_record_frames_bool
 
-    def run(self, annotate_images: bool = True):
+    def run(self):
         logger.info("Starting camera group thread worker")
         self._camera_group.start()
         should_continue = True
@@ -106,7 +108,7 @@ class CamGroupThreadWorker(QThread):
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
 
-        if annotate_images:
+        if self.annotate_images:
             charuco_board = CharucoBoardDefinition()
 
         while self._camera_group.is_capturing and should_continue:
@@ -123,9 +125,9 @@ class CamGroupThreadWorker(QThread):
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
                         # TODO: if calibration videos is checked, checked for charuco board, annotate it, then pass annotated image into q image
                         # add a checkbox to skelly_cam that says "annotate image" - start with making this a bool for the class
-                        if annotate_images:
+                        if self.annotate_images:
                             draw_charuco_on_image(image=frame_payload.image, charuco_board=charuco_board)
-                            
+
                         q_image = self._convert_frame(frame_payload)
 
                         frame_diagnostic_dictionary = {}
