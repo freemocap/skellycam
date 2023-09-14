@@ -6,6 +6,8 @@ from typing import List, Union
 import cv2
 from PyQt6.QtCore import pyqtSignal, Qt, QThread
 from PyQt6.QtGui import QImage
+from skellycam.detection.charuco.charuco_definition import CharucoBoardDefinition
+from skellycam.detection.charuco.charuco_detection import draw_charuco_on_image
 
 from skellycam.detection.models.frame_payload import FramePayload
 from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
@@ -27,6 +29,7 @@ class CamGroupThreadWorker(QThread):
             self,
             camera_ids: Union[List[str], None],
             get_new_synchronized_videos_folder_callable: callable,
+            annotate_images: bool = False,
             parent=None,
     ):
 
@@ -37,6 +40,7 @@ class CamGroupThreadWorker(QThread):
         super().__init__(parent=parent)
         self._camera_ids = camera_ids
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
+        self.annotate_images = annotate_images
 
         self._should_pause_bool = False
         self._should_record_frames_bool = False
@@ -104,6 +108,9 @@ class CamGroupThreadWorker(QThread):
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
 
+        if self.annotate_images:
+            charuco_board = CharucoBoardDefinition()
+
         while self._camera_group.is_capturing and should_continue:
             if self._updating_camera_settings_bool:
                 continue
@@ -115,6 +122,10 @@ class CamGroupThreadWorker(QThread):
                         if self._should_record_frames_bool:
                             self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
+
+                        if self.annotate_images:
+                            draw_charuco_on_image(image=frame_payload.image, charuco_board=charuco_board)
+
                         q_image = self._convert_frame(frame_payload)
 
                         frame_diagnostic_dictionary = {}

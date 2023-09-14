@@ -41,6 +41,7 @@ class SkellyCamWidget(QWidget):
             self,
             get_new_synchronized_videos_folder_callable: callable,
             camera_ids: List[Union[str, int]] = None,
+            annotate_images: bool = False,
             parent=None,
     ):
 
@@ -49,6 +50,7 @@ class SkellyCamWidget(QWidget):
         )
 
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
+        self.annotate_images = annotate_images
 
         self._camera_config_dicationary = None
         self._detect_cameras_worker = None
@@ -182,6 +184,7 @@ class SkellyCamWidget(QWidget):
     def _start_camera_group_frame_worker(self, camera_ids):
 
         logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
+        self._cam_group_frame_worker.annotate_images = self.annotate_images
         self._cam_group_frame_worker.camera_ids = camera_ids
         self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout(
             camera_config_dictionary=self._cam_group_frame_worker.camera_config_dictionary
@@ -214,6 +217,7 @@ class SkellyCamWidget(QWidget):
         cam_group_frame_worker = CamGroupThreadWorker(
             camera_ids=self._camera_ids,
             get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
+            annotate_images=self.annotate_images
         )
 
         cam_group_frame_worker.cameras_connected_signal.connect(
