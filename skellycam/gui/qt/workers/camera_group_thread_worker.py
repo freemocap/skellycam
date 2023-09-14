@@ -120,11 +120,9 @@ class CamGroupThreadWorker(QThread):
                 if frame_payload:
                     if not self._should_pause_bool:
                         if self._should_record_frames_bool:
-                            # TODO: make intermediary after this that groups payloads into synchronized packets
                             self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-                        # TODO: if calibration videos is checked, checked for charuco board, annotate it, then pass annotated image into q image
-                        # add a checkbox to skelly_cam that says "annotate image" - start with making this a bool for the class
+
                         if self.annotate_images:
                             draw_charuco_on_image(image=frame_payload.image, charuco_board=charuco_board)
 
