@@ -12,7 +12,7 @@ from skellycam.backend.detection.models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.camera_group import CameraGroup
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 
-from skellycam.frontend.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
+from skellycam.frontend.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
 from skellycam.backend.opencv.camera.types.camera_id import CameraId
 
 logger = logging.getLogger(__name__)

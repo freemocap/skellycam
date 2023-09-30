@@ -5,7 +5,7 @@ from typing import Dict, Union
 from PyQt6.QtCore import pyqtSignal, QThread
 
 from skellycam.backend.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
-from skellycam.backend.opencv import VideoRecorder
+from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
 

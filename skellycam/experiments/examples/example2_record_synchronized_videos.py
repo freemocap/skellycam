@@ -1,4 +1,4 @@
-from skellycam.backend.experiments import MultiCameraVideoRecorder
+from skellycam.experiments import MultiCameraVideoRecorder
 
 if __name__ == "__main__":
     """

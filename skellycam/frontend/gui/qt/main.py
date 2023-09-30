@@ -1,8 +1,8 @@
 import logging
 import sys
 
-from skellycam.frontend.qt.skelly_cam_main_window import SkellyCamMainWindow
-from skellycam.frontend.qt.utilities.get_qt_app import get_qt_app
+from skellycam.frontend.gui.qt.skelly_cam_main_window import SkellyCamMainWindow
+from skellycam.frontend.gui.qt.utilities.get_qt_app import get_qt_app
 
 logger = logging.getLogger(__name__)
 

@@ -3,13 +3,8 @@ import platform
 import sys
 from pathlib import Path
 
-try:
-    from skellycam.frontend.qt.main import qt_gui_main
-except Exception as e:
-    base_package_path = Path(__file__).parent.parent
-    print(f"adding base_package_path: {base_package_path} : to sys.path")
-    sys.path.insert(0, str(base_package_path))  # add parent directory to sys.path
-    from skellycam.frontend.qt.main import qt_gui_main
+
+from skellycam import qt_gui_main
 
 
 def main():
