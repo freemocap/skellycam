@@ -7,18 +7,18 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.frontend.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.frontend.gui.qt.skelly_cam_widget import (
+from skellycam.frontend.qt_gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
+from skellycam.frontend.qt_gui.widgets.skelly_cam_widget import (
     SkellyCamWidget,
 )
-from skellycam.frontend.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import (
+from skellycam.frontend.qt_gui.widgets.sub_widgets.skelly_cam_config_parameter_tree_widget import (
     SkellyCamParameterTreeWidget,
 )
-from skellycam.frontend.gui.qt.widgets.skelly_cam_controller_widget import (
+from skellycam.frontend.qt_gui.widgets.sub_widgets.skelly_cam_controller_widget import (
     SkellyCamControllerWidget,
 )
-from skellycam.frontend.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
-from skellycam.frontend.gui.qt.widgets.welcome_to_skellycam_widget import (
+from skellycam.frontend.qt_gui.widgets.sub_widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
+from skellycam.frontend.qt_gui.widgets.sub_widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
 from skellycam.system.environment.default_paths import get_default_session_folder_path, \

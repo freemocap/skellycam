@@ -5,9 +5,9 @@ from typing import Dict, List
 
 from PyQt6.QtCore import pyqtSignal
 
-from skellycam.models.camera_config import CameraConfig
+from skellycam.data_models.camera_config import CameraConfig
 from skellycam.backend.opencv.detection.detect_cameras import detect_cameras
-from skellycam.models.frame_payload import FramePayload
+from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )

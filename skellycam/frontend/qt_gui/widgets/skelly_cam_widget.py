@@ -12,11 +12,11 @@ from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout,
 )
 
-from skellycam.models.camera_config import CameraConfig
-from skellycam.frontend.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
-from skellycam.frontend.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
-from skellycam.frontend.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
-from skellycam.frontend.gui.qt.workers.detect_cameras_worker import DetectCamerasWorker
+from skellycam.data_models.camera_config import CameraConfig
+from skellycam.frontend.qt_gui.utilities.qt_label_strings import no_cameras_found_message_string
+from skellycam.frontend.qt_gui.widgets.sub_widgets.single_camera_view_widget import SingleCameraViewWidget
+from skellycam.frontend.qt_gui.workers.camera_group_thread_worker import CamGroupThreadWorker
+from skellycam.frontend.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
 from skellycam.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING
 
 logger = logging.getLogger(__name__)

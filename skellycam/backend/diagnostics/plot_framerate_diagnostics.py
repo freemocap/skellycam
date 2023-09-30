@@ -6,7 +6,7 @@ import numpy as np
 from pydantic import BaseModel
 from scipy.stats import median_abs_deviation
 
-from skellycam.models.frame_payload import FramePayload
+from skellycam.data_models.frame_payload import FramePayload
 
 from skellycam.backend.utils.start_file import open_file
 

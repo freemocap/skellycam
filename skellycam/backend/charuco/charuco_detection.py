@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from skellycam.models.charuco_definition import CharucoBoardDefinition
+from skellycam.data_models.charuco_definition import CharucoBoardDefinition
 
 def draw_charuco_on_image(image: np.ndarray, charuco_board: CharucoBoardDefinition = CharucoBoardDefinition()) -> np.ndarray:
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

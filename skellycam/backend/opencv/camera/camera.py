@@ -7,7 +7,7 @@ from typing import Optional
 
 from skellycam.backend.opencv.camera.attributes import Attributes
 from skellycam.backend.opencv.camera.internal_camera_thread import VideoCaptureThread
-from skellycam.models.camera_config import CameraConfig
+from skellycam.data_models.camera_config import CameraConfig
 from skellycam.frontend.viewers.cv_cam_viewer import CvCamViewer
 
 logger = logging.getLogger(__name__)

@@ -5,7 +5,7 @@ from typing import Dict, List, Union
 
 import numpy as np
 
-from skellycam.models.frame_payload import FramePayload
+from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.diagnostics.create_diagnostic_plots import create_diagnostic_plots
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.tests.test_frame_timestamp_synchronization import test_frame_timestamp_synchronization

@@ -12,8 +12,8 @@ from skellycam.backend.backend_process_controller import BackendController
 from skellycam.backend.charuco.charuco_detection import draw_charuco_on_image
 from skellycam.backend.opencv.camera.types.camera_id import CameraId
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.frontend.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
-from skellycam.models.frame_payload import FramePayload
+from skellycam.frontend.qt_gui.workers.video_save_thread_worker import VideoSaveThreadWorker
+from skellycam.data_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
