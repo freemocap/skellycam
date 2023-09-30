@@ -2,10 +2,10 @@ import logging
 import multiprocessing
 from typing import Dict, List
 
-from skellycam.data_models.camera_config import CameraConfig
-from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.strategies.cam_group_queue_process import CamGroupQueueProcess
 from skellycam.backend.utils.array_split_by import array_split_by
+from skellycam.data_models.camera_config import CameraConfig
+from skellycam.data_models.frame_payload import FramePayload
 
 ### Don't change this? Users should submit the actual value they want
 ### this is our library default.
@@ -19,8 +19,13 @@ logger = logging.getLogger(__name__)
 
 class GroupedProcessStrategy:
     def __init__(self, camera_ids: List[str]):
+
         self._camera_ids = camera_ids
         self._processes, self._cam_id_process_map = self._create_processes(self._camera_ids)
+
+    @property
+    def new_frames_available(self):
+        return any([process.new_frames_available for process in self._processes])
 
     @property
     def processes(self):
@@ -53,20 +58,22 @@ class GroupedProcessStrategy:
             if cam_id in process.camera_ids:
                 return process.check_if_camera_is_ready(cam_id)
 
-    def get_current_frame_by_cam_id(self, camera_id: str):
-        for process in self._processes:
-            current_frame = process.get_current_frame_by_camera_id(camera_id)
-            if current_frame:
-                return current_frame
-
     def _get_queue_size_by_camera_id(self, camera_ids: str) -> int:
         for process in self._processes:
             if camera_ids in process.camera_ids:
                 return process.get_queue_size_by_camera_id(camera_ids)
 
+    def get_new_frames(self) -> Dict[str, FramePayload]:
+        new_frames = {}
+        for cam_id, process in self._cam_id_process_map.items():
+            new_frame = process.get_new_frame_by_camera_id(cam_id, block_if_empty=False)
+            if new_frame:
+                new_frames[cam_id] = new_frame
+        return new_frames
+
     def get_latest_frames(self) -> Dict[str, FramePayload]:
         return {
-            cam_id: process.get_current_frame_by_camera_id(cam_id)
+            cam_id: process.get_new_frame_by_camera_id(cam_id, block_if_empty=True)
             for cam_id, process in self._cam_id_process_map.items()
         }
 

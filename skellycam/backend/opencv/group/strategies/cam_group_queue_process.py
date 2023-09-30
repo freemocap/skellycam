@@ -155,14 +155,17 @@ class CamGroupQueueProcess:
     def _get_queue_by_camera_id(self, camera_id: str) -> multiprocessing.Queue:
         return self._queues[camera_id]
 
-    def get_current_frame_by_camera_id(self, camera_id) -> Union[FramePayload, None]:
+    def get_new_frame_by_camera_id(self, camera_id: str, block_if_empty:bool) -> Union[FramePayload, None]:
         try:
             if camera_id not in self._queues:
+                logger.error(f"Camera {camera_id} not in queues")
                 return
 
             queue = self._get_queue_by_camera_id(camera_id)
             if not queue.empty():
-                return queue.get(block=True)
+                return queue.get(block=block_if_empty)
+            else:
+                return
         except Exception as e:
             logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
             return
@@ -184,7 +187,7 @@ if __name__ == "__main__":
     while True:
         # print("Queue size: ", p.queue_size("0"))
         curr = perf_counter_ns() * 1e-6
-        frames = p.get_current_frame_by_camera_id("0")
+        frames = p.get_new_frame_by_camera_id("0")
         if frames:
             end = perf_counter_ns() * 1e-6
             frame_count_in_ms = f"{math.trunc(end - curr)}"

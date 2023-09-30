@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.frontend.qt_gui.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.frontend.qt_gui.widgets.sub_widgets.single_camera_view_widget import SingleCameraViewWidget
-from skellycam.frontend.qt_gui.workers.camera_group_thread_worker import CamGroupThreadWorker
+from skellycam.frontend.qt_gui.workers.camera_group_thread_worker import CameraGroupThreadWorker
 from skellycam.frontend.qt_gui.workers.detect_cameras_worker import DetectCamerasWorker
 from skellycam.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING
 
@@ -69,7 +69,7 @@ class SkellyCamWidget(QWidget):
         self._layout.addLayout(self._camera_views_layout)
 
         self._camera_ids = camera_ids
-        self._cam_group_frame_worker = self._create_cam_group_frame_worker()
+        self._camera_group_thread_worker = self._create_camera_group_thread_worker()
 
         self._detect_available_cameras_push_button = self._create_detect_cameras_button()
         self._layout.addWidget(self._detect_available_cameras_push_button)
@@ -80,7 +80,7 @@ class SkellyCamWidget(QWidget):
         self._cameras_disconnected_label.setStyleSheet(title_label_style_string)
         self._cameras_disconnected_label.hide()
         self.cameras_connected_signal.connect(self._cameras_disconnected_label.hide)
-        self._cam_group_frame_worker.cameras_closed_signal.connect(self._show_cameras_disconnected_message)
+        self._camera_group_thread_worker.cameras_closed_signal.connect(self._show_cameras_disconnected_message)
 
         self._no_cameras_found_label = QLabel(no_cameras_found_message_string)
         self._layout.addWidget(self._no_cameras_found_label)
@@ -97,7 +97,7 @@ class SkellyCamWidget(QWidget):
 
     @property
     def controller_slot_dictionary(self):
-        return self._cam_group_frame_worker.slot_dictionary
+        return self._camera_group_thread_worker.slot_dictionary
 
     @property
     def camera_config_dicationary(self):
@@ -105,11 +105,11 @@ class SkellyCamWidget(QWidget):
 
     @property
     def cameras_connected(self):
-        return self._cam_group_frame_worker.cameras_connected
+        return self._camera_group_thread_worker.cameras_connected
 
     @property
     def is_recording(self):
-        return self._cam_group_frame_worker.is_recording
+        return self._camera_group_thread_worker.is_recording
 
     @property
     def detect_available_cameras_push_button(self):
@@ -188,18 +188,18 @@ class SkellyCamWidget(QWidget):
         logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
         self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout()
 
-        self._cam_group_frame_worker.annotate_images = self.annotate_images
-        self._cam_group_frame_worker.camera_ids = camera_ids
-        self._cam_group_frame_worker.start()
-        self._cam_group_frame_worker.new_image_signal.connect(self._handle_image_update)
+        self._camera_group_thread_worker.annotate_images = self.annotate_images
+        self._camera_group_thread_worker.camera_ids = camera_ids
+        self._camera_group_thread_worker.start()
+        self._camera_group_thread_worker.new_image_signal.connect(self._handle_image_update)
 
     def disconnect_from_cameras(self):
         logger.info("Disconnecting from cameras")
         self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
-        self._cam_group_frame_worker.close()
+        self._camera_group_thread_worker.close()
 
     def pause(self):
-        self._cam_group_frame_worker.pause()
+        self._camera_group_thread_worker.pause()
 
     def _create_detect_cameras_button(self):
         detect_available_cameras_push_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
@@ -214,28 +214,28 @@ class SkellyCamWidget(QWidget):
 
         return detect_available_cameras_push_button
 
-    def _create_cam_group_frame_worker(self):
-        cam_group_frame_worker = CamGroupThreadWorker(
+    def _create_camera_group_thread_worker(self):
+        camera_group_thread_worker = CameraGroupThreadWorker(
             camera_ids=self._camera_ids,
             get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
             annotate_images=self.annotate_images
         )
 
-        cam_group_frame_worker.cameras_connected_signal.connect(
+        camera_group_thread_worker.cameras_connected_signal.connect(
             self._handle_cameras_connected
         )
 
-        cam_group_frame_worker.camera_group_created_signal.connect(
+        camera_group_thread_worker.camera_group_created_signal.connect(
             self.camera_group_created_signal.emit
         )
 
-        cam_group_frame_worker.videos_saved_to_this_folder_signal.connect(
-            self._handle_cam_group_frame_worker_videos_saved_to_this_folder
+        camera_group_thread_worker.videos_saved_to_this_folder_signal.connect(
+            self._handle_camera_group_thread_worker_videos_saved_to_this_folder
         )
 
-        return cam_group_frame_worker
+        return camera_group_thread_worker
 
-    def _handle_cam_group_frame_worker_videos_saved_to_this_folder(self, folder_path: str):
+    def _handle_camera_group_thread_worker_videos_saved_to_this_folder(self, folder_path: str):
         logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
         self.videos_saved_to_this_folder_signal.emit(folder_path)
 
@@ -284,7 +284,7 @@ class SkellyCamWidget(QWidget):
                 self._dictionary_of_single_camera_view_widgets[camera_id].hide()
                 self._dictionary_of_single_camera_view_widgets[camera_id].hide()
 
-        self._cam_group_frame_worker.update_camera_group_configs(
+        self._camera_group_thread_worker.update_camera_group_configs(
             camera_config_dictionary=camera_config_dictionary
         )
 
@@ -314,7 +314,7 @@ class SkellyCamWidget(QWidget):
 
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")
-        self._cam_group_frame_worker.close()
+        self._camera_group_thread_worker.close()
         self.close()
 
 

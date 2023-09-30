@@ -10,58 +10,45 @@ logger = logging.getLogger(__name__)
 
 class BackendController:
     def __init__(self,
-                 pipe_connection,
+                 camera_ids: List[str],
+                 queue: multiprocessing.Queue,
                  exit_event: multiprocessing.Event):
-        self._pipe_connection = pipe_connection
+        self._queue = queue
         self._exit_event = exit_event
 
-    def start_camera_group_process(self, camera_ids: List[int]):
-        process = multiprocessing.Process(target=self._run_camera_group_process,
+        self._process = multiprocessing.Process(target=self._run_camera_group_process,
                                           args=(camera_ids,
-                                                self._pipe_connection,
+                                                self._queue,
                                                 self._exit_event))
-        process.start()
-        while not self._exit_event.is_set():
-            time.sleep(0.1)
-            if self._pipe_connection.poll():
-                message = self._pipe_connection.recv()
-                logger.debug(f"Received message from frontend process: {message}")
-                if message == "stop":
-                    process.terminate()
-                    process.join()
-                    self._exit_event.set()
-                    logger.info("Backend process terminated")
-                    break
-                else:
-                    logger.error(f"Unknown message received from frontend process: {message}")
-                    raise ValueError(f"Unknown message received from frontend process: {message}")
+
+
+    def start_camera_group_process(self):
+        self._process.start()
+        logger.info(f"Started camera group process")
 
     @staticmethod
     def _run_camera_group_process(camera_ids: List[int],
-                                  pipe_connection,
+                                  queue: multiprocessing.Queue,
                                   exit_event: multiprocessing.Event):
+        logger.info(f"Starting camera group process for camera_ids: {camera_ids}")
         camera_group = create_camera_group(camera_ids)
-        pipe_connection.send({"type": "camera_group_created",
-                              "camera_config_dictionary": camera_group.camera_config_dictionary})
+        queue.put({"type": "camera_group_created",
+                   "camera_config_dictionary": camera_group.camera_config_dictionary})
         camera_group.start()
         should_continue = True
         logger.info("Emitting `cameras_connected_signal`")
-        pipe_connection.send({"type": "cameras_connected"})
+        queue.put({"type": "cameras_connected"})
 
         while camera_group.is_capturing and should_continue and not exit_event.is_set():
-            if pipe_connection.poll():
-                message = pipe_connection.recv()
-                logger.debug(f"Received message from frontend process: {message}")
-                if message == "stop":
-                    camera_group.close()
-                    logger.info("Backend process terminated")
-                    should_continue = False
-                    exit_event.set()
-                    break
 
-            frame_payload_dictionary = camera_group.latest_frames()
-            pipe_connection.send({"type": "new_images",
-                                  "frames_payload": frame_payload_dictionary})
+            new_frames = camera_group.new_frames()
+            if len(new_frames) > 0:
+                logger.trace(f"Stuffing latest frames into pipe: {list(new_frames.keys())} - queue size: {queue.qsize()}")
+                for camera_id, frame_payload in new_frames.items():
+                    if not camera_id == frame_payload.camera_id:
+                        raise ValueError(f"camera_id: {camera_id} != frame_payload.camera_id: {frame_payload.camera_id}")
+                    queue.put({"type": "new_frame",
+                               "frame": frame_payload})
 
 
 def create_camera_group(camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None

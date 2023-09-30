@@ -18,7 +18,7 @@ from skellycam.data_models.frame_payload import FramePayload
 logger = logging.getLogger(__name__)
 
 
-class CamGroupThreadWorker(QThread):
+class CameraGroupThreadWorker(QThread):
     new_image_signal = pyqtSignal(CameraId, QImage, dict)
     cameras_connected_signal = pyqtSignal()
     cameras_closed_signal = pyqtSignal()
@@ -51,8 +51,7 @@ class CamGroupThreadWorker(QThread):
         self._camera_group = None
         self._video_recorder_dictionary = None
 
-        self._pipe_parent = None
-        self._pipe_child = None
+        self._queue = None
 
     @property
     def camera_ids(self):
@@ -88,22 +87,23 @@ class CamGroupThreadWorker(QThread):
         return self._should_record_frames_bool
 
     def run(self):
-        self._pipe_parent, self._pipe_child = multiprocessing.Pipe()
+        self._queue = multiprocessing.Queue()
         exit_event = multiprocessing.Event()
-        backend_controller = BackendController(pipe_connection=self._pipe_child,
+        backend_controller = BackendController(camera_ids=self.camera_ids,
+                                               queue=self._queue,
                                                exit_event=exit_event)
-        backend_controller.start_camera_group_process(camera_ids=self.camera_ids)
+        backend_controller.start_camera_group_process()
         while not exit_event.is_set():
-            if self._pipe_parent.poll():
-                message = self._pipe_parent.recv()
-                logger.debug(f"Received message from backend process: {message}")
-                self._handle_pipe_message(message)
+            if not self._queue.empty():
+                message = self._queue.get()
+                self._handle_queue_message(message)
             else:
-                time.sleep(0.01)
+                time.sleep(0.001)
 
-    def _handle_pipe_message(self, message):
-        if message["type"] == "new_images":
-            self._handle_new_images(message["frames_payload"])
+    def _handle_queue_message(self, message):
+        logger.debug(f"Handling message from backend process with type: {message['type']}")
+        if message["type"] == "new_frame":
+            self._handle_new_frame(message["frame"])
 
         elif message["type"] == "cameras_connected":
             self.cameras_connected_signal.emit()
@@ -120,17 +120,21 @@ class CamGroupThreadWorker(QThread):
         else:
             logger.error(f"Received unknown message from backend process: {message}")
 
-    def _handle_new_images(self, frames_payload: Dict[CameraId, FramePayload]):
-        for frame_payload in frames_payload.values():
-            if self.annotate_images:
-                frame_payload.image = draw_charuco_on_image(frame_payload.image)
-            converted_frame = convert_frame(frame_payload)
-            frame_stats = {"timestamp_ns": frame_payload.timestamp_ns,
-                           "number_of_frames_received": frame_payload.number_of_frames_received,
-                           "number_of_frames_recorded": frame_payload.number_of_frames_recorded,
-                           "queue_size": frame_payload.queue_size}
+    def _handle_new_frame(self, frame: FramePayload):
 
-            self.new_image_signal.emit(frame_payload.camera_id, converted_frame, frame_stats)
+        try:
+            if self.annotate_images:
+                frame.image = draw_charuco_on_image(frame.image)
+            converted_frame = convert_frame(frame)
+            frame_stats = {"timestamp_ns": frame.timestamp_ns,
+                           "number_of_frames_received": frame.number_of_frames_received,
+                           "number_of_frames_recorded": frame.number_of_frames_recorded,
+                           "queue_size": frame.queue_size}
+            logger.trace(f"Emitting `new_image_signal` with camera id: {frame.camera_id} - image.shape: {frame.image.shape} - frame_stats: {frame_stats}")
+            self.new_image_signal.emit(frame.camera_id, converted_frame, frame_stats)
+        except Exception as e:
+            logger.error(f"Problem converting frame: {e}")
+            raise e
 
     def close(self):
         logger.info("Closing camera group")

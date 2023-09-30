@@ -23,6 +23,7 @@ class CameraGroup:
             strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
             camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
+
         logger.info(
             f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
         )
@@ -50,6 +51,10 @@ class CameraGroup:
                 )
         else:
             self._camera_config_dictionary = camera_config_dictionary
+
+    @property
+    def new_frames_available(self):
+        return self._strategy_class.new_frames_available
 
     @property
     def is_capturing(self):
@@ -119,11 +124,17 @@ class CameraGroup:
     def check_if_camera_is_ready(self, cam_id: str):
         return self._strategy_class.check_if_camera_is_ready(cam_id)
 
-    def get_by_cam_id(self, cam_id: str):
-        return self._strategy_class.get_current_frame_by_cam_id(cam_id)
+
+    def new_frames(self) -> Dict[str, FramePayload]:
+        new_frames = self._strategy_class.get_new_frames()
+        if len(new_frames) > 0:
+            logger.trace(f"Got new frames from Cameras: {list(new_frames.keys())}")
+        return new_frames
 
     def latest_frames(self) -> Dict[str, FramePayload]:
-        return self._strategy_class.get_latest_frames()
+        latest_frames = self._strategy_class.get_latest_frames()
+        logger.trace(f"Getting latest frames from Cameras: {latest_frames.keys()}")
+        return latest_frames
 
     def _resolve_strategy(self, cam_ids: List[str]):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
