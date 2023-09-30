@@ -11,5 +11,4 @@ class FramePayload:
     number_of_frames_received: int = None  # how many frames have been grabbed from this camera?
     number_of_frames_recorded: int = None  # how many frames have been recorded (to be dumped to video)?
     camera_id: str = None
-    mean_frames_per_second: float = None
     queue_size: int = None

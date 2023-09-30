@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import pyqtSignal, QThread
 
-from skellycam.backend.detection.detect_cameras import detect_cameras
+from skellycam.backend.opencv.detection.detect_cameras import detect_cameras
 
 logger = logging.getLogger(__name__)
 

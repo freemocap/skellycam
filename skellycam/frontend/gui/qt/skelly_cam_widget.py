@@ -52,7 +52,7 @@ class SkellyCamWidget(QWidget):
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
         self.annotate_images = annotate_images
 
-        self._camera_config_dicationary = None
+        self._camera_config_dicationary = {}
         self._detect_cameras_worker = None
         self._dictionary_of_single_camera_view_widgets = None
 
@@ -127,18 +127,20 @@ class SkellyCamWidget(QWidget):
         self._no_cameras_found_label.show()
         self._detect_available_cameras_push_button.show()
 
-    def _create_camera_view_widgets_and_add_them_to_grid_layout(self, camera_config_dictionary: Dict[
-        str, CameraConfig]) -> dict:
+    def _create_camera_view_widgets_and_add_them_to_grid_layout(self,
+                                                                #camera_config_dictionary: Dict[        str, CameraConfig]
+                                                                ) -> dict:
 
         logger.info(
-            f"Creating camera view grid layout for camera config dictionary: {camera_config_dictionary}"
+            f"Creating camera view grid layout"
         )
 
         dictionary_of_single_camera_view_widgets = {}
         landscape_camera_number = -1
         portrait_camera_number = -1
-        for camera_id, camera_config in camera_config_dictionary.items():
-
+        for camera_id in self._camera_ids:
+            camera_config = CameraConfig(camera_id=camera_id)
+            self._camera_config_dicationary[camera_id] = camera_config
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
                                                         camera_config=camera_config,
                                                         parent=self)
@@ -184,11 +186,10 @@ class SkellyCamWidget(QWidget):
     def _start_camera_group_frame_worker(self, camera_ids):
 
         logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
+        self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout()
+
         self._cam_group_frame_worker.annotate_images = self.annotate_images
         self._cam_group_frame_worker.camera_ids = camera_ids
-        self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout(
-            camera_config_dictionary=self._cam_group_frame_worker.camera_config_dictionary
-        )
         self._cam_group_frame_worker.start()
         self._cam_group_frame_worker.new_image_signal.connect(self._handle_image_update)
 

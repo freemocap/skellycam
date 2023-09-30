@@ -61,7 +61,8 @@ class SingleCameraViewWidget(QWidget):
         self._image_label_widget.setPixmap(pixmap)
 
         q_size = frame_diagnostics_dictionary['queue_size']
-        frames_recorded = frame_diagnostics_dictionary['frames_recorded']
+        frames_recorded = frame_diagnostics_dictionary['number_of_frames_recorded']
+
         if frames_recorded is None:
             frames_recorded = 0
         self._title_label_widget.setText(

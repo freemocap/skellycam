@@ -3,7 +3,7 @@ import numpy as np
 
 from skellycam.models.charuco_definition import CharucoBoardDefinition
 
-def draw_charuco_on_image(image: np.ndarray, charuco_board: CharucoBoardDefinition) -> None:
+def draw_charuco_on_image(image: np.ndarray, charuco_board: CharucoBoardDefinition = CharucoBoardDefinition()) -> np.ndarray:
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
     charuco_corners, charuco_ids, marker_corners, marker_ids = charuco_board.charuco_detector.detectBoard(image_gray)
@@ -11,3 +11,5 @@ def draw_charuco_on_image(image: np.ndarray, charuco_board: CharucoBoardDefiniti
         cv2.aruco.drawDetectedMarkers(image, marker_corners)
     if not (charuco_ids is None) and len(charuco_ids) >= 4:
         cv2.aruco.drawDetectedCornersCharuco(image, charuco_corners, charuco_ids)
+
+    return image

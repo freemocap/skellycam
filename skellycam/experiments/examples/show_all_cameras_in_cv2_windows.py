@@ -4,7 +4,7 @@ import multiprocessing
 
 import cv2
 
-from skellycam.backend.detection.detect_cameras import detect_cameras
+from skellycam.backend.opencv.detection.detect_cameras import detect_cameras
 from skellycam.backend.opencv.group.camera_group import CameraGroup
 
 logger = logging.getLogger(__name__)
