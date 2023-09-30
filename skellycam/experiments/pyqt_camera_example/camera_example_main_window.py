@@ -18,7 +18,7 @@ from imagesettings import ImageSettings
 from videosettings import VideoSettings
 
 
-class Camera(QMainWindow):
+class CameraExampleMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
