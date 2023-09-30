@@ -10,11 +10,12 @@ __repo_url__ = f"https://github.com/freemocap/{__package_name__}/"
 __repo_issues_url__ = f"{__repo_url__}issues"
 
 from skellycam.frontend.gui.qt.main import qt_gui_main
-from skellycam.system.environment.default_paths import get_log_file_path
-from skellycam.system.log_config.logsetup import configure_logging
+from skellycam.system.configure_logging import LogLevel, configure_logging
 
 
-configure_logging(log_file_path=get_log_file_path())
+
+configure_logging(LogLevel.TRACE)
+
 
 import logging
 
