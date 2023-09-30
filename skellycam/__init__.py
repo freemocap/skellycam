@@ -26,10 +26,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.info(f"Initializing {__package_name__} package, version: {__version__}, from file: {__file__}")
 
-from skellycam.opencv.camera.camera import Camera
-from skellycam.opencv.camera.models.camera_config import CameraConfig
-
-from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import SkellyCamParameterTreeWidget
-from skellycam.gui.qt.widgets.skelly_cam_controller_widget import SkellyCamControllerWidget
-from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
-from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
+from skellycam.frontend.qt.widgets.skelly_cam_config_parameter_tree_widget import SkellyCamParameterTreeWidget
+from skellycam.frontend.qt.widgets.skelly_cam_controller_widget import SkellyCamControllerWidget
+from skellycam.frontend.qt.skelly_cam_widget import SkellyCamWidget
+from skellycam.frontend.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
