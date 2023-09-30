@@ -3,7 +3,7 @@ import traceback
 
 import cv2
 
-from skellycam.backend.opencv.camera.models.camera_config import CameraConfig
+from skellycam.models.camera_config import CameraConfig
 
 logger = logging.getLogger(__name__)
 

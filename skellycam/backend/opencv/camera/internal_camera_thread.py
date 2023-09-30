@@ -6,8 +6,8 @@ import traceback
 
 import cv2
 
-from skellycam.backend.detection.models.frame_payload import FramePayload
-from skellycam.backend.opencv.camera.models.camera_config import CameraConfig
+from skellycam.models.frame_payload import FramePayload
+from skellycam.models.camera_config import CameraConfig
 from skellycam.backend.opencv.config.apply_config import apply_configuration
 from skellycam.backend.opencv.config.determine_backend import determine_backend
 

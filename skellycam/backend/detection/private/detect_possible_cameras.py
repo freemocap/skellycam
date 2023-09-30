@@ -4,7 +4,7 @@ import time
 import cv2
 import numpy as np
 
-from skellycam.backend.detection.private.found_camera_cache import FoundCameraCache
+from skellycam.models.found_camera_cache import FoundCameraCache
 from skellycam.backend.opencv.config.determine_backend import determine_backend
 
 CAM_CHECK_NUM = 20  # please give me a reason to increase this number ;D

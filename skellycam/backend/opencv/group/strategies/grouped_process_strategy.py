@@ -2,8 +2,8 @@ import logging
 import multiprocessing
 from typing import Dict, List
 
-from skellycam.backend.opencv.camera.models.camera_config import CameraConfig
-from skellycam.backend.detection.models.frame_payload import FramePayload
+from skellycam.models.camera_config import CameraConfig
+from skellycam.models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.strategies.cam_group_queue_process import CamGroupQueueProcess
 from skellycam.backend.utils.array_split_by import array_split_by
 

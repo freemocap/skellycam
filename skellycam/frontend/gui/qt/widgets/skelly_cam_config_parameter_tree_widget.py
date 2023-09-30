@@ -6,7 +6,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-from skellycam.backend.opencv.camera.models.camera_config import CameraConfig
+from skellycam.models.camera_config import CameraConfig
 from skellycam.frontend.gui.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.frontend.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
                                                                   EXPAND_ALL_STRING, ROTATE_180_STRING,

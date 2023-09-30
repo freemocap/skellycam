@@ -7,9 +7,9 @@ from typing import Dict, List, Union
 
 from setproctitle import setproctitle
 
-from skellycam.backend.detection.models.frame_payload import FramePayload
+from skellycam.models.frame_payload import FramePayload
 from skellycam.backend.opencv.camera.camera import Camera
-from skellycam.backend.opencv.camera.models.camera_config import CameraConfig
+from skellycam.models.camera_config import CameraConfig
 from skellycam.backend.opencv.group.strategies.queue_communicator import QueueCommunicator
 
 logger = logging.getLogger(__name__)

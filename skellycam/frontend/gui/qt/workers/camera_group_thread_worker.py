@@ -6,9 +6,9 @@ from typing import List, Union
 import cv2
 from PyQt6.QtCore import pyqtSignal, Qt, QThread
 from PyQt6.QtGui import QImage
-from skellycam.backend.detection.charuco.charuco_definition import CharucoBoardDefinition
-from skellycam.backend.detection.charuco.charuco_detection import draw_charuco_on_image
-from skellycam.backend.detection.models.frame_payload import FramePayload
+from skellycam.backend.charuco.charuco_detection import draw_charuco_on_image
+from skellycam.models.charuco_definition import CharucoBoardDefinition
+from skellycam.models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.camera_group import CameraGroup
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 
