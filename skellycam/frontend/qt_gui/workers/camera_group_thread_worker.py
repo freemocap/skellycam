@@ -101,7 +101,7 @@ class CameraGroupThreadWorker(QThread):
                 time.sleep(0.001)
 
     def _handle_queue_message(self, message):
-        logger.debug(f"Handling message from backend process with type: {message['type']}")
+        logger.trace(f"Handling message from backend process with type: {message['type']}")
         if message["type"] == "new_frame":
             self._handle_new_frame(message["frame"])
 
