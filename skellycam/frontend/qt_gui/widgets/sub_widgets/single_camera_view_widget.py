@@ -43,7 +43,7 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def handle_image_update(self, q_image: QImage, frame_diagnostics_dictionary: dict):
+    def handle_image_update(self, q_image: QImage, frame_info: dict):
         pixmap = QPixmap.fromImage(q_image)
 
         image_label_widget_width = self._image_label_widget.width()
@@ -60,8 +60,8 @@ class SingleCameraViewWidget(QWidget):
 
         self._image_label_widget.setPixmap(pixmap)
 
-        q_size = frame_diagnostics_dictionary['queue_size']
-        frames_recorded = frame_diagnostics_dictionary['number_of_frames_recorded']
+        q_size = frame_info['queue_size']
+        frames_recorded = frame_info['number_of_frames_recorded']
 
         if frames_recorded is None:
             frames_recorded = 0

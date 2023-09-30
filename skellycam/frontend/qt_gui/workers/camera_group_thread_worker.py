@@ -2,18 +2,16 @@ import logging
 import multiprocessing
 import time
 from copy import deepcopy
-from typing import List, Dict
+from typing import List
 
-import cv2
-from PyQt6.QtCore import pyqtSignal, Qt, QThread
+import numpy as np
+from PyQt6.QtCore import pyqtSignal, QThread
 from PyQt6.QtGui import QImage
 
 from skellycam.backend.backend_process_controller import BackendController
-from skellycam.backend.charuco.charuco_detection import draw_charuco_on_image
 from skellycam.backend.opencv.camera.types.camera_id import CameraId
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.frontend.qt_gui.workers.video_save_thread_worker import VideoSaveThreadWorker
-from skellycam.data_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +100,8 @@ class CameraGroupThreadWorker(QThread):
 
     def _handle_queue_message(self, message):
         logger.trace(f"Handling message from backend process with type: {message['type']}")
-        if message["type"] == "new_frame":
-            self._handle_new_frame(message["frame"])
+        if message["type"] == "new_image":
+            self._handle_new_image(message["image"], message["frame_info"])
 
         elif message["type"] == "cameras_connected":
             self.cameras_connected_signal.emit()
@@ -120,18 +118,13 @@ class CameraGroupThreadWorker(QThread):
         else:
             logger.error(f"Received unknown message from backend process: {message}")
 
-    def _handle_new_frame(self, frame: FramePayload):
+    def _handle_new_image(self, image: np.ndarray, frame_info: dict):
 
         try:
-            if self.annotate_images:
-                frame.image = draw_charuco_on_image(frame.image)
-            converted_frame = convert_frame(frame)
-            frame_stats = {"timestamp_ns": frame.timestamp_ns,
-                           "number_of_frames_received": frame.number_of_frames_received,
-                           "number_of_frames_recorded": frame.number_of_frames_recorded,
-                           "queue_size": frame.queue_size}
-            logger.trace(f"Emitting `new_image_signal` with camera id: {frame.camera_id} - image.shape: {frame.image.shape} - frame_stats: {frame_stats}")
-            self.new_image_signal.emit(frame.camera_id, converted_frame, frame_stats)
+            q_image = image_to_q_image(image)
+            logger.trace(
+                f"Emitting `new_image_signal` with camera id: {frame_info['camera_id']} - {image.shape} - frame_stats: {frame_info}")
+            self.new_image_signal.emit(frame_info["camera_id"], q_image, frame_info)
         except Exception as e:
             logger.error(f"Problem converting frame: {e}")
             raise e
@@ -234,16 +227,11 @@ class CameraGroupThreadWorker(QThread):
         return True
 
 
-def convert_frame(frame: FramePayload):
-    image = frame.image
-    # image = cv2.flip(image, 1)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    converted_frame = QImage(
+def image_to_q_image(image: np.ndarray) -> QImage:
+    q_image = QImage(
         image.data,
         image.shape[1],
         image.shape[0],
         QImage.Format.Format_RGB888,
     )
-
-    return converted_frame.scaled(int(image.shape[1] / 2), int(image.shape[0] / 2),
-                                  Qt.AspectRatioMode.KeepAspectRatio)
+    return q_image

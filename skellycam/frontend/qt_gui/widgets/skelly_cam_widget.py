@@ -259,9 +259,9 @@ class SkellyCamWidget(QWidget):
         self._reset_detect_available_cameras_button()
 
     @pyqtSlot(str, QImage, dict)
-    def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary: Dict):
+    def _handle_image_update(self, camera_id: str, q_image: QImage, frame_info: Dict):
         self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image,
-                                                                                      frame_diagnostics_dictionary=frame_diagnostics_dictionary)
+                                                                                      frame_info=frame_info)
 
     def _reset_detect_available_cameras_button(self):
         self._detect_available_cameras_push_button.setText("Detect Available Cameras")
