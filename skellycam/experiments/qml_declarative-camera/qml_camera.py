@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     # QQuickWidget for embedding QML
     qml_widget = QQuickWidget()
-    qml_widget.setSource(QUrl('simple_camera.qml'))
+    qml_widget.setSource(QUrl('declarative-camera.qml'))
     qml_widget.setResizeMode(QQuickWidget.SizeRootObjectToView)
 
     # Embed QML in QWidget
