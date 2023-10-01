@@ -1,8 +1,13 @@
+import logging
+
+import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from skellycam.data_models.camera_config import CameraConfig
+
+logger = logging.getLogger(__name__)
 
 
 class SingleCameraViewWidget(QWidget):
@@ -35,6 +40,8 @@ class SingleCameraViewWidget(QWidget):
         self._image_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._image_label_widget)
 
+        self._luminance = []
+
     @property
     def camera_id(self):
         return self._camera_id
@@ -43,8 +50,26 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
+    def calculate_mean_luminance(self, q_image: QImage):
+        # Convert QImage to numpy array
+        q_image_data = q_image.convertToFormat(QImage.Format.Format_RGB888)
+        ptr = q_image_data.bits().asarray(q_image_data.sizeInBytes())
+        image = np.frombuffer(ptr, np.uint8).reshape((q_image.height(), q_image.width(), 3))
+
+        mean_luminance = np.mean(image)
+        if mean_luminance > 200:
+            f = 9
+        return mean_luminance
+
     def handle_image_update(self, q_image: QImage, frame_info: dict):
+        logger.trace(f"Handling image update for camera_id: {self._camera_id}")
         pixmap = QPixmap.fromImage(q_image)
+
+        mean_luminance = self.calculate_mean_luminance(q_image)
+
+        self._luminance.append(mean_luminance)
+        logger.debug(
+            f"Camera {self._camera_id} mean luminance on this frame: {mean_luminance}, average: {np.mean(self._luminance)}")
 
         image_label_widget_width = self._image_label_widget.width()
         image_label_widget_height = self._image_label_widget.height()
@@ -60,13 +85,13 @@ class SingleCameraViewWidget(QWidget):
 
         self._image_label_widget.setPixmap(pixmap)
 
-        q_size = frame_info['queue_size']
+        queue_size = frame_info['queue_size']
         frames_recorded = frame_info['number_of_frames_recorded']
 
         if frames_recorded is None:
             frames_recorded = 0
         self._title_label_widget.setText(
-            self._camera_name_string + f"\nQueue Size:{q_size} | "
+            self._camera_name_string + f"\nQueue Size:{queue_size} | "
                                        f"Frames Recorded#{str(frames_recorded)}".ljust(38))
 
     def show(self):

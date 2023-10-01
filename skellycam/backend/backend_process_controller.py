@@ -57,7 +57,8 @@ class BackendController:
                     if annotate_images:
                         frame_payload.image = draw_charuco_on_image(frame_payload.image)
                     image = prepare_image_for_frontend(frame_payload)
-
+                    if np.mean(image) > 200:
+                        f = 9
                     frame_info = {"camera_id": camera_id,
                                   "timestamp_ns": frame_payload.timestamp_ns,
                                   "number_of_frames_received": frame_payload.number_of_frames_received,

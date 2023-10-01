@@ -14,7 +14,7 @@ from skellycam.system.configure_logging import LogLevel, configure_logging
 
 
 
-configure_logging(LogLevel.TRACE)
+configure_logging(LogLevel.DEBUG)
 
 
 import logging
