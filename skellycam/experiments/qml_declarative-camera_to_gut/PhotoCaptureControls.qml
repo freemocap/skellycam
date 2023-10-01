@@ -16,7 +16,7 @@ FocusScope {
     property int buttonsWidth
 
     signal previewSelected
-    signal photoModeSelected
+    signal videoModeSelected
 
     Rectangle {
         id: buttonPaneShadow
@@ -27,27 +27,46 @@ FocusScope {
             anchors.margins: buttonsmargin
             flow: captureControls.state === "MobilePortrait"
                   ? GridLayout.LeftToRight : GridLayout.TopToBottom
-            Item {
+            CameraButton {
+                text: "Capture"
                 implicitWidth: buttonsWidth
-                height: 70
-                CameraButton {
-                    text: "Record"
-                    anchors.fill: parent
-                    visible: captureSession.recorder.recorderState !== MediaRecorder.RecordingState
-                    onClicked: captureSession.recorder.record()
-                }
+                visible: captureSession.imageCapture.readyForCapture
+                onClicked: captureSession.imageCapture.captureToFile("")
             }
 
-            Item {
+            CameraPropertyButton {
+                id : wbModesButton
                 implicitWidth: buttonsWidth
-                height: 70
-                CameraButton {
-                    id: stopButton
-                    text: "Stop"
-                    anchors.fill: parent
-                    visible: captureSession.recorder.recorderState === MediaRecorder.RecordingState
-                    onClicked: captureSession.recorder.stop()
+                state: captureControls.state
+                value: Camera.WhiteBalanceAuto
+                model: ListModel {
+                    ListElement {
+                        icon: "images/camera_auto_mode.png"
+                        value: Camera.WhiteBalanceAuto
+                        text: "Auto"
+                    }
+                    ListElement {
+                        icon: "images/camera_white_balance_sunny.png"
+                        value: Camera.WhiteBalanceSunlight
+                        text: "Sunlight"
+                    }
+                    ListElement {
+                        icon: "images/camera_white_balance_cloudy.png"
+                        value: Camera.WhiteBalanceCloudy
+                        text: "Cloudy"
+                    }
+                    ListElement {
+                        icon: "images/camera_white_balance_incandescent.png"
+                        value: Camera.WhiteBalanceTungsten
+                        text: "Tungsten"
+                    }
+                    ListElement {
+                        icon: "images/camera_white_balance_flourescent.png"
+                        value: Camera.WhiteBalanceFluorescent
+                        text: "Fluorescent"
+                    }
                 }
+                onValueChanged: captureControls.captureSession.camera.whiteBalanceMode = wbModesButton.value
             }
 
             Item {
@@ -56,9 +75,8 @@ FocusScope {
                 CameraButton {
                     text: "View"
                     anchors.fill: parent
-                    onClicked: captureControls.previewSelected()
-                    //don't show View button during recording
-                    visible: captureSession.recorder.actualLocation && !stopButton.visible
+                    onClicked:state = captureControls.previewSelected()
+                    visible: captureControls.previewAvailable
                 }
             }
         }
@@ -71,34 +89,35 @@ FocusScope {
 
             CameraListButton {
                 implicitWidth: buttonsWidth
-                onValueChanged: captureSession.camera.cameraDevice = value
                 state: captureControls.state
+                onValueChanged: captureSession.camera.cameraDevice = value
             }
 
             CameraButton {
-                text: "Switch to Photiooooooo"
+                text: "Switch to Video"
                 implicitWidth: buttonsWidth
-                onClicked: captureControls.photoModeSelected()
+                onClicked: captureControls.videoModeSelected()
             }
 
             CameraButton {
                 id: quitButton
-                text: "Quit"
                 implicitWidth: buttonsWidth
+                text: "Quit"
                 onClicked: Qt.quit()
             }
         }
     }
 
     ZoomControl {
+        id: zoomControl
         x : 0
         y : captureControls.state === "MobilePortrait" ? -buttonPaneShadow.height : 0
         width : 100
         height: parent.height
 
-        currentZoom: captureSession.camera.zoomFactor
-        maximumZoom: captureSession.camera.maximumZoomFactor
-        onZoomTo: captureSession.camera.zoomFactor = target
+        currentZoom: camera.zoomFactor
+        maximumZoom: camera.maximumZoomFactor
+        onZoomTo: camera.zoomFactor = target
     }
 
     FlashControl {
@@ -106,7 +125,7 @@ FocusScope {
         y : captureControls.state === "MobilePortrait" ?
                 parent.height - (buttonPaneShadow.height + height) : parent.height - height
 
-        cameraDevice: captureSession.camera
+        cameraDevice: camera
     }
 
     states: [
@@ -115,7 +134,7 @@ FocusScope {
             PropertyChanges {
                 target: buttonPaneShadow
                 width: parent.width
-                height: buttonsPanelPortraitHeight
+                height: captureControls.buttonsPanelPortraitHeight
             }
             PropertyChanges {
                 target: buttonsColumn
@@ -138,7 +157,7 @@ FocusScope {
                 anchors.top: parent.top
             }
             AnchorChanges {
-                target: bottomColumn;
+                target: bottomColumn
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -167,39 +186,39 @@ FocusScope {
                 anchors.right: parent.right
             }
             AnchorChanges {
-                target: buttonsColumn;
+                target: buttonsColumn
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                anchors.left: parent.left;
+                anchors.left: parent.left
             }
             AnchorChanges {
-                target: bottomColumn;
-                anchors.top: parent.top;
-                anchors.bottom: parent.bottom;
-                anchors.right: parent.right;
+                target: bottomColumn
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
             }
         },
         State {
             name: "Other"
             PropertyChanges {
-                target: buttonPaneShadow;
-                width: bottomColumn.width + 16;
-                height: parent.height;
+                target: buttonPaneShadow
+                width: bottomColumn.width + 16
+                height: parent.height
             }
             AnchorChanges {
-                target: buttonPaneShadow;
-                anchors.top: parent.top;
-                anchors.right: parent.right;
-            }
-            AnchorChanges {
-                target: buttonsColumn;
+                target: buttonPaneShadow
                 anchors.top: parent.top
                 anchors.right: parent.right
             }
             AnchorChanges {
-                target: bottomColumn;
-                anchors.bottom: parent.bottom;
-                anchors.right: parent.right;
+                target: buttonsColumn
+                anchors.top: parent.top
+                anchors.right: parent.right
+            }
+            AnchorChanges {
+                target: bottomColumn
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
             }
         }
     ]

@@ -10,7 +10,7 @@ FocusScope {
     property CaptureSession captureSession
     property bool previewAvailable : false
 
-    property int buttonsmargin: 8
+    property int buttonsmargin: 4
     property int buttonsPanelWidth
     property int buttonsPanelPortraitHeight
     property int buttonsWidth
@@ -20,7 +20,7 @@ FocusScope {
 
     Rectangle {
         id: buttonPaneShadow
-        color: Qt.rgba(0.08, 0.08, 0.08, 1)
+        color: Qt.rgba(0.8, 0.08, 0.08, 1)
 
         GridLayout {
             id: buttonsColumn
@@ -40,7 +40,7 @@ FocusScope {
 
             Item {
                 implicitWidth: buttonsWidth
-                height: 70
+                height: 700
                 CameraButton {
                     id: stopButton
                     text: "Stop"
@@ -75,18 +75,18 @@ FocusScope {
                 state: captureControls.state
             }
 
-            CameraButton {
-                text: "Switch to Photiooooooo"
-                implicitWidth: buttonsWidth
-                onClicked: captureControls.photoModeSelected()
-            }
-
-            CameraButton {
-                id: quitButton
-                text: "Quit"
-                implicitWidth: buttonsWidth
-                onClicked: Qt.quit()
-            }
+            // CameraButton {
+            //     text: "Switch to Photoeeewewew"
+            //     implicitWidth: buttonsWidth
+            //     onClicked: captureControls.photoModeSelected()
+            // }
+            //
+            // CameraButton {
+            //     id: quitButton
+            //     text: "Quit"
+            //     implicitWidth: buttonsWidth
+            //     onClicked: Qt.quit()
+            // }
         }
     }
 
