@@ -25,24 +25,18 @@ class Camera(QMainWindow):
         self._video_devices_group = None
 
         self.m_devices = QMediaDevices()
-        self.m_imageCapture = None
         self.m_captureSession = QMediaCaptureSession()
         self.m_camera = None
         self.m_audioInput = QAudioInput()
         self.m_captureSession.setAudioInput(self.m_audioInput)
         self.m_mediaRecorder = None
 
-        self.m_isCapturingImage = False
         self.m_applicationExiting = False
-        self.m_doImageCapture = True
 
         self.m_metaDataDialog = None
 
         self._ui = Ui_Camera()
         self._ui.setupUi(self)
-        image = Path(__file__).parent / "shutter.svg"
-        self._ui.takeImageButton.setIcon(QIcon(os.fspath(image)))
-        # self._ui.actionAbout_Qt.triggered.connect(qApp.aboutQt)
 
         # disable all buttons by default
         self.updateCameraActive(False)
@@ -82,19 +76,11 @@ class Camera(QMainWindow):
             self.m_mediaRecorder.durationChanged.connect(self.updateRecordTime)
             self.m_mediaRecorder.errorChanged.connect(self.displayRecorderError)
 
-        if not self.m_imageCapture:
-            self.m_imageCapture = QImageCapture()
-            self.m_captureSession.setImageCapture(self.m_imageCapture)
-            self.m_imageCapture.readyForCaptureChanged.connect(self.readyForCapture)
-            self.m_imageCapture.imageCaptured.connect(self.processCapturedImage)
-            self.m_imageCapture.imageSaved.connect(self.imageSaved)
-            self.m_imageCapture.errorOccurred.connect(self.displayCaptureError)
 
         self.m_captureSession.setVideoOutput(self._ui.viewfinder)
 
         self.updateCameraActive(self.m_camera.isActive())
         self.updateRecorderState(self.m_mediaRecorder.recorderState())
-        self.readyForCapture(self.m_imageCapture.isReadyForCapture())
 
         self.updateCaptureMode()
 

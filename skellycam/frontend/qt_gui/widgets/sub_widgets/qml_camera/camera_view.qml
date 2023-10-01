@@ -3,33 +3,13 @@
 
 import QtQuick
 import QtMultimedia
+import "components/icons" as Icons
 
 Rectangle {
     id: cameraUI
-
     color: "black"
     height: 480
-    state: "VideoCapture"
     width: 800
-
-    states: [
-        State {
-            name: "VideoCapture"
-            StateChangeScript {
-                script: {
-                    camera.start();
-                }
-            }
-        },
-        State {
-            name: "VideoPreview"
-            StateChangeScript {
-                script: {
-                    camera.stop();
-                }
-            }
-        }
-    ]
 
     CaptureSession {
         id: captureSession
@@ -38,25 +18,38 @@ Rectangle {
 
         camera: Camera {
             id: camera
-
+            Component.onCompleted: camera.start() // Starts the camera once the component is completed
         }
         imageCapture: ImageCapture {
             id: imageCapture
-
         }
         recorder: MediaRecorder {
             id: recorder
-
-            //             resolution: "640x480"
-            //             frameRate: 30
         }
     }
+
     VideoOutput {
         id: viewfinder
-
         anchors.fill: parent
-        //        autoOrientation: true
         visible: True
     }
 
+    Icons.GearIcon {
+        anchors.top: parent.top
+        anchors.right: parent.right
+    }
+
+    // Controls menu
+    Rectangle {
+        id: controlsMenu
+        color: "lightgrey"
+        width: parent.width / 3
+        height: parent.height / 2
+        anchors.top: parent.top
+        anchors.right: parent.right
+        visible: false
+
+        // Control Camera Exposure
+
+    }
 }

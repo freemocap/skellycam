@@ -1,0 +1,7 @@
+<!-- COMPILE WITH  - pyside6-rcc -o qml_resources_qrc.py qml_components.qrc-->
+
+<RCC>
+    <qresource prefix="/">
+        <file>icons/GearIcon.qml</file>
+    </qresource>
+</RCC>
