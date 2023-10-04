@@ -8,7 +8,7 @@ import numpy as np
 from PyQt6.QtCore import pyqtSignal, QThread
 from PyQt6.QtGui import QImage
 
-from skellycam.backend.backend_process_controller import BackendController
+from skellycam.backend.backend_process_controller import BackendProcessController
 from skellycam.backend.opencv.camera.types.camera_id import CameraId
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.frontend.qt_gui.workers.video_save_thread_worker import VideoSaveThreadWorker
@@ -87,9 +87,9 @@ class CameraGroupThreadWorker(QThread):
     def run(self):
         self._queue = multiprocessing.Queue()
         exit_event = multiprocessing.Event()
-        backend_controller = BackendController(camera_ids=self.camera_ids,
-                                               queue=self._queue,
-                                               exit_event=exit_event)
+        backend_controller = BackendProcessController(camera_ids=self.camera_ids,
+                                                      queue=self._queue,
+                                                      exit_event=exit_event)
         backend_controller.start_camera_group_process()
         while not exit_event.is_set():
             if not self._queue.empty():

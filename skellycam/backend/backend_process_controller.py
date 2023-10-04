@@ -12,7 +12,7 @@ from skellycam.data_models.frame_payload import FramePayload
 logger = logging.getLogger(__name__)
 
 
-class BackendController:
+class BackendProcessController:
     def __init__(self,
                  camera_ids: List[str],
                  queue: multiprocessing.Queue,
@@ -58,7 +58,7 @@ class BackendController:
                     image = prepare_image_for_frontend(image=frame_payload.image,
                                                        annotate_image=annotate_images)
 
-                    frame_info = BackendController._extract_frame_stats(camera_id, frame_payload, queue)
+                    frame_info = BackendProcess._extract_frame_stats(camera_id, frame_payload, queue)
                     queue.put({"type": "new_image",
                                "image": image,
                                "frame_info": frame_info})
