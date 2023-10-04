@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import List
 
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, QThread
+from PyQt6.QtCore import pyqtSignal, QThread, QByteArray
 from PyQt6.QtGui import QImage
 
 from skellycam.backend.backend_process_controller import BackendProcessController
@@ -38,9 +38,7 @@ class CameraGroupThreadWorker(QThread):
         self._camera_ids = camera_ids
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
         self.annotate_images = annotate_images
-
-        # self._should_pause_bool = False
-        # self._should_record_frames_bool = False
+        self._time_since_last_frame = time.process_time_ns()
 
         self._updating_camera_settings_bool = False
         self._current_recording_name = None
@@ -118,12 +116,12 @@ class CameraGroupThreadWorker(QThread):
         else:
             logger.error(f"Received unknown message from backend process: {message}")
 
-    def _handle_new_image(self, image: np.ndarray, frame_info: dict):
+    def _handle_new_image(self, image_byte_array:QByteArray, frame_info: dict):
 
         try:
-            q_image = image_to_q_image(image)
+            q_image = image_byte_string_to_q_image(image_byte_array)
             logger.trace(
-                f"Emitting `new_image_signal` with camera id: {frame_info['camera_id']} - {image.shape} - frame_stats: {frame_info}")
+                f"Emitting `new_image_signal` with camera id: {frame_info['camera_id']}")
             self.new_image_signal.emit(frame_info["camera_id"], q_image, frame_info)
         except Exception as e:
             logger.error(f"Problem converting frame: {e}")
@@ -234,4 +232,9 @@ def image_to_q_image(image: np.ndarray) -> QImage:
         image.shape[0],
         QImage.Format.Format_RGB888,
     )
+    return q_image
+
+def image_byte_string_to_q_image(image_byte_array: QByteArray) -> QImage:
+    q_image = QImage()
+    q_image.loadFromData(image_byte_array)
     return q_image
