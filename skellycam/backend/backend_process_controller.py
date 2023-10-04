@@ -7,6 +7,7 @@ import numpy as np
 
 from skellycam.backend.charuco.charuco_detection import draw_charuco_on_image
 from skellycam.backend.opencv.group.camera_group import CameraGroup
+from skellycam.data_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +39,11 @@ class BackendController:
         queue.put({"type": "camera_group_created",
                    "camera_config_dictionary": camera_group.camera_config_dictionary})
         camera_group.start()
-        should_continue = True
+
         logger.info("Emitting `cameras_connected_signal`")
         queue.put({"type": "cameras_connected"})
 
-        while camera_group.is_capturing and should_continue and not exit_event.is_set():
+        while camera_group.is_capturing and not exit_event.is_set():
 
             new_frames = camera_group.new_frames()
             if len(new_frames) > 0:
@@ -54,19 +55,22 @@ class BackendController:
                         raise ValueError(
                             f"camera_id: {camera_id} != frame_payload.camera_id: {frame_payload.camera_id}")
 
-                    if annotate_images:
-                        frame_payload.image = draw_charuco_on_image(frame_payload.image)
-                    image = prepare_image_for_frontend(frame_payload)
-                    if np.mean(image) > 200:
-                        f = 9
-                    frame_info = {"camera_id": camera_id,
-                                  "timestamp_ns": frame_payload.timestamp_ns,
-                                  "number_of_frames_received": frame_payload.number_of_frames_received,
-                                  "number_of_frames_recorded": frame_payload.number_of_frames_recorded,
-                                  "queue_size": queue.qsize()}
+                    image = prepare_image_for_frontend(image=frame_payload.image,
+                                                       annotate_image=annotate_images)
+
+                    frame_info = BackendController._extract_frame_stats(camera_id, frame_payload, queue)
                     queue.put({"type": "new_image",
                                "image": image,
                                "frame_info": frame_info})
+
+    @staticmethod
+    def _extract_frame_stats(camera_id, frame_payload, queue):
+        frame_info = {"camera_id": camera_id,
+                      "timestamp_ns": frame_payload.timestamp_ns,
+                      "number_of_frames_received": frame_payload.number_of_frames_received,
+                      "number_of_frames_recorded": frame_payload.number_of_frames_recorded,
+                      "queue_size": queue.qsize()}
+        return frame_info
 
 
 def create_camera_group(camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None
@@ -82,8 +86,12 @@ def create_camera_group(camera_ids: List[Union[str, int]], camera_config_diction
     return camera_group
 
 
-def prepare_image_for_frontend(frame_payload) -> np.ndarray:
-    image = frame_payload.image
+def prepare_image_for_frontend(image: np.ndarray,
+                               annotate_image:bool) -> np.ndarray:
+    if annotate_image:
+        image = draw_charuco_on_image(image)
+
+
     # image = cv2.flip(image, 1)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_scaled = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)

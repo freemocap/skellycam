@@ -173,6 +173,9 @@ class CameraGroup:
                     camera_config_dict=self._camera_config_dictionary,
                 )
 
+    def new_multiframe_available(self):
+        pass
+
 # async def getall(g: CameraGroup):
 #     await asyncio.gather(
 #         cam_show("0", lambda: g.get_current_frame_by_cam_id("0")),
