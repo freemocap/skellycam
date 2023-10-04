@@ -19,9 +19,11 @@ class DetectCamerasWorker(QThread):
         logger.info("Starting detect cameras thread worker")
         available_cameras = self._devices.videoInputs()
         camera_info = {}
-        for camera_number, camera in available_cameras:
-            position = camera.position()
-            camera_info[camera_id] = self._devices.deviceDescription(camera_id)
+        # for camera_number, camera in available_cameras:
+        #     position = camera.position()
+        #     camera_info[camera_id] = self._devices.deviceDescription(camera_id)
+
+        camera_ids = [str(camera_number) for camera_number, _ in enumerate(available_cameras)]
         self.cameras_detected_signal.emit(camera_ids)
 
 if __name__ == "__main__":

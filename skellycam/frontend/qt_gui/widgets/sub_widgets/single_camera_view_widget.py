@@ -40,8 +40,6 @@ class SingleCameraViewWidget(QWidget):
         self._image_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._image_label_widget)
 
-        self._luminance = []
-
     @property
     def camera_id(self):
         return self._camera_id
@@ -62,15 +60,7 @@ class SingleCameraViewWidget(QWidget):
         return mean_luminance
 
     def handle_image_update(self, q_image: QImage, frame_info: dict):
-        logger.trace(f"Handling image update for camera_id: {self._camera_id}")
         pixmap = QPixmap.fromImage(q_image)
-
-        mean_luminance = self.calculate_mean_luminance(q_image)
-
-        self._luminance.append(mean_luminance)
-        logger.debug(
-            f"Camera {self._camera_id} mean luminance on this frame: {mean_luminance}, average: {np.mean(self._luminance)}")
-
         image_label_widget_width = self._image_label_widget.width()
         image_label_widget_height = self._image_label_widget.height()
 
