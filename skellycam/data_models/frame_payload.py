@@ -7,7 +7,8 @@ from multiprocessing.shared_memory import SharedMemory
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
+
+
 
 
 @dataclass
@@ -42,6 +43,7 @@ class SharedMemoryFramePayload:
     camera_id: c_wchar_p  # camera_id of the image (str)
     number_of_frames_received: Value  # number of frames received (int)
 
+
     @classmethod
     def from_data(cls, success: bool, image: np.ndarray, timestamp_ns: float, camera_id: str,
                   number_of_frames_received: int):
@@ -72,3 +74,17 @@ class SharedMemoryFramePayload:
         shared_memory.unlink()
 
 
+
+if __name__ == "__main__":
+    import skellycam
+    skellycam.configure_logging()
+    logger = logging.getLogger(__name__)
+
+    dummy_image = np.random.randint(0, 255, (10, 20, 3), dtype=np.uint8)
+    shared_payload = SharedMemoryFramePayload.from_data(success=True,
+                                                        image=dummy_image,
+                                                        timestamp_ns=123456789,
+                                                        camera_id="test_camera",
+                                                        number_of_frames_received=1)
+    logger.info(f"Shared payload.image_name {shared_payload.image_name.value}")
+    logger.info(f"Shared payload.get_image().shape {shared_payload.get_image().shape}")

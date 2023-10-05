@@ -103,7 +103,7 @@ class CameraGroupThreadWorker(QThread):
 
     def _handle_queue_message(self, message):
         logger.trace(f"Handling message from backend process with type: {message['type']}")
-        if message["type"] == "latest_frames":
+        if message["type"] == "new_image":
             self._handle_latest_frames(message["image"], message["frame_info"])
 
         elif message["type"] == "cameras_connected":
@@ -119,7 +119,7 @@ class CameraGroupThreadWorker(QThread):
             self.videos_saved_to_this_folder_signal.emit(message["folder_path"])
 
         else:
-            logger.error(f"Received unknown message from backend process: {message}")
+            logger.error(f"Received unknown message type from backend process: `{message['type']}`")
 
     def _handle_latest_frames(self, image_byte_array: QByteArray, frame_info: dict):
 

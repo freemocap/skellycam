@@ -49,7 +49,8 @@ class BackendProcessController:
             camera_group = create_and_start_camera_group(camera_configs=camera_configs,
                                                          exit_event=exit_event,
                                                          send_to_frontend=send_to_frontend)
-
+            all_frames = {camera_id: [] for camera_id in camera_configs.keys()}
+            latest_frames = {camera_id: None for camera_id in camera_configs.keys()}
             while camera_group.is_capturing and not exit_event.is_set():
                 if receive_from_frontend.poll():
                     message = receive_from_frontend.recv()
@@ -58,7 +59,14 @@ class BackendProcessController:
                     handle_message_from_frontend(camera_group=camera_group,
                                                  message=message,
                                                  send_to_frontend=send_to_frontend,
-                                                 annotate_images=annotate_images)
+                                                 annotate_images=annotate_images,
+                                                 latest_frames=latest_frames, )
+                new_frames = camera_group.new_frames()
+                if len(new_frames) > 0:
+                    logger.trace(f"Got new frames from cameras: {new_frames.keys()}")
+                    for camera_id, frame_payload in new_frames.items():
+                        all_frames[camera_id].append(frame_payload)
+                        latest_frames[camera_id] = frame_payload
 
 
         except Exception as e:
@@ -91,7 +99,8 @@ def create_and_start_camera_group(camera_configs: Dict[str, CameraConfig],
 def handle_message_from_frontend(camera_group: CameraGroup,
                                  message: Dict[str, Any],
                                  send_to_frontend,  # pipe connection
-                                 annotate_images: bool):
+                                 annotate_images: bool,
+                                 latest_frames: Dict[str, FramePayload]):
     logger.info(f"Handling  message: `{message['type']}`...")
 
     if message["type"] == "update_camera_settings":
@@ -109,13 +118,9 @@ def handle_message_from_frontend(camera_group: CameraGroup,
 
     elif message["type"] == "get_latest_frames":
         logger.trace(f"Getting latest frames...")
-        latest_frames = camera_group.latest_frames()
-        if latest_frames is None:
-            logger.trace(f"No frames yet...")
-        else:
-            send_image_to_frontend(annotate_images=annotate_images,
-                                   frames=camera_group.latest_frames(),
-                                   send_to_frontend=send_to_frontend)
+        send_image_to_frontend(annotate_images=annotate_images,
+                               frames=latest_frames,
+                               send_to_frontend=send_to_frontend)
     else:
         raise ValueError(f"Unknown message type: {message['type']}")
 
@@ -135,14 +140,15 @@ def send_image_to_frontend(annotate_images: bool,
                            frames: Dict[str, FramePayload],
                            send_to_frontend):
     for camera_id, frame_payload in frames.items():
-        image = prepare_image_for_frontend(image=frame_payload.image,
-                                           annotate_image=annotate_images)
-        byte_array = _convert_image_to_byte_array(image)
-        send_to_frontend.send({"type": "new_image",
-                               "image": byte_array,
-                               "frame_info": {"camera_id": frame_payload.camera_id,
-                                              "timestamp_ns": frame_payload.timestamp_ns,
-                                              "number_of_frames_received": frame_payload.number_of_frames_received}})
+        if frame_payload is not None:
+            image = prepare_image_for_frontend(image=frame_payload.image,
+                                               annotate_image=annotate_images)
+            byte_array = _convert_image_to_byte_array(image)
+            send_to_frontend.send({"type": "new_image",
+                                   "image": byte_array,
+                                   "frame_info": {"camera_id": frame_payload.camera_id,
+                                                  "timestamp_ns": frame_payload.timestamp_ns,
+                                                  "number_of_frames_received": frame_payload.number_of_frames_received}})
 
 
 def _convert_image_to_byte_array(image):

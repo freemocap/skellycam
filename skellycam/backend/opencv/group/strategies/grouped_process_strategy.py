@@ -52,18 +52,12 @@ class GroupedProcessStrategy:
                 process.start_capture(
                     event_dictionary=event_dictionary, camera_configs=camera_configs
                 )
-            self._run_frame_grabbing_loop()
         except Exception as e:
             logger.error(f"Failed to start capture: {e}")
             logger.exception(e)
             raise e
 
-    def _run_frame_grabbing_loop(self):
-        while self.is_capturing:
 
-            new_frames = self.get_new_frames()
-            if len(new_frames) > 0:
-                logger.trace(f"Got new frames from cameras: {new_frames.keys()}")
 
     def _get_empty_multiframe_payload_dictionary(self):
         return {camera_id: None for camera_id in self._camera_ids}

@@ -6,8 +6,8 @@ from skellycam.backend.opencv.camera.types.camera_id import CameraId
 class CameraConfig(BaseModel):
     camera_id: CameraId = 0
     exposure: int = -7
-    resolution_width: int = 1920
-    resolution_height: int = 1080
+    resolution_width: int = 1280#1920
+    resolution_height: int = 720#1080
     framerate: int = 30
     # fourcc: str = "MP4V"
     fourcc: str = "MJPG"

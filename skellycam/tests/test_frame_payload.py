@@ -17,8 +17,8 @@ def test_frame_payload_conversion(sample_image):
                                                         number_of_frames_received=1)
     final_payload = FramePayload.from_shared_memory_frame_payload(shared_memory_frame_payload=shared_payload)
 
-    assert np.array_equal(shared_payload.image, final_payload.image)
+    assert np.array_equal(shared_payload.get_image(), final_payload.image)
     assert shared_payload.success == final_payload.success
-    assert shared_payload.timestamp == final_payload.timestamp
+    assert shared_payload.timestamp_ns == final_payload.timestamp
     assert shared_payload.camera_id == final_payload.camera_id
     assert shared_payload.frames_received == final_payload.frames_received

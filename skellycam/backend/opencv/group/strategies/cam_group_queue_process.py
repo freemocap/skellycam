@@ -78,11 +78,9 @@ class CamGroupQueueProcess:
             logger.info(f"CamGroupProcess {self.name} terminate command executed")
 
     @staticmethod
-    def _create_cams(camera_config_dict: Dict[str, CameraConfig],
-                     queues: Dict[str, multiprocessing.Queue]) -> Dict[str, Camera]:
+    def _create_cams(camera_config_dict: Dict[str, CameraConfig]) -> Dict[str, Camera]:
         cam_dict = {
-            camera_config.camera_id: Camera(config = camera_config,
-                                            frame_queue = queues[camera_config.camera_id])
+            camera_config.camera_id: Camera(config=camera_config)
             for camera_config in camera_config_dict.values()
         }
         return cam_dict
@@ -106,12 +104,11 @@ class CamGroupQueueProcess:
         process_camera_config_dict = {
             camera_id: camera_config_dict[camera_id] for camera_id in cam_ids
         }
-        cameras_dictionary = CamGroupQueueProcess._create_cams(
+        cameras = CamGroupQueueProcess._create_cams(
             camera_config_dict=process_camera_config_dict,
-            queues=queues,
         )
 
-        for camera in cameras_dictionary.values():
+        for camera in cameras.values():
             camera.connect(ready_event_dictionary[camera.camera_id])
 
         while not exit_event.is_set():
@@ -136,19 +133,19 @@ class CamGroupQueueProcess:
                 # awhile.
                 sleep(0.1)
                 logger.trace("Looping in CamGroupProcess")
-                # for camera in cameras_dictionary.values():
-                #
-                # try:
-                #     queue = queues[camera.camera_id]
-                #     queue.put(camera.latest_frame)
-                # except Exception as e:
-                #     logger.exception(
-                #         f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
-                #     )
-                #     break
+                for camera in cameras.values():
+                    try:
+                        if camera.new_frame_ready:
+                            logger.info(
+                                f"Putting frame into queue: {camera.camera_id} - {queues[camera.camera_id].qsize()} - Image shape: {camera.latest_frame.image.shape} - queue size: {queues[camera.camera_id].qsize()}")
+                            queues[camera.camera_id].put(camera.latest_frame)
+                    except Exception as e:
+                        logger.error(f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}")
+                        logger.exception(e)
+                        raise e
 
         # close cameras on exit
-        for camera in cameras_dictionary.values():
+        for camera in cameras.values():
             logger.info(f"Closing camera {camera.camera_id}")
             camera.close()
 

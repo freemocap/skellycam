@@ -17,12 +17,10 @@ class Camera:
     def __init__(
             self,
             config: CameraConfig,
-            frame_queue: multiprocessing.Queue,
     ):
 
         self._ready_event = None
         self._config = config
-        self._frame_queue = frame_queue
         self._capture_thread: Optional[VideoCaptureThread] = None
 
     @property
@@ -63,7 +61,6 @@ class Camera:
         self._capture_thread = VideoCaptureThread(
             config=self._config,
             ready_event=self._ready_event,
-            frame_queue=self._frame_queue,
         )
         self._capture_thread.start()
 

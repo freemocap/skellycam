@@ -75,14 +75,12 @@ class SingleCameraViewWidget(QWidget):
 
         self._image_label_widget.setPixmap(pixmap)
 
-        queue_size = frame_info['queue_size']
-        frames_recorded = frame_info['number_of_frames_recorded']
+        frames_recieved = frame_info['number_of_frames_received']
 
-        if frames_recorded is None:
+        if frames_recieved is None:
             frames_recorded = 0
         self._title_label_widget.setText(
-            self._camera_name_string + f"\nQueue Size:{queue_size} | "
-                                       f"Frames Recorded#{str(frames_recorded)}".ljust(38))
+            self._camera_name_string + f"Frames Recorded#{str(frames_recieved)}".ljust(38))
 
     def show(self):
         super().show()
