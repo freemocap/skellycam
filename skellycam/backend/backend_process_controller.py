@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from typing import List, Union, Dict, Any
+from typing import Dict, Any
 
 import cv2
 import numpy as np
@@ -9,6 +9,7 @@ from PyQt6.QtGui import QImage
 
 from skellycam.backend.charuco.charuco_detection import draw_charuco_on_image
 from skellycam.backend.opencv.group.camera_group import CameraGroup
+from skellycam.data_models.camera_config import CameraConfig
 from skellycam.data_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class BackendProcessController:
     def __init__(self,
-                 camera_ids: List[Union[int, str]],
+                 camera_configs: Dict[str, CameraConfig],
                  send_to_frontend,  # pipe connection
                  receive_from_frontend,  # pipe connection
                  exit_event: multiprocessing.Event):
@@ -27,7 +28,7 @@ class BackendProcessController:
         self._exit_event = exit_event
 
         self._process = multiprocessing.Process(target=self._run_camera_group_process,
-                                                args=(camera_ids,
+                                                args=(camera_configs,
                                                       self._send_to_frontend,
                                                       self._receive_from_frontend,
                                                       self._exit_event))
@@ -37,15 +38,15 @@ class BackendProcessController:
         logger.info(f"Started camera group process")
 
     @staticmethod
-    def _run_camera_group_process(camera_ids: List[str],
+    def _run_camera_group_process(camera_configs: Dict[str, CameraConfig],
                                   send_to_frontend,  # pipe connection
                                   receive_from_frontend,  # pipe connection
                                   exit_event: multiprocessing.Event,
                                   annotate_images: bool = False):
         camera_group = None
         try:
-            logger.info(f"Starting camera group process for camera_ids: {camera_ids}")
-            camera_group = create_and_start_camera_group(camera_ids=camera_ids,
+            logger.info(f"Starting camera group process for cameras: {camera_configs.keys()}")
+            camera_group = create_and_start_camera_group(camera_configs=camera_configs,
                                                          exit_event=exit_event,
                                                          send_to_frontend=send_to_frontend)
 
@@ -73,10 +74,10 @@ class BackendProcessController:
             logger.info("Camera group process closing down...")
 
 
-def create_and_start_camera_group(camera_ids: List[str],
+def create_and_start_camera_group(camera_configs: Dict[str, CameraConfig],
                                   exit_event: multiprocessing.Event,
                                   send_to_frontend) -> CameraGroup:
-    camera_group = create_camera_group(camera_ids)
+    camera_group = CameraGroup(camera_configs=camera_configs)
     send_to_frontend.send({"type": "camera_group_created",
                            "camera_config_dictionary": camera_group.camera_config_dictionary})
     camera_group.start(exit_event=exit_event)
@@ -133,7 +134,6 @@ def _handle_update_camera_settings_message(camera_group, message, send_to_fronte
 def send_image_to_frontend(annotate_images: bool,
                            frames: Dict[str, FramePayload],
                            send_to_frontend):
-    frames_for_frontend = {}
     for camera_id, frame_payload in frames.items():
         image = prepare_image_for_frontend(image=frame_payload.image,
                                            annotate_image=annotate_images)
@@ -142,8 +142,7 @@ def send_image_to_frontend(annotate_images: bool,
                                "image": byte_array,
                                "frame_info": {"camera_id": frame_payload.camera_id,
                                               "timestamp_ns": frame_payload.timestamp_ns,
-                                              "number_of_frames_received": frame_payload.number_of_frames_received,
-                                              "number_of_frames_recorded": frame_payload.number_of_frames_recorded}})
+                                              "number_of_frames_received": frame_payload.number_of_frames_received}})
 
 
 def _convert_image_to_byte_array(image):
@@ -176,16 +175,3 @@ def prepare_image_for_frontend(image: np.ndarray,
     image_scaled = cv2.resize(image, dimension, interpolation=cv2.INTER_AREA)
 
     return image_scaled
-
-
-def create_camera_group(camera_ids: List[Union[str, int]], camera_config_dictionary: dict = None
-                        ):
-    logger.info(
-        f"Creating `camera_group` for camera_ids: {camera_ids}, camera_config_dictionary: {camera_config_dictionary}"
-    )
-
-    camera_group = CameraGroup(
-        camera_ids_list=camera_ids,
-        camera_config_dictionary=camera_config_dictionary,
-    )
-    return camera_group

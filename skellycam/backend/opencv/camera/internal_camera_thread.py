@@ -6,10 +6,10 @@ import traceback
 
 import cv2
 
-from skellycam.data_models.frame_payload import FramePayload
-from skellycam.data_models.camera_config import CameraConfig
 from skellycam.backend.opencv.config.apply_config import apply_configuration
 from skellycam.backend.opencv.config.determine_backend import determine_backend
+from skellycam.data_models.camera_config import CameraConfig
+from skellycam.data_models.frame_payload import FramePayload, SharedMemoryFramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -18,67 +18,24 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
             self,
             config: CameraConfig,
-            ready_event: multiprocessing.Event = None,
+            frame_queue: multiprocessing.Queue,
+            ready_event: multiprocessing.Event,
     ):
         super().__init__()
-        self._previous_frame_timestamp_ns = None
+        self._frame_queue = frame_queue
         self._new_frame_ready = False
         self.daemon = False
 
-        if ready_event is None:
-            self._ready_event = multiprocessing.Event()
-            self._ready_event.set()
-        else:
-            self._ready_event = ready_event
+        self._ready_event = ready_event
 
         self._config = config
         self._is_capturing_frames = False
-        self._is_recording_frames = False
 
         self._number_of_frames_received: int = 0
 
-        # self._elapsed_during_frame_grab = [] #TODO
         self._capture_timestamps = []
         self._mean_frames_per_second = None
-        self._frame: FramePayload = FramePayload()
         self._cv2_video_capture = self._create_cv2_capture()
-
-    @property
-    def first_frame_timestamp(self):
-        if len(self._capture_timestamps) > 0:
-            return self._capture_timestamps[0]
-        return None
-
-    #
-    # @property
-    # def mean_frames_per_second(self):
-    #     return self._mean_frames_per_second
-    #
-    # def update_mean_frames_per_second(self, latest_frame_timestamp_ns: float):
-    #
-    #     if self._previous_frame_timestamp_ns is None:
-    #         self._previous_frame_timestamp_ns = latest_frame_timestamp_ns
-    #         return 0
-    #
-    #     frame_duration_in_seconds = ((latest_frame_timestamp_ns - self._previous_frame_timestamp_ns) / 1e9) ** -1
-    #
-    #     if self._mean_frames_per_second is None:
-    #         self._mean_frames_per_second = frame_duration_in_seconds
-    #         return self._mean_frames_per_second
-    #
-    #     self._mean_frames_per_second = (self._mean_frames_per_second + frame_duration_in_seconds) / 2
-    #
-    #     return self._mean_frames_per_second
-
-    @property
-    def latest_frame(self) -> FramePayload:
-        self._new_frame_ready = False
-        self._frame.number_of_frames_recorded = self._frame.number_of_frames_recorded
-        return self._frame
-
-    @property
-    def new_frame_ready(self):
-        return self._new_frame_ready
 
     @property
     def is_capturing_frames(self) -> bool:
@@ -96,7 +53,7 @@ class VideoCaptureThread(threading.Thread):
         try:
             while self._is_capturing_frames:
                 try:
-                    self._frame = self._get_next_frame()
+                    frame = self._get_next_frame()
                 except Exception as e:
                     logger.error(e)
 
@@ -127,14 +84,35 @@ class VideoCaptureThread(threading.Thread):
 
         if success:
             self._number_of_frames_received += 1
-
-        return FramePayload(
+        reg_frame_tik = time.perf_counter()
+        frame_payload = FramePayload(
             success=success,
             image=image,
             timestamp_ns=retrieval_timestamp,
             number_of_frames_received=self._number_of_frames_received,
             camera_id=str(self._config.camera_id),
         )
+        reg_frame_tok = time.perf_counter()
+        reg_enqueue_tik = time.perf_counter()
+        self._frame_queue.put(frame_payload)
+        reg_enqueue_tok = time.perf_counter()
+
+        shared_frame_tik = time.perf_counter()
+        # shared_frame_payload = SharedMemoryFramePayload.from_data(success=success,
+        #                                                           image=image,
+        #                                                           timestamp_ns=retrieval_timestamp,
+        #                                                           number_of_frames_received=self._number_of_frames_received,
+        #                                                           camera_id=str(self._config.camera_id))
+        # shared_frame_tok = time.perf_counter()
+        # shared_enqueue_tik = time.perf_counter()
+        # self._frame_queue.put(shared_frame_payload)
+        # shared_enqueue_tok = time.perf_counter()
+        #
+        # logger.info(f"It took {reg_frame_tok - reg_frame_tik:.6f} seconds to create a regular frame payload.\n"
+        #             f"It took {reg_enqueue_tok - reg_enqueue_tik:.6f} seconds to enqueue a regular frame payload.\n"
+        #             f"It took {shared_frame_tok - shared_frame_tik:.6f} seconds to create a shared frame payload.\n"
+        #             f"It took {shared_enqueue_tok - shared_enqueue_tik:.6f} seconds to enqueue a shared frame payload.\n")
+        f = 9
 
     def _create_cv2_capture(self):
         logger.info(f"Connecting to Camera: {self._config.camera_id}...")

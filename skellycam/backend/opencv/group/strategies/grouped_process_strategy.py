@@ -45,12 +45,12 @@ class GroupedProcessStrategy:
     def start_capture(
             self,
             event_dictionary: Dict[str, multiprocessing.Event],
-            camera_config_dict: Dict[str, CameraConfig],
+            camera_configs: Dict[str, CameraConfig],
     ):
         try:
             for process in self._processes:
                 process.start_capture(
-                    event_dictionary=event_dictionary, camera_config_dict=camera_config_dict
+                    event_dictionary=event_dictionary, camera_configs=camera_configs
                 )
             self._run_frame_grabbing_loop()
         except Exception as e:

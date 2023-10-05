@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Union
+from typing import Dict
 
 import cv2
 from PyQt6.QtCore import pyqtSignal, Qt, pyqtSlot
@@ -40,23 +40,17 @@ class SkellyCamWidget(QWidget):
     def __init__(
             self,
             get_new_synchronized_videos_folder_callable: callable,
-            camera_ids: List[Union[str, int]] = None,
             annotate_images: bool = False,
             parent=None,
     ):
-
-        logger.info(
-            f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
-        )
+        super().__init__(parent=parent)
 
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
         self.annotate_images = annotate_images
 
-        self._camera_config_dicationary = {}
+        self._camera_configs = {}
         self._detect_cameras_worker = None
         self._dictionary_of_single_camera_view_widgets = None
-
-        super().__init__(parent=parent)
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
@@ -68,7 +62,6 @@ class SkellyCamWidget(QWidget):
         self._camera_views_layout.addLayout(self._camera_portrait_grid_layout)
         self._layout.addLayout(self._camera_views_layout)
 
-        self._camera_ids = camera_ids
         self._camera_group_thread_worker = self._create_camera_group_thread_worker()
 
         self._detect_available_cameras_push_button = self._create_detect_cameras_button()
@@ -100,8 +93,8 @@ class SkellyCamWidget(QWidget):
         return self._camera_group_thread_worker.slot_dictionary
 
     @property
-    def camera_config_dicationary(self):
-        return self._camera_config_dicationary
+    def camera_configs(self):
+        return self._camera_configs
 
     @property
     def cameras_connected(self):
@@ -128,7 +121,7 @@ class SkellyCamWidget(QWidget):
         self._detect_available_cameras_push_button.show()
 
     def _create_camera_view_widgets_and_add_them_to_grid_layout(self,
-                                                                #camera_config_dictionary: Dict[        str, CameraConfig]
+                                                                camera_configs: Dict[str, CameraConfig]
                                                                 ) -> dict:
 
         logger.info(
@@ -138,9 +131,8 @@ class SkellyCamWidget(QWidget):
         dictionary_of_single_camera_view_widgets = {}
         landscape_camera_number = -1
         portrait_camera_number = -1
-        for camera_id in self._camera_ids:
-            camera_config = CameraConfig(camera_id=camera_id)
-            self._camera_config_dicationary[camera_id] = camera_config
+        for camera_id, camera_config in camera_configs.items():
+
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
                                                         camera_config=camera_config,
                                                         parent=self)
@@ -183,13 +175,15 @@ class SkellyCamWidget(QWidget):
         )
         self._detect_cameras_worker.start()
 
-    def _start_camera_group_frame_worker(self, camera_ids):
+    def _start_camera_group_frame_worker(self, camera_configs: Dict[str, CameraConfig],
+                                         annotate_images: bool = True):
 
-        logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
-        self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout()
+        logger.info(f"Starting camera group frame worker with camera_ids: {camera_configs.keys()}")
+        self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout(
+            camera_configs=camera_configs)
 
-        self._camera_group_thread_worker.annotate_images = self.annotate_images
-        self._camera_group_thread_worker.camera_ids = camera_ids
+        self._camera_group_thread_worker.annotate_images = annotate_images
+        self._camera_group_thread_worker.camera_configs = camera_configs
         self._camera_group_thread_worker.start()
         self._camera_group_thread_worker.new_image_signal.connect(self._handle_image_update)
 
@@ -202,7 +196,8 @@ class SkellyCamWidget(QWidget):
         self._camera_group_thread_worker.pause()
 
     def _create_detect_cameras_button(self):
-        detect_available_cameras_push_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
+        detect_available_cameras_push_button = QPushButton(
+            f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         detect_available_cameras_push_button.clicked.connect(self.detect_available_cameras)
         detect_available_cameras_push_button.hasFocus()
         detect_available_cameras_push_button.setStyleSheet("""
@@ -216,9 +211,7 @@ class SkellyCamWidget(QWidget):
 
     def _create_camera_group_thread_worker(self):
         camera_group_thread_worker = CameraGroupThreadWorker(
-            camera_ids=self._camera_ids,
             get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
-            annotate_images=self.annotate_images
         )
 
         camera_group_thread_worker.cameras_connected_signal.connect(
@@ -248,11 +241,13 @@ class SkellyCamWidget(QWidget):
 
         logger.info(f"Detected cameras: {camera_ids}")
         self._detect_available_cameras_push_button.hide()
-        self._camera_ids = camera_ids
+        self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in camera_ids}
         self._detect_available_cameras_push_button.setText(
             f"Connecting to Cameras {camera_ids}..."
         )
-        self._start_camera_group_frame_worker(self._camera_ids)
+        self._start_camera_group_frame_worker(camera_configs=self._camera_configs,
+                                              annotate_images=self.annotate_images
+                                              )
 
     def _handle_cameras_connected(self):
         self.cameras_connected_signal.emit()

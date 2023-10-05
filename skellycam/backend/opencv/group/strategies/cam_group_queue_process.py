@@ -1,8 +1,7 @@
 import logging
-import math
 import multiprocessing
 from multiprocessing import Process
-from time import perf_counter_ns, sleep
+from time import sleep
 from typing import Dict, List, Union
 
 from setproctitle import setproctitle
@@ -28,7 +27,7 @@ class CamGroupQueueProcess:
         self._process: Process = None
         self._payload = None
         queue_name_list = self._cam_ids.copy()
-        queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
+        # queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
         communicator = QueueCommunicator(queue_name_list)
         self._queues = communicator.queues
 
@@ -43,7 +42,7 @@ class CamGroupQueueProcess:
     def start_capture(
             self,
             event_dictionary: Dict[str, multiprocessing.Event],
-            camera_config_dict: Dict[str, CameraConfig],
+            camera_configs: Dict[str, CameraConfig],
     ):
         """
         Start capturing frames. Only return if the underlying process is fully running.
@@ -60,7 +59,7 @@ class CamGroupQueueProcess:
         self._process = Process(
             name=f"Cameras {self._cam_ids}",
             target=CamGroupQueueProcess._begin,
-            args=(self._cam_ids, self._queues, event_dictionary, camera_config_dict),
+            args=(self._cam_ids, self._queues, event_dictionary, camera_configs),
         )
         self._process.start()
         while not self._process.is_alive():
@@ -79,9 +78,11 @@ class CamGroupQueueProcess:
             logger.info(f"CamGroupProcess {self.name} terminate command executed")
 
     @staticmethod
-    def _create_cams(camera_config_dict: Dict[str, CameraConfig]) -> Dict[str, Camera]:
+    def _create_cams(camera_config_dict: Dict[str, CameraConfig],
+                     queues: Dict[str, multiprocessing.Queue]) -> Dict[str, Camera]:
         cam_dict = {
-            camera_config.camera_id: Camera(camera_config)
+            camera_config.camera_id: Camera(config = camera_config,
+                                            frame_queue = queues[camera_config.camera_id])
             for camera_config in camera_config_dict.values()
         }
         return cam_dict
@@ -106,7 +107,8 @@ class CamGroupQueueProcess:
             camera_id: camera_config_dict[camera_id] for camera_id in cam_ids
         }
         cameras_dictionary = CamGroupQueueProcess._create_cams(
-            camera_config_dict=process_camera_config_dict
+            camera_config_dict=process_camera_config_dict,
+            queues=queues,
         )
 
         for camera in cameras_dictionary.values():
@@ -118,15 +120,15 @@ class CamGroupQueueProcess:
                     f"Parent process is no longer alive. Exiting {cam_ids} process"
                 )
                 break
-
-            if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
-                logger.info(
-                    "Camera config dict queue has items - updating cameras configs"
-                )
-                camera_config_dictionary = queues[CAMERA_CONFIG_DICT_QUEUE_NAME].get()
-
-                for camera_id, camera in cameras_dictionary.items():
-                    camera.update_config(camera_config_dictionary[camera_id])
+            #
+            # if queues[CAMERA_CONFIG_DICT_QUEUE_NAME].qsize() > 0:
+            #     logger.info(
+            #         "Camera config dict queue has items - updating cameras configs"
+            #     )
+            #     camera_config_dictionary = queues[CAMERA_CONFIG_DICT_QUEUE_NAME].get()
+            #
+            #     for camera_id, camera in cameras_dictionary.items():
+            #         camera.update_config(camera_config_dictionary[camera_id])
 
             if start_event.is_set():
                 # This tight loop ends up 100% the process, so a sleep between framecaptures is
@@ -163,6 +165,9 @@ class CamGroupQueueProcess:
 
             queue = self._get_queue_by_camera_id(camera_id)
             logger.trace(f"Gathering frame from queue {camera_id} - Queue size {queue.qsize()}...")
+            if queue.qsize() == 0:
+                logger.trace(f"Queue size is 0, returning")
+                return
             frame = queue.get(block=block_if_empty)
             logger.trace(f"Got frame from queue: {camera_id}: frame.image.shape{frame.image.shape}")
             return frame
@@ -175,5 +180,3 @@ class CamGroupQueueProcess:
 
     def update_camera_configs(self, camera_config_dictionary):
         self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME].put(camera_config_dictionary)
-
-

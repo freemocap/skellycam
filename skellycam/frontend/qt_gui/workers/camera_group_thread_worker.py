@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import time
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 from PyQt6.QtCore import pyqtSignal, QThread, QByteArray, pyqtSlot
@@ -10,6 +10,7 @@ from PyQt6.QtGui import QImage
 from skellycam.backend.backend_process_controller import BackendProcessController
 from skellycam.backend.opencv.camera.types.camera_id import CameraId
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.data_models.camera_config import CameraConfig
 
 logger = logging.getLogger(__name__)
 
@@ -23,21 +24,17 @@ class CameraGroupThreadWorker(QThread):
 
     def __init__(
             self,
-            camera_ids: List[int],
             get_new_synchronized_videos_folder_callable: callable,
-            annotate_images: bool = False,
             parent=None,
     ):
         self._synchronized_video_folder_path = None
-        logger.info(
-            f"Initializing camera group frame worker with camera ids: {camera_ids}"
-        )
+
         super().__init__(parent=parent)
-        self._camera_ids = camera_ids
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
-        self.annotate_images = annotate_images
 
         self._camera_group = None
+        self._annotate_images = None
+        self._camera_configs = None
         self._video_recorder_dictionary = None
 
         self._queue_to_backend = None
@@ -68,11 +65,17 @@ class CameraGroupThreadWorker(QThread):
         }
 
     @property
-    def camera_config_dictionary(self):
-        return self._camera_group.camera_config_dictionary
+    def camera_configs(self):
+        return self._camera_group.camera_configs
+
+    @camera_configs.setter
+    def camera_configs(self, camera_configs: Dict[str, CameraConfig]):
+        self._camera_configs = camera_configs
 
     @property
     def cameras_connected(self):
+        if self._camera_group is None:
+            return False
         return self._camera_group.is_capturing
 
     @property
@@ -84,7 +87,7 @@ class CameraGroupThreadWorker(QThread):
         receive_from_backend, send_to_frontend = multiprocessing.Pipe(duplex=False)
 
         exit_event = multiprocessing.Event()
-        backend_controller = BackendProcessController(camera_ids=self.camera_ids,
+        backend_controller = BackendProcessController(camera_configs=self._camera_configs,
                                                       send_to_frontend=send_to_frontend,
                                                       receive_from_frontend=receive_from_frontend,
                                                       exit_event=exit_event)
@@ -164,7 +167,7 @@ class CameraGroupThreadWorker(QThread):
 
     def _initialize_video_recorder_dictionary(self):
         video_recorder_dictionary = {}
-        for camera_id, config in self._camera_group.camera_config_dictionary.items():
+        for camera_id, config in self._camera_group.camera_configs.items():
             if config.use_this_camera:
                 video_recorder_dictionary[camera_id] = VideoRecorder()
         return video_recorder_dictionary
