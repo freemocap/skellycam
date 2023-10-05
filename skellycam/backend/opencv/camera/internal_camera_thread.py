@@ -23,7 +23,6 @@ class VideoCaptureThread(threading.Thread):
     ):
         super().__init__()
         self._frame_queue = frame_queue
-        self._new_frame_ready = False
         self.daemon = False
 
         self._ready_event = ready_event
@@ -52,38 +51,29 @@ class VideoCaptureThread(threading.Thread):
         )
         try:
             while self._is_capturing_frames:
-                try:
-                    frame = self._get_next_frame()
-                except Exception as e:
-                    logger.error(e)
-
-
-        except:
+                frame = self._get_next_frame()
+                self._frame_queue.put(frame)
+        except Exception as e:
             logger.error(
                 f"Camera ID: [{self._config.camera_id}] Frame loop thread exited due to error"
             )
-            traceback.print_exc()
-        else:
-            logger.info(
-                f"Camera ID: [{self._config.camera_id}] Frame capture has stopped."
-            )
+            logger.exception(e)
+            raise e
 
-    def _get_next_frame(self):
-        try:
-            self._cv2_video_capture.grab()
-            success, image = self._cv2_video_capture.retrieve()
-            retrieval_timestamp = time.perf_counter_ns()
-            if self._config.rotate_video_cv2_code is not None:
-                image = cv2.rotate(image, self._config.rotate_video_cv2_code)
-
-        except:
-            logger.error(f"Failed to read frame from Camera: {self._config.camera_id}")
-            raise Exception
-        else:
-            self._new_frame_ready = success
+    def _get_next_frame(self) -> FramePayload:
+        success,image = self._cv2_video_capture.read()  # <- THIS IS WHERE THE MAGIC HAPPENS (i.e. the actual frame capture, aka the actual "measurement", aka the "moment of transduction", aka "the moment where environmental energy (light) is transcduced into a pattern of electrical energy (pixels) on a sensor (the camera's sensor)")
+        retrieval_timestamp = time.perf_counter_ns()
 
         if success:
+            self._new_frame_ready = True
             self._number_of_frames_received += 1
+        else:
+            logger.error(
+                f"Failed to read frame from camera at port# {self._config.camera_id}: "
+                f"returned value: {success}, "
+                f"returned image: {image}"
+            )
+
         reg_frame_tik = time.perf_counter()
         frame_payload = FramePayload(
             success=success,
@@ -98,21 +88,21 @@ class VideoCaptureThread(threading.Thread):
         reg_enqueue_tok = time.perf_counter()
 
         shared_frame_tik = time.perf_counter()
-        # shared_frame_payload = SharedMemoryFramePayload.from_data(success=success,
-        #                                                           image=image,
-        #                                                           timestamp_ns=retrieval_timestamp,
-        #                                                           number_of_frames_received=self._number_of_frames_received,
-        #                                                           camera_id=str(self._config.camera_id))
-        # shared_frame_tok = time.perf_counter()
-        # shared_enqueue_tik = time.perf_counter()
-        # self._frame_queue.put(shared_frame_payload)
-        # shared_enqueue_tok = time.perf_counter()
-        #
-        # logger.info(f"It took {reg_frame_tok - reg_frame_tik:.6f} seconds to create a regular frame payload.\n"
-        #             f"It took {reg_enqueue_tok - reg_enqueue_tik:.6f} seconds to enqueue a regular frame payload.\n"
-        #             f"It took {shared_frame_tok - shared_frame_tik:.6f} seconds to create a shared frame payload.\n"
-        #             f"It took {shared_enqueue_tok - shared_enqueue_tik:.6f} seconds to enqueue a shared frame payload.\n")
-        f = 9
+        shared_frame_payload = SharedMemoryFramePayload.from_data(success=success,
+                                                                  image=image,
+                                                                  timestamp_ns=retrieval_timestamp,
+                                                                  number_of_frames_received=self._number_of_frames_received,
+                                                                  camera_id=str(self._config.camera_id))
+        shared_frame_tok = time.perf_counter()
+        shared_enqueue_tik = time.perf_counter()
+        self._frame_queue.put(shared_frame_payload)
+        shared_enqueue_tok = time.perf_counter()
+
+        logger.info(f"It took {reg_frame_tok - reg_frame_tik:.6f} seconds to create a regular frame payload.\n"
+                    f"It took {reg_enqueue_tok - reg_enqueue_tik:.6f} seconds to enqueue a regular frame payload.\n"
+                    f"It took {shared_frame_tok - shared_frame_tik:.6f} seconds to create a shared frame payload.\n"
+                    f"It took {shared_enqueue_tok - shared_enqueue_tik:.6f} seconds to enqueue a shared frame payload.\n")
+        return frame_payload
 
     def _create_cv2_capture(self):
         logger.info(f"Connecting to Camera: {self._config.camera_id}...")

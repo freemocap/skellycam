@@ -134,17 +134,18 @@ class CamGroupQueueProcess:
                 # This tight loop ends up 100% the process, so a sleep between framecaptures is
                 # necessary. We can get away with this because we don't expect another frame for
                 # awhile.
-                sleep(0.001)
-                for camera in cameras_dictionary.values():
-                    if camera.new_frame_ready:
-                        try:
-                            queue = queues[camera.camera_id]
-                            queue.put(camera.latest_frame)
-                        except Exception as e:
-                            logger.exception(
-                                f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
-                            )
-                            break
+                sleep(0.1)
+                logger.trace("Looping in CamGroupProcess")
+                # for camera in cameras_dictionary.values():
+                #
+                # try:
+                #     queue = queues[camera.camera_id]
+                #     queue.put(camera.latest_frame)
+                # except Exception as e:
+                #     logger.exception(
+                #         f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
+                #     )
+                #     break
 
         # close cameras on exit
         for camera in cameras_dictionary.values():
@@ -164,12 +165,12 @@ class CamGroupQueueProcess:
                 return
 
             queue = self._get_queue_by_camera_id(camera_id)
-            logger.trace(f"Gathering frame from queue {camera_id} - Queue size {queue.qsize()}...")
+            # logger.trace(f"Gathering frame from queue {camera_id} - Queue size {queue.qsize()}...")
             if queue.qsize() == 0:
-                logger.trace(f"Queue size is 0, returning")
+                # logger.trace(f"Queue size is 0, returning")
                 return
             frame = queue.get(block=block_if_empty)
-            logger.trace(f"Got frame from queue: {camera_id}: frame.image.shape{frame.image.shape}")
+            # logger.trace(f"Got frame from queue: {camera_id}: frame.image.shape{frame.image.shape}")
             return frame
         except Exception as e:
             logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
