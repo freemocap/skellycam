@@ -37,7 +37,7 @@ class BackendProcessController:
         logger.info(f"Started camera group process")
 
     @staticmethod
-    def _run_camera_group_process(camera_ids: List[int],
+    def _run_camera_group_process(camera_ids: List[str],
                                   send_to_frontend,  # pipe connection
                                   receive_from_frontend,  # pipe connection
                                   exit_event: multiprocessing.Event,
@@ -45,13 +45,10 @@ class BackendProcessController:
         camera_group = None
         try:
             logger.info(f"Starting camera group process for camera_ids: {camera_ids}")
-            camera_group = create_camera_group(camera_ids)
-            send_to_frontend.send({"type": "camera_group_created",
-                                   "camera_config_dictionary": camera_group.camera_config_dictionary})
-            camera_group.start(exit_event=exit_event)
+            camera_group = create_and_start_camera_group(camera_ids=camera_ids,
+                                                         exit_event=exit_event,
+                                                         send_to_frontend=send_to_frontend)
 
-            logger.info("Emitting `cameras_connected_signal`")
-            send_to_frontend.send({"type": "cameras_connected"})
             while camera_group.is_capturing and not exit_event.is_set():
                 if receive_from_frontend.poll():
                     message = receive_from_frontend.recv()
@@ -72,13 +69,24 @@ class BackendProcessController:
             if hasattr(camera_group, "close"):
                 logger.info("Closing camera group")
                 camera_group.close()
-                logger.info("Emitting `cameras_closed_signal`")
                 send_to_frontend.send({"type": "cameras_closed"})
-                logger.info("Exiting camera group process")
-            logger.info("Exiting camera group process")
+            logger.info("Camera group process closing down...")
 
 
-@staticmethod
+def create_and_start_camera_group(camera_ids: List[str],
+                                  exit_event: multiprocessing.Event,
+                                  send_to_frontend) -> CameraGroup:
+    camera_group = create_camera_group(camera_ids)
+    send_to_frontend.send({"type": "camera_group_created",
+                           "camera_config_dictionary": camera_group.camera_config_dictionary})
+    camera_group.start(exit_event=exit_event)
+
+    logger.info("Emitting `cameras_connected_signal`")
+    send_to_frontend.send({"type": "cameras_connected"})
+
+    return camera_group
+
+
 def handle_message_from_frontend(camera_group: CameraGroup,
                                  message: Dict[str, Any],
                                  send_to_frontend,  # pipe connection

@@ -161,7 +161,7 @@ class CameraGroup:
                 logger.info(f"Process {process.name} died! Restarting now...")
                 process.start_capture(
                     event_dictionary=self._event_dictionary,
-                    camera_config_dict=self._camera_config_dictionary,
+                    camera_configs=self._camera_config_dictionary,
                 )
 
     def new_multiframe_available(self):
