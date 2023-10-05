@@ -1,17 +1,15 @@
 import logging
 import multiprocessing
 import time
-from copy import deepcopy
 from typing import List
 
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, QThread, QByteArray
+from PyQt6.QtCore import pyqtSignal, QThread, QByteArray, pyqtSlot
 from PyQt6.QtGui import QImage
 
 from skellycam.backend.backend_process_controller import BackendProcessController
 from skellycam.backend.opencv.camera.types.camera_id import CameraId
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.frontend.qt_gui.workers.video_save_thread_worker import VideoSaveThreadWorker
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +36,15 @@ class CameraGroupThreadWorker(QThread):
         self._camera_ids = camera_ids
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
         self.annotate_images = annotate_images
-        self._time_since_last_frame = time.process_time_ns()
-
-        self._updating_camera_settings_bool = False
-        self._current_recording_name = None
-        self._video_save_process = None
 
         self._camera_group = None
         self._video_recorder_dictionary = None
 
-        self._queue = None
+        self._queue_to_backend = None
+
+    @pyqtSlot()
+    def add_message_to_queue(self):
+        self._queue_to_backend.put({"type": "get_latest_frames"})
 
     @property
     def camera_ids(self):
@@ -83,23 +80,28 @@ class CameraGroupThreadWorker(QThread):
         return self._should_record_frames_bool
 
     def run(self):
-        self._queue = multiprocessing.Queue()
+        receive_from_frontend, send_to_backend = multiprocessing.Pipe(duplex=False)
+        receive_from_backend, send_to_frontend = multiprocessing.Pipe(duplex=False)
+
         exit_event = multiprocessing.Event()
         backend_controller = BackendProcessController(camera_ids=self.camera_ids,
-                                                      queue=self._queue,
+                                                      send_to_frontend=send_to_frontend,
+                                                      receive_from_frontend=receive_from_frontend,
                                                       exit_event=exit_event)
+
         backend_controller.start_camera_group_process()
         while not exit_event.is_set():
-            if not self._queue.empty():
-                message = self._queue.get()
+            if  receive_from_backend.poll():
+                message = receive_from_backend.recv()
                 self._handle_queue_message(message)
             else:
-                time.sleep(0.001)
+                time.sleep(0.033)
+                send_to_backend.send({"type": "get_latest_frames"})
 
     def _handle_queue_message(self, message):
         logger.trace(f"Handling message from backend process with type: {message['type']}")
-        if message["type"] == "new_image":
-            self._handle_new_image(message["image"], message["frame_info"])
+        if message["type"] == "latest_frames":
+            self._handle_latest_frames(message["image"], message["frame_info"])
 
         elif message["type"] == "cameras_connected":
             self.cameras_connected_signal.emit()
@@ -116,7 +118,7 @@ class CameraGroupThreadWorker(QThread):
         else:
             logger.error(f"Received unknown message from backend process: {message}")
 
-    def _handle_new_image(self, image_byte_array:QByteArray, frame_info: dict):
+    def _handle_latest_frames(self, image_byte_array: QByteArray, frame_info: dict):
 
         try:
             q_image = image_byte_string_to_q_image(image_byte_array)
@@ -160,69 +162,12 @@ class CameraGroupThreadWorker(QThread):
         del self._video_recorder_dictionary
         self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
-    def update_camera_group_configs(self, camera_config_dictionary: dict):
-        if self._camera_ids is None:
-            self._camera_ids = list(camera_config_dictionary.keys())
-
-        if self._camera_group is None:
-            self._camera_group = self._create_camera_group(
-                camera_ids=self.camera_ids,
-                camera_config_dictionary=camera_config_dictionary,
-            )
-            return
-
-        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
-        self._updating_camera_settings_bool = True
-        self._updating_camera_settings_bool = not self._update_camera_settings(
-            camera_config_dictionary
-        )
-
-    def _launch_save_video_thread_worker(self):
-        logger.info("Launching save video thread worker")
-
-        synchronized_videos_folder = self._synchronized_video_folder_path
-        self._synchronized_video_folder_path = None
-
-        video_recorders_to_save = {}
-        for camera_id, video_recorder in self._video_recorder_dictionary.items():
-            if video_recorder.number_of_frames > 0:
-                video_recorders_to_save[camera_id] = deepcopy(video_recorder)
-
-        self._video_save_thread_worker = VideoSaveThreadWorker(
-            dictionary_of_video_recorders=video_recorders_to_save,
-            folder_to_save_videos=str(synchronized_videos_folder),
-            create_diagnostic_plots_bool=True,
-        )
-        self._video_save_thread_worker.start()
-        self._video_save_thread_worker.finished_signal.connect(
-            self._handle_videos_save_thread_worker_finished
-        )
-
-    def _handle_videos_save_thread_worker_finished(self, folder_path: str):
-        logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
-        self.videos_saved_to_this_folder_signal.emit(folder_path)
-
     def _initialize_video_recorder_dictionary(self):
         video_recorder_dictionary = {}
         for camera_id, config in self._camera_group.camera_config_dictionary.items():
             if config.use_this_camera:
                 video_recorder_dictionary[camera_id] = VideoRecorder()
         return video_recorder_dictionary
-
-    def _get_recorder_frame_count_dict(self):
-        return {
-            camera_id: recorder.number_of_frames
-            for camera_id, recorder in self._video_recorder_dictionary.items()
-        }
-
-    def _update_camera_settings(self, camera_config_dictionary: dict):
-        try:
-            self._camera_group.update_camera_configs(camera_config_dictionary)
-
-        except Exception as e:
-            logger.error(f"Problem updating camera settings: {e}")
-
-        return True
 
 
 def image_to_q_image(image: np.ndarray) -> QImage:
@@ -233,6 +178,7 @@ def image_to_q_image(image: np.ndarray) -> QImage:
         QImage.Format.Format_RGB888,
     )
     return q_image
+
 
 def image_byte_string_to_q_image(image_byte_array: QByteArray) -> QImage:
     q_image = QImage()

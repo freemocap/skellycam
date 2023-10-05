@@ -5,13 +5,13 @@ from typing import Dict, List
 
 from PyQt6.QtCore import pyqtSignal
 
-from skellycam.data_models.camera_config import CameraConfig
 from skellycam.backend.opencv.detection.detect_cameras import detect_cameras
-from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
 from skellycam.backend.opencv.group.strategies.strategies import Strategy
+from skellycam.data_models.camera_config import CameraConfig
+from skellycam.data_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,8 @@ class CameraGroup:
             camera_config_dictionary: Dict[str, CameraConfig] = None,
     ):
 
+        self._start_event = None
+        self._exit_event = None
         logger.info(
             f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
         )
@@ -61,10 +63,6 @@ class CameraGroup:
         return self._strategy_class.is_capturing
 
     @property
-    def exit_event(self):
-        return self._exit_event
-
-    @property
     def camera_ids(self):
         return self._camera_ids
 
@@ -81,13 +79,13 @@ class CameraGroup:
         self._camera_config_dictionary = camera_config_dictionary
         self._strategy_class.update_camera_configs(camera_config_dictionary)
 
-    def start(self):
+    def start(self, exit_event: multiprocessing.Event):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
         :return:
         """
         logger.info(f"Starting camera group with strategy {self._strategy_enum}")
-        self._exit_event = multiprocessing.Event()
+        self._exit_event = exit_event
         self._start_event = multiprocessing.Event()
         self._event_dictionary = {"start": self._start_event,
                                   "exit": self._exit_event}
@@ -124,7 +122,6 @@ class CameraGroup:
     def check_if_camera_is_ready(self, cam_id: str):
         return self._strategy_class.check_if_camera_is_ready(cam_id)
 
-
     def new_frames(self) -> Dict[str, FramePayload]:
         new_frames = self._strategy_class.get_new_frames()
         if len(new_frames) > 0:
@@ -132,8 +129,8 @@ class CameraGroup:
         return new_frames
 
     def latest_frames(self) -> Dict[str, FramePayload]:
+        logger.trace(f"Getting latest frames from Cameras: {self._camera_ids}")
         latest_frames = self._strategy_class.get_latest_frames()
-        logger.trace(f"Getting latest frames from Cameras: {latest_frames.keys()}")
         return latest_frames
 
     def _resolve_strategy(self, cam_ids: List[str]):
@@ -142,19 +139,13 @@ class CameraGroup:
 
     def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
         logger.info("Closing camera group")
-        self._set_exit_event()
-        # self._terminate_processes()
-
+        self._exit_event.set()
         if wait_for_exit:
             while self.is_capturing:
                 logger.debug("waiting for camera group to stop....")
                 time.sleep(0.1)
         if cameras_closed_signal is not None:
             cameras_closed_signal.emit()
-
-    def _set_exit_event(self):
-        logger.info("Setting exit event")
-        self.exit_event.set()
 
     def _terminate_processes(self):
         logger.info("Terminating processes")

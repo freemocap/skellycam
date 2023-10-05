@@ -47,11 +47,26 @@ class GroupedProcessStrategy:
             event_dictionary: Dict[str, multiprocessing.Event],
             camera_config_dict: Dict[str, CameraConfig],
     ):
+        try:
+            for process in self._processes:
+                process.start_capture(
+                    event_dictionary=event_dictionary, camera_config_dict=camera_config_dict
+                )
+            self._run_frame_grabbing_loop()
+        except Exception as e:
+            logger.error(f"Failed to start capture: {e}")
+            logger.exception(e)
+            raise e
 
-        for process in self._processes:
-            process.start_capture(
-                event_dictionary=event_dictionary, camera_config_dict=camera_config_dict
-            )
+    def _run_frame_grabbing_loop(self):
+        while self.is_capturing:
+
+            new_frames = self.get_new_frames()
+            if len(new_frames) > 0:
+                logger.trace(f"Got new frames from cameras: {new_frames.keys()}")
+
+    def _get_empty_multiframe_payload_dictionary(self):
+        return {camera_id: None for camera_id in self._camera_ids}
 
     def check_if_camera_is_ready(self, cam_id: str) -> bool:
         for process in self._processes:
@@ -72,10 +87,11 @@ class GroupedProcessStrategy:
         return new_frames
 
     def get_latest_frames(self) -> Dict[str, FramePayload]:
-        return {
+        latest_frames = {
             cam_id: process.get_new_frame_by_camera_id(cam_id, block_if_empty=True)
             for cam_id, process in self._cam_id_process_map.items()
         }
+        return latest_frames
 
     def _create_processes(
             self, cam_ids: List[str], cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS

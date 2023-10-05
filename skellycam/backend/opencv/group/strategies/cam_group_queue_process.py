@@ -7,10 +7,10 @@ from typing import Dict, List, Union
 
 from setproctitle import setproctitle
 
-from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.opencv.camera.camera import Camera
-from skellycam.data_models.camera_config import CameraConfig
 from skellycam.backend.opencv.group.strategies.queue_communicator import QueueCommunicator
+from skellycam.data_models.camera_config import CameraConfig
+from skellycam.data_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -155,17 +155,17 @@ class CamGroupQueueProcess:
     def _get_queue_by_camera_id(self, camera_id: str) -> multiprocessing.Queue:
         return self._queues[camera_id]
 
-    def get_new_frame_by_camera_id(self, camera_id: str, block_if_empty:bool) -> Union[FramePayload, None]:
+    def get_new_frame_by_camera_id(self, camera_id: str, block_if_empty: bool) -> Union[FramePayload, None]:
         try:
             if camera_id not in self._queues:
                 logger.error(f"Camera {camera_id} not in queues")
                 return
 
             queue = self._get_queue_by_camera_id(camera_id)
-            if not queue.empty():
-                return queue.get(block=block_if_empty)
-            else:
-                return
+            logger.trace(f"Gathering frame from queue {camera_id} - Queue size {queue.qsize()}...")
+            frame = queue.get(block=block_if_empty)
+            logger.trace(f"Got frame from queue: {camera_id}: frame.image.shape{frame.image.shape}")
+            return frame
         except Exception as e:
             logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
             return
@@ -177,18 +177,3 @@ class CamGroupQueueProcess:
         self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME].put(camera_config_dictionary)
 
 
-if __name__ == "__main__":
-    p = CamGroupQueueProcess(
-        [
-            "0",
-        ]
-    )
-    p.start_capture()
-    while True:
-        # print("Queue size: ", p.queue_size("0"))
-        curr = perf_counter_ns() * 1e-6
-        frames = p.get_new_frame_by_camera_id("0")
-        if frames:
-            end = perf_counter_ns() * 1e-6
-            frame_count_in_ms = f"{math.trunc(end - curr)}"
-            print(f"{frame_count_in_ms}ms for this frame")
