@@ -1,37 +1,46 @@
 import logging
 import multiprocessing
 import time
-
-import numpy as np
-import cv2
 from multiprocessing import shared_memory, Process
+from typing import Dict, Union
+
+import cv2
+import numpy as np
 
 from skellycam import configure_logging
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
-def update_shared_memory_image(shared_memory_name: str,
+
+def update_shared_memory_image(shared_memory_info: Dict[str, Union[str, int]],
                                camera_index: int,
-                               exit_event: multiprocessing.Event):
+                               exit_event: multiprocessing.Event,
+                               rolling_frame_buffer_size: int,
+                               number_of_frames_read: multiprocessing.Value):
+    shared_memory_name = shared_memory_info["name"]
+    shared_memory_dtype = shared_memory_info["data_type"]
+    shared_memory_shape = shared_memory_info["shape"]
     logger.info(f"Child Process: {shared_memory_name} - starting")
     camera_capture = cv2.VideoCapture(camera_index)
     existing_shared_memory = shared_memory.SharedMemory(name=shared_memory_name)
-    read_successful, frame = camera_capture.read()
-    if not read_successful:
-        logger.error(f"Child Process: {existing_shared_memory.name} - could not read initial frame")
-        exit(1)
-    logger.info(f"Child Process: {existing_shared_memory.name} - initial frame shape: {frame.shape}")
-    shared_image_frame = np.ndarray(frame.shape, dtype=frame.dtype, buffer=existing_shared_memory.buf)
-    shared_image_frame[:] = frame[:]
+    logger.info(f"Child Process: {existing_shared_memory.name} - shared_memory_array shape: {shared_memory_shape}")
+    shared_image_array = np.ndarray(shape=shared_memory_shape,
+                                    dtype=shared_memory_dtype,
+                                    buffer=existing_shared_memory.buf)
 
     try:
+
         while not exit_event.is_set():
             logger.debug(f"Child Process: {existing_shared_memory.name} - reading new frame from camera")
             read_successful, frame = camera_capture.read()
-            if not read_successful:
-                break
-            shared_image_frame[:] = frame[:]
+            if read_successful:
+                number_of_frames_read.value += 1
+                logger.debug(f"Child Process: {existing_shared_memory.name} - read frame {number_of_frames_read.value}")
+                shared_image_array[number_of_frames_read.value % rolling_frame_buffer_size] = frame
+                logger.debug(f"Child Process: {existing_shared_memory.name} - wrote frame {number_of_frames_read.value}")
+            else:
+                logger.error(f"Child Process: {existing_shared_memory.name} - failed to read frame!!")
 
     except Exception as e:
         logger.error(f"Child Process: {existing_shared_memory.name} - {e}")
@@ -43,35 +52,46 @@ def update_shared_memory_image(shared_memory_name: str,
             logger.error(f"Child Process: {existing_shared_memory.name} exited unexpectedly")
             exit(333)
 
+
 def parent_function():
     exit_code = 0
-    logger.info("Creating VideoCapture object to get initial frame")
-    video_capture = cv2.VideoCapture(0)  # Assuming camera_index as 0.
-    if not video_capture.isOpened():
-        logger.error("Could not open video capture device")
-        exit(123)
-    read_successful, initial_frame = video_capture.read()
-    if not read_successful:
-        logger.error("Could not read initial frame")
-        exit(342)
-    logger.info(f"Initial frame shape: {initial_frame.shape}")
-    shared_memory_block = shared_memory.SharedMemory(create=True, size=initial_frame.nbytes)
-    shared_image_frame = np.ndarray(initial_frame.shape, dtype=initial_frame.dtype, buffer=shared_memory_block.buf)
-    shared_image_frame[:] = initial_frame[:]
-    logger.info(f"Created shared memory block: {shared_memory_block.name} - {shared_image_frame.shape}")
-    video_capture.release()
+    initial_image = get_initial_image()
+
+    logger.info(f"Initial frame shape: {initial_image.shape}")
+    rolling_frame_buffer_size = 100
+    image_shape = initial_image.shape
+    initial_image_array = np.zeros(shape=(rolling_frame_buffer_size, image_shape[0], image_shape[1], image_shape[2]),
+                                   dtype=initial_image.dtype)
+    number_of_bytes_needed = initial_image_array.nbytes
+    shared_memory_block = shared_memory.SharedMemory(create=True, size=number_of_bytes_needed)
+    shared_image_array = np.ndarray(initial_image_array.shape, dtype=initial_image_array.dtype,
+                                    buffer=shared_memory_block.buf)
+    shared_image_array[:] = initial_image_array[:]
+    logger.info(f"Created shared memory block: {shared_memory_block.name} - {shared_image_array.shape}")
 
     logger.info("Starting child process")
     exit_event = multiprocessing.Event()
-    child_process = Process(target=update_shared_memory_image, args=(shared_memory_block.name, 0, exit_event))
+    shared_memory_info = {"name": shared_memory_block.name,
+                          "data_type": shared_image_array.dtype,
+                          "shape": shared_image_array.shape}
+    # multiprocess.Value integer to keep track of how many frames have been read from the camera
+    number_of_frames_read = multiprocessing.Value('i', 0)
+    child_process = Process(target=update_shared_memory_image,
+                            args=(shared_memory_info, 0, exit_event, rolling_frame_buffer_size, number_of_frames_read))
     child_process.start()
-    try:
-        while not exit_event.is_set():
 
-            logger.debug(f"Main Process: {shared_image_frame.shape} - trying to show image")
-            time.sleep(0.033)
-            cv2.imshow("Shared Memory Camera - `q` to quit", shared_image_frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+    try:
+        number_frame_shown = -1
+        while not exit_event.is_set():
+            if number_frame_shown >= number_of_frames_read.value:
+                time.sleep(0.01)
+                continue
+            number_frame_shown += 1
+            image_to_display = shared_image_array[number_frame_shown % rolling_frame_buffer_size]
+            logger.debug(f"Main Process: {image_to_display.shape} - trying to show image")
+            cv2.imshow("Shared Memory Camera - `q` to quit", image_to_display)
+            # exit loop on Q or ESC
+            if cv2.waitKey(1) & 0xFF in [ord('q'), 27]:
                 exit_event.set()
 
     except Exception as e:
@@ -89,5 +109,21 @@ def parent_function():
         shared_memory_block.unlink()
         logger.info("Main Process: Exiting...")
         exit(exit_code)
+
+
+def get_initial_image():
+    logger.info("Creating VideoCapture object to get initial frame")
+    video_capture = cv2.VideoCapture(0)  # Assuming camera_index as 0.
+    if not video_capture.isOpened():
+        logger.error("Could not open video capture device")
+        exit(123)
+    read_successful, initial_image = video_capture.read()
+    if not read_successful:
+        logger.error("Could not read initial frame")
+        exit(342)
+    video_capture.release()
+    return initial_image
+
+
 if __name__ == '__main__':
     parent_function()
