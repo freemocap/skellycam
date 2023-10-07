@@ -16,7 +16,7 @@ RESOLUTION_1080P = (1920, 1080)
 RESOLUTION_720P = (1280, 720)
 RESOLUTION_480P = (640, 480)
 
-CHOSEN_RESOLUTION = RESOLUTION_480P
+CHOSEN_RESOLUTION = RESOLUTION_1080P
 
 
 def camera_loop(shared_memory_info: Dict[str, Union[str, int]],
@@ -144,7 +144,7 @@ def parent_function():
             if current_frame_buffer_copy < 0:
                 current_frame_buffer_copy = rolling_frame_buffer_size - 1
             if previous_frame_buffer_index == current_frame_buffer_copy:
-                time.sleep(0.01)
+                time.sleep(0.001)
                 continue
             else:
                 number_frame_shown += 1
