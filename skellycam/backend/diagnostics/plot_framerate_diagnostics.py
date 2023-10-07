@@ -8,7 +8,7 @@ from scipy.stats import median_abs_deviation
 
 from skellycam.data_models.frame_payload import FramePayload
 
-from skellycam.backend.utils.start_file import open_file
+from skellycam.backend.utilities.start_file import open_file
 
 logger = logging.getLogger(__name__)
 

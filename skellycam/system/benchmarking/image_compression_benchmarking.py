@@ -1,45 +1,50 @@
 import itertools
 import time
 import timeit
+from collections import defaultdict
 from io import BytesIO
-from typing import List
+from typing import List, Tuple
 
 import cv2
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 from PIL import Image
 from skimage import io as skimage_io
+from tabulate import tabulate
 from tqdm import tqdm
 
-def grab_sample_frames(resolutions,
-                       number_of_frames:int,
-                       camera_number:int=0):
+from skellycam.backend.utilities.magic_nested_dict import MagicTreeDict
 
+
+def grab_sample_frames(resolutions,
+                       number_of_frames: int,
+                       camera_number: int = 0):
     cap = cv2.VideoCapture(camera_number)
-    images_and_durations_by_resolution = {}
+    images_and_durations_by_resolution = MagicTreeDict()
     for resolution in resolutions:
         print(f"Grabbing frame at {resolution}")
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
         success, img = cap.read()
 
-        images_and_durations_by_resolution[resolution] = {"images":[],
-                                            "grab_duration_ns":[]}
+        images = []
+        grab_durations = []
 
         for _ in range(number_of_frames):
-            start_time = time.process_time_ns()
+            start_time = time.process_time()
             success, img = cap.read()
-            elapsed_ns = time.perf_counter_ns() - start_time
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
 
             if not success:
                 raise Exception(f"Failed to read frame from camera - {resolution}!")
-            images_and_durations_by_resolution[resolution]["images"].append(img)
-            images_and_durations_by_resolution[resolution]["grab_duration_ns"].append(elapsed_ns)
-
+            images.append(img)
+            grab_durations.append(elapsed_ms)
+        images_and_durations_by_resolution[resolution]["images"] = images
+        images_and_durations_by_resolution[resolution]["grab_durations"] = grab_durations
 
     cap.release()
     return images_and_durations_by_resolution
+
 
 def encode_cv2(img: np.ndarray, quality: int, format: str):
     if format == 'jpg':
@@ -91,8 +96,7 @@ encoding_functions = {
 }
 
 
-def read_and_encode_image(image:np.ndarray, library:str, format:str, quality:int):
-
+def read_and_encode_image(image: np.ndarray, library: str, format: str, quality: int):
     start_time = timeit.default_timer()
     buffer_size = encoding_functions[f'encode_{library}'](image, quality, format)
     elapsed_sec = timeit.default_timer() - start_time
@@ -100,91 +104,72 @@ def read_and_encode_image(image:np.ndarray, library:str, format:str, quality:int
     return elapsed_ms, buffer_size
 
 
-def image_compression_benchmark():
+def create_nested_dict() -> defaultdict:
+    return defaultdict(create_nested_dict)
+
+
+def defaultdict_to_dict(d):
+    if isinstance(d, defaultdict):
+        d = {k: defaultdict_to_dict(v) for k, v in d.items()}
+    return d
+
+
+def calculate_tree_stats(data_tree: MagicTreeDict,
+                         libraries: List[str],
+                         qualities: List[int],
+                         resolutions: List[Tuple[int, int]], image_formats: List[str]) -> MagicTreeDict:
+    stats_tree = MagicTreeDict()
+    for library, resolution, quality, format_ in itertools.product(libraries, resolutions, qualities, image_formats):
+        leaf = data_tree[library][resolution][quality][format_]
+        leaf['mean_time'] = np.mean(leaf['times'])
+        leaf['std_time'] = np.std(leaf['times'])
+
+        leaf['mean_size'] = np.mean(leaf['sizes'])
+        leaf['std_size'] = np.std(leaf['sizes'])
+    return stats_tree
+
+
+def image_compression_benchmark() -> defaultdict:
     resolutions = [(1920, 1080), (1280, 720), (640, 480)]
     libraries = ['cv2', 'pillow', 'skimage']
-    image_formats = ['jpg']#, 'png']
-    qualities = [20, 60, 100]  # Quality/compression levels (10-100)
+    image_formats = ['jpg']
+    qualities = [20, 60, 100]
 
+    images_and_durations_by_resolution = grab_sample_frames(resolutions=resolutions, number_of_frames=30)
 
-    images_and_durations_by_resolution = grab_sample_frames(resolutions = resolutions,
-                                              number_of_frames=30)
+    compression_results = MagicTreeDict()
+    camera_stats_results = MagicTreeDict()
 
-    results = {}
     total_iterations = len(libraries) * len(image_formats) * len(qualities) * len(resolutions)
     progress_bar = tqdm(total=total_iterations, dynamic_ncols=True)
 
-    for library, image_format, quality, resolution in itertools.product(libraries, image_formats, qualities, resolutions):
-        progress_bar.set_postfix(
-            {'library': library, 'format': image_format, 'quality': quality, 'resolution': resolution},
-            refresh=True)
+    for library, format_, quality, resolution in itertools.product(libraries, image_formats, qualities, resolutions):
+        progress_bar.set_postfix({'library': library, 'format': format_, 'quality': quality, 'resolution': resolution},
+                                 refresh=True)
 
-        images, _ = images_and_durations_by_resolution[resolution].items()
+        images, grab_duration_ms = images_and_durations_by_resolution[resolution].items()
+        times_and_sizes = [read_and_encode_image(image, library, format_, quality) for image in images[1]]
 
-        times_and_sizes = [read_and_encode_image(image, library, image_format, quality) for image in images[1]]
-        if library not in results:
-            results[library] = {}
-        results[library][image_format] = {
-            'quality': quality,
-            'resolution': resolution,
-            'times': [entry[0] for entry in times_and_sizes],
-            'sizes': [entry[1] for entry in times_and_sizes],
-        }
+        compression_results[library][resolution][quality][format_] = {'times': [entry[0] for entry in times_and_sizes],
+                                                                      'sizes': [entry[1] for entry in times_and_sizes]}
+
+        camera_stats_results[library][resolution][quality] = {'grab_duration_ms': grab_duration_ms}
 
         progress_bar.update()
 
     progress_bar.close()
 
+    processed_results = calculate_means_and_stds(compression_results, libraries, qualities, resolutions, image_formats)
 
-    df = pd.DataFrame.from_dict(results, orient="index")
+    df = pd.DataFrame(processed_results).transpose()
+    df.index.names = ['library', 'format', 'quality', 'resolution']
 
-    print(df)
+    print("\n---------------------------------------------------\nSummary Table:")
+    print(tabulate(df.reset_index(), headers='keys', tablefmt='grid'))
 
-    # caluclate means and std and print in a nicely formatted table
-    for library in libraries:
-        for image_format in image_formats:
-            df.loc[library, image_format, 'mean_time'] = df.loc[library, image_format, 'times'].mean()
-            df.loc[library, image_format, 'std_time'] = df.loc[library, image_format, 'times'].std()
-            df.loc[library, image_format, 'mean_size'] = df.loc[library, image_format, 'sizes'].mean()
-            df.loc[library, image_format, 'std_size'] = df.loc[library, image_format, 'sizes'].std()
-    #now print just a nice summary table with means and stds
-    print("\n---------------------------------------------------\n"
-          "Summary Table:")
-    print(df.loc[:, :, ['mean_time', 'std_time', 'mean_size', 'std_size']])
-
-    return results
-
-
-
-
-def plot_image_compression_benchmarks(results: dict):
-    fig = go.Figure()
-
-    marker_dict = {'jpg': 'circle', 'png': 'square'}
-
-    for library, library_results in results.items():
-        for image_format, format_results in library_results.items():
-            fig.add_trace(go.Scatter(
-                x=format_results['times'],
-                y=format_results['sizes'],
-                mode='markers',
-                marker=dict(
-                    size=10,
-                    symbol=marker_dict[image_format]
-                ),
-                name=f'{library} - {image_format}'
-            ))
-    fig.update_layout(
-        title='Image Compression Times/Sizes By Library and Format',
-        xaxis_title='Time (sec)',
-        yaxis_title='Size (bytes)',
-        showlegend=True,
-    )
-    fig.show()
-    f = 9
+    return compression_results
 
 
 if __name__ == "__main__":
     print("Starting the test...")
     benchmarking_results = image_compression_benchmark()
-    plot_image_compression_benchmarks(benchmarking_results)
