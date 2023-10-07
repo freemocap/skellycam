@@ -14,13 +14,13 @@ SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
 LOGS_INFO_AND_SETTINGS_FOLDER_NAME = "logs_info_and_settings"
 LOG_FILE_FOLDER_NAME = "logs"
 TIMESTAMPS_FOLDER_NAME = "timestamps"
+BENCHMARKING_FOLDER_NAME = "benchmarking"
 
-#Emoji strings
+# Emoji strings
 RED_X_EMOJI_STRING = "\U0000274C"
 MAGNIFYING_GLASS_EMOJI_STRING = "\U0001F50D"
 CAMERA_WITH_FLASH_EMOJI_STRING = "\U0001F4F8"
 HAMMER_AND_WRENCH_EMOJI_STRING = "\U0001F6E0"
-
 
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
@@ -38,6 +38,12 @@ def get_default_session_folder_path(create_folder: bool = True, string_tag: str 
     if create_folder:
         folder_path.mkdir(parents=True, exist_ok=True)
     return str(folder_path)
+
+
+def get_benchmarking_path(make_run_subfolder:bool=True) -> str:
+    path = get_default_skellycam_base_folder_path() / BENCHMARKING_FOLDER_NAME / get_iso6201_time_string()
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
 
 
 def get_log_file_path():
@@ -95,8 +101,7 @@ def get_default_recording_name(string_tag: str = None):
     return recording_name
 
 
-def create_new_synchronized_videos_folder(recording_folder_path: Union[str, Path],
-                                          ):
+def create_new_synchronized_videos_folder(recording_folder_path: Union[str, Path]):
     folder_path = Path(recording_folder_path) / SYNCHRONIZED_VIDEOS_FOLDER_NAME
     folder_path.mkdir(parents=True, exist_ok=True)
     logger.info(f"Creating new recording video folder: {folder_path}")
