@@ -1,82 +1,43 @@
 import collections
 import sys
 from collections import defaultdict
-from typing import List, Union, Any
+from typing import Any
+from typing import List, Union
 
 import numpy as np
-from rich import box
+import rich.tree
 from rich.console import Console
-from rich.table import Table
 from rich.tree import Tree
 
 
-class MagicTreeDict(defaultdict):
-    def __init__(self):
-        super().__init__(self.create_nested_dict)
+class TreePrinter:
+    def __init__(self, tree: 'MagicTreeDict'):
+        self.tree = tree
 
-    @staticmethod
-    def create_nested_dict():
-        return defaultdict(MagicTreeDict.create_nested_dict)
+    def __str__(self):
+        console = Console()
+        with console.capture() as capture:
+            rich_tree = Tree(":seedling:")
+            self._add_branch(rich_tree, dict(self.tree))
+            console.print(rich_tree)
+        return capture.get()
 
-    def get_leaf_paths(self, current=None, path=None):
-        if current is None:
-            current = self
-        if path is None:
-            path = []
-        leaf_paths = []
-        for key, value in current.items():
-            new_path = path + [key]
-            if isinstance(value, defaultdict):
-                leaf_paths.extend(self.get_leaf_paths(value, new_path))
+    def _add_branch(self, rich_tree: rich.tree.Tree, subdict):
+        for key, value in subdict.items():
+            if isinstance(value, dict):
+                branch = rich_tree.add(key)
+                self._add_branch(branch, value)
             else:
-                leaf_paths.append(new_path)
-        return leaf_paths
+                rich_tree.add(f"{key}: {value}")
 
-    def data_from_path(self, path: List[str], current=None) -> Union['MagicTreeDict', Any]:
-        """
-        Returns the data at the given path, be it a leaf(endpoint) or a branch (i.e. a sub-tree/dict)
 
-        Either returns the data at the given path, or creates a new empty sub-tree dictionary at that location and returns that
+class TreeCalculator:
+    def __init__(self, tree: 'MagicTreeDict'):
+        self.tree = tree
 
-        """
-        if current is None:
-            current = self
-        return current if len(path) == 0 else self.data_from_path(path[1:], current=current[path[0]])
-
-    def print_leaf_info(self, current=None):
-        types_to_print = {
-            list: lambda x: (len(x), type(x[0]) if len(x) > 0 else None),
-            np.ndarray: lambda x: (x.shape, x.dtype),
-            str: lambda x: f"Length: {len(x)} Characters: {x[:12]}...{x[-12:]}" if len(x) > 25 else x,
-            tuple: lambda x: (len(x), type(x[0]) if len(x) > 0 else None)
-        }
-
-        if current is None:
-            current = self
-            self._leaf_info_table = Table(show_header=True, header_style="bold magenta", box=box.ROUNDED)
-            self._leaf_info_table.add_column("Node")
-            self._leaf_info_table.add_column("Type")
-            self._leaf_info_table.add_column("Info")
-            self._leaf_info_table.add_column("Bytes")
-            self._leaf_info_table.add_column("Memory address")
-
-        for key, value in current.items():
-            if isinstance(value, defaultdict):
-                self.print_leaf_info(value)
-            else:
-                type_info = type(value)
-                other_info = types_to_print.get(type_info, lambda x: 'Unsupported type')(value)
-                self._leaf_info_table.add_row(key, str(type_info), str(other_info), str(sys.getsizeof(value)), str(id(value)))
-
-        if current is self:
-            console = Console()
-            console.print(self._leaf_info_table)
-            self._leaf_info_table = None
-
-    def calculate_tree_stats(self,
-                             metrics: List[str] = None,
-                             data_keys: List[str] = None,
-                             add_leaves: bool = True) -> 'MagicTreeDict':
+    def calculate_stats(self,
+                        metrics: List[str] = None,
+                        data_keys: List[str] = None) -> 'MagicTreeDict':
         """
         Calculates the mean and standard deviation of all leaf nodes in the tree.
 
@@ -89,12 +50,12 @@ class MagicTreeDict(defaultdict):
         """
         metrics = metrics or ['mean', 'std']
         data_keys = data_keys or ['ALL']
-        leaf_paths = self.get_leaf_paths()
 
-        stats_tree = self if add_leaves else MagicTreeDict()
+        stats_tree = MagicTreeDict()
 
+        leaf_paths = self.tree.get_leaf_paths()
         for path in leaf_paths:
-            leaf_orig = self.data_from_path(path)
+            leaf_orig = self.tree.data_from_path(path)
             data_name = path[-1]
 
             if isinstance(leaf_orig, list) and (data_name in data_keys or data_keys == ['ALL']):
@@ -108,6 +69,95 @@ class MagicTreeDict(defaultdict):
                     leaf_std = np.std(leaf_orig)
                     stats_tree[path]['std'] = leaf_std
         return stats_tree
+
+
+class MagicTreeDict(defaultdict):
+    """
+    A class that integrates `defaultdict` with added functionality.
+
+    The `MagicTreeDict` class allows for representing a nested dictionary
+    in a tree-like structure. It provides methods for traversing the tree,
+    and getting or setting data using a list of keys, and also calculates stats
+    and prints information about the leaves.
+    """
+
+    def __init__(self):
+        super().__init__(self.create_nested_dict)
+
+    @staticmethod
+    def create_nested_dict():
+        return defaultdict(MagicTreeDict.create_nested_dict)
+
+    def get_leaf_paths(self):
+        """
+        Returns a list of all the paths to the leaves in the tree.
+        """
+        leaf_paths = []
+        self._traverse_tree(lambda path, value: leaf_paths.append(path))
+        return leaf_paths
+
+    def data_from_path(self, path: List[str], current=None) -> Union['MagicTreeDict', Any]:
+        """
+        Returns the data at the given path, be it a leaf(endpoint) or a branch (i.e. a sub-tree/dict)
+
+        Either returns the data at the given path, or creates a new empty sub-tree dictionary at that location and returns that
+
+        """
+        if current is None:
+            current = self
+        return current if len(path) == 0 else self.data_from_path(path[1:], current=current[path[0]])
+
+    def calculate_tree_stats(self,
+                             metrics: List[str] = None,
+                             data_keys: List[str] = None) -> 'MagicTreeDict':
+        stats = TreeCalculator(self).calculate_stats(metrics=metrics,
+                                                     data_keys=data_keys)
+        return stats
+
+    def print_leaf_info(self, current=None, path=None):
+        """Prints the information about all the leaves of the tree."""
+        console = Console()
+        tree = Tree(":seedling:")
+        self._get_leaf_info()
+        print(self._leaf_info)
+
+    def _get_leaf_info(self, current=None, path=None):
+        if current is None:
+            self._leaf_info = MagicTreeDict()
+            current = self
+        if path is None:
+            path = []
+        for key, value in current.items():
+            new_path = path + [key]
+
+            type_ = type(value).__name__
+            info = str(value)[:20] + (str(value)[20:] and '..')
+            nbytes = sys.getsizeof(value)
+            memory_address = hex(id(value))
+
+            if isinstance(value, defaultdict):
+                self._get_leaf_info(current=value,
+                                    path=new_path)
+            else:
+                self._leaf_info[new_path].update({"type": type_,
+                                                  "info": info,
+                                                  "nbytes": nbytes,
+                                                  "memory_address": memory_address})
+
+    def _traverse_tree(self, callback, current=None, path=None):
+        if current is None:
+            current = self
+        if path is None:
+            path = []
+        for key, value in current.items():
+            new_path = path + [key]
+            if isinstance(value, defaultdict):
+                self._traverse_tree(callback, value, new_path)
+            else:
+                callback(new_path, value)
+
+    def __str__(self):
+        return TreePrinter(self).__str__()
 
     def __setitem__(self, keys, value):
         """
@@ -147,27 +197,6 @@ class MagicTreeDict(defaultdict):
     def __repr__(self):
         return repr(dict(self))
 
-    def __str__(self):
-        """
-        Prints the tree in a nice format using rich
-        """
-        console = Console()
-
-        def add_branch(tree: Tree, data: dict, level: int = 0, max_level: int = 6):
-            colors = ['bright_yellow', 'bright_blue', 'bright_green', 'bright_red', 'bright_magenta', 'bright_cyan']
-            for key, value in data.items():
-                if isinstance(value, dict) and level < max_level:
-                    branch = tree.add(f"[{colors[level % len(colors)]}]{key}")
-                    add_branch(branch, value, level + 1)
-                else:
-                    tree.add(f"[{colors[level % len(colors)]}]{key} : {value}")
-
-        tree = Tree(":seedling:")
-        add_branch(tree, dict(self))
-        with console.capture() as capture:
-            console.print(tree)
-        return capture.get()
-
 
 def create_sample_magic_tree():
     magic_tree = MagicTreeDict()
@@ -185,33 +214,32 @@ def test_magic_tree_dict(magic_tree: MagicTreeDict = None):
         magic_tree = create_sample_magic_tree()
     print(f"Original MagicTreeDict:\n{magic_tree}\n")
 
-    stats = magic_tree.calculate_tree_stats(add_leaves=False)
+    stats = magic_tree.calculate_tree_stats()
     print(f"Calculate tree stats and return in new MagicTreeDict:\n{stats}\n")
     print(f"Original MagicTreeDict (again) :\n{magic_tree}\n")
-
-    magic_tree.calculate_tree_stats()
-    print(f"Calculate tree stats and update original MagicTreeDict:\n{magic_tree}\n")
     return magic_tree
+
 
 
 if __name__ == "__main__":
     tree = test_magic_tree_dict()
     tree.print_leaf_info()
 
-# Expected output (2023-10-08):
+# # Expected output (2023-10-08):
+#
 # Original MagicTreeDict:
 # 🌱
 # └── a
 #     ├── b
 #     │   ├── c
-#     │   │   ├── woo : [1, 2, 13]
-#     │   │   ├── woo2 : ✨
-#     │   │   └── hey : [71, 8, 9]
-#     │   └── ??️ : [[1. 0. 0.]
+#     │   │   ├── woo: [1, 2, 13]
+#     │   │   ├── woo2: ✨
+#     │   │   └── hey: [71, 8, 9]
+#     │   └── ??️: [[1. 0. 0.]
 #     │        [0. 1. 0.]
 #     │        [0. 0. 1.]]
 #     └── c
-#         └── bang : [4, 51, 6]
+#         └── bang: [4, 51, 6]
 #
 #
 # Calculate tree stats and return in new MagicTreeDict:
@@ -220,18 +248,18 @@ if __name__ == "__main__":
 #     ├── b
 #     │   └── c
 #     │       ├── woo
-#     │       │   ├── data : [1, 2, 13]
-#     │       │   ├── mean : 5.333333333333333
-#     │       │   └── std : 5.436502143433364
+#     │       │   ├── data: [1, 2, 13]
+#     │       │   ├── mean: 5.333333333333333
+#     │       │   └── std: 5.436502143433364
 #     │       └── hey
-#     │           ├── data : [71, 8, 9]
-#     │           ├── mean : 29.333333333333332
-#     │           └── std : 29.465610840812758
+#     │           ├── data: [71, 8, 9]
+#     │           ├── mean: 29.333333333333332
+#     │           └── std: 29.465610840812758
 #     └── c
 #         └── bang
-#             ├── data : [4, 51, 6]
-#             ├── mean : 20.333333333333332
-#             └── std : 21.69997439834639
+#             ├── data: [4, 51, 6]
+#             ├── mean: 20.333333333333332
+#             └── std: 21.69997439834639
 #
 #
 # Original MagicTreeDict (again) :
@@ -239,14 +267,14 @@ if __name__ == "__main__":
 # └── a
 #     ├── b
 #     │   ├── c
-#     │   │   ├── woo : [1, 2, 13]
-#     │   │   ├── woo2 : ✨
-#     │   │   └── hey : [71, 8, 9]
-#     │   └── ??️ : [[1. 0. 0.]
+#     │   │   ├── woo: [1, 2, 13]
+#     │   │   ├── woo2: ✨
+#     │   │   └── hey: [71, 8, 9]
+#     │   └── ??️: [[1. 0. 0.]
 #     │        [0. 1. 0.]
 #     │        [0. 0. 1.]]
 #     └── c
-#         └── bang : [4, 51, 6]
+#         └── bang: [4, 51, 6]
 #
 #
 # Calculate tree stats and update original MagicTreeDict:
@@ -255,23 +283,21 @@ if __name__ == "__main__":
 #     ├── b
 #     │   ├── c
 #     │   │   ├── woo
-#     │   │   │   ├── data : [1, 2, 13]
-#     │   │   │   ├── mean : 5.333333333333333
-#     │   │   │   └── std : 5.436502143433364
-#     │   │   ├── woo2 : ✨
+#     │   │   │   ├── data: [1, 2, 13]
+#     │   │   │   ├── mean: 5.333333333333333
+#     │   │   │   └── std: 5.436502143433364
+#     │   │   ├── woo2: ✨
 #     │   │   └── hey
-#     │   │       ├── data : [71, 8, 9]
-#     │   │       ├── mean : 29.333333333333332
-#     │   │       └── std : 29.465610840812758
-#     │   └── ??️ : [[1. 0. 0.]
+#     │   │       ├── data: [71, 8, 9]
+#     │   │       ├── mean: 29.333333333333332
+#     │   │       └── std: 29.465610840812758
+#     │   └── ??️: [[1. 0. 0.]
 #     │        [0. 1. 0.]
 #     │        [0. 0. 1.]]
 #     └── c
 #         └── bang
-#             ├── data : [4, 51, 6]
-#             ├── mean : 20.333333333333332
-#             └── std : 21.69997439834639
+#             ├── data: [4, 51, 6]
+#             ├── mean: 20.333333333333332
+#             └── std: 21.69997439834639
 #
 #
-#
-# Process finished with exit code 0
