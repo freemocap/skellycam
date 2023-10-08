@@ -6,6 +6,7 @@ from io import BytesIO
 
 import cv2
 import numpy as np
+import pandas as pd
 from PIL import Image
 from skimage import io as skimage_io
 from tqdm import tqdm
@@ -141,5 +142,15 @@ if __name__ == "__main__":
     stats = benchmarking_results.calculate_tree_stats()
     print(stats)
     times = stats.filter_tree("times")
+    sizes = stats.filter_tree("sizes")
     print(times)
-    f=9
+
+    times_dict = times.__dict__()
+    results_table = pd.DataFrame.from_dict(times_dict)
+
+
+    def get_mean(entry):
+        return entry[60]['jpg']['times']['mean']
+    mean_values_table = results_table.applymap(get_mean)
+
+    print(mean_values_table)
