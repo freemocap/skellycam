@@ -103,7 +103,7 @@ def read_and_encode_image(image: np.ndarray, library: str, format: str, quality:
     return elapsed_ms, buffer_size
 
 
-def image_compression_benchmark() -> defaultdict:
+def image_compression_benchmark() -> MagicTreeDict:
     resolutions = [(1920, 1080), (1280, 720), (640, 480)]
     libraries = ['cv2', 'pillow', 'skimage']
     image_formats = ['jpg']
@@ -131,12 +131,12 @@ def image_compression_benchmark() -> defaultdict:
 
     progress_bar.close()
 
-    stats = results.calculate_tree_stats(add_leaves=False)
-    print(stats)
     return results
 
 
 if __name__ == "__main__":
     print("Starting the test...")
     benchmarking_results = image_compression_benchmark()
+
     stats = benchmarking_results.calculate_tree_stats()
+    print(stats)

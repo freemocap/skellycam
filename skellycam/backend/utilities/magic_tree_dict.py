@@ -5,9 +5,11 @@ from typing import Any
 from typing import List, Union
 
 import numpy as np
+import pandas as pd
 import rich.tree
 from rich.console import Console
 from rich.tree import Tree
+from tabulate import tabulate
 
 
 class TreePrinter:
@@ -15,20 +17,33 @@ class TreePrinter:
         self.tree = tree
 
     def __str__(self):
-        console = Console()
-        with console.capture() as capture:
-            rich_tree = Tree(":seedling:")
-            self._add_branch(rich_tree, dict(self.tree))
-            console.print(rich_tree)
-        return capture.get()
+        try:
+            console = Console()
+            with console.capture() as capture:
+                rich_tree = Tree(":seedling:")
+                self._add_branch(rich_tree, dict(self.tree))
+                console.print(rich_tree)
+            return capture.get()
+        except Exception as e:
+            print(f"Failed to print tree: {e}")
+            raise e
 
     def _add_branch(self, rich_tree: rich.tree.Tree, subdict):
-        for key, value in subdict.items():
-            if isinstance(value, dict):
-                branch = rich_tree.add(key)
-                self._add_branch(branch, value)
-            else:
-                rich_tree.add(f"{key}: {value}")
+        try:
+            for key, value in subdict.items():
+                if isinstance(value, dict):
+                    branch = rich_tree.add(str(key))
+                    self._add_branch(branch, value)
+                else:
+                    value = str(value)  # try to convert it to a string
+                    rich_tree.add(f"{key}: {value}")
+        except Exception as e:
+            print(f"Failed to add branch: {e}")
+            raise e
+
+    def print_table(self, leaf_keys: Union[str, List[str]]):
+        df = self.tree.to_dataframe(leaf_keys=leaf_keys)
+        print(tabulate(df, headers='keys', tablefmt='psql'))
 
 
 class TreeCalculator:
@@ -59,8 +74,6 @@ class TreeCalculator:
             data_name = path[-1]
 
             if isinstance(leaf_orig, list) and (data_name in data_keys or data_keys == ['ALL']):
-                stats_tree[path] = {"data": leaf_orig}  # preserve the original leaf value under "data" key
-
                 if 'mean' in metrics:
                     leaf_mean = np.mean(leaf_orig)
                     stats_tree[path]['mean'] = leaf_mean
@@ -96,6 +109,26 @@ class MagicTreeDict(defaultdict):
         self._traverse_tree(lambda path, value: leaf_paths.append(path))
         return leaf_paths
 
+    def get_leaf_keys(self):
+        """
+        Returns all the keys of leaf nodes in the tree.
+        """
+        leaf_keys = []
+        self._traverse_tree(lambda path, value: leaf_keys.append(path[-1]))
+        return leaf_keys
+
+    def get_path_to_leaf(self, leaf_key: str) -> List[str]:
+        """
+        Returns the path to a specified leaf in the tree.
+        """
+        leaf_paths = []
+        self._traverse_tree(lambda path, value: leaf_paths.append(path) if path[-1] == leaf_key else None)
+
+        if not leaf_paths:
+            raise KeyError(f"Leaf key '{leaf_key}' not found in tree.")
+
+        return leaf_paths
+
     def data_from_path(self, path: List[str], current=None) -> Union['MagicTreeDict', Any]:
         """
         Returns the data at the given path, be it a leaf(endpoint) or a branch (i.e. a sub-tree/dict)
@@ -120,6 +153,42 @@ class MagicTreeDict(defaultdict):
         tree = Tree(":seedling:")
         self._get_leaf_info()
         print(self._leaf_info)
+
+    def get_paths_for_keys(self, keys):
+        paths = []
+        self._traverse_tree(lambda path, value: paths.append(path) if path[-1] in keys else None)
+        return paths
+
+    def print_table(self, keys: Union[str, List[str]] = None):
+        TreePrinter(tree=self).print_table(keys)
+
+    def to_dataframe(self, leaf_keys: Union[str, List[str]] = None):
+        if leaf_keys is None:
+            leaf_keys = self.get_leaf_keys()
+
+        paths = [self.get_path_to_leaf(leaf_key=key) for key in leaf_keys]
+        paths = [path for sublist in paths for path in sublist]  # flatten list
+
+        table_dict = {}
+        leaf_lengths = set()
+
+        for path in paths:
+            data = self.data_from_path(path)
+            if hasattr(data, '__iter__'):
+                leaf_lengths.add(len(data))
+            else:
+                leaf_lengths.add(1)
+
+            if tuple(path) in table_dict:
+                raise ValueError(
+                    f"Error at path level {path} - Path is not unique. Ensure each path in your tree is unique - exisiting paths: {table_dict.keys()}")
+            table_dict[tuple(path)] = data
+
+        if len(leaf_lengths) > 1:
+            raise ValueError(
+                f"Error at {path} level -  Leaf node data lengths are inconsistent. Ensure all leaf data have the same length or are scalar. Found lengths: {leaf_lengths}")
+
+        return pd.DataFrame.from_dict(table_dict, orient='index').transpose()
 
     def _get_leaf_info(self, current=None, path=None):
         if current is None:
@@ -209,21 +278,20 @@ def create_sample_magic_tree():
     return magic_tree
 
 
-def test_magic_tree_dict(magic_tree: MagicTreeDict = None):
-    if magic_tree is None:
-        magic_tree = create_sample_magic_tree()
-    print(f"Original MagicTreeDict:\n{magic_tree}\n")
-
-    stats = magic_tree.calculate_tree_stats()
-    print(f"Calculate tree stats and return in new MagicTreeDict:\n{stats}\n")
-    print(f"Original MagicTreeDict (again) :\n{magic_tree}\n")
-    return magic_tree
-
+def test_magic_tree_dict():
+    tree = create_sample_magic_tree()
+    print(f"Original MagicTreeDict:\n{tree}\n\n")
+    print(f"Calculate tree stats and return in new MagicTreeDict:\n{tree.calculate_tree_stats()}\n\n")
+    print(f"Print Table:\n")
+    tree.print_table(['woo', 'bang', 'hey'])
+    stats = tree.calculate_tree_stats()
+    print(f"Calculate Tree Stats:\n{stats}\n\n")
+    print(f"Print stats table:\n")
+    stats.print_table(['mean', 'std'])
 
 
 if __name__ == "__main__":
-    tree = test_magic_tree_dict()
-    tree.print_leaf_info()
+    test_magic_tree_dict()
 
 # # Expected output (2023-10-08):
 # Original MagicTreeDict:
@@ -247,16 +315,13 @@ if __name__ == "__main__":
 #     ├── b
 #     │   └── c
 #     │       ├── woo
-#     │       │   ├── data: [1, 2, 13]
 #     │       │   ├── mean: 5.333333333333333
 #     │       │   └── std: 5.436502143433364
 #     │       └── hey
-#     │           ├── data: [71, 8, 9]
 #     │           ├── mean: 29.333333333333332
 #     │           └── std: 29.465610840812758
 #     └── c
 #         └── bang
-#             ├── data: [4, 51, 6]
 #             ├── mean: 20.333333333333332
 #             └── std: 21.69997439834639
 #
@@ -284,29 +349,29 @@ if __name__ == "__main__":
 #     │   │   │   ├── type: list
 #     │   │   │   ├── info: [1, 2, 13]
 #     │   │   │   ├── nbytes: 88
-#     │   │   │   └── memory_address: 0x1f33561d6c0
+#     │   │   │   └── memory_address: 0x1fe33cd0f80
 #     │   │   ├── woo2
 #     │   │   │   ├── type: str
 #     │   │   │   ├── info: ✨
 #     │   │   │   ├── nbytes: 76
-#     │   │   │   └── memory_address: 0x1f303fb4990
+#     │   │   │   └── memory_address: 0x1fe02675250
 #     │   │   └── hey
 #     │   │       ├── type: list
 #     │   │       ├── info: [71, 8, 9]
 #     │   │       ├── nbytes: 88
-#     │   │       └── memory_address: 0x1f3355d5b40
+#     │   │       └── memory_address: 0x1fe33c81640
 #     │   └── ??️
 #     │       ├── type: ndarray
 #     │       ├── info: [[1. 0. 0.]
 #     │       │    [0. 1. ..
 #     │       ├── nbytes: 200
-#     │       └── memory_address: 0x1f3352bbc30
+#     │       └── memory_address: 0x1fe33967bd0
 #     └── c
 #         └── bang
 #             ├── type: list
 #             ├── info: [4, 51, 6]
 #             ├── nbytes: 88
-#             └── memory_address: 0x1f3355d5940
+#             └── memory_address: 0x1fe33c81400
 #
 #
 # Process finished with exit code 0
