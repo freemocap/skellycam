@@ -1,29 +1,36 @@
 # __main__.py
-import platform
-import sys
-from pathlib import Path
+import logging
+import multiprocessing
+from multiprocessing import freeze_support
 
-try:
-    from skellycam.frontend.qt import qt_gui_main
-except Exception as e:
-    base_package_path = Path(__file__).parent.parent
-    print(f"adding base_package_path: {base_package_path} : to sys.path")
-    sys.path.insert(0, str(base_package_path))  # add parent directory to sys.path
-    from skellycam.frontend.qt import qt_gui_main
+from skellycam.backend.backend_main import backend_main
+from skellycam.frontend.frontend_main import frontend_main
+from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
+
+logger = logging.getLogger(__name__)
 
 
 def main():
-    qt_gui_main()
+    messages_from_frontend, messages_to_backend = multiprocessing.Pipe(duplex=False)
+    messages_from_backend, messages_to_frontend = multiprocessing.Pipe(duplex=False)
 
+    backend_process = multiprocessing.Process(target=backend_main, args=(messages_from_frontend, messages_to_frontend))
+    frontend_process = multiprocessing.Process(target=frontend_main, args=(messages_from_backend, messages_to_backend))
+
+    logger.info(f"Starting backend process...")
+    backend_process.start()
+
+    logger.info(f"Starting frontend process...")
+    frontend_process.start()
+
+    backend_process.join()
+    frontend_process.join()
+
+    logger.info(f"Exiting main...")
 
 if __name__ == "__main__":
-    print(f"Running `skellycam.__main__` from - {__file__}")
-
-    if platform.system() == "Windows":
-        # set up so you can change the taskbar icon - https://stackoverflow.com/a/74531530/14662833
-        import ctypes
-        import skellycam
-        myappid = f"{skellycam.__package_name__}_{skellycam.__version__}"  # arbitrary string
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-
+    logger.info(f"Running from __main__: {__name__} - {__file__}")
+    freeze_support()
+    setup_app_id_for_windows()
     main()
+    logger.info(f"Exiting __main__, bye!")

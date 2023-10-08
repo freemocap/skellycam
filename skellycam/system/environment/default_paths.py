@@ -9,7 +9,7 @@ from skellycam.system.environment.home_dir import os_independent_home_dir
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skelly-cam-recordings"
+DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skellycam_data"
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
 LOGS_INFO_AND_SETTINGS_FOLDER_NAME = "logs_info_and_settings"
 LOG_FILE_FOLDER_NAME = "logs"
