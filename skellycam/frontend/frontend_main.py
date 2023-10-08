@@ -4,6 +4,7 @@ import sys
 import time
 from typing import Dict, Any
 
+from skellycam.frontend.qt.skelly_cam_main_window import SkellyCamMainWindow
 # from skellycam.frontend.qt.skelly_cam_main_window import SkellyCamMainWindow
 from skellycam.frontend.qt.utilities.app_singletons.get_or_create_app_state import get_or_create_app_state
 from skellycam.frontend.qt.utilities.app_singletons.get_or_create_qt_app import get_or_create_qt_app
@@ -38,8 +39,8 @@ def frontend_main(messages_from_backend: multiprocessing.connection.Connection,
                 logger.info(f"frontend_main received message from backend: {message}")
 
 
-        # main_window = SkellyCamMainWindow()
-        # main_window.show()
+        main_window = SkellyCamMainWindow()
+        main_window.show()
         error_code = app.exec()
         logger.info(f"Exiting with code: {error_code}")
         print("Thank you for using Skelly Cam \U0001F480 \U0001F4F8")

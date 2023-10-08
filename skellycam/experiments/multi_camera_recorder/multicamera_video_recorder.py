@@ -6,23 +6,18 @@ from typing import Dict, Union
 
 import cv2
 
-from skellycam import CameraConfig
 from skellycam.backend.detection.detect_cameras import detect_cameras
-from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.diagnostics import plot_first_middle_and_last_frames
-from skellycam.backend.diagnostics import (
-    calculate_camera_diagnostic_results,
-    create_timestamp_diagnostic_plots,
-)
+from skellycam.backend.diagnostics.plot_framerate_diagnostics import calculate_camera_diagnostic_results, \
+    create_timestamp_diagnostic_plots
 from skellycam.backend.opencv.group.camera_group import CameraGroup
-from skellycam.backend.opencv import (
-    save_synchronized_videos,
-)
+from skellycam.backend.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.data_models.camera_config import CameraConfig
+from skellycam.data_models.frame_payload import FramePayload
 from skellycam.system.environment.default_paths import (
-    default_base_folder,
     default_session_name,
-    get_iso6201_time_string,
+    get_iso6201_time_string, SYNCHRONIZED_VIDEOS_FOLDER_NAME, get_default_skellycam_base_folder_path,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,7 +35,7 @@ class MultiCameraVideoRecorder:
         self._session_name = default_session_name(string_tag=string_tag)
 
         if video_save_folder_path is None:
-            self._video_save_folder_path = default_base_folder() / self._session_name / SYNCHRONIZED_VIDEOS_FOLDER_NAME
+            self._video_save_folder_path = get_default_skellycam_base_folder_path() / self._session_name / SYNCHRONIZED_VIDEOS_FOLDER_NAME
         else:
             self._video_save_folder_path = Path(video_save_folder_path)
         self._video_save_folder_path.mkdir(parents=True, exist_ok=True)

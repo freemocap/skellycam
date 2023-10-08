@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout,
 )
 
-from skellycam import CameraConfig
+from skellycam.data_models.camera_config import CameraConfig
 from skellycam.frontend.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.frontend.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
 from skellycam.frontend.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
