@@ -1,3 +1,4 @@
+import io
 import logging
 import multiprocessing
 import threading
@@ -5,6 +6,7 @@ import time
 import traceback
 
 import cv2
+from PIL import Image
 
 from skellycam.backend.opencv.config.apply_config import apply_configuration
 from skellycam.backend.opencv.config.determine_backend import determine_backend
@@ -13,17 +15,28 @@ from skellycam.data_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
+def compress_image(image,
+                   quality: int) -> bytes:
+    # Image compression
+    image_pil = Image.fromarray(image)
+    byte_arr = io.BytesIO()
+    image_pil.save(byte_arr, format='JPEG', quality=quality) #adjust quality as per requirement`
+    image_compressed = byte_arr.getvalue()
+    return image_compressed
 
 class VideoCaptureThread(threading.Thread):
     def __init__(
             self,
             config: CameraConfig,
             ready_event: multiprocessing.Event,
+            compression: bool = True,
     ):
         super().__init__()
-        self.daemon = False
         self._ready_event = ready_event
         self._config = config
+        self._compression = compression
+
+        self.daemon = False
         self._is_capturing_frames = False
         self._new_frame_ready = False
         self._number_of_frames_received: int = 0
@@ -71,6 +84,9 @@ class VideoCaptureThread(threading.Thread):
         success, image = self._cv2_video_capture.read()  # <- THIS IS WHERE THE MAGIC HAPPENS (i.e. the actual frame capture, aka the actual "measurement", aka the "moment of transduction", aka "the moment where environmental energy (light) is transcduced into a pattern of electrical energy (pixels) on a sensor (the camera's sensor)")
         retrieval_timestamp = time.perf_counter_ns()
 
+        if self._compression:
+            image = compress_image(image, quality=20) #the safest time to do this is right after a frame read bc we have the most time. Decrease quality to increase speed
+
         if success:
             self._number_of_frames_received += 1
             return FramePayload(
@@ -79,6 +95,7 @@ class VideoCaptureThread(threading.Thread):
                 timestamp_ns=retrieval_timestamp,
                 number_of_frames_received=self._number_of_frames_received,
                 camera_id=str(self._config.camera_id),
+                compression='JPEG' if self._compression else "raw",
             )
         else:
             logger.error(
@@ -93,7 +110,8 @@ class VideoCaptureThread(threading.Thread):
 
         try:
             self._cv2_video_capture.release()
-        except:
+        except Exception as e:
+            logger.trace(e)
             pass
 
         capture = cv2.VideoCapture(int(self._config.camera_id), cap_backend)

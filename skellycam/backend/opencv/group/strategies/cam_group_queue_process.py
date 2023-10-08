@@ -137,7 +137,7 @@ class CamGroupQueueProcess:
                     try:
                         if camera.new_frame_ready:
                             logger.info(
-                                f"Putting frame into queue: {camera.camera_id} - {queues[camera.camera_id].qsize()} - Image shape: {camera.latest_frame.image.shape} - queue size: {queues[camera.camera_id].qsize()}")
+                                f"Putting frame into queue: {camera.camera_id} - {queues[camera.camera_id].qsize()}")
                             queues[camera.camera_id].put(camera.latest_frame)
                     except Exception as e:
                         logger.error(f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}")

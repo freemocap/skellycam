@@ -60,7 +60,7 @@ class BackendProcessController:
                                                  message=message,
                                                  send_to_frontend=send_to_frontend,
                                                  annotate_images=annotate_images,
-                                                 latest_frames=latest_frames, )
+                                                 latest_frames=latest_frames )
                 new_frames = camera_group.new_frames()
                 if len(new_frames) > 0:
                     logger.trace(f"Got new frames from cameras: {new_frames.keys()}")
@@ -139,16 +139,25 @@ def _handle_update_camera_settings_message(camera_group, message, send_to_fronte
 def send_image_to_frontend(annotate_images: bool,
                            frames: Dict[str, FramePayload],
                            send_to_frontend):
-    for camera_id, frame_payload in frames.items():
-        if frame_payload is not None:
-            image = prepare_image_for_frontend(image=frame_payload.image,
+    for camera_id, frame in frames.items():
+        if frame is None:
+            continue
+        if frame.compression.lower() == "jpeg":
+            image = cv2.imdecode(np.frombuffer(frame.image, np.uint8), cv2.IMREAD_COLOR)
+        elif frame.compression.lower() == "raw":
+            image = frame.image
+        else:
+            raise ValueError(f"Unknown compression type: {frame.compression}")
+
+        if frame is not None:
+            image = prepare_image_for_frontend(image=image,
                                                annotate_image=annotate_images)
             byte_array = _convert_image_to_byte_array(image)
             send_to_frontend.send({"type": "new_image",
                                    "image": byte_array,
-                                   "frame_info": {"camera_id": frame_payload.camera_id,
-                                                  "timestamp_ns": frame_payload.timestamp_ns,
-                                                  "number_of_frames_received": frame_payload.number_of_frames_received}})
+                                   "frame_info": {"camera_id": frame.camera_id,
+                                                  "timestamp_ns": frame.timestamp_ns,
+                                                  "number_of_frames_received": frame.number_of_frames_received}})
 
 
 def _convert_image_to_byte_array(image):
