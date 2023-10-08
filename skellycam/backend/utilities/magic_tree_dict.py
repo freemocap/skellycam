@@ -160,8 +160,23 @@ class MagicTreeDict(defaultdict):
         return paths
 
     def print_table(self, keys: Union[str, List[str]] = None):
+        if isinstance(keys, str):
+            keys = [keys]
         TreePrinter(tree=self).print_table(keys)
 
+    def filter_tree(self, target_key, current=None):
+        new_tree = MagicTreeDict()
+        if current is None:
+            current = self
+        for key, value in current.items():
+            if isinstance(value, defaultdict):
+                sub_tree = self.filter_tree(target_key, value)
+                if sub_tree:
+                    new_tree[key] = sub_tree
+            else:
+                if key == target_key:
+                    new_tree[key] = value
+        return new_tree if len(new_tree) > 0 else None
     def to_dataframe(self, leaf_keys: Union[str, List[str]] = None):
         if leaf_keys is None:
             leaf_keys = self.get_leaf_keys()
@@ -275,6 +290,8 @@ def create_sample_magic_tree():
         3)  # TODO - doesn't handle this correctly - skips it in stats, and prints matrix poorly
     magic_tree['a']['c']['bang'] = [4, 51, 6]
     magic_tree['a']['b']['c']['hey'] = [71, 8, 9]
+    magic_tree['a']['b']['woo'] = [11, 22, 13]
+
     return magic_tree
 
 
@@ -284,6 +301,11 @@ def test_magic_tree_dict():
     print(f"Calculate tree stats and return in new MagicTreeDict:\n{tree.calculate_tree_stats()}\n\n")
     print(f"Print Table:\n")
     tree.print_table(['woo', 'bang', 'hey'])
+
+    print(f"Filter tree on `woo`:\n")
+    woo_tree = tree.filter_tree('woo')
+    print(woo_tree)
+
     stats = tree.calculate_tree_stats()
     print(f"Calculate Tree Stats:\n{stats}\n\n")
     print(f"Print stats table:\n")
@@ -309,6 +331,7 @@ if __name__ == "__main__":
 #         └── bang: [4, 51, 6]
 #
 #
+#
 # Calculate tree stats and return in new MagicTreeDict:
 # 🌱
 # └── a
@@ -326,52 +349,40 @@ if __name__ == "__main__":
 #             └── std: 21.69997439834639
 #
 #
-# Original MagicTreeDict (again) :
+#
+# Print Table:
+#
+# +----+--------------------------+----------------------+--------------------------+
+# |    |   ('a', 'b', 'c', 'woo') |   ('a', 'c', 'bang') |   ('a', 'b', 'c', 'hey') |
+# |----+--------------------------+----------------------+--------------------------|
+# |  0 |                        1 |                    4 |                       71 |
+# |  1 |                        2 |                   51 |                        8 |
+# |  2 |                       13 |                    6 |                        9 |
+# +----+--------------------------+----------------------+--------------------------+
+# Calculate Tree Stats:
 # 🌱
 # └── a
 #     ├── b
-#     │   ├── c
-#     │   │   ├── woo: [1, 2, 13]
-#     │   │   ├── woo2: ✨
-#     │   │   └── hey: [71, 8, 9]
-#     │   └── ??️: [[1. 0. 0.]
-#     │        [0. 1. 0.]
-#     │        [0. 0. 1.]]
-#     └── c
-#         └── bang: [4, 51, 6]
-#
-#
-# 🌱
-# └── a
-#     ├── b
-#     │   ├── c
-#     │   │   ├── woo
-#     │   │   │   ├── type: list
-#     │   │   │   ├── info: [1, 2, 13]
-#     │   │   │   ├── nbytes: 88
-#     │   │   │   └── memory_address: 0x1fe33cd0f80
-#     │   │   ├── woo2
-#     │   │   │   ├── type: str
-#     │   │   │   ├── info: ✨
-#     │   │   │   ├── nbytes: 76
-#     │   │   │   └── memory_address: 0x1fe02675250
-#     │   │   └── hey
-#     │   │       ├── type: list
-#     │   │       ├── info: [71, 8, 9]
-#     │   │       ├── nbytes: 88
-#     │   │       └── memory_address: 0x1fe33c81640
-#     │   └── ??️
-#     │       ├── type: ndarray
-#     │       ├── info: [[1. 0. 0.]
-#     │       │    [0. 1. ..
-#     │       ├── nbytes: 200
-#     │       └── memory_address: 0x1fe33967bd0
+#     │   └── c
+#     │       ├── woo
+#     │       │   ├── mean: 5.333333333333333
+#     │       │   └── std: 5.436502143433364
+#     │       └── hey
+#     │           ├── mean: 29.333333333333332
+#     │           └── std: 29.465610840812758
 #     └── c
 #         └── bang
-#             ├── type: list
-#             ├── info: [4, 51, 6]
-#             ├── nbytes: 88
-#             └── memory_address: 0x1fe33c81400
+#             ├── mean: 20.333333333333332
+#             └── std: 21.69997439834639
 #
+#
+#
+# Print stats table:
+#
+# +----+----------------------------------+----------------------------------+------------------------------+---------------------------------+---------------------------------+-----------------------------+
+# |    |   ('a', 'b', 'c', 'woo', 'mean') |   ('a', 'b', 'c', 'hey', 'mean') |   ('a', 'c', 'bang', 'mean') |   ('a', 'b', 'c', 'woo', 'std') |   ('a', 'b', 'c', 'hey', 'std') |   ('a', 'c', 'bang', 'std') |
+# |----+----------------------------------+----------------------------------+------------------------------+---------------------------------+---------------------------------+-----------------------------|
+# |  0 |                          5.33333 |                          29.3333 |                      20.3333 |                          5.4365 |                         29.4656 |                        21.7 |
+# +----+----------------------------------+----------------------------------+------------------------------+---------------------------------+---------------------------------+-----------------------------+
 #
 # Process finished with exit code 0
