@@ -140,4 +140,6 @@ if __name__ == "__main__":
 
     stats = benchmarking_results.calculate_tree_stats()
     print(stats)
-    stats.print_table(["mean", "std"])
+    times = stats.filter_tree("times")
+    print(times)
+    f=9

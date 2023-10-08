@@ -154,29 +154,30 @@ class MagicTreeDict(defaultdict):
         self._get_leaf_info()
         print(self._leaf_info)
 
-    def get_paths_for_keys(self, keys):
-        paths = []
-        self._traverse_tree(lambda path, value: paths.append(path) if path[-1] in keys else None)
-        return paths
-
     def print_table(self, keys: Union[str, List[str]] = None):
         if isinstance(keys, str):
             keys = [keys]
         TreePrinter(tree=self).print_table(keys)
 
-    def filter_tree(self, target_key, current=None):
+    def get_paths_for_keys(self, keys):
+        paths = []
+        self._traverse_tree(lambda path, value: paths.append(path) if path[-1] in keys else None)
+        return paths
+
+    def filter_tree(self, target_key, current=None, path=None):
+        """
+        Returns a new tree containing only the branches and leaves that contain the target key.
+        """
         new_tree = MagicTreeDict()
-        if current is None:
-            current = self
-        for key, value in current.items():
-            if isinstance(value, defaultdict):
-                sub_tree = self.filter_tree(target_key, value)
-                if sub_tree:
-                    new_tree[key] = sub_tree
-            else:
-                if key == target_key:
-                    new_tree[key] = value
-        return new_tree if len(new_tree) > 0 else None
+        paths = self.get_paths_for_keys(keys=[target_key])
+        if len(paths) == 0:
+            raise KeyError(f"'{target_key}' not found in tree...")
+
+        for path in paths:
+            new_tree[path] = self.data_from_path(path)
+
+        return new_tree
+
     def to_dataframe(self, leaf_keys: Union[str, List[str]] = None):
         if leaf_keys is None:
             leaf_keys = self.get_leaf_keys()
@@ -235,10 +236,9 @@ class MagicTreeDict(defaultdict):
             path = []
         for key, value in current.items():
             new_path = path + [key]
+            callback(new_path, value)
             if isinstance(value, defaultdict):
                 self._traverse_tree(callback, value, new_path)
-            else:
-                callback(new_path, value)
 
     def __str__(self):
         return TreePrinter(self).__str__()
@@ -278,8 +278,14 @@ class MagicTreeDict(defaultdict):
         else:
             raise TypeError("Invalid key type.")
 
-    def __repr__(self):
-        return repr(dict(self))
+    def __dict__(self):
+        def convert(default_dict):
+            if isinstance(default_dict, defaultdict):
+                default_dict = {k: convert(v) for k, v in default_dict.items()}
+            return default_dict
+
+        return convert(self)
+
 
 
 def create_sample_magic_tree():
@@ -290,21 +296,24 @@ def create_sample_magic_tree():
         3)  # TODO - doesn't handle this correctly - skips it in stats, and prints matrix poorly
     magic_tree['a']['c']['bang'] = [4, 51, 6]
     magic_tree['a']['b']['c']['hey'] = [71, 8, 9]
-    magic_tree['a']['b']['woo'] = [11, 22, 13]
 
     return magic_tree
 
 
 def test_magic_tree_dict():
     tree = create_sample_magic_tree()
+    print(f"Print as regular dict:\n")
+    print(tree.__dict__())
+    print(dict(tree)) #TODO - this still includes the defaultdicts, will need to override __iter__ or items or soemthing to fix this ish
+
     print(f"Original MagicTreeDict:\n{tree}\n\n")
     print(f"Calculate tree stats and return in new MagicTreeDict:\n{tree.calculate_tree_stats()}\n\n")
     print(f"Print Table:\n")
     tree.print_table(['woo', 'bang', 'hey'])
 
-    print(f"Filter tree on `woo`:\n")
-    woo_tree = tree.filter_tree('woo')
-    print(woo_tree)
+    print(f"Filter tree on `c`:\n")
+    c_tree = tree.filter_tree('c')
+    print(c_tree)
 
     stats = tree.calculate_tree_stats()
     print(f"Calculate Tree Stats:\n{stats}\n\n")
