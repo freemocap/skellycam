@@ -7,18 +7,18 @@ from typing import Dict, Union
 import cv2
 
 from skellycam import CameraConfig
-from skellycam.detection.detect_cameras import detect_cameras
-from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.diagnostics.plot_first_middle_and_last_frames import plot_first_middle_and_last_frames
-from skellycam.diagnostics.plot_framerate_diagnostics import (
+from skellycam.backend.detection.detect_cameras import detect_cameras
+from skellycam.data_models.frame_payload import FramePayload
+from skellycam.backend.diagnostics import plot_first_middle_and_last_frames
+from skellycam.backend.diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
 )
-from skellycam.opencv.group.camera_group import CameraGroup
-from skellycam.opencv.video_recorder.save_synchronized_videos import (
+from skellycam.backend.opencv.group.camera_group import CameraGroup
+from skellycam.backend.opencv import (
     save_synchronized_videos,
 )
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.system.environment.default_paths import (
     default_base_folder,
     default_session_name,
