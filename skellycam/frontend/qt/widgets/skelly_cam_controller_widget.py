@@ -1,5 +1,4 @@
 import logging
-from typing import Callable, Dict
 
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
@@ -31,14 +30,6 @@ class SkellyCamControllerWidget(QWidget):
         self._camera_viewer_widget.cameras_connected_signal.connect(
             self._show_buttons
         )
-        self._slot_dictionary = (
-            self._camera_viewer_widget.controller_slot_dictionary
-        )
-        if self._slot_dictionary is not None:
-            self.connect_buttons_to_slots(
-                button_dictionary=self._button_dictionary,
-                slot_dictionary=self._slot_dictionary,
-            )
 
     @property
     def stop_recording_button(self):
@@ -70,18 +61,13 @@ class SkellyCamControllerWidget(QWidget):
         start_recording_push_button = QPushButton("\U0001F534 Start Recording")
         start_recording_push_button.setEnabled(True)
         start_recording_push_button.hide()
-        start_recording_push_button.clicked.connect(
-            self._start_recording_push_button_clicked
-        )
+
         button_layout.addWidget(start_recording_push_button)
         button_dictionary["start_recording"] = start_recording_push_button
 
         stop_recording_push_button = QPushButton("\U00002B1B Stop Recording")
         stop_recording_push_button.setEnabled(False)
         stop_recording_push_button.hide()
-        stop_recording_push_button.clicked.connect(
-            self._stop_recording_push_button_clicked
-        )
         button_layout.addWidget(stop_recording_push_button)
         button_dictionary["stop_recording"] = stop_recording_push_button
 
@@ -107,33 +93,6 @@ class SkellyCamControllerWidget(QWidget):
 
     def _start_recording_push_button_clicked(self):
         logger.debug("Start Recording button clicked")
-        if self._camera_viewer_widget.cameras_connected:
-            # self._button_dictionary["play"].setEnabled(False)
-            # self._button_dictionary["pause"].setEnabled(False)
-            self._button_dictionary["start_recording"].setEnabled(False)
-            self._button_dictionary["start_recording"].setText("\U0001F534 \U000021BB Recording...")
-            self._button_dictionary["stop_recording"].setEnabled(True)
 
     def _stop_recording_push_button_clicked(self):
         logger.debug("Stop Recording button clicked")
-        # self._button_dictionary["play"].setEnabled(False)
-        # self._button_dictionary["pause"].setEnabled(True)
-        self._button_dictionary["start_recording"].setEnabled(True)
-        self._button_dictionary["start_recording"].setText("\U0001F534 Start Recording")
-        self._button_dictionary["stop_recording"].setEnabled(False)
-
-    def connect_buttons_to_slots(
-            self,
-            button_dictionary: Dict[str, QPushButton],
-            slot_dictionary: Dict[str, Callable],
-    ):
-        for button_name, button in button_dictionary.items():
-            if button_name in self._slot_dictionary:
-                logger.debug(
-                    f"Connecting {button}.clicked to {slot_dictionary[button_name]}"
-                )
-                button.clicked.connect(self._slot_dictionary[button_name])
-            else:
-                logger.warning(
-                    f"No slot found for button: {button_name} in slot dictionary: {self._slot_dictionary}"
-                )

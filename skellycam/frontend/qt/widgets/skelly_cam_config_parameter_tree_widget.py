@@ -19,34 +19,7 @@ from skellycam.system.environment.default_paths import RED_X_EMOJI_STRING, MAGNI
 logger = logging.getLogger(__name__)
 
 
-#
-# parameter_tree_stylesheet_string = """
-#                                     QTreeView {
-#                                         background-color: rgb(0, 152, 154);
-#                                         alternate-background-color: rgb(139, 144, 145);
-#                                         color: rgb(28, 100, 28);
-#                                     }
-#                                     QLabel {
-#                                         color: rgb(28, 123, 28);
-#                                     }
-#                                     QPushbutton {
-#                                         color: rgb(0, 28, 8);
-#                                     }
-#                                     QTreeView::item:has-children {
-#                                         background-color: '#212627';
-#                                         color: rgb(233, 185, 110);
-#                                     }
-#                                     QTreeView::item:selected {
-#                                         background-color: rgb(92, 53, 102);
-#                                     }
-#                                     QTreeView::item:selected:active {
-#                                         background-color: rgb(92, 53, 102);
-#                                     }
-#                                     """
-
-
 class SkellyCamParameterTreeWidget(QWidget):
-    emitting_camera_configs_signal = pyqtSignal(dict)
 
     def __init__(self,
                  camera_viewer_widget: SkellyCamWidget):
@@ -77,14 +50,11 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._detect_available_cameras_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         self._layout.addWidget(self._detect_available_cameras_button)
         self._detect_available_cameras_button.setEnabled(False)
-        self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.detect_available_cameras)
 
         self._apply_settings_to_cameras_button = QPushButton(
             f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
         )
-        self._apply_settings_to_cameras_button.clicked.connect(
-            self._emit_camera_configs_dict
-        )
+
         self._apply_settings_to_cameras_button.setEnabled(False)
         self._layout.addWidget(self._apply_settings_to_cameras_button)
 
@@ -95,30 +65,6 @@ class SkellyCamParameterTreeWidget(QWidget):
             Parameter(name="No cameras connected...", value="", type="str")
         )
 
-        self._connect_signals_to_slots(self._camera_viewer_widget)
-
-    def _connect_signals_to_slots(self, camera_viewer_widget: SkellyCamWidget):
-        camera_viewer_widget.camera_group_created_signal.connect(
-            self.update_camera_config_parameter_tree
-        )
-
-        self.emitting_camera_configs_signal.connect(
-            camera_viewer_widget.update_camera_configs
-        )
-
-        self._close_cameras_button.clicked.connect(
-            self._handle_close_cameras_button_clicked
-        )
-        self._camera_viewer_widget.cameras_connected_signal.connect(
-            lambda: self._close_cameras_button.setEnabled(True)
-        )
-        self._camera_viewer_widget.cameras_connected_signal.connect(
-            lambda: self._detect_available_cameras_button.setEnabled(True)
-        )
-
-        self._camera_viewer_widget.cameras_connected_signal.connect(
-            lambda: self._apply_settings_to_cameras_button.setEnabled(True)
-        )
 
     def update_camera_config_parameter_tree(
             self, dictionary_of_camera_configs: Dict[str, CameraConfig]
@@ -138,7 +84,7 @@ class SkellyCamParameterTreeWidget(QWidget):
     def _emit_camera_configs_dict(self):
         camera_configs_dictionary = self._extract_dictionary_of_camera_configs()
         logger.info(f"Emitting camera configs dictionary: {camera_configs_dictionary}")
-        self.emitting_camera_configs_signal.emit(camera_configs_dictionary)
+
 
     def _convert_camera_config_to_parameter(
             self, camera_config: CameraConfig
@@ -286,19 +232,5 @@ class SkellyCamParameterTreeWidget(QWidget):
             elif action.name() == COLLAPSE_ALL_STRING:
                 camera_parameter.setOpts(expanded=False)
 
-    def _handle_close_cameras_button_clicked(self):
-        self._camera_viewer_widget.disconnect_from_cameras()
 
 
-if __name__ == "__main__":
-    import sys
-
-    from PyQt6.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget(camera_viewer_widget=SkellyCamWidget())
-    qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree(
-        {"0": CameraConfig(camera_id=0), "1": CameraConfig(camera_id=1)}
-    )
-    qt_camera_config_parameter_tree_widget.show()
-    sys.exit(app.exec())

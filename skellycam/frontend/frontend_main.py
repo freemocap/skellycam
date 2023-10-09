@@ -38,7 +38,6 @@ def frontend_main(messages_from_backend: multiprocessing.connection.Connection,
                 message = messages_from_backend.recv()
                 logger.info(f"frontend_main received message from backend: {message}")
 
-
         main_window = SkellyCamMainWindow()
         main_window.show()
         error_code = app.exec()
@@ -47,6 +46,7 @@ def frontend_main(messages_from_backend: multiprocessing.connection.Connection,
         sys.exit()
     except Exception as e:
         logger.error(f"An error occurred: {e}")
+        logger.exception(e)
         messages_to_backend.send({"type": "error",
                                   "message": str(e),
                                   "data": {}})
