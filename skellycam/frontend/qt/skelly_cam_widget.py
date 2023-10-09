@@ -165,5 +165,4 @@ class SkellyCamWidget(QWidget):
 
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")
-        self._cam_group_frame_worker.close()
         self.close()
