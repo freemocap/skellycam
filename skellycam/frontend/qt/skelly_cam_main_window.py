@@ -1,8 +1,7 @@
 import logging
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtGui import QIcon, Qt
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam.frontend.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.qt.skelly_cam_widget import (

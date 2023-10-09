@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 
 from skellycam.data_models.camera_config import CameraConfig
 

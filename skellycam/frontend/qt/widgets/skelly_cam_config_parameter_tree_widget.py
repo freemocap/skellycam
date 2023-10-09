@@ -2,9 +2,8 @@ import logging
 from copy import deepcopy
 from typing import Dict
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam.frontend.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.frontend.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,

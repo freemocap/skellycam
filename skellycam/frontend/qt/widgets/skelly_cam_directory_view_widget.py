@@ -4,9 +4,8 @@ from copy import copy
 from pathlib import Path
 from typing import Union
 
-from PyQt6.QtGui import QFileSystemModel
-from PyQt6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget
-from qtpy import QtGui
+from PySide6 import QtGui
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QFileSystemModel, QLabel, QMenu
 
 logger = logging.getLogger(__name__)
 
@@ -83,14 +82,3 @@ class SkellyCamDirectoryViewWidget(QWidget):
         logger.info(f"Opening file from file_system_view_widget: {file_path}")
         os.startfile(file_path)
 
-
-if __name__ == "__main__":
-    import sys
-
-    from PyQt6.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    skellycam_directory_view_widget = SkellyCamDirectoryViewWidget(folder_path=Path.home())
-    skellycam_directory_view_widget.expand_directory_to_path(Path.home() / "Downloads")
-    skellycam_directory_view_widget.show()
-    sys.exit(app.exec())

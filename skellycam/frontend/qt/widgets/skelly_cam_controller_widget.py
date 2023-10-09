@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 
 from skellycam.frontend.qt.skelly_cam_widget import (
     SkellyCamWidget,

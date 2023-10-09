@@ -1,6 +1,5 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtGui import QPixmap, Qt
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 
 from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG
 
@@ -44,12 +43,3 @@ class WelcomeToSkellyCamWidget(QWidget):
         self.resize(skellycam_logo_pixmap.width(), skellycam_logo_pixmap.height())
 
 
-if __name__ == "__main__":
-    import sys
-
-    from PyQt6.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
-    welcome_to_skellycam_widget.show()
-    sys.exit(app.exec())

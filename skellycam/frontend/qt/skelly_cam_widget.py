@@ -2,14 +2,8 @@ import logging
 from typing import Dict
 
 import cv2
-from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtWidgets import (
-    QGridLayout,
-    QLabel,
-    QPushButton,
-    QVBoxLayout,
-    QWidget, QHBoxLayout,
-)
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton
 
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.frontend.qt.utilities.qt_label_strings import no_cameras_found_message_string
@@ -29,10 +23,10 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class SkellyCamWidget(QWidget):
-    cameras_connected_signal = pyqtSignal()
-    camera_group_created_signal = pyqtSignal(dict)
-    incoming_camera_configs_signal = pyqtSignal(dict)
-    videos_saved_to_this_folder_signal = pyqtSignal(str)
+    cameras_connected_signal = Signal()
+    camera_group_created_signal = Signal(dict)
+    incoming_camera_configs_signal = Signal(dict)
+    videos_saved_to_this_folder_signal = Signal(str)
 
     def __init__(
             self,
