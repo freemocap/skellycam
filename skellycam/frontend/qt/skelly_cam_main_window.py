@@ -20,13 +20,12 @@ from skellycam.frontend.qt.widgets.welcome_to_skellycam_widget import (
 from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path, \
     PATH_TO_SKELLY_CAM_LOGO_SVG
 
-logger = logging.getLogger(__name__)
 
 
 class SkellyCamMainWindow(QMainWindow):
 
     def __init__(self):
-        logger.info("Initializing QtGUIMainWindow")
+        frontend_logger.info("Initializing QtGUIMainWindow")
         super().__init__()
         self.setGeometry(100, 100, 1600, 900)
         self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
@@ -94,5 +93,5 @@ class SkellyCamMainWindow(QMainWindow):
         try:
             self._camera_viewer_widget.close()
         except Exception as e:
-            logger.error(f"Error while closing the viewer widget: {e}")
+            frontend_logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)

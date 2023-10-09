@@ -1,4 +1,6 @@
-from pydantic import BaseModel, PrivateAttr
+from typing import Dict
+
+from pydantic import BaseModel, PrivateAttr, Field
 
 from skellycam.data_models.timestamps.timestamp import Timestamp
 
