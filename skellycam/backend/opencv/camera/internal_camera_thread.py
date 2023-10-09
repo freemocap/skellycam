@@ -11,7 +11,7 @@ from skellycam.data_models.camera_config import CameraConfig
 from skellycam.backend.opencv.config.apply_config import apply_configuration
 from skellycam.backend.opencv.config.determine_backend import determine_backend
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class VideoCaptureThread(threading.Thread):

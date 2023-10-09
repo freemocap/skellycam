@@ -1,17 +1,15 @@
-import logging
-
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 
-from skellycam.frontend.qt.skelly_cam_widget import (
-    SkellyCamWidget,
+from skellycam.frontend.gui.widgets.cameras.camera_grid import (
+    CameraGrid,
 )
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
-class SkellyCamControllerWidget(QWidget):
+class ControlPanel(QWidget):
     def __init__(
-            self, camera_viewer_widget: SkellyCamWidget, parent=None
+            self, camera_viewer_widget: CameraGrid, parent=None
     ):
         super().__init__(parent=parent)
 

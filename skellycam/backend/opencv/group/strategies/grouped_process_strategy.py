@@ -15,7 +15,7 @@ _DEFAULT_CAM_PER_PROCESS = 2
 
 # https://refactoring.guru/design-patterns/strategy
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class GroupedProcessStrategy:

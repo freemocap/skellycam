@@ -1,4 +1,3 @@
-import logging
 import time
 from datetime import datetime
 from pathlib import Path
@@ -7,20 +6,17 @@ from typing import Union
 import skellycam
 from skellycam.system.environment.home_dir import os_independent_home_dir
 
-logger = logging.getLogger(__name__)
-
 DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skellycam_data"
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
 LOGS_INFO_AND_SETTINGS_FOLDER_NAME = "logs_info_and_settings"
 LOG_FILE_FOLDER_NAME = "logs"
 TIMESTAMPS_FOLDER_NAME = "timestamps"
 
-#Emoji strings
+# Emoji strings
 RED_X_EMOJI_STRING = "\U0000274C"
 MAGNIFYING_GLASS_EMOJI_STRING = "\U0001F50D"
 CAMERA_WITH_FLASH_EMOJI_STRING = "\U0001F4F8"
 HAMMER_AND_WRENCH_EMOJI_STRING = "\U0001F6E0"
-
 
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
@@ -90,8 +86,6 @@ def get_default_recording_name(string_tag: str = None):
     just_hours_minutes_seconds = full_time.split("T")[1]
     recording_name = just_hours_minutes_seconds + string_tag
 
-    logger.info(f"Generated new recording name: {recording_name}")
-
     return recording_name
 
 
@@ -99,5 +93,4 @@ def create_new_synchronized_videos_folder(recording_folder_path: Union[str, Path
                                           ):
     folder_path = Path(recording_folder_path) / SYNCHRONIZED_VIDEOS_FOLDER_NAME
     folder_path.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Creating new recording video folder: {folder_path}")
     return str(folder_path)

@@ -11,7 +11,7 @@ from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.tests.test_frame_timestamp_synchronization import test_frame_timestamp_synchronization
 from skellycam.tests.test_synchronized_video_frame_counts import test_synchronized_video_frame_counts
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 def save_synchronized_videos(

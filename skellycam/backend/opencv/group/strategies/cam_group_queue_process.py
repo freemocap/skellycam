@@ -12,7 +12,7 @@ from skellycam.data_models.camera_config import CameraConfig
 from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.strategies.queue_communicator import QueueCommunicator
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
 

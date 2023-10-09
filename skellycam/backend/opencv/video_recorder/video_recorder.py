@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from skellycam.data_models.frame_payload import FramePayload
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class VideoRecorder:

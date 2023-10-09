@@ -2,7 +2,7 @@ import multiprocessing
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 
-APP_STATE = {"app": "state"}
+DUMMY_APP_STATE = {"app": "state"}
 
 
 # Backend process
@@ -20,7 +20,7 @@ def frontend_process(frontend_conn):
     timer.start(500)  # 500ms
 
     def send_app_state():
-        frontend_conn.send(APP_STATE)
+        frontend_conn.send(DUMMY_APP_STATE)
         response = frontend_conn.recv()
         print("Frontend received: ", response)
 

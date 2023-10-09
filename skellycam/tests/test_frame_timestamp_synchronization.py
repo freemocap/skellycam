@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 def test_frame_timestamp_synchronization(synchronized_frame_list_dictionary):

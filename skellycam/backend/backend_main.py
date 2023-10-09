@@ -1,18 +1,23 @@
-import logging
 import time
+from multiprocessing import Event
 from multiprocessing.connection import Connection
 
+from skellycam import logger
 from skellycam.data_models.message_from_backend import MessageFromBackend
-
-logger = logging.getLogger(__name__)
 
 
 def backend_main(messages_from_frontend: Connection,
-                 messages_to_frontend: Connection):
+                 messages_to_frontend: Connection,
+                 exit_event: Event,
+                 reboot_event: Event):
     logger.success(f"Backend main started!")
     while True:
+        logger.trace(f"Checking for messages from frontend...")
         try:
-            time.sleep(.001)
+            if exit_event.is_set() or reboot_event.is_set():
+                logger.info(f"Exit or reboot event set, exiting...")
+                break
+            time.sleep(1.0)
             if messages_from_frontend.poll():
                 message = messages_from_frontend.recv()
                 logger.info(f"backend_main received message from frontend: {message}")

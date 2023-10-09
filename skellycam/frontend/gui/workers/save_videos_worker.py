@@ -8,8 +8,6 @@ from skellycam.backend.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,
 )
 
-logger = logging.getLogger(__name__)
-
 
 class SaveVideosWorker(QThread):
     done_saving_videos_signal = pyqtSignal()

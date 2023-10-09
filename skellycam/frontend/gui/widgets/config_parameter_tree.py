@@ -1,27 +1,26 @@
-import logging
 from copy import deepcopy
 from typing import Dict
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
-from skellycam.frontend.qt.skelly_cam_widget import SkellyCamWidget
-from skellycam.frontend.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
-                                                              EXPAND_ALL_STRING, ROTATE_180_STRING,
-                                                              ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
-                                                              rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
-                                                              USE_THIS_CAMERA_STRING)
+from skellycam.frontend.gui.widgets.cameras.camera_grid import CameraGrid
+from skellycam.frontend.gui.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
+                                                               EXPAND_ALL_STRING, ROTATE_180_STRING,
+                                                               ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
+                                                               rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
+                                                               USE_THIS_CAMERA_STRING)
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.system.environment.default_paths import RED_X_EMOJI_STRING, MAGNIFYING_GLASS_EMOJI_STRING, \
     CAMERA_WITH_FLASH_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class SkellyCamParameterTreeWidget(QWidget):
 
     def __init__(self,
-                 camera_viewer_widget: SkellyCamWidget):
+                 camera_viewer_widget: CameraGrid):
 
         super().__init__()
 

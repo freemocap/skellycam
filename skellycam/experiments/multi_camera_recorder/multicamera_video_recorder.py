@@ -20,7 +20,7 @@ from skellycam.system.environment.default_paths import (
     get_iso6201_time_string, SYNCHRONIZED_VIDEOS_FOLDER_NAME, get_default_skellycam_base_folder_path,
 )
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class MultiCameraVideoRecorder:

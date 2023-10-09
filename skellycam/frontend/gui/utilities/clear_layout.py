@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 def clear_layout(layout):

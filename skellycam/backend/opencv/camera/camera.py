@@ -10,7 +10,7 @@ from skellycam.backend.opencv.camera.internal_camera_thread import VideoCaptureT
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.experiments.examples.viewers.cv_cam_viewer import CvCamViewer
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class Camera:

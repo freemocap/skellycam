@@ -7,7 +7,7 @@ from PyQt6.QtCore import pyqtSignal, QThread
 from skellycam.backend.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class VideoSaveThreadWorker(QThread):

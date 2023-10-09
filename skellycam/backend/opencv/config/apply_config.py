@@ -5,7 +5,7 @@ import cv2
 
 from skellycam.data_models.camera_config import CameraConfig
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConfig):

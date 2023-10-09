@@ -14,7 +14,7 @@ from skellycam.backend.opencv.group.strategies.grouped_process_strategy import (
 )
 from skellycam.backend.opencv.group.strategies.strategies import Strategy
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class CameraGroup:

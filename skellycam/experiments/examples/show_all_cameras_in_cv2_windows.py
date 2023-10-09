@@ -7,7 +7,7 @@ import cv2
 from skellycam.backend.detection.detect_cameras import detect_cameras
 from skellycam.backend.opencv.group.camera_group import CameraGroup
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 async def show_all_cameras_in_cv2_windows(camera_ids_list: list = None):

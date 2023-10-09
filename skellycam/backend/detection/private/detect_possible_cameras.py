@@ -9,7 +9,7 @@ from skellycam.backend.opencv.config.determine_backend import determine_backend
 
 CAM_CHECK_NUM = 20  # please give me a reason to increase this number ;D
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class DetectPossibleCameras:

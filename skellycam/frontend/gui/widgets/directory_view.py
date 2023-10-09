@@ -7,7 +7,7 @@ from typing import Union
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QFileSystemModel, QLabel, QMenu
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class SkellyCamDirectoryViewWidget(QWidget):

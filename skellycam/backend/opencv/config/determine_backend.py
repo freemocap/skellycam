@@ -3,7 +3,7 @@ import platform
 
 import cv2
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 def determine_backend():

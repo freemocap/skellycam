@@ -10,7 +10,7 @@ from skellycam.backend.diagnostics.plot_framerate_diagnostics import (
 )
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 def create_diagnostic_plots(

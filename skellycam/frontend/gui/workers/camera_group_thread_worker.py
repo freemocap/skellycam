@@ -10,12 +10,12 @@ from skellycam.data_models.charuco_definition import CharucoBoardDefinition
 from skellycam.backend.detection.charuco.charuco_detection import draw_charuco_on_image
 
 from skellycam.data_models.frame_payload import FramePayload
-from skellycam.frontend.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
+from skellycam.frontend.gui.workers.video_save_thread_worker import VideoSaveThreadWorker
 from skellycam.data_models.camera_id import CameraId
 from skellycam.backend.opencv.group.camera_group import CameraGroup
 from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class CamGroupThreadWorker(QThread):

@@ -13,7 +13,7 @@ from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.opencv.group.camera_group import CameraGroup
 from skellycam.utilities.start_file import open_file
 
-logger = logging.getLogger(__name__)
+from skellycam import logger
 
 
 class TimestampDiagnosticsDataClass(BaseModel):
