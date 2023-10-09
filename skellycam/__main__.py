@@ -34,3 +34,7 @@ if __name__ == "__main__":
     setup_app_id_for_windows()
     main()
     logger.info(f"Exiting __main__, bye!")
+
+    print("\n--------------------------------------------------")
+    print("Thank you for using Skelly Cam \U0001F480 \U0001F4F8")
+    print("--------------------------------------------------\n")
