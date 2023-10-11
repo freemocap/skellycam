@@ -11,7 +11,7 @@ def backend_main(messages_from_frontend: Connection,
                  exit_event: Event):
     logger.success(f"Backend main started!")
     while True:
-        logger.trace(f"Checking for messages from frontend...")
+        # logger.trace(f"Checking for messages from frontend...")
         try:
             if exit_event.is_set():
                 logger.info(f"Exit or reboot event set, exiting...")

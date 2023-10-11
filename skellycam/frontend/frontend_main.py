@@ -25,7 +25,7 @@ def frontend_main(messages_from_backend: multiprocessing.connection.Connection,
             timer.timeout.connect(lambda: listen_for_backend_requests())  # Let the interpreter run each 500 ms.
 
             def listen_for_backend_requests():
-                logger.trace(f"Checking for messages from backend...")
+                # logger.trace(f"Checking for messages from backend...")
                 if exit_event.is_set() or reboot_event.is_set():
                     logger.info(f"Exit or reboot event set, quitting app...")
                     app.quit()
