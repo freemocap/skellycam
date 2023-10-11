@@ -31,23 +31,28 @@ class MainWindow(QMainWindow):
     def __init__(self, exit_event: multiprocessing.Event, reboot_event: multiprocessing.Event):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
+        self._layout = QVBoxLayout()
+        self._create_central_widget()
+
         self.shortcuts = KeyboardShortcuts(exit_event=exit_event,
                                            reboot_event=reboot_event)
         self.shortcuts.connect_shortcuts(self)
         self._initUI()
 
     def emit_update(self, update: UpdateModel) -> None:
-        logger.trace(f"Emitting update signal with data: {update}")
+        logger.trace(f"Emitting update signal with data: {update} from MainWindow")
         self.updated.emit(update)
+
+    def _create_central_widget(self):
+        self._central_widget = QWidget()
+        self.setCentralWidget(self._central_widget)
+        self._central_widget.setLayout(self._layout)
 
     def _initUI(self):
         self.setGeometry(100, 100, 1600, 900)
         self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
         self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
         self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
-
-        self._layout = QVBoxLayout()
-        self._create_central_widget()
 
         self._welcome_widget = Welcome(parent=self)
         self._layout.addWidget(self._welcome_widget)
@@ -102,11 +107,6 @@ class MainWindow(QMainWindow):
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_tree_dock
         )
-
-    def _create_central_widget(self):
-        self._central_widget = QWidget()
-        self.setCentralWidget(self._central_widget)
-        self._central_widget.setLayout(self._layout)
 
     def closeEvent(self, a0) -> None:
         try:

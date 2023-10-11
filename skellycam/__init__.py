@@ -15,6 +15,6 @@ from skellycam.system.environment.configure_logging import configure_logging, Lo
 
 configure_logging(LogLevel.TRACE)
 
-
+GRUMPY_MODE = True #If true, will crash on any error. If false, will try to recover from errors.
 
 logger = logging.getLogger(__name__)

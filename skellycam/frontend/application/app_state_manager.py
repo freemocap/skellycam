@@ -1,9 +1,10 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, PrivateAttr
 
 from skellycam import logger
 from skellycam.data_models.app_state.app_state import AppState
+from skellycam.data_models.request_response import UpdateModel
 
 _APP_STATE = None
 _APP_STATE_MANAGER = None
@@ -42,13 +43,32 @@ class AppStateManager(BaseModel):
         self._state_changed = False
         return self._app_state
 
-    def update(self, update: Dict[str, Any]):
+    def update(self, update: UpdateModel) -> Optional[AppState]:
+        """
+        Updates the AppState with the data from the UpdateModel
 
-        self._app_state.changed = True
+        Args:
+            update (UpdateModel): The update to apply to the AppState
 
-        for key, value in update.items():
-            try:
-                setattr(self._app_state, key, value)
-            except AttributeError as e:
+        Returns:
+            Optional[AppState]: The updated AppState, or None if the AppState was not changed
+
+        """
+        logger.debug(f"Updating AppState with: {update}")
+
+        for key, value in update.data.items():
+            if hasattr(self._app_state, key):
+                current_value = getattr(self._app_state, key)
+                if current_value != value:
+                    logger.debug(f"Updating AppState.{key} from `{current_value}` to `{value}`")
+                    setattr(self._app_state, key, value)
+                    self._state_changed = True
+
+            else:
                 logger.error(f"Key `{key}` not found AppState!")
                 raise AttributeError(f"Key `{key}` not found AppState!")
+
+        if self._state_changed:
+            return self._app_state
+
+

@@ -1,8 +1,8 @@
-from PySide6.QtCore import Signal
 from PySide6.QtGui import QPixmap, Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
+from PySide6.QtGui import QPixmap, Qt
+from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 
-from skellycam import logger
+from skellycam.data_models.request_response import UpdateModel
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG
 
@@ -11,11 +11,10 @@ class Welcome(UpdateWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._initUI()
-        self._parent_widget = parent
-        self.updated.connect(self._parent_widget.update)
         self._session_started = False
 
-        self._start_session_button.clicked.connect(lambda : self.emit_update(data={"session_started": True}))
+        self._start_session_button.clicked.connect(lambda: self.emit_update(UpdateModel(data={"session_started": True},
+                                                                                        source=self.name)))
 
     def _initUI(self):
         self._layout = QVBoxLayout()
@@ -47,5 +46,3 @@ class Welcome(UpdateWidget):
         self._start_session_button = QPushButton("Start Session")
         self._layout.addWidget(self._start_session_button)
         self.resize(skellycam_logo_pixmap.width(), skellycam_logo_pixmap.height())
-
-
