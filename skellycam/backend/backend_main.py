@@ -8,13 +8,12 @@ from skellycam.data_models.message_from_backend import MessageFromBackend
 
 def backend_main(messages_from_frontend: Connection,
                  messages_to_frontend: Connection,
-                 exit_event: Event,
-                 reboot_event: Event):
+                 exit_event: Event):
     logger.success(f"Backend main started!")
     while True:
         logger.trace(f"Checking for messages from frontend...")
         try:
-            if exit_event.is_set() or reboot_event.is_set():
+            if exit_event.is_set():
                 logger.info(f"Exit or reboot event set, exiting...")
                 break
             time.sleep(1.0)

@@ -21,6 +21,7 @@ def frontend_main(messages_from_backend: multiprocessing.connection.Connection,
         try:
             timer = QTimer()
             timer.start(500)
+            logger.info(f"Frontend listening for messages from backend...")
             timer.timeout.connect(lambda: listen_for_backend_requests())  # Let the interpreter run each 500 ms.
 
             def listen_for_backend_requests():
