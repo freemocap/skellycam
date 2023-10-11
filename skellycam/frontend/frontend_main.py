@@ -1,13 +1,14 @@
 import multiprocessing.connection
 import pprint
 import sys
+import warnings
 
 from PySide6.QtCore import QTimer
 
-from skellycam import logger
+from skellycam import logger, GRUMPY_MODE
 from skellycam.data_models.request_response import UpdateModel
 from skellycam.frontend.application import app_state_manager, create_or_recreate_qt_application
-from skellycam.frontend.gui.main_window.skelly_cam_main_window import MainWindow
+from skellycam.frontend.gui.main_window.main_window import MainWindow
 
 
 def frontend_main_loop(messages_from_frontend: multiprocessing.Queue,
@@ -37,7 +38,6 @@ def frontend_main_loop(messages_from_frontend: multiprocessing.Queue,
                     logger.info(
                         f"frontend_main received message from backend: \n {pprint.pformat(message)} \n- queue size: {messages_from_backend.qsize()}")
                     if not message.type == "success":
-                        raise Exception(f"Backend sent error message: {message.message}")
                         if GRUMPY_MODE:
                             raise Exception(f"Backend sent error message: {message.message}")
                         else:
@@ -63,7 +63,12 @@ def frontend_main_loop(messages_from_frontend: multiprocessing.Queue,
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             logger.exception(e)
+            if GRUMPY_MODE:
+                exit_event.set()
+                raise e
+
         finally:
+            exit_event.set()
             app.quit()
             if main_window:
                 main_window.close()

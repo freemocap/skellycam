@@ -2,6 +2,7 @@
 from multiprocessing import freeze_support
 
 from skellycam import logger
+from skellycam.main.main_loop import main_loop
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 
 

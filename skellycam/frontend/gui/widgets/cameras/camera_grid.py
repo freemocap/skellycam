@@ -4,12 +4,11 @@ import cv2
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton
 
+from skellycam import logger
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.frontend.gui.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraViewWidget
 from skellycam.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING
-
-from skellycam import logger
 
 title_label_style_string = """
                            font-size: 18px;
@@ -47,9 +46,6 @@ class CameraGrid(QWidget):
         self._camera_views_layout.addLayout(self._camera_portrait_grid_layout)
         self._layout.addLayout(self._camera_views_layout)
 
-        self._detect_available_cameras_push_button = self._create_detect_cameras_button()
-        self._layout.addWidget(self._detect_available_cameras_push_button)
-
         self._cameras_disconnected_label = QLabel(" - No Cameras Connected - ")
         self._layout.addWidget(self._cameras_disconnected_label)
         self._cameras_disconnected_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -67,21 +63,16 @@ class CameraGrid(QWidget):
 
         # self._layout.addStretch()
 
-    @property
-    def detect_available_cameras_push_button(self):
-        return self._detect_available_cameras_push_button
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
-        self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
         self._cameras_disconnected_label.show()
-        self._detect_available_cameras_push_button.show()
+        self._connect_to_cameras_push_button.show()
 
     def _show_no_cameras_found_message(self):
         logger.info("Showing `no cameras found` message")
-        self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
         self._no_cameras_found_label.show()
-        self._detect_available_cameras_push_button.show()
+        self._connect_to_cameras_push_button.show()
 
     def _create_camera_view_widgets_and_add_them_to_grid_layout(self) -> dict:
 
@@ -115,22 +106,7 @@ class CameraGrid(QWidget):
 
         return dictionary_of_single_camera_view_widgets
 
-    def _create_detect_cameras_button(self):
-        detect_available_cameras_push_button = QPushButton(
-            f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
-        detect_available_cameras_push_button.hasFocus()
-        detect_available_cameras_push_button.setStyleSheet("""
-                                                            border-width: 2px;
-                                                           font-size: 42px;
-                                                           border-radius: 10px;
-                                                           """)
-        detect_available_cameras_push_button.setProperty("recommended_next", True)
 
-        return detect_available_cameras_push_button
-
-    def _reset_detect_available_cameras_button(self):
-        self._detect_available_cameras_push_button.setText("Detect Available Cameras")
-        self._detect_available_cameras_push_button.setEnabled(True)
 
     def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:
         if (
