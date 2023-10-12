@@ -1,18 +1,17 @@
 import json
-import logging
 import time
 from pathlib import Path
 from typing import Dict, Union
 
 import cv2
 
-from skellycam.backend.detection.detect_cameras import detect_cameras
-from skellycam.backend.diagnostics import plot_first_middle_and_last_frames
-from skellycam.backend.diagnostics.plot_framerate_diagnostics import calculate_camera_diagnostic_results, \
+from skellycam.backend.controller.core_processes.detection import detect_cameras
+from skellycam.backend.controller.core_processes.diagnostics import plot_first_middle_and_last_frames
+from skellycam.backend.controller.core_processes.diagnostics import calculate_camera_diagnostic_results, \
     create_timestamp_diagnostic_plots
-from skellycam.backend.opencv.group.camera_group import CameraGroup
-from skellycam.backend.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
-from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.backend.controller.core_processes.opencv.group import CameraGroup
+from skellycam.backend.controller.core_processes.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from skellycam.backend.controller.core_processes.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.data_models.frame_payload import FramePayload
 from skellycam.system.environment.default_paths import (

@@ -1,4 +1,3 @@
-import logging
 import time
 from pathlib import Path
 from typing import Dict, List, Union
@@ -8,9 +7,9 @@ from pydantic import BaseModel
 from rich import print
 from scipy.stats import median_abs_deviation
 
-from skellycam.backend.detection.detect_cameras import detect_cameras
+from skellycam.backend.controller.core_processes.detection.detect_cameras import detect_cameras
 from skellycam.data_models.frame_payload import FramePayload
-from skellycam.backend.opencv.group.camera_group import CameraGroup
+from skellycam.backend.controller.core_processes.opencv.group.camera_group import CameraGroup
 from skellycam.utilities.start_file import open_file
 
 from skellycam import logger

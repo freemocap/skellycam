@@ -5,7 +5,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QMainWindow
 
 from skellycam import logger
-from skellycam.data_models.request_response import UpdateModel
+from skellycam.data_models.request_response_update import UpdateModel
 
 
 class UpdateWidget(QWidget):
@@ -27,14 +27,19 @@ class UpdateWidget(QWidget):
         Args:
             parent (UpdateWidget): The parent widget that this widget sends update signals to - makes a tree :D
         """
+        self._get_route(parent)
+        logger.trace(f"Initializing {self.name}...")
         super().__init__(*args, **kwargs)
         self.updated.connect(parent.emit_update)
+
+        self._data = {}
+
+    def _get_route(self, parent):
         if isinstance(parent, QMainWindow):
             self._route = ["MainWindow"]
         else:
             self._route = deepcopy(parent._route)
         self._route.append(self.__class__.__name__)
-        self._data = {}
 
     @property
     def route(self) -> list[str]:

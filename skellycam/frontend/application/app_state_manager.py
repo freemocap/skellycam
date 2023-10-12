@@ -4,7 +4,7 @@ from pydantic import BaseModel, PrivateAttr
 
 from skellycam import logger
 from skellycam.data_models.app_state.app_state import AppState
-from skellycam.data_models.request_response import UpdateModel
+from skellycam.data_models.request_response_update import UpdateModel
 
 _APP_STATE = None
 _APP_STATE_MANAGER = None

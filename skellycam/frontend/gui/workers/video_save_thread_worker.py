@@ -1,11 +1,10 @@
-import logging
 from pathlib import Path
 from typing import Dict, Union
 
 from PyQt6.QtCore import pyqtSignal, QThread
 
-from skellycam.backend.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
-from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.backend.controller.core_processes.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
+from skellycam.backend.controller.core_processes.opencv.video_recorder.video_recorder import VideoRecorder
 
 from skellycam import logger
 

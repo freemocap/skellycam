@@ -1,4 +1,3 @@
-import logging
 import multiprocessing
 import time
 from typing import Dict, List
@@ -7,12 +6,12 @@ from PyQt6.QtCore import pyqtSignal
 
 from skellycam.data_models.camera_config import CameraConfig
 
-from skellycam.backend.detection.detect_cameras import detect_cameras
+from skellycam.backend.controller.core_processes.detection.detect_cameras import detect_cameras
 from skellycam.data_models.frame_payload import FramePayload
-from skellycam.backend.opencv.group.strategies.grouped_process_strategy import (
+from skellycam.backend.controller.core_processes.opencv.group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
-from skellycam.backend.opencv.group.strategies.strategies import Strategy
+from skellycam.backend.controller.core_processes.opencv.group.strategies.strategies import Strategy
 
 from skellycam import logger
 

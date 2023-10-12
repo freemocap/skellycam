@@ -1,7 +1,7 @@
 import multiprocessing
 import time
 
-from skellycam import logger, GRUMPY_MODE
+from skellycam import logger
 from skellycam.main.helpers import shut_down, reset_events, start_up
 
 
@@ -32,9 +32,7 @@ def main_loop():
             except Exception as e:
                 logger.error(f"An error occurred: {e}")
                 logger.exception(e)
-                if GRUMPY_MODE:
-                    exit_event.set()
-                    raise e
+                raise e
             finally:
                 logger.info(f"Exiting main loop...")
                 exit_event.set()

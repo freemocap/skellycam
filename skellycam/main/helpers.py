@@ -1,8 +1,8 @@
 import multiprocessing
 
 from skellycam import logger
-from skellycam.backend.backend_main import backend_main_loop
-from skellycam.frontend.frontend_main import frontend_main_loop
+from skellycam.backend.backend import backend_main_loop
+from skellycam.frontend.frontend import frontend_loop
 
 
 def start_up(exit_event):
@@ -30,10 +30,10 @@ def start_frontend_process(exit_event: multiprocessing.Event,
                            ):
     logger.info(f"Starting frontend process...")
     reboot_event = multiprocessing.Event()
-    frontend_process = multiprocessing.Process(target=frontend_main_loop, args=(messages_from_frontend,
-                                                                                messages_from_backend,
-                                                                                exit_event,
-                                                                                reboot_event))
+    frontend_process = multiprocessing.Process(target=frontend_loop, args=(messages_from_frontend,
+                                                                           messages_from_backend,
+                                                                           exit_event,
+                                                                           reboot_event))
     frontend_process.start()
     logger.success(f"Frontend process started!")
     return frontend_process, reboot_event

@@ -1,14 +1,13 @@
-import logging
 from pathlib import Path
 from pprint import pprint
 from typing import Dict, Union
 
-from skellycam.backend.diagnostics.plot_first_middle_and_last_frames import plot_first_middle_and_last_frames
-from skellycam.backend.diagnostics.plot_framerate_diagnostics import (
+from skellycam.backend.controller.core_processes.diagnostics.plot_first_middle_and_last_frames import plot_first_middle_and_last_frames
+from skellycam.backend.controller.core_processes.diagnostics.plot_framerate_diagnostics import (
     calculate_camera_diagnostic_results,
     create_timestamp_diagnostic_plots,
 )
-from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.backend.controller.core_processes.opencv.video_recorder.video_recorder import VideoRecorder
 
 from skellycam import logger
 

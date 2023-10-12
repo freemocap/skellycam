@@ -1,4 +1,3 @@
-import logging
 import time
 from copy import deepcopy
 from typing import List, Union
@@ -7,13 +6,13 @@ import cv2
 from PyQt6.QtCore import pyqtSignal, Qt, QThread
 from PyQt6.QtGui import QImage
 from skellycam.data_models.charuco_definition import CharucoBoardDefinition
-from skellycam.backend.detection.charuco.charuco_detection import draw_charuco_on_image
+from skellycam.backend.controller.core_processes.detection.charuco.charuco_detection import draw_charuco_on_image
 
 from skellycam.data_models.frame_payload import FramePayload
 from skellycam.frontend.gui.workers.video_save_thread_worker import VideoSaveThreadWorker
 from skellycam.data_models.camera_id import CameraId
-from skellycam.backend.opencv.group.camera_group import CameraGroup
-from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.backend.controller.core_processes.opencv.group import CameraGroup
+from skellycam.backend.controller.core_processes.opencv.video_recorder.video_recorder import VideoRecorder
 
 from skellycam import logger
 

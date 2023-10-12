@@ -3,14 +3,17 @@ import pprint
 import time
 from multiprocessing import Event
 
-from skellycam import logger, GRUMPY_MODE
-from skellycam.data_models.message_from_backend import MessageFromBackend
+from skellycam import logger
+from skellycam.backend.controller.controller import get_or_create_controller
+
+CONTROLLER = None
 
 
 def backend_main_loop(messages_from_frontend: multiprocessing.Queue,
                       messages_from_backend: multiprocessing.Queue,
                       exit_event: Event):
     logger.success(f"Backend main started!")
+    controller = get_or_create_controller()
     while True:
         # logger.trace(f"Checking for messages from frontend...")
         try:
@@ -22,6 +25,7 @@ def backend_main_loop(messages_from_frontend: multiprocessing.Queue,
                 message = messages_from_frontend.get()
                 logger.info(f"Backend received message from frontend: queue size: {messages_from_frontend.qsize()}")
                 logger.info(f"backend_main received message from frontend:\n {pprint.pformat(message, indent=4)}")
+
                 messages_from_backend.put(MessageFromBackend(type="success",
                                                              message="Backend received message",
                                                              data={"wow": "cool data"}))
@@ -30,10 +34,9 @@ def backend_main_loop(messages_from_frontend: multiprocessing.Queue,
             logger.exception(e)
             messages_from_backend.put(MessageFromBackend(type="error",
                                                          message=str(e),
-                                                         data={}))
-            if GRUMPY_MODE:
-                exit_event.set()
-                raise e
+                                                         data={e.with_traceback()}))
+            raise e
         finally:
-            logger.info(f"Exiting backend main loop...")
-            exit_event.set()
+            if not exit_event.is_set():
+                logger.info(f"Exiting backend main loop ...")
+                exit_event.set()

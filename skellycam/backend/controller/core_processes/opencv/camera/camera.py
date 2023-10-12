@@ -1,12 +1,11 @@
 import asyncio
-import logging
 import multiprocessing
 import time
 import traceback
 from typing import Optional
 
-from skellycam.backend.opencv.camera.attributes import Attributes
-from skellycam.backend.opencv.camera.internal_camera_thread import VideoCaptureThread
+from skellycam.backend.controller.core_processes.opencv.camera.attributes import Attributes
+from skellycam.backend.controller.core_processes.opencv.camera.internal_camera_thread import VideoCaptureThread
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.experiments.examples.viewers.cv_cam_viewer import CvCamViewer
 

@@ -1,4 +1,4 @@
-from skellycam.backend.detection.private.detect_possible_cameras import DetectPossibleCameras
+from skellycam.backend.controller.core_processes.detection.private.detect_possible_cameras import DetectPossibleCameras
 from skellycam.data_models.found_camera_cache import FoundCameraCache
 
 # No consumer should call this "private" variable

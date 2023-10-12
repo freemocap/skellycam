@@ -1,8 +1,6 @@
-import logging
-
 from PyQt6.QtCore import pyqtSignal, QThread
 
-from skellycam.backend.detection.detect_cameras import detect_cameras
+from skellycam.backend.controller.core_processes.detection import detect_cameras
 
 from skellycam import logger
 

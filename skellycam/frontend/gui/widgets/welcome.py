@@ -1,7 +1,7 @@
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 
-from skellycam.data_models.request_response import UpdateModel
+from skellycam.data_models.request_response_update import UpdateModel
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG, MAGNIFYING_GLASS_EMOJI_STRING, \
     CAMERA_WITH_FLASH_EMOJI_STRING

@@ -2,13 +2,13 @@ from typing import Dict
 
 import cv2
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel
 
 from skellycam import logger
 from skellycam.data_models.camera_config import CameraConfig
 from skellycam.frontend.gui.utilities.qt_label_strings import no_cameras_found_message_string
+from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraViewWidget
-from skellycam.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING
 
 title_label_style_string = """
                            font-size: 18px;
@@ -20,20 +20,13 @@ MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
 MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
-class CameraGrid(QWidget):
+class CameraGrid(UpdateWidget):
     cameras_connected_signal = Signal()
     camera_group_created_signal = Signal(dict)
     incoming_camera_configs_signal = Signal(dict)
     videos_saved_to_this_folder_signal = Signal(str)
 
-    def __init__(
-            self,
-            parent=None,
-    ):
-
-        logger.info(
-            f"Initializing QtMultiCameraViewerWidget with camera_ids")
-
+    def __init__(self, parent=None ):
         super().__init__(parent=parent)
 
         self._layout = QVBoxLayout()
@@ -62,7 +55,6 @@ class CameraGrid(QWidget):
         self.sizePolicy().setVerticalStretch(1)
 
         # self._layout.addStretch()
-
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
@@ -105,8 +97,6 @@ class CameraGrid(QWidget):
             dictionary_of_single_camera_view_widgets[camera_id] = single_camera_view
 
         return dictionary_of_single_camera_view_widgets
-
-
 
     def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:
         if (

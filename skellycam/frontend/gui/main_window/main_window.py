@@ -5,7 +5,7 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam import logger
-from skellycam.data_models.request_response import UpdateModel
+from skellycam.data_models.request_response_update import UpdateModel
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (

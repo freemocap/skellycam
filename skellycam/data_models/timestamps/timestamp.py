@@ -25,27 +25,6 @@ class Timestamp(BaseModel):
     day_of_year: int
     is_leap_year: bool
 
-    # @classmethod
-    # def from_perf_counter_and_offset(cls,
-    #                                  perf_counter: Union[int, float],
-    #                                  # a call from `time.perf_counter_ns():int` or `time.perf_counter():float`
-    #                                  offset_mapping: Dict[int, Union[datetime, 'Timestamp']]
-    #                                  # a dictionary mapping a perf_counter_ns or perf_counter to a datetime or Timestamp object
-    #                                  ):
-    #     """
-    #     Create a timestamp object from a perf_counter_ns or perf_counter and an offset dictionary mapping an and initial perf_counter_ns or perf_counter to a datetime or Timestamp object
-    #     """
-    #     perf_counter_ns = cls._convert_perf_counter(perf_counter)
-    #
-    #     reference_perf_ns, reference_timestamp = cls._unpack_mapping(offset_mapping)
-    #
-    #     # calculate the offset
-    #     offset_ns = perf_counter_ns - reference_perf_ns
-    #
-    #     # calculate the timestamp
-    #     timestamp_ns = reference_timestamp.datetime + offset_ns
-
-
 
     @classmethod
     def _convert_perf_counter(cls, perf_counter: Union[int, float]):

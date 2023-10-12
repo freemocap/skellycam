@@ -1,11 +1,10 @@
 import asyncio
-import logging
 import multiprocessing
 
 import cv2
 
-from skellycam.backend.detection.detect_cameras import detect_cameras
-from skellycam.backend.opencv.group.camera_group import CameraGroup
+from skellycam.backend.controller.core_processes.detection import detect_cameras
+from skellycam.backend.controller.core_processes.opencv.group import CameraGroup
 
 from skellycam import logger
 

@@ -1,4 +1,3 @@
-import logging
 import platform
 from pathlib import Path
 from typing import Dict, List, Union
@@ -6,8 +5,8 @@ from typing import Dict, List, Union
 import numpy as np
 
 from skellycam.data_models.frame_payload import FramePayload
-from skellycam.backend.diagnostics.create_diagnostic_plots import create_diagnostic_plots
-from skellycam.backend.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.backend.controller.core_processes.diagnostics.create_diagnostic_plots import create_diagnostic_plots
+from skellycam.backend.controller.core_processes.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.tests.test_frame_timestamp_synchronization import test_frame_timestamp_synchronization
 from skellycam.tests.test_synchronized_video_frame_counts import test_synchronized_video_frame_counts
 
