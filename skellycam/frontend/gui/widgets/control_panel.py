@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 
+from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
     CameraGrid,
 )
@@ -7,23 +8,24 @@ from skellycam.frontend.gui.widgets.cameras.camera_grid import (
 from skellycam import logger
 
 
-class ControlPanel(QWidget):
+class ControlPanel(UpdateWidget):
     def __init__(
-            self, camera_viewer_widget: CameraGrid, parent=None
+            self,
+            camera_grid: CameraGrid,
+            parent=None
     ):
         super().__init__(parent=parent)
 
+        self._initUI(camera_grid)
+
+    def _initUI(self, camera_viewer_widget):
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
-
         self._layout = QVBoxLayout()
-
         self._layout = QHBoxLayout()
         self.setLayout(self._layout)
-
         self._button_layout, self._button_dictionary = self._create_button_dictionary()
         self._layout.addLayout(self._button_layout)
-
         self._camera_viewer_widget = camera_viewer_widget
         self._camera_viewer_widget.cameras_connected_signal.connect(
             self._show_buttons
@@ -58,14 +60,14 @@ class ControlPanel(QWidget):
 
         start_recording_push_button = QPushButton("\U0001F534 Start Recording")
         start_recording_push_button.setEnabled(True)
-        start_recording_push_button.hide()
+        # start_recording_push_button.hide()
 
         button_layout.addWidget(start_recording_push_button)
         button_dictionary["start_recording"] = start_recording_push_button
 
         stop_recording_push_button = QPushButton("\U00002B1B Stop Recording")
         stop_recording_push_button.setEnabled(False)
-        stop_recording_push_button.hide()
+        # stop_recording_push_button.hide()
         button_layout.addWidget(stop_recording_push_button)
         button_dictionary["stop_recording"] = stop_recording_push_button
 

@@ -5,6 +5,7 @@ from multiprocessing import Event
 
 from skellycam import logger
 from skellycam.backend.controller.controller import get_or_create_controller
+from skellycam.data_models.request_response_update import Response, MessageType
 
 CONTROLLER = None
 
@@ -26,15 +27,15 @@ def backend_main_loop(messages_from_frontend: multiprocessing.Queue,
                 logger.info(f"Backend received message from frontend: queue size: {messages_from_frontend.qsize()}")
                 logger.info(f"backend_main received message from frontend:\n {pprint.pformat(message, indent=4)}")
 
-                messages_from_backend.put(MessageFromBackend(type="success",
-                                                             message="Backend received message",
-                                                             data={"wow": "cool data"}))
+                messages_from_backend.put(Response(success=True,
+                                                   message="Backend received message",
+                                                   data={"wow": "cool data"}))
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             logger.exception(e)
-            messages_from_backend.put(MessageFromBackend(type="error",
-                                                         message=str(e),
-                                                         data={e.with_traceback()}))
+            messages_from_backend.put(Response(message_type=MessageType.ERROR,
+                                               message=str(e),
+                                               data={e.with_traceback()}))
             raise e
         finally:
             if not exit_event.is_set():

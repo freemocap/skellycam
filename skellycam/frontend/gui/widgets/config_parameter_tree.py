@@ -45,7 +45,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._layout.addWidget(self._close_cameras_button)
         self._close_cameras_button.setEnabled(False)
 
-        self._detect_available_cameras_button = QPushButton(f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
+        self._detect_available_cameras_button = QPushButton(f"Connect to Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         self._layout.addWidget(self._detect_available_cameras_button)
         self._detect_available_cameras_button.setEnabled(False)
 

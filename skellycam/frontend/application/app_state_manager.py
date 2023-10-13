@@ -63,10 +63,9 @@ class AppStateManager(BaseModel):
                     logger.debug(f"Updating AppState.{key} from `{current_value}` to `{value}`")
                     setattr(self._app_state, key, value)
                     self._state_changed = True
-
             else:
-                logger.error(f"Key `{key}` not found AppState!")
-                raise AttributeError(f"Key `{key}` not found AppState!")
+                logger.warning(f"WARNING - Key `{key}` not found AppState!")
+                # raise AttributeError(f"Key `{key}` not found AppState!")
 
         if self._state_changed:
             return self._app_state

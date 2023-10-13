@@ -1,8 +1,8 @@
 import multiprocessing
 
 from skellycam import logger
-from skellycam.backend.backend import backend_main_loop
-from skellycam.frontend.frontend import frontend_loop
+from skellycam.backend.backend_loop import backend_main_loop
+from skellycam.frontend.frontend_loop import frontend_loop
 
 
 def start_up(exit_event):

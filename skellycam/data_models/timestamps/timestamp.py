@@ -82,6 +82,9 @@ class Timestamp(BaseModel):
     def __str__(self):
         return f"{self.day_of_week}, {self.human_friendly_local} (local timezone: {self.local_time_zone})"
 
+    def __repr__(self):
+        self.__str__()
+
 
 
 if __name__ == "__main__":
