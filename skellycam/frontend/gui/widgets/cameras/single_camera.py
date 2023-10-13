@@ -6,14 +6,13 @@ from skellycam.data_models.camera_config import CameraConfig
 
 
 
-class SingleCameraViewWidget(QWidget):
+class SingleCameraView(QWidget):
     def __init__(self,
-                 camera_id: str,
                  camera_config: CameraConfig,
                  parent: QWidget = None):
         super().__init__(parent=parent)
 
-        self._camera_id = camera_id
+        self._camera_id = camera_config.camera_id
         self._camera_config = camera_config
 
         self._layout = QVBoxLayout()
@@ -83,3 +82,10 @@ class SingleCameraViewWidget(QWidget):
         self._image_label_widget.close()
         self._title_label_widget.close()
         super().close()
+
+    def update_camera_config(self, camera_config:CameraConfig):
+        if camera_config == self._camera_config:
+            return
+        else:
+            self._camera_config = camera_config
+            self._title_label_widget.setText(self._camera_name_string)

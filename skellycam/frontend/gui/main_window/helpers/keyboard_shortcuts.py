@@ -22,9 +22,9 @@ class KeyboardShortcuts:
         QShortcut(QKeySequence('Ctrl+R'), window, activated=self._handle_reboot)
 
     def _handle_quit(self):
-        logger.info(f"Heard `Ctrl+Q`, exiting...")
+        logger.info(f"Heard `Ctrl+Q`, SETTING EXIT EVENT")
         self.exit_event.set()
 
     def _handle_reboot(self):
-        logger.info(f"Heard `Ctrl+R`, rebooting...")
+        logger.info(f"Heard `Ctrl+R`, SETTING REBOOT EVENT")
         self.reboot_event.set()

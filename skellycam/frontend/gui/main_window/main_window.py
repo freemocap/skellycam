@@ -5,10 +5,10 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import UpdateModel
+from skellycam.data_models.request_response_update import UpdateModel, BaseMessage
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
-from skellycam.frontend.gui.main_window.helpers.update_view import update_view
+from skellycam.frontend.gui.main_window.helpers.view_updater import ViewUpdater
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
     CameraGrid,
 )
@@ -37,11 +37,15 @@ class MainWindow(QMainWindow):
                                            reboot_event=reboot_event)
         self.shortcuts.connect_shortcuts(self)
         self._initUI()
+        self._view_updater = ViewUpdater(main_window=self)
 
     def emit_update(self, update: UpdateModel) -> None:
         logger.trace(f"Emitting update signal with data: {update} from MainWindow")
         self.updated.emit(update)
-        update_view(main_window=self, update=update)
+        self.update_view(update)
+
+    def update_view(self, message: BaseMessage) -> None:
+        self._view_updater.handle_message(message)
 
     def _create_central_widget(self):
         self._central_widget = QWidget()
@@ -75,7 +79,6 @@ class MainWindow(QMainWindow):
         self._layout.addWidget(self.camera_grid)
         self.camera_grid.hide()
         self.control_panel.hide()
-
 
     def _create_dock_tabs(self):
         self._create_parameter_tree_dock()

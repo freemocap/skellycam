@@ -1,8 +1,8 @@
 import multiprocessing
 
 from skellycam import logger
-from skellycam.backend.backend_loop import backend_main_loop
-from skellycam.frontend.frontend_loop import frontend_loop
+from skellycam.backend.backend_main import backend_main
+from skellycam.frontend.frontend_main import frontend_main
 
 
 def start_up(exit_event):
@@ -30,10 +30,11 @@ def start_frontend_process(exit_event: multiprocessing.Event,
                            ):
     logger.info(f"Starting frontend process...")
     reboot_event = multiprocessing.Event()
-    frontend_process = multiprocessing.Process(target=frontend_loop, args=(messages_from_frontend,
-                                                                           messages_from_backend,
-                                                                           exit_event,
-                                                                           reboot_event))
+    frontend_process = multiprocessing.Process(target=frontend_main,
+                                               args=(messages_from_frontend,
+                                                     messages_from_backend,
+                                                     exit_event,
+                                                     reboot_event))
     frontend_process.start()
     logger.success(f"Frontend process started!")
     return frontend_process, reboot_event
@@ -43,15 +44,17 @@ def start_backend_process(exit_event: multiprocessing.Event,
                           messages_from_frontend: multiprocessing.Queue,
                           messages_from_backend: multiprocessing.Queue):
     logger.info(f"Starting backend process...")
-    backend_process = multiprocessing.Process(target=backend_main_loop, args=(messages_from_frontend,
-                                                                              messages_from_backend,
-                                                                              exit_event))
+    backend_process = multiprocessing.Process(target=backend_main,
+                                              args=(messages_from_frontend,
+                                                    messages_from_backend,
+                                                    exit_event))
     backend_process.start()
     logger.success(f"Backend process started!")
     return backend_process
 
 
-def shut_down(exit_event: multiprocessing.Event, backend_process: multiprocessing.Process,
+def shut_down(exit_event: multiprocessing.Event,
+              backend_process: multiprocessing.Process,
               frontend_process: multiprocessing.Process):
     logger.info(f"Shutting down frontend and backend processes...")
     exit_event.set()

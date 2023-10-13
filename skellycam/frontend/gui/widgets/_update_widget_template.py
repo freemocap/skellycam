@@ -5,7 +5,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QMainWindow
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import UpdateModel
+from skellycam.data_models.request_response_update import UpdateModel, BaseMessage
 
 
 class UpdateWidget(QWidget):
@@ -58,3 +58,6 @@ class UpdateWidget(QWidget):
         logger.trace(f"Emitting update signal with data: \n{update}")
         self._data.update(update.data)
         self.updated.emit(update)
+
+    def update_view(self, message: BaseMessage):
+        raise NotImplementedError
