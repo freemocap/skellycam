@@ -8,7 +8,7 @@ from skellycam import logger
 from skellycam.data_models.request_response_update import UpdateModel
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
-from skellycam.frontend.gui.main_window.helpers.update_handler import update_view
+from skellycam.frontend.gui.main_window.helpers.update_view import update_view
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
     CameraGrid,
 )
