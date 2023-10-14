@@ -2,7 +2,7 @@
 from multiprocessing import freeze_support
 
 from skellycam import logger
-from skellycam.main.main_loop import main_process
+from skellycam.main.main import main
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 
 
@@ -11,7 +11,7 @@ if __name__ == "__main__":
     logger.info(f"Running from __main__: {__name__} - {__file__}")
     freeze_support()
     setup_app_id_for_windows()
-    main_process()
+    main()
     logger.info(f"Exiting __main__, bye!")
 
     print("\n--------------------------------------------------")

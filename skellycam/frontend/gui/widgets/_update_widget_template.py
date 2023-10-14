@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from copy import deepcopy
 from typing import Union
 
@@ -22,23 +23,21 @@ class UpdateWidget(QWidget):
 
     updated = Signal(UpdateModel)
 
-    def __init__(self, parent: Union[QMainWindow, 'UpdateWidget'], *args, **kwargs):
+    def __init__(self, parent: Union[QMainWindow, 'UpdateWidget', QWidget], *args, **kwargs):
         """
         Args:
-            parent (UpdateWidget): The parent widget that this widget sends update signals to - makes a tree :D
+            parent (UpdateWidget): The parent widget that this widget sends update signals to - makes a tree and trees are cool :D
         """
         self._get_route(parent)
         logger.trace(f"Initializing {self.name}...")
         super().__init__(*args, **kwargs)
         self.updated.connect(parent.emit_update)
 
-        self._data = {}
-
     def _get_route(self, parent):
         if isinstance(parent, QMainWindow):
             self._route = ["MainWindow"]
         else:
-            self._route = deepcopy(parent._route)
+            self._route = deepcopy(parent.route)
         self._route.append(self.__class__.__name__)
 
     @property
@@ -56,7 +55,6 @@ class UpdateWidget(QWidget):
 
     def emit_update(self, update: UpdateModel) -> None:
         logger.trace(f"Emitting update signal with data: \n{update}")
-        self._data.update(update.data)
         self.updated.emit(update)
 
     def update_view(self, message: BaseMessage):

@@ -20,8 +20,8 @@ class Controller:
         logger.debug(f"Controller received request:\n {request}")
         response = None
         try:
-            match request.data["event"]:
-                case "session_started":
+            match request.event:
+                case EventTypes.SESSION_STARTED:
                     logger.debug(f"Handling `session_started` event...")
                     cameras = detect_available_cameras()
                     logger.debug(f"Detected available cameras: {[camera.description for camera in cameras.values()]}")

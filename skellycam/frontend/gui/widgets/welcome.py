@@ -1,7 +1,7 @@
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 
-from skellycam.data_models.request_response_update import UpdateModel
+from skellycam.data_models.request_response_update import UpdateModel, EventTypes
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG, CAMERA_WITH_FLASH_EMOJI_STRING, \
     SPARKLES_EMOJI_STRING
@@ -60,5 +60,5 @@ class Welcome(UpdateWidget):
 
     def _start_session_button_clicked(self):
         self.hide()
-        self.emit_update(UpdateModel(data={"event":"session_started"},
+        self.emit_update(UpdateModel(event=EventTypes.SESSION_STARTED,
                                      source=self.name))

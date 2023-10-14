@@ -80,6 +80,7 @@ class CameraGrid(UpdateWidget):
     def _update_camera_grid(self, cameras: Dict[str, CameraInfo]):
         self._camera_configs = {}
         for camera_id, camera_info in cameras.items():
+
             self._camera_configs[camera_id] = CameraConfig(camera_id=camera_id,
                                                            framerate=camera_info.available_framerates[-1])
 
@@ -115,7 +116,8 @@ class CameraGrid(UpdateWidget):
                 grid_column = divmod_remainder
                 self._camera_portrait_grid_layout.addWidget(self._single_cameras[camera_id], grid_row, grid_column)
 
-    def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:
+    @staticmethod
+    def _get_landscape_or_portrait(camera_config: CameraConfig) -> str:
         if (
                 camera_config.rotate_video_cv2_code == cv2.ROTATE_90_CLOCKWISE
                 or camera_config.rotate_video_cv2_code == cv2.ROTATE_90_COUNTERCLOCKWISE

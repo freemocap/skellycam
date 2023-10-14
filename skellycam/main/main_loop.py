@@ -1,18 +1,7 @@
-import multiprocessing
 import time
 
 from skellycam import logger
 from skellycam.main.helpers import shut_down, reset_events, start_up
-
-
-def main_process():
-    logger.info(f"Starting main...")
-
-    exit_event = multiprocessing.Event()
-
-    main_loop(exit_event)
-
-    logger.info(f"Exiting main...")
 
 
 def main_loop(exit_event):
