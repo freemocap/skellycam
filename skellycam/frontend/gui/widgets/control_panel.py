@@ -1,17 +1,16 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
-
-from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
-from skellycam.frontend.gui.widgets.cameras.camera_grid import (
-    CameraGrid,
-)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton
 
 from skellycam import logger
+from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
+from skellycam.frontend.gui.widgets.cameras.camera_grid import (
+    CameraGridView,
+)
 
 
-class ControlPanel(UpdateWidget):
+class RecordButtonsView(UpdateWidget):
     def __init__(
             self,
-            camera_grid: CameraGrid,
+            camera_grid: CameraGridView,
             parent=None
     ):
         super().__init__(parent=parent)

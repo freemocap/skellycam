@@ -8,14 +8,19 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from skellycam.data_models.frame_payload import FramePayload
-
 from skellycam import logger
+from skellycam.data_models.cameras.camera_config import CameraConfig
+from skellycam.data_models.frame_payload import FramePayload
 
 
 class VideoRecorder:
-    def __init__(self):
-
+    def __init__(self,
+                 camera_config: CameraConfig,
+                 video_save_path: str,
+                 ):
+        self._camera_config = camera_config
+        self._video_save_path = video_save_path
+        self._initialize_video_writer()
         self._cv2_video_writer = None
         self._path_to_save_video_file = None
         self._frame_payload_list: List[FramePayload] = []
@@ -88,25 +93,19 @@ class VideoRecorder:
 
     def _initialize_video_writer(
             self,
-            image_height: Union[int, float],
-            image_width: Union[int, float],
-            path_to_save_video_file: Union[str, Path],
-            frames_per_second: Union[int, float] = None,
             fourcc: str = "mp4v",
-            # calibration_videos: bool = False,
     ) -> cv2.VideoWriter:
 
         video_writer_object = cv2.VideoWriter(
-            str(path_to_save_video_file),
-            cv2.VideoWriter_fourcc(*fourcc),
-            frames_per_second,
-            (int(image_width), int(image_height)),
+            str(self._video_save_path),
+            cv2.VideoWriter_fourcc(*self._camera_config.fourcc),
+            self._camera_config.framerate,
+            (int(self._camera_config.resolution.width),
+             int(self._camera_config.resolution.height)),
         )
 
         if not video_writer_object.isOpened():
-            logger.error(
-                f"cv2.VideoWriter failed to initialize for: {str(path_to_save_video_file)}"
-            )
+            logger.error(f"cv2.VideoWriter failed to initialize!")
             raise Exception("cv2.VideoWriter is not open")
 
         return video_writer_object

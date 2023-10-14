@@ -1,6 +1,8 @@
-import cv2
 from dataclasses import dataclass
 from typing import Dict
+
+import cv2
+
 
 @dataclass
 class CharucoBoardDefinition:

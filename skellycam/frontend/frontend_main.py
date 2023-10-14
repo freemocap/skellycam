@@ -1,10 +1,9 @@
 import multiprocessing.connection
-import warnings
 
 from PySide6.QtCore import QTimer
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import UpdateModel, MessageType
+from skellycam.data_models.request_response_update import UpdateModel
 from skellycam.frontend.application import app_state_manager, create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import MainWindow
 

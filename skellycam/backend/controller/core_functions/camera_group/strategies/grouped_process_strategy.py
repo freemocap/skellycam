@@ -1,10 +1,11 @@
 import multiprocessing
 from typing import Dict, List
 
+from skellycam.backend.controller.core_processes.opencv.group.strategies.cam_group_queue_process import \
+    CamGroupQueueProcess
 from skellycam.data_models.camera_config import CameraConfig
 
 from skellycam.data_models.frame_payload import FramePayload
-from skellycam.backend.controller.core_processes.opencv.group.strategies.cam_group_queue_process import CamGroupQueueProcess
 from skellycam.utilities.array_split_by import array_split_by
 
 ### Don't change this? Users should submit the actual value they want

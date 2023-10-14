@@ -1,4 +1,3 @@
-import logging
 import os
 from copy import copy
 from pathlib import Path
@@ -10,7 +9,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QFileSystemModel,
 from skellycam import logger
 
 
-class SkellyCamDirectoryViewWidget(QWidget):
+class DirectoryView(QWidget):
     def __init__(self, folder_path: Union[str, Path] = None):
         logger.info("Creating QtDirectoryViewWidget")
         super().__init__()

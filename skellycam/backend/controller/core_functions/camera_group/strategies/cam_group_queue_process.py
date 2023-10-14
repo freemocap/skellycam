@@ -5,13 +5,12 @@ from time import perf_counter_ns, sleep
 from typing import Dict, List, Union
 
 from setproctitle import setproctitle
-
 from skellycam.backend.controller.core_processes.opencv.camera.camera import Camera
-from skellycam.data_models.camera_config import CameraConfig
-from skellycam.data_models.frame_payload import FramePayload
 from skellycam.backend.controller.core_processes.opencv.group.strategies.queue_communicator import QueueCommunicator
+from skellycam.data_models.camera_config import CameraConfig
 
 from skellycam import logger
+from skellycam.data_models.frame_payload import FramePayload
 
 CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
 

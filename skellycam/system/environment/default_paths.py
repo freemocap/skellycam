@@ -19,13 +19,13 @@ SPARKLES_EMOJI_STRING = "\U00002728"
 MAGNIFYING_GLASS_EMOJI_STRING = "\U0001F50D"
 CAMERA_WITH_FLASH_EMOJI_STRING = "\U0001F4F8"
 HAMMER_AND_WRENCH_EMOJI_STRING = "\U0001F6E0"
+CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING = "\U0001F503"
 
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
-PATH_TO_SKELLY_CAM_LOGO_SVG = str(
-    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.svg"
+PATH_TO_SKELLY_CAM_LOGO_PNG = str(
+    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.png"
 )
-
 
 def get_default_skellycam_base_folder_path():
     return Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME

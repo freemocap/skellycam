@@ -4,13 +4,12 @@ import time
 import traceback
 
 import cv2
-
-from skellycam.data_models.frame_payload import FramePayload
-from skellycam.data_models.camera_config import CameraConfig
 from skellycam.backend.controller.core_processes.opencv.config.apply_config import apply_configuration
 from skellycam.backend.controller.core_processes.opencv.config.determine_backend import determine_backend
+from skellycam.data_models.camera_config import CameraConfig
 
 from skellycam import logger
+from skellycam.data_models.frame_payload import FramePayload
 
 
 class VideoCaptureThread(threading.Thread):

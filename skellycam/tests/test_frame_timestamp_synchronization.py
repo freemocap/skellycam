@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 
 from skellycam import logger

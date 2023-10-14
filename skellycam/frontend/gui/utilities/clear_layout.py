@@ -1,5 +1,3 @@
-import logging
-
 from skellycam import logger
 
 

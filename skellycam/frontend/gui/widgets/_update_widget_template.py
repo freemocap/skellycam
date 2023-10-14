@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from copy import deepcopy
 from typing import Union
 
@@ -31,7 +30,7 @@ class UpdateWidget(QWidget):
         self._get_route(parent)
         logger.trace(f"Initializing {self.name}...")
         super().__init__(*args, **kwargs)
-        self.updated.connect(parent.emit_update)
+        self.updated.connect(parent.emit_message)
 
     def _get_route(self, parent):
         if isinstance(parent, QMainWindow):
@@ -53,9 +52,9 @@ class UpdateWidget(QWidget):
         name = ".".join(self._route)
         return name
 
-    def emit_update(self, update: UpdateModel) -> None:
-        logger.trace(f"Emitting update signal with data: \n{update}")
-        self.updated.emit(update)
+    def emit_message(self, message: BaseMessage) -> None:
+        logger.trace(f"Emitting update signal with data: \n{message}")
+        self.updated.emit(message)
 
     def update_view(self, message: BaseMessage):
         raise NotImplementedError

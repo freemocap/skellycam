@@ -3,11 +3,11 @@ from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 
 from skellycam.data_models.request_response_update import UpdateModel, EventTypes
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
-from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG, CAMERA_WITH_FLASH_EMOJI_STRING, \
+from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_PNG, CAMERA_WITH_FLASH_EMOJI_STRING, \
     SPARKLES_EMOJI_STRING
 
 
-class Welcome(UpdateWidget):
+class WelcomeView(UpdateWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self._initUI()
@@ -18,7 +18,7 @@ class Welcome(UpdateWidget):
         self.setLayout(self._layout)
         skellycam_logo_label = QLabel(self)
         self._layout.addWidget(skellycam_logo_label)
-        skellycam_logo_pixmap = QPixmap(PATH_TO_SKELLY_CAM_LOGO_SVG)
+        skellycam_logo_pixmap = QPixmap(PATH_TO_SKELLY_CAM_LOGO_PNG)
         skellycam_logo_pixmap = skellycam_logo_pixmap.scaledToWidth(300)
         skellycam_logo_label.setPixmap(skellycam_logo_pixmap)
         skellycam_logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -60,5 +60,5 @@ class Welcome(UpdateWidget):
 
     def _start_session_button_clicked(self):
         self.hide()
-        self.emit_update(UpdateModel(event=EventTypes.SESSION_STARTED,
-                                     source=self.name))
+        self.emit_message(UpdateModel(event=EventTypes.SESSION_STARTED,
+                                      source=self.name))

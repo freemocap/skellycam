@@ -2,16 +2,10 @@ import multiprocessing
 import time
 from typing import Dict, List
 
-from PyQt6.QtCore import pyqtSignal
-
+from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import \
+    GroupedProcessStrategy
+from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import Strategy
 from skellycam.data_models.camera_config import CameraConfig
-
-from skellycam.backend.controller.core_processes.detection.detect_cameras import detect_cameras
-from skellycam.data_models.frame_payload import FramePayload
-from skellycam.backend.controller.core_processes.opencv.group.strategies.grouped_process_strategy import (
-    GroupedProcessStrategy,
-)
-from skellycam.backend.controller.core_processes.opencv.group.strategies.strategies import Strategy
 
 from skellycam import logger
 
@@ -19,27 +13,18 @@ from skellycam import logger
 class CameraGroup:
     def __init__(
             self,
-            camera_ids_list: List[str] = None,
             strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
-            camera_config_dictionary: Dict[str, CameraConfig] = None,
+            camera_configs: Dict[str, CameraConfig] = None,
     ):
         logger.info(
-            f"Creating camera group for cameras: {camera_ids_list} with strategy {strategy} and camera configs {camera_config_dictionary}"
+            f"Creating camera group with strategy {strategy} and camera configs {camera_configs}"
         )
         self._event_dictionary = None
         self._strategy_enum = strategy
-        self._camera_ids = camera_ids_list
 
-        # Make optional, if a list of cams is sent then just use that
-        if camera_ids_list is None:
-            if camera_config_dictionary is not None:
-                camera_ids_list = list(camera_config_dictionary.keys())
-            else:
-                camera_ids_list = detect_cameras().cameras_found_list
+        self._strategy_class = self._resolve_strategy(camera_ids = camera_configs.keys())
 
-        self._strategy_class = self._resolve_strategy(camera_ids_list)
-
-        if camera_config_dictionary is None:
+        if camera_configs is None:
             logger.info(
                 f"No camera config dict passed in, using default config: {CameraConfig()}"
             )
@@ -49,7 +34,7 @@ class CameraGroup:
                     camera_id=camera_id
                 )
         else:
-            self._camera_config_dictionary = camera_config_dictionary
+            self._camera_config_dictionary = camera_configs
 
     @property
     def is_capturing(self):

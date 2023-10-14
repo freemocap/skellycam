@@ -22,6 +22,14 @@ class EventTypes(Enum):
     CAMERA_CONNECTED = "camera_connected"
 
 
+class RequestType:
+    DETECT_AVAILABLE_CAMERAS = "detect_available_cameras"
+    CONNECT_TO_CAMERAS = "connect_to_cameras"
+    CLOSE_CAMERAS = "close_cameras"
+    START_RECORDING = "start_recording"
+    STOP_RECORDING = "stop_recording"
+
+
 class BaseMessage(BaseModel):
     message_type: MessageType = Field(default=MessageType.REQUEST, description="The type of request")
     data: Dict[str, Any] = Field(default_factory=dict)

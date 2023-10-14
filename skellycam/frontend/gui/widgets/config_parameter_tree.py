@@ -1,88 +1,106 @@
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, Union
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from PySide6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
-from skellycam.frontend.gui.widgets.cameras.camera_grid import CameraGrid
+from skellycam import logger
+from skellycam.data_models.cameras.camera_config import CameraConfig
+from skellycam.data_models.request_response_update import Request, RequestType
 from skellycam.frontend.gui.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
                                                                EXPAND_ALL_STRING, ROTATE_180_STRING,
-                                                               ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
+                                                               ROTATE_90_CLOCKWISE_STRING,
+                                                               ROTATE_90_COUNTERCLOCKWISE_STRING,
                                                                rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                                USE_THIS_CAMERA_STRING)
-from skellycam.data_models.camera_config import CameraConfig
+from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.system.environment.default_paths import RED_X_EMOJI_STRING, MAGNIFYING_GLASS_EMOJI_STRING, \
-    CAMERA_WITH_FLASH_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
+    CAMERA_WITH_FLASH_EMOJI_STRING, CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING
 
-from skellycam import logger
+DETECT_AVAILABLE_CAMERAS_BUTTON_TEXT = f"Detect Available Cameras {MAGNIFYING_GLASS_EMOJI_STRING}"
+CONNECT_TO_CAMERAS_BUTTON_TEXT = f"Connect to Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}"
+RESET_CAMERA_SETTINGS_BUTTON_TEXT = f"Reset Camera Settings {CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING}"
+CLOSE_CAMERAS_BUTTON_TEXT = f"Close Cameras {RED_X_EMOJI_STRING}"
 
 
-class SkellyCamParameterTreeWidget(QWidget):
+class CameraControlPanelView(UpdateWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self._layout = QVBoxLayout()
 
-    def __init__(self,
-                 camera_viewer_widget: CameraGrid):
+        self._detect_available_cameras_button = QPushButton(self.tr(DETECT_AVAILABLE_CAMERAS_BUTTON_TEXT))
+        self._connect_to_cameras = QPushButton(self.tr(CONNECT_TO_CAMERAS_BUTTON_TEXT))
+        self._close_cameras_button = QPushButton(self.tr(CLOSE_CAMERAS_BUTTON_TEXT))
 
-        super().__init__()
+        self.initUI()
 
+    def initUI(self):
+        self._layout.addWidget(self._close_cameras_button)
+        self._close_cameras_button.setEnabled(False)
+
+        self._layout.addWidget(self._detect_available_cameras_button)
+        self._detect_available_cameras_button.setEnabled(False)
+        self._connect_buttons()
+
+    def _connect_buttons(self):
+        self._detect_available_cameras_button.clicked.connect(lambda:
+                                                              self.emit_message(Request(
+                                                                  request_type=RequestType.DETECT_AVAILABLE_CAMERAS)))
+        self._connect_to_cameras.clicked.connect(lambda:
+                                                    self.emit_message(Request(
+                                                        request_type=RequestType.CONNECT_TO_CAMERAS)))
+        self._close_cameras_button.clicked.connect(
+            lambda: self.emit_message(Request(request_type=RequestType.CLOSE_CAMERAS)))
+
+
+class CameraSettingsView(UpdateWidget):
+
+    def __init__(self, camera_configs: Dict[str, CameraConfig], parent: Union[QMainWindow, 'UpdateWidget', QWidget]):
+        super().__init__(parent=parent)
+        self._camera_configs = camera_configs
+        self._camera_control_panel_view = CameraControlPanelView(parent=self)
+        self._parameter_tree = ParameterTree(parent=self, showHeader=False)
+        self.initUI()
+        self.update_parameter_tree()
+
+    def get_camera_configs(self) -> Dict[str, CameraConfig]:
+        self._parameter_tree.
+
+    def initUI(self):
         # self.setMinimumWidth(250)
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
 
-
-        self._camera_viewer_widget = camera_viewer_widget
         self.setStyleSheet("""
         QPushButton{
         border-width: 2px;
         font-size: 15px;
         }
         """)
-
-        self._camera_parameter_group_dictionary = {}
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
-        self._layout.addWidget(self._close_cameras_button)
-        self._close_cameras_button.setEnabled(False)
+        self._layout.addWidget(self._camera_control_panel_view)
 
-        self._detect_available_cameras_button = QPushButton(f"Connect to Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
-        self._layout.addWidget(self._detect_available_cameras_button)
-        self._detect_available_cameras_button.setEnabled(False)
+        self._layout.addWidget(self._parameter_tree)
 
-        self._apply_settings_to_cameras_button = QPushButton(
-            f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
-        )
+    def update_parameter_tree(self):
 
-        self._apply_settings_to_cameras_button.setEnabled(False)
-        self._layout.addWidget(self._apply_settings_to_cameras_button)
+        logger.debug("Updating camera configs in parameter tree")
 
-        self._parameter_tree_widget = ParameterTree(parent=self, showHeader=False)
-        # self._parameter_tree_widget.setStyleSheet(parameter_tree_stylesheet_string)
-        self._layout.addWidget(self._parameter_tree_widget)
-        self._parameter_tree_widget.addParameters(
-            Parameter(name="No cameras connected...", value="", type="str")
-        )
-
-
-    def update_camera_config_parameter_tree(
-            self, dictionary_of_camera_configs: Dict[str, CameraConfig]
-    ):
-        logger.info("Updating camera configs in parameter tree")
-
-        self._parameter_tree_widget.clear()
+        self._parameter_tree.clear()
         self._add_expand_collapse_buttons()
         for camera_config in dictionary_of_camera_configs.values():
             self._camera_parameter_group_dictionary[
                 camera_config.camera_id
             ] = self._convert_camera_config_to_parameter(camera_config)
-            self._parameter_tree_widget.addParameters(
+            self._parameter_tree.addParameters(
                 self._camera_parameter_group_dictionary[camera_config.camera_id]
             )
 
     def _emit_camera_configs_dict(self):
         camera_configs_dictionary = self._extract_dictionary_of_camera_configs()
         logger.info(f"Emitting camera configs dictionary: {camera_configs_dictionary}")
-
 
     def _convert_camera_config_to_parameter(
             self, camera_config: CameraConfig
@@ -213,7 +231,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         expand_all_button_parameter.sigActivated.connect(
             self._expand_or_collapse_all_action
         )
-        self._parameter_tree_widget.addParameters(expand_all_button_parameter)
+        self._parameter_tree.addParameters(expand_all_button_parameter)
 
         collapse_all_button_parameter = Parameter.create(
             name=COLLAPSE_ALL_STRING, type="action"
@@ -221,7 +239,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         collapse_all_button_parameter.sigActivated.connect(
             self._expand_or_collapse_all_action
         )
-        self._parameter_tree_widget.addParameters(collapse_all_button_parameter)
+        self._parameter_tree.addParameters(collapse_all_button_parameter)
 
     def _expand_or_collapse_all_action(self, action):
         for camera_parameter in self._camera_parameter_group_dictionary.values():
@@ -229,6 +247,3 @@ class SkellyCamParameterTreeWidget(QWidget):
                 camera_parameter.setOpts(expanded=True)
             elif action.name() == COLLAPSE_ALL_STRING:
                 camera_parameter.setOpts(expanded=False)
-
-
-
