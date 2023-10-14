@@ -37,7 +37,7 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
             logger.success(f"Frontend main started!")
             app = create_or_recreate_qt_application()
 
-            def listen_for_backend_requests():
+            def check_for_backend_messages():
                 # logger.trace(f"Checking for messages from backend...")
                 if not messages_from_backend.empty():
                     response = messages_from_backend.get()
@@ -52,9 +52,10 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
                 messages_from_frontend.put(update.dict())
 
             logger.info(f"Frontend lister loop starting...")
-            timer = QTimer()
-            timer.start(500)
-            timer.timeout.connect(lambda: listen_for_backend_requests())  # Let the interpreter run each 500 ms.
+            update_timer = QTimer()
+            update_timer.start(500)
+            update_timer.timeout.connect(lambda: check_for_backend_messages())  # Let the interpreter run each 500 ms.
+
 
             main_window = MainWindow(exit_event=exit_event,
                                      reboot_event=reboot_event, )
