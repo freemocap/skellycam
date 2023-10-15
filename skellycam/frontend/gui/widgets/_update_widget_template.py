@@ -20,7 +20,7 @@ class UpdateWidget(QWidget):
         updated (Signal): Emitted when an update occurs.
     """
 
-    updated = Signal()
+    updated = Signal(BaseMessage)
 
     def __init__(self, parent: Union[QMainWindow, 'UpdateWidget', QWidget], *args, **kwargs):
         """

@@ -69,14 +69,14 @@ class VideoRecorderManager:
 
 
 class Controller:
-    camera_group_manager: CameraGroupManager = None
+    camera_group_manager: CameraGroupManager = CameraGroupManager()
     video_recorder_manager: VideoRecorderManager = None
     available_cameras: Dict[str, CameraDeviceInfo] = None
     def handle_request(self, request: Request) -> Response:
         logger.debug(f"Controller received request:\n {request}")
         response = None
         try:
-            match request.event:
+            match request.message_type:
                 case MessageTypes.SESSION_STARTED:
                     logger.debug(f"Handling `session_started` event...")
                     self.available_cameras = detect_available_cameras()
@@ -85,7 +85,8 @@ class Controller:
                     response = Response(success=True,
                                         data={"cameras": cameras},
                                         message_type=MessageTypes.CAMERA_DETECTED)
-                    self.camera_group_manager = CameraGroupManager(camera_configs=request.data["camera_configs"])
+
+                    self.camera_group_manager.update_configs(camera_configs=request.data["camera_configs"])
 
 
         except Exception as e:

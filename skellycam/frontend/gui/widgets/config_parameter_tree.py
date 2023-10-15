@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam import logger
-from skellycam.data_models.cameras.camera_config import CameraConfig, RotationType
+from skellycam.data_models.cameras.camera_config import CameraConfig, RotationTypes
 from skellycam.data_models.cameras.video_resolution import VideoResolution
 from skellycam.data_models.request_response_update import Request, MessageTypes
 from skellycam.frontend.gui.utilities.qt_label_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
@@ -103,7 +103,7 @@ class CameraSettingsView(UpdateWidget):
                 dict(
                     name=self.tr("Rotate Image"),
                     type="list",
-                    limits=RotationType.as_strings(),
+                    limits=RotationTypes.as_strings(),
                     value=camera_config.rotation.value,
                 ),
                 dict(name=self.tr("Exposure"),
