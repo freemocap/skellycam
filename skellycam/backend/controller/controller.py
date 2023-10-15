@@ -3,15 +3,15 @@ from pathlib import Path
 from typing import Dict
 
 from skellycam import logger
-from skellycam.backend.controller.core_functions.camera_group.camera_group_manager import CameraGroupManager
-from skellycam.backend.controller.core_functions.device_detection.detect_available_cameras import \
+from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import CameraGroupManager
+from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import \
     detect_available_cameras
-from skellycam.backend.controller.core_functions.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.data_models.cameras.camera_config import CameraConfig
 from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.cameras.camera_id import CameraId
 from skellycam.data_models.frame_payload import FramePayload
-from skellycam.data_models.request_response_update import Request, Response, MessageType, EventTypes
+from skellycam.data_models.request_response_update import Request, Response, MessageTypes
 from skellycam.frontend.gui.widgets import cameras
 
 CONTROLLER = None
@@ -77,14 +77,14 @@ class Controller:
         response = None
         try:
             match request.event:
-                case EventTypes.SESSION_STARTED:
+                case MessageTypes.SESSION_STARTED:
                     logger.debug(f"Handling `session_started` event...")
                     self.available_cameras = detect_available_cameras()
                     logger.debug(f"Detected available self.available_cameras: "
                                  f"{[camera.description for camera in self.available_cameras.values()]}")
                     response = Response(success=True,
                                         data={"cameras": cameras},
-                                        event=EventTypes.CAMERA_DETECTED)
+                                        message_type=MessageTypes.CAMERA_DETECTED)
                     self.camera_group_manager = CameraGroupManager(camera_configs=request.data["camera_configs"])
 
 
@@ -92,7 +92,7 @@ class Controller:
             logger.error(f"An error occurred: {e}")
             logger.exception(e)
             response = Response(success=False,
-                                message_type=MessageType.ERROR,
+                                message_type=MessageTypes.ERROR,
                                 data={"error": str(e),
                                       "traceback": traceback.format_exc()})
         finally:

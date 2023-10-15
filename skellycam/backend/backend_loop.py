@@ -5,7 +5,7 @@ import traceback
 
 from skellycam import logger
 from skellycam.backend.controller.controller import get_or_create_controller
-from skellycam.data_models.request_response_update import Request, Response, MessageType
+from skellycam.data_models.request_response_update import Request, Response, MessageTypes
 
 
 def backend_loop(exit_event: multiprocessing.Event,
@@ -32,7 +32,7 @@ def backend_loop(exit_event: multiprocessing.Event,
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         logger.exception(e)
-        messages_from_backend.put(Response(message_type=MessageType.ERROR,
+        messages_from_backend.put(Response(message_type=MessageTypes.ERROR,
                                            success=False,
                                            data={"error": str(e),
                                                  "traceback": traceback.format_exc()}))

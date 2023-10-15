@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Dict, Optional, List
 
 import cv2
-from pydantic import BaseModel, Field, PositiveFloat, NegativeInt, root_validator
+from pydantic import BaseModel, Field, PositiveFloat, NegativeInt
 
 from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.cameras.camera_id import CameraId
@@ -10,7 +10,7 @@ from skellycam.data_models.cameras.video_resolution import VideoResolution
 
 
 class RotationType(Enum):
-    NO_ROTATION = 0
+    NO_ROTATION = None
     CLOCKWISE_90 = cv2.ROTATE_90_CLOCKWISE
     COUNTERCLOCKWISE_90 = cv2.ROTATE_90_COUNTERCLOCKWISE
     ROTATE_180 = cv2.ROTATE_180
@@ -27,6 +27,10 @@ class RotationType(Enum):
                 return "Rotate 180 degrees"
 
         raise ValueError(f"Unknown rotation type: {self}")
+
+    @classmethod
+    def as_strings(cls):
+        return [str(member.value) for member in cls]
 
 
 class CameraConfig(BaseModel):
@@ -49,8 +53,8 @@ class CameraConfig(BaseModel):
     fourcc: str = Field(default="MP4V",
                         description="The fourcc code to use for the video codec - `MP4V` is the default,  "
                                     "but it would be interesting to try `MJPG1, `H264`, etc")
-    available_resolutions:Optional[List[VideoResolution]]
-    available_framerates:Optional[List[PositiveFloat]]
+    available_resolutions: Optional[List[VideoResolution]]
+    available_framerates: Optional[List[PositiveFloat]]
 
     @classmethod
     def from_id(cls, camera_id: CameraId):

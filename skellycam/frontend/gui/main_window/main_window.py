@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import UpdateModel, BaseMessage, EventTypes
+from skellycam.data_models.request_response_update import Update, BaseMessage, MessageTypes
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.main_window.helpers.view_updater import ViewUpdater
@@ -32,12 +32,12 @@ class ChildWidgetManager:
         self.main_window = main_window
 
     def handle_message(self, message: BaseMessage):
-        if message.event == EventTypes.SESSION_STARTED:
-            message.data["camera_configs"]= self.main_window.camera_settings_view.get_camera_configs()
+        if message.message_type == MessageTypes.SESSION_STARTED:
+            self.main_window.camera_settings_view.update_parameter_tree(camera_configs=message.data["camera_configs"])
 
 
 class MainWindow(QMainWindow):
-    updated = Signal(UpdateModel)
+    updated = Signal(Update)
 
     def __init__(self, exit_event: multiprocessing.Event, reboot_event: multiprocessing.Event):
         logger.info("Initializing QtGUIMainWindow")
@@ -50,10 +50,11 @@ class MainWindow(QMainWindow):
         self._view_updater = ViewUpdater(main_window=self)
         self._child_widget_manager = ChildWidgetManager(main_window=self)
 
-    def emit_update(self, update: UpdateModel) -> None:
+    def emit_update(self, update: Update) -> None:
         logger.trace(f"Emitting update signal with data: {update} from MainWindow")
         self.updated.emit(update)
         self.update_view(update)
+        self._child_widget_manager.handle_message(update)
 
     def update_view(self, message: BaseMessage) -> None:
         self._view_updater.handle_message(message)
@@ -64,7 +65,6 @@ class MainWindow(QMainWindow):
         self._central_widget.setLayout(self._layout)
 
     def _initUI(self):
-
         self.setGeometry(100, 100, 1600, 900)
         if not Path(PATH_TO_SKELLY_CAM_LOGO_PNG).is_file():
             raise FileNotFoundError(f"Could not find logo at {PATH_TO_SKELLY_CAM_LOGO_PNG}")
@@ -74,9 +74,7 @@ class MainWindow(QMainWindow):
 
         self._layout = QVBoxLayout()
         self._create_central_widget()
-
         self._create_main_view()
-
         self._create_dock_tabs()
 
     def _create_main_view(self):
@@ -103,17 +101,13 @@ class MainWindow(QMainWindow):
 
     def _create_directory_dock(self):
         self._directory_view_dock = QDockWidget("Directory View", self)
-        self.directory_view = DirectoryView(
-            folder_path=get_default_skellycam_base_folder_path(),
-        )
+        self.directory_view = DirectoryView(folder_path=get_default_skellycam_base_folder_path())
         self._directory_view_dock.setWidget(self.directory_view)
         self._directory_view_dock.setFeatures(
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
-        self.addDockWidget(
-            Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock
-        )
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock)
 
     def _create_parameter_tree_dock(self):
         self._camera_settings_view_dock = QDockWidget("Camera Settings", self)
@@ -121,13 +115,7 @@ class MainWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
-        self.camera_settings_view = (
-            CameraSettingsView(self.camera_grid_view)
-        )
-        # self._layout.addWidget(self._qt_camera_config_parameter_tree_widget)
-        self._camera_settings_view_dock.setWidget(
-            self.camera_settings_view
-        )
-        self.addDockWidget(
-            Qt.DockWidgetArea.RightDockWidgetArea, self._camera_settings_view_dock
-        )
+        self.camera_settings_view = CameraSettingsView(parent=self)
+
+        self._camera_settings_view_dock.setWidget(self.camera_settings_view)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._camera_settings_view_dock)

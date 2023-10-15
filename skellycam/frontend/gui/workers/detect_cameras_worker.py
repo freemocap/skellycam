@@ -1,5 +1,5 @@
 from PyQt6.QtCore import pyqtSignal, QThread
-from skellycam.backend.controller.core_processes.detection import detect_cameras
+from skellycam.backend.controller.core_functionality.detection import detect_cameras
 
 from skellycam import logger
 

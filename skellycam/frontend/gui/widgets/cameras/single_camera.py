@@ -3,7 +3,7 @@ import pprint
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
-from skellycam.data_models.camera_config import CameraConfig
+from skellycam.data_models.cameras.camera_config import CameraConfig
 
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 

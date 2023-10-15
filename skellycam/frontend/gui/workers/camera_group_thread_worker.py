@@ -3,25 +3,25 @@ from copy import deepcopy
 from typing import List, Union
 
 import cv2
-from PyQt6.QtCore import pyqtSignal, Qt, QThread
-from PyQt6.QtGui import QImage
-from skellycam.backend.controller.core_processes.detection.charuco.charuco_detection import draw_charuco_on_image
-from skellycam.backend.controller.core_processes.opencv.group import CameraGroup
-from skellycam.backend.controller.core_processes.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.data_models.camera_id import CameraId
+from PySide6.QtCore import QThread, Signal
+from PySide6.QtGui import QImage, Qt
 
 from skellycam import logger
+from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
+from skellycam.backend.controller.core_functionality.image_annotation.draw_charuco import draw_charuco_on_image
+from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.data_models.cameras.camera_id import CameraId
 from skellycam.data_models.charuco_definition import CharucoBoardDefinition
 from skellycam.data_models.frame_payload import FramePayload
 from skellycam.frontend.gui.workers.video_save_thread_worker import VideoSaveThreadWorker
 
 
 class CamGroupThreadWorker(QThread):
-    new_image_signal = pyqtSignal(CameraId, QImage, dict)
-    cameras_connected_signal = pyqtSignal()
-    cameras_closed_signal = pyqtSignal()
-    camera_group_created_signal = pyqtSignal(dict)
-    videos_saved_to_this_folder_signal = pyqtSignal(str)
+    new_image_signal = Signal(CameraId, QImage, dict)
+    cameras_connected_signal = Signal()
+    cameras_closed_signal = Signal()
+    camera_group_created_signal = Signal(dict)
+    videos_saved_to_this_folder_signal = Signal(str)
 
     def __init__(
             self,
@@ -158,7 +158,7 @@ class CamGroupThreadWorker(QThread):
     def close(self):
         logger.info("Closing camera group")
         try:
-            self._camera_group.close(cameras_closed_signal=self.cameras_closed_signal)
+            self._camera_group.close()
         except AttributeError:
             pass
 

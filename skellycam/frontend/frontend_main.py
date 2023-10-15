@@ -3,7 +3,7 @@ import multiprocessing.connection
 from PySide6.QtCore import QTimer
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import UpdateModel
+from skellycam.data_models.request_response_update import Update
 from skellycam.frontend.application import app_state_manager, create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import MainWindow
 
@@ -45,7 +45,7 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
                         logger.error(f"Backend sent error message: {response.data['error']}!")
                     main_window.update_view(response)
 
-            def update_backend(update: UpdateModel):
+            def update_backend(update: Update):
                 logger.debug(f"Updating backend with:\n {update}")
                 app_state_manager.update(update=update)
                 messages_from_frontend.put(update.dict())

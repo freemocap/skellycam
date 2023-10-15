@@ -3,11 +3,11 @@ from typing import Dict
 import cv2
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel
-from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import CameraInfo
-from skellycam.data_models.camera_config import CameraConfig
+from skellycam.data_models.cameras.camera_config import CameraConfig
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import BaseMessage, EventTypes
+from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
+from skellycam.data_models.request_response_update import BaseMessage, MessageTypes
 from skellycam.frontend.gui.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraView
@@ -65,19 +65,19 @@ class CameraGridView(UpdateWidget):
     def update_view(self, message: BaseMessage):
         logger.trace(f"Updating view with message: {message.message_type}")
         match message.event:
-            case EventTypes.CAMERA_DETECTED:
+            case MessageTypes.CAMERA_DETECTED:
                 logger.debug(f"Heard `camera_detected` event, updating view...")
 
                 self._handle_cameras_detected(cameras=message.data["cameras"])
 
-    def _handle_cameras_detected(self, cameras: Dict[str, CameraInfo]):
+    def _handle_cameras_detected(self, cameras: Dict[str, CameraDeviceInfo]):
         if len(cameras) == 0:
             logger.info("No cameras detected!")
             self._no_cameras_found_label.show()
             return
         self._update_camera_grid(cameras=cameras)
 
-    def _update_camera_grid(self, cameras: Dict[str, CameraInfo]):
+    def _update_camera_grid(self, cameras: Dict[str, CameraDeviceInfo]):
         self._camera_configs = {}
         for camera_id, camera_info in cameras.items():
 

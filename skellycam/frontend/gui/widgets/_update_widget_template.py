@@ -5,7 +5,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QMainWindow
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import UpdateModel, BaseMessage
+from skellycam.data_models.request_response_update import Update, BaseMessage
 
 
 class UpdateWidget(QWidget):
@@ -20,7 +20,7 @@ class UpdateWidget(QWidget):
         updated (Signal): Emitted when an update occurs.
     """
 
-    updated = Signal(UpdateModel)
+    updated = Signal()
 
     def __init__(self, parent: Union[QMainWindow, 'UpdateWidget', QWidget], *args, **kwargs):
         """
