@@ -39,7 +39,9 @@ class ChildWidgetManager:
 class MainWindow(QMainWindow):
     updated = Signal(Update)
 
-    def __init__(self, exit_event: multiprocessing.Event, reboot_event: multiprocessing.Event):
+    def __init__(self,
+                 exit_event: multiprocessing.Event,
+                 reboot_event: multiprocessing.Event):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
 
@@ -50,11 +52,11 @@ class MainWindow(QMainWindow):
         self._view_updater = ViewUpdater(main_window=self)
         self._child_widget_manager = ChildWidgetManager(main_window=self)
 
-    def emit_update(self, update: Update) -> None:
-        logger.trace(f"Emitting update signal with data: {update} from MainWindow")
-        self.updated.emit(update)
-        self.update_view(update)
-        self._child_widget_manager.handle_message(update)
+    def emit_message(self, message: BaseMessage) -> None:
+        logger.trace(f"Emitting update signal with data: {message} from MainWindow")
+        self.updated.emit(message)
+        self.update_view(message)
+        self._child_widget_manager.handle_message(message)
 
     def update_view(self, message: BaseMessage) -> None:
         self._view_updater.handle_message(message)
