@@ -2,7 +2,7 @@ import multiprocessing
 import pprint
 from typing import Dict, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 
 from skellycam.data_models.cameras.camera_config import CameraConfig
 from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
@@ -10,6 +10,7 @@ from skellycam.data_models.timestamps.timestamp import Timestamp
 
 
 class BaseMessage(BaseModel):
+    data: Dict[str,Any] = Field(default_factory=dict, description="The data for this request/response/update")
     timestamp: Timestamp = Field(default_factory=Timestamp.now, description="The time this request was created")
     metadata: Dict[str, Any] = Field(default_factory=dict,
                                      description="Any metadata to include with this request "
@@ -44,6 +45,16 @@ class Update(Request):
                                     " (should look like an import path,"
                                     " e.g. `backend.data.models.Update`)")
 
+class UpdateCameraConfigs(Update):
+    """
+    A request to update the camera configs
+    """
+    @root_validator
+    def check_data(cls, values):
+        if "camera_configs" not in values["data"]:
+            raise ValueError("No `camera_configs` key in `data`")
+        return values
+
 
 class Response(Request):
     """
@@ -54,24 +65,27 @@ class Response(Request):
 
 
 class CamerasDetected(Response):
-    available_camera_devices: Dict[str, CameraDeviceInfo] = Field(default_factory=dict,
-                                                                  description="A dictionary with the available"
-                                                                              " cameras (as `CameraDeviceInfo`objects),"
-                                                                              " keyed by camera_id")
+    """
+    A response to a `DetectAvailableCameras` request, should contain a list of `CameraDeviceInfo` objects
+    """
+    @root_validator
+    def check_data(cls, values):
+        if "available_cameras" not in values["data"]:
+            raise ValueError("No `available_cameras` key in `data`")
+        return values
 
 class ConnectToCameras(Request):
     """
-    A request to connect to cameras and return a multiprocessing Queue that will be used to send images
+    A request to connect to cameras
     """
-    camera_configs: Dict[str, CameraConfig] = Field(default_factory=dict,
-                                                    description="A dictionary with the camera configs containing the "
-                                                                "information we'l give to OpenCV to connect to the "
-                                                                "camera, keyed by camera_id")
+    @root_validator
+    def check_data(cls, values):
+        if "camera_configs" not in values["data"]:
+            raise ValueError("No `camera_configs` key in `data`")
+        return values
 
 class CameraConnected(Response):
     """
     A response to a `ConnectToCameras` request
     """
-    image_queue: multiprocessing.Queue = Field(default_factory=multiprocessing.Queue,
-                                                  description="A multiprocessing Queue that will be used to send images "
-                                                                "to the frontend")
+

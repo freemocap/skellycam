@@ -1,6 +1,8 @@
 import cv2
 
 import skellycam
+from skellycam.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING, \
+    CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING, RED_X_EMOJI_STRING
 
 ROTATE_90_CLOCKWISE_STRING = "90 Clockwise"
 ROTATE_90_COUNTERCLOCKWISE_STRING = "90 Counterclockwise"
@@ -44,3 +46,7 @@ no_cameras_found_message_string += "    - Unplug and re-plug your cameras \n"
 no_cameras_found_message_string += f"    - Restart your the `{skellycam.__package_name__}` application \n"
 no_cameras_found_message_string += "    - Restart your computer \n"
 no_cameras_found_message_string += f"    - Submit an Issue on the Github: {skellycam.__repo_issues_url__}  (include a copy of the `log` file from this session)\n"
+DETECT_AVAILABLE_CAMERAS_BUTTON_TEXT = f"Detect Available Cameras {MAGNIFYING_GLASS_EMOJI_STRING}"
+CONNECT_TO_CAMERAS_BUTTON_TEXT = f"Connect to Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}"
+RESET_CAMERA_SETTINGS_BUTTON_TEXT = f"Reset Camera Settings {CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING}"
+CLOSE_CAMERAS_BUTTON_TEXT = f"Close Cameras {RED_X_EMOJI_STRING}"

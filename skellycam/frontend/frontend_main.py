@@ -55,7 +55,6 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
             update_timer.start(500)
             update_timer.timeout.connect(lambda: check_for_backend_messages())  # Let the interpreter run each 500 ms.
 
-
             main_window = MainWindow(exit_event=exit_event,
                                      reboot_event=reboot_event, )
             main_window.updated.connect(lambda update: update_backend(update))

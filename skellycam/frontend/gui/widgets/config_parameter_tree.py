@@ -1,54 +1,19 @@
 from copy import deepcopy
 from typing import Dict, Union
 
-from PySide6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QMainWindow
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam import logger
 from skellycam.data_models.cameras.camera_config import CameraConfig, RotationType
+from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.cameras.video_resolution import VideoResolution
-from skellycam.data_models.request_response_update import Request, MessageTypes
-from skellycam.frontend.gui.utilities.qt_label_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
-                                                               rotate_image_str_to_cv2_code,
-                                                               USE_THIS_CAMERA_STRING)
+from skellycam.data_models.request_response_update import UpdateCameraConfigs
+from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
+                                                         rotate_image_str_to_cv2_code,
+                                                         USE_THIS_CAMERA_STRING)
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
-from skellycam.system.environment.default_paths import RED_X_EMOJI_STRING, MAGNIFYING_GLASS_EMOJI_STRING, \
-    CAMERA_WITH_FLASH_EMOJI_STRING, CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING
-
-DETECT_AVAILABLE_CAMERAS_BUTTON_TEXT = f"Detect Available Cameras {MAGNIFYING_GLASS_EMOJI_STRING}"
-CONNECT_TO_CAMERAS_BUTTON_TEXT = f"Connect to Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}"
-RESET_CAMERA_SETTINGS_BUTTON_TEXT = f"Reset Camera Settings {CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING}"
-CLOSE_CAMERAS_BUTTON_TEXT = f"Close Cameras {RED_X_EMOJI_STRING}"
-
-
-class CameraControlPanelView(UpdateWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self._layout = QVBoxLayout()
-
-        self._detect_available_cameras_button = QPushButton(self.tr(DETECT_AVAILABLE_CAMERAS_BUTTON_TEXT))
-        self._connect_to_cameras = QPushButton(self.tr(CONNECT_TO_CAMERAS_BUTTON_TEXT))
-        self._close_cameras_button = QPushButton(self.tr(CLOSE_CAMERAS_BUTTON_TEXT))
-
-        self.initUI()
-
-    def initUI(self):
-        self._layout.addWidget(self._close_cameras_button)
-        self._close_cameras_button.setEnabled(False)
-
-        self._layout.addWidget(self._detect_available_cameras_button)
-        self._detect_available_cameras_button.setEnabled(False)
-        self._connect_buttons()
-
-    def _connect_buttons(self):
-        self._detect_available_cameras_button.clicked.connect(lambda:
-                                                              self.emit_message(Request(
-                                                                  message_type=MessageTypes.DETECT_AVAILABLE_CAMERAS)))
-        self._connect_to_cameras.clicked.connect(lambda:
-                                                 self.emit_message(Request(
-                                                     message_type=MessageTypes.CONNECT_TO_CAMERAS)))
-        self._close_cameras_button.clicked.connect(
-            lambda: self.emit_message(Request(message_type=MessageTypes.CLOSE_CAMERAS)))
+from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanelView
 
 
 class CameraSettingsView(UpdateWidget):
@@ -83,8 +48,9 @@ class CameraSettingsView(UpdateWidget):
     def camera_configs(self) -> Dict[str, CameraConfig]:
         return self._extract_camera_configs()
 
-    def update_parameter_tree(self, camera_configs: Dict[str, CameraConfig]):
+    def update_parameter_tree(self, available_cameras: Dict[str, CameraDeviceInfo]):
         logger.debug("Updating camera configs in parameter tree")
+        camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in available_cameras.keys()}
         self._parameter_tree.clear()
         self._parameter_groups = {}
         for camera_config in camera_configs.values():
@@ -139,10 +105,10 @@ class CameraSettingsView(UpdateWidget):
         camera_parameter_group.param(self.tr(USE_THIS_CAMERA_STRING)).sigValueChanged.connect(
             lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
         )
-        camera_parameter_group.sigValueChanged.connect(lambda _: self.emit_message(Request(
-            message_type=MessageTypes.UPDATE_CAMERA_CONFIGS,
-            data=self.camera_configs
-        )))
+        camera_parameter_group.sigValueChanged.connect(
+            lambda _: self.emit_message(UpdateCameraConfigs(data=self.camera_configs)
+                                        )
+        )
         return camera_parameter_group
 
     def _create_copy_to_all_cameras_action_parameter(self, camera_id) -> Parameter:

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import MessageTypes, BaseMessage
+from skellycam.data_models.request_response_update import BaseMessage, Response, CamerasDetected
 
 if TYPE_CHECKING:
     from skellycam.frontend.gui.main_window.main_window import MainWindow
@@ -10,21 +10,21 @@ if TYPE_CHECKING:
 class ViewUpdater:
     def __init__(self, main_window: 'MainWindow'):
         self.main_window = main_window
+        self.connect_signals_to_slots()
 
     def handle_message(self, message: BaseMessage) -> None:
-        logger.trace(f"Updating view with message type: {message.message_type}")
-        if message.message_type == MessageTypes.ERROR:
-            logger.error(f"Backend sent error message: {message.data['error']}!")
-            return
+        logger.trace(f"Updating view with message type: {message.__class__}")
 
-        match message.event:
-            case MessageTypes.SESSION_STARTED:
-                logger.debug(f"Heard `session_started` event, updating view...")
-                self.main_window.camera_grid_view.show()
-                self.main_window.record_buttons_view.show()
-                self.main_window.welcome_view.hide()
-            case MessageTypes.CAMERA_DETECTED:
-                logger.debug(f"Heard `camera_detected` event, updating view...")
-                self.main_window.camera_grid_view.update_view(message)
+        match message.__class__:
+            case CamerasDetected.__class__:
+                self.main_window.camera_settings_view.update_parameter_tree(available_cameras=message.data["available_camera_devices"])
+
+
+    def connect_signals_to_slots(self) -> None:
+        self._connect_start_session_signal()
+
+    def _connect_start_session_signal(self):
+        self.main_window.welcome_view.session_started.connect(lambda: self.main_window.camera_grid_view.show())
+        self.main_window.welcome_view.session_started.connect(lambda: self.main_window.record_buttons_view.show())
 
 

@@ -94,7 +94,6 @@ class Controller:
             logger.error(f"An error occurred: {e}")
             logger.exception(e)
             response = Response(success=False,
-                                message_type=MessageTypes.ERROR,
                                 data={"error": str(e),
                                       "traceback": traceback.format_exc()})
         finally:

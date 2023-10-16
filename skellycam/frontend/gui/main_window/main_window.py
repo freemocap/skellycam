@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import Update, BaseMessage, MessageTypes
+from skellycam.data_models.request_response_update import Update, BaseMessage
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.main_window.helpers.view_updater import ViewUpdater
@@ -27,15 +27,6 @@ from skellycam.system.environment.default_paths import get_default_skellycam_bas
     PATH_TO_SKELLY_CAM_LOGO_PNG
 
 
-class ChildWidgetManager:
-    def __init__(self, main_window: 'MainWindow'):
-        self.main_window = main_window
-
-    def handle_message(self, message: BaseMessage):
-        if message.message_type == MessageTypes.SESSION_STARTED:
-            self.main_window.camera_settings_view.update_parameter_tree(camera_configs=message.data["camera_configs"])
-
-
 class MainWindow(QMainWindow):
     updated = Signal(Update)
 
@@ -50,15 +41,10 @@ class MainWindow(QMainWindow):
         self.shortcuts.connect_shortcuts(self)
         self._initUI()
         self._view_updater = ViewUpdater(main_window=self)
-        self._child_widget_manager = ChildWidgetManager(main_window=self)
 
     def emit_message(self, message: BaseMessage) -> None:
         logger.trace(f"Emitting update signal with data: {message} from MainWindow")
         self.updated.emit(message)
-        self.update_view(message)
-        self._child_widget_manager.handle_message(message)
-
-    def update_view(self, message: BaseMessage) -> None:
         self._view_updater.handle_message(message)
 
     def _create_central_widget(self):

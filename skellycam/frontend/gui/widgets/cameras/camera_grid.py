@@ -7,8 +7,8 @@ from skellycam.data_models.cameras.camera_config import CameraConfig
 
 from skellycam import logger
 from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
-from skellycam.data_models.request_response_update import BaseMessage, MessageTypes
-from skellycam.frontend.gui.utilities.qt_label_strings import no_cameras_found_message_string
+from skellycam.data_models.request_response_update import BaseMessage, CamerasDetected
+from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
 from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraView
 
@@ -63,23 +63,22 @@ class CameraGridView(UpdateWidget):
         self.sizePolicy().setVerticalStretch(1)
 
     def update_view(self, message: BaseMessage):
-        logger.trace(f"Updating view with message: {message.message_type}")
-        match message.event:
-            case MessageTypes.CAMERA_DETECTED:
+        logger.trace(f"Updating view with message: {message.__class__}")
+        match message.__class__:
+            case CamerasDetected.__class__:
                 logger.debug(f"Heard `camera_detected` event, updating view...")
+                self._handle_cameras_detected(available_cameras=message.data["available_camera_devices"])
 
-                self._handle_cameras_detected(cameras=message.data["cameras"])
-
-    def _handle_cameras_detected(self, cameras: Dict[str, CameraDeviceInfo]):
-        if len(cameras) == 0:
+    def _handle_cameras_detected(self, available_cameras: Dict[str, CameraDeviceInfo]):
+        if len(available_cameras) == 0:
             logger.info("No cameras detected!")
             self._no_cameras_found_label.show()
             return
-        self._update_camera_grid(cameras=cameras)
+        self._update_camera_grid(available_cameras)
 
-    def _update_camera_grid(self, cameras: Dict[str, CameraDeviceInfo]):
+    def _update_camera_grid(self, available_cameras: Dict[str, CameraDeviceInfo]):
         self._camera_configs = {}
-        for camera_id, camera_info in cameras.items():
+        for camera_id, camera_info in available_cameras.items():
 
             self._camera_configs[camera_id] = CameraConfig(camera_id=camera_id,
                                                            framerate=camera_info.available_framerates[-1])
