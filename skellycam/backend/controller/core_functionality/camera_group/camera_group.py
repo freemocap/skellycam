@@ -1,11 +1,14 @@
 import multiprocessing
 import time
-from typing import Dict
+from typing import Dict, List
 
-from skellycam import logger
+from PySide6.QtCore import Signal
+
 from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import \
     GroupedProcessStrategy
 from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import Strategy
+
+from skellycam import logger
 from skellycam.data_models.cameras.camera_config import CameraConfig
 from skellycam.data_models.frame_payload import FramePayload
 
@@ -14,15 +17,16 @@ class CameraGroup:
     def __init__(
             self,
             strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+            camera_configs: Dict[str, CameraConfig] = None,
     ):
-        logger.info(f"Creating camera group with strategy {strategy}")
-        self._strategy_enum = strategy
-
         self._start_event = None
         self._exit_event = None
-
-
-        self._camera_configs = None
+        logger.info(
+            f"Creating camera group with strategy {strategy} and camera configs {camera_configs}"
+        )
+        self._event_dictionary = None
+        self._strategy_enum = strategy
+        self._camera_configs = camera_configs
         self._strategy_class = self._resolve_strategy()
 
     @property
@@ -105,6 +109,7 @@ class CameraGroup:
                 logger.debug("waiting for camera group to stop....")
                 time.sleep(0.1)
 
+
     def _set_exit_event(self):
         logger.info("Setting exit event")
         self.exit_event.set()
@@ -124,7 +129,3 @@ class CameraGroup:
                 process.start_capture(
                     event_dictionary=self._event_dictionary,
                 )
-
-    def update_configs(self, camera_configs: Dict[str, CameraConfig]):
-        for process in self._strategy_class.processes:
-            process.update_configs(camera_configs=camera_configs)

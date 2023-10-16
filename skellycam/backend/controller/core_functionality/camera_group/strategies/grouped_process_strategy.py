@@ -20,8 +20,7 @@ from skellycam import logger
 class GroupedProcessStrategy:
     def __init__(self, camera_configs: Dict[str, CameraConfig]):
         self._camera_configs = camera_configs
-        self._processes, self._cam_id_process_map = self._create_processes()
-        self._create_queues()
+        self._processes, self._cam_id_process_map = self._create_processes(self._camera_configs)
 
     @property
     def processes(self):
@@ -41,6 +40,7 @@ class GroupedProcessStrategy:
     def start_capture(
             self,
             event_dictionary: Dict[str, multiprocessing.Event],
+            camera_config_dict: Dict[str, CameraConfig],
     ):
 
         for process in self._processes:
@@ -67,11 +67,6 @@ class GroupedProcessStrategy:
             cam_id: process.get_current_frame_by_camera_id(cam_id)
             for cam_id, process in self._cam_id_process_map.items()
         }
-
-    def _create_queues(self):
-        self._frame_queues = {camera_id: multiprocessing.Queue()
-                              for camera_id in self._camera_configs.keys()}
-        self._config_queue = multiprocessing.Queue()
 
     def _create_processes(
             self,

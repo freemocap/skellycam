@@ -85,7 +85,7 @@ class Controller:
                     response = Response(success=True,
                                         data={"cameras": cameras},
                                         message_type=MessageTypes.CAMERA_DETECTED)
-
+                    
                     self.camera_group_manager.update_configs(camera_configs=request.data["camera_configs"])
 
 
