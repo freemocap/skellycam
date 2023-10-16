@@ -5,7 +5,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QMainWindow
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import Update, BaseMessage
+from skellycam.data_models.request_response_update import MainWindowClosed, BaseMessage
 
 
 class UpdateWidget(QWidget):

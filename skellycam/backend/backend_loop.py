@@ -21,13 +21,13 @@ def backend_loop(exit_event: multiprocessing.Event,
                 break
             time.sleep(1.0)
             if not messages_from_frontend.empty():
-                request = Request(**messages_from_frontend.get())
+                message = messages_from_frontend.get()
 
                 logger.info(
-                    f"backend_main received message from frontend:\n {pprint.pformat(request.dict(), indent=4)}\n"
+                    f"backend_main received message from frontend:\n {message.__class__}\n"
                     f"Queue size: {messages_from_frontend.qsize()}")
 
-                response = controller.handle_request(request=request)
+                response = controller.handle_message(message=message)
                 messages_from_backend.put(response)
     except Exception as e:
         logger.error(f"An error occurred: {e}")

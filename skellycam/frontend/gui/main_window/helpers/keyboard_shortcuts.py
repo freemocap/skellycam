@@ -16,15 +16,15 @@ class KeyboardShortcuts:
         self.connect_reboot(window)
 
     def connect_quit(self, window):
-        QShortcut(QKeySequence('Ctrl+Q'), window, activated=self._handle_quit)
+        QShortcut(QKeySequence('Ctrl+Q'), window, activated=self.quit)
 
     def connect_reboot(self, window):
-        QShortcut(QKeySequence('Ctrl+R'), window, activated=self._handle_reboot)
+        QShortcut(QKeySequence('Ctrl+R'), window, activated=self.reboot)
 
-    def _handle_quit(self):
-        logger.info(f"Heard `Ctrl+Q`, SETTING EXIT EVENT")
+    def quit(self):
+        logger.info(f"SETTING EXIT EVENT")
         self.exit_event.set()
 
-    def _handle_reboot(self):
-        logger.info(f"Heard `Ctrl+R`, SETTING REBOOT EVENT")
+    def reboot(self):
+        logger.info(f"SETTING REBOOT EVENT")
         self.reboot_event.set()

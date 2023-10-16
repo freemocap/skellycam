@@ -20,10 +20,11 @@ class CameraGroupManager:
 
     def __init__(self,
                  camera_configs: Dict[str, CameraConfig]):
-        self._cameras = camera_configs
+        self._camera_configs = camera_configs
         self._camera_group = None
         self._camera_group_thread = None
         self._camera_group_queue = multiprocessing.Queue()
+        self._create_camera_group(self)
 
     def _create_video_recorders(self, cameras: Dict[str, CameraConfig], video_save_directory: str = None):
         if video_save_directory is None:
@@ -36,10 +37,12 @@ class CameraGroupManager:
                                                           video_save_path=video_save_directory,
                                                           ) for camera_id, camera_config in cameras.items()}
 
-    def create_camera_group(self):
+    def _create_camera_group(self):
         self._camera_group_queue = self._camera_group.get_queue()
         self._camera_group = CameraGroup(camera_configs=self._camera_configs)
         self._camera_group_thread = threading.Thread(target=self._camera_group.start)
+
+    def start(self):
         self._camera_group_thread.start()
 
     def get_video_recorders(self) -> Dict[str, VideoRecorder]:

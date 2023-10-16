@@ -4,7 +4,7 @@ from pydantic import BaseModel, PrivateAttr
 
 from skellycam import logger
 from skellycam.data_models.app_state.app_state import AppState
-from skellycam.data_models.request_response_update import Update
+from skellycam.data_models.request_response_update import MainWindowClosed
 
 _APP_STATE = None
 _APP_STATE_MANAGER = None
@@ -43,12 +43,12 @@ class AppStateManager(BaseModel):
         self._state_changed = False
         return self._app_state
 
-    def update(self, update: Update) -> Optional[AppState]:
+    def update(self, update: MainWindowClosed) -> Optional[AppState]:
         """
         Updates the AppState with the data from the UpdateModel
 
         Args:
-            update (Update): The update to apply to the AppState
+            update (MainWindowClosed): The update to apply to the AppState
 
         Returns:
             Optional[AppState]: The updated AppState, or None if the AppState was not changed

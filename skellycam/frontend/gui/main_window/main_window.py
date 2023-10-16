@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import Update, BaseMessage
+from skellycam.data_models.request_response_update import MainWindowClosed, BaseMessage
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.main_window.helpers.view_updater import ViewUpdater
@@ -28,7 +28,7 @@ from skellycam.system.environment.default_paths import get_default_skellycam_bas
 
 
 class MainWindow(QMainWindow):
-    updated = Signal(Update)
+    updated = Signal(MainWindowClosed)
 
     def __init__(self,
                  exit_event: multiprocessing.Event,
@@ -45,6 +45,9 @@ class MainWindow(QMainWindow):
     def emit_message(self, message: BaseMessage) -> None:
         logger.trace(f"Emitting update signal with data: {message} from MainWindow")
         self.updated.emit(message)
+        self.update_view(message)
+
+    def update_view(self, message: BaseMessage):
         self._view_updater.handle_message(message)
 
     def _create_central_widget(self):
@@ -107,3 +110,8 @@ class MainWindow(QMainWindow):
 
         self._camera_settings_view_dock.setWidget(self.camera_settings_view)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._camera_settings_view_dock)
+
+    def closeEvent(self, event):
+        logger.info("Closing MainWindow...")
+        self.shortcuts.quit()
+        event.accept()

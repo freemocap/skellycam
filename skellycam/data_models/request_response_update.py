@@ -45,6 +45,12 @@ class Update(Request):
                                     " (should look like an import path,"
                                     " e.g. `backend.data.models.Update`)")
 
+class MainWindowClosed(Update):
+    """
+    This update is sent when the main window is closed
+    """
+    pass
+
 class UpdateCameraConfigs(Update):
     """
     A request to update the camera configs
