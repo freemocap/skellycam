@@ -2,10 +2,9 @@ import multiprocessing
 import threading
 from typing import Dict
 
+from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
-
-from skellycam import logger
 from skellycam.data_models.cameras.camera_config import CameraConfig
 
 
@@ -20,14 +19,11 @@ class CameraGroupManager:
     """
 
     def __init__(self,
-                 cameras: Dict[str, CameraConfig],
-                 video_save_directory: str = None):
-        self._cameras = cameras
+                 camera_configs: Dict[str, CameraConfig]):
+        self._cameras = camera_configs
         self._camera_group = None
         self._camera_group_thread = None
         self._camera_group_queue = multiprocessing.Queue()
-        self._create_video_recorders(cameras=cameras,
-                                     video_save_directory=video_save_directory)
 
     def _create_video_recorders(self, cameras: Dict[str, CameraConfig], video_save_directory: str = None):
         if video_save_directory is None:
@@ -42,13 +38,9 @@ class CameraGroupManager:
 
     def create_camera_group(self):
         self._camera_group_queue = self._camera_group.get_queue()
-        self._camera_group = CameraGroup()
-        self._camera_group_thread = threading.Thread(target=self._start_camera_group_loop)
+        self._camera_group = CameraGroup(camera_configs=self._camera_configs)
+        self._camera_group_thread = threading.Thread(target=self._camera_group.start)
         self._camera_group_thread.start()
-
-
-    def _start_camera_group_loop(self):
-        self._camera_group.start()
 
     def get_video_recorders(self) -> Dict[str, VideoRecorder]:
         return self._video_recorders
@@ -59,4 +51,4 @@ class CameraGroupManager:
 
     def update_configs(self, camera_configs):
         logger.debug(f"Updating camera configs to {camera_configs.keys()}")
-        self._camera_group.update_configs(camera_configs=camera_configs)        
+        self._camera_group.update_configs(camera_configs=camera_configs)

@@ -1,56 +1,19 @@
+import multiprocessing
 import pprint
-from enum import Enum
 from typing import Dict, Any
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field
 
+from skellycam.data_models.cameras.camera_config import CameraConfig
+from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.timestamps.timestamp import Timestamp
 
 
-class MessageTypes(Enum):
-    UNSPECIFIED = "unspecified"
-    REQUEST = "request"
-    RESPONSE = "response"
-    UPDATE = "update"
-    ERROR = "error"
-    WARNING = "warning"
-
-    SESSION_STARTED = "session_started"
-    CAMERA_DETECTED = "camera_detected"
-    CAMERA_CONNECTED = "camera_connected"
-
-    DETECT_AVAILABLE_CAMERAS = "detect_available_cameras"
-    UPDATE_CAMERA_CONFIGS = "update_camera_configs"
-    CONNECT_TO_CAMERAS = "connect_to_cameras"
-    CLOSE_CAMERAS = "close_cameras"
-    START_RECORDING = "start_recording"
-    STOP_RECORDING = "stop_recording"
-
-
 class BaseMessage(BaseModel):
-    message_type: MessageTypes = Field(default=MessageTypes.REQUEST, description="The type of request")
-    data: Dict[str, Any] = Field(default_factory=dict)
     timestamp: Timestamp = Field(default_factory=Timestamp.now, description="The time this request was created")
     metadata: Dict[str, Any] = Field(default_factory=dict,
                                      description="Any metadata to include with this request "
                                                  "(i.e. stuff that might be useful, but which shouldn't be in `data`")
-
-    @root_validator()
-    def check_data(cls, values):
-        """
-        Check that the `data` field contains the correct keys for the given event type
-        """
-        match values.get("message_type", MessageTypes.UNSPECIFIED):
-            case MessageTypes.CAMERA_DETECTED:
-                assert "camera_configs" in values["data"], "camera_configs must be in data for CAMERA_DETECTED"
-            case MessageTypes.CAMERA_CONNECTED:
-                assert "image_queue" in values["data"], "image_queue must be in data for CAMERA_CONNECTED"
-            case MessageTypes.UPDATE_CAMERA_CONFIGS:
-                assert "camera_configs" in values["data"], "camera_configs must be in data for UPDATE_CAMERA_CONFIGS"
-            case MessageTypes.START_RECORDING:
-                assert "save_path" in values["data"], "save_path must be in data for START_RECORDING"
-
-        return values
 
     def __str__(self):
         dict_str = self.dict()
@@ -59,31 +22,56 @@ class BaseMessage(BaseModel):
 
 
 class Request(BaseMessage):
-    @root_validator(pre=True)
-    def set_type(cls, values):
-        if "message_type" not in values:
-            values["message_type"] = MessageTypes.REQUEST
-        return values
+    """
+    A request to do something (e.g. detect available cameras, connect to cameras, etc.)
+    """
+    pass
 
 
-class Response(Request):
-    success: bool
-
-    @root_validator(pre=True)
-    def set_type(cls, values):
-        if "message_type" not in values:
-            values["message_type"] = MessageTypes.RESPONSE
-        return values
+class DetectAvailableCameras(Request):
+    """
+    A request to detect available cameras and return their info in a `CamerasDetected` response
+    """
+    pass
 
 
 class Update(Request):
+    """
+    A request to update something (e.g. a camera config, a GUI window, etc.)
+    """
     source: str = Field(default_factory=str,
                         description="The function/method where this update"
                                     " (should look like an import path,"
                                     " e.g. `backend.data.models.Update`)")
 
-    @root_validator(pre=True)
-    def set_type(cls, values):
-        if "message_type" not in values:
-            values["message_type"] = MessageTypes.UPDATE
-        return values
+
+class Response(Request):
+    """
+    A response to a request
+    """
+
+    success: bool
+
+
+class CamerasDetected(Response):
+    available_camera_devices: Dict[str, CameraDeviceInfo] = Field(default_factory=dict,
+                                                                  description="A dictionary with the available"
+                                                                              " cameras (as `CameraDeviceInfo`objects),"
+                                                                              " keyed by camera_id")
+
+class ConnectToCameras(Request):
+    """
+    A request to connect to cameras and return a multiprocessing Queue that will be used to send images
+    """
+    camera_configs: Dict[str, CameraConfig] = Field(default_factory=dict,
+                                                    description="A dictionary with the camera configs containing the "
+                                                                "information we'l give to OpenCV to connect to the "
+                                                                "camera, keyed by camera_id")
+
+class CameraConnected(Response):
+    """
+    A response to a `ConnectToCameras` request
+    """
+    image_queue: multiprocessing.Queue = Field(default_factory=multiprocessing.Queue,
+                                                  description="A multiprocessing Queue that will be used to send images "
+                                                                "to the frontend")

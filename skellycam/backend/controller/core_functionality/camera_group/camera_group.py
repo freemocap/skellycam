@@ -1,14 +1,11 @@
 import multiprocessing
 import time
-from typing import Dict, List
+from typing import Dict
 
-from PySide6.QtCore import Signal
-
+from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import \
     GroupedProcessStrategy
 from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import Strategy
-
-from skellycam import logger
 from skellycam.data_models.cameras.camera_config import CameraConfig
 from skellycam.data_models.frame_payload import FramePayload
 
@@ -16,8 +13,8 @@ from skellycam.data_models.frame_payload import FramePayload
 class CameraGroup:
     def __init__(
             self,
+            camera_configs: Dict[str, CameraConfig],
             strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
-            camera_configs: Dict[str, CameraConfig] = None,
     ):
         self._start_event = None
         self._exit_event = None
@@ -108,7 +105,6 @@ class CameraGroup:
             while self.is_capturing:
                 logger.debug("waiting for camera group to stop....")
                 time.sleep(0.1)
-
 
     def _set_exit_event(self):
         logger.info("Setting exit event")

@@ -1,6 +1,6 @@
 import traceback
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import CameraGroupManager
@@ -11,8 +11,8 @@ from skellycam.data_models.cameras.camera_config import CameraConfig
 from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.cameras.camera_id import CameraId
 from skellycam.data_models.frame_payload import FramePayload
-from skellycam.data_models.request_response_update import Request, Response, MessageTypes
-from skellycam.frontend.gui.widgets import cameras
+from skellycam.data_models.request_response_update import Request, Response, CamerasDetected, DetectAvailableCameras, \
+    ConnectToCameras
 
 CONTROLLER = None
 
@@ -67,26 +67,27 @@ class VideoRecorderManager:
         return str(Path(self._video_save_directory) / file_name)
 
 
-
 class Controller:
-    camera_group_manager: CameraGroupManager = CameraGroupManager()
+    camera_group_manager: Optional[CameraGroupManager]
     video_recorder_manager: VideoRecorderManager = None
     available_cameras: Dict[str, CameraDeviceInfo] = None
+
     def handle_request(self, request: Request) -> Response:
         logger.debug(f"Controller received request:\n {request}")
         response = None
         try:
-            match request.message_type:
-                case MessageTypes.SESSION_STARTED:
-                    logger.debug(f"Handling `session_started` event...")
+            match request.__class__:
+                case DetectAvailableCameras.__class__:
                     self.available_cameras = detect_available_cameras()
                     logger.debug(f"Detected available self.available_cameras: "
                                  f"{[camera.description for camera in self.available_cameras.values()]}")
-                    response = Response(success=True,
-                                        data={"cameras": cameras},
-                                        message_type=MessageTypes.CAMERA_DETECTED)
-                    
-                    self.camera_group_manager.update_configs(camera_configs=request.data["camera_configs"])
+                    response = CamerasDetected(success=True,
+                                               available_cameras = self.available_cameras)
+
+                case ConnectToCameras.__class__:
+                    self.camera_group_manager = CameraGroupManager(camera_configs=request.data["camera_configs"])
+
+                    self.camera_group_manager.start_camera_group()
 
 
         except Exception as e:
