@@ -22,7 +22,8 @@ class BaseMessage(BaseModel):
                                                  "(i.e. stuff that might be useful, but which shouldn't be in `data`")
 
     def __str__(self):
-        dict_str = self.dict()
+        dict_str = {"name": self.__class__.__name__}
+        dict_str.update(**self.dict())
         dict_str["timestamp"] = str(self.timestamp)  # use the string representation of the timestamp
         return pprint.pformat(dict_str, indent=4)
 
@@ -33,8 +34,8 @@ class BaseRequest(BaseMessage):
     """
 
     @classmethod
-    def create(cls, **kwargs):
-        metadata = kwargs.pop("metadata", {})
+    def create(cls, metadata: dict = None, **kwargs, ):
+        metadata = kwargs.pop("metadata", {}) if metadata is None else metadata
         return cls(data=kwargs,
                    metadata=metadata)
 
@@ -55,7 +56,8 @@ class BaseCommand(BaseModel):
         raise NotImplementedError
 
     def __str__(self):
-        dict_str = self.dict()
+        dict_str = {"name": self.__class__.__name__}
+        dict_str.update(**self.dict())
         return pprint.pformat(dict_str, indent=4)
 
 
@@ -69,14 +71,22 @@ class BaseInteraction(BaseModel):
 
     @classmethod
     def as_request(cls, **kwargs):
-        return cls(request=cls.request.create(**kwargs,
-                                              metadata=kwargs.pop("metadata", {})
-                                              )
-                   )
+        return cls(request=cls.request.create(**kwargs))
 
-    def execute_command(self, controller: "Controller"):
+    def execute_command(self, controller: "Controller") -> BaseResponse:
         self.command.from_request(self.request)
         self.response = self.command.execute(controller)
+        return self.response
+
+
+    def __str__(self):
+        dict_str = {"name": self.__class__.__name__,
+                    "request": str(self.request),
+                    "command": str(self.command) if self.command else f"Yet to be defined",
+                    "response": str(self.response) if self.response else f"Yet to be defined"
+                    }
+
+        return pprint.pformat(dict_str, indent=4)
 
 
 class DetectAvailableCamerasRequest(BaseRequest):
@@ -92,26 +102,25 @@ class CamerasDetectedResponse(BaseResponse):
 
 
 class DetectAvailableCamerasCommand(BaseCommand):
-    def execute(self, controller: "Controller") -> BaseResponse:
+    def execute(self, controller: "Controller") -> CamerasDetectedResponse:
         controller.available_cameras = detect_available_cameras()
         return CamerasDetectedResponse(success=True,
                                        available_cameras=controller.available_cameras)
 
 
-class DetectCameras(BaseInteraction):
+class DetectCamerasInteraction(BaseInteraction):
     request: DetectAvailableCamerasRequest
     command: Optional[DetectAvailableCamerasCommand]
     response: Optional[CamerasDetectedResponse]
 
     @classmethod
     def as_request(cls, **kwargs):
-        return cls(request=cls.request.create(**kwargs))
+        return cls(request=DetectAvailableCamerasRequest.create(**kwargs))
 
-    def execute_command(self, controller: "Controller"):
+    def execute_command(self, controller: "Controller") -> CamerasDetectedResponse:
         self.command = DetectAvailableCamerasCommand()
-        self.command.execute(controller)
-        self.response = CamerasDetectedResponse(success=True,
-                                                available_cameras=controller.available_cameras)
+        self.response = self.command.execute(controller)
+        return self.response
 
 
 class ConnectToCamerasCommand(BaseCommand):

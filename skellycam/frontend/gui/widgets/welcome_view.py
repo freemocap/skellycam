@@ -54,6 +54,6 @@ class WelcomeView(QWidget):
                            border-radius: 10px;
                            width: 50%;
                            """)
-        self.start_session_button.clicked.connect(self.hide)
+
 
 

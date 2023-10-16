@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from skellycam import logger
 from skellycam.backend.controller.commands.requests_commands import BaseResponse, CamerasDetectedResponse, \
-    DetectCameras
+    DetectCamerasInteraction
 
 if TYPE_CHECKING:
     from skellycam.frontend.gui.main_window.main_window import MainWindow
@@ -45,7 +45,7 @@ class ChildWidgetManager:
         self.camera_settings_view.camera_configs_changed.connect(lambda: NotImplementedError())
 
     def _connect_start_session_signal(self):
-        self.welcome_view.start_session_button.clicked.connect(lambda: self.camera_grid_view.show())
-        self.welcome_view.start_session_button.clicked.connect(lambda: self.record_buttons_view.show())
-        self.welcome_view.start_session_button.clicked.connect(
-            lambda: self.interact_with_backend.emit(DetectCameras.as_request()))
+        self.welcome_view.hide()
+        self.camera_grid_view.show()
+        self.record_buttons_view.show()
+        self.interact_with_backend.emit(DetectCamerasInteraction.as_request())

@@ -10,7 +10,7 @@ from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 CONTROLLER = None
 
 
-def get_or_create_controller():
+def get_or_create_controller() -> 'Controller':
     global CONTROLLER
     if CONTROLLER is None:
         CONTROLLER = Controller()
@@ -26,7 +26,6 @@ class Controller:
         logger.debug(f"Controller handling interaction: {interaction}")
         try:
             response = interaction.execute_command(controller=self)
-            logger.debug(f"Controller handled interaction: {interaction}")
             return response
         except Exception as e:
             logger.error(f"An error occurred: {e}")

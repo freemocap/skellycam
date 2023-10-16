@@ -27,7 +27,7 @@ def backend_loop(exit_event: multiprocessing.Event,
                     f"backend_main received message from frontend:\n {message}\n"
                     f"Queue size: {messages_from_frontend.qsize()}")
 
-                response = controller.handle_message(message=message)
+                response = controller.handle_interaction(interaction=message)
                 messages_from_backend.put(response)
     except Exception as e:
         logger.error(f"An error occurred: {e}")

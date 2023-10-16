@@ -40,7 +40,7 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
                 # logger.trace(f"Checking for messages from backend...")
                 if not messages_from_backend.empty():
                     response = messages_from_backend.get()
-                    logger.info(f"frontend_main received message from backend: \n {response.__class__}")
+                    logger.info(f"frontend_main received message from backend: \n {response.__class__.__name__}")
                     if not response.success:
                         logger.error(f"Backend sent error message: {response.data['error']}!")
                     main_window.handle_backend_response(response)
