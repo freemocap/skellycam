@@ -1,14 +1,12 @@
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QPixmap, Qt
-from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton
+from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton, QWidget
 
-from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_PNG, CAMERA_WITH_FLASH_EMOJI_STRING, \
     SPARKLES_EMOJI_STRING
 
 
-class WelcomeView(UpdateWidget):
-    session_started = Signal()
+class WelcomeView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self._initUI()
@@ -43,22 +41,19 @@ class WelcomeView(UpdateWidget):
         self._layout.addWidget(subtitle_text_label)
 
         self._create_start_session_button()
-        self._layout.addWidget(self._start_session_button)
+        self._layout.addWidget(self.start_session_button)
         self._layout.addStretch()
 
     def _create_start_session_button(self):
-        self._start_session_button = QPushButton(
+        self.start_session_button = QPushButton(
             f"Begin Session {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
-        self._start_session_button.hasFocus()
-        self._start_session_button.setStyleSheet("""
+        self.start_session_button.hasFocus()
+        self.start_session_button.setStyleSheet("""
                             border-width: 2px;
                            font-size: 42px;
                            border-radius: 10px;
                            width: 50%;
                            """)
-        self._start_session_button.clicked.connect(self._start_session_button_clicked)
+        self.start_session_button.clicked.connect(self.hide)
 
-    def _start_session_button_clicked(self):
-        self.hide()
-        self.session_started.emit()
 

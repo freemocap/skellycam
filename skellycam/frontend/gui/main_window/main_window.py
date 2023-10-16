@@ -6,10 +6,10 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import MainWindowClosed, BaseMessage
+from skellycam.backend.controller.commands.requests_commands import BaseInteraction, BaseResponse
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
+from skellycam.frontend.gui.main_window.helpers.child_widget_manager import ChildWidgetManager
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
-from skellycam.frontend.gui.main_window.helpers.view_updater import ViewUpdater
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
     CameraGridView,
 )
@@ -28,7 +28,7 @@ from skellycam.system.environment.default_paths import get_default_skellycam_bas
 
 
 class MainWindow(QMainWindow):
-    updated = Signal(MainWindowClosed)
+    interact_with_backend = Signal(BaseInteraction)
 
     def __init__(self,
                  exit_event: multiprocessing.Event,
@@ -40,15 +40,10 @@ class MainWindow(QMainWindow):
                                            reboot_event=reboot_event)
         self.shortcuts.connect_shortcuts(self)
         self._initUI()
-        self._view_updater = ViewUpdater(main_window=self)
+        self._child_widget_manager = ChildWidgetManager(main_window=self)
 
-    def emit_message(self, message: BaseMessage) -> None:
-        logger.trace(f"Emitting update signal with data: {message} from MainWindow")
-        self.updated.emit(message)
-        self.update_view(message)
-
-    def update_view(self, message: BaseMessage):
-        self._view_updater.handle_message(message)
+    def handle_backend_response(self, response: BaseResponse) -> None:
+        self._child_widget_manager.handle_backend_response(response=response)
 
     def _create_central_widget(self):
         self._central_widget = QWidget()
@@ -73,10 +68,7 @@ class MainWindow(QMainWindow):
         self._layout.addWidget(self.welcome_view)
         self.camera_grid_view = CameraGridView(parent=self)
         self.camera_grid_view.resize(1280, 720)
-        self.record_buttons_view = RecordButtonsView(
-            camera_grid=self.camera_grid_view,
-            parent=self,
-        )
+        self.record_buttons_view = RecordButtonsView(parent=self, )
         self._layout.addWidget(self.record_buttons_view)
         self._layout.addWidget(self.camera_grid_view)
         self.camera_grid_view.hide()

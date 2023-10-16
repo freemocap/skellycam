@@ -4,8 +4,8 @@ import time
 import traceback
 
 from skellycam import logger
+from skellycam.backend.controller.commands.requests_commands import ErrorResponse
 from skellycam.backend.controller.controller import get_or_create_controller
-from skellycam.data_models.request_response_update import Request, Response
 
 
 def backend_loop(exit_event: multiprocessing.Event,
@@ -24,7 +24,7 @@ def backend_loop(exit_event: multiprocessing.Event,
                 message = messages_from_frontend.get()
 
                 logger.info(
-                    f"backend_main received message from frontend:\n {message.__class__}\n"
+                    f"backend_main received message from frontend:\n {message}\n"
                     f"Queue size: {messages_from_frontend.qsize()}")
 
                 response = controller.handle_message(message=message)
@@ -32,6 +32,6 @@ def backend_loop(exit_event: multiprocessing.Event,
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         logger.exception(e)
-        messages_from_backend.put(Response(success=False,
+        messages_from_backend.put(ErrorResponse(success=False,
                                            data={"error": str(e),
                                                  "traceback": traceback.format_exc()}))

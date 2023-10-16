@@ -3,8 +3,8 @@ import multiprocessing.connection
 from PySide6.QtCore import QTimer
 
 from skellycam import logger
-from skellycam.data_models.request_response_update import MainWindowClosed, BaseMessage
-from skellycam.frontend.application import app_state_manager, create_or_recreate_qt_application
+from skellycam.backend.controller.commands.requests_commands import BaseRequest, BaseInteraction, BaseResponse
+from skellycam.frontend.application import create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import MainWindow
 
 
@@ -43,12 +43,12 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
                     logger.info(f"frontend_main received message from backend: \n {response.__class__}")
                     if not response.success:
                         logger.error(f"Backend sent error message: {response.data['error']}!")
-                    main_window.update_view(response)
+                    main_window.handle_backend_response(response)
 
-            def send_message_to_backend(message: BaseMessage):
-                logger.debug(f"Updating backend with:\n {message.__class__}")
-                app_state_manager.update(update=message)
-                messages_from_frontend.put(message)
+            def interact_with_backend(interaction: BaseInteraction) -> None:
+                logger.debug(f"Sending interaction to backend: {interaction}")
+                # app_state_manager.update(update=request)
+                messages_from_frontend.put(interaction)
 
             logger.info(f"Frontend lister loop starting...")
             update_timer = QTimer()
@@ -57,7 +57,7 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
 
             main_window = MainWindow(exit_event=exit_event,
                                      reboot_event=reboot_event, )
-            main_window.updated.connect(lambda update: send_message_to_backend(update))
+            main_window.interact_with_backend.connect(lambda interaction: interact_with_backend(interaction))
             main_window.show()
             exit_code = app.exec()
     except Exception as e:

@@ -27,7 +27,7 @@ class CameraDeviceInfo(BaseModel):
     available_video_formats: List[DeviceVideoFormat]
 
     @property
-    def available_resolutions(self) -> List[VideoResolution]:
+    def available_resolutions(self) -> List[str]:
         """
         Get a list of all available resolutions, sorted from lowest ([0]) to highest ([-1])
         """
@@ -35,7 +35,8 @@ class CameraDeviceInfo(BaseModel):
                            for video_format in self.available_video_formats]
         unique_resolutions = list(set(all_resolutions))
         unique_resolutions.sort()
-        return unique_resolutions
+        return [str(unique_resolution) for unique_resolution in unique_resolutions]
+
 
     @property
     def available_framerates(self) -> List[float]:

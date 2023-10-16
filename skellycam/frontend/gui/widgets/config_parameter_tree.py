@@ -1,24 +1,24 @@
 from copy import deepcopy
 from typing import Dict, Union
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam import logger
-from skellycam.data_models.cameras.camera_config import CameraConfig, RotationType
+from skellycam.data_models.cameras.camera_config import CameraConfig, RotationTypes
 from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.cameras.video_resolution import VideoResolution
-from skellycam.data_models.request_response_update import UpdateCameraConfigs
 from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
-from skellycam.frontend.gui.widgets._update_widget_template import UpdateWidget
 from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanelView
 
 
-class CameraSettingsView(UpdateWidget):
+class CameraSettingsView(QWidget):
+    camera_configs_changed = Signal(Dict[str, CameraConfig])
 
-    def __init__(self, parent: Union[QMainWindow, 'UpdateWidget', QWidget]):
+    def __init__(self, parent: Union[QMainWindow, QWidget]):
         super().__init__(parent=parent)
         self._parameter_groups = None
         self._camera_control_panel_view = CameraControlPanelView(parent=self)
@@ -46,18 +46,27 @@ class CameraSettingsView(UpdateWidget):
 
     @property
     def camera_configs(self) -> Dict[str, CameraConfig]:
-        return self._extract_camera_configs()
+        # return self._extract_camera_configs()
+        return self._camera_configs
 
-    def update_parameter_tree(self, available_cameras: Dict[str, CameraDeviceInfo]):
+    def update_avalable_cameras(self, available_cameras: Dict[str, CameraDeviceInfo]):
         logger.debug("Updating camera configs in parameter tree")
-        camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in available_cameras.keys()}
+        self._available_cameras = available_cameras
+        self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in available_cameras.keys()}
+        self.update_pameter_tree()
+
+    def update_pameter_tree(self):
         self._parameter_tree.clear()
         self._parameter_groups = {}
-        for camera_config in camera_configs.values():
-            self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config)
+        for camera_config, camera_info in zip(self.camera_configs.values(), self._available_cameras.values()):
+            if not camera_config.camera_id == camera_info.camera_id:
+                raise ValueError("Camera IDs do not match!")
+            self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config=camera_config,
+                                                                                         camera_info=camera_info)
             self._parameter_tree.addParameters(self._parameter_groups[camera_config.camera_id])
 
-    def _convert_to_parameter(self, camera_config: CameraConfig) -> Parameter:
+    def _convert_to_parameter(self, camera_config: CameraConfig,
+                              camera_info: CameraDeviceInfo) -> Parameter:
 
         camera_parameter_group = Parameter.create(
             name="Camera_" + str(camera_config.camera_id),
@@ -69,21 +78,18 @@ class CameraSettingsView(UpdateWidget):
                 dict(
                     name=self.tr("Rotate Image"),
                     type="list",
-                    limits=RotationType.as_strings(),
+                    limits=RotationTypes.as_strings(),
                     value=camera_config.rotation.value,
                 ),
                 dict(name=self.tr("Exposure"),
                      type="int",
+                     limits=(-13, -1),
                      value=camera_config.exposure),
                 dict(
-                    name=self.tr("Resolution Width"),
-                    type="int",
+                    name=self.tr("Resolution"),
+                    type="list",
+                    limits=camera_info.available_resolutions,
                     value=camera_config.resolution.width,
-                ),
-                dict(
-                    name=self.tr("Resolution Height"),
-                    type="int",
-                    value=camera_config.resolution.height,
                 ),
                 dict(
                     name="FourCC",
@@ -92,8 +98,9 @@ class CameraSettingsView(UpdateWidget):
                 ),
                 dict(
                     name=self.tr("Framerate"),
-                    type="int",
+                    type="list",
                     value=camera_config.framerate,
+                    limits=camera_info.available_framerates,
                     tip="Framerate in frames per second",
                 ),
                 self._create_copy_to_all_cameras_action_parameter(
@@ -105,10 +112,7 @@ class CameraSettingsView(UpdateWidget):
         camera_parameter_group.param(self.tr(USE_THIS_CAMERA_STRING)).sigValueChanged.connect(
             lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
         )
-        camera_parameter_group.sigValueChanged.connect(
-            lambda _: self.emit_message(UpdateCameraConfigs(data=self.camera_configs)
-                                        )
-        )
+        camera_parameter_group.sigValueChanged.connect(lambda: self.camera_configs_changed.emit(self.camera_configs))
         return camera_parameter_group
 
     def _create_copy_to_all_cameras_action_parameter(self, camera_id) -> Parameter:
@@ -143,12 +147,12 @@ class CameraSettingsView(UpdateWidget):
     def _apply_settings_to_all_cameras(self, camera_id_to_copy_from: str):
         logger.info(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
 
-        for camera_id in self.camera_configs.keys():
-            original_config = deepcopy(self.camera_configs[camera_id])
-            self.camera_configs[camera_id] = deepcopy(self.camera_configs[camera_id_to_copy_from])
-            self.camera_configs[camera_id].camera_id = camera_id
-            self.camera_configs[camera_id].use_this_camera = original_config.use_this_camera
-        self.update_parameter_tree()
+        for camera_id in self._camera_configs.keys():
+            original_config = deepcopy(self._camera_configs[camera_id])
+            self._camera_configs[camera_id] = deepcopy(self._camera_configs[camera_id_to_copy_from])
+            self._camera_configs[camera_id].camera_id = camera_id
+            self._camera_configs[camera_id].use_this_camera = original_config.use_this_camera
+        self.update_pameter_tree()
 
     def _enable_or_disable_camera_settings(self, camera_config_parameter_group):
         use_this_camera_checked = camera_config_parameter_group.param(
