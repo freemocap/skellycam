@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import pylsl
 from typing import Dict, List
 
 from skellycam import CameraConfig
@@ -16,11 +17,20 @@ _DEFAULT_CAM_PER_PROCESS = 2
 
 logger = logging.getLogger(__name__)
 
+# create info for LSL outlet
+info = pylsl.StreamInfo(
+    name="SkellyCam",
+    type="Video",
+    channel_count=1,
+    nominal_srate=pylsl.IRREGULAR_RATE,
+    channel_format=pylsl.cf_string,
+)
 
 class GroupedProcessStrategy:
     def __init__(self, camera_ids: List[str]):
         self._camera_ids = camera_ids
         self._processes, self._cam_id_process_map = self._create_processes(self._camera_ids)
+        self._lsl_outlet = pylsl.StreamOutlet(info)
 
     @property
     def processes(self):
@@ -47,6 +57,9 @@ class GroupedProcessStrategy:
             process.start_capture(
                 event_dictionary=event_dictionary, camera_config_dict=camera_config_dict
             )
+
+        # send trigger to LSL outlet
+        self._lsl_outlet.push_sample(["start_video_recording"])
 
     def check_if_camera_is_ready(self, cam_id: str) -> bool:
         for process in self._processes:
