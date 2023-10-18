@@ -104,14 +104,20 @@ class DetectAvailableCamerasCommand(BaseCommand):
 
 
 class ConnectToCamerasResponse(BaseResponse):
-    image_queue: Any # this will be a multiprocessing.Queue
+    pass
+
+
 class ConnectToCamerasCommand(BaseCommand):
     camera_configs: Dict[str, CameraConfig]
 
     def execute(self, controller) -> ConnectToCamerasResponse:
-        controller.camera_group_manager = CameraGroupManager(camera_configs=self.camera_configs)
-        controller.camera_group_manager.start()
-        return ConnectToCamerasResponse(image_queue=controller.camera_group_manager.frontend_image_queue)
+        try:
+            controller.camera_group_manager = CameraGroupManager(camera_configs=self.camera_configs)
+            controller.camera_group_manager.start()
+            return ConnectToCamerasResponse(success=True)
+        except Exception as e:
+            return ConnectToCamerasResponse(success=False,
+                                            error=str(e))
 
 
 class ConnectToCamerasRequest(BaseRequest):

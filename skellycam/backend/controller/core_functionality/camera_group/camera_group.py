@@ -61,7 +61,7 @@ class CameraGroup:
         self._wait_for_cameras_to_start()
 
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
-        logger.info(f"Waiting for cameras {self._camera_configs.keys()} to start")
+        logger.trace(f"Waiting for cameras {self._camera_configs.keys()} to start")
         all_cameras_started = False
         while not all_cameras_started:
             time.sleep(0.5)
@@ -72,15 +72,15 @@ class CameraGroup:
                     camera_id
                 )
 
-            logger.debug(f"Camera started? {camera_started_dictionary}")
+            logger.trace(f"Camera started? {camera_started_dictionary}")
 
-            logger.debug(f"Active processes {multiprocessing.active_children()}")
+            logger.trace(f"Active processes {multiprocessing.active_children()}")
             if restart_process_if_it_dies:
                 self._restart_dead_processes()
 
             all_cameras_started = all(list(camera_started_dictionary.values()))
 
-        logger.info(f"All cameras {self._camera_configs.keys()} started!")
+        logger.success(f"All cameras {self._camera_configs.keys()} started!")
         self._start_event.set()  # start frame capture on all cameras
 
     def check_if_camera_is_ready(self, cam_id: str):

@@ -13,6 +13,6 @@ import logging
 
 from skellycam.system.environment.configure_logging import configure_logging, LogLevel
 
-configure_logging(LogLevel.TRACE)
+configure_logging(LogLevel.DEBUG)
 
 logger = logging.getLogger(__name__)
