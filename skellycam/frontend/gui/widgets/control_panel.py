@@ -40,6 +40,16 @@ class RecordButtonsView(QWidget):
         button_layout.addWidget(self.stop_recording_push_button)
         return button_layout
 
-    def show_buttons(self):
+    def show(self):
+        super().show()
+        self.start_recording_push_button.show()
+        self.stop_recording_push_button.show()
         self.start_recording_push_button.setEnabled(True)
+        self.stop_recording_push_button.setEnabled(False)
+
+    def hide(self):
+        super().hide()
+        self.start_recording_push_button.hide()
+        self.stop_recording_push_button.hide()
+        self.start_recording_push_button.setEnabled(False)
         self.stop_recording_push_button.setEnabled(False)
