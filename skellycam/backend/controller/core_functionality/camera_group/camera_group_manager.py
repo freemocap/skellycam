@@ -1,11 +1,12 @@
-import multiprocessing
 import threading
-from typing import Dict, Optional
+import time
+from typing import Dict, Optional, List
 
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.data_models.cameras.camera_config import CameraConfig
+from skellycam.data_models.frame_payload import FramePayload
 
 
 class CameraGroupManager:
@@ -22,9 +23,10 @@ class CameraGroupManager:
                  camera_configs: Dict[str, CameraConfig]):
         self._camera_group: Optional[CameraGroup] = None
         self._camera_group_thread: Optional[threading.Thread] = None
-        
+
         self._camera_configs = camera_configs
-        self.frontend_image_queue = multiprocessing.Queue()
+        self.incoming_frames_by_camera: Dict[str, List[FramePayload]] = {camera_id: [] for camera_id in
+                                                                         camera_configs.keys()}
         self._create_camera_group()
 
     def _create_video_recorders(self, cameras: Dict[str, CameraConfig], video_save_directory: str = None):
@@ -40,7 +42,18 @@ class CameraGroupManager:
 
     def _create_camera_group(self):
         self._camera_group = CameraGroup(camera_configs=self._camera_configs)
-        self._camera_group_thread = threading.Thread(target=self._camera_group.start)
+        self._camera_group_thread = threading.Thread(target=self._run_camera_group_loop, )
+
+    def _run_camera_group_loop(self):
+        self._camera_group.start()
+        while not self._camera_group.exit_event.is_set():
+            time.sleep(0.001)
+            new_frames = self._camera_group.new_frames()
+            if new_frames:
+                for frame in new_frames:
+                    self.incoming_frames_by_camera[frame.camera_id].append(frame)
+                print(
+                    f"Frame count by camera: {[f'Camera {camera_id}, Frame count: {len(frames)}' for camera_id, frames in self.incoming_frames_by_camera.items()]}")
 
     def start(self):
         logger.debug(f"Starting camera group thread...")

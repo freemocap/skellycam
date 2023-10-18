@@ -1,5 +1,5 @@
 import multiprocessing
-from typing import Dict
+from typing import Dict, List
 
 from skellycam.backend.controller.core_functionality.camera_group.strategies.cam_group_queue_process import \
     CamGroupQueueProcess
@@ -66,6 +66,12 @@ class GroupedProcessStrategy:
             cam_id: process.get_current_frame_by_camera_id(cam_id)
             for cam_id, process in self._cam_id_process_map.items()
         }
+
+    def get_new_frames(self) -> List[FramePayload]:
+        new_frames = []
+        for camera_id, process in self._cam_id_process_map.items():
+            new_frames.extend(process.get_new_frames_by_camera_id(camera_id))
+        return new_frames
 
     def _create_processes(
             self,

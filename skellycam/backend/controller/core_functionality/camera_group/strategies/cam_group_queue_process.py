@@ -1,13 +1,11 @@
-import math
 import multiprocessing
 from multiprocessing import Process
-from time import perf_counter_ns, sleep
+from time import sleep
 from typing import Dict, List, Union
 
 from setproctitle import setproctitle
 
 from skellycam import logger
-from skellycam.backend.controller.core_functionality.camera_group.strategies.queue_communicator import QueueCommunicator
 from skellycam.backend.controller.core_functionality.opencv.camera.camera import Camera
 from skellycam.data_models.cameras.camera_config import CameraConfig
 from skellycam.data_models.frame_payload import FramePayload
@@ -25,10 +23,10 @@ class CamGroupQueueProcess:
         self._camera_configs = camera_configs
         self._process: Process = None
         self._payload = None
-        queue_name_list = list(self._camera_configs.keys())
-        queue_name_list.append(CAMERA_CONFIG_DICT_QUEUE_NAME)
-        communicator = QueueCommunicator(queue_name_list)
-        self._queues = communicator.queues
+
+        self._queues = {camera_id: multiprocessing.Queue() for camera_id in self._camera_configs.keys()}
+        self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME] = multiprocessing.Queue()
+
 
     @property
     def camera_ids(self) -> List[str]:
@@ -130,7 +128,6 @@ class CamGroupQueueProcess:
                 sleep(0.001)
                 for camera in cameras_dictionary.values():
                     if camera.new_frame_ready:
-                        new_frame_added = True
                         try:
                             queues[camera.camera_id].put(camera.latest_frame)
 
@@ -139,7 +136,6 @@ class CamGroupQueueProcess:
                                 f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
                             )
                             break
-
 
         # close cameras on exit
         for camera in cameras_dictionary.values():
@@ -164,9 +160,25 @@ class CamGroupQueueProcess:
             logger.exception(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
             return
 
+    def get_new_frames_by_camera_id(self, camera_id) -> List[FramePayload]:
+        new_frames = []
+        try:
+            if camera_id not in self._queues:
+                raise ValueError(f"Camera {camera_id} not in queues: {self._queues.keys()}")
+
+            queue = self._get_queue_by_camera_id(camera_id)
+            while not queue.empty():
+                new_frames.append(queue.get(block=False))
+        except Exception as e:
+            logger.error(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
+            logger.exception(e)
+            raise e
+        return new_frames
+
+
+
     def get_queue_size_by_camera_id(self, camera_id: str) -> int:
         return self._queues[camera_id].qsize()
 
     def update_camera_configs(self, camera_config_dictionary):
         self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME].put(camera_config_dictionary)
-

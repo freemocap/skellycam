@@ -1,6 +1,6 @@
 import multiprocessing
 import time
-from typing import Dict
+from typing import Dict, List
 
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import \
@@ -90,6 +90,9 @@ class CameraGroup:
 
     def latest_frames(self) -> Dict[str, FramePayload]:
         return self._strategy_class.get_latest_frames()
+
+    def new_frames(self) -> List[FramePayload]:
+        return self._strategy_class.get_new_frames()
 
     def _resolve_strategy(self):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
