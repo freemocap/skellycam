@@ -53,14 +53,13 @@ class CameraSettingsView(QWidget):
         logger.debug("Updating camera configs in parameter tree")
         self._available_cameras = available_cameras
         self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in available_cameras.keys()}
-        self.update_pameter_tree()
+        self.update_parameter_tree()
 
-    def update_pameter_tree(self):
+    def update_parameter_tree(self):
+        logger.debug("Updating parameter tree")
         self._parameter_tree.clear()
         self._parameter_groups = {}
         for camera_config, camera_info in zip(self.camera_configs.values(), self._available_cameras.values()):
-            if not camera_config.camera_id == camera_info.camera_id:
-                raise ValueError("Camera IDs do not match!")
             self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config=camera_config,
                                                                                          camera_info=camera_info)
             self._parameter_tree.addParameters(self._parameter_groups[camera_config.camera_id])
@@ -89,7 +88,7 @@ class CameraSettingsView(QWidget):
                     name=self.tr("Resolution"),
                     type="list",
                     limits=camera_info.available_resolutions,
-                    value=camera_config.resolution.width,
+                    value=str(camera_config.resolution),
                 ),
                 dict(
                     name="FourCC",
@@ -152,7 +151,7 @@ class CameraSettingsView(QWidget):
             self._camera_configs[camera_id] = deepcopy(self._camera_configs[camera_id_to_copy_from])
             self._camera_configs[camera_id].camera_id = camera_id
             self._camera_configs[camera_id].use_this_camera = original_config.use_this_camera
-        self.update_pameter_tree()
+        self.update_parameter_tree()
 
     def _enable_or_disable_camera_settings(self, camera_config_parameter_group):
         use_this_camera_checked = camera_config_parameter_group.param(

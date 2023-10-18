@@ -5,6 +5,10 @@ class VideoResolution(BaseModel):
     width: int
     height: int
 
+
+    def __hash__(self):
+        return hash((self.width, self.height))
+
     def __lt__(self, other: "VideoResolution") -> bool:
         """
         Define this so we can sort a list of `VideoResolution`s
