@@ -259,7 +259,7 @@ class CamGroupThreadWorker(QThread):
 
     def _update_camera_settings(self, camera_config_dictionary: dict):
         try:
-            self._camera_group.update_camera_configs(camera_config_dictionary)
+            self._camera_group.update_configs(camera_config_dictionary)
 
         except Exception as e:
             logger.error(f"Problem updating camera settings: {e}")

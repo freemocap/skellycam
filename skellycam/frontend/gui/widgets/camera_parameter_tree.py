@@ -48,7 +48,7 @@ class CameraParameterTree(QWidget):
         # return self._extract_camera_configs()
         return self._camera_configs
 
-    def update_avalable_cameras(self, available_cameras: Dict[str, CameraDeviceInfo]):
+    def update_available_cameras(self, available_cameras: Dict[str, CameraDeviceInfo]):
         logger.debug("Updating camera configs in parameter tree")
         self._available_cameras = available_cameras
         self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in available_cameras.keys()}

@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 
 from skellycam import logger
-from skellycam.backend.controller.commands.requests_commands import BaseInteraction, BaseResponse, \
+from skellycam.backend.controller.commands.interactions import BaseInteraction, BaseResponse, \
     ErrorResponse
 from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.backend.controller.managers.video_recorder_manager import VideoRecorderManager

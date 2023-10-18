@@ -3,8 +3,8 @@ import pprint
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
-from skellycam.data_models.cameras.camera_config import CameraConfig
 
+from skellycam.data_models.cameras.camera_config import CameraConfig
 
 
 class SingleCameraView(QWidget):
@@ -23,26 +23,26 @@ class SingleCameraView(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
         self._camera_name_string = f"Camera {self._camera_id}"
-        self._title_label_widget = QLabel(self._camera_name_string, parent=self)
-        self._layout.addWidget(self._title_label_widget)
-        self._title_label_widget.setStyleSheet("""
+        self._title_label = QLabel(self._camera_name_string, parent=self)
+        self._layout.addWidget(self._title_label)
+        self._title_label.setStyleSheet("""
                            font-size: 12px;
                            font-weight: bold;
                            font-family: "Dosis", sans-serif;
                            color: #000000;
                            """)
-        self._title_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._image_label_widget = QLabel(f"\U0001F4F8 Connecting... \n\n {self._annotation_text}", parent=self)
-        self._image_label_widget.setStyleSheet("border: 1px solid;")
-        self._image_label_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._image_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._layout.addWidget(self._image_label_widget)
+        self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._image_view = QLabel(f"\U0001F4F8 Connecting... \n\n {self._annotation_text}", parent=self)
+        self._image_view.setStyleSheet("border: 1px solid;")
+        self._image_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._image_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._layout.addWidget(self._image_view)
 
     def handle_image_update(self, q_image: QImage, frame_diagnostics_dictionary: dict):
         self._pixmap.convertFromImage(q_image)
 
-        image_label_widget_width = self._image_label_widget.width()
-        image_label_widget_height = self._image_label_widget.height()
+        image_label_widget_width = self._image_view.width()
+        image_label_widget_height = self._image_view.height()
 
         scaled_width = int(image_label_widget_width * .95)
         scaled_height = int(image_label_widget_height * .95)
@@ -53,35 +53,35 @@ class SingleCameraView(QWidget):
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation, )
 
-        self._image_label_widget.setPixmap(self._pixmap)
+        self._image_view.setPixmap(self._pixmap)
 
         q_size = frame_diagnostics_dictionary['queue_size']
         frames_recorded = frame_diagnostics_dictionary['frames_recorded']
         if frames_recorded is None:
             frames_recorded = 0
-        self._title_label_widget.setText(
+        self._title_label.setText(
             self._camera_name_string + f"\nQueue Size:{q_size} | "
                                        f"Frames Recorded#{str(frames_recorded)}".ljust(38))
 
     def show(self):
         super().show()
-        self._image_label_widget.show()
-        self._title_label_widget.show()
+        self._image_view.show()
+        self._title_label.show()
 
     def hide(self):
         super().hide()
-        self._image_label_widget.hide()
-        self._title_label_widget.hide()
+        self._image_view.hide()
+        self._title_label.hide()
 
     def close(self):
-        self._image_label_widget.close()
-        self._title_label_widget.close()
+        self._image_view.close()
+        self._title_label.close()
         super().close()
 
     def paintEvent(self, event):
         super().paintEvent(event)
 
-        self._painter.begin(self._image_label_widget.pixmap())
+        self._painter.begin(self._image_view.pixmap())
         self._painter.setPen(QColor(255, 0, 0))  # Red color
         self._painter.drawText(event.rect(), Qt.AlignCenter, self._annotation_text)
         self._painter.end()

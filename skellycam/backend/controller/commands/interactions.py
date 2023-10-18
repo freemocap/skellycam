@@ -1,6 +1,5 @@
-import multiprocessing
 import pprint
-from typing import Dict, Any, Optional, TYPE_CHECKING
+from typing import Dict, Any, Optional, TYPE_CHECKING, Union
 
 from pydantic import BaseModel, Field
 
@@ -12,7 +11,7 @@ from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.timestamps.timestamp import Timestamp
 
 if TYPE_CHECKING:
-    from skellycam.backend.controller.controller import Controller
+    from skellycam.backend.controller.backendcontroller import BackendController
 
 
 class BaseMessage(BaseModel):
@@ -24,6 +23,7 @@ class BaseMessage(BaseModel):
 
     def __str__(self):
         return self.__class__.__name__
+
 
 
 class BaseRequest(BaseMessage):
@@ -42,13 +42,25 @@ class BaseResponse(BaseMessage):
     """
     success: bool = Field(default=False, description="Whether or not this request was successful")
 
+    def __str__(self):
+        return f"{self.__class__.__name__}: success = {self.success}"
+
+
+class ErrorResponse(BaseResponse):
+    error: str
+
+    @classmethod
+    def from_exception(cls, exception: Exception):
+        return cls(success=False,
+                   error=str(exception))
+
 
 class BaseCommand(BaseModel):
     @classmethod
     def from_request(cls, request: BaseRequest):
         raise NotImplementedError
 
-    def execute(self, controller) -> BaseResponse:
+    def execute(self, controller: 'BackendController', **kwargs) -> BaseResponse:
         raise NotImplementedError
 
     def __str__(self):
@@ -69,7 +81,7 @@ class BaseInteraction(BaseModel):
     def as_request(cls, **kwargs):
         return cls(request=cls.request.create(**kwargs))
 
-    def execute_command(self, controller: "Controller") -> BaseResponse:
+    def execute_command(self, controller: "BackendController") -> BaseResponse:
         self.command.from_request(self.request)
         self.response = self.command.execute(controller)
         return self.response
@@ -97,7 +109,7 @@ class CamerasDetectedResponse(BaseResponse):
 
 
 class DetectAvailableCamerasCommand(BaseCommand):
-    def execute(self, controller: "Controller") -> CamerasDetectedResponse:
+    def execute(self, controller: "BackendController", **kwargs) -> CamerasDetectedResponse:
         controller.available_cameras = detect_available_cameras()
         return CamerasDetectedResponse(success=True,
                                        available_cameras=controller.available_cameras)
@@ -110,7 +122,7 @@ class ConnectToCamerasResponse(BaseResponse):
 class ConnectToCamerasCommand(BaseCommand):
     camera_configs: Dict[str, CameraConfig]
 
-    def execute(self, controller) -> ConnectToCamerasResponse:
+    def execute(self, controller, **kwargs) -> ConnectToCamerasResponse:
         try:
             controller.camera_group_manager = CameraGroupManager(camera_configs=self.camera_configs)
             controller.camera_group_manager.start()
@@ -128,8 +140,6 @@ class ConnectToCamerasRequest(BaseRequest):
         return cls(camera_configs=camera_configs)
 
 
-
-
 class ConnectToCamerasInteraction(BaseInteraction):
     request: ConnectToCamerasRequest
     command: Optional[ConnectToCamerasCommand]
@@ -139,7 +149,7 @@ class ConnectToCamerasInteraction(BaseInteraction):
     def as_request(cls, **kwargs):
         return cls(request=ConnectToCamerasRequest.create(**kwargs))
 
-    def execute_command(self, controller: "Controller") -> BaseResponse:
+    def execute_command(self, controller: "BackendController") -> BaseResponse:
         self.command = ConnectToCamerasCommand(camera_configs=self.request.camera_configs)
         self.response = self.command.execute(controller)
         return self.response
@@ -154,16 +164,82 @@ class DetectCamerasInteraction(BaseInteraction):
     def as_request(cls, **kwargs):
         return cls(request=DetectAvailableCamerasRequest.create(**kwargs))
 
-    def execute_command(self, controller: "Controller") -> CamerasDetectedResponse:
+    def execute_command(self, controller: "BackendController") -> CamerasDetectedResponse:
         self.command = DetectAvailableCamerasCommand()
         self.response = self.command.execute(controller)
         return self.response
 
 
-class ErrorResponse(BaseResponse):
-    error: str
+class CloseCamerasRequest(BaseRequest):
+    pass
+
+
+class CloseCamerasResponse(BaseResponse):
+    pass
+
+
+class CloseCamerasCommand(BaseCommand):
+    def execute(self, controller, **kwargs) -> CloseCamerasResponse:
+        controller.camera_group_manager.stop_camera_group()
+        return CloseCamerasResponse(success=True)
+
+
+class CloseCamerasInteraction(BaseInteraction):
+    request: CloseCamerasRequest
+    command: Optional[CloseCamerasCommand]
+    response: Optional[CloseCamerasResponse]
 
     @classmethod
-    def from_exception(cls, exception: Exception):
-        return cls(success=False,
-                   error=str(exception))
+    def as_request(cls, **kwargs):
+        return cls(request=CloseCamerasRequest.create(**kwargs))
+
+    def execute_command(self, controller: "BackendController") -> CloseCamerasResponse:
+        self.command = CloseCamerasCommand()
+        self.response = self.command.execute(controller)
+        return self.response
+
+
+class UpdateCameraConfigsRequest(BaseRequest):
+    camera_configs: Dict[str, CameraConfig]
+
+    @classmethod
+    def create(cls, camera_configs: Dict[str, CameraConfig]):
+        return cls(camera_configs=camera_configs)
+
+
+class UpdateCameraConfigsResponse(BaseResponse):
+    pass
+
+
+class UpdateCameraConfigsException(Exception):
+    pass
+
+
+
+class UpdateCameraConfigsCommand(BaseCommand):
+    def execute(self, controller,**kwargs) -> UpdateCameraConfigsResponse:
+        try:
+            camera_configs = kwargs["camera_configs"]
+        except KeyError:
+            raise KeyError("Missing `camera_configs` argument")
+
+        try:
+            controller.camera_group_manager.update_configs(camera_configs=camera_configs)
+            return UpdateCameraConfigsResponse(success=True)
+        except Exception as e:
+            raise UpdateCameraConfigsException(e)
+
+
+class UpdateCameraConfigsInteraction(BaseInteraction):
+    request: UpdateCameraConfigsRequest
+    command: Optional[UpdateCameraConfigsCommand]
+    response: Optional[UpdateCameraConfigsResponse]
+
+    @classmethod
+    def as_request(cls, **kwargs):
+        return cls(request=UpdateCameraConfigsRequest.create(**kwargs))
+
+    def execute_command(self, controller: "BackendController") -> UpdateCameraConfigsResponse:
+        self.command = UpdateCameraConfigsCommand()
+        self.response = self.command.execute(controller, camera_configs=self.request.camera_configs)
+        return self.response

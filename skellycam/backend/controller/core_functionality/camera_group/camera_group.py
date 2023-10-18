@@ -38,7 +38,7 @@ class CameraGroup:
     def queue_size(self) -> Dict[str, int]:
         return self._strategy_class.queue_size
 
-    def update_camera_configs(self, camera_configs: Dict[str, CameraConfig]):
+    def update_configs(self, camera_configs: Dict[str, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_configs}")
         self._camera_configs = camera_configs
         self._strategy_class.update_camera_configs(camera_configs)
@@ -55,7 +55,6 @@ class CameraGroup:
                                   "exit": self._exit_event}
         self._strategy_class.start_capture(
             event_dictionary=self._event_dictionary,
-            camera_config_dict=self._camera_configs,
         )
 
         self._wait_for_cameras_to_start()

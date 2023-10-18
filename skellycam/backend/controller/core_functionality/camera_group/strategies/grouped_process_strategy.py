@@ -40,7 +40,6 @@ class GroupedProcessStrategy:
     def start_capture(
             self,
             event_dictionary: Dict[str, multiprocessing.Event],
-            camera_config_dict: Dict[str, CameraConfig],
     ):
 
         for process in self._processes:

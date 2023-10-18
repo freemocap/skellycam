@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Any, Dict, Optional, List
 
 import cv2
 from pydantic import BaseModel, Field, PositiveFloat, NegativeInt
@@ -48,7 +47,15 @@ class CameraConfig(BaseModel):
                                               "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/")
     rotation: RotationTypes = Field(default=RotationTypes.NO_ROTATION,
                                     description="The rotation to apply to the images "
-                                               "of this camera (after they are captured)")
+                                                "of this camera (after they are captured)")
     fourcc: str = Field(default="MP4V",
                         description="The fourcc code to use for the video codec - `MP4V` is the default,  "
                                     "but it would be interesting to try `MJPG1, `H264`, etc")
+
+    @property
+    def orientation(self) -> str:
+        return self.resolution.orientation
+
+    @property
+    def aspect_ratio(self) -> float:
+        return self.resolution.aspect_ratio

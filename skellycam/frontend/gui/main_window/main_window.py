@@ -6,15 +6,15 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget, QLabel
 
 from skellycam import logger
-from skellycam.backend.controller.commands.requests_commands import BaseInteraction, BaseResponse
+from skellycam.backend.controller.commands.interactions import BaseInteraction, BaseResponse
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.frontend.gui.main_window.helpers.child_widget_manager import ChildWidgetManager
+from skellycam.frontend.gui.main_window.helpers.frontend_manager import FrontendManager
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
     CameraGrid,
 )
-from skellycam.frontend.gui.widgets.config_parameter_tree import (
+from skellycam.frontend.gui.widgets.camera_parameter_tree import (
     CameraParameterTree,
 )
 from skellycam.frontend.gui.widgets.record_buttons_view import (
@@ -41,10 +41,7 @@ class MainWindow(QMainWindow):
                                            reboot_event=reboot_event)
         self.shortcuts.connect_shortcuts(self)
         self._initUI()
-        self._child_widget_manager = ChildWidgetManager(main_window=self)
 
-    def handle_backend_response(self, response: BaseResponse) -> None:
-        self._child_widget_manager.handle_backend_response(response=response)
 
     def _initUI(self):
         self.setGeometry(100, 100, 1600, 900)

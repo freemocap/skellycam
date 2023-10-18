@@ -5,6 +5,13 @@ class VideoResolution(BaseModel):
     width: int
     height: int
 
+    @property
+    def orientation(self) -> str:
+        return "landscape" if self.width > self.height else "portrait"
+
+    @property
+    def aspect_ratio(self) -> float:
+        return self.width / self.height
 
     def __hash__(self):
         return hash((self.width, self.height))
