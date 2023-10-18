@@ -3,6 +3,7 @@ from multiprocessing import Process
 from time import sleep
 from typing import Dict, List, Union
 
+import _queue
 from setproctitle import setproctitle
 
 from skellycam import logger
@@ -26,7 +27,6 @@ class CamGroupQueueProcess:
 
         self._queues = {camera_id: multiprocessing.Queue() for camera_id in self._camera_configs.keys()}
         self._queues[CAMERA_CONFIG_DICT_QUEUE_NAME] = multiprocessing.Queue()
-
 
     @property
     def camera_ids(self) -> List[str]:
@@ -167,15 +167,16 @@ class CamGroupQueueProcess:
                 raise ValueError(f"Camera {camera_id} not in queues: {self._queues.keys()}")
 
             queue = self._get_queue_by_camera_id(camera_id)
-            while not queue.empty():
-                new_frames.append(queue.get(block=False))
+            try:
+                while True:
+                    new_frames.append(queue.get(block=False))
+            except _queue.Empty:
+                pass
         except Exception as e:
             logger.error(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
             logger.exception(e)
             raise e
         return new_frames
-
-
 
     def get_queue_size_by_camera_id(self, camera_id: str) -> int:
         return self._queues[camera_id].qsize()
