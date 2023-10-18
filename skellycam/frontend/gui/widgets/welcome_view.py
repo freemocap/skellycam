@@ -6,7 +6,7 @@ from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_P
     SPARKLES_EMOJI_STRING
 
 
-class WelcomeView(QWidget):
+class Welcome(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self._initUI()

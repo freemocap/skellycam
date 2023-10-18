@@ -12,17 +12,17 @@ from skellycam.frontend.gui.main_window.helpers.child_widget_manager import Chil
 from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
-    CameraGridView,
+    CameraGrid,
 )
 from skellycam.frontend.gui.widgets.config_parameter_tree import (
     CameraParameterTree,
 )
 from skellycam.frontend.gui.widgets.record_buttons_view import (
-    RecordButtonsView,
+    RecordButtons,
 )
 from skellycam.frontend.gui.widgets.directory_view import DirectoryView
 from skellycam.frontend.gui.widgets.welcome_view import (
-    WelcomeView,
+    Welcome,
 )
 from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path, \
     PATH_TO_SKELLY_CAM_LOGO_PNG
@@ -67,15 +67,15 @@ class MainWindow(QMainWindow):
 
 
     def _create_main_view(self):
-        self.welcome_view = WelcomeView(parent=self)
-        self._layout.addWidget(self.welcome_view)
-        self.camera_grid_view = CameraGridView(parent=self)
-        self.camera_grid_view.resize(1280, 720)
-        self.record_buttons_view = RecordButtonsView(parent=self, )
-        self._layout.addWidget(self.record_buttons_view)
-        self._layout.addWidget(self.camera_grid_view)
-        self.camera_grid_view.hide()
-        self.record_buttons_view.hide()
+        self.welcome = Welcome(parent=self)
+        self._layout.addWidget(self.welcome)
+        self.camera_grid = CameraGrid(parent=self)
+        self.camera_grid.resize(1280, 720)
+        self.record_buttons = RecordButtons(parent=self, )
+        self._layout.addWidget(self.record_buttons)
+        self._layout.addWidget(self.camera_grid)
+        self.camera_grid.hide()
+        self.record_buttons.hide()
 
     def _create_dock_tabs(self):
         self._create_camera_settings_dock()

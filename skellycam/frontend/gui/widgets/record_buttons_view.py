@@ -2,11 +2,11 @@ from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget
 
 from skellycam.frontend.gui.utilities.qt_strings import STOP_RECORDING_BUTTON_TEXT, START_RECORDING_BUTTON_TEXT
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
-    CameraGridView,
+    CameraGrid,
 )
 
 
-class RecordButtonsView(QWidget):
+class RecordButtons(QWidget):
     def __init__(
             self,
             parent=None

@@ -1,3 +1,4 @@
+import multiprocessing
 import pprint
 from typing import Dict, Any, Optional, TYPE_CHECKING
 
@@ -31,10 +32,8 @@ class BaseRequest(BaseMessage):
     """
 
     @classmethod
-    def create(cls, metadata: dict = None, **kwargs, ):
-        metadata = kwargs.pop("metadata", {}) if metadata is None else metadata
-        return cls(data=kwargs,
-                   metadata=metadata)
+    def create(cls, **kwargs):
+        return cls(**kwargs)
 
 
 class BaseResponse(BaseMessage):
@@ -104,6 +103,42 @@ class DetectAvailableCamerasCommand(BaseCommand):
                                        available_cameras=controller.available_cameras)
 
 
+class ConnectToCamerasResponse(BaseResponse):
+    image_queue: Any # this will be a multiprocessing.Queue
+class ConnectToCamerasCommand(BaseCommand):
+    camera_configs: Dict[str, CameraConfig]
+
+    def execute(self, controller) -> ConnectToCamerasResponse:
+        controller.camera_group_manager = CameraGroupManager(camera_configs=self.camera_configs)
+        controller.camera_group_manager.start()
+        return ConnectToCamerasResponse(image_queue=controller.camera_group_manager.frontend_image_queue)
+
+
+class ConnectToCamerasRequest(BaseRequest):
+    camera_configs: Dict[str, CameraConfig]
+
+    @classmethod
+    def create(cls, camera_configs: Dict[str, CameraConfig]):
+        return cls(camera_configs=camera_configs)
+
+
+
+
+class ConnectToCamerasInteraction(BaseInteraction):
+    request: ConnectToCamerasRequest
+    command: Optional[ConnectToCamerasCommand]
+    response: Optional[ConnectToCamerasResponse]
+
+    @classmethod
+    def as_request(cls, **kwargs):
+        return cls(request=ConnectToCamerasRequest.create(**kwargs))
+
+    def execute_command(self, controller: "Controller") -> BaseResponse:
+        self.command = ConnectToCamerasCommand(camera_configs=self.request.camera_configs)
+        self.response = self.command.execute(controller)
+        return self.response
+
+
 class DetectCamerasInteraction(BaseInteraction):
     request: DetectAvailableCamerasRequest
     command: Optional[DetectAvailableCamerasCommand]
@@ -117,19 +152,6 @@ class DetectCamerasInteraction(BaseInteraction):
         self.command = DetectAvailableCamerasCommand()
         self.response = self.command.execute(controller)
         return self.response
-
-
-class ConnectToCamerasCommand(BaseCommand):
-    camera_configs: Dict[str, CameraConfig]
-
-    def execute(self, controller):
-        controller.camera_group_manager = CameraGroupManager(camera_configs=self.camera_configs)
-        controller.camera_group_manager.start()
-
-
-class CameraConnectedResponse(BaseModel):
-    success: bool
-    camera_group_manager: Any
 
 
 class ErrorResponse(BaseResponse):

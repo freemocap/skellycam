@@ -20,7 +20,7 @@ MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
 MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
-class CameraGridView(QWidget):
+class CameraGrid(QWidget):
     cameras_connected_signal = Signal()
     camera_group_created_signal = Signal(dict)
     incoming_camera_configs_signal = Signal(dict)

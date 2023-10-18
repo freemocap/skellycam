@@ -20,7 +20,7 @@ from skellycam import logger
 class GroupedProcessStrategy:
     def __init__(self, camera_configs: Dict[str, CameraConfig]):
         self._camera_configs = camera_configs
-        self._processes, self._cam_id_process_map = self._create_processes(self._camera_configs)
+        self._processes, self._cam_id_process_map = self._create_processes()
 
     @property
     def processes(self):
