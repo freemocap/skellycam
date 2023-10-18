@@ -5,7 +5,7 @@ import traceback
 
 from skellycam import logger
 from skellycam.backend.controller.commands.interactions import ErrorResponse
-from skellycam.backend.controller.backendcontroller import get_or_create_controller
+from skellycam.backend.controller.controller import get_or_create_controller
 
 
 def backend_loop(exit_event: multiprocessing.Event,

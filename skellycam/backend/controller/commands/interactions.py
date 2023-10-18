@@ -11,7 +11,7 @@ from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.timestamps.timestamp import Timestamp
 
 if TYPE_CHECKING:
-    from skellycam.backend.controller.backendcontroller import BackendController
+    from skellycam.backend.controller.controller import BackendController
 
 
 class BaseMessage(BaseModel):
