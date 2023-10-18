@@ -22,10 +22,7 @@ class BaseMessage(BaseModel):
                                                  "(i.e. stuff that might be useful, but which shouldn't be in `data`")
 
     def __str__(self):
-        dict_str = {"name": self.__class__.__name__}
-        dict_str.update(**self.dict())
-        dict_str["timestamp"] = str(self.timestamp)  # use the string representation of the timestamp
-        return pprint.pformat(dict_str, indent=4)
+        return self.__class__.__name__
 
 
 class BaseRequest(BaseMessage):
@@ -77,7 +74,6 @@ class BaseInteraction(BaseModel):
         self.command.from_request(self.request)
         self.response = self.command.execute(controller)
         return self.response
-
 
     def __str__(self):
         dict_str = {"name": self.__class__.__name__,

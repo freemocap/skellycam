@@ -29,7 +29,7 @@ class RotationTypes(Enum):
 
     @classmethod
     def as_strings(cls):
-        return [str(member.value) for member in cls]
+        return [str(member.name) for member in cls]
 
 
 class CameraConfig(BaseModel):

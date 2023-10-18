@@ -13,39 +13,43 @@ class ChildWidgetManager:
         self.main_window = main_window
         self.connect_signals()
 
-    @property
-    def welcome_view(self):
-        return self.main_window.welcome_view
-
-    @property
-    def camera_grid_view(self):
-        return self.main_window.camera_grid_view
-
-    @property
-    def camera_settings_view(self):
-        return self.main_window.camera_settings_view
-
-    @property
-    def record_buttons_view(self):
-        return self.main_window.record_buttons_view
-
-    @property
-    def interact_with_backend(self):
-        return self.main_window.interact_with_backend
-
     def handle_backend_response(self, response: BaseResponse) -> None:
         logger.trace(f"Updating view with message type: {response}")
 
         if isinstance(response, CamerasDetectedResponse):
-            self.camera_settings_view.update_avalable_cameras(
+            self.main_window.camera_parameter_tree.update_avalable_cameras(
                 available_cameras=CamerasDetectedResponse(**response.dict()).available_cameras)
 
     def connect_signals(self) -> None:
-        self.welcome_view.start_session_button.clicked.connect(self._connect_start_session_signal)
-        self.camera_settings_view.camera_configs_changed.connect(lambda: NotImplementedError())
+        self.main_window.welcome_view.start_session_button.clicked.connect(self._connect_start_session_signal)
+        self.main_window.camera_parameter_tree.camera_configs_changed.connect(
+            self.emit_update_camera_configs_interaction)
+        self.main_window.camera_control_panel.close_cameras_button.clicked.connect(
+            lambda: logger.info("Closing cameras..."))
+        self.main_window.camera_control_panel.connect_to_cameras_button.clicked.connect(
+            lambda: logger.info("Connecting to cameras..."))
+        self.main_window.camera_control_panel.detect_available_cameras_button.clicked.connect(
+            self.emit_detect_cameras_interaction)
 
     def _connect_start_session_signal(self):
-        self.welcome_view.hide()
-        self.camera_grid_view.show()
-        self.record_buttons_view.show()
-        self.interact_with_backend.emit(DetectCamerasInteraction.as_request())
+        self.main_window.welcome_view.hide()
+        self.main_window.camera_grid_view.show()
+        self.main_window.record_buttons_view.show()
+        self.main_window.camera_settings_dock.show()
+        self.emit_detect_cameras_interaction()
+
+    def emit_detect_cameras_interaction(self):
+        logger.info("Emitting detect cameras interaction")
+        self.main_window.interact_with_backend.emit(DetectCamerasInteraction.as_request())
+
+    def emit_update_camera_configs_interaction(self):
+        logger.info("Emitting update camera configs interaction")
+        # self.main_window.interact_with_backend.emit(UpdateCameraConfigsInteraction.as_request(camera_configs=self.main_window.camera_parameter_tree.camera_configs))
+
+    def emit_close_cameras_interaction(self):
+        logger.info("Emitting close cameras interaction")
+        # self.main_window.interact_with_backend.emit(CloseCamerasInteraction.as_request())
+
+    def emit_connect_to_cameras_interaction(self):
+        logger.info("Emitting connect to cameras interaction")
+        # self.main_window.interact_with_backend.emit(ConnectToCamerasInteraction.as_request())

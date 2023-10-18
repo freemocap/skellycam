@@ -12,16 +12,17 @@ from skellycam.data_models.cameras.video_resolution import VideoResolution
 from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
-from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanelView
+from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
 
 
-class CameraSettingsView(QWidget):
-    camera_configs_changed = Signal(Dict[str, CameraConfig])
+class CameraParameterTree(QWidget):
+    camera_configs_changed = Signal(dict)
 
     def __init__(self, parent: Union[QMainWindow, QWidget]):
         super().__init__(parent=parent)
+        self._camera_configs = None
+        self._available_cameras = None
         self._parameter_groups = None
-        self._camera_control_panel_view = CameraControlPanelView(parent=self)
         self._parameter_tree = ParameterTree(parent=self, showHeader=False)
 
         self.initUI()
@@ -39,8 +40,6 @@ class CameraSettingsView(QWidget):
         """)
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
-
-        self._layout.addWidget(self._camera_control_panel_view)
 
         self._layout.addWidget(self._parameter_tree)
 
@@ -111,7 +110,7 @@ class CameraSettingsView(QWidget):
         camera_parameter_group.param(self.tr(USE_THIS_CAMERA_STRING)).sigValueChanged.connect(
             lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
         )
-        camera_parameter_group.sigValueChanged.connect(lambda: self.camera_configs_changed.emit(self.camera_configs))
+        camera_parameter_group.sigTreeStateChanged.connect(self._handle_parameter_tree_change)
         return camera_parameter_group
 
     def _create_copy_to_all_cameras_action_parameter(self, camera_id) -> Parameter:
@@ -161,3 +160,7 @@ class CameraSettingsView(QWidget):
             if child_parameter.name() != USE_THIS_CAMERA_STRING:
                 child_parameter.setOpts(enabled=use_this_camera_checked)
                 child_parameter.setReadonly(use_this_camera_checked)
+
+    def _handle_parameter_tree_change(self):
+        logger.trace(f"Parameter tree changed -  emitting camera_configs_changed signal")
+        self.camera_configs_changed.emit(self.camera_configs)
