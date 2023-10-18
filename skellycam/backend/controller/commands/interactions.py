@@ -11,7 +11,7 @@ from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.data_models.timestamps.timestamp import Timestamp
 
 if TYPE_CHECKING:
-    from skellycam.backend.controller.controller import BackendController
+    from skellycam.backend.controller.controller import Controller
 
 
 class BaseMessage(BaseModel):
@@ -179,7 +179,7 @@ class CloseCamerasResponse(BaseResponse):
 
 
 class CloseCamerasCommand(BaseCommand):
-    def execute(self, controller, **kwargs) -> CloseCamerasResponse:
+    def execute(self, controller:"Controller", **kwargs) -> CloseCamerasResponse:
         controller.camera_group_manager.stop_camera_group()
         return CloseCamerasResponse(success=True)
 

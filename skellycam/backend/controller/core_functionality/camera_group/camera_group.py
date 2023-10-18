@@ -73,13 +73,13 @@ class CameraGroup:
 
             logger.trace(f"Camera started? {camera_started_dictionary}")
 
-            logger.trace(f"Active processes {multiprocessing.active_children()}")
+            logger.trace(f"Active processes {str(multiprocessing.active_children())}")
             if restart_process_if_it_dies:
                 self._restart_dead_processes()
 
             all_cameras_started = all(list(camera_started_dictionary.values()))
 
-        logger.success(f"All cameras {self._camera_configs.keys()} started!")
+        logger.success(f"All cameras {list(self._camera_configs.keys())} started!")
         self._start_event.set()  # start frame capture on all cameras
 
     def check_if_camera_is_ready(self, cam_id: str):

@@ -130,14 +130,16 @@ class CamGroupQueueProcess:
                 sleep(0.001)
                 for camera in cameras_dictionary.values():
                     if camera.new_frame_ready:
+                        new_frame_added = True
                         try:
-                            queue = queues[camera.camera_id]
-                            queue.put(camera.latest_frame)
+                            queues[camera.camera_id].put(camera.latest_frame)
+
                         except Exception as e:
                             logger.exception(
                                 f"Problem when putting a frame into the queue: Camera {camera.camera_id} - {e}"
                             )
                             break
+
 
         # close cameras on exit
         for camera in cameras_dictionary.values():
