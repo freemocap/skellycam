@@ -58,7 +58,7 @@ class VideoCaptureThread(threading.Thread):
                 time.sleep(.001)
                 continue
             self._frame: FramePayload = self._get_next_frame()
-            self._pipe.send_bytes(self._frame.to_bytes())
+            # self._pipe.send_bytes(self._frame.to_bytes())
 
         self.stop()
         logger.info(
@@ -70,6 +70,7 @@ class VideoCaptureThread(threading.Thread):
         retrieval_timestamp = time.perf_counter_ns()
         self._new_frame_ready = success
         if success:
+            logger.trace(f"Camera ID: [{self._config.camera_id}] got a frame!")
             self._number_of_frames_received += 1
         else:
             raise FailedToReadFrameFromCameraException(
@@ -105,9 +106,7 @@ class VideoCaptureThread(threading.Thread):
             )
 
         logger.success(f"Successfully connected to Camera: {self._config.camera_id}!")
-        if not self._this_camera_ready_event.is_set():
-            self._this_camera_ready_event.set()
-
+        self._this_camera_ready_event.set()
         return capture
 
     def stop(self):

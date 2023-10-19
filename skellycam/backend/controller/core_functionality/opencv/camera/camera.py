@@ -67,21 +67,6 @@ class Camera:
         finally:
             logger.info(f"Camera ID: [{self._config.camera_id}] has closed")
 
-    async def show_async(self):
-        viewer = CvCamViewer()
-        viewer.begin_viewer(self.camera_id)
-        while True:
-            if self.new_frame_ready:
-                viewer.recv_img(self.latest_frame)
-                await asyncio.sleep(0)
-
-    def show(self):
-        viewer = CvCamViewer()
-        viewer.begin_viewer(self.camera_id)
-        while True:
-            if self.new_frame_ready:
-                viewer.recv_img(self.latest_frame)
-
     def update_config(self, camera_config: CameraConfig):
         logger.info(
             f"Updating config for camera_id: {self.camera_id}  -  {camera_config}"
@@ -90,6 +75,7 @@ class Camera:
             self.close()
         else:
             if not self._capture_thread.is_capturing_frames:
-                self.connect(self._this_camera_ready_event)
+                self.connect(this_camera_ready=self._this_camera_ready_event,
+                             all_cameras_ready=self._all_cameras_ready_event)
 
             self._capture_thread.update_camera_config(camera_config)
