@@ -22,10 +22,10 @@ class CamerasDetectedResponse(BaseResponse):
 
 
 class DetectAvailableCamerasCommand(BaseCommand):
-    def execute(self, controller: "Controller", **kwargs) -> CamerasDetectedResponse:
-        controller.available_cameras = detect_available_cameras()
+    def execute(self, **kwargs) -> CamerasDetectedResponse:
+        available_cameras = detect_available_cameras()
         return CamerasDetectedResponse(success=True,
-                                       available_cameras=controller.available_cameras)
+                                       available_cameras=available_cameras)
 
 
 class DetectCamerasInteraction(BaseInteraction):
@@ -37,7 +37,7 @@ class DetectCamerasInteraction(BaseInteraction):
     def as_request(cls, **kwargs):
         return cls(request=DetectAvailableCamerasRequest.create(**kwargs))
 
-    def execute_command(self, controller: "Controller") -> CamerasDetectedResponse:
+    def execute_command(self, **kwargs) -> CamerasDetectedResponse:
         self.command = DetectAvailableCamerasCommand()
-        self.response = self.command.execute(controller)
+        self.response = self.command.execute()
         return self.response

@@ -55,7 +55,9 @@ class BaseCommand(BaseModel):
     def from_request(cls, request: BaseRequest):
         raise NotImplementedError
 
-    def execute(self, controller: 'Controller', **kwargs) -> BaseResponse:
+    def execute(self,
+                controller: Optional[Controller],
+                **kwargs) -> BaseResponse:
         raise NotImplementedError
 
     def __str__(self):
@@ -75,9 +77,9 @@ class BaseInteraction(BaseModel):
     def as_request(cls, **kwargs):
         return cls(request=cls.request.create(**kwargs))
 
-    def execute_command(self, controller: "Controller") -> BaseResponse:
+    def execute_command(self, controller: Optional["Controller"], **kwargs) -> BaseResponse:
         self.command.from_request(self.request)
-        self.response = self.command.execute(controller)
+        self.response = self.command.execute(controller, **kwargs)
         return self.response
 
     def __str__(self):

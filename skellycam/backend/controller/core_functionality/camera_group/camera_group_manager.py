@@ -5,44 +5,20 @@ from typing import Dict, Optional, List
 
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
-from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.models.cameras.frames.frontend import FrontendMultiFramePayload
 
 
 class CameraGroupManager:
-    """
-    creates a `camera_group` and then holds it in a looping thread.
-    returns a two-way queue that will be used to send as-formatted-as-possble q_images to the frontend
-
-    Also manages `video_recorders`  and will stuff images into them as they come in from the `camera_group`,
-    provided that we are currently 'recording'  - otherwise, they'll just be slung at the front and
-     then lost like tears in the rain.
-    """
 
     def __init__(self,
-                 camera_configs: Dict[str, CameraConfig],
-                 frontend_frame_queue: multiprocessing.Queue,) -> None:
+                 frontend_frame_queue: multiprocessing.Queue, ) -> None:
         self.frontend_frame_queue = frontend_frame_queue
         self._camera_group: Optional[CameraGroup] = None
         self._camera_group_thread: Optional[threading.Thread] = None
 
-        self._camera_configs = camera_configs
-        self.incoming_frames_by_camera: Dict[str, List[FramePayload]] = {camera_id: [] for camera_id in
-                                                                         camera_configs.keys()}
-        self._create_camera_group()
-
-    def _create_video_recorders(self, cameras: Dict[str, CameraConfig], video_save_directory: str = None):
-        if video_save_directory is None:
-            logger.debug(f"No video save directory provided, not creating video recorders")
-            return
-
-        logger.debug(f"Creating video recorders for cameras: {cameras.keys()} to save to {video_save_directory}")
-
-        self._video_recorders = {camera_id: VideoRecorder(camera_config=camera_config,
-                                                          video_save_path=video_save_directory,
-                                                          ) for camera_id, camera_config in cameras.items()}
+        self._camera_configs: Optional[Dict[str, CameraConfig]] = None
 
     def _create_camera_group(self):
         self._camera_group = CameraGroup(camera_configs=self._camera_configs)
@@ -58,8 +34,8 @@ class CameraGroupManager:
                 self._handle_new_frames(frontend_payload, new_frames)
 
     def _handle_new_frames(self,
-                           frontend_payload,
-                           new_frames) -> FrontendMultiFramePayload:
+                           frontend_payload: FrontendMultiFramePayload,
+                           new_frames:List[FramePayload]) -> FrontendMultiFramePayload:
         for frame in new_frames:
             frontend_payload.add_frame(frame=frame)
             if frontend_payload.full:
@@ -67,12 +43,11 @@ class CameraGroupManager:
                 frontend_payload = FrontendMultiFramePayload(frames={})
         return frontend_payload
 
-    def start(self):
+    def start(self, camera_configs: Dict[str, CameraConfig]):
         logger.debug(f"Starting camera group thread...")
+        self._camera_configs = camera_configs
+        self._create_camera_group()
         self._camera_group_thread.start()
-
-    def get_video_recorders(self) -> Dict[str, VideoRecorder]:
-        return self._video_recorders
 
     def stop_camera_group(self):
         logger.debug(f"Stopping camera group thread...")

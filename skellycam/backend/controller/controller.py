@@ -13,18 +13,20 @@ from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
 CONTROLLER = None
 
 
-def get_or_create_controller() -> 'Controller':
+def get_or_create_controller(frontend_frame_queue:multiprocessing.Queue) -> 'Controller':
     global CONTROLLER
     if CONTROLLER is None:
-        CONTROLLER = Controller()
+        CONTROLLER = Controller(frontend_frame_queue=frontend_frame_queue)
     return CONTROLLER
 
 
 class Controller:
-    camera_group_manager: Optional[CameraGroupManager]
-    video_recorder_manager: Optional[VideoRecorderManager]
-    available_cameras: Optional[Dict[str, CameraDeviceInfo]]
-    frontend_frame_queue: Optional[multiprocessing.Queue]
+
+    def __init__(self, frontend_frame_queue: multiprocessing.Queue):
+        self.available_cameras = None
+        self.frontend_frame_queue = frontend_frame_queue
+        self.camera_group_manager = CameraGroupManager(frontend_frame_queue=self.frontend_frame_queue)
+
 
     def handle_interaction(self, interaction: BaseInteraction) -> BaseResponse:
         logger.debug(f"Controller handling interaction: {interaction}")

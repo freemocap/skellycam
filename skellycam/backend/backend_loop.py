@@ -13,8 +13,7 @@ def backend_loop(exit_event: multiprocessing.Event,
                  messages_from_frontend: multiprocessing.Queue,
                  frontend_frame_queue: multiprocessing.Queue):
     logger.info(f"Backend main loop starting...")
-    controller = get_or_create_controller()
-    controller.frontend_frame_queue = frontend_frame_queue
+    controller = get_or_create_controller(frontend_frame_queue = frontend_frame_queue)
     try:
         while True:
             if exit_event.is_set():

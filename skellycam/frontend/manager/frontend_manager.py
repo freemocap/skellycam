@@ -69,7 +69,7 @@ class FrontendManager:
 
         self._frame_grabber.new_frames.connect(self.camera_grid.handle_new_images)
 
-    def _handle_backend_response(self, response: BaseResponse) -> None:
+    def handle_backend_response(self, response: BaseResponse) -> None:
         logger.trace(f"Updating view with message type: {response}")
 
         if isinstance(response, CamerasDetectedResponse):
