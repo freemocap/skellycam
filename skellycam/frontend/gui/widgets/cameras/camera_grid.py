@@ -8,7 +8,8 @@ from skellycam import logger
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraView
 from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.frames.frontend import FrontendMultiFramePayload
+from skellycam.models.cameras.camera_id import CameraId
+from skellycam.models.cameras.frames.multiframe_payload import MultiFramePayload
 
 title_label_style_string = """
                            font-size: 18px;
@@ -26,7 +27,7 @@ class CameraGrid(QWidget):
         super().__init__(parent=parent)
 
         self._initUI()
-        self._camera_configs: Dict[str, CameraConfig] = {}
+        self._camera_configs: Dict[CameraId, CameraConfig] = {}
         self._single_cameras: Dict[str, SingleCameraView] = {}
 
     def _initUI(self):
@@ -40,8 +41,8 @@ class CameraGrid(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-    @Slot(FrontendMultiFramePayload)
-    def handle_new_images(self, payload: FrontendMultiFramePayload):
+    @Slot(MultiFramePayload)
+    def handle_new_images(self, payload: MultiFramePayload):
         for camera_id, frame in payload.frames.items():
             if camera_id in self._single_cameras.keys():
                 self._single_cameras[camera_id].handle_image_update(frame=frame)
@@ -68,7 +69,7 @@ class CameraGrid(QWidget):
         self._no_cameras_found_label.setStyleSheet(title_label_style_string)
         self._no_cameras_found_label.hide()
 
-    def update_camera_grid(self, camera_configs: Dict[str, CameraConfig]):
+    def update_camera_grid(self, camera_configs: Dict[CameraId, CameraConfig]):
         logger.info(f"Updating camera grid with cameras: {camera_configs.keys()}")
         self._camera_configs = camera_configs
         self._handle_text_labels()

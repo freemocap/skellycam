@@ -7,13 +7,14 @@ from skellycam.backend.controller.core_functionality.camera_group.strategies.gro
     GroupedProcessStrategy
 from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import Strategy
 from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 
 
 class CameraGroup:
     def __init__(
             self,
-            camera_configs: Dict[str, CameraConfig],
+            camera_configs: Dict[CameraId, CameraConfig],
             strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
     ):
         self._start_event = None
@@ -34,11 +35,8 @@ class CameraGroup:
     def exit_event(self):
         return self._exit_event
 
-    @property
-    def queue_size(self) -> Dict[str, int]:
-        return self._strategy_class.queue_size
 
-    def update_configs(self, camera_configs: Dict[str, CameraConfig]):
+    def update_configs(self, camera_configs: Dict[CameraId, CameraConfig]):
         logger.info(f"Updating camera configs to {camera_configs}")
         self._camera_configs = camera_configs
         self._strategy_class.update_camera_configs(camera_configs)

@@ -10,7 +10,7 @@ from skellycam.backend.controller.interactions.detect_available_cameras import C
 from skellycam.backend.controller.interactions.update_camera_configs import UpdateCameraConfigsInteraction
 from skellycam.frontend.manager.helpers.frame_grabber import FrameGrabber
 from skellycam.models.cameras.camera_config import CameraConfig
-
+from skellycam.models.cameras.camera_id import CameraId
 
 if TYPE_CHECKING:
     from skellycam.frontend.gui.main_window.main_window import MainWindow
@@ -49,7 +49,7 @@ class FrontendManager:
         return self.main_window.camera_control_panel
 
     @property
-    def camera_configs(self) -> Dict[str, CameraConfig]:
+    def camera_configs(self) -> Dict[CameraId, CameraConfig]:
         return self.camera_parameter_tree.camera_configs
 
     def _connect_signals(self) -> None:
@@ -91,7 +91,7 @@ class FrontendManager:
         self.main_window.camera_settings_dock.show()
         self._emit_detect_cameras_interaction()
 
-    def _handle_camera_configs_changed(self, camera_configs: Dict[str, CameraConfig]):
+    def _handle_camera_configs_changed(self, camera_configs: Dict[CameraId, CameraConfig]):
         logger.info("Handling Camera Configs Changed signal")
         self.camera_grid.update_camera_grid(camera_configs=camera_configs)
         self.main_window.interact_with_backend.emit(

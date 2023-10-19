@@ -4,11 +4,11 @@ from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QWidget
 
 from skellycam import logger
-from skellycam.models.cameras.frames.frontend import FrontendMultiFramePayload
+from skellycam.models.cameras.frames.multiframe_payload import MultiFramePayload
 
 
 class FrameGrabber(QThread):
-    new_frames = Signal(FrontendMultiFramePayload)
+    new_frames = Signal(MultiFramePayload)
 
     def __init__(self, incoming_frame_queue: multiprocessing.Queue, parent=QWidget):
         super().__init__(parent=parent)
@@ -17,7 +17,7 @@ class FrameGrabber(QThread):
     def run(self):
         while True:
             try:
-                payload: FrontendMultiFramePayload = self.incoming_frame_queue.get(block=True)
+                payload: MultiFramePayload = self.incoming_frame_queue.get(block=True)
                 logger.trace(f"Got new multi-frame payload from backend! Emitting `new_frames` signal")
                 self.new_frames.emit(payload)
             except Exception as e:

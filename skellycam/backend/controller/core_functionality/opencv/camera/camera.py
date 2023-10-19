@@ -4,22 +4,24 @@ import time
 import traceback
 from typing import Optional
 
-from skellycam.backend.controller.core_functionality.opencv.camera.attributes import Attributes
-from skellycam.backend.controller.core_functionality.opencv.camera.internal_camera_thread import VideoCaptureThread
-from skellycam.models.cameras.camera_config import CameraConfig
-
 from skellycam import logger
+from skellycam.backend.controller.core_functionality.opencv.camera.internal_camera_thread import VideoCaptureThread
 from skellycam.experiments.examples.viewers.cv_cam_viewer import CvCamViewer
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_id import CameraId
 
 
 class Camera:
     def __init__(
             self,
             config: CameraConfig,
+            pipe  # multiprocessing.connection.Connection,
     ):
 
-        self._ready_event = None
+        self._all_cameras_ready_event = None
+        self._this_camera_ready_event = None
         self._config = config
+        self._pipe = pipe
         self._capture_thread: Optional[VideoCaptureThread] = None
 
     @property
@@ -27,31 +29,15 @@ class Camera:
         return f"Camera_{self._config.camera_id}"
 
     @property
-    def attributes(self):
-        return Attributes(self._capture_thread)
+    def camera_id(self) -> CameraId:
+        return self._config.camera_id
 
-    @property
-    def camera_id(self):
-        return str(self._config.camera_id)
+    def connect(self,
+                this_camera_ready: multiprocessing.Event,
+                all_cameras_ready: multiprocessing.Event):
 
-    @property
-    def is_capturing_frames(self):
-        return self._capture_thread.is_capturing_frames
-
-    @property
-    def new_frame_ready(self):
-        return self._capture_thread.new_frame_ready
-
-    @property
-    def latest_frame(self):
-        return self._capture_thread.latest_frame
-
-    def connect(self, ready_event: multiprocessing.Event = None):
-        if ready_event is None:
-            self._ready_event = multiprocessing.Event()
-            self._ready_event.set()
-        else:
-            self._ready_event = ready_event
+        self._this_camera_ready_event = this_camera_ready
+        self._all_cameras_ready_event = all_cameras_ready
 
         if self._capture_thread and self._capture_thread.is_capturing_frames:
             logger.debug(f"Already capturing frames for camera_id: {self.camera_id}")
@@ -59,7 +45,9 @@ class Camera:
         logger.debug(f"Camera ID: [{self._config.camera_id}] Creating thread")
         self._capture_thread = VideoCaptureThread(
             config=self._config,
-            ready_event=self._ready_event,
+            pipe=self._pipe,
+            this_camera_ready_event=self._this_camera_ready_event,
+            all_cameras_ready_event=all_cameras_ready,
         )
         self._capture_thread.start()
 
@@ -102,6 +90,6 @@ class Camera:
             self.close()
         else:
             if not self._capture_thread.is_capturing_frames:
-                self.connect(self._ready_event)
+                self.connect(self._this_camera_ready_event)
 
             self._capture_thread.update_camera_config(camera_config)

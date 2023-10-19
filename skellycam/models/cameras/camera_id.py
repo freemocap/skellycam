@@ -1,2 +1,2 @@
-CameraId = str
+CameraId = int
 

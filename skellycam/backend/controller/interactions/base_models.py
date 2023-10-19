@@ -56,7 +56,7 @@ class BaseCommand(BaseModel):
         raise NotImplementedError
 
     def execute(self,
-                controller: Optional[Controller],
+                controller: Optional["Controller"],
                 **kwargs) -> BaseResponse:
         raise NotImplementedError
 

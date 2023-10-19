@@ -8,6 +8,7 @@ from pyqtgraph.parametertree import ParameterTree, Parameter
 from skellycam import logger
 from skellycam.models.cameras.camera_config import CameraConfig, RotationTypes
 from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
+from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.video_resolution import VideoResolution
 from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          rotate_image_str_to_cv2_code,
@@ -44,7 +45,7 @@ class CameraParameterTree(QWidget):
         self._layout.addWidget(self._parameter_tree)
 
     @property
-    def camera_configs(self) -> Dict[str, CameraConfig]:
+    def camera_configs(self) -> Dict[CameraId, CameraConfig]:
         # return self._extract_camera_configs()
         return self._camera_configs
 
@@ -123,7 +124,7 @@ class CameraParameterTree(QWidget):
         )
         return button
 
-    def _extract_camera_configs(self) -> Dict[str, CameraConfig]:
+    def _extract_camera_configs(self) -> Dict[CameraId, CameraConfig]:
         logger.info("Extracting camera configs from parameter tree")
         configs = {}
         for (camera_id, parameter_group,) in self._parameter_groups.items():

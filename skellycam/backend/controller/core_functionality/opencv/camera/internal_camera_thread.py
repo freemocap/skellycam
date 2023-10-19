@@ -20,35 +20,24 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
             self,
             config: CameraConfig,
-            ready_event: multiprocessing.Event = None,
+            pipe,  # multiprocessing.connection.Connection
+            this_camera_ready_event: multiprocessing.Event,
+            all_cameras_ready_event: multiprocessing.Event,
     ):
         super().__init__()
-        self._previous_frame_timestamp_ns = None
+        self._pipe = pipe
         self._new_frame_ready = False
         self.daemon = False
 
-        if ready_event is None:
-            self._ready_event = multiprocessing.Event()
-            self._ready_event.set()
-        else:
-            self._ready_event = ready_event
+        self._this_camera_ready_event = this_camera_ready_event
+        self._all_cameras_ready_event = all_cameras_ready_event
 
         self._config = config
         self._is_capturing_frames = False
 
-        self._number_of_frames_received: int = 0
+        self._number_of_frames_received: int = -1
 
-        self._frame: FramePayload = FramePayload()
         self._cv2_video_capture = None
-
-    @property
-    def latest_frame(self) -> FramePayload:
-        self._new_frame_ready = False
-        return self._frame
-
-    @property
-    def new_frame_ready(self):
-        return self._new_frame_ready
 
     @property
     def is_capturing_frames(self) -> bool:
@@ -65,9 +54,13 @@ class VideoCaptureThread(threading.Thread):
         )
 
         while self._is_capturing_frames:
-            self._frame = self._get_next_frame()
+            if not self._all_cameras_ready_event.is_set():
+                time.sleep(.001)
+                continue
+            self._frame: FramePayload = self._get_next_frame()
+            self._pipe.send_bytes(self._frame.to_bytes())
 
-        self._cv2_video_capture.release()
+        self.stop()
         logger.info(
             f"Camera ID: [{self._config.camera_id}] Frame capture loop has exited"
         )
@@ -84,12 +77,12 @@ class VideoCaptureThread(threading.Thread):
                 f"returned value: {success}, "
                 f"returned image: {image}"
             )
-        return FramePayload(
+        return FramePayload.create(
             success=success,
             image=image,
             timestamp_ns=retrieval_timestamp,
-            number_of_frames_received=self._number_of_frames_received,
-            camera_id=str(self._config.camera_id),
+            frame_number=self._number_of_frames_received,
+            camera_id=self._config.camera_id,
         )
 
     def _create_cv2_capture(self):
@@ -112,8 +105,8 @@ class VideoCaptureThread(threading.Thread):
             )
 
         logger.success(f"Successfully connected to Camera: {self._config.camera_id}!")
-        if not self._ready_event.is_set():
-            self._ready_event.set()
+        if not self._this_camera_ready_event.is_set():
+            self._this_camera_ready_event.set()
 
         return capture
 
@@ -127,4 +120,3 @@ class VideoCaptureThread(threading.Thread):
         self._config = new_config
         logger.info(f"Updating Camera: {self._config.camera_id} config to {new_config}")
         apply_camera_configuration(self._cv2_video_capture, new_config)
-

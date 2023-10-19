@@ -1,9 +1,10 @@
 import multiprocessing
 from typing import Dict, List
 
-from skellycam.backend.controller.core_functionality.camera_group.strategies.cam_group_queue_process import \
-    CamGroupQueueProcess
+from skellycam.backend.controller.core_functionality.camera_group.strategies.cam_group_pipe_process import \
+    CamGroupPipeProcess
 from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.utilities.array_split_by import dict_split_by
 
@@ -18,7 +19,7 @@ from skellycam import logger
 
 
 class GroupedProcessStrategy:
-    def __init__(self, camera_configs: Dict[str, CameraConfig]):
+    def __init__(self, camera_configs: Dict[CameraId, CameraConfig]):
         self._camera_configs = camera_configs
         self._processes, self._cam_id_process_map = self._create_processes()
 
@@ -33,9 +34,6 @@ class GroupedProcessStrategy:
                 return False
         return True
 
-    @property
-    def queue_size(self) -> Dict[str, int]:
-        return {camera_id: self._get_queue_size_by_camera_id(camera_id) for camera_id in self._camera_configs.keys()}
 
     def start_capture(
             self,
@@ -56,10 +54,6 @@ class GroupedProcessStrategy:
             if current_frame:
                 return current_frame
 
-    def _get_queue_size_by_camera_id(self, camera_ids: str) -> int:
-        for process in self._processes:
-            if camera_ids in process.camera_ids:
-                return process.get_queue_size_by_camera_id(camera_ids)
 
     def get_latest_frames(self) -> Dict[str, FramePayload]:
         return {
@@ -81,7 +75,7 @@ class GroupedProcessStrategy:
             raise ValueError("No cameras were provided")
         camera_subarrays = dict_split_by(self._camera_configs, cameras_per_process)
         processes = [
-            CamGroupQueueProcess(camera_subarray) for camera_subarray in camera_subarrays
+            CamGroupPipeProcess(camera_subarray) for camera_subarray in camera_subarrays
         ]
         cam_id_to_process = {}
         for process in processes:

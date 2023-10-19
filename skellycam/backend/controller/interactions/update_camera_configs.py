@@ -4,6 +4,7 @@ from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
     BaseInteraction
 from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_id import CameraId
 
 
 class UpdateCameraConfigsException(Exception):
@@ -11,10 +12,10 @@ class UpdateCameraConfigsException(Exception):
 
 
 class UpdateCameraConfigsRequest(BaseRequest):
-    camera_configs: Dict[str, CameraConfig]
+    camera_configs: Dict[CameraId, CameraConfig]
 
     @classmethod
-    def create(cls, camera_configs: Dict[str, CameraConfig]):
+    def create(cls, camera_configs: Dict[CameraId, CameraConfig]):
         return cls(camera_configs=camera_configs)
 
 

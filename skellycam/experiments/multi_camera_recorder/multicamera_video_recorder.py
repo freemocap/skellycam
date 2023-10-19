@@ -26,7 +26,7 @@ class MultiCameraVideoRecorder:
     def __init__(
             self,
             video_save_folder_path: Union[str, Path] = None,
-            camera_config_dict: Dict[str, CameraConfig] = None,
+            camera_config_dict: Dict[CameraId, CameraConfig] = None,
             string_tag: str = None,
     ):
         self._session_start_time_iso8601 = get_iso6201_time_string()

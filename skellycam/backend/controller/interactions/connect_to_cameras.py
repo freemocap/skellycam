@@ -6,6 +6,7 @@ from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.interactions.base_models import BaseCommand, BaseRequest, \
     BaseInteraction, BaseResponse
 from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_id import CameraId
 
 
 class ConnectToCamerasResponse(BaseResponse):
@@ -13,7 +14,7 @@ class ConnectToCamerasResponse(BaseResponse):
 
 
 class ConnectToCamerasCommand(BaseCommand):
-    camera_configs: Dict[str, CameraConfig]
+    camera_configs: Dict[CameraId, CameraConfig]
 
     def execute(self,
                 controller: Controller,
@@ -31,10 +32,10 @@ class ConnectToCamerasCommand(BaseCommand):
 
 
 class ConnectToCamerasRequest(BaseRequest):
-    camera_configs: Dict[str, CameraConfig]
+    camera_configs: Dict[CameraId, CameraConfig]
 
     @classmethod
-    def create(cls, camera_configs: Dict[str, CameraConfig]):
+    def create(cls, camera_configs: Dict[CameraId, CameraConfig]):
         return cls(camera_configs=camera_configs)
 
 
@@ -44,7 +45,7 @@ class ConnectToCamerasInteraction(BaseInteraction):
     response: Optional[ConnectToCamerasResponse]
 
     @classmethod
-    def as_request(cls, camera_configs: Dict[str, CameraConfig]):
+    def as_request(cls, camera_configs: Dict[CameraId, CameraConfig]):
         return cls(request=ConnectToCamerasRequest.create(camera_configs=camera_configs))
 
     def execute_command(self, controller: Controller, **kwargs) -> BaseResponse:

@@ -14,7 +14,7 @@ class VideoRecorderManager:
 
     Parameters:
     -----------
-    cameras: Dict[str, CameraConfig]
+    cameras: Dict[CameraId, CameraConfig]
         A dictionary of `CameraConfig` objects, keyed by camera_id
     video_save_directory: str
         The directory to save videos to, videos will be saved to this directory as `[Path(video_save_directory)/Path(video_save_directory).stem]_camera_[camera_id].mp4`
@@ -27,7 +27,7 @@ class VideoRecorderManager:
     """
 
     def __init__(self,
-                 cameras: Dict[str, CameraConfig],
+                 cameras: Dict[CameraId, CameraConfig],
                  video_save_directory: str = None):
         self._cameras = cameras
         self._video_save_directory = video_save_directory
