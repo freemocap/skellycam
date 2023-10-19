@@ -1,7 +1,7 @@
 from enum import Enum
 
 import cv2
-from pydantic import BaseModel, Field, PositiveFloat, NegativeInt
+from pydantic import BaseModel, Field
 
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.video_resolution import VideoResolution
@@ -40,15 +40,15 @@ class CameraConfig(BaseModel):
 
     resolution: VideoResolution = Field(default=VideoResolution(width=1280, height=720),
                                         description="The current resolution of the camera, in pixels.")
-    framerate: PositiveFloat = Field(default=30,
-                                     description="The framerate of the camera (in frames per second).")
-    exposure: NegativeInt = Field(default=-7,
-                                  description="The exposure of the camera using the opencv convention - "
-                                              "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/")
+    framerate: float = Field(default=30,
+                             description="The framerate of the camera (in frames per second).")
+    exposure: int = Field(default=-7,
+                          description="The exposure of the camera using the opencv convention - "
+                                      "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/")
     rotation: RotationTypes = Field(default=RotationTypes.NO_ROTATION,
                                     description="The rotation to apply to the images "
                                                 "of this camera (after they are captured)")
-    fourcc: str = Field(default="MP4V",
+    fourcc: str = Field(default="MJPG",
                         description="The fourcc code to use for the video codec - `MP4V` is the default,  "
                                     "but it would be interesting to try `MJPG1, `H264`, etc")
 
