@@ -6,6 +6,7 @@ from PySide6.QtGui import QImage, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 
 from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.frames.frontend import FrontendFramePayload
 
 
 class SingleCameraView(QWidget):
@@ -39,9 +40,8 @@ class SingleCameraView(QWidget):
         self._image_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._image_view)
 
-    @Slot(FrontendMultiFramePackage)
-    def handle_image_update(self, q_image: QImage, frame_diagnostics_dictionary: Dict[str, Any]):
-        self._pixmap.convertFromImage(q_image)
+    def handle_image_update(self, frame: FrontendFramePayload):
+        self._pixmap.convertFromImage(frame.q_image)
 
         image_label_widget_width = self._image_view.width()
         image_label_widget_height = self._image_view.height()
@@ -56,14 +56,14 @@ class SingleCameraView(QWidget):
             Qt.TransformationMode.SmoothTransformation, )
 
         self._image_view.setPixmap(self._pixmap)
-
-        q_size = frame_diagnostics_dictionary['queue_size']
-        frames_recorded = frame_diagnostics_dictionary['frames_recorded']
-        if frames_recorded is None:
-            frames_recorded = 0
-        self._title_label.setText(
-            self._camera_name_string + f"\nQueue Size:{q_size} | "
-                                       f"Frames Recorded#{str(frames_recorded)}".ljust(38))
+        #
+        # q_size = frame_diagnostics_dictionary['queue_size']
+        # frames_recorded = frame_diagnostics_dictionary['frames_recorded']
+        # if frames_recorded is None:
+        #     frames_recorded = 0
+        # self._title_label.setText(
+        #     self._camera_name_string + f"\nQueue Size:{q_size} | "
+        #                                f"Frames Recorded#{str(frames_recorded)}".ljust(38))
 
     def show(self):
         super().show()

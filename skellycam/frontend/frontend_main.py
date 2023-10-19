@@ -5,16 +5,18 @@ from PySide6.QtCore import QTimer
 from skellycam import logger
 from skellycam.backend.controller.interactions.base_models import BaseInteraction, BaseResponse
 from skellycam.frontend.application import create_or_recreate_qt_application
-from skellycam.frontend.gui.main_window.frontend_manager.frontend_manager import FrontendManager
 from skellycam.frontend.gui.main_window.main_window import MainWindow
+from skellycam.frontend.manager.frontend_manager import FrontendManager
 
 
 def frontend_main(messages_from_frontend: multiprocessing.Queue,
                   messages_from_backend: multiprocessing.Queue,
+                  frontend_frame_queue: multiprocessing.Queue,
                   exit_event: multiprocessing.Event,
                   reboot_event: multiprocessing.Event) -> int:
     exit_code = frontend_loop(messages_from_frontend=messages_from_frontend,
                               messages_from_backend=messages_from_backend,
+                              frontend_frame_queue=frontend_frame_queue,
                               exit_event=exit_event,
                               reboot_event=reboot_event)
 
@@ -27,6 +29,7 @@ def frontend_main(messages_from_frontend: multiprocessing.Queue,
 
 def frontend_loop(messages_from_frontend: multiprocessing.Queue,
                   messages_from_backend: multiprocessing.Queue,
+                  frontend_frame_queue: multiprocessing.Queue,
                   exit_event: multiprocessing.Event,
                   reboot_event: multiprocessing.Event):
     exit_code = 0
@@ -60,7 +63,8 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
                                      reboot_event=reboot_event, )
             main_window.interact_with_backend.connect(lambda interaction: interact_with_backend(interaction))
             main_window.show()
-            frontend_manager = FrontendManager(main_window=main_window)
+            frontend_manager = FrontendManager(main_window=main_window,
+                                               incoming_frame_queue=frontend_frame_queue)
 
             exit_code = app.exec()
     except Exception as e:

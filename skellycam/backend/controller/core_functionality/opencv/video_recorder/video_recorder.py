@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from skellycam import logger
 from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.frame_models.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload
 
 
 class VideoRecorder:

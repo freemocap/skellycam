@@ -59,9 +59,8 @@ class BaseCommand(BaseModel):
         raise NotImplementedError
 
     def __str__(self):
-        dict_str = {"name": self.__class__.__name__}
-        dict_str.update(**self.dict())
-        return pprint.pformat(dict_str, indent=4)
+
+        return  {"name": self.__class__.__name__}
 
 
 class BaseInteraction(BaseModel):
@@ -82,11 +81,10 @@ class BaseInteraction(BaseModel):
         return self.response
 
     def __str__(self):
-        dict_str = {"name": self.__class__.__name__,
-                    "request": str(self.request),
-                    "command": str(self.command) if self.command else f"Yet to be defined",
-                    "response": str(self.response) if self.response else f"Yet to be defined"
-                    }
-
-        return pprint.pformat(dict_str, indent=4)
+        if self.command is None:
+            return f"{self.__class__.__name__}: {self.request}"
+        elif self.response is None:
+            return f"{self.__class__.__name__}: {self.request} -> {self.command}"
+        else:
+            return f"{self.__class__.__name__}: {self.request} -> {self.command} -> {self.response}"
 

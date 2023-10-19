@@ -20,7 +20,7 @@ def get_or_create_controller() -> 'Controller':
     return CONTROLLER
 
 
-class Controller(BaseModel):
+class Controller:
     camera_group_manager: Optional[CameraGroupManager]
     video_recorder_manager: Optional[VideoRecorderManager]
     available_cameras: Optional[Dict[str, CameraDeviceInfo]]

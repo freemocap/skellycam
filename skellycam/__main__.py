@@ -2,7 +2,7 @@
 from multiprocessing import freeze_support
 
 from skellycam import logger
-from skellycam.main.main import main
+from skellycam._main.main import main
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 
 if __name__ == "__main__":

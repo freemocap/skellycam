@@ -1,14 +1,14 @@
 from typing import Dict
 
 import numpy as np
-from PySide6.QtCore import Signal, Qt, Slot
-from PySide6.QtGui import QImage
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
 
 from skellycam import logger
-from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraView
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.frames.frontend import FrontendMultiFramePayload
 
 title_label_style_string = """
                            font-size: 18px;
@@ -40,11 +40,11 @@ class CameraGrid(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-    @Slot(dict)
-    def handle_new_images(self, q_images: Dict[str, QImage]):
-        for camera_id, q_image in q_images.items():
+    @Slot(FrontendMultiFramePayload)
+    def handle_new_images(self, payload: FrontendMultiFramePayload):
+        for camera_id, frame in payload.frames.items():
             if camera_id in self._single_cameras.keys():
-                self._single_cameras[camera_id].update_image(q_image=q_image)
+                self._single_cameras[camera_id].handle_image_update(frame=frame)
             else:
                 raise KeyError(f"Camera ID {camera_id} not found in camera grid")
 
@@ -121,10 +121,9 @@ class CameraGrid(QWidget):
         self.close()
 
     def _handle_text_labels(self):
-        if len(self._camera_configs) ==0:
+        if len(self._camera_configs) == 0:
             self._cameras_disconnected_label.show()
             self._no_cameras_found_label.show()
         else:
             self._cameras_disconnected_label.hide()
             self._no_cameras_found_label.hide()
-

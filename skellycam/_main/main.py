@@ -1,7 +1,7 @@
 import multiprocessing
 
 from skellycam import logger
-from skellycam.main.main_loop import main_loop
+from skellycam._main.main_loop import main_loop
 
 
 def main():

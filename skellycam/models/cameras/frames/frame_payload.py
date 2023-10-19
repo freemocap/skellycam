@@ -1,10 +1,12 @@
+from dataclasses import dataclass
+
 import numpy as np
 from pydantic import BaseModel
 
 from skellycam.models.cameras.camera_id import CameraId
 
-
-class FramePayload(BaseModel):
+@dataclass
+class FramePayload:
     success: bool = False
     image: np.ndarray = None
     timestamp_ns: float = None

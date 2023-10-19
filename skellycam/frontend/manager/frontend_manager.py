@@ -8,8 +8,9 @@ from skellycam.backend.controller.interactions.connect_to_cameras import Connect
 from skellycam.backend.controller.interactions.detect_available_cameras import CamerasDetectedResponse, \
     DetectCamerasInteraction
 from skellycam.backend.controller.interactions.update_camera_configs import UpdateCameraConfigsInteraction
+from skellycam.frontend.manager.helpers.frame_grabber import FrameGrabber
 from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.frontend.gui.workers.frame_grabber import FrameGrabber
+
 
 if TYPE_CHECKING:
     from skellycam.frontend.gui.main_window.main_window import MainWindow
@@ -66,7 +67,7 @@ class FrontendManager:
         self.camera_control_panel.detect_available_cameras_button.clicked.connect(
             self._emit_detect_cameras_interaction)
 
-        self._frame_grabber.new_images.connect(self.camera_grid.handle_new_images)
+        self._frame_grabber.new_frames.connect(self.camera_grid.handle_new_images)
 
     def _handle_backend_response(self, response: BaseResponse) -> None:
         logger.trace(f"Updating view with message type: {response}")

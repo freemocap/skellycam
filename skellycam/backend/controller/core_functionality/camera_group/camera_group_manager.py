@@ -7,7 +7,8 @@ from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.frame_models.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frontend import FrontendMultiFramePayload
 
 
 class CameraGroupManager:
@@ -44,20 +45,27 @@ class CameraGroupManager:
                                                           ) for camera_id, camera_config in cameras.items()}
 
     def _create_camera_group(self):
-        self._camera_group = CameraGroup(camera_configs=self._camera_configs,
-                                         frontend_frame_queue=self.frontend_frame_queue,)
+        self._camera_group = CameraGroup(camera_configs=self._camera_configs)
         self._camera_group_thread = threading.Thread(target=self._run_camera_group_loop, )
 
     def _run_camera_group_loop(self):
         self._camera_group.start()
+        frontend_payload = FrontendMultiFramePayload(frames={})
         while not self._camera_group.exit_event.is_set():
             time.sleep(0.001)
             new_frames = self._camera_group.new_frames()
             if new_frames:
-                for frame in new_frames:
-                    self.incoming_frames_by_camera[frame.camera_id].append(frame)
-                print(
-                    f"Frame count by camera: {[f'Camera {camera_id}, Frame count: {len(frames)}' for camera_id, frames in self.incoming_frames_by_camera.items()]}")
+                self._handle_new_frames(frontend_payload, new_frames)
+
+    def _handle_new_frames(self,
+                           frontend_payload,
+                           new_frames) -> FrontendMultiFramePayload:
+        for frame in new_frames:
+            frontend_payload.add_frame(frame=frame)
+            if frontend_payload.full:
+                self.frontend_frame_queue.put(frontend_payload)
+                frontend_payload = FrontendMultiFramePayload(frames={})
+        return frontend_payload
 
     def start(self):
         logger.debug(f"Starting camera group thread...")

@@ -30,12 +30,14 @@ def reset_events(exit_event, reboot_event):
 def start_frontend_process(exit_event: multiprocessing.Event,
                            messages_from_frontend: multiprocessing.Queue,
                            messages_from_backend: multiprocessing.Queue,
+                           frontend_frame_queue: multiprocessing.Queue
                            ):
     logger.info(f"Starting frontend process...")
     reboot_event = multiprocessing.Event()
     frontend_process = multiprocessing.Process(target=frontend_main,
                                                args=(messages_from_frontend,
                                                      messages_from_backend,
+                                                     frontend_frame_queue,
                                                      exit_event,
                                                      reboot_event))
     frontend_process.start()

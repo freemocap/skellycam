@@ -1,7 +1,7 @@
 import time
 
 from skellycam import logger
-from skellycam.main.helpers import shut_down, reset_events, start_up
+from skellycam._main.helpers import shut_down, reset_events, start_up
 
 
 def main_loop(exit_event):

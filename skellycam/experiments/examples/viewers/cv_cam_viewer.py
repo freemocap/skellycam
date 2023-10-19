@@ -5,7 +5,7 @@ from typing import Union
 import cv2
 from setproctitle import setproctitle
 
-from skellycam.models.cameras.frame_models.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload
 
 
 class CvCamViewer:

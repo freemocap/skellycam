@@ -15,7 +15,7 @@ from skellycam.backend.controller.core_functionality.opencv.video_recorder.video
 from skellycam.models.cameras.camera_config import CameraConfig
 
 from skellycam import logger
-from skellycam.models.cameras.frame_models.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.system.environment.default_paths import (
     default_session_name,
     get_iso6201_time_string, SYNCHRONIZED_VIDEOS_FOLDER_NAME, get_default_skellycam_base_folder_path,

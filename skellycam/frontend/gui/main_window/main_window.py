@@ -8,8 +8,8 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget, QL
 from skellycam import logger
 from skellycam.backend.controller.interactions.base_models import BaseInteraction, BaseResponse
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.frontend.gui.main_window.frontend_manager.frontend_manager import FrontendManager
-from skellycam.frontend.gui.main_window.frontend_manager.keyboard_shortcuts import KeyboardShortcuts
+from skellycam.frontend.gui.main_window.keyboard_shortcuts import KeyboardShortcuts
+
 from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
     CameraGrid,

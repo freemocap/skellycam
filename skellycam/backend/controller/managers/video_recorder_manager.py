@@ -4,7 +4,7 @@ from typing import Dict
 from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frame_models.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload
 
 
 class VideoRecorderManager:

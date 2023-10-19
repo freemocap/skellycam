@@ -7,7 +7,7 @@ from skellycam.backend.controller.core_functionality.diagnostics.create_diagnost
 from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
 
 from skellycam import logger
-from skellycam.models.cameras.frame_models.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.tests.test_frame_timestamp_synchronization import test_frame_timestamp_synchronization
 from skellycam.tests.test_synchronized_video_frame_counts import test_synchronized_video_frame_counts
 

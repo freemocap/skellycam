@@ -1,5 +1,6 @@
 from typing import Dict, Optional
 
+from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
     BaseInteraction
 from skellycam.models.cameras.camera_config import CameraConfig
@@ -44,7 +45,7 @@ class UpdateCameraConfigsInteraction(BaseInteraction):
     def as_request(cls, **kwargs):
         return cls(request=UpdateCameraConfigsRequest.create(**kwargs))
 
-    def execute_command(self, controller: "Controller") -> UpdateCameraConfigsResponse:
+    def execute_command(self, controller: Controller) -> UpdateCameraConfigsResponse:
         self.command = UpdateCameraConfigsCommand()
         self.response = self.command.execute(controller, camera_configs=self.request.camera_configs)
         return self.response
