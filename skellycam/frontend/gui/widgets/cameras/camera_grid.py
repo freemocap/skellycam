@@ -1,11 +1,12 @@
 from typing import Dict
 
 import numpy as np
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, Slot
+from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
 
 from skellycam import logger
-from skellycam.data_models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraView
 
@@ -20,13 +21,10 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class CameraGrid(QWidget):
-    cameras_connected_signal = Signal()
-    camera_group_created_signal = Signal(dict)
-    incoming_camera_configs_signal = Signal(dict)
-    video_saved_to_this_folder_signal = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+
         self._initUI()
         self._camera_configs: Dict[str, CameraConfig] = {}
         self._single_cameras: Dict[str, SingleCameraView] = {}
@@ -41,6 +39,14 @@ class CameraGrid(QWidget):
 
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
+
+    @Slot(dict)
+    def handle_new_images(self, q_images: Dict[str, QImage]):
+        for camera_id, q_image in q_images.items():
+            if camera_id in self._single_cameras.keys():
+                self._single_cameras[camera_id].update_image(q_image=q_image)
+            else:
+                raise KeyError(f"Camera ID {camera_id} not found in camera grid")
 
     def _create_camera_view_layouts(self):
         self._camera_views_layout = QHBoxLayout()

@@ -3,7 +3,7 @@
 # from pydantic import BaseModel, PrivateAttr
 #
 # from skellycam import logger
-# from skellycam.data_models.app_state.app_state import AppState
+# from skellycam.models.app_state.app_state import AppState
 #
 # _APP_STATE = None
 # _APP_STATE_MANAGER = None

@@ -1,10 +1,11 @@
 import pprint
+from typing import Any, Dict
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 
-from skellycam.data_models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_config import CameraConfig
 
 
 class SingleCameraView(QWidget):
@@ -38,7 +39,8 @@ class SingleCameraView(QWidget):
         self._image_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._image_view)
 
-    def handle_image_update(self, q_image: QImage, frame_diagnostics_dictionary: dict):
+    @Slot(FrontendMultiFramePackage)
+    def handle_image_update(self, q_image: QImage, frame_diagnostics_dictionary: Dict[str, Any]):
         self._pixmap.convertFromImage(q_image)
 
         image_label_widget_width = self._image_view.width()
@@ -85,3 +87,4 @@ class SingleCameraView(QWidget):
         self._painter.setPen(QColor(255, 0, 0))  # Red color
         self._painter.drawText(event.rect(), Qt.AlignCenter, self._annotation_text)
         self._painter.end()
+

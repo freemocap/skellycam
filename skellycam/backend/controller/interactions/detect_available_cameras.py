@@ -1,0 +1,43 @@
+from typing import Dict, Optional
+
+from skellycam.backend.controller.controller import Controller
+from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import \
+    detect_available_cameras
+
+from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
+    BaseInteraction
+from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
+
+
+class DetectAvailableCamerasRequest(BaseRequest):
+    """
+    A request to detect available cameras and return their info in a `CamerasDetected` response
+    """
+    pass
+
+
+class CamerasDetectedResponse(BaseResponse):
+    success: bool
+    available_cameras: Dict[str, CameraDeviceInfo]
+
+
+class DetectAvailableCamerasCommand(BaseCommand):
+    def execute(self, controller: "Controller", **kwargs) -> CamerasDetectedResponse:
+        controller.available_cameras = detect_available_cameras()
+        return CamerasDetectedResponse(success=True,
+                                       available_cameras=controller.available_cameras)
+
+
+class DetectCamerasInteraction(BaseInteraction):
+    request: DetectAvailableCamerasRequest
+    command: Optional[DetectAvailableCamerasCommand]
+    response: Optional[CamerasDetectedResponse]
+
+    @classmethod
+    def as_request(cls, **kwargs):
+        return cls(request=DetectAvailableCamerasRequest.create(**kwargs))
+
+    def execute_command(self, controller: "Controller") -> CamerasDetectedResponse:
+        self.command = DetectAvailableCamerasCommand()
+        self.response = self.command.execute(controller)
+        return self.response

@@ -6,9 +6,9 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam import logger
-from skellycam.data_models.cameras.camera_config import CameraConfig, RotationTypes
-from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
-from skellycam.data_models.cameras.video_resolution import VideoResolution
+from skellycam.models.cameras.camera_config import CameraConfig, RotationTypes
+from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
+from skellycam.models.cameras.video_resolution import VideoResolution
 from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)

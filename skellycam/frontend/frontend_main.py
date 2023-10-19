@@ -3,9 +3,9 @@ import multiprocessing.connection
 from PySide6.QtCore import QTimer
 
 from skellycam import logger
-from skellycam.backend.controller.commands.interactions import BaseInteraction, BaseResponse
+from skellycam.backend.controller.interactions.base_models import BaseInteraction, BaseResponse
 from skellycam.frontend.application import create_or_recreate_qt_application
-from skellycam.frontend.gui.main_window.helpers.frontend_manager import FrontendManager
+from skellycam.frontend.gui.main_window.frontend_manager.frontend_manager import FrontendManager
 from skellycam.frontend.gui.main_window.main_window import MainWindow
 
 
@@ -44,7 +44,7 @@ def frontend_loop(messages_from_frontend: multiprocessing.Queue,
                     logger.info(f"frontend_main received message from backend: {response}")
                     if not response.success:
                         logger.error(f"Backend sent error message: {response}!")
-                    frontend_manager.handle_backend_response(response)
+                    frontend_manager._handle_backend_response(response)
 
             def interact_with_backend(interaction: BaseInteraction) -> None:
                 logger.debug(f"Sending interaction to backend: {interaction}")

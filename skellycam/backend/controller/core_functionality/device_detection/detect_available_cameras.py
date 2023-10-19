@@ -3,7 +3,7 @@ from typing import Dict
 
 from PySide6.QtMultimedia import QMediaDevices
 
-from skellycam.data_models.cameras.camera_device_info import CameraDeviceInfo
+from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
 
 
 def detect_available_cameras() -> Dict[str, CameraDeviceInfo]:

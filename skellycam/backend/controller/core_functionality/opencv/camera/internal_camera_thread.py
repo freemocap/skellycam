@@ -8,8 +8,8 @@ import cv2
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.config.apply_config import apply_camera_configuration
 from skellycam.backend.controller.core_functionality.config.determine_backend import determine_backend
-from skellycam.data_models.cameras.camera_config import CameraConfig
-from skellycam.data_models.frame_payload import FramePayload
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.frame_models.frame_payload import FramePayload
 
 
 class FailedToReadFrameFromCameraException(Exception):

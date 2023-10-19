@@ -6,10 +6,10 @@ from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget, QLabel
 
 from skellycam import logger
-from skellycam.backend.controller.commands.interactions import BaseInteraction, BaseResponse
+from skellycam.backend.controller.interactions.base_models import BaseInteraction, BaseResponse
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.frontend.gui.main_window.helpers.frontend_manager import FrontendManager
-from skellycam.frontend.gui.main_window.helpers.keyboard_shortcuts import KeyboardShortcuts
+from skellycam.frontend.gui.main_window.frontend_manager.frontend_manager import FrontendManager
+from skellycam.frontend.gui.main_window.frontend_manager.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
 from skellycam.frontend.gui.widgets.cameras.camera_grid import (
     CameraGrid,
@@ -17,11 +17,11 @@ from skellycam.frontend.gui.widgets.cameras.camera_grid import (
 from skellycam.frontend.gui.widgets.camera_parameter_tree import (
     CameraParameterTree,
 )
-from skellycam.frontend.gui.widgets.record_buttons_view import (
+from skellycam.frontend.gui.widgets.record_buttons import (
     RecordButtons,
 )
-from skellycam.frontend.gui.widgets.directory_view import DirectoryView
-from skellycam.frontend.gui.widgets.welcome_view import (
+from skellycam.frontend.gui.widgets.directory import DirectoryView
+from skellycam.frontend.gui.widgets.welcome import (
     Welcome,
 )
 from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path, \

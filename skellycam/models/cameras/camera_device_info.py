@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
-from skellycam.data_models.cameras.video_resolution import VideoResolution
+from skellycam.models.cameras.video_resolution import VideoResolution
 
 
 class DeviceVideoFormat(BaseModel):

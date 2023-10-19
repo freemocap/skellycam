@@ -1,6 +1,6 @@
 from pydantic import BaseModel, PrivateAttr
 
-from skellycam.data_models.timestamps.timestamp import Timestamp
+from skellycam.models.timestamp import Timestamp
 
 
 class AppTimeState(BaseModel):

@@ -3,8 +3,8 @@ from enum import Enum
 import cv2
 from pydantic import BaseModel, Field, PositiveFloat, NegativeInt
 
-from skellycam.data_models.cameras.camera_id import CameraId
-from skellycam.data_models.cameras.video_resolution import VideoResolution
+from skellycam.models.cameras.camera_id import CameraId
+from skellycam.models.cameras.video_resolution import VideoResolution
 
 
 class RotationTypes(Enum):

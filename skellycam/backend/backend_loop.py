@@ -4,16 +4,17 @@ import time
 import traceback
 
 from skellycam import logger
-from skellycam.backend.controller.commands.interactions import ErrorResponse
+from skellycam.backend.controller.interactions.base_models import ErrorResponse
 from skellycam.backend.controller.controller import get_or_create_controller
 
 
 def backend_loop(exit_event: multiprocessing.Event,
                  messages_from_backend: multiprocessing.Queue,
-                 messages_from_frontend: multiprocessing.Queue):
+                 messages_from_frontend: multiprocessing.Queue,
+                 frontend_frame_queue: multiprocessing.Queue):
     logger.info(f"Backend main loop starting...")
     controller = get_or_create_controller()
-
+    controller.frontend_frame_queue = frontend_frame_queue
     try:
         while True:
             if exit_event.is_set():

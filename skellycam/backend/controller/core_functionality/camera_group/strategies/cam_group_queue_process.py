@@ -8,8 +8,8 @@ from setproctitle import setproctitle
 
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.opencv.camera.camera import Camera
-from skellycam.data_models.cameras.camera_config import CameraConfig
-from skellycam.data_models.frame_payload import FramePayload
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.frame_models.frame_payload import FramePayload
 
 CAMERA_CONFIG_DICT_QUEUE_NAME = "camera_config_dict_queue"
 

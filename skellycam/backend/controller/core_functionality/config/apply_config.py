@@ -1,7 +1,7 @@
 import traceback
 
 import cv2
-from skellycam.data_models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.camera_config import CameraConfig
 
 from skellycam import logger
 

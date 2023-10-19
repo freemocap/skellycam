@@ -6,8 +6,8 @@ from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import \
     GroupedProcessStrategy
 from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import Strategy
-from skellycam.data_models.cameras.camera_config import CameraConfig
-from skellycam.data_models.frame_payload import FramePayload
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.frame_models.frame_payload import FramePayload
 
 
 class CameraGroup:

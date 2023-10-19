@@ -9,9 +9,11 @@ CONTROLLER = None
 
 def backend_main(messages_from_frontend: multiprocessing.Queue,
                  messages_from_backend: multiprocessing.Queue,
+                    frontend_frame_queue: multiprocessing.Queue,
                  exit_event: Event):
     logger.success(f"Backend main started!")
     backend_loop(exit_event=exit_event,
+                 frontend_frame_queue=frontend_frame_queue,
                  messages_from_backend=messages_from_backend,
                  messages_from_frontend=messages_from_frontend)
 

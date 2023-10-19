@@ -3,8 +3,8 @@ from typing import Dict, List
 
 from skellycam.backend.controller.core_functionality.camera_group.strategies.cam_group_queue_process import \
     CamGroupQueueProcess
-from skellycam.data_models.cameras.camera_config import CameraConfig
-from skellycam.data_models.frame_payload import FramePayload
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.frame_models.frame_payload import FramePayload
 from skellycam.utilities.array_split_by import dict_split_by
 
 ### Don't change this? Users should submit the actual value they want

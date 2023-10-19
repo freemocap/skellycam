@@ -1,3 +1,4 @@
+import multiprocessing
 import threading
 import time
 from typing import Dict, Optional, List
@@ -5,8 +6,8 @@ from typing import Dict, Optional, List
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.opencv.video_recorder.video_recorder import VideoRecorder
-from skellycam.data_models.cameras.camera_config import CameraConfig
-from skellycam.data_models.frame_payload import FramePayload
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.frame_models.frame_payload import FramePayload
 
 
 class CameraGroupManager:
@@ -20,7 +21,9 @@ class CameraGroupManager:
     """
 
     def __init__(self,
-                 camera_configs: Dict[str, CameraConfig]):
+                 camera_configs: Dict[str, CameraConfig],
+                 frontend_frame_queue: multiprocessing.Queue,) -> None:
+        self.frontend_frame_queue = frontend_frame_queue
         self._camera_group: Optional[CameraGroup] = None
         self._camera_group_thread: Optional[threading.Thread] = None
 
@@ -41,7 +44,8 @@ class CameraGroupManager:
                                                           ) for camera_id, camera_config in cameras.items()}
 
     def _create_camera_group(self):
-        self._camera_group = CameraGroup(camera_configs=self._camera_configs)
+        self._camera_group = CameraGroup(camera_configs=self._camera_configs,
+                                         frontend_frame_queue=self.frontend_frame_queue,)
         self._camera_group_thread = threading.Thread(target=self._run_camera_group_loop, )
 
     def _run_camera_group_loop(self):
