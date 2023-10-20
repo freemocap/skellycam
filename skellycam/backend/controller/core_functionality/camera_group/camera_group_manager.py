@@ -39,8 +39,7 @@ class CameraGroupManager:
         for frame in new_frames:
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
-                for frame in multi_frame_payload.frames.values():
-                    self.frontend_frame_pipe_sender.send_bytes(multi_frame_payload.to_bytes())
+                self.frontend_frame_pipe_sender.send_bytes(multi_frame_payload.to_bytes())
                 multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
         return multi_frame_payload
 

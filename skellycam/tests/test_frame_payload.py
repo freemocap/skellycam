@@ -54,10 +54,10 @@ def test_multi_frame_payload_to_and_from_bytes():
     assert original_multi_frame_payload.full, "MultiFramePayload didn't show 'full' after adding the frames, something is wrong!"
 
     # Convert to bytes
-    multi_frame_bytes_list = original_multi_frame_payload.to_bytes_list()
+    multi_frame_bytes = original_multi_frame_payload.to_bytes()
 
     # Convert back to MultiFramePayload
-    recovered_multi_frame_payload = MultiFramePayload.from_bytes_list(multi_frame_bytes_list)
+    recovered_multi_frame_payload = MultiFramePayload.from_bytes(multi_frame_bytes)
 
     # Check that everything matches
     assert original_multi_frame_payload.camera_ids == recovered_multi_frame_payload.camera_ids

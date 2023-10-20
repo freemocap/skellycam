@@ -1,3 +1,4 @@
+import itertools
 import struct
 from typing import Dict, Optional, List
 
@@ -10,13 +11,13 @@ from skellycam.models.cameras.camera_id import CameraId
 FRAME_PAYLOAD_BYTES_HEADER = 'bqiq'
 RAW_IMAGE_BYTES_HEADER = '4i'
 
+
 class RawImage(BaseModel):
     bytes: bytes
     width: int
     height: int
     channels: int
     data_type: str
-
 
     @property
     def image(self) -> np.ndarray:
@@ -67,7 +68,6 @@ class FramePayload(BaseModel):
                                           "(`0` is the first frame pulled from this camera)")
     camera_id: int = Field(description="The camera ID of the camera that this frame came from,"
                                        " e.g. `0` if this is the `cap = cv2.VideoCapture(0)` camera")
-
 
     @property
     def image(self) -> np.ndarray:
@@ -128,20 +128,49 @@ class MultiFramePayload(BaseModel):
     def add_frame(self, frame: FramePayload):
         self.frames[str(frame.camera_id)] = frame
 
-    def to_bytes_list(self) -> List[bytes]:
-        return [frame.to_bytes() for frame in self.frames.values()]
+    def to_bytes(self) -> bytes:
+        frames_data = [(index, frame.to_bytes()) for index, frame in enumerate(self.frames.values()) if
+                       frame is not None]
+        number_of_frames = len(frames_data)
+
+        # We'll save the indices of the non-None frames, as well as their lengths
+        header_info = [(index, len(frame_bytes)) for index, frame_bytes in frames_data]
+        frames_bytes = b''.join([frame_bytes for _, frame_bytes in frames_data])
+
+        # Header will be number of frames, followed by (index, length) pairs for each frame
+        header = struct.pack('i' + 'ii' * number_of_frames, number_of_frames, *itertools.chain(*header_info))
+
+        return header + frames_bytes
+
 
     @classmethod
-    def from_bytes_list(cls, byte_obj_list: List[bytes]):
-        frames = [FramePayload.from_bytes(byte_obj) for byte_obj in byte_obj_list]
-        return cls(frames={str(frame.camera_id): frame for frame in frames})
+    def from_bytes(cls, byte_obj: bytes):
+        number_of_frames = struct.unpack('i', byte_obj[:4])[0]
+        byte_obj = byte_obj[4:]
 
+        header_info = struct.unpack('ii' * number_of_frames, byte_obj[:8 * number_of_frames])
+        byte_obj = byte_obj[8 * number_of_frames:]
+
+        # Unpack indices and lengths from header info
+        indices, lengths = header_info[::2], header_info[1::2]
+
+        frames = []
+        byte_offset = 0
+        for index, length in zip(indices, lengths):
+            frame_bytes = byte_obj[byte_offset:byte_offset + length]
+            frame = FramePayload.from_bytes(frame_bytes) if frame_bytes != b"" else None
+            frames.append(frame)
+            byte_offset += length
+
+        return cls(frames={frame.camera_id: frame for frame in frames})
 
 if __name__ == "__main__":
     from skellycam.tests.test_frame_payload import test_frame_payload_to_and_from_bytes, \
-        test_raw_image_to_and_from_bytes
+        test_raw_image_to_and_from_bytes, test_multi_frame_payload_to_and_from_bytes
 
     test_raw_image_to_and_from_bytes()
     print("RawImage tests passed!")
     test_frame_payload_to_and_from_bytes()
     print("FramePayload tests passed!")
+    test_multi_frame_payload_to_and_from_bytes()
+    print("MultiFramePayload tests passed!")
