@@ -1,5 +1,6 @@
 from typing import Dict
 
+import cv2
 import numpy as np
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
@@ -48,7 +49,7 @@ class CameraGrid(QWidget):
             for camera_id, frame in payload.frames.items():
                 if camera_id in self._single_cameras.keys():
                     # self._single_cameras[camera_id].handle_image_update(frame=frame)
-                    pass
+                    cv2.imshow(f"Camera {camera_id}", frame.image)
                 else:
                     raise KeyError(f"Camera ID {camera_id} not found in camera grid")
         except Exception as e:

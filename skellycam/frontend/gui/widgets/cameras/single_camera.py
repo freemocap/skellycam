@@ -80,14 +80,3 @@ class SingleCameraView(QWidget):
         super().close()
 
 
-if __name__ == "__main__":
-    """
-    pop up the camera view and show images from a standard cv2 capture loop
-    """
-    import sys
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    camera_view = SingleCameraView(camera_config=CameraConfig(camera_id=0))
-    camera_view.show()
-    app.exec()
