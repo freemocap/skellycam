@@ -10,7 +10,7 @@ from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message
 from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraView
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frames.multiframe_payload import MultiFramePayload
+from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
 
 title_label_style_string = """
                            font-size: 18px;

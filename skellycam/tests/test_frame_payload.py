@@ -1,6 +1,13 @@
 import numpy as np
 
-from skellycam.models.cameras.frames.frame_payload import FramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload, RawImage
+
+
+def test_raw_image_to_and_from_bytes():
+    image = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
+    raw_image = RawImage.from_cv2_image(image)
+    recovered_image = RawImage.from_bytes(raw_image.to_bytes())
+    assert np.array_equal(image, recovered_image.image)
 
 
 def test_frame_payload_to_and_from_bytes():
@@ -23,7 +30,8 @@ def test_frame_payload_to_and_from_bytes():
     assert original_payload.frame_number == recovered_payload.frame_number
     assert original_payload.camera_id == recovered_payload.camera_id
     assert np.array_equal(
-        np.frombuffer(original_payload.image.bytes, dtype=np.uint8).reshape(
-            original_payload.image.height, original_payload.image.width, original_payload.image.channels),
-        np.frombuffer(recovered_payload.image.bytes, dtype=np.uint8).reshape(
-            recovered_payload.image.height, recovered_payload.image.width, recovered_payload.image.channels))
+        np.frombuffer(original_payload.raw_image.bytes, dtype=np.uint8).reshape(
+            original_payload.raw_image.height, original_payload.raw_image.width, original_payload.raw_image.channels),
+        np.frombuffer(recovered_payload.raw_image.bytes, dtype=np.uint8).reshape(
+            recovered_payload.raw_image.height, recovered_payload.raw_image.width,
+            recovered_payload.raw_image.channels))

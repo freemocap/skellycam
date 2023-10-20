@@ -11,7 +11,7 @@ from skellycam.frontend.manager.frontend_manager import FrontendManager
 
 def frontend_main(messages_from_frontend: multiprocessing.Queue,
                   messages_from_backend: multiprocessing.Queue,
-                  frontend_frame_queue: multiprocessing.Queue,
+                  frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection,
                   exit_event: multiprocessing.Event,
                   reboot_event: multiprocessing.Event) -> int:
     def check_for_backend_messages():
@@ -31,7 +31,8 @@ def frontend_main(messages_from_frontend: multiprocessing.Queue,
     main_window.interact_with_backend.connect(lambda interaction: interact_with_backend(interaction))
     main_window.show()
 
-    frontend_manager = FrontendManager(main_window=main_window, incoming_frame_queue=frontend_frame_queue)
+    frontend_manager = FrontendManager(main_window=main_window,
+                                       frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
 
     logger.info(f"Frontend listener loop starting...")
     update_timer = QTimer()

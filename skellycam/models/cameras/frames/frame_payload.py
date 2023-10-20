@@ -1,9 +1,14 @@
 import struct
+from typing import Dict, Optional, List
 
 import numpy as np
 from PySide6.QtGui import QImage
 from pydantic import BaseModel, Field
 
+from skellycam.models.cameras.camera_id import CameraId
+
+FRAME_PAYLOAD_BYTES_HEADER = 'bqiq'
+RAW_IMAGE_BYTES_HEADER = '4i'
 
 class RawImage(BaseModel):
     bytes: bytes
@@ -11,6 +16,7 @@ class RawImage(BaseModel):
     height: int
     channels: int
     data_type: str
+
 
     @property
     def image(self) -> np.ndarray:
@@ -28,7 +34,7 @@ class RawImage(BaseModel):
 
     @classmethod
     def from_bytes(cls, byte_obj: bytes):
-        header_size = struct.calcsize('4i')
+        header_size = struct.calcsize(RAW_IMAGE_BYTES_HEADER)
         width, height, channels, data_type_length = struct.unpack('4i', byte_obj[:header_size])
         data_type_start = header_size
         data_type_end = data_type_start + data_type_length
@@ -41,7 +47,7 @@ class RawImage(BaseModel):
                    data_type=data_type)
 
     def to_bytes(self):
-        header = struct.pack('4i', self.width, self.height, self.channels, len(self.data_type))
+        header = struct.pack(RAW_IMAGE_BYTES_HEADER, self.width, self.height, self.channels, len(self.data_type))
         return header + self.data_type.encode() + self.bytes
 
     def to_q_image(self) -> QImage:
@@ -62,6 +68,7 @@ class FramePayload(BaseModel):
     camera_id: int = Field(description="The camera ID of the camera that this frame came from,"
                                        " e.g. `0` if this is the `cap = cv2.VideoCapture(0)` camera")
 
+
     @property
     def image(self) -> np.ndarray:
         return self.raw_image.image
@@ -81,14 +88,16 @@ class FramePayload(BaseModel):
             camera_id=camera_id,
         )
 
-    def to_bytes(self):
-        header = struct.pack('bqiq', self.success, self.timestamp_ns, self.frame_number, self.camera_id)
-        return header + self.raw_image.to_bytes()
+    def to_bytes(self) -> bytes:
+        byte_string = struct.pack(FRAME_PAYLOAD_BYTES_HEADER, self.success, self.timestamp_ns, self.frame_number,
+                                  self.camera_id)
+        return byte_string + self.raw_image.to_bytes()
 
     @classmethod
     def from_bytes(cls, byte_obj: bytes):
-        header_size = struct.calcsize('bqiq')
-        success, timestamp_ns, frame_number, camera_id = struct.unpack('bqiq', byte_obj[:header_size])
+        header_size = struct.calcsize(FRAME_PAYLOAD_BYTES_HEADER)
+        success, timestamp_ns, frame_number, camera_id = struct.unpack(FRAME_PAYLOAD_BYTES_HEADER,
+                                                                       byte_obj[:header_size])
         image = RawImage.from_bytes(byte_obj[header_size:])
         return cls(success=success,
                    timestamp_ns=timestamp_ns,
@@ -100,7 +109,31 @@ class FramePayload(BaseModel):
         return self.raw_image.to_q_image()
 
 
-if __name__ == "__main__":
-    from skellycam.tests.test_frame_payload_to_and_from_bytes import test_frame_payload_to_and_from_bytes
+class MultiFramePayload(BaseModel):
+    frames: Dict[str, Optional[FramePayload]]
 
+    @classmethod
+    def create(cls, camera_ids: List[CameraId], **kwargs):
+        return cls(frames={camera_id: None for camera_id in camera_ids},
+                   **kwargs)
+
+    @property
+    def camera_ids(self) -> List[CameraId]:
+        return [CameraId(camera_id) for camera_id in self.frames.keys()]
+
+    @property
+    def full(self):
+        return not any([frame is None for frame in self.frames.values()])
+
+    def add_frame(self, frame: FramePayload):
+        self.frames[str(frame.camera_id)] = frame
+
+
+if __name__ == "__main__":
+    from skellycam.tests.test_frame_payload import test_frame_payload_to_and_from_bytes, \
+        test_raw_image_to_and_from_bytes
+
+    test_raw_image_to_and_from_bytes()
+    print("RawImage tests passed!")
     test_frame_payload_to_and_from_bytes()
+    print("FramePayload tests passed!")

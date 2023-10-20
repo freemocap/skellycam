@@ -1,4 +1,3 @@
-import multiprocessing
 import threading
 import time
 from typing import Dict, Optional, List
@@ -7,15 +6,15 @@ from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frames.frame_payload import FramePayload
-from skellycam.models.cameras.frames.multiframe_payload import MultiFramePayload
+from skellycam.models.cameras.frames.frame_payload import FramePayload, MultiFramePayload
 
 
 class CameraGroupManager:
 
     def __init__(self,
-                 frontend_frame_queue: multiprocessing.Queue, ) -> None:
-        self.frontend_frame_queue = frontend_frame_queue
+                 frontend_frame_pipe_sender  # multiprocessing.connection.Connection
+                 ) -> None:
+        self.frontend_frame_pipe_sender = frontend_frame_pipe_sender
         self._camera_group: Optional[CameraGroup] = None
         self._camera_group_thread: Optional[threading.Thread] = None
 
@@ -40,7 +39,7 @@ class CameraGroupManager:
         for frame in new_frames:
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
-                self.frontend_frame_queue.put(multi_frame_payload)
+                self.frontend_frame_pipe_sender.send_bytes(multi_frame_payload.to_bytes())
                 multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
         return multi_frame_payload
 

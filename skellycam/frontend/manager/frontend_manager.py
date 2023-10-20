@@ -23,12 +23,15 @@ if TYPE_CHECKING:
 
 
 class FrontendManager:
-    def __init__(self, main_window: 'MainWindow', incoming_frame_queue: multiprocessing.Queue):
+    def __init__(self,
+                 main_window: 'MainWindow',
+                 frontend_frame_pipe_receiver  # multiprocessing.connection.Connection
+                 ) -> None:
         self.main_window = main_window
         self._stop_frame_grabber_event = multiprocessing.Event()
         self._frame_grabber = FrameGrabber(parent=self.main_window,
                                            stop_event=self._stop_frame_grabber_event,
-                                           incoming_frame_queue=incoming_frame_queue)
+                                           frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
 
         self._connect_signals()
 
