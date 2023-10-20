@@ -5,7 +5,7 @@ from skellycam.models.cameras.frames.frame_payload import FramePayload, RawImage
 
 def test_raw_image_to_and_from_bytes():
     image = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
-    raw_image = RawImage.from_cv2_image(image)
+    raw_image = RawImage.from_image(image)
     recovered_image = RawImage.from_bytes(raw_image.to_bytes())
     assert np.array_equal(image, recovered_image.image)
 
@@ -30,9 +30,9 @@ def test_frame_payload_to_and_from_bytes():
     assert original_payload.frame_number == recovered_payload.frame_number
     assert original_payload.camera_id == recovered_payload.camera_id
     assert np.array_equal(
-        np.frombuffer(original_payload.raw_image.bytes, dtype=np.uint8).reshape(
+        np.frombuffer(original_payload.raw_image.image_bytes, dtype=np.uint8).reshape(
             original_payload.raw_image.height, original_payload.raw_image.width, original_payload.raw_image.channels),
-        np.frombuffer(recovered_payload.raw_image.bytes, dtype=np.uint8).reshape(
+        np.frombuffer(recovered_payload.raw_image.image_bytes, dtype=np.uint8).reshape(
             recovered_payload.raw_image.height, recovered_payload.raw_image.width,
             recovered_payload.raw_image.channels))
 
@@ -64,12 +64,14 @@ def test_multi_frame_payload_to_and_from_bytes():
     assert original_multi_frame_payload.full == recovered_multi_frame_payload.full
     for camera_id in original_multi_frame_payload.camera_ids:
         assert np.array_equal(
-            np.frombuffer(original_multi_frame_payload.frames[str(camera_id)].raw_image.bytes, dtype=np.uint8).reshape(
+            np.frombuffer(original_multi_frame_payload.frames[str(camera_id)].raw_image.image_bytes,
+                          dtype=np.uint8).reshape(
                 original_multi_frame_payload.frames[str(camera_id)].raw_image.height,
                 original_multi_frame_payload.frames[str(camera_id)].raw_image.width,
                 original_multi_frame_payload.frames[str(camera_id)].raw_image.channels),
 
-            np.frombuffer(recovered_multi_frame_payload.frames[str(camera_id)].raw_image.bytes, dtype=np.uint8).reshape(
+            np.frombuffer(recovered_multi_frame_payload.frames[str(camera_id)].raw_image.image_bytes,
+                          dtype=np.uint8).reshape(
                 recovered_multi_frame_payload.frames[str(camera_id)].raw_image.height,
                 recovered_multi_frame_payload.frames[str(camera_id)].raw_image.width,
                 recovered_multi_frame_payload.frames[str(camera_id)].raw_image.channels)

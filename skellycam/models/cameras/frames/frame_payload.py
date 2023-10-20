@@ -1,58 +1,112 @@
 import itertools
 import struct
-from typing import Dict, Optional, List
+from io import BytesIO
+from typing import Dict, Optional, List, Literal
 
+import cv2
 import numpy as np
+from PIL import Image
 from PySide6.QtGui import QImage
 from pydantic import BaseModel, Field
+from tabulate import tabulate
 
 from skellycam.models.cameras.camera_id import CameraId
 
 FRAME_PAYLOAD_BYTES_HEADER = 'bqiq'
-RAW_IMAGE_BYTES_HEADER = '4i'
+RAW_IMAGE_BYTES_HEADER = '5i'
 
 
 class RawImage(BaseModel):
-    bytes: bytes
+    image_bytes: bytes
     width: int
     height: int
     channels: int
     data_type: str
+    compression: Literal["RAW", "JPEG", "PNG"] = Field(default="RAW")
 
     @property
     def image(self) -> np.ndarray:
-        return np.frombuffer(self.bytes, dtype=self.data_type).reshape((self.height, self.width, self.channels))
+        if self.compression == "RAW":
+            return np.frombuffer(self.image_bytes, dtype=self.data_type).reshape(
+                (self.height, self.width, self.channels))
+        else:
+            image_mode = 'L' if self.channels == 1 else 'RGB'
+            pil_image = Image.open(BytesIO(self.image_bytes)).convert(image_mode)
+            return np.array(pil_image)
 
     @classmethod
-    def from_cv2_image(cls, image: np.ndarray):
+    def from_image(cls, image: np.ndarray, compression: Literal["RAW", "JPEG", "PNG"] = "RAW"):
+        if compression == "RAW":
+            return cls(
+                image_bytes=image.tobytes(),
+                width=image.shape[1],
+                height=image.shape[0],
+                channels=image.shape[2],
+                data_type=str(image.dtype),
+            )
+
         return cls(
-            bytes=image.tobytes(),
+            image_bytes=cls._compress_image(image=image, compression=compression),
             width=image.shape[1],
             height=image.shape[0],
             channels=image.shape[2],
             data_type=str(image.dtype),
+            compression=compression,
         )
 
     @classmethod
     def from_bytes(cls, byte_obj: bytes):
         header_size = struct.calcsize(RAW_IMAGE_BYTES_HEADER)
-        width, height, channels, data_type_length = struct.unpack('4i', byte_obj[:header_size])
+        width, height, channels, data_type_length, compression_type_length = struct.unpack(RAW_IMAGE_BYTES_HEADER,
+                                                                                           byte_obj[:header_size])
+
         data_type_start = header_size
         data_type_end = data_type_start + data_type_length
         data_type = byte_obj[data_type_start:data_type_end].decode()
-        image_bytes = byte_obj[data_type_end:]
-        return cls(bytes=image_bytes,
+
+        compression_start = data_type_end
+        compression_end = compression_start + compression_type_length
+        compression = byte_obj[compression_start:compression_end].decode()
+        image_bytes = byte_obj[compression_end:]
+        return cls(image_bytes=image_bytes,
                    width=width,
                    height=height,
                    channels=channels,
-                   data_type=data_type)
+                   data_type=data_type,
+                   compression=compression)
 
     def to_bytes(self):
-        header = struct.pack(RAW_IMAGE_BYTES_HEADER, self.width, self.height, self.channels, len(self.data_type))
-        return header + self.data_type.encode() + self.bytes
+        header = struct.pack(RAW_IMAGE_BYTES_HEADER,
+                             self.width,
+                             self.height,
+                             self.channels,
+                             len(self.data_type),
+                             len(self.compression)) + self.data_type.encode() + self.compression.encode()
+        return header + self.image_bytes
+
+    def _compress_image(image: np.ndarray,
+                        compression: str,
+                        quality: int = 70) -> bytes:
+        match compression:
+            case "JPEG":
+                """Compresses the image using JPEG format and returns it as bytes."""
+                pil_image = Image.fromarray(image)
+                with BytesIO() as byte_stream:
+                    pil_image.save(byte_stream, format='JPEG', quality=quality)
+                    byte_stream.seek(0)
+                    compressed_image_bytes = byte_stream.read()
+                return compressed_image_bytes
+            case "PNG":
+                """Compresses the image using PNG format and returns it as bytes."""
+                pil_image = Image.fromarray(image)
+                with BytesIO() as byte_stream:
+                    pil_image.save(byte_stream, format='PNG')
+                    byte_stream.seek(0)
+                    compressed_image_bytes = byte_stream.read()
+                return compressed_image_bytes
 
     def to_q_image(self) -> QImage:
-        return QImage(self.bytes,
+        return QImage(self.image_bytes,
                       self.width,
                       self.height,
                       self.channels * self.width,
@@ -79,14 +133,18 @@ class FramePayload(BaseModel):
                image: np.ndarray,
                timestamp_ns: int,
                frame_number: int,
-               camera_id: int):
+               camera_id: int,
+               compression: Literal["RAW", "JPEG", "PNG"] = "RAW"):
         return cls(
             success=success,
-            raw_image=RawImage.from_cv2_image(image),
+            raw_image=RawImage.from_image(image=image, compression=compression),
             timestamp_ns=timestamp_ns,
             frame_number=frame_number,
             camera_id=camera_id,
         )
+
+    def compress(self, compression: Literal["JPEG", "PNG"]):
+        self.raw_image = RawImage.from_image(image=self.raw_image.image, compression=compression)
 
     def to_bytes(self) -> bytes:
         byte_string = struct.pack(FRAME_PAYLOAD_BYTES_HEADER, self.success, self.timestamp_ns, self.frame_number,
@@ -107,6 +165,9 @@ class FramePayload(BaseModel):
 
     def to_q_image(self) -> QImage:
         return self.raw_image.to_q_image()
+
+    def resize(self, factor: float):
+        self.raw_image = RawImage.from_image(image=cv2.resize(self.image, dsize=None, fx=factor, fy=factor))
 
 
 class MultiFramePayload(BaseModel):
@@ -142,7 +203,6 @@ class MultiFramePayload(BaseModel):
 
         return header + frames_bytes
 
-
     @classmethod
     def from_bytes(cls, byte_obj: bytes):
         number_of_frames = struct.unpack('i', byte_obj[:4])[0]
@@ -164,6 +224,74 @@ class MultiFramePayload(BaseModel):
 
         return cls(frames={frame.camera_id: frame for frame in frames})
 
+    def to_composite_image(self) -> np.ndarray:
+        """
+        Convert multiple frames into a stitched image along the horizontal axis.
+        Frames should be of same height.
+        """
+
+        composite_image = None
+        for camera_id, frame_payload in self.frames.items():
+            if frame_payload is None:
+                continue
+
+            image = frame_payload.image
+            image = cv2.putText(
+                image, str(camera_id), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                (255, 0, 0), 2, cv2.LINE_AA
+            )
+
+            if composite_image is None:
+                composite_image = image
+            else:
+                composite_image = np.hstack((composite_image, image))
+
+        return composite_image
+
+
+def evaluate_multi_frame_compression():
+    import time
+    number_of_images = 4
+    image_shape = (1920, 1080, 3)
+    images = [np.random.randint(0, 255, image_shape, dtype=np.uint8) for _ in range(number_of_images)]
+
+    compressed_results = {"add_frame_duration_ms": [],
+                          "size_kb": []}
+    uncompressed_results = {"add_frame_duration_ms": [],
+                            "size_kb": []}
+
+    for image in images:
+        tik = time.perf_counter()
+        uncompressed_frame = FramePayload.create(success=True,
+                                                 image=image,
+                                                 timestamp_ns=0,
+                                                 frame_number=0,
+                                                 camera_id=0)
+        tok = time.perf_counter()
+        duration_ms = (tok - tik) * 1000
+        size_kb = len(uncompressed_frame.to_bytes()) / 1000
+        uncompressed_results["add_frame_duration_ms"].append(duration_ms)
+        uncompressed_results["size_kb"].append(size_kb)
+
+        tik = time.perf_counter()
+        compressed_frame = FramePayload.create(success=True,
+                                               image=image,
+                                               timestamp_ns=0,
+                                               frame_number=0,
+                                               camera_id=0,
+                                               compression="JPEG")
+        tok = time.perf_counter()
+        duration_ms = (tok - tik) * 1000
+        size_kb = len(compressed_frame.to_bytes()) / 1000
+        compressed_results["add_frame_duration_ms"].append(duration_ms)
+        compressed_results["size_kb"].append(size_kb)
+
+    print(f"\nUncompressed Results:")
+    print(tabulate(uncompressed_results, headers="keys", tablefmt="pretty"))
+    print(f"\nCompressed Results:")
+    print(tabulate(compressed_results, headers="keys", tablefmt="pretty"))
+
+
 if __name__ == "__main__":
     from skellycam.tests.test_frame_payload import test_frame_payload_to_and_from_bytes, \
         test_raw_image_to_and_from_bytes, test_multi_frame_payload_to_and_from_bytes
@@ -173,4 +301,5 @@ if __name__ == "__main__":
     test_frame_payload_to_and_from_bytes()
     print("FramePayload tests passed!")
     test_multi_frame_payload_to_and_from_bytes()
-    print("MultiFramePayload tests passed!")
+    print("MultiFramePayload to/from bytes tests passed!")
+    evaluate_multi_frame_compression()

@@ -43,15 +43,16 @@ class CameraGrid(QWidget):
         self.sizePolicy().setVerticalStretch(1)
 
     @Slot(MultiFramePayload)
-    def handle_new_images(self, payload: MultiFramePayload):
+    def handle_new_images(self, payload: np.ndarray):
         # logger.trace(f"Got new images Updating camera views")
         try:
-            for camera_id, frame in payload.frames.items():
-                if camera_id in self._single_cameras.keys():
-                    # self._single_cameras[camera_id].handle_image_update(frame=frame)
-                    cv2.imshow(f"Camera {camera_id}", frame.image)
-                else:
-                    raise KeyError(f"Camera ID {camera_id} not found in camera grid")
+            cv2.imshow("wow", payload)
+        #     for camera_id, frame in payload.frames.items():
+        #         if camera_id in self._single_cameras.keys():
+        #             # self._single_cameras[camera_id].handle_image_update(frame=frame)
+        #             cv2.imshow(f"Camera {camera_id}", frame.image)
+        #         else:
+        #             raise KeyError(f"Camera ID {camera_id} not found in camera grid")
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             logger.exception(e)
