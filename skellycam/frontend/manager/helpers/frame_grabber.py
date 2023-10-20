@@ -22,8 +22,8 @@ class FrameGrabber(QThread):
 
         while True and not self.stop_event.is_set():
             try:
-                payload_bytes = self.frontend_frame_pipe_receiver.recv_bytes()
-                multi_frame_payload = MultiFramePayload.from_bytes(payload_bytes)
+                multi_frame_payload_bytes = self.frontend_frame_pipe_receiver.recv_bytes()
+                multi_frame_payload = MultiFramePayload.from_bytes(multi_frame_payload_bytes)
                 # logger.trace(f"Got new multi-frame payload from backend! Emitting `new_frames` signal")
                 self.new_frames.emit(multi_frame_payload)
             except Exception as e:
