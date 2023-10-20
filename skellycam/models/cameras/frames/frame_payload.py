@@ -5,13 +5,16 @@ from PySide6.QtGui import QImage
 from pydantic import BaseModel, Field
 
 
-
 class RawImage(BaseModel):
     bytes: bytes
     width: int
     height: int
     channels: int
-    dtype: str
+    data_type: str
+
+    @property
+    def image(self) -> np.ndarray:
+        return np.frombuffer(self.bytes, dtype=self.data_type).reshape((self.height, self.width, self.channels))
 
     @classmethod
     def from_cv2_image(cls, image: np.ndarray):
@@ -20,37 +23,49 @@ class RawImage(BaseModel):
             width=image.shape[1],
             height=image.shape[0],
             channels=image.shape[2],
-            dtype=str(image.dtype),
+            data_type=str(image.dtype),
         )
-
-    def to_bytes(self):
-        header = struct.pack('4i', self.width, self.height, self.channels, len(self.dtype))
-        return header + self.dtype.encode() + self.bytes
 
     @classmethod
     def from_bytes(cls, byte_obj: bytes):
         header_size = struct.calcsize('4i')
-        width, height, channels, dtype_len = struct.unpack('4i', byte_obj[:header_size])
-        dtype_start = header_size
-        dtype_end = dtype_start + dtype_len
-        dtype = byte_obj[dtype_start:dtype_end].decode()
-        img_bytes = byte_obj[dtype_end:]
-        return cls(bytes=img_bytes,
+        width, height, channels, data_type_length = struct.unpack('4i', byte_obj[:header_size])
+        data_type_start = header_size
+        data_type_end = data_type_start + data_type_length
+        data_type = byte_obj[data_type_start:data_type_end].decode()
+        image_bytes = byte_obj[data_type_end:]
+        return cls(bytes=image_bytes,
                    width=width,
                    height=height,
                    channels=channels,
-                   dtype=dtype)
+                   data_type=data_type)
+
+    def to_bytes(self):
+        header = struct.pack('4i', self.width, self.height, self.channels, len(self.data_type))
+        return header + self.data_type.encode() + self.bytes
+
+    def to_q_image(self) -> QImage:
+        return QImage(self.bytes,
+                      self.width,
+                      self.height,
+                      self.channels * self.width,
+                      QImage.Format_RGB888)
 
 
 class FramePayload(BaseModel):
     success: bool = Field(description="The `success` part of `success, image = cv2.VideoCapture.read()`")
-    image: RawImage = Field(description="The raw image from `cv2.VideoCapture.read()`")
+    raw_image: RawImage = Field(description="The raw image from `cv2.VideoCapture.read()`")
     timestamp_ns: int = Field(description="The timestamp of the frame in nanoseconds,"
                                           " from `time.perf_counter_ns()`")
     frame_number: int = Field(description="The frame number of the frame "
                                           "(`0` is the first frame pulled from this camera)")
     camera_id: int = Field(description="The camera ID of the camera that this frame came from,"
                                        " e.g. `0` if this is the `cap = cv2.VideoCapture(0)` camera")
+
+    @property
+    def image(self) -> np.ndarray:
+        return self.raw_image.image
+
     @classmethod
     def create(cls,
                success: bool,
@@ -60,7 +75,7 @@ class FramePayload(BaseModel):
                camera_id: int):
         return cls(
             success=success,
-            image=RawImage.from_cv2_image(image),
+            raw_image=RawImage.from_cv2_image(image),
             timestamp_ns=timestamp_ns,
             frame_number=frame_number,
             camera_id=camera_id,
@@ -68,7 +83,7 @@ class FramePayload(BaseModel):
 
     def to_bytes(self):
         header = struct.pack('bqiq', self.success, self.timestamp_ns, self.frame_number, self.camera_id)
-        return header + self.image.to_bytes()
+        return header + self.raw_image.to_bytes()
 
     @classmethod
     def from_bytes(cls, byte_obj: bytes):
@@ -79,16 +94,10 @@ class FramePayload(BaseModel):
                    timestamp_ns=timestamp_ns,
                    frame_number=frame_number,
                    camera_id=camera_id,
-                   image=image)
+                   raw_image=image)
 
     def to_q_image(self) -> QImage:
-        image = QImage(self.image.bytes,
-                       self.image.width,
-                       self.image.height,
-                       self.image.channels * self.image.width,
-                       QImage.Format(self.image.dtype))
-        return image
-
+        return self.raw_image.to_q_image()
 
 
 if __name__ == "__main__":

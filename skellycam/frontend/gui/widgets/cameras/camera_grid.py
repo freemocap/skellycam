@@ -43,11 +43,18 @@ class CameraGrid(QWidget):
 
     @Slot(MultiFramePayload)
     def handle_new_images(self, payload: MultiFramePayload):
-        for camera_id, frame in payload.frames.items():
-            if camera_id in self._single_cameras.keys():
-                self._single_cameras[camera_id].handle_image_update(frame=frame)
-            else:
-                raise KeyError(f"Camera ID {camera_id} not found in camera grid")
+        # logger.trace(f"Got new images Updating camera views")
+        try:
+            for camera_id, frame in payload.frames.items():
+                if camera_id in self._single_cameras.keys():
+                    # self._single_cameras[camera_id].handle_image_update(frame=frame)
+                    pass
+                else:
+                    raise KeyError(f"Camera ID {camera_id} not found in camera grid")
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            logger.exception(e)
+            raise e
 
     def _create_camera_view_layouts(self):
         self._camera_views_layout = QHBoxLayout()

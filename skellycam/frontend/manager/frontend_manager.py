@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING, Dict
 
 from skellycam import logger
 from skellycam.backend.controller.interactions.base_models import BaseResponse
-from skellycam.backend.controller.interactions.close_cameras import CloseCamerasInteraction
-from skellycam.backend.controller.interactions.connect_to_cameras import ConnectToCamerasInteraction
+from skellycam.backend.controller.interactions.close_cameras import CloseCamerasInteraction, CloseCamerasResponse
+from skellycam.backend.controller.interactions.connect_to_cameras import ConnectToCamerasInteraction, \
+    ConnectToCamerasResponse
 from skellycam.backend.controller.interactions.detect_available_cameras import CamerasDetectedResponse, \
     DetectCamerasInteraction
 from skellycam.backend.controller.interactions.update_camera_configs import UpdateCameraConfigsInteraction
@@ -24,9 +25,26 @@ if TYPE_CHECKING:
 class FrontendManager:
     def __init__(self, main_window: 'MainWindow', incoming_frame_queue: multiprocessing.Queue):
         self.main_window = main_window
+        self._stop_frame_grabber_event = multiprocessing.Event()
         self._frame_grabber = FrameGrabber(parent=self.main_window,
+                                           stop_event=self._stop_frame_grabber_event,
                                            incoming_frame_queue=incoming_frame_queue)
+
         self._connect_signals()
+
+    def handle_backend_response(self, response: BaseResponse) -> None:
+        logger.trace(f"Updating view with message type: {response}")
+
+        if isinstance(response, CamerasDetectedResponse):
+            self._handle_cameras_detected_response(response)
+        elif isinstance(response, ConnectToCamerasResponse):
+            self._handle_cameras_connected_response()
+        elif isinstance(response, CloseCamerasResponse):
+            self._handle_cameras_closed_response()
+        elif isinstance(response, BaseResponse):
+            logger.warning(f"Received BaseResponse with no 'response' behavior: {response}")
+        else:
+            raise ValueError(f"Unhandled response type: {response}")
 
     @property
     def welcome(self) -> 'Welcome':
@@ -69,19 +87,9 @@ class FrontendManager:
 
         self._frame_grabber.new_frames.connect(self.camera_grid.handle_new_images)
 
-    def handle_backend_response(self, response: BaseResponse) -> None:
-        logger.trace(f"Updating view with message type: {response}")
-
-        if isinstance(response, CamerasDetectedResponse):
-            self._handle_cameras_detected_response(response)
-        elif isinstance(response, BaseResponse):
-            logger.warning(f"Received BaseResponse with no 'response' behavior: {response}")
-        else:
-            raise ValueError(f"Unhandled response type: {response}")
-
-    def _handle_cameras_detected_response(self, response):
-        self.camera_parameter_tree.update_available_cameras(
-            available_cameras=CamerasDetectedResponse(**response.dict()).available_cameras)
+    def _handle_cameras_detected_response(self, response: CamerasDetectedResponse):
+        self.camera_control_panel.handle_cameras_detected()
+        self.camera_parameter_tree.update_available_cameras(available_cameras=response.available_cameras)
         self.camera_grid.update_camera_grid(camera_configs=self.camera_configs)
 
     def _handle_start_session_signal(self):
@@ -93,6 +101,7 @@ class FrontendManager:
 
     def _handle_camera_configs_changed(self, camera_configs: Dict[CameraId, CameraConfig]):
         logger.info("Handling Camera Configs Changed signal")
+
         self.camera_grid.update_camera_grid(camera_configs=camera_configs)
         self.main_window.interact_with_backend.emit(
             UpdateCameraConfigsInteraction.as_request(camera_configs=self.camera_configs))
@@ -103,6 +112,7 @@ class FrontendManager:
 
     def _emit_close_cameras_interaction(self):
         logger.info("Emitting close cameras interaction")
+        self._stop_frame_grabber_event.set()
         self.main_window.interact_with_backend.emit(CloseCamerasInteraction.as_request())
 
     def _emit_connect_to_cameras_interaction(self):
@@ -113,4 +123,11 @@ class FrontendManager:
         self._start_frame_grabber()
 
     def _start_frame_grabber(self):
-        pass
+        self._stop_frame_grabber_event.clear()
+        self._frame_grabber.start()
+
+    def _handle_cameras_connected_response(self):
+        self.camera_control_panel.close_cameras_button.setEnabled(True)
+
+    def _handle_cameras_closed_response(self):
+        self.camera_control_panel.handle_cameras_closed()

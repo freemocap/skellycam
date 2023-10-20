@@ -51,32 +51,40 @@ class VideoCaptureThread(threading.Thread):
         logger.info(
             f"Camera ID: [{self._config.camera_id}] Frame capture loop has started"
         )
+        self._wait_for_all_cameras_ready()
+        self._frame_number = -1
+        try:
+            while self._is_capturing_frames:
+                self._frame = self._get_next_frame()
+
+                self._pipe.send_bytes(self._frame.to_bytes())
+        except Exception as e:
+            logger.error(f"Error in frame capture loop: {e}")
+            logger.exception(e)
+            raise e
+        finally:
+            self.stop()
+            logger.info(
+                f"Camera ID: [{self._config.camera_id}] Frame capture loop has exited"
+            )
+
+    def _get_next_frame(self) -> FramePayload:
+        success, image = self._cv2_video_capture.read()
+        retrieval_timestamp = time.perf_counter()
+        self._frame_number += 1
+        return FramePayload.create(
+            success=success,
+            image=image,
+            timestamp_ns=int(retrieval_timestamp),
+            frame_number=self._frame_number,
+            camera_id=self._config.camera_id,
+        )
+
+    def _wait_for_all_cameras_ready(self):
         while not self._all_cameras_ready_event.is_set():
             time.sleep(.001)
             continue
         self._is_capturing_frames = True
-        frame_number = -1
-        camera_id = self._config.camera_id
-        previous_timestamp = time.perf_counter()
-        while self._is_capturing_frames:
-            success, image = self._cv2_video_capture.read()
-            retrieval_timestamp = time.perf_counter()
-            frame_number += 1
-            FramePayload.create(
-                success=success,
-                image=image,
-                timestamp_ns=int(retrieval_timestamp),
-                frame_number=frame_number,
-                camera_id=camera_id,
-            )
-            logger.trace(f"CAMERA_ID: {camera_id} - FPS: {1 / (retrieval_timestamp - previous_timestamp)} - image.shape: {image.shape}")
-            previous_timestamp = retrieval_timestamp
-            # self._pipe.send_bytes(self._frame.to_bytes())
-
-        self.stop()
-        logger.info(
-            f"Camera ID: [{self._config.camera_id}] Frame capture loop has exited"
-        )
 
     def _create_cv2_capture(self):
         logger.info(f"Connecting to Camera: {self._config.camera_id}...")
@@ -85,7 +93,7 @@ class VideoCaptureThread(threading.Thread):
         if self._cv2_video_capture is not None and self._cv2_video_capture.isOpened():
             self._cv2_video_capture.release()
 
-        capture = cv2.VideoCapture(int(self._config.camera_id), cap_backend)
+        capture = cv2.VideoCapture(self._config.camera_id, cap_backend)
         apply_camera_configuration(capture, self._config)
 
         success, image = capture.read()

@@ -1,13 +1,11 @@
 import pprint
-from typing import Any, Dict
 
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtGui import QImage, QPixmap, QPainter, QColor
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.frames.frame_payload import FramePayload
-from skellycam.models.cameras.frames.multiframe_payload import MultiFramePayload
 
 
 class SingleCameraView(QWidget):
@@ -20,6 +18,7 @@ class SingleCameraView(QWidget):
         self._annotation_text = pprint.pformat(camera_config.dict())
         self._pixmap = QPixmap()
         self._painter = QPainter()
+        self._processing_frame = False
         self._initUI()
 
     def _initUI(self):
@@ -42,8 +41,13 @@ class SingleCameraView(QWidget):
         self._layout.addWidget(self._image_view)
 
     def handle_image_update(self, frame: FramePayload):
+        if self._processing_frame:
+            return  # Don't process frames faster than we can display them
+        else:
+            self._processing_frame = True
+
         q_image = frame.to_q_image()
-        self._pixmap.convertFromImage(q_image)
+        self._pixmap = QPixmap.fromImage(q_image)
 
         image_label_widget_width = self._image_view.width()
         image_label_widget_height = self._image_view.height()
@@ -58,6 +62,7 @@ class SingleCameraView(QWidget):
             Qt.TransformationMode.SmoothTransformation, )
 
         self._image_view.setPixmap(self._pixmap)
+        self._processing_frame = False
 
     def show(self):
         super().show()
@@ -74,11 +79,15 @@ class SingleCameraView(QWidget):
         self._title_label.close()
         super().close()
 
-    def paintEvent(self, event):
-        super().paintEvent(event)
 
-        self._painter.begin(self._image_view.pixmap())
-        self._painter.setPen(QColor(255, 0, 0))  # Red color
-        self._painter.drawText(event.rect(), Qt.AlignCenter, self._annotation_text)
-        self._painter.end()
+if __name__ == "__main__":
+    """
+    pop up the camera view and show images from a standard cv2 capture loop
+    """
+    import sys
+    from PySide6.QtWidgets import QApplication
 
+    app = QApplication(sys.argv)
+    camera_view = SingleCameraView(camera_config=CameraConfig(camera_id=0))
+    camera_view.show()
+    app.exec()
