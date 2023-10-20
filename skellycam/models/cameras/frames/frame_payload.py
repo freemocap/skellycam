@@ -128,6 +128,14 @@ class MultiFramePayload(BaseModel):
     def add_frame(self, frame: FramePayload):
         self.frames[str(frame.camera_id)] = frame
 
+    def to_bytes_list(self) -> List[bytes]:
+        return [frame.to_bytes() for frame in self.frames.values()]
+
+    @classmethod
+    def from_bytes_list(cls, byte_obj_list: List[bytes]):
+        frames = [FramePayload.from_bytes(byte_obj) for byte_obj in byte_obj_list]
+        return cls(frames={str(frame.camera_id): frame for frame in frames})
+
 
 if __name__ == "__main__":
     from skellycam.tests.test_frame_payload import test_frame_payload_to_and_from_bytes, \
