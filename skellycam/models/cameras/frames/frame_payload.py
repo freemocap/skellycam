@@ -171,7 +171,7 @@ class FramePayload(BaseModel):
 
 
 class MultiFramePayload(BaseModel):
-    frames: Dict[str, Optional[FramePayload]]
+    frames: Dict[CameraId, Optional[FramePayload]]
 
     @classmethod
     def create(cls, camera_ids: List[CameraId], **kwargs):
@@ -187,7 +187,7 @@ class MultiFramePayload(BaseModel):
         return not any([frame is None for frame in self.frames.values()])
 
     def add_frame(self, frame: FramePayload):
-        self.frames[str(frame.camera_id)] = frame
+        self.frames[frame.camera_id] = frame
 
     def to_bytes(self) -> bytes:
         frames_data = [(index, frame.to_bytes()) for index, frame in enumerate(self.frames.values()) if
@@ -223,30 +223,6 @@ class MultiFramePayload(BaseModel):
             byte_offset += length
 
         return cls(frames={frame.camera_id: frame for frame in frames})
-
-    def to_composite_image(self) -> np.ndarray:
-        """
-        Convert multiple frames into a stitched image along the horizontal axis.
-        Frames should be of same height.
-        """
-
-        composite_image = None
-        for camera_id, frame_payload in self.frames.items():
-            if frame_payload is None:
-                continue
-
-            image = frame_payload.image
-            image = cv2.putText(
-                image, str(camera_id), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
-                (255, 0, 0), 2, cv2.LINE_AA
-            )
-
-            if composite_image is None:
-                composite_image = image
-            else:
-                composite_image = np.hstack((composite_image, image))
-
-        return composite_image
 
 
 def evaluate_multi_frame_compression():

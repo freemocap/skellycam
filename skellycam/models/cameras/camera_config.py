@@ -49,9 +49,8 @@ class CameraConfig(BaseModel):
     rotation: RotationTypes = Field(default=RotationTypes.NO_ROTATION,
                                     description="The rotation to apply to the images "
                                                 "of this camera (after they are captured)")
-    fourcc: str = Field(default="MJPG",
-                        description="The fourcc code to use for the video codec - `MP4V` is the default,  "
-                                    "but it would be interesting to try `MJPG1, `H264`, etc")
+    fourcc: str = Field(default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
+                        description="The fourcc code to use for the video codec")
 
     @property
     def orientation(self) -> str:

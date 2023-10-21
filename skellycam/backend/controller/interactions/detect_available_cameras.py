@@ -1,12 +1,11 @@
 from typing import Dict, Optional
 
-from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import \
     detect_available_cameras
-
 from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
     BaseInteraction
 from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
+from skellycam.models.cameras.camera_id import CameraId
 
 
 class DetectAvailableCamerasRequest(BaseRequest):
@@ -18,7 +17,7 @@ class DetectAvailableCamerasRequest(BaseRequest):
 
 class CamerasDetectedResponse(BaseResponse):
     success: bool
-    available_cameras: Dict[str, CameraDeviceInfo]
+    available_cameras: Dict[CameraId, CameraDeviceInfo]
 
 
 class DetectAvailableCamerasCommand(BaseCommand):

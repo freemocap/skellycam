@@ -21,55 +21,70 @@ class VideoCaptureThread(threading.Thread):
             self,
             config: CameraConfig,
             pipe,  # multiprocessing.connection.Connection
-            this_camera_ready_event: multiprocessing.Event,
+            is_capturing_event: multiprocessing.Event,
             all_cameras_ready_event: multiprocessing.Event,
     ):
         super().__init__()
-        self._previous_timestamp = time.perf_counter()
+        self._should_run_frame_loop = False
         self._pipe = pipe
-        self._new_frame_ready = False
-        self.daemon = False
-
-        self._this_camera_ready_event = this_camera_ready_event
+        self.daemon = True
+        self._is_capturing_event = is_capturing_event
         self._all_cameras_ready_event = all_cameras_ready_event
-
         self._config = config
-        self._is_capturing_frames = False
-
         self._cv2_video_capture = None
 
     @property
     def is_capturing_frames(self) -> bool:
-        return self._is_capturing_frames
+        return self._is_capturing_event.is_set()
 
     def run(self):
         self._cv2_video_capture = self._create_cv2_capture()
         self._start_frame_loop()
 
     def _start_frame_loop(self):
-        self._is_capturing_frames = True
+
         logger.info(
             f"Camera ID: [{self._config.camera_id}] Frame capture loop has started"
         )
         self._wait_for_all_cameras_ready()
         self._frame_number = -1
-        try:
-            while self._is_capturing_frames:
-                self._frame = self._get_next_frame()
 
-                self._pipe.send_bytes(self._frame.to_bytes())
+        self._frame_loop()  # main frame loop
+
+        logger.info(
+            f"Camera ID: [{self._config.camera_id}] Frame capture loop has exited"
+        )
+
+    def _frame_loop(self):
+        """
+        This loop is responsible for capturing frames from the camera and stuffing them into the pipe
+        """
+        self._is_capturing_event.set()
+        try:
+            while self._should_run_frame_loop:
+                frame = self._get_next_frame()
+                self._pipe.send_bytes(frame.to_bytes())
         except Exception as e:
             logger.error(f"Error in frame capture loop: {e}")
             logger.exception(e)
             raise e
-        finally:
-            self.stop()
-            logger.info(
-                f"Camera ID: [{self._config.camera_id}] Frame capture loop has exited"
-            )
 
     def _get_next_frame(self) -> FramePayload:
-        success, image = self._cv2_video_capture.read()
+        """
+        THIS IS WHERE THE MAGIC HAPPENS
+
+        This method is responsible for grabbing the next frame from the camera - it is the point of "transduction"
+         when a pattern of environmental energy (i.e. a timeslice of the 2D pattern of light intensity in 3 wavelengths
+          within the field of view of the camera ) is abosrbed by the camera's sensor and converted into a digital
+          representation of that pattern (i.e. a 2D array of pixel values in 3 channels).
+
+        This is the empirical measurement, whereupon all future inference will derive their empirical grounding.
+
+        This sweet baby must be protected at all costs. Nothing is allowed to block this call (which could result in
+        a frame drop)
+        """
+
+        success, image = self._cv2_video_capture.read()  #THIS IS WHERE THE MAGIC HAPPENS
         retrieval_timestamp = time.perf_counter()
         self._frame_number += 1
         return FramePayload.create(
@@ -84,7 +99,7 @@ class VideoCaptureThread(threading.Thread):
         while not self._all_cameras_ready_event.is_set():
             time.sleep(.001)
             continue
-        self._is_capturing_frames = True
+        self._should_run_frame_loop = True
 
     def _create_cv2_capture(self):
         logger.info(f"Connecting to Camera: {self._config.camera_id}...")
@@ -106,13 +121,13 @@ class VideoCaptureThread(threading.Thread):
             )
 
         logger.success(f"Successfully connected to Camera: {self._config.camera_id}!")
-        self._this_camera_ready_event.set()
+        self._is_capturing_event.set()
         return capture
 
     def stop(self):
         logger.debug("Stopping frame capture loop...")
-        self._is_capturing_frames = False
-        if self._cv2_video_capture is not None and self._cv2_video_capture.isOpened():
+        self._should_run_frame_loop = False
+        if self._cv2_video_capture is not None:
             self._cv2_video_capture.release()
 
     def update_camera_config(self, new_config: CameraConfig):
@@ -129,7 +144,7 @@ if __name__ == "__main__":
     event2.set()
     thread = VideoCaptureThread(config=config,
                                 pipe=con1,
-                                this_camera_ready_event=event1,
+                                is_capturing_event=event1,
                                 all_cameras_ready_event=event2)
     thread.start()
     #

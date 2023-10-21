@@ -1,12 +1,8 @@
-import asyncio
 import multiprocessing
-import time
-import traceback
 from typing import Optional
 
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.opencv.camera.internal_camera_thread import VideoCaptureThread
-from skellycam.experiments.examples.viewers.cv_cam_viewer import CvCamViewer
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 
@@ -19,7 +15,7 @@ class Camera:
     ):
 
         self._all_cameras_ready_event = None
-        self._this_camera_ready_event = None
+        self._is_capturing_event = None
         self._config = config
         self._pipe = pipe
         self._capture_thread: Optional[VideoCaptureThread] = None
@@ -33,10 +29,10 @@ class Camera:
         return self._config.camera_id
 
     def connect(self,
-                this_camera_ready: multiprocessing.Event,
+                is_capturing_event: multiprocessing.Event,
                 all_cameras_ready: multiprocessing.Event):
 
-        self._this_camera_ready_event = this_camera_ready
+        self._is_capturing_event = is_capturing_event
         self._all_cameras_ready_event = all_cameras_ready
 
         if self._capture_thread and self._capture_thread.is_capturing_frames:
@@ -46,26 +42,15 @@ class Camera:
         self._capture_thread = VideoCaptureThread(
             config=self._config,
             pipe=self._pipe,
-            this_camera_ready_event=self._this_camera_ready_event,
+            is_capturing_event=self._is_capturing_event,
             all_cameras_ready_event=all_cameras_ready,
         )
         self._capture_thread.start()
 
-    def stop_frame_capture(self):
-        self._capture_thread.stop()
-
     def close(self):
-        try:
-            self._capture_thread.stop()
-            while self._capture_thread.is_alive():
-                # wait for thread to die.
-                # TODO: use threading.Event for synchronize mainthread vs other threads
-                time.sleep(0.1)
-        except:
-            logger.error("Printing traceback")
-            traceback.print_exc()
-        finally:
-            logger.info(f"Camera ID: [{self._config.camera_id}] has closed")
+        self._capture_thread.stop()
+        self._capture_thread.join()
+        logger.debug(f"Camera ID: [{self._config.camera_id}] has closed")
 
     def update_config(self, camera_config: CameraConfig):
         logger.info(
@@ -75,7 +60,7 @@ class Camera:
             self.close()
         else:
             if not self._capture_thread.is_capturing_frames:
-                self.connect(this_camera_ready=self._this_camera_ready_event,
+                self.connect(is_capturing_event=self._is_capturing_event,
                              all_cameras_ready=self._all_cameras_ready_event)
 
             self._capture_thread.update_camera_config(camera_config)

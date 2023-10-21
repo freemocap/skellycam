@@ -6,14 +6,13 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam import logger
+from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
+                                                         rotate_image_str_to_cv2_code,
+                                                         USE_THIS_CAMERA_STRING)
 from skellycam.models.cameras.camera_config import CameraConfig, RotationTypes
 from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.video_resolution import VideoResolution
-from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
-                                                         rotate_image_str_to_cv2_code,
-                                                         USE_THIS_CAMERA_STRING)
-from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
 
 
 class CameraParameterTree(QWidget):
@@ -49,7 +48,7 @@ class CameraParameterTree(QWidget):
         # return self._extract_camera_configs()
         return self._camera_configs
 
-    def update_available_cameras(self, available_cameras: Dict[str, CameraDeviceInfo]):
+    def update_available_cameras(self, available_cameras: Dict[CameraId, CameraDeviceInfo]):
         logger.debug("Updating camera configs in parameter tree")
         self._available_cameras = available_cameras
         self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in available_cameras.keys()}
