@@ -25,28 +25,28 @@ class RecordButtons(QWidget):
     def _create_buttons(self) -> QHBoxLayout:
         button_layout = QHBoxLayout()
 
-        self.start_recording_push_button = QPushButton(self.tr(START_RECORDING_BUTTON_TEXT))
-        self.start_recording_push_button.setEnabled(True)
-        self.start_recording_push_button.hide()
+        self.start_recording_button = QPushButton(self.tr(START_RECORDING_BUTTON_TEXT))
+        self.start_recording_button.setEnabled(True)
+        self.start_recording_button.hide()
 
-        button_layout.addWidget(self.start_recording_push_button)
+        button_layout.addWidget(self.start_recording_button)
 
-        self.stop_recording_push_button = QPushButton(self.tr(STOP_RECORDING_BUTTON_TEXT))
-        self.stop_recording_push_button.setEnabled(False)
-        self.stop_recording_push_button.hide()
-        button_layout.addWidget(self.stop_recording_push_button)
+        self.stop_recording_button = QPushButton(self.tr(STOP_RECORDING_BUTTON_TEXT))
+        self.stop_recording_button.setEnabled(False)
+        self.stop_recording_button.hide()
+        button_layout.addWidget(self.stop_recording_button)
         return button_layout
 
     def show(self):
         super().show()
-        self.start_recording_push_button.show()
-        self.stop_recording_push_button.show()
-        self.start_recording_push_button.setEnabled(True)
-        self.stop_recording_push_button.setEnabled(False)
+        self.start_recording_button.show()
+        self.stop_recording_button.show()
+        self.start_recording_button.setEnabled(True)
+        self.stop_recording_button.setEnabled(False)
 
     def hide(self):
         super().hide()
-        self.start_recording_push_button.hide()
-        self.stop_recording_push_button.hide()
-        self.start_recording_push_button.setEnabled(False)
-        self.stop_recording_push_button.setEnabled(False)
+        self.start_recording_button.hide()
+        self.stop_recording_button.hide()
+        self.start_recording_button.setEnabled(False)
+        self.stop_recording_button.setEnabled(False)

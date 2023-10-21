@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict
 
+from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
@@ -15,11 +16,28 @@ class VideoRecorderManager:
                  video_save_directory: str = get_default_session_folder_path(create_folder=False)):
         self._cameras = cameras
         self._video_save_directory = video_save_directory
+
+        self._is_recording = False
+
         self._video_recorders: Dict[CameraId, VideoRecorder] = {camera_id: VideoRecorder(camera_config=camera_config,
                                                                                          video_save_path=self._make_video_file_path(
                                                                                              camera_id=camera_id)
                                                                                          ) for camera_id, camera_config
                                                                 in cameras.items()}
+
+    @property
+    def is_recording(self):
+        return self._is_recording
+
+    @property
+    def has_frames_to_save(self):
+        return any([video_recorder.has_frames_to_save for video_recorder in self._video_recorders.values()])
+
+    def start_recording(self):
+        self._is_recording = True
+
+    def stop_recording(self):
+        self._is_recording = False
 
     def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         for camera_id, frame_payload in multi_frame_payload.frames.items():
@@ -28,6 +46,10 @@ class VideoRecorderManager:
     def one_frame_to_disk(self):
         for video_recorder in self._video_recorders.values():
             video_recorder.one_frame_to_disk()
+
+        if not self.has_frames_to_save and not self.is_recording:
+            logger.info("No frames to save and not recording, so finishing and closing video recorders")
+            self.finish_and_close()
 
     def finish_and_close(self):
         for camera_id, video_recorder in self._video_recorders.items():

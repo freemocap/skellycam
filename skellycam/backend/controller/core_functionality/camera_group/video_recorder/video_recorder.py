@@ -20,7 +20,12 @@ class VideoRecorder:
         self._frame_payload_list: List[FramePayload] = []
         self._first_frame_timestamp = None
 
+    @property
+    def has_frames_to_save(self):
+        return len(self._frame_payload_list) > 0
+
     def close(self):
+        logger.debug(f"Closing video recorder for camera {self._camera_config.camera_id}")
         self._cv2_video_writer.release()
         self._timestamp_file.close()
 
@@ -43,6 +48,7 @@ class VideoRecorder:
         self.close()
 
     def finish(self):
+        logger.debug(f"Finishing video recording for camera {self._camera_config.camera_id}")
         while len(self._frame_payload_list) > 0:
             self.one_frame_to_disk()
 

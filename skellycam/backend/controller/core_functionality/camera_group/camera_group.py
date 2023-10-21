@@ -68,7 +68,6 @@ class CameraGroup:
                 logger.success(f"All cameras {list(self._camera_configs.keys())} started!")
                 self._all_cameras_ready_event.set()  # start frame capture on all cameras
 
-
     def _resolve_strategy(self):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
             return GroupedProcessStrategy(camera_configs=self._camera_configs,
