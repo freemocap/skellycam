@@ -31,7 +31,7 @@ class CameraGroupManager:
             time.sleep(0.001)
             new_frames = self._camera_group.new_frames()
             if new_frames:
-                self._handle_new_frames(multi_frame_payload, new_frames)
+                multi_frame_payload = self._handle_new_frames(multi_frame_payload, new_frames)
 
     def _handle_new_frames(self,
                            multi_frame_payload: MultiFramePayload,
