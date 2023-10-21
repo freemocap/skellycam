@@ -1,13 +1,12 @@
 from typing import Dict
 
-import cv2
 import numpy as np
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
 
 from skellycam import logger
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
-from skellycam.frontend.gui.widgets.cameras.single_camera import SingleCameraView
+from skellycam.frontend.gui.widgets.camera_views.single_camera import SingleCameraView
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
@@ -43,16 +42,16 @@ class CameraGrid(QWidget):
         self.sizePolicy().setVerticalStretch(1)
 
     @Slot(MultiFramePayload)
-    def handle_new_images(self, payload: np.ndarray):
+    def handle_new_images(self, payload: MultiFramePayload):
         # logger.trace(f"Got new images Updating camera views")
         try:
-            cv2.imshow("wow", payload)
-        #     for camera_id, frame in payload.frames.items():
-        #         if camera_id in self._single_cameras.keys():
-        #             # self._single_cameras[camera_id].handle_image_update(frame=frame)
-        #             cv2.imshow(f"Camera {camera_id}", frame.image)
-        #         else:
-        #             raise KeyError(f"Camera ID {camera_id} not found in camera grid")
+            # cv2.imshow("wow", payload)
+            for camera_id, frame in payload.frames.items():
+                if camera_id in self._single_cameras.keys():
+                    self._single_cameras[camera_id].handle_image_update(frame=frame)
+                    # cv2.imshow(f"Camera {camera_id}", frame.image)
+                else:
+                    raise KeyError(f"Camera ID {camera_id} not found in camera grid")
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             logger.exception(e)

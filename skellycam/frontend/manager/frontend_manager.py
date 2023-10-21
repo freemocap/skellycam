@@ -16,7 +16,7 @@ from skellycam.models.cameras.camera_id import CameraId
 if TYPE_CHECKING:
     from skellycam.frontend.gui.main_window.main_window import MainWindow
     from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
-    from skellycam.frontend.gui.widgets.cameras.camera_grid import CameraGrid
+    from skellycam.frontend.gui.widgets.camera_views.camera_grid import CameraGrid
     from skellycam.frontend.gui.widgets.camera_parameter_tree import CameraParameterTree
     from skellycam.frontend.gui.widgets.record_buttons import RecordButtons
     from skellycam.frontend.gui.widgets.welcome import Welcome

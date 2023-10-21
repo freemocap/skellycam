@@ -3,24 +3,23 @@ from pathlib import Path
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QIcon, Qt
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget, QLabel
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QDockWidget
 
 from skellycam import logger
-from skellycam.backend.controller.interactions.base_models import BaseInteraction, BaseResponse
+from skellycam.backend.controller.interactions.base_models import BaseInteraction
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.keyboard_shortcuts import KeyboardShortcuts
-
 from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
-from skellycam.frontend.gui.widgets.cameras.camera_grid import (
-    CameraGrid,
-)
 from skellycam.frontend.gui.widgets.camera_parameter_tree import (
     CameraParameterTree,
 )
+from skellycam.frontend.gui.widgets.camera_views.camera_grid import (
+    CameraGrid,
+)
+from skellycam.frontend.gui.widgets.directory import DirectoryView
 from skellycam.frontend.gui.widgets.record_buttons import (
     RecordButtons,
 )
-from skellycam.frontend.gui.widgets.directory import DirectoryView
 from skellycam.frontend.gui.widgets.welcome import (
     Welcome,
 )

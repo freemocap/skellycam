@@ -47,7 +47,7 @@ class SingleCameraView(QWidget):
             self._processing_frame = True
 
         q_image = frame.to_q_image()
-        self._pixmap = QPixmap.fromImage(q_image)
+        pixmap = QPixmap.fromImage(q_image)
 
         image_label_widget_width = self._image_view.width()
         image_label_widget_height = self._image_view.height()
@@ -55,13 +55,13 @@ class SingleCameraView(QWidget):
         scaled_width = int(image_label_widget_width * .95)
         scaled_height = int(image_label_widget_height * .95)
 
-        self._pixmap = self._pixmap.scaled(
+        pixmap = pixmap.scaled(
             scaled_width,
             scaled_height,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation, )
 
-        self._image_view.setPixmap(self._pixmap)
+        self._image_view.setPixmap(pixmap)
         self._processing_frame = False
 
     def show(self):
