@@ -21,19 +21,25 @@ from skellycam import logger
 class GroupedProcessStrategy:
     def __init__(self, camera_configs: Dict[CameraId, CameraConfig]):
         self._camera_configs = camera_configs
-        self._processes, self._cam_id_process_map = self._create_processes()
+        self._processes, self._camera_id_to_process_map = self._create_processes()
 
     @property
     def processes(self):
         return self._processes
 
     @property
-    def is_capturing(self):
+    def all_capturing(self):
         for process in self._processes:
-            if not process.is_capturing:
+            if not process.any_capturing:
                 return False
         return True
 
+    @property
+    def any_capturing(self):
+        for process in self._processes:
+            if process.any_capturing:
+                return True
+        return False
 
     def start_capture(
             self,
@@ -48,22 +54,9 @@ class GroupedProcessStrategy:
             if cam_id in process.camera_ids:
                 return process.check_if_camera_is_ready(cam_id)
 
-    def get_current_frame_by_cam_id(self, camera_id: str):
-        for process in self._processes:
-            current_frame = process.get_current_frame_by_camera_id(camera_id)
-            if current_frame:
-                return current_frame
-
-
-    def get_latest_frames(self) -> Dict[str, FramePayload]:
-        return {
-            cam_id: process.get_current_frame_by_camera_id(cam_id)
-            for cam_id, process in self._cam_id_process_map.items()
-        }
-
     def get_new_frames(self) -> List[FramePayload]:
         new_frames = []
-        for camera_id, process in self._cam_id_process_map.items():
+        for camera_id, process in self._camera_id_to_process_map.items():
             new_frames.extend(process.get_new_frames_by_camera_id(camera_id))
         return new_frames
 
@@ -73,15 +66,17 @@ class GroupedProcessStrategy:
     ):
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras were provided")
-        camera_subarrays = dict_split_by(self._camera_configs, cameras_per_process)
+        camera_config_subarrays = dict_split_by(some_dict=self._camera_configs,
+                                                split_by=cameras_per_process)
         processes = [
-            CamSubarrayPipeProcess(camera_subarray) for camera_subarray in camera_subarrays
+            CamSubarrayPipeProcess(subarray_camera_configs=subarray)
+            for subarray in camera_config_subarrays
         ]
-        cam_id_to_process = {}
+        camera_id_to_process = {}
         for process in processes:
             for cam_id in process.camera_ids:
-                cam_id_to_process[cam_id] = process
-        return processes, cam_id_to_process
+                camera_id_to_process[cam_id] = process
+        return processes, camera_id_to_process
 
     def update_camera_configs(self, camera_config_dictionary):
         logger.info(f"Updating camera configs: {camera_config_dictionary}")

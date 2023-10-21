@@ -1,14 +1,21 @@
+import enum
 import platform
 
 import cv2
 
-from skellycam import logger
+
+class BackendSelection(enum.Enum):
+    CAP_ANY = cv2.CAP_ANY
+    CAP_DSHOW = cv2.CAP_DSHOW
 
 
-def determine_backend():
+def determine_backend() -> BackendSelection:
     if platform.system() == "Windows":
-        logger.debug(f"Windows machine detected - using backend `cv2.CAP_DSHOW`")
-        return cv2.CAP_DSHOW
+        return BackendSelection.CAP_DSHOW
     else:
-        logger.debug(f"Non-Windows machine detected - using backend `cv2.CAP_ANY`")
-        return cv2.CAP_ANY
+        return BackendSelection.CAP_ANY
+
+
+if __name__ == "__main__":
+    b = determine_backend()
+    print(b.name)

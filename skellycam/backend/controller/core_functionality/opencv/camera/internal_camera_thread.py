@@ -20,14 +20,14 @@ class VideoCaptureThread(threading.Thread):
     def __init__(
             self,
             config: CameraConfig,
-            pipe,  # multiprocessing.connection.Connection
+            pipe_sender_connection,  # multiprocessing.connection.Connection
             is_capturing_event: multiprocessing.Event,
             all_cameras_ready_event: multiprocessing.Event,
             close_cameras_event: multiprocessing.Event,
     ):
         super().__init__()
         self._config = config
-        self._pipe = pipe
+        self._pipe_sender_connection = pipe_sender_connection
         self._is_capturing_event = is_capturing_event
         self._all_cameras_ready_event = all_cameras_ready_event
         self._close_cameras_event = close_cameras_event
@@ -45,32 +45,29 @@ class VideoCaptureThread(threading.Thread):
         self._start_frame_loop()
 
     def _start_frame_loop(self):
-
-        logger.info(
-            f"Camera ID: [{self._config.camera_id}] Frame capture loop has started"
-        )
+        logger.info(f"Camera ID: [{self._config.camera_id}] starting frame capture loop...")
         self._wait_for_all_cameras_ready()
         self._frame_number = -1
-
         self._frame_loop()  # main frame loop
-
-        logger.info(
-            f"Camera ID: [{self._config.camera_id}] Frame capture loop has exited"
-        )
 
     def _frame_loop(self):
         """
         This loop is responsible for capturing frames from the camera and stuffing them into the pipe
         """
         self._is_capturing_event.set()
+        logger.info(f"Camera ID: [{self._config.camera_id}] Frame capture loop is running")
         try:
-            while self._all_cameras_ready_event.is_set() and not self._close_cameras_event.is_set():
+            while not self._close_cameras_event.is_set():
                 frame = self._get_next_frame()
-                self._pipe.send_bytes(frame.to_bytes())
+                frame_bytes = frame.to_bytes()
+                self._pipe_sender_connection.send_bytes(frame_bytes)
+                print('woowoowoowo')
         except Exception as e:
             logger.error(f"Error in frame capture loop: {e}")
             logger.exception(e)
             raise e
+        finally:
+            logger.info(f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped")
 
     def _get_next_frame(self) -> FramePayload:
         """
@@ -87,7 +84,7 @@ class VideoCaptureThread(threading.Thread):
         a frame drop)
         """
 
-        success, image = self._cv2_video_capture.read()  #THIS IS WHERE THE MAGIC HAPPENS
+        success, image = self._cv2_video_capture.read()  # THIS IS WHERE THE MAGIC HAPPENS
         retrieval_timestamp = time.perf_counter()
         self._frame_number += 1
         return FramePayload.create(
@@ -99,18 +96,21 @@ class VideoCaptureThread(threading.Thread):
         )
 
     def _wait_for_all_cameras_ready(self):
+        logger.debug(f"Waiting for all cameras to be ready...")
         while not self._all_cameras_ready_event.is_set():
             time.sleep(.001)
             continue
+        logger.debug(f"All cameras ready!")
 
     def _create_cv2_capture(self):
-        logger.info(f"Connecting to Camera: {self._config.camera_id}...")
         cap_backend = determine_backend()
+        logger.info(f"Creating cv.VideoCapture object for Camera: {self._config.camera_id} "
+                    f"using backend `{cap_backend.name}`...")
 
         if self._cv2_video_capture is not None and self._cv2_video_capture.isOpened():
             self._cv2_video_capture.release()
 
-        capture = cv2.VideoCapture(self._config.camera_id, cap_backend)
+        capture = cv2.VideoCapture(self._config.camera_id, cap_backend.value)
         apply_camera_configuration(capture, self._config)
 
         success, image = capture.read()
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     event2 = multiprocessing.Event()
     event2.set()
     thread = VideoCaptureThread(config=config,
-                                pipe=con1,
+                                pipe_sender_connection=con1,
                                 is_capturing_event=event1,
                                 all_cameras_ready_event=event2)
     thread.start()

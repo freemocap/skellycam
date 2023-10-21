@@ -23,19 +23,18 @@ class CameraGroupManager:
         self._camera_runner_thread: Optional[threading.Thread] = None
         self._camera_configs: Optional[Dict[CameraId, CameraConfig]] = None
 
-
-
     def _run_camera_group_loop(self):
         self._camera_group.start()
         multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
-        while not self._camera_group._close_cameras_event.is_set():
+        while self._camera_group.is_capturing:
             time.sleep(0.001)
             new_frames = self._camera_group.new_frames()
             if len(new_frames) > 0:
                 multi_frame_payload = self._handle_new_frames(multi_frame_payload, new_frames)
-            else:
-                # if no new frames this loop, take the opportunity to write a frame to disk (to avoid blocking an `image` loop with a disk IO call)
-                self._video_recorder_manager.one_frame_to_disk_per_camera()
+            # else:
+            #     # if no new frames this loop, take the opportunity to write a frame to disk
+            #     # (to avoid blocking an opportunity to send a frame to the frontend with a disk write)
+            #     self._video_recorder_manager.one_frame_to_disk()
 
     def _handle_new_frames(self,
                            multi_frame_payload: MultiFramePayload,
@@ -45,7 +44,8 @@ class CameraGroupManager:
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
                 # self._video_recorder_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload)
-                self.frontend_frame_pipe_sender.send_bytes(multi_frame_payload.to_bytes())
+                frontend_payload = self._prepare_frontend_payload(multi_frame_payload=multi_frame_payload)
+                self.frontend_frame_pipe_sender.send_bytes(frontend_payload.to_bytes())
                 multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
         return multi_frame_payload
 
@@ -67,3 +67,14 @@ class CameraGroupManager:
     def update_configs(self, camera_configs: Dict[CameraId, CameraConfig]):
         logger.debug(f"Updating camera configs to {camera_configs.keys()}")
         self._camera_group.update_configs(camera_configs=camera_configs)
+
+    def _prepare_frontend_payload(self, multi_frame_payload: MultiFramePayload,
+                                  scale_images: float = 0.5) -> MultiFramePayload:
+        frontend_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
+        for camera_id, frame_payload in multi_frame_payload.frames.items():
+            frontend_payload.add_frame(frame_payload)
+
+        for camera_id, frame_payload in frontend_payload.frames.items():
+            frame_payload.resize(scale_factor=scale_images)
+
+        return frontend_payload

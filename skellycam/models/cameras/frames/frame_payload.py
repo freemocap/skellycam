@@ -127,6 +127,18 @@ class FramePayload(BaseModel):
     def image(self) -> np.ndarray:
         return self.raw_image.image
 
+    @property
+    def width(self) -> int:
+        return self.raw_image.width
+
+    @property
+    def resolution(self) -> tuple[int, int]:
+        return self.width, self.height
+
+    @property
+    def height(self) -> int:
+        return self.raw_image.height
+
     @classmethod
     def create(cls,
                success: bool,
@@ -166,8 +178,9 @@ class FramePayload(BaseModel):
     def to_q_image(self) -> QImage:
         return self.raw_image.to_q_image()
 
-    def resize(self, factor: float):
-        self.raw_image = RawImage.from_image(image=cv2.resize(self.image, dsize=None, fx=factor, fy=factor))
+    def resize(self, scale_factor: float):
+        scaled_image = cv2.resize(self.image, dsize=None, fx=scale_factor, fy=scale_factor)
+        self.raw_image = RawImage.from_image(image=scaled_image, compression=self.raw_image.compression)
 
 
 class MultiFramePayload(BaseModel):

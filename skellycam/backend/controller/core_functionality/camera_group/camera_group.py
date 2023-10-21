@@ -29,11 +29,8 @@ class CameraGroup:
 
     @property
     def is_capturing(self):
-        return self._strategy_class.is_capturing
+        return self._strategy_class.all_capturing
 
-    @property
-    def close_cameras_event(self):
-        return self._close_cameras_event
 
 
     def update_configs(self, camera_configs: Dict[CameraId, CameraConfig]):
@@ -89,6 +86,7 @@ class CameraGroup:
     def close(self):
         logger.debug("Closing camera group")
         self._close_cameras_event.set()
-        while self.is_capturing:
-            logger.trace("Waiting for cameras to close...")
-            time.sleep(0.5)
+        while self._strategy_class.any_capturing:
+            logger.trace("Waiting for cameras to stop capturing")
+            time.sleep(1.0)
+        logger.info("All cameras have stopped capturing")

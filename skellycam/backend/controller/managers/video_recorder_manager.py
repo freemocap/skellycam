@@ -25,7 +25,7 @@ class VideoRecorderManager:
         for camera_id, frame_payload in multi_frame_payload.frames.items():
             self._video_recorders[camera_id].append_frame_payload_to_list(frame_payload=frame_payload)
 
-    def one_frame_to_disk_per_camera(self):
+    def one_frame_to_disk(self):
         for video_recorder in self._video_recorders.values():
             video_recorder.one_frame_to_disk()
 

@@ -11,13 +11,13 @@ class Camera:
     def __init__(
             self,
             config: CameraConfig,
-            pipe,  # multiprocessing.connection.Connection,
+            pipe_sender_connection,  # multiprocessing.connection.Connection,
             is_capturing_event: multiprocessing.Event,
             all_cameras_ready: multiprocessing.Event,
             close_cameras_event: multiprocessing.Event,
     ):
         self._config = config
-        self._pipe = pipe
+        self._pipe_sender_connection = pipe_sender_connection
         self._is_capturing_event = is_capturing_event
         self._all_cameras_ready_event = all_cameras_ready
         self._close_cameras_event = close_cameras_event
@@ -38,7 +38,7 @@ class Camera:
         logger.debug(f"Camera ID: [{self._config.camera_id}] Creating thread")
         self._capture_thread = VideoCaptureThread(
             config=self._config,
-            pipe=self._pipe,
+            pipe_sender_connection=self._pipe_sender_connection,
             is_capturing_event=self._is_capturing_event,
             all_cameras_ready_event=self._all_cameras_ready_event,
             close_cameras_event=self._close_cameras_event,
@@ -58,7 +58,6 @@ class Camera:
             self.close()
         else:
             if not self._capture_thread.is_capturing_frames:
-                self.connect(is_capturing_event=self._is_capturing_event,
-                             all_cameras_ready=self._all_cameras_ready_event)
+                self.connect()
 
             self._capture_thread.update_camera_config(camera_config)

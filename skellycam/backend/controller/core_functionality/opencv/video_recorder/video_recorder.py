@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import cv2
 
@@ -15,7 +15,7 @@ class VideoRecorder:
                  ):
         self._camera_config = camera_config
         self._video_save_path = Path(video_save_path)
-        self._cv2_video_writer = self._create_video_writer()
+        self._cv2_video_writer: Optional[cv2.VideoWriter] = None
         self._timestamp_file = self._initialize_timestamp_writer()
         self._frame_payload_list: List[FramePayload] = []
         self._first_frame_timestamp = None
@@ -27,6 +27,7 @@ class VideoRecorder:
     def append_frame_payload_to_list(self, frame_payload: FramePayload):
         if self._first_frame_timestamp is None:
             self._first_frame_timestamp = frame_payload.timestamp_ns
+            self._cv2_video_writer = self._create_video_writer(frame_payload)
         self._frame_payload_list.append(frame_payload)
 
     def one_frame_to_disk(self):
@@ -47,7 +48,7 @@ class VideoRecorder:
 
     def _create_video_writer(
             self,
-            fourcc: str = "mp4v",
+            representative_frame: FramePayload,
     ) -> cv2.VideoWriter:
         logger.debug(
             f"Creating video writer for camera {self._camera_config.camera_id} to save video at: {self._video_save_path}")
@@ -56,8 +57,7 @@ class VideoRecorder:
             str(self._video_save_path),
             cv2.VideoWriter_fourcc(*self._camera_config.fourcc),
             self._camera_config.framerate,
-            (int(self._camera_config.resolution.width),
-             int(self._camera_config.resolution.height)),
+            representative_frame.resolution
         )
 
         if not video_writer_object.isOpened():
