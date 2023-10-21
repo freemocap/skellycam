@@ -43,24 +43,23 @@ class CameraGroupManager:
         self._camera_group.start()
         multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
         while self._camera_group.any_capturing:
-            time.sleep(0.001)
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
                 multi_frame_payload = self._handle_new_frames(multi_frame_payload, new_frames)
-
-            if self._video_recorder_manager.has_frames_to_save:
+            elif self._video_recorder_manager.is_recording and self._video_recorder_manager.has_frames_to_save:
                 self._video_recorder_manager.one_frame_to_disk()
+            else:
+                time.sleep(0.001)
 
     def _handle_new_frames(self,
                            multi_frame_payload: MultiFramePayload,
                            new_frames: List[FramePayload]) -> MultiFramePayload:
         for frame in new_frames:
-            # frame.compress(compression="JPEG")
-            frame.set_image(image=cv2.cvtColor(frame.get_image(), cv2.COLOR_BGR2RGB))
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
                 if self._video_recorder_manager.is_recording:
                     self._video_recorder_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload)
+
                 frontend_payload = self._prepare_frontend_payload(multi_frame_payload=multi_frame_payload)
                 self.frontend_frame_pipe_sender.send_bytes(frontend_payload.to_bytes())
                 multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
@@ -87,11 +86,8 @@ class CameraGroupManager:
 
     def _prepare_frontend_payload(self, multi_frame_payload: MultiFramePayload,
                                   scale_images: float = 0.5) -> MultiFramePayload:
-        frontend_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
-        for camera_id, frame_payload in multi_frame_payload.frames.items():
-            frontend_payload.add_frame(frame_payload)
-
-        for camera_id, frame_payload in frontend_payload.frames.items():
-            frame_payload.resize(scale_factor=scale_images)
-
+        frontend_payload = multi_frame_payload.copy(deep=True)
+        frontend_payload.resize(scale_factor=scale_images)
+        for frame in frontend_payload.frames.values():
+            frame.set_image(image=cv2.cvtColor(frame.get_image(), cv2.COLOR_BGR2RGB))
         return frontend_payload

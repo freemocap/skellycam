@@ -199,6 +199,10 @@ class MultiFramePayload(BaseModel):
     def full(self):
         return not any([frame is None for frame in self.frames.values()])
 
+    def resize(self, scale_factor: float):
+        for frame in self.frames.values():
+            if frame is not None:
+                frame.resize(scale_factor=scale_factor)
     def add_frame(self, frame: FramePayload):
         self.frames[frame.camera_id] = frame
 

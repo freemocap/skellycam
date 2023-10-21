@@ -52,8 +52,7 @@ class CameraConfig(BaseModel):
     capture_fourcc: str = Field(default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
                                 description="The fourcc code to use for the video codec in the `cv2.VideoCapture` object")
 
-    writer_fourcc: str = Field(default="mp4v",
-                               # TODO - compare performance of MJPG vs H264 vs whatever else, also consider saving as `mkv` or `avi` or something
+    writer_fourcc: str = Field(default="XVID",  # Save videos as XVID/avi so video will still work even if crashses
                                description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object")
 
     @property

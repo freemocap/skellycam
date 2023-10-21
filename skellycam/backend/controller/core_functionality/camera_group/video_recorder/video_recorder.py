@@ -10,6 +10,9 @@ from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path
 
 
+class FailedToWriteFrameToVideoException(Exception):
+    pass
+
 class VideoRecorder:
     def __init__(self,
                  camera_config: CameraConfig,
@@ -32,6 +35,9 @@ class VideoRecorder:
 
     def close(self):
         logger.debug(f"Closing video recorder for camera {self._camera_config.camera_id}")
+        if self.has_frames_to_save:
+            logger.warning(f"Video recorder for camera {self._camera_config.camera_id} has frames to save!")
+            self.finish()
         self._cv2_video_writer.release()
         self._timestamp_file.close()
 
@@ -41,7 +47,7 @@ class VideoRecorder:
         self._frame_payload_list.append(frame_payload)
 
     def _initialize_on_first_frame(self, frame_payload):
-        self._initialization_frame = frame_payload
+        self._initialization_frame = frame_payload.copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
         self._timestamp_file = self._initialize_timestamp_writer()
 
@@ -54,6 +60,7 @@ class VideoRecorder:
         self._cv2_video_writer.write(image)
         timestamp_from_zero = frame.timestamp_ns - self.first_frame_timestamp
         self._timestamp_file.write(f"{frame.frame_number}, {timestamp_from_zero}\n")
+
 
     def finish_and_close(self):
         self.finish()
@@ -106,7 +113,8 @@ def test_video_recording():
 
     camera_id = 0
     # Initialize a default camera_config
-    config = CameraConfig(camera_id=camera_id)
+    config = CameraConfig(camera_id=camera_id,
+                          writer_fourcc="XVID", )
 
     cap_backend = determine_backend()
 
@@ -114,12 +122,15 @@ def test_video_recording():
     apply_camera_configuration(cap, config)
 
     # Initialize VideoRecorder with camera_config and a save path
-    save_path = Path(get_default_skellycam_base_folder_path()) / "tests" / f"test_video_recording_{camera_id}.mp4"
+    save_path = Path(get_default_skellycam_base_folder_path()) / "tests" / f"test_video_recording_{camera_id}.avi"
     video_recorder = VideoRecorder(config, str(save_path))
 
     # Record 100 frames
     for frame_number in range(100):
         success, image = cap.read()
+
+        if not success:
+            raise Exception(f"Failed to read frame from camera {camera_id}")
 
         frame_payload = FramePayload.create(success=success,
                                             frame_number=frame_number,
@@ -128,6 +139,7 @@ def test_video_recording():
                                             timestamp_ns=time.perf_counter_ns()
                                             )
         video_recorder.append_frame_payload_to_list(frame_payload)
+        video_recorder.one_frame_to_disk()
 
     # Finish recording, and save the video
     video_recorder.finish_and_close()
