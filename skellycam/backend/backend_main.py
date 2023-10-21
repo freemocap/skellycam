@@ -3,8 +3,10 @@ from multiprocessing import Event
 
 from skellycam import logger
 from skellycam.backend.backend_loop import backend_loop
+from skellycam.utilities.clean_up import remove_empty_directories
 
 CONTROLLER = None
+
 
 
 def backend_main(messages_from_frontend: multiprocessing.Queue,
@@ -20,3 +22,6 @@ def backend_main(messages_from_frontend: multiprocessing.Queue,
     if not exit_event.is_set():
         logger.info(f"SETTING EXIT EVENT")
         exit_event.set()
+
+    remove_empty_directories()
+    logger.success(f"Backend main exiting!")

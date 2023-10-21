@@ -6,14 +6,14 @@ from skellycam.backend.controller.core_functionality.camera_group.video_recorder
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
-from skellycam.system.environment.default_paths import get_default_session_folder_path
+from skellycam.system.environment.default_paths import get_default_recording_folder_path
 
 
 class VideoRecorderManager:
 
     def __init__(self,
                  cameras: Dict[CameraId, CameraConfig],
-                 video_save_directory: str = get_default_session_folder_path(create_folder=False)):
+                 video_save_directory: str = get_default_recording_folder_path(create_folder=False)):
         self._cameras = cameras
         self._video_save_directory = video_save_directory
 

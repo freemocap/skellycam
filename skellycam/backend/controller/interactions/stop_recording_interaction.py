@@ -15,7 +15,7 @@ class StopRecordingResponse(BaseResponse):
 
 class StopRecordingCommand(BaseCommand):
     def execute(self, controller: "Controller", **kwargs) -> StopRecordingResponse:
-        controller.camera_group_manager.start_recording()
+        controller.camera_group_manager.stop_recording()
         return StopRecordingResponse(success=True)
 
 

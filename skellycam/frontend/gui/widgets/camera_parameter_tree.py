@@ -92,7 +92,7 @@ class CameraParameterTree(QWidget):
                 dict(
                     name="FourCC",
                     type="str",
-                    value=camera_config.fourcc,
+                    value=camera_config.capture_fourcc,
                 ),
                 dict(
                     name=self.tr("Framerate"),

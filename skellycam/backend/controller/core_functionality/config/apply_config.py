@@ -1,9 +1,9 @@
 import traceback
 
 import cv2
-from skellycam.models.cameras.camera_config import CameraConfig
 
 from skellycam import logger
+from skellycam.models.cameras.camera_config import CameraConfig
 
 
 class FailedToApplyCameraConfigurationError(Exception):
@@ -18,7 +18,7 @@ def apply_camera_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConf
         f"Resolution width: {config.resolution.width}, "
         f"Resolution height: {config.resolution.height}, "
         f"Framerate: {config.framerate}, "
-        f"Fourcc: {config.fourcc}"
+        f"Fourcc: {config.capture_fourcc}"
     )
     try:
         if not cv2_vid_cap.isOpened():
@@ -38,7 +38,7 @@ def apply_camera_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConf
         cv2_vid_cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
         cv2_vid_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
         cv2_vid_cap.set(cv2.CAP_PROP_FPS, config.framerate)
-        cv2_vid_cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.fourcc))
+        cv2_vid_cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc))
     except Exception as e:
         logger.error(f"Problem applying configuration for camera: {config.camera_id}")
         traceback.print_exc()

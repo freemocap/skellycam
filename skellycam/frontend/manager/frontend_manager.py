@@ -130,6 +130,7 @@ class FrontendManager:
         self.main_window.camera_grid.show()
         self.main_window.record_buttons.show()
         self.main_window.camera_settings_dock.show()
+        self.main_window.directory_view_dock.show()
         self._request_detect_cameras()
 
     def _handle_camera_configs_changed(self, camera_configs: Dict[CameraId, CameraConfig]):

@@ -49,8 +49,12 @@ class CameraConfig(BaseModel):
     rotation: RotationTypes = Field(default=RotationTypes.NO_ROTATION,
                                     description="The rotation to apply to the images "
                                                 "of this camera (after they are captured)")
-    fourcc: str = Field(default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
-                        description="The fourcc code to use for the video codec")
+    capture_fourcc: str = Field(default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
+                                description="The fourcc code to use for the video codec in the `cv2.VideoCapture` object")
+
+    writer_fourcc: str = Field(default="mp4v",
+                               # TODO - compare performance of MJPG vs H264 vs whatever else, also consider saving as `mkv` or `avi` or something
+                               description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object")
 
     @property
     def orientation(self) -> str:

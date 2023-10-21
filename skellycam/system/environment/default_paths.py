@@ -31,8 +31,8 @@ def get_default_skellycam_base_folder_path():
     return Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME
 
 
-def get_default_session_folder_path(create_folder: bool = True, string_tag: str = None):
-    folder_path = get_default_skellycam_base_folder_path() / default_session_name(string_tag=string_tag)
+def get_default_recording_folder_path(create_folder: bool = True, string_tag: str = None):
+    folder_path = get_default_skellycam_base_folder_path() / "recordings" / default_session_name(string_tag=string_tag)
     if create_folder:
         folder_path.mkdir(parents=True, exist_ok=True)
     return str(folder_path)

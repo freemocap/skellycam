@@ -39,7 +39,6 @@ class CameraGroupManager:
             return
         self._video_recorder_manager.stop_recording()
 
-
     def _run_camera_group_loop(self):
         self._camera_group.start()
         multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
@@ -48,11 +47,9 @@ class CameraGroupManager:
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
                 multi_frame_payload = self._handle_new_frames(multi_frame_payload, new_frames)
-            else:
-                if self._video_recorder_manager.is_recording:
-                    # if no new frames this loop, take the opportunity to write a frame to disk
-                    # (to avoid blocking an opportunity to send a frame to the frontend with a disk write)
-                    self._video_recorder_manager.one_frame_to_disk()
+
+            if self._video_recorder_manager.has_frames_to_save:
+                self._video_recorder_manager.one_frame_to_disk()
 
     def _handle_new_frames(self,
                            multi_frame_payload: MultiFramePayload,

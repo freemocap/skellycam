@@ -80,7 +80,6 @@ class MainWindow(QMainWindow):
             self.directory_view_dock,
             self.camera_settings_dock,
         )
-        self.camera_settings_dock.raise_()
 
 
     def _create_directory_dock(self):

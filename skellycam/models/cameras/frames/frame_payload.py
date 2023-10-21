@@ -129,23 +129,15 @@ class FramePayload(BaseModel):
     camera_id: int = Field(description="The camera ID of the camera that this frame came from,"
                                        " e.g. `0` if this is the `cap = cv2.VideoCapture(0)` camera")
 
+    def get_resolution(self) -> tuple[int, int]:
+        return self.raw_image.width, self.raw_image.height
+
     def get_image(self) -> np.ndarray:
         return self.raw_image.get_image()
 
     def set_image(self, image: np.ndarray):
         self.raw_image = RawImage.from_image(image=image, compression=self.raw_image.compression)
 
-    @property
-    def width(self) -> int:
-        return self.raw_image.width
-
-    @property
-    def resolution(self) -> tuple[int, int]:
-        return self.width, self.height
-
-    @property
-    def height(self) -> int:
-        return self.raw_image.height
 
     @classmethod
     def create(cls,
