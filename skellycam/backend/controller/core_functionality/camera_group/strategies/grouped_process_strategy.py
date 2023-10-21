@@ -1,8 +1,8 @@
 import multiprocessing
 from typing import Dict, List
 
-from skellycam.backend.controller.core_functionality.camera_group.strategies.cam_group_pipe_process import \
-    CamGroupPipeProcess
+from skellycam.backend.controller.core_functionality.camera_group.strategies.camera_subarray_pipe_process import \
+    CamSubarrayPipeProcess
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload
@@ -75,7 +75,7 @@ class GroupedProcessStrategy:
             raise ValueError("No cameras were provided")
         camera_subarrays = dict_split_by(self._camera_configs, cameras_per_process)
         processes = [
-            CamGroupPipeProcess(camera_subarray) for camera_subarray in camera_subarrays
+            CamSubarrayPipeProcess(camera_subarray) for camera_subarray in camera_subarrays
         ]
         cam_id_to_process = {}
         for process in processes:

@@ -1,4 +1,3 @@
-import multiprocessing
 from typing import TYPE_CHECKING, Dict
 
 from skellycam import logger
@@ -28,10 +27,9 @@ class FrontendManager:
                  frontend_frame_pipe_receiver  # multiprocessing.connection.Connection
                  ) -> None:
         self.main_window = main_window
-        self._stop_frame_grabber_event = multiprocessing.Event()
         self._frame_grabber = FrameGrabber(parent=self.main_window,
-                                           stop_event=self._stop_frame_grabber_event,
                                            frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
+        self._frame_grabber.start()
 
         self._connect_signals()
 
@@ -90,6 +88,19 @@ class FrontendManager:
 
         self._frame_grabber.new_frames.connect(self.camera_grid.handle_new_images)
 
+    def _emit_detect_cameras_interaction(self):
+        logger.info("Emitting detect cameras interaction")
+        self.main_window.interact_with_backend.emit(DetectCamerasInteraction.as_request())
+
+    def _emit_close_cameras_interaction(self):
+        logger.info("Emitting close cameras interaction")
+        self.main_window.interact_with_backend.emit(CloseCamerasInteraction.as_request())
+
+    def _emit_connect_to_cameras_interaction(self):
+        logger.info("Emitting connect to cameras interaction")
+        self.main_window.interact_with_backend.emit(
+            ConnectToCamerasInteraction.as_request(camera_configs=self.camera_configs))
+
     def _handle_cameras_detected_response(self, response: CamerasDetectedResponse):
         self.camera_control_panel.handle_cameras_detected()
         self.camera_parameter_tree.update_available_cameras(available_cameras=response.available_cameras)
@@ -108,26 +119,6 @@ class FrontendManager:
         self.camera_grid.update_camera_grid(camera_configs=camera_configs)
         self.main_window.interact_with_backend.emit(
             UpdateCameraConfigsInteraction.as_request(camera_configs=self.camera_configs))
-
-    def _emit_detect_cameras_interaction(self):
-        logger.info("Emitting detect cameras interaction")
-        self.main_window.interact_with_backend.emit(DetectCamerasInteraction.as_request())
-
-    def _emit_close_cameras_interaction(self):
-        logger.info("Emitting close cameras interaction")
-        self._stop_frame_grabber_event.set()
-        self.main_window.interact_with_backend.emit(CloseCamerasInteraction.as_request())
-
-    def _emit_connect_to_cameras_interaction(self):
-        logger.info("Emitting connect to cameras interaction")
-        self.main_window.interact_with_backend.emit(
-            ConnectToCamerasInteraction.as_request(camera_configs=self.camera_configs))
-
-        self._start_frame_grabber()
-
-    def _start_frame_grabber(self):
-        self._stop_frame_grabber_event.clear()
-        self._frame_grabber.start()
 
     def _handle_cameras_connected_response(self):
         self.camera_control_panel.close_cameras_button.setEnabled(True)

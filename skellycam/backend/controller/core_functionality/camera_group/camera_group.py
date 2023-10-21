@@ -60,8 +60,8 @@ class CameraGroup:
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.trace(f"Waiting for cameras {self._camera_configs.keys()} to start")
         all_cameras_started = False
-        while not all_cameras_started:
-            time.sleep(0.5)
+        while not all_cameras_started and not self._close_cameras_event.is_set():
+            time.sleep(1.0)
             camera_started_dictionary = dict.fromkeys(self._camera_configs.keys(), False)
 
             for camera_id in self._camera_configs.keys():

@@ -1,7 +1,6 @@
 import multiprocessing
 import time
 from multiprocessing import Process
-from time import sleep
 from typing import Dict, List, Any, Optional
 
 from setproctitle import setproctitle
@@ -13,7 +12,7 @@ from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 
 
-class CamGroupPipeProcess:
+class CamSubarrayPipeProcess:
     def __init__(self, camera_configs: Dict[CameraId, CameraConfig]):
         if len(camera_configs) == 0:
             raise ValueError("CamGroupProcess must have at least one camera")
@@ -55,16 +54,14 @@ class CamGroupPipeProcess:
 
         self._process = Process(
             name=f"Cameras {self.camera_ids}",
-            target=CamGroupPipeProcess._begin,
+            target=CamSubarrayPipeProcess._run_process,
             args=(self._camera_configs,
                   self._pipe_sender_connections,
                   self._camera_config_queue,
                   event_dictionary),
         )
         self._process.start()
-        while not self.is_capturing:
-            logger.debug(f"Waiting for Process {self._process.name} cameras to start")
-            sleep(0.25)
+
 
     def update_camera_configs(self, camera_config_dictionary):
         self._camera_config_queue.put(camera_config_dictionary)
@@ -101,17 +98,22 @@ class CamGroupPipeProcess:
 
     @staticmethod
     def _create_cameras(camera_configs: Dict[CameraId, CameraConfig],
-                        pipe_connections  # multiprocessing.connection.Connection
+                        pipe_connections,  # multiprocessing.connection.Connection
+                        event_dictionary: Dict[str, multiprocessing.Event],
                         ) -> Dict[str, Camera]:
         cameras = {
             camera_id: Camera(config=camera_config,
-                              pipe=pipe_connections[camera_id])
+                              pipe=pipe_connections[camera_id],
+                              is_capturing_event=event_dictionary["is_capturing_events_by_camera"][camera_id],
+                              all_cameras_ready=event_dictionary["all_cameras_ready"],
+                              close_cameras_event=event_dictionary["close_cameras"],
+                              )
             for camera_id, camera_config in camera_configs.items()
         }
         return cameras
 
     @staticmethod
-    def _begin(
+    def _run_process(
             camera_configs: Dict[CameraId, CameraConfig],
             pipe_connections: Dict[str, Any],  # multiprocessing.connection.Connection
             camera_config_queue: multiprocessing.Queue,
@@ -120,23 +122,20 @@ class CamGroupPipeProcess:
         logger.info(
             f"Starting frame loop capture in CamGroupProcess for cameras: {camera_configs.keys()}"
         )
-        is_capturing_events_by_camera = event_dictionary["is_capturing_events_by_camera"]
-        all_cameras_ready_event = event_dictionary["all_cameras_ready"]
-        close_cameras_event = event_dictionary["close_cameras"]
 
         process_name = f"Cameras {camera_configs.keys()}"
         setproctitle(process_name)
 
-        cameras = CamGroupPipeProcess._create_cameras(
+        cameras = CamSubarrayPipeProcess._create_cameras(
             camera_configs=camera_configs,
             pipe_connections=pipe_connections,
+            event_dictionary=event_dictionary,
         )
 
         for camera in cameras.values():
-            camera.connect(is_capturing_event=is_capturing_events_by_camera[camera.camera_id],
-                           all_cameras_ready=all_cameras_ready_event)
+            camera.connect()
 
-        while not close_cameras_event.is_set():
+        while not event_dictionary["close_cameras"].is_set():
             time.sleep(0.5)  # check for new configs every 0.5 seconds
             if camera_config_queue.qsize() > 0:
                 logger.info(
@@ -146,12 +145,3 @@ class CamGroupPipeProcess:
 
                 for camera_id, camera in cameras.items():
                     camera.update_config(camera_config_dictionary[camera_id])
-
-
-        # close cameras on exit
-        for camera in cameras.values():
-            logger.info(f"Closing camera {camera.camera_id}")
-            camera.close()
-
-
-

@@ -11,13 +11,16 @@ class Camera:
     def __init__(
             self,
             config: CameraConfig,
-            pipe  # multiprocessing.connection.Connection,
+            pipe,  # multiprocessing.connection.Connection,
+            is_capturing_event: multiprocessing.Event,
+            all_cameras_ready: multiprocessing.Event,
+            close_cameras_event: multiprocessing.Event,
     ):
-
-        self._all_cameras_ready_event = None
-        self._is_capturing_event = None
         self._config = config
         self._pipe = pipe
+        self._is_capturing_event = is_capturing_event
+        self._all_cameras_ready_event = all_cameras_ready
+        self._close_cameras_event = close_cameras_event
         self._capture_thread: Optional[VideoCaptureThread] = None
 
     @property
@@ -28,13 +31,7 @@ class Camera:
     def camera_id(self) -> CameraId:
         return self._config.camera_id
 
-    def connect(self,
-                is_capturing_event: multiprocessing.Event,
-                all_cameras_ready: multiprocessing.Event):
-
-        self._is_capturing_event = is_capturing_event
-        self._all_cameras_ready_event = all_cameras_ready
-
+    def connect(self):
         if self._capture_thread and self._capture_thread.is_capturing_frames:
             logger.debug(f"Already capturing frames for camera_id: {self.camera_id}")
             return
@@ -43,7 +40,8 @@ class Camera:
             config=self._config,
             pipe=self._pipe,
             is_capturing_event=self._is_capturing_event,
-            all_cameras_ready_event=all_cameras_ready,
+            all_cameras_ready_event=self._all_cameras_ready_event,
+            close_cameras_event=self._close_cameras_event,
         )
         self._capture_thread.start()
 

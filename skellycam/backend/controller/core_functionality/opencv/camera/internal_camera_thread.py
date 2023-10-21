@@ -23,14 +23,17 @@ class VideoCaptureThread(threading.Thread):
             pipe,  # multiprocessing.connection.Connection
             is_capturing_event: multiprocessing.Event,
             all_cameras_ready_event: multiprocessing.Event,
+            close_cameras_event: multiprocessing.Event,
     ):
         super().__init__()
-        self._should_run_frame_loop = False
+        self._config = config
         self._pipe = pipe
-        self.daemon = True
         self._is_capturing_event = is_capturing_event
         self._all_cameras_ready_event = all_cameras_ready_event
-        self._config = config
+        self._close_cameras_event = close_cameras_event
+
+        self._should_run_frame_loop = False
+        self.daemon = True
         self._cv2_video_capture = None
 
     @property
@@ -61,7 +64,7 @@ class VideoCaptureThread(threading.Thread):
         """
         self._is_capturing_event.set()
         try:
-            while self._should_run_frame_loop:
+            while self._all_cameras_ready_event.is_set() and not self._close_cameras_event.is_set():
                 frame = self._get_next_frame()
                 self._pipe.send_bytes(frame.to_bytes())
         except Exception as e:
@@ -99,7 +102,6 @@ class VideoCaptureThread(threading.Thread):
         while not self._all_cameras_ready_event.is_set():
             time.sleep(.001)
             continue
-        self._should_run_frame_loop = True
 
     def _create_cv2_capture(self):
         logger.info(f"Connecting to Camera: {self._config.camera_id}...")
@@ -126,7 +128,6 @@ class VideoCaptureThread(threading.Thread):
 
     def stop(self):
         logger.debug("Stopping frame capture loop...")
-        self._should_run_frame_loop = False
         if self._cv2_video_capture is not None:
             self._cv2_video_capture.release()
 
