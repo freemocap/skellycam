@@ -4,7 +4,8 @@ from typing import Dict, Optional, List
 
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
-from skellycam.backend.controller.managers.video_recorder_manager import VideoRecorderManager
+from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_manager import \
+    VideoRecorderManager
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload, MultiFramePayload
@@ -31,10 +32,10 @@ class CameraGroupManager:
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
                 multi_frame_payload = self._handle_new_frames(multi_frame_payload, new_frames)
-            # else:
-            #     # if no new frames this loop, take the opportunity to write a frame to disk
-            #     # (to avoid blocking an opportunity to send a frame to the frontend with a disk write)
-            #     self._video_recorder_manager.one_frame_to_disk()
+            else:
+                # if no new frames this loop, take the opportunity to write a frame to disk
+                # (to avoid blocking an opportunity to send a frame to the frontend with a disk write)
+                self._video_recorder_manager.one_frame_to_disk()
 
     def _handle_new_frames(self,
                            multi_frame_payload: MultiFramePayload,
@@ -43,7 +44,7 @@ class CameraGroupManager:
             # frame.compress(compression="JPEG")
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
-                # self._video_recorder_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload)
+                self._video_recorder_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload)
                 frontend_payload = self._prepare_frontend_payload(multi_frame_payload=multi_frame_payload)
                 self.frontend_frame_pipe_sender.send_bytes(frontend_payload.to_bytes())
                 multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
