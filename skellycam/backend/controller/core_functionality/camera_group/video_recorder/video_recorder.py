@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -6,6 +7,7 @@ import cv2
 from skellycam import logger
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.frames.frame_payload import FramePayload
+from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path
 
 
 class VideoRecorder:
@@ -95,4 +97,44 @@ class VideoRecorder:
     def _validate_frame(self, frame: FramePayload):
         if frame.get_resolution() != self._initialization_frame.get_resolution():
             raise Exception(
-                f"Frame resolution {frame.resolution} does not match initialization frame resolution {self._initialization_frame.resolution}")
+                f"Frame resolution {frame.get_resolution()} does not match initialization frame resolution {self._initialization_frame.get_resolution()}")
+
+
+def test_video_recording():
+    from skellycam.backend.controller.core_functionality.config.determine_backend import determine_backend
+    from skellycam.backend.controller.core_functionality.config.apply_config import apply_camera_configuration
+
+    camera_id = 0
+    # Initialize a default camera_config
+    config = CameraConfig(camera_id=camera_id)
+
+    cap_backend = determine_backend()
+
+    cap = cv2.VideoCapture(config.camera_id, cap_backend.value)
+    apply_camera_configuration(cap, config)
+
+    # Initialize VideoRecorder with camera_config and a save path
+    save_path = Path(get_default_skellycam_base_folder_path()) / "tests" / f"test_video_recording_{camera_id}.mp4"
+    video_recorder = VideoRecorder(config, str(save_path))
+
+    # Record 100 frames
+    for frame_number in range(100):
+        success, image = cap.read()
+
+        frame_payload = FramePayload.create(success=success,
+                                            frame_number=frame_number,
+                                            image=image,
+                                            camera_id=camera_id,
+                                            timestamp_ns=time.perf_counter_ns()
+                                            )
+        video_recorder.append_frame_payload_to_list(frame_payload)
+
+    # Finish recording, and save the video
+    video_recorder.finish_and_close()
+
+    cap.release()
+    print("Recording finished.")
+
+
+if __name__ == "__main__":
+    test_video_recording()
