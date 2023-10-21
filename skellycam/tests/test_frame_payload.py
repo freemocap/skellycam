@@ -7,7 +7,7 @@ def test_raw_image_to_and_from_bytes():
     image = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
     raw_image = RawImage.from_image(image)
     recovered_image = RawImage.from_bytes(raw_image.to_bytes())
-    assert np.array_equal(image, recovered_image.image)
+    assert np.array_equal(image, recovered_image.get_image())
 
 
 def test_frame_payload_to_and_from_bytes():
@@ -64,17 +64,17 @@ def test_multi_frame_payload_to_and_from_bytes():
     assert original_multi_frame_payload.full == recovered_multi_frame_payload.full
     for camera_id in original_multi_frame_payload.camera_ids:
         assert np.array_equal(
-            np.frombuffer(original_multi_frame_payload.frames[str(camera_id)].raw_image.image_bytes,
+            np.frombuffer(original_multi_frame_payload.frames[camera_id].raw_image.image_bytes,
                           dtype=np.uint8).reshape(
-                original_multi_frame_payload.frames[str(camera_id)].raw_image.height,
-                original_multi_frame_payload.frames[str(camera_id)].raw_image.width,
-                original_multi_frame_payload.frames[str(camera_id)].raw_image.channels),
+                original_multi_frame_payload.frames[camera_id].raw_image.height,
+                original_multi_frame_payload.frames[camera_id].raw_image.width,
+                original_multi_frame_payload.frames[camera_id].raw_image.channels),
 
-            np.frombuffer(recovered_multi_frame_payload.frames[str(camera_id)].raw_image.image_bytes,
+            np.frombuffer(recovered_multi_frame_payload.frames[camera_id].raw_image.image_bytes,
                           dtype=np.uint8).reshape(
-                recovered_multi_frame_payload.frames[str(camera_id)].raw_image.height,
-                recovered_multi_frame_payload.frames[str(camera_id)].raw_image.width,
-                recovered_multi_frame_payload.frames[str(camera_id)].raw_image.channels)
+                recovered_multi_frame_payload.frames[camera_id].raw_image.height,
+                recovered_multi_frame_payload.frames[camera_id].raw_image.width,
+                recovered_multi_frame_payload.frames[camera_id].raw_image.channels)
         )
 
 

@@ -39,7 +39,7 @@ class VideoRecorder:
         if len(self._frame_payload_list) == 0:
             return
         frame = self._frame_payload_list.pop(-1)
-        self._cv2_video_writer.write(frame.image)
+        self._cv2_video_writer.write(frame.get_image())
         timestamp_from_zero = frame.timestamp_ns - self._first_frame_timestamp
         self._timestamp_file.write(f"{frame.frame_number}, {timestamp_from_zero}\n")
 

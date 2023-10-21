@@ -59,7 +59,7 @@ class CameraGroupManager:
                            new_frames: List[FramePayload]) -> MultiFramePayload:
         for frame in new_frames:
             # frame.compress(compression="JPEG")
-            frame.image = cv2.cvtColor(frame.image, cv2.COLOR_BGR2RGB)
+            frame.set_image(image=cv2.cvtColor(frame.get_image(), cv2.COLOR_BGR2RGB))
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
                 if self._video_recorder_manager.is_recording:

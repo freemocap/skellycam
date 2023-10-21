@@ -24,25 +24,6 @@ class RawImage(BaseModel):
     data_type: str
     compression: Literal["RAW", "JPEG", "PNG"] = Field(default="RAW")
 
-    @property
-    def image(self) -> np.ndarray:
-        if self.compression == "RAW":
-            return np.frombuffer(self.image_bytes, dtype=self.data_type).reshape(
-                (self.height, self.width, self.channels))
-        else:
-            image_mode = 'L' if self.channels == 1 else 'RGB'
-            pil_image = Image.open(BytesIO(self.image_bytes)).convert(image_mode)
-            return np.array(pil_image)
-
-    @image.setter
-    def image(self, image: np.ndarray):
-        self.image_bytes = image.tobytes()
-        self.width = image.shape[1]
-        self.height = image.shape[0]
-        self.channels = image.shape[2]
-        self.data_type = str(image.dtype)
-
-
     @classmethod
     def from_image(cls, image: np.ndarray, compression: Literal["RAW", "JPEG", "PNG"] = "RAW"):
         if compression == "RAW":
@@ -83,6 +64,22 @@ class RawImage(BaseModel):
                    channels=channels,
                    data_type=data_type,
                    compression=compression)
+
+    def get_image(self) -> np.ndarray:
+        if self.compression == "RAW":
+            return np.frombuffer(self.image_bytes, dtype=self.data_type).reshape(
+                (self.height, self.width, self.channels))
+        else:
+            image_mode = 'L' if self.channels == 1 else 'RGB'
+            pil_image = Image.open(BytesIO(self.image_bytes)).convert(image_mode)
+            return np.array(pil_image)
+
+    def set_image(self, image: np.ndarray):
+        self.image_bytes = image.tobytes()
+        self.width = image.shape[1]
+        self.height = image.shape[0]
+        self.channels = image.shape[2]
+        self.data_type = str(image.dtype)
 
     def to_bytes(self):
         header = struct.pack(RAW_IMAGE_BYTES_HEADER,
@@ -132,13 +129,11 @@ class FramePayload(BaseModel):
     camera_id: int = Field(description="The camera ID of the camera that this frame came from,"
                                        " e.g. `0` if this is the `cap = cv2.VideoCapture(0)` camera")
 
-    @property
-    def image(self) -> np.ndarray:
-        return self.raw_image.image
+    def get_image(self) -> np.ndarray:
+        return self.raw_image.get_image()
 
-    @image.setter
-    def image(self, image: np.ndarray):
-        self.raw_image.image = image
+    def set_image(self, image: np.ndarray):
+        self.raw_image = RawImage.from_image(image=image, compression=self.raw_image.compression)
 
     @property
     def width(self) -> int:
@@ -192,7 +187,7 @@ class FramePayload(BaseModel):
         return self.raw_image.to_q_image()
 
     def resize(self, scale_factor: float):
-        scaled_image = cv2.resize(self.image, dsize=None, fx=scale_factor, fy=scale_factor)
+        scaled_image = cv2.resize(self.get_image(), dsize=None, fx=scale_factor, fy=scale_factor)
         self.raw_image = RawImage.from_image(image=scaled_image, compression=self.raw_image.compression)
 
 
