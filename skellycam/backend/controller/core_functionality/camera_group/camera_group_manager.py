@@ -38,7 +38,7 @@ class CameraGroupManager:
                            new_frames:List[FramePayload]) -> MultiFramePayload:
         for frame in new_frames:
             # frame.compress(compression="JPEG")
-            frame.resize(factor=.5)
+            # frame.resize(factor=.5)
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
                 self.frontend_frame_pipe_sender.send_bytes(multi_frame_payload.to_bytes())
