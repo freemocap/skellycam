@@ -32,7 +32,6 @@ class VideoCaptureThread(threading.Thread):
         self._all_cameras_ready_event = all_cameras_ready_event
         self._close_cameras_event = close_cameras_event
 
-        self._should_run_frame_loop = False
         self.daemon = True
         self._cv2_video_capture = None
 
@@ -61,12 +60,12 @@ class VideoCaptureThread(threading.Thread):
                 frame = self._get_next_frame()
                 frame_bytes = frame.to_bytes()
                 self._pipe_sender_connection.send_bytes(frame_bytes)
-                print('woowoowoowo')
         except Exception as e:
             logger.error(f"Error in frame capture loop: {e}")
             logger.exception(e)
             raise e
         finally:
+            self._is_capturing_event.clear()
             logger.info(f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped")
 
     def _get_next_frame(self) -> FramePayload:
@@ -75,7 +74,7 @@ class VideoCaptureThread(threading.Thread):
 
         This method is responsible for grabbing the next frame from the camera - it is the point of "transduction"
          when a pattern of environmental energy (i.e. a timeslice of the 2D pattern of light intensity in 3 wavelengths
-          within the field of view of the camera ) is abosrbed by the camera's sensor and converted into a digital
+          within the field of view of the camera ) is absorbed by the camera's sensor and converted into a digital
           representation of that pattern (i.e. a 2D array of pixel values in 3 channels).
 
         This is the empirical measurement, whereupon all future inference will derive their empirical grounding.
@@ -135,29 +134,3 @@ class VideoCaptureThread(threading.Thread):
         self._config = new_config
         logger.info(f"Updating Camera: {self._config.camera_id} config to {new_config}")
         apply_camera_configuration(self._cv2_video_capture, new_config)
-
-
-if __name__ == "__main__":
-    config = CameraConfig(camera_id=0)
-    con1, con2 = multiprocessing.Pipe()
-    event1 = multiprocessing.Event()
-    event2 = multiprocessing.Event()
-    event2.set()
-    thread = VideoCaptureThread(config=config,
-                                pipe_sender_connection=con1,
-                                is_capturing_event=event1,
-                                all_cameras_ready_event=event2)
-    thread.start()
-    #
-    # cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    # # apply_camera_configuration(cap, CameraConfig(camera_id=0))
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-    # fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    # cap.set(cv2.CAP_PROP_FOURCC, fourcc)
-    # previous_timestamp = time.perf_counter()
-    # while True:
-    #     success, image = cap.read()
-    #     timestamp = time.perf_counter()
-    #     print(f"FPS: {1 / (timestamp - previous_timestamp)} - image.shape: {image.shape}")
-    #     previous_timestamp = timestamp

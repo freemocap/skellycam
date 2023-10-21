@@ -26,9 +26,9 @@ class CameraGroupManager:
     def _run_camera_group_loop(self):
         self._camera_group.start()
         multi_frame_payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()))
-        while self._camera_group.is_capturing:
+        while self._camera_group.any_capturing:
             time.sleep(0.001)
-            new_frames = self._camera_group.new_frames()
+            new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
                 multi_frame_payload = self._handle_new_frames(multi_frame_payload, new_frames)
             # else:

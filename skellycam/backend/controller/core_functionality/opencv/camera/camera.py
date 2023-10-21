@@ -13,19 +13,16 @@ class Camera:
             config: CameraConfig,
             pipe_sender_connection,  # multiprocessing.connection.Connection,
             is_capturing_event: multiprocessing.Event,
-            all_cameras_ready: multiprocessing.Event,
+            all_cameras_ready_event: multiprocessing.Event,
             close_cameras_event: multiprocessing.Event,
     ):
         self._config = config
         self._pipe_sender_connection = pipe_sender_connection
         self._is_capturing_event = is_capturing_event
-        self._all_cameras_ready_event = all_cameras_ready
+        self._all_cameras_ready_event = all_cameras_ready_event
         self._close_cameras_event = close_cameras_event
-        self._capture_thread: Optional[VideoCaptureThread] = None
 
-    @property
-    def name(self):
-        return f"Camera_{self._config.camera_id}"
+        self._capture_thread: Optional[VideoCaptureThread] = None
 
     @property
     def camera_id(self) -> CameraId:
