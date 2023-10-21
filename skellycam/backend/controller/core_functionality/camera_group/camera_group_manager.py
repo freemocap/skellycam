@@ -25,12 +25,14 @@ class CameraGroupManager:
         self._camera_runner_thread: Optional[threading.Thread] = None
         self._camera_configs: Optional[Dict[CameraId, CameraConfig]] = None
 
+
     def start_recording(self):
         logger.debug(f"Starting recording...")
         if self._video_recorder_manager is None:
             logger.warning(f"Video recorder manager not initialized")
             return
-        self._video_recorder_manager.start_recording()
+        self._video_recorder_manager.start_recording(
+            start_time_perf_counter_ns_to_unix_mapping=(time.perf_counter_ns(), time.time_ns()))
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")

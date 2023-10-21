@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple
 
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
@@ -16,23 +16,25 @@ class VideoRecorderManager:
         self._cameras = cameras
         self._video_save_directory = video_save_directory
 
-        self._is_recording = False
 
         self._video_recorders: Dict[CameraId, VideoRecorder] = {camera_id: VideoRecorder(camera_config=camera_config,
                                                                                          video_save_path=self._make_video_file_path(
                                                                                              camera_id=camera_id)
                                                                                          ) for camera_id, camera_config
                                                                 in cameras.items()}
+        self._is_recording = False
 
     @property
-    def is_recording(self):
+    def is_recording(self) -> bool:
         return self._is_recording
 
     @property
     def has_frames_to_save(self):
         return any([video_recorder.has_frames_to_save for video_recorder in self._video_recorders.values()])
 
-    def start_recording(self):
+    def start_recording(self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]):
+        for video_recorder in self._video_recorders.values():
+            video_recorder.set_time_mapping(perf_counter_to_unix_mapping=start_time_perf_counter_ns_to_unix_mapping)
         self._is_recording = True
 
     def stop_recording(self):

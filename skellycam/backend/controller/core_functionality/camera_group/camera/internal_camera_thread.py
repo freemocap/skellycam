@@ -84,12 +84,12 @@ class VideoCaptureThread(threading.Thread):
         """
 
         success, image = self._cv2_video_capture.read()  # THIS IS WHERE THE MAGIC HAPPENS
-        retrieval_timestamp = time.perf_counter()
+        retrieval_timestamp = time.perf_counter_ns()
         self._frame_number += 1
         return FramePayload.create(
             success=success,
             image=image,
-            timestamp_ns=int(retrieval_timestamp),
+            timestamp_ns=retrieval_timestamp,
             frame_number=self._frame_number,
             camera_id=self._config.camera_id,
         )
