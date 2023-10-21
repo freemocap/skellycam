@@ -34,6 +34,15 @@ class RawImage(BaseModel):
             pil_image = Image.open(BytesIO(self.image_bytes)).convert(image_mode)
             return np.array(pil_image)
 
+    @image.setter
+    def image(self, image: np.ndarray):
+        self.image_bytes = image.tobytes()
+        self.width = image.shape[1]
+        self.height = image.shape[0]
+        self.channels = image.shape[2]
+        self.data_type = str(image.dtype)
+
+
     @classmethod
     def from_image(cls, image: np.ndarray, compression: Literal["RAW", "JPEG", "PNG"] = "RAW"):
         if compression == "RAW":
@@ -126,6 +135,10 @@ class FramePayload(BaseModel):
     @property
     def image(self) -> np.ndarray:
         return self.raw_image.image
+
+    @image.setter
+    def image(self, image: np.ndarray):
+        self.raw_image.image = image
 
     @property
     def width(self) -> int:

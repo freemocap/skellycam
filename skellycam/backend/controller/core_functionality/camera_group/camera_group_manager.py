@@ -2,6 +2,8 @@ import threading
 import time
 from typing import Dict, Optional, List
 
+import cv2
+
 from skellycam import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_manager import \
@@ -57,6 +59,7 @@ class CameraGroupManager:
                            new_frames: List[FramePayload]) -> MultiFramePayload:
         for frame in new_frames:
             # frame.compress(compression="JPEG")
+            frame.image = cv2.cvtColor(frame.image, cv2.COLOR_BGR2RGB)
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
                 if self._video_recorder_manager.is_recording:
