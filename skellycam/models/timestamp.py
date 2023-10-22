@@ -1,6 +1,6 @@
 import calendar
 from datetime import datetime, timezone
-from typing import Optional, Union, Dict
+from typing import Optional
 
 from pydantic import BaseModel
 from tzlocal import get_localzone
@@ -27,30 +27,8 @@ class Timestamp(BaseModel):
 
 
     @classmethod
-    def _convert_perf_counter(cls, perf_counter: Union[int, float]):
-        """
-        If the perf_counter is a float (e.g. from time.perf_counter()), convert it to an int (e.g. time.perf_counter_ns())
-
-        Perf_counter_ns is more precise because it avoids floating point error, but perf_counter is more human-readable, so we want to support both
-
-        Converting a perf_counter to a perf_counter_ns is effectively enshrining floating point error, but like, whatever lol
-        """
-
-        if isinstance(perf_counter, float):
-            perf_counter_ns = int(
-                perf_counter * 1e9)  # convert to ns (by enshrining floating point error, but like, whatever)
-
-    @classmethod
-    def _unpack_reference_mapping(cls, offset_mapping: Dict[Union[int, float], Union[datetime, 'Timestamp']]):
-        """
-        Unpack the reference mapping into a perf_counter_ns and a timestamp
-        convert
-        """
-        _perf_counter = list(offset_mapping.keys())[0]
-        _timestamp = offset_mapping[_perf_counter]
-        if isinstance(_timestamp, datetime):
-            _timestamp = int(_timestamp.timestamp() * 1e9)
-        return _perf_counter, _timestamp
+    def from_utc_ns(cls, unix_timestamp_utc_ns: int):
+        return cls.from_datetime(datetime.utcfromtimestamp(unix_timestamp_utc_ns / 1e9))
 
     @classmethod
     def from_datetime(cls, datetime_reference: datetime):

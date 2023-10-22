@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Dict, Tuple
 
+from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamp_logger import \
+    TimestampLoggerManager
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
@@ -11,17 +13,17 @@ from skellycam.system.environment.default_paths import get_default_recording_fol
 class VideoRecorderManager:
 
     def __init__(self,
-                 cameras: Dict[CameraId, CameraConfig],
+                 camera_configs: Dict[CameraId, CameraConfig],
                  video_save_directory: str = get_default_recording_folder_path(create_folder=False)):
-        self._cameras = cameras
+        self._camera_configs = camera_configs
         self._video_save_directory = video_save_directory
-
-
+        self._timestamp_manager = TimestampLoggerManager(video_save_directory=self._video_save_directory,
+                                                         camera_configs=camera_configs)
         self._video_recorders: Dict[CameraId, VideoRecorder] = {camera_id: VideoRecorder(camera_config=camera_config,
                                                                                          video_save_path=self._make_video_file_path(
                                                                                              camera_id=camera_id)
                                                                                          ) for camera_id, camera_config
-                                                                in cameras.items()}
+                                                                in camera_configs.items()}
         self._is_recording = False
 
     @property
@@ -33,8 +35,7 @@ class VideoRecorderManager:
         return any([video_recorder.has_frames_to_save for video_recorder in self._video_recorders.values()])
 
     def start_recording(self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]):
-        for video_recorder in self._video_recorders.values():
-            video_recorder.set_time_mapping(perf_counter_to_unix_mapping=start_time_perf_counter_ns_to_unix_mapping)
+        self._timestamp_manager.set_time_mapping(start_time_perf_counter_ns_to_unix_mapping)
         self._is_recording = True
 
     def stop_recording(self):
@@ -48,7 +49,6 @@ class VideoRecorderManager:
     def one_frame_to_disk(self):
         for video_recorder in self._video_recorders.values():
             video_recorder.one_frame_to_disk()
-
 
     def finish_and_close(self):
         for camera_id, video_recorder in self._video_recorders.items():

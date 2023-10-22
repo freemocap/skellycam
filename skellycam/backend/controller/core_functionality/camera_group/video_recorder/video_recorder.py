@@ -1,7 +1,6 @@
 import time
-from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 
 import cv2
 
@@ -50,29 +49,8 @@ class VideoRecorder:
         self._validate_frame(frame=frame)
         image = frame.get_image()
         self._cv2_video_writer.write(image)
-        self._log_timestamp(frame)
 
-    def _log_timestamp(self, frame):
-        timestamp_from_zero = frame.timestamp_ns - self.first_frame_timestamp
-        frame_duration = frame.timestamp_ns - self._previous_frame_timestamp
-        self._previous_frame_timestamp = frame.timestamp_ns
 
-        # Convert perf_counter_ns timestamp to Unix timestamp
-        start_perf_counter_time_ns, start_unix_time_ns = self._perf_counter_to_unix_mapping
-        elapsed_time_ns = frame.timestamp_ns - start_perf_counter_time_ns
-        unix_timestamp_ns = start_unix_time_ns + elapsed_time_ns
-
-        # Convert Unix timestamp to ISO 8601 format
-        iso8601_timestamp = datetime.fromtimestamp(unix_timestamp_ns / 1e9).isoformat()
-        self._timestamp_file.write(
-            f"{frame.frame_number},"
-            f" {timestamp_from_zero},"
-            f" {frame_duration},"
-            f" {unix_timestamp_ns},"
-            f" {iso8601_timestamp}\n")
-
-    def set_time_mapping(self, perf_counter_to_unix_mapping: Tuple[int, int]):
-        self._perf_counter_to_unix_mapping = perf_counter_to_unix_mapping
 
     def finish_and_close(self):
         self.finish()
@@ -96,7 +74,6 @@ class VideoRecorder:
         self._initialization_frame = frame_payload.copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
         self._previous_frame_timestamp = frame_payload.timestamp_ns
-        self._timestamp_file = self._initialize_timestamp_writer()
 
     def _create_video_writer(
             self,
@@ -117,17 +94,7 @@ class VideoRecorder:
 
         return video_writer_object
 
-    def _initialize_timestamp_writer(self):
 
-        timestamp_file_path = Path(self._video_save_path.parent) / "timestamps" / Path(
-            self._video_save_path.stem + "_timestamps.csv")
-        logger.debug(f"Creating timestamp file at: {timestamp_file_path}")
-        timestamp_file_path.parent.mkdir(parents=True, exist_ok=True)
-        timestamp_file_path.touch(exist_ok=True)
-        timestamp_file = open(timestamp_file_path, "w")
-        timestamp_file.write(
-            "frame_number, timestamp_from_zero_ns, frame_duration_ns, timestamp_unix_utc_ns, timestamp_utc_iso8601\n")
-        return timestamp_file
 
     def _validate_frame(self, frame: FramePayload):
         if frame.get_resolution() != self._initialization_frame.get_resolution():

@@ -71,7 +71,7 @@ class CameraGroupManager:
         logger.debug(f"Starting camera group thread...")
         self._camera_configs = camera_configs
         self._camera_group = CameraGroup(camera_configs=self._camera_configs)
-        self._video_recorder_manager = VideoRecorderManager(cameras=self._camera_configs)
+        self._video_recorder_manager = VideoRecorderManager(camera_configs=self._camera_configs)
         self._camera_runner_thread = threading.Thread(target=self._run_camera_group_loop, daemon=True)
         self._camera_runner_thread.start()
 
