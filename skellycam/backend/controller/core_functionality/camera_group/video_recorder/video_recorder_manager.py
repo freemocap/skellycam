@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Dict, Tuple
 
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamp_logger import \
-    TimestampLoggerManager
+    MultiFrameTimestampLogger
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
@@ -15,10 +15,11 @@ class VideoRecorderManager:
     def __init__(self,
                  camera_configs: Dict[CameraId, CameraConfig],
                  video_save_directory: str = get_default_recording_folder_path(create_folder=False)):
+        self._multi_frame_number = 0
         self._camera_configs = camera_configs
         self._video_save_directory = video_save_directory
-        self._timestamp_manager = TimestampLoggerManager(video_save_directory=self._video_save_directory,
-                                                         camera_configs=camera_configs)
+        self._timestamp_manager = MultiFrameTimestampLogger(video_save_directory=self._video_save_directory,
+                                                            camera_configs=camera_configs)
         self._video_recorders: Dict[CameraId, VideoRecorder] = {camera_id: VideoRecorder(camera_config=camera_config,
                                                                                          video_save_path=self._make_video_file_path(
                                                                                              camera_id=camera_id)
@@ -43,9 +44,11 @@ class VideoRecorderManager:
         self.finish_and_close()
 
     def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
+        self._multi_frame_number += 1
         for camera_id, frame_payload in multi_frame_payload.frames.items():
             self._video_recorders[camera_id].append_frame_payload_to_list(frame_payload=frame_payload)
-        self._timestamp_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload)
+        self._timestamp_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload,
+                                                           multi_frame_number=self._multi_frame_number)
 
     def one_frame_to_disk(self):
         for video_recorder in self._video_recorders.values():
