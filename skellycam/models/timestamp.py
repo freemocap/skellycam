@@ -1,6 +1,5 @@
 import calendar
 from datetime import datetime, timezone
-from typing import Optional
 
 from pydantic import BaseModel
 from tzlocal import get_localzone
@@ -16,7 +15,6 @@ class Timestamp(BaseModel):
     unix_timestamp_local: float
     unix_timestamp_utc_isoformat: str
     unix_timestamp_local_isoformat: str
-    perf_counter_ns: Optional[int]
     local_time_zone: str
     human_friendly_utc: str
     human_friendly_local: str

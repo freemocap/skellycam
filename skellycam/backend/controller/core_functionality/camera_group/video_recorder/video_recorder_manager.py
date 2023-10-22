@@ -45,6 +45,7 @@ class VideoRecorderManager:
     def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         for camera_id, frame_payload in multi_frame_payload.frames.items():
             self._video_recorders[camera_id].append_frame_payload_to_list(frame_payload=frame_payload)
+        self._timestamp_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload)
 
     def one_frame_to_disk(self):
         for video_recorder in self._video_recorders.values():
@@ -53,6 +54,7 @@ class VideoRecorderManager:
     def finish_and_close(self):
         for camera_id, video_recorder in self._video_recorders.items():
             video_recorder.finish_and_close()
+        self._timestamp_manager.close()
 
     def _make_video_file_path(self, camera_id: CameraId, video_format: str = "avi"):
         """

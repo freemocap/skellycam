@@ -62,13 +62,11 @@ class VideoRecorder:
             self.one_frame_to_disk()
 
     def close(self):
-
         logger.debug(f"Closing video recorder for camera {self._camera_config.camera_id}")
         if self.has_frames_to_save:
             logger.warning(f"Video recorder for camera {self._camera_config.camera_id} has frames to save!")
             self.finish()
         self._cv2_video_writer.release()
-        self._timestamp_file.close()
 
     def _initialize_on_first_frame(self, frame_payload):
         self._initialization_frame = frame_payload.copy(deep=True)

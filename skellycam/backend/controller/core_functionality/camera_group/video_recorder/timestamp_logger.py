@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any
@@ -27,9 +28,8 @@ class TimestampLogger:
 
     def set_time_mapping(self, perf_counter_to_unix_mapping: Tuple[int, int]):
         self._perf_counter_to_unix_mapping = perf_counter_to_unix_mapping
-
-    def set_first_frame_timestamp(self, first_frame_timestamp: int):
-        self._first_frame_timestamp = first_frame_timestamp
+        self._first_frame_timestamp = perf_counter_to_unix_mapping[0]
+        self._previous_frame_timestamp = self._first_frame_timestamp
 
     def log_timestamp(self, frame: FramePayload) -> Dict[str, Any]:
         timestamp_from_zero = frame.timestamp_ns - self._first_frame_timestamp
@@ -62,6 +62,9 @@ class TimestampLogger:
         timestamp_file.write(",".join(self._csv_header) + "\n")
         return timestamp_file
 
+    def close(self):
+        self._timestamp_file.close()
+
 
 class TimestampLoggerManager:
     def __init__(self,
@@ -77,16 +80,17 @@ class TimestampLoggerManager:
         self._main_timestamp_file = self._initialize_main_timestamp_writer()
 
     def set_time_mapping(self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]):
-        self._save_starting_timestamp(start_time_perf_counter_ns_to_unix_mapping)
+        self._save_starting_timestamp(start_time_perf_counter_ns_to_unix_mapping[1])
+        self._first_frame_timestamp = start_time_perf_counter_ns_to_unix_mapping[0]
         for timestamp_logger in self._timestamp_loggers.values():
             timestamp_logger.set_time_mapping(start_time_perf_counter_ns_to_unix_mapping)
 
-    def _save_starting_timestamp(self, start_time_perf_counter_ns_to_unix_mapping):
-        self._starting_timestamp = Timestamp.from_utc_ns(start_time_perf_counter_ns_to_unix_mapping[1])
+    def _save_starting_timestamp(self, start_time_unix):
+        self._starting_timestamp = Timestamp.from_utc_ns(start_time_unix)
         self._main_timestamp_path.parent.mkdir(parents=True, exist_ok=True)
         # save starting timestamp to JSON file
-        with open(self._main_timestamp_path.parent / "recording_start_mega_timestamp.json", "w") as f:
-            f.write(self._starting_timestamp.to_json())
+        with open(self._main_timestamp_path.parent / "recording_start_timestamp.json", "w") as f:
+            f.write(json.dumps(self._starting_timestamp.dict(), indent=4))
 
     def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         timestamp_dict_by_camera = {}
@@ -100,7 +104,8 @@ class TimestampLoggerManager:
         row_dict["mean_timestamp_from_zero_ns"] = self._get_mean_timestamp_from_zero_ns(timestamp_dict_by_camera)
         row_dict["mean_frame_duration_ns"] = self._get_mean_frame_duration_ns(timestamp_dict_by_camera)
         row_dict["mean_timestamp_unix_utc_ns"] = self._get_mean_timestamp_unix_utc_ns(timestamp_dict_by_camera)
-        row_dict["mean_timestamp_utc_iso8601"] = self._get_mean_timestamp_utc_iso8601(timestamp_dict_by_camera)
+        row_dict["mean_timestamp_utc_iso8601"] = self._get_mean_timestamp_utc_iso8601(
+            row_dict["mean_timestamp_unix_utc_ns"])
         row_dict["inter_camera_timestamp_range_ns"] = self._get_inter_camera_timestamp_range_ns(
             timestamp_dict_by_camera)
         row_dict["inter_camera_timestamp_stddev_ns"] = self._get_inter_camera_timestamp_stddev_ns(
@@ -171,3 +176,8 @@ class TimestampLoggerManager:
                             ]
         for camera_id in camera_configs.keys():
             self._csv_header.append(f"camera_{camera_id}_timestamp_log")
+
+    def close(self):
+        for timestamp_logger in self._timestamp_loggers.values():
+            timestamp_logger.close()
+        self._main_timestamp_file.close()

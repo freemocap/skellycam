@@ -38,8 +38,8 @@ class CameraConfig(BaseModel):
     use_this_camera: bool = Field(default=True,
                                   description="Whether or not to use this camera for streaming/recording")
 
-    resolution: VideoResolution = Field(default=VideoResolution(width=1920,
-                                                                height=1080),
+    resolution: VideoResolution = Field(default=VideoResolution(width=1280,
+                                                                height=720),
                                         description="The current resolution of the camera, in pixels.")
     framerate: float = Field(default=30,
                              description="The framerate of the camera (in frames per second).")
