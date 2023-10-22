@@ -9,14 +9,15 @@ from skellycam import logger
 from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
-from skellycam.models.cameras.camera_config import CameraConfig, RotationTypes
+from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.models.cameras.image_rotation_types import RotationTypes
 from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.video_resolution import VideoResolution
 
 
 class CameraParameterTree(QWidget):
-    camera_configs_changed = Signal(dict)
+    # camera_configs_changed = Signal(dict)
 
     def __init__(self, parent: Union[QMainWindow, QWidget]):
         super().__init__(parent=parent)
@@ -110,7 +111,7 @@ class CameraParameterTree(QWidget):
         camera_parameter_group.param(self.tr(USE_THIS_CAMERA_STRING)).sigValueChanged.connect(
             lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
         )
-        camera_parameter_group.sigTreeStateChanged.connect(self._handle_parameter_tree_change)
+        # camera_parameter_group.sigTreeStateChanged.connect(self._handle_parameter_tree_change)
         return camera_parameter_group
 
     def _create_copy_to_all_cameras_action_parameter(self, camera_id) -> Parameter:
@@ -119,7 +120,7 @@ class CameraParameterTree(QWidget):
             type="action",
         )
         button.sigActivated.connect(
-            lambda: self._apply_settings_to_all_cameras(camera_id)
+            lambda: self._copy_settings_to_all_cameras(camera_id)
         )
         return button
 
@@ -142,7 +143,7 @@ class CameraParameterTree(QWidget):
 
         return configs
 
-    def _apply_settings_to_all_cameras(self, camera_id_to_copy_from: str):
+    def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: str):
         logger.info(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
 
         for camera_id in self._camera_configs.keys():
@@ -161,6 +162,6 @@ class CameraParameterTree(QWidget):
                 child_parameter.setOpts(enabled=use_this_camera_checked)
                 child_parameter.setReadonly(use_this_camera_checked)
 
-    def _handle_parameter_tree_change(self):
-        logger.trace(f"Parameter tree changed -  emitting camera_configs_changed signal")
-        self.camera_configs_changed.emit(self.camera_configs)
+    # def _handle_parameter_tree_change(self):
+    #     logger.trace(f"Parameter tree changed -  emitting camera_configs_changed signal")
+    #     self.camera_configs_changed.emit(self.camera_configs)

@@ -9,7 +9,7 @@ from skellycam import logger
 from skellycam.backend.controller.interactions.base_models import BaseInteraction
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.keyboard_shortcuts import KeyboardShortcuts
-from skellycam.frontend.gui.widgets.camera_control_panel import CameraControlPanel
+from skellycam.frontend.gui.widgets.camera_control_buttons import CameraControlButtons
 from skellycam.frontend.gui.widgets.camera_parameter_tree import (
     CameraParameterTree,
 )
@@ -100,8 +100,8 @@ class MainWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
         camera_settings_layout = QVBoxLayout()
-        self.camera_control_panel = CameraControlPanel(parent=self)
-        camera_settings_layout.addWidget(self.camera_control_panel)
+        self.camera_control_buttons = CameraControlButtons(parent=self)
+        camera_settings_layout.addWidget(self.camera_control_buttons)
         self.camera_parameter_tree = CameraParameterTree(parent=self)
         camera_settings_layout.addWidget(self.camera_parameter_tree)
         camera_settings_widget = QWidget(parent=self)

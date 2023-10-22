@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    input_model = CameraConfig.from_id(camera_id='0')
+    input_model = CameraConfig(camera_id='0')
     pprint(f"Input model:\n\n {input_model}\n", indent=4)
 
     model = CameraConfigView(model=input_model)
