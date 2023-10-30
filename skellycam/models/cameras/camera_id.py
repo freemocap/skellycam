@@ -1,0 +1,2 @@
+CameraId = int
+
