@@ -1,4 +1,5 @@
 import json
+import pprint
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
@@ -8,10 +9,8 @@ import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam import logger
-from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frames.frame_payload import FramePayload, MultiFramePayload
-from skellycam.models.timestamp import Timestamp
+from skellycam.models.cameras.frames.frame_payload import FramePayload
 
 
 class CameraTimestampLog(BaseModel):
@@ -188,6 +187,36 @@ class CameraTimestampLogger:
                 f.write(CameraTimestampLog.to_document())
 
     def close(self):
-        self._timestamp_file.close()
         self._save_documentation()
+        self._save_timestamp_stats()
+        self._timestamp_file.close()
 
+    def _save_timestamp_stats(self):
+        stats = self._get_timestamp_stats()
+        stats_path = self._csv_path.parent / "camera_timestamps_stats.json"
+        with open(stats_path, "w") as f:
+            f.write(json.dumps(stats, indent=4))
+
+        logger.info(f"Saved timestamp stats to {stats_path} -\n\n"
+                    f"{pprint.pformat(stats, indent=4)})\n\n")
+
+    def _get_timestamp_stats(self):
+        stats = {}
+        stats.update({
+            "first_frame_timestamp_ns": self._first_frame_timestamp,
+            "perf_counter_to_unix_mapping_ns": self._perf_counter_to_unix_mapping,
+        })
+        stats.update(self._get_stats_from_csv())
+
+        return stats
+
+    def _get_stats_from_csv(self):
+        csv = np.genfromtxt(self._csv_path, delimiter=",", names=True)
+        stats = {}
+        for field_name in csv.dtype.names:
+            stats[field_name] = {}
+            stats[field_name]["mean"] = np.mean(csv[field_name])
+            stats[field_name]["std"] = np.std(csv[field_name])
+            stats[field_name]["min"] = np.min(csv[field_name])
+            stats[field_name]["max"] = np.max(csv[field_name])
+        return stats

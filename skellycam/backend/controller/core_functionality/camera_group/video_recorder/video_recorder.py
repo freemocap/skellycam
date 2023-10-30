@@ -67,8 +67,8 @@ class VideoRecorder:
 
     def finish_and_close(self):
         self.finish()
-        while not self.finished:
-            time.sleep(0.001)
+        if self.has_frames_to_save:
+            raise AssertionError("VideoRecorder `finish` was returned, but there are still frames to save!")
         self.close()
 
     def finish(self):
@@ -80,13 +80,22 @@ class VideoRecorder:
         logger.debug(f"Closing video recorder for camera {self._camera_config.camera_id}")
         if self.has_frames_to_save:
             raise AssertionError("VideoRecorder has frames to save, but `close` was called! Theres a buggo in the logic somewhere...")
-        self._cv2_video_writer.release()
+        self._close_video_writer() if self._cv2_video_writer is not None else None
 
     def _initialize_on_first_frame(self, frame_payload):
         self._initialization_frame = frame_payload.copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
         self._check_if_writer_open()
         self._previous_frame_timestamp = frame_payload.timestamp_ns
+
+    def _close_video_writer(self):
+        logger.debug(
+            f"Closing video writer for camera {self._camera_config.camera_id} to save video at: {self._video_save_path}")
+        if self._cv2_video_writer is None:
+            raise AssertionError(
+                "VideoWriter is None, but `_close_video_writer` was called! There's a buggo in the application logic somewhere...")
+        self._cv2_video_writer.release()
+        self._cv2_video_writer = None
 
     def _create_video_writer(
             self,
