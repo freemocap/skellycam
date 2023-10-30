@@ -5,6 +5,14 @@ class VideoResolution(BaseModel):
     width: int
     height: int
 
+    @classmethod
+    def from_string(cls, tuple_str: str, split_on: str = "x") -> "VideoResolution":
+        """
+        Create a `VideoResolution` from a string like "(1280, 720)"
+        """
+        width, height = tuple_str.replace("(", "").replace(")", "").split(split_on)
+        return cls(width=int(width), height=int(height))
+
     @property
     def orientation(self) -> str:
         return "landscape" if self.width > self.height else "portrait"

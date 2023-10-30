@@ -11,15 +11,15 @@ class CameraConfig(BaseModel):
 
     use_this_camera: bool = Field(default=True,
                                   description="Whether or not to use this camera for streaming/recording")
-
     resolution: VideoResolution = Field(default=VideoResolution(width=1280,
                                                                 height=720),
                                         description="The current resolution of the camera, in pixels.")
-    framerate: float = Field(default=30,
-                             description="The framerate of the camera (in frames per second).")
     exposure: int = Field(default=-6,
                           description="The exposure of the camera using the opencv convention - "
                                       "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/")
+    framerate: float = Field(default=30,
+                             description="The framerate of the camera (in frames per second).")
+
     rotation: RotationTypes = Field(default=RotationTypes.COUNTERCLOCKWISE_90,
                                     description="The rotation to apply to the images "
                                                 "of this camera (after they are captured)")

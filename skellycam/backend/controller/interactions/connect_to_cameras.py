@@ -8,10 +8,20 @@ from skellycam.backend.controller.interactions.base_models import BaseCommand, B
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 
+class ConnectToCamerasRequest(BaseRequest):
+    camera_configs: Dict[CameraId, CameraConfig]
+
+    @classmethod
+    def create(cls, camera_configs: Dict[CameraId, CameraConfig]):
+        if len(camera_configs) == 0:
+            raise ValueError("Must have at least one camera")
+        return cls(camera_configs=camera_configs)
+
+
+
 
 class ConnectToCamerasResponse(BaseResponse):
     pass
-
 
 class ConnectToCamerasCommand(BaseCommand):
     camera_configs: Dict[CameraId, CameraConfig]
@@ -31,12 +41,6 @@ class ConnectToCamerasCommand(BaseCommand):
                                                       "traceback": str(traceback.format_exc())})
 
 
-class ConnectToCamerasRequest(BaseRequest):
-    camera_configs: Dict[CameraId, CameraConfig]
-
-    @classmethod
-    def create(cls, camera_configs: Dict[CameraId, CameraConfig]):
-        return cls(camera_configs=camera_configs)
 
 
 class ConnectToCamerasInteraction(BaseInteraction):
