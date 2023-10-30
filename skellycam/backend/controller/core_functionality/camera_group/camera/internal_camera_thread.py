@@ -34,6 +34,7 @@ class VideoCaptureThread(threading.Thread):
 
         self.daemon = True
         self._cv2_video_capture = None
+        self._updating_config = False
 
     @property
     def is_capturing_frames(self) -> bool:
@@ -57,6 +58,9 @@ class VideoCaptureThread(threading.Thread):
         logger.info(f"Camera ID: [{self._config.camera_id}] Frame capture loop is running")
         try:
             while not self._close_cameras_event.is_set():
+                if self._updating_config:
+                    time.sleep(.001)
+                    continue
                 frame = self._get_next_frame()
                 frame_bytes = frame.to_bytes()
                 self._pipe_sender_connection.send_bytes(frame_bytes)
@@ -131,6 +135,8 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.release()
 
     def update_camera_config(self, new_config: CameraConfig):
+        self._updating_config = True
         self._config = new_config
         logger.info(f"Updating Camera: {self._config.camera_id} config to {new_config}")
         apply_camera_configuration(self._cv2_video_capture, new_config)
+        self._updating_config = False

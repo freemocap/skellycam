@@ -46,7 +46,7 @@ class UpdateCameraConfigsInteraction(BaseInteraction):
     def as_request(cls, **kwargs):
         return cls(request=UpdateCameraConfigsRequest.create(**kwargs))
 
-    def execute_command(self, controller: Controller) -> UpdateCameraConfigsResponse:
+    def execute_command(self, controller: Controller, **kwargs ) -> UpdateCameraConfigsResponse:
         self.command = UpdateCameraConfigsCommand()
         self.response = self.command.execute(controller, camera_configs=self.request.camera_configs)
         return self.response
