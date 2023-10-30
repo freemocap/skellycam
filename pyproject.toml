@@ -1,64 +1,19 @@
-[tool.poetry]
-name = "skellycam"
-version = "2023.09.1086"
-description = "\"A simple python API for efficiently connecting to and recording synchronized videos from one or multiple cameras 💀📸\""
-authors = ["Skelly FreeMoCap <info@freemocap.org>"]
-license = "AGPLv3"
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = ">3.10, <3.12"
-numpy = "1.24.4"
-opencv-contrib-python = "4.8.*"
-pydantic = "<2"
-matplotlib = "3.7.2"
-pandas = "2.1.0"
-pillow = "^10.0.1"
-setproctitle = "^1.3.3"
-tqdm = "^4.66.1"
-scikit-image = "^0.22.0"
-rich = "^13.6.0"
-plotly = "^5.17.0"
-blosc2 = "^2.2.9"
-tabulate = "^0.9.0"
-tzlocal = "^5.1"
-pyside6 = "^6.5.3"
-pyqtgraph = "^0.13.3"
-
-[tool.poetry.group.dev.dependencies]
-black = "^23.9.1"
-pre-commit = "^3.4.0"
-pyinstaller = "^6.0.0"
+# pyproject.toml
+# originally based on - https://realpython.com/pypi-publish-python-package/
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
-
-[project.urls]
-Homepage = "https://github.com/freemocap/skellycam"
-
-[tool.bumpver]
-current_version = "v2023.09.1086"
-
-version_pattern = "vYYYY.0M.BUILD[-TAG]"
-commit_message  = "Bump version {old_version} -> {new_version}"
-commit          = true
-tag             = true
-push            = true
-
-[tool.bumpver.file_patterns]
-"skellycam/__init__.py" = ["{version}"]
-
-[project.scripts]
-skellycam = "skellycam.__main__:main"
-
-[tool.setuptools]
-py-modules = ["skellycam"]
-
-
-
-
+[project]
+name = "skellycam"
+readme = "README.md"
+authors = [
+    {name = "Skelly FreeMoCap", email = "info@freemocap.org"},
+    {name = "Endurance Idehen"},
+    {name = "Jonathan Samir Matthis"},
+    ]
+license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
@@ -100,3 +55,53 @@ keywords = [
     "synchronization",
     "computer vision"
 ]
+
+#dynamic = ["dependencies"]
+dependencies = [
+"numpy",
+"opencv-contrib-python",
+"pydantic",
+"Pillow",
+"psutil",
+"setproctitle",
+"pyqt6",
+"matplotlib",
+"scipy",
+"rich",
+"pandas",
+"pyqtgraph",
+"qtpy",
+"toml",
+"tqdm",
+]
+requires-python = ">=3.8"
+
+dynamic = ["version", "description"]
+
+[project.optional-dependencies]
+dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/freemocap/skellycam"
+
+[tool.bumpver]
+current_version = "v2023.09.1086"
+
+version_pattern = "vYYYY.0M.BUILD[-TAG]"
+commit_message  = "Bump version {old_version} -> {new_version}"
+commit          = true
+tag             = true
+push            = true
+
+[tool.bumpver.file_patterns]
+#"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
+"skellycam/__init__.py" = ["{version}"]
+
+#[tool.setuptools.dynamic]
+#dependencies = {file = "requirements.txt"}
+
+[project.scripts]
+skellycam = "skellycam.__main__:main"
+
+[tool.setuptools]
+py-modules = ["skellycam"]

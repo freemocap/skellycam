@@ -1,6 +1,6 @@
 import asyncio
 
-from skellycam.experiments.examples.viewers.cv_cam_viewer import CvCamViewer
+from skellycam.viewers.cv_cam_viewer import CvCamViewer
 
 
 async def cam_show(cam_id, get_frame):

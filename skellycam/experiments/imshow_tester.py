@@ -1,8 +1,8 @@
 import asyncio
 
-from skellycam.backend.controller.core_functionality.detection import detect_cameras
-from skellycam.backend.controller.core_functionality.opencv import Camera
-from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.detection.detect_cameras import detect_cameras
+from skellycam.opencv.camera.camera import Camera
+from skellycam.opencv.camera.models.camera_config import CameraConfig
 
 
 async def imshow_testing():
