@@ -24,22 +24,28 @@ class CameraGroupManager:
         self._video_recorder_manager: Optional[VideoRecorderManager] = None
         self._camera_runner_thread: Optional[threading.Thread] = None
         self._camera_configs: Optional[Dict[CameraId, CameraConfig]] = None
-
+        self._is_recording = False
 
     def start_recording(self):
         logger.debug(f"Starting recording...")
-        if self._video_recorder_manager is None:
-            logger.warning(f"Video recorder manager not initialized")
-            return
+        if self._video_recorder_manager is not None:
+            raise AssertionError("Video recorder manager already initialized! "
+                                 "There's a buggo in the application logic somewhere")
+        self._video_recorder_manager = VideoRecorderManager(camera_configs=self._camera_configs)
         self._video_recorder_manager.start_recording(
             start_time_perf_counter_ns_to_unix_mapping=(time.perf_counter_ns(), time.time_ns()))
+        self._is_recording = True
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
-        if self._video_recorder_manager is None:
-            logger.warning(f"Video recorder manager not initialized")
-            return
+        if self._video_recorder_manager is  None:
+            raise AssertionError("Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! "
+                                 "There's a buggo in the application logic somewhere")
         self._video_recorder_manager.stop_recording()
+        while not self._video_recorder_manager.finished:
+            time.sleep(0.001)
+        self._video_recorder_manager = None
+        self._is_recording = False
 
     def _run_camera_group_loop(self):
         self._camera_group.start()
@@ -48,8 +54,12 @@ class CameraGroupManager:
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
                 multi_frame_payload = self._handle_new_frames(multi_frame_payload, new_frames)
-            elif self._video_recorder_manager.is_recording and self._video_recorder_manager.has_frames_to_save:
-                self._video_recorder_manager.one_frame_to_disk()
+            elif self._is_recording:
+                if self._video_recorder_manager is None:
+                    logger.error(f"Video recorder manager not initialized")
+                    raise AssertionError("Video recorder manager not initialized but `_is_recording` is True")
+                if self._video_recorder_manager.has_frames_to_save:
+                    self._video_recorder_manager.one_frame_to_disk()
             else:
                 time.sleep(0.001)
 
@@ -59,7 +69,10 @@ class CameraGroupManager:
         for frame in new_frames:
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
-                if self._video_recorder_manager.is_recording:
+                if self._is_recording:
+                    if self._video_recorder_manager is None:
+                        logger.error(f"Video recorder manager not initialized")
+                        raise AssertionError("Video recorder manager not initialized but `_is_recording` is True")
                     self._video_recorder_manager.handle_multi_frame_payload(multi_frame_payload=multi_frame_payload)
 
                 frontend_payload = self._prepare_frontend_payload(multi_frame_payload=multi_frame_payload)
@@ -71,7 +84,6 @@ class CameraGroupManager:
         logger.debug(f"Starting camera group thread...")
         self._camera_configs = camera_configs
         self._camera_group = CameraGroup(camera_configs=self._camera_configs)
-        self._video_recorder_manager = VideoRecorderManager(camera_configs=self._camera_configs)
         self._camera_runner_thread = threading.Thread(target=self._run_camera_group_loop, daemon=True)
         self._camera_runner_thread.start()
 

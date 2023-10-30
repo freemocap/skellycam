@@ -34,6 +34,10 @@ class VideoRecorder:
         return len(self._frame_payload_list) > 0
 
     @property
+    def finished(self):
+        return not self.has_frames_to_save and not self._cv2_video_writer.isOpened()
+
+    @property
     def first_frame_timestamp(self) -> int:
         return self._initialization_frame.timestamp_ns
 
@@ -44,16 +48,27 @@ class VideoRecorder:
 
     def one_frame_to_disk(self):
         if len(self._frame_payload_list) == 0:
-            return
+            raise AssertionError("No frames to save, but `one_frame_to_disk` was called! "
+                                 "There's a buggo in the application logic somewhere...")
+        self._check_if_writer_open()
         frame = self._frame_payload_list.pop(-1)
         self._validate_frame(frame=frame)
         image = frame.get_image()
         self._cv2_video_writer.write(image)
 
-
+    def _check_if_writer_open(self):
+        if not self._cv2_video_writer.isOpened():
+            if Path(self._video_save_path).exists():
+                raise AssertionError(
+                    f"VideoWriter is not open, but video file already exists at {self._video_save_path} - looks like the VideoWriter initialized properly but closed unexpectedly!")
+            else:
+                raise AssertionError(
+                    "VideoWriter is not open and video file doesn't exist - looks like the VideoWriter failed to initialize!")
 
     def finish_and_close(self):
         self.finish()
+        while not self.finished:
+            time.sleep(0.001)
         self.close()
 
     def finish(self):
@@ -64,13 +79,13 @@ class VideoRecorder:
     def close(self):
         logger.debug(f"Closing video recorder for camera {self._camera_config.camera_id}")
         if self.has_frames_to_save:
-            logger.warning(f"Video recorder for camera {self._camera_config.camera_id} has frames to save!")
-            self.finish()
+            raise AssertionError("VideoRecorder has frames to save, but `close` was called! Theres a buggo in the logic somewhere...")
         self._cv2_video_writer.release()
 
     def _initialize_on_first_frame(self, frame_payload):
         self._initialization_frame = frame_payload.copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
+        self._check_if_writer_open()
         self._previous_frame_timestamp = frame_payload.timestamp_ns
 
     def _create_video_writer(
@@ -87,8 +102,7 @@ class VideoRecorder:
         )
 
         if not video_writer_object.isOpened():
-            logger.error(f"cv2.VideoWriter failed to initialize!")
-            raise Exception("cv2.VideoWriter is not open")
+            raise Exception("cv2.VideoWriter failed to initialize!")
 
         return video_writer_object
 

@@ -16,6 +16,7 @@ from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.video_resolution import VideoResolution
 
 
+
 class CameraParameterTree(QWidget):
     # camera_configs_changed = Signal(dict)
 
