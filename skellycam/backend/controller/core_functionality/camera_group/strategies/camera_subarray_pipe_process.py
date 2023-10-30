@@ -10,6 +10,7 @@ from skellycam.backend.controller.core_functionality.camera_group.camera.camera 
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload
+from skellycam.models.cameras.image_rotation_types import RotationTypes
 
 
 class CamSubarrayPipeProcess:
@@ -64,7 +65,9 @@ class CamSubarrayPipeProcess:
         )
         self._process.start()
 
-    def update_camera_configs(self, camera_config_dictionary):
+    def update_camera_configs(self, camera_config_dictionary: Dict[CameraId, CameraConfig]):
+        for camera_id, camera_config in camera_config_dictionary.items():
+            self._subarray_camera_configs[camera_id] = camera_config
         self._camera_config_queue.put(camera_config_dictionary)
 
     def get_new_frames_by_camera_id(self, camera_id) -> List[FramePayload]:
@@ -80,11 +83,20 @@ class CamSubarrayPipeProcess:
                 frame_bytes = pipe_receiver_connection.recv_bytes()
                 new_frames.append(FramePayload.from_bytes(frame_bytes))
 
+            if len(new_frames) > 0:
+                self._apply_image_rotation(new_frames)
+
         except Exception as e:
             logger.error(f"Problem when grabbing a frame from: Camera {camera_id} - {e}")
             logger.exception(e)
             raise e
         return new_frames
+
+    def _apply_image_rotation(self, new_frames: List[FramePayload]):
+        for frame in new_frames:
+            config = self._subarray_camera_configs[frame.camera_id]
+            if config.rotation != RotationTypes.NO_ROTATION:
+                frame.rotate(config.rotation.value)
 
     def _create_pipes(self):
         self._pipe_receiver_connections = {}

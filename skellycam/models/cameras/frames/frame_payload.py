@@ -182,6 +182,9 @@ class FramePayload(BaseModel):
         scaled_image = cv2.resize(self.get_image(), dsize=None, fx=scale_factor, fy=scale_factor)
         self.raw_image = RawImage.from_image(image=scaled_image, compression=self.raw_image.compression)
 
+    def rotate(self, cv2_rotate_flag: int):
+        rotated_image = cv2.rotate(self.get_image(), cv2_rotate_flag)
+        self.raw_image = RawImage.from_image(image=rotated_image, compression=self.raw_image.compression)
 
 class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]]

@@ -20,7 +20,7 @@ class CameraConfig(BaseModel):
     exposure: int = Field(default=-6,
                           description="The exposure of the camera using the opencv convention - "
                                       "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/")
-    rotation: RotationTypes = Field(default=RotationTypes.NO_ROTATION,
+    rotation: RotationTypes = Field(default=RotationTypes.COUNTERCLOCKWISE_90,
                                     description="The rotation to apply to the images "
                                                 "of this camera (after they are captured)")
     capture_fourcc: str = Field(default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
@@ -36,4 +36,3 @@ class CameraConfig(BaseModel):
     @property
     def aspect_ratio(self) -> float:
         return self.resolution.aspect_ratio
-

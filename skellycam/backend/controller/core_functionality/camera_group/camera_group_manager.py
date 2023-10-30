@@ -84,6 +84,7 @@ class CameraGroupManager:
 
     def update_configs(self, camera_configs: Dict[CameraId, CameraConfig]):
         logger.debug(f"Updating camera configs to {camera_configs.keys()}")
+        self._camera_configs = camera_configs
         self._camera_group.update_configs(camera_configs=camera_configs)
 
     def _prepare_frontend_payload(self, multi_frame_payload: MultiFramePayload,
