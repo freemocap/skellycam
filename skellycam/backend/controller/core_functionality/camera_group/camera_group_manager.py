@@ -19,12 +19,14 @@ class CameraGroupManager:
                  frontend_frame_pipe_sender  # multiprocessing.connection.Connection
                  ) -> None:
 
+
         self.frontend_frame_pipe_sender = frontend_frame_pipe_sender
         self._camera_group: Optional[CameraGroup] = None
         self._video_recorder_manager: Optional[VideoRecorderManager] = None
         self._camera_runner_thread: Optional[threading.Thread] = None
         self._camera_configs: Optional[Dict[CameraId, CameraConfig]] = None
         self._is_recording = False
+        self._stop_recording = False
 
     def start_recording(self):
         logger.debug(f"Starting recording...")
@@ -35,6 +37,7 @@ class CameraGroupManager:
         self._video_recorder_manager.start_recording(
             start_time_perf_counter_ns_to_unix_mapping=(time.perf_counter_ns(), time.time_ns()))
         self._is_recording = True
+        self._stop_recording = False
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
@@ -42,10 +45,7 @@ class CameraGroupManager:
             raise AssertionError("Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! "
                                  "There's a buggo in the application logic somewhere")
         self._video_recorder_manager.stop_recording()
-        while not self._video_recorder_manager.finished:
-            time.sleep(0.001)
-        self._video_recorder_manager = None
-        self._is_recording = False
+        self._stop_recording = True
 
     def _run_camera_group_loop(self):
         self._camera_group.start()
@@ -60,8 +60,20 @@ class CameraGroupManager:
                     raise AssertionError("Video recorder manager not initialized but `_is_recording` is True")
                 if self._video_recorder_manager.has_frames_to_save:
                     self._video_recorder_manager.one_frame_to_disk()
+                else:
+                    if self._stop_recording:
+                        logger.debug(
+                            f"No more frames to save, and `_stop_recording` is True - closing video recorder manager")
+                        self._close_video_recorder_manager()
             else:
                 time.sleep(0.001)
+
+    def _close_video_recorder_manager(self):
+        self._video_recorder_manager.finish_and_close()
+        while not self._video_recorder_manager.finished:
+            time.sleep(0.001)
+        self._video_recorder_manager = None
+        self._is_recording = False
 
     def _handle_new_frames(self,
                            multi_frame_payload: MultiFramePayload,

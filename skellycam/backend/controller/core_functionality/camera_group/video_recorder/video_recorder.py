@@ -35,7 +35,9 @@ class VideoRecorder:
 
     @property
     def finished(self):
-        return not self.has_frames_to_save and not self._cv2_video_writer.isOpened()
+        frames_save_done = not self.has_frames_to_save
+        video_writer_done = not self._cv2_video_writer.isOpened() if self._cv2_video_writer is not None else True
+        return frames_save_done and video_writer_done
 
     @property
     def first_frame_timestamp(self) -> int:
@@ -57,6 +59,11 @@ class VideoRecorder:
         self._cv2_video_writer.write(image)
 
     def _check_if_writer_open(self):
+
+        if self._cv2_video_writer is None:
+            raise AssertionError("VideoWriter is None, but `_check_if_writer_open` was called! "
+                                 "There's a buggo in the application logic somewhere...")
+
         if not self._cv2_video_writer.isOpened():
             if Path(self._video_save_path).exists():
                 raise AssertionError(
@@ -95,7 +102,6 @@ class VideoRecorder:
             raise AssertionError(
                 "VideoWriter is None, but `_close_video_writer` was called! There's a buggo in the application logic somewhere...")
         self._cv2_video_writer.release()
-        self._cv2_video_writer = None
 
     def _create_video_writer(
             self,

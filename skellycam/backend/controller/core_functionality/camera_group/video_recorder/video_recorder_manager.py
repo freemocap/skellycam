@@ -34,8 +34,10 @@ class VideoRecorderManager:
 
     @property
     def finished(self):
-        return all([video_recorder.finished for video_recorder in
-                    self._video_recorders.values()]) and self._timestamp_manager.finished
+        all_video_recorders_finished = all([video_recorder.finished for video_recorder in
+                                            self._video_recorders.values()])
+        timestamp_manager_finished = self._timestamp_manager.finished
+        return all_video_recorders_finished and timestamp_manager_finished
 
     def start_recording(self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]):
 
@@ -44,7 +46,6 @@ class VideoRecorderManager:
 
     def stop_recording(self):
         self._is_recording = False
-        self.finish_and_close()
 
     def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         self._multi_frame_number += 1
