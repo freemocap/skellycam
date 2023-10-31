@@ -80,7 +80,7 @@ class CameraTimestampLogger:
         timestamp_df.to_csv(self._timestamp_csv_path, index=False)
 
     def _save_timestamp_stats(self):
-        self._stats = self._get_timestamp_stats()
+        self._stats = self._get_stats_from_csv()
         self._stats_json_path = self._timestamp_csv_path.parent / f"{self.file_name_prefix}_timestamp_stats.json"
         with open(self._stats_json_path, "w") as f:
             f.write(json.dumps(self._stats, indent=4))
@@ -88,15 +88,6 @@ class CameraTimestampLogger:
         logger.info(f"Saved timestamp stats to {self._stats_json_path} -\n\n"
                     f"{pprint.pformat(self._stats, indent=4)})\n\n")
 
-    def _get_timestamp_stats(self):
-        stats = {
-            "first_frame_timestamp_ns": self._first_frame_timestamp,
-            "perf_counter_to_unix_mapping_ns": {"time.perf_counter_ns": self._perf_counter_to_unix_mapping[0],
-                                                "time.time_ns": self._perf_counter_to_unix_mapping[1]}
-        }
-        stats.update(self._get_stats_from_csv())
-
-        return stats
 
     def _get_stats_from_csv(self):
         timestamps_df = pd.read_csv(self._timestamp_csv_path)

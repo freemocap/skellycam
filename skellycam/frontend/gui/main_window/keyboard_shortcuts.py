@@ -19,7 +19,8 @@ class KeyboardShortcuts:
         QShortcut(QKeySequence('Ctrl+Q'), window, activated=self.quit)
 
     def connect_reboot(self, window):
-        QShortcut(QKeySequence('Ctrl+R'), window, activated=self.reboot)
+        # QShortcut(QKeySequence('Ctrl+R'), window, activated=self.reboot)
+        pass
 
     def quit(self):
         logger.info(f"SETTING EXIT EVENT")

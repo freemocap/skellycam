@@ -41,12 +41,8 @@ class RecordButtons(QWidget):
         super().show()
         self.start_recording_button.show()
         self.stop_recording_button.show()
-        self.start_recording_button.setEnabled(True)
-        self.stop_recording_button.setEnabled(False)
 
     def hide(self):
         super().hide()
         self.start_recording_button.hide()
         self.stop_recording_button.hide()
-        self.start_recording_button.setEnabled(False)
-        self.stop_recording_button.setEnabled(False)

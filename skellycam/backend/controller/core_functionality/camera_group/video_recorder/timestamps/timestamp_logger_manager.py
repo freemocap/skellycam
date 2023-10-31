@@ -21,7 +21,7 @@ class TimestampLoggerManager:
                  camera_configs: Dict[CameraId, CameraConfig],
                  video_save_directory: str):
         self._timestamp_logs: List[MultiFrameTimestampLog] = []
-        self._timestamp_mapping: Optional[Tuple[int, int]] = None
+        self._start_time_perf_counter_ns_to_unix_mapping: Optional[Tuple[int, int]] = None
         self._first_frame_timestamp: Optional[int] = None
         video_path = Path(video_save_directory)
         self._file_name_prefix = video_path.stem
@@ -34,7 +34,6 @@ class TimestampLoggerManager:
 
         self._csv_header = MultiFrameTimestampLog.as_csv_header(camera_ids=list(camera_configs.keys()))
 
-
     @property
     def finished(self):
         all_loggers_finished = all([timestamp_logger.finished for timestamp_logger in self._timestamp_loggers.values()])
@@ -43,12 +42,12 @@ class TimestampLoggerManager:
         return all_loggers_finished and timestamp_csv_exists and timestamp_stats_exists
 
     def set_time_mapping(self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]):
-        self._timestamp_mapping = start_time_perf_counter_ns_to_unix_mapping
-        self._save_starting_timestamp(self._timestamp_mapping)
+        self._start_time_perf_counter_ns_to_unix_mapping = start_time_perf_counter_ns_to_unix_mapping
+        self._save_starting_timestamp(self._start_time_perf_counter_ns_to_unix_mapping)
 
-        self._first_frame_timestamp = self._timestamp_mapping[0]
+        self._first_frame_timestamp = self._start_time_perf_counter_ns_to_unix_mapping[0]
         for timestamp_logger in self._timestamp_loggers.values():
-            timestamp_logger.set_time_mapping(self._timestamp_mapping)
+            timestamp_logger.set_time_mapping(self._start_time_perf_counter_ns_to_unix_mapping)
 
     def _save_starting_timestamp(self, perf_counter_to_unix_mapping: Tuple[int, int]):
         self._starting_timestamp = Timestamp.from_mapping(perf_counter_to_unix_mapping)
@@ -69,12 +68,10 @@ class TimestampLoggerManager:
                             multi_frame_number: int):
         multi_frame_timestamp_log = MultiFrameTimestampLog.from_timestamp_logs(
             timestamp_logs=timestamp_log_by_camera,
-            timestamp_mapping=self._timestamp_mapping,
+            timestamp_mapping=self._start_time_perf_counter_ns_to_unix_mapping,
             first_frame_timestamp_ns=self._first_frame_timestamp,
             multi_frame_number=multi_frame_number)
         self._timestamp_logs.append(multi_frame_timestamp_log)
-
-
 
     def close(self):
         self._save_documentation()
@@ -115,7 +112,11 @@ class TimestampLoggerManager:
 
     def _get_timestamp_stats(self) -> Dict[Hashable, Any]:
         stats = {"total_frames": len(self._timestamp_logs),
-                 "total_recording_duration_s": self._timestamp_logs[-1].mean_timestamp_from_zero_s}
+                 "total_recording_duration_s": self._timestamp_logs[-1].mean_timestamp_from_zero_s,
+                 "start_time_perf_counter_ns_to_unix_mapping": {
+                     "time.perf_counter_ns": self._start_time_perf_counter_ns_to_unix_mapping[0],
+                     "time.time_ns": self._start_time_perf_counter_ns_to_unix_mapping[1]}
+                 }
         stats.update(self._get_stats_from_csv())
         return stats
 
