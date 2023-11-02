@@ -1,3 +1,4 @@
+import pylsl
 import threading
 import time
 from typing import Dict, Optional, List
@@ -16,7 +17,8 @@ from skellycam.models.cameras.frames.frame_payload import FramePayload, MultiFra
 class CameraGroupManager:
 
     def __init__(self,
-                 frontend_frame_pipe_sender  # multiprocessing.connection.Connection
+                 frontend_frame_pipe_sender,  # multiprocessing.connection.Connection
+                 output_lsl_stream_name: bool = True, # add LSL trigger when recording ist started/ stopped
                  ) -> None:
 
         self.frontend_frame_pipe_sender = frontend_frame_pipe_sender
@@ -25,6 +27,12 @@ class CameraGroupManager:
         self._camera_runner_thread: Optional[threading.Thread] = None
         self._camera_configs: Optional[Dict[CameraId, CameraConfig]] = None
 
+        if output_lsl_stream_name:
+            self._lsl_stream_name = "SkellyCam"
+            self._lsl_stream = pylsl.StreamInfo(name=self._lsl_stream_name, type='Markers', channel_count=1,
+                                                nominal_srate=pylsl.IRREGULAR_RATE,
+                                                channel_format=pylsl.cf_string)
+            self._lsl_stream_outlet = pylsl.StreamOutlet(self._lsl_stream)
 
     def start_recording(self):
         logger.debug(f"Starting recording...")
@@ -33,6 +41,8 @@ class CameraGroupManager:
             return
         self._video_recorder_manager.start_recording(
             start_time_perf_counter_ns_to_unix_mapping=(time.perf_counter_ns(), time.time_ns()))
+        if self._lsl_stream_name:
+            self._lsl_stream_outlet.push_sample(['camera_started'])
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
@@ -40,6 +50,8 @@ class CameraGroupManager:
             logger.warning(f"Video recorder manager not initialized")
             return
         self._video_recorder_manager.stop_recording()
+        if self._lsl_stream_name:
+            self._lsl_stream_outlet.push_sample(['camera_stopped'])
 
     def _run_camera_group_loop(self):
         self._camera_group.start()
