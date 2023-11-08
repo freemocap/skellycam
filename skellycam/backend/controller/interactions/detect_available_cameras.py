@@ -27,7 +27,7 @@ class DetectAvailableCamerasCommand(BaseCommand):
                                        available_cameras=available_cameras)
 
 
-class DetectCamerasInteraction(BaseInteraction):
+class DetectAvailableCamerasInteraction(BaseInteraction):
     request: DetectAvailableCamerasRequest
     command: Optional[DetectAvailableCamerasCommand]
     response: Optional[CamerasDetectedResponse]

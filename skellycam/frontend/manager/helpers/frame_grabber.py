@@ -16,7 +16,7 @@ class FrameGrabber(QThread):
         self.daemon = True
 
     def run(self):
-
+        logger.info(f"FrameGrabber starting...")
         while True:
             try:
                 multi_frame_payload_bytes = self.frontend_frame_pipe_receiver.recv_bytes()  # waits here until there is something to receive

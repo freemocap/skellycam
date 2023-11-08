@@ -20,6 +20,7 @@ def backend_loop(exit_event: multiprocessing.Event,
                 logger.info(f"Exit or reboot event set, exiting...")
                 break
             time.sleep(1.0)
+
             if not messages_from_frontend.empty():
                 message = messages_from_frontend.get()
 
@@ -28,6 +29,7 @@ def backend_loop(exit_event: multiprocessing.Event,
                     f"Queue size: {messages_from_frontend.qsize()}")
 
                 response = controller.handle_interaction(interaction=message)
+                logger.debug(f"backend_main sending response to frontend: {response}")
                 messages_from_backend.put(response)
     except Exception as e:
         logger.error(f"An error occurred: {e}")

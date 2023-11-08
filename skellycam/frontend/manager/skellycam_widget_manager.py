@@ -1,3 +1,4 @@
+import multiprocessing
 from typing import TYPE_CHECKING, Dict
 
 from skellycam import logger
@@ -6,40 +7,52 @@ from skellycam.backend.controller.interactions.close_cameras import CloseCameras
 from skellycam.backend.controller.interactions.connect_to_cameras import ConnectToCamerasInteraction, \
     ConnectToCamerasResponse
 from skellycam.backend.controller.interactions.detect_available_cameras import CamerasDetectedResponse, \
-    DetectCamerasInteraction
+    DetectAvailableCamerasInteraction
 from skellycam.backend.controller.interactions.start_recording_interaction import StartRecordingInteraction
 from skellycam.backend.controller.interactions.stop_recording_interaction import StopRecordingInteraction, \
     StopRecordingResponse
 from skellycam.backend.controller.interactions.update_camera_configs import UpdateCameraConfigsInteraction
+from skellycam.frontend.gui.skellycam_widget.helpers.backend_communicator import BackendCommunicator
 from skellycam.frontend.manager.helpers.frame_grabber import FrameGrabber
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 
 if TYPE_CHECKING:
-    from skellycam.frontend.gui.main_window.main_window import MainWindow
-    from skellycam.frontend.gui.widgets.camera_control_buttons import CameraControlButtons
-    from skellycam.frontend.gui.widgets.camera_views.camera_grid import CameraGrid
-    from skellycam.frontend.gui.widgets.camera_parameter_tree import CameraParameterTree
-    from skellycam.frontend.gui.widgets.record_buttons import RecordButtons
-    from skellycam.frontend.gui.widgets.welcome import Welcome
+    from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
+    from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import CameraGrid
+    from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.record_buttons import RecordButtons
+    from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.welcome import Welcome
+    from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_control_buttons import \
+        CameraControlButtons
+    from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_parameter_tree import \
+        CameraParameterTree
 
 
-class FrontendManager:
+class SkellycamWidgetManager:
     def __init__(self,
-                 main_window: 'MainWindow',
+                 main_widget: 'SkellyCamWidget',
+                 messages_from_frontend: multiprocessing.Queue,
+                 messages_from_backend: multiprocessing.Queue,
                  frontend_frame_pipe_receiver  # multiprocessing.connection.Connection
                  ) -> None:
 
-        self.main_window = main_window
-        self._frame_grabber = FrameGrabber(parent=self.main_window,
+        self.main_widget = main_widget
+        self._frame_grabber = FrameGrabber(parent=self.main_widget,
                                            frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
+
+        self._backend_communicator = BackendCommunicator(messages_from_frontend=messages_from_frontend,
+                                                         messages_from_backend=messages_from_backend,
+                                                         frontend_frame_pipe_receiver=frontend_frame_pipe_receiver,
+                                                         handle_backend_response=self.handle_backend_response,
+                                                         parent=self.main_widget)
         self._frame_grabber.start()
+        self._backend_communicator.start()
 
         self._connect_signals()
 
     # Main Backend Response Handler
     def handle_backend_response(self, response: BaseResponse) -> None:
-        logger.trace(f"Updating view with message type: {response}")
+        logger.debug(f"Handling Backend response: {response}")
 
         if isinstance(response, CamerasDetectedResponse):
             self._handle_cameras_detected_response(response)
@@ -56,75 +69,75 @@ class FrontendManager:
 
     @property
     def welcome(self) -> 'Welcome':
-        return self.main_window.welcome
+        return self.main_widget.welcome
 
     @property
     def camera_grid(self) -> 'CameraGrid':
-        return self.main_window.camera_grid
+        return self.main_widget.camera_grid
 
     @property
     def record_buttons(self) -> 'RecordButtons':
-        return self.main_window.record_buttons
+        return self.main_widget.record_buttons
 
     @property
     def camera_parameter_tree(self) -> 'CameraParameterTree':
-        return self.main_window.camera_parameter_tree
+        return self.main_widget.camera_parameter_tree
 
     @property
     def camera_control_buttons(self) -> 'CameraControlButtons':
-        return self.main_window.camera_control_buttons
+        return self.main_widget.camera_control_buttons
 
     @property
     def camera_configs(self) -> Dict[CameraId, CameraConfig]:
         return self.camera_parameter_tree.camera_configs
 
     def _connect_signals(self) -> None:
+
         self.welcome.start_session_button.clicked.connect(self._handle_start_session_signal)
-
-        self.record_buttons.start_recording_button.clicked.connect(self._send_start_recording_request)
-        self.record_buttons.stop_recording_button.clicked.connect(self._send_stop_recording_response)
-
-        # self.camera_parameter_tree.camera_configs_changed.connect(
-        #     self._handle_camera_configs_changed)
-
-        self.camera_control_buttons.close_cameras_button.clicked.connect(
-            self._send_close_cameras_request)
-
-        self.camera_control_buttons.connect_to_cameras_button.clicked.connect(
-            self._send_connect_to_cameras_request)
-
-        self.camera_control_buttons.detect_available_cameras_button.clicked.connect(
-            self._send_detect_cameras_request)
-
-        self.camera_control_buttons.apply_camera_settings_button.clicked.connect(
-            self._send_update_camera_configs_request)
 
         self._frame_grabber.new_frames.connect(self.camera_grid.handle_new_images)
 
-    def _handle_start_session_signal(self):
-        self.main_window.welcome.hide()
-        self.main_window.camera_grid.show()
-        self.main_window.record_buttons.show()
-        self.main_window.camera_settings_dock.show()
-        self.main_window.directory_view_dock.show()
-        self._send_detect_cameras_request()
+        self.record_buttons.start_recording_button.clicked.connect(
+            lambda: self._backend_communicator.send_interaction_to_backend(StartRecordingInteraction.as_request()))
 
-    def _send_detect_cameras_request(self):
-        logger.info("Emitting detect cameras interaction")
-        self.main_window.interact_with_backend.emit(DetectCamerasInteraction.as_request())
+        self.record_buttons.stop_recording_button.clicked.connect(
+            lambda: self._backend_communicator.send_interaction_to_backend(StopRecordingInteraction.as_request())
+        )
+
+        self.camera_control_buttons.close_cameras_button.clicked.connect(
+            lambda: self._backend_communicator.send_interaction_to_backend(CloseCamerasInteraction.as_request()))
+
+        self.camera_control_buttons.connect_to_cameras_button.clicked.connect(
+            lambda: self._backend_communicator.send_interaction_to_backend(
+                ConnectToCamerasInteraction.as_request(camera_configs=self.camera_configs)))
+
+        self.camera_control_buttons.detect_available_cameras_button.clicked.connect(
+            lambda: self._backend_communicator.send_interaction_to_backend(
+                DetectAvailableCamerasInteraction.as_request()))
+
+        self.camera_control_buttons.apply_camera_settings_button.clicked.connect(
+            lambda: self._backend_communicator.send_interaction_to_backend(
+                UpdateCameraConfigsInteraction.as_request(camera_configs=self.camera_configs)))
+
+
+    def _handle_start_session_signal(self):
+        self.main_widget.welcome.hide()
+        self.main_widget.camera_grid.show()
+        self.main_widget.record_buttons.show()
+        self.main_widget.side_panel.show()
+
+        self._backend_communicator.send_interaction_to_backend(
+            DetectAvailableCamerasInteraction.as_request())
 
     def _handle_cameras_detected_response(self, response: CamerasDetectedResponse):
+        logger.debug(f"Handling cameras detected response: {response}")
         self.camera_parameter_tree.update_available_cameras(available_cameras=response.available_cameras)
         self.camera_grid.update_camera_grid(camera_configs=self.camera_configs)
         self.camera_control_buttons.detect_available_cameras_button.setEnabled(True)
         self.camera_control_buttons.connect_to_cameras_button.setEnabled(True)
         self.camera_control_buttons.connect_to_cameras_button.setFocus()
 
-        self._send_connect_to_cameras_request()
-
-    def _send_connect_to_cameras_request(self):
-        logger.info("Emitting connect to cameras interaction")
-        self.main_window.interact_with_backend.emit(
+        self._backend_communicator.send_interaction_to_backend(
             ConnectToCamerasInteraction.as_request(camera_configs=self.camera_configs))
 
     def _handle_cameras_connected_response(self):
@@ -138,36 +151,6 @@ class FrontendManager:
         self.camera_control_buttons.connect_to_cameras_button.hasFocus()
         self.record_buttons.start_recording_button.setEnabled(False)
 
-    def _send_close_cameras_request(self):
-        logger.info("Emitting close cameras interaction")
-        self.main_window.interact_with_backend.emit(CloseCamerasInteraction.as_request())
-
-    def _send_update_camera_configs_request(self):
-        logger.info("Emitting connect to cameras interaction")
-        self.main_window.interact_with_backend.emit(
-            UpdateCameraConfigsInteraction.as_request(camera_configs=self.camera_configs))
-
-    def _send_start_recording_request(self):
-        logger.info("Emitting start recording interaction")
-        self.record_buttons.start_recording_button.setEnabled(False)
-        self.record_buttons.stop_recording_button.setEnabled(True)
-        self.main_window.interact_with_backend.emit(
-            StartRecordingInteraction.as_request(camera_configs=self.camera_configs))
-
-
-
-    def _send_stop_recording_response(self):
-        logger.info("Emitting stop recording interaction")
-        self.main_window.interact_with_backend.emit(
-            StopRecordingInteraction.as_request(camera_configs=self.camera_configs))
-
     def _handle_stop_recording_response(self):
         self.record_buttons.start_recording_button.setEnabled(True)
         self.record_buttons.stop_recording_button.setEnabled(False)
-
-    # def _handle_camera_configs_changed(self, camera_configs: Dict[CameraId, CameraConfig]):
-    #     logger.info("Handling Camera Configs Changed signal")
-    #
-    #     self.camera_grid.update_camera_grid(camera_configs=camera_configs)
-    #     self.main_window.interact_with_backend.emit(
-    #         UpdateCameraConfigsInteraction.as_request(camera_configs=self.camera_configs))

@@ -19,7 +19,7 @@ def start_up(exit_event):
                                                             messages_from_backend=messages_from_backend,
                                                             messages_from_frontend=messages_from_frontend,
                                                             frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
-    return backend_process, frontend_process, reboot_event
+    return backend_process, frontend_process, reboot_event, messages_from_frontend, messages_from_backend
 
 
 def reset_events(exit_event, reboot_event):
