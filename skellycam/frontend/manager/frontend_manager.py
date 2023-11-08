@@ -8,7 +8,8 @@ from skellycam.backend.controller.interactions.connect_to_cameras import Connect
 from skellycam.backend.controller.interactions.detect_available_cameras import CamerasDetectedResponse, \
     DetectCamerasInteraction
 from skellycam.backend.controller.interactions.start_recording_interaction import StartRecordingInteraction
-from skellycam.backend.controller.interactions.stop_recording_interaction import StopRecordingInteraction
+from skellycam.backend.controller.interactions.stop_recording_interaction import StopRecordingInteraction, \
+    StopRecordingResponse
 from skellycam.backend.controller.interactions.update_camera_configs import UpdateCameraConfigsInteraction
 from skellycam.frontend.manager.helpers.frame_grabber import FrameGrabber
 from skellycam.models.cameras.camera_config import CameraConfig
@@ -46,6 +47,8 @@ class FrontendManager:
             self._handle_cameras_connected_response()
         elif isinstance(response, CloseCamerasResponse):
             self._handle_cameras_closed_response()
+        elif isinstance(response, StopRecordingResponse):
+            self._handle_stop_recording_response()
         elif isinstance(response, BaseResponse):
             logger.warning(f"Received BaseResponse with no 'response' behavior: {response}")
         else:
@@ -146,15 +149,19 @@ class FrontendManager:
 
     def _send_start_recording_request(self):
         logger.info("Emitting start recording interaction")
-        self.main_window.interact_with_backend.emit(
-            StartRecordingInteraction.as_request(camera_configs=self.camera_configs))
         self.record_buttons.start_recording_button.setEnabled(False)
         self.record_buttons.stop_recording_button.setEnabled(True)
+        self.main_window.interact_with_backend.emit(
+            StartRecordingInteraction.as_request(camera_configs=self.camera_configs))
+
+
 
     def _send_stop_recording_response(self):
         logger.info("Emitting stop recording interaction")
         self.main_window.interact_with_backend.emit(
             StopRecordingInteraction.as_request(camera_configs=self.camera_configs))
+
+    def _handle_stop_recording_response(self):
         self.record_buttons.start_recording_button.setEnabled(True)
         self.record_buttons.stop_recording_button.setEnabled(False)
 

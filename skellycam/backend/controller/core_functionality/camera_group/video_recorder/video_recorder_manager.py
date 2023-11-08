@@ -1,8 +1,9 @@
+import time
 from pathlib import Path
 from typing import Dict, Tuple
 
-from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamp_logger import \
-    MultiFrameTimestampLogger
+from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger_manager import \
+    TimestampLoggerManager
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder import VideoRecorder
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
@@ -18,8 +19,8 @@ class VideoRecorderManager:
         self._multi_frame_number = 0
         self._camera_configs = camera_configs
         self._video_save_directory = video_save_directory
-        self._timestamp_manager = MultiFrameTimestampLogger(video_save_directory=self._video_save_directory,
-                                                            camera_configs=camera_configs)
+        self._timestamp_manager = TimestampLoggerManager(video_save_directory=self._video_save_directory,
+                                                         camera_configs=camera_configs)
         self._video_recorders: Dict[CameraId, VideoRecorder] = {camera_id: VideoRecorder(camera_config=camera_config,
                                                                                          video_save_path=self._make_video_file_path(
                                                                                              camera_id=camera_id)
@@ -28,20 +29,23 @@ class VideoRecorderManager:
         self._is_recording = False
 
     @property
-    def is_recording(self) -> bool:
-        return self._is_recording
-
-    @property
     def has_frames_to_save(self):
         return any([video_recorder.has_frames_to_save for video_recorder in self._video_recorders.values()])
 
+    @property
+    def finished(self):
+        all_video_recorders_finished = all([video_recorder.finished for video_recorder in
+                                            self._video_recorders.values()])
+        timestamp_manager_finished = self._timestamp_manager.finished
+        return all_video_recorders_finished and timestamp_manager_finished
+
     def start_recording(self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]):
+
         self._timestamp_manager.set_time_mapping(start_time_perf_counter_ns_to_unix_mapping)
         self._is_recording = True
 
     def stop_recording(self):
         self._is_recording = False
-        self.finish_and_close()
 
     def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         self._multi_frame_number += 1
@@ -58,6 +62,10 @@ class VideoRecorderManager:
         for camera_id, video_recorder in self._video_recorders.items():
             video_recorder.finish_and_close()
         self._timestamp_manager.close()
+
+        while not self.finished:
+            time.sleep(0.001)
+
 
     def _make_video_file_path(self, camera_id: CameraId, video_format: str = "avi"):
         """
