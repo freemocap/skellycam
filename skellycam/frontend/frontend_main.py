@@ -26,6 +26,7 @@ def frontend_main(messages_from_frontend: multiprocessing.Queue,
         logger.exception(e)
         raise e
     finally:
+        logger.info(f"Closing main window and quitting app...")
         if main_window is not None:
             main_window.close()
         if app is not None:
@@ -34,6 +35,7 @@ def frontend_main(messages_from_frontend: multiprocessing.Queue,
     if not exit_event.is_set():
         logger.info(f"SETTING EXIT EVENT!")
         exit_event.set()
+
     logger.info(f"Exiting frontend_main")
 
     return exit_code

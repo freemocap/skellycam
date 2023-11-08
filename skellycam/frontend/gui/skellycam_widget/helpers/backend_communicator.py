@@ -1,14 +1,13 @@
 import multiprocessing
-import time
 from typing import Callable
 
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QTimer
 
 from skellycam import logger
 from skellycam.backend.controller.interactions.base_models import BaseResponse, BaseInteraction
 
 
-class BackendCommunicator(QThread):
+class BackendCommunicator:
     def __init__(self,
                  messages_from_frontend: multiprocessing.Queue,
                  messages_from_backend: multiprocessing.Queue,
@@ -17,24 +16,24 @@ class BackendCommunicator(QThread):
                  parent=None,
 
                  ):
-        super().__init__(parent=parent)
         self._parent = parent
         self._messages_from_frontend = messages_from_frontend
         self._messages_from_backend = messages_from_backend
         self._frontend_frame_pipe_receiver = frontend_frame_pipe_receiver
         self._handle_backend_response = handle_backend_response
 
-    def run(self) -> None:
-        logger.info(f"Backend Communicator loop starting...")
-        loop_time = 0.5
-        while True:
-            time.sleep(loop_time)
-            if not self._messages_from_backend.empty():
-                response: BaseResponse = self._messages_from_backend.get()
-                logger.info(f"frontend_main received message from backend: {response}")
-                if not response.success:
-                    logger.error(f"Backend sent error message: {response}!")
-                self._handle_backend_response(response)
+    def start(self):
+        self._update_timer = QTimer()
+        self._update_timer.start(500)
+        self._update_timer.timeout.connect(self._check_for_messages_from_backend)
+
+    def _check_for_messages_from_backend(self):
+        if not self._messages_from_backend.empty():
+            response: BaseResponse = self._messages_from_backend.get()
+            logger.info(f"frontend_main received message from backend: {response}")
+            if not response.success:
+                logger.error(f"Backend sent error message: {response}!")
+            self._handle_backend_response(response)
 
     def send_interaction_to_backend(self, interaction: BaseInteraction) -> None:
         logger.debug(f"Sending interaction to backend: {interaction}")

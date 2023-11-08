@@ -58,9 +58,13 @@ class CameraParameterTree(QWidget):
 
     def _update_parameter_tree(self):
         logger.debug(f"Updating parameter tree with new camera configs: {self._camera_configs}")
-        self._parameter_tree.clear()
+        if len(self._parameter_groups) > 0:
+            print("qqqqqqqqqqqqqqqqqqqqqqasldadasadasd")
+            self._parameter_tree.clear()
+            print("asldadasadasd")
         self._parameter_groups = {}
         for camera_config, camera_info in zip(self._camera_configs.values(), self._available_cameras.values()):
+            print(f"l;opploppl - {camera_config}")
             self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config=camera_config,
                                                                                          camera_info=camera_info)
             self._parameter_tree.addParameters(self._parameter_groups[camera_config.camera_id])
