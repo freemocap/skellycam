@@ -3,7 +3,6 @@ from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
-from skellycam import logger
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import CameraGrid
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.record_buttons import RecordButtons
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.welcome import Welcome
@@ -14,6 +13,9 @@ from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.came
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import DirectoryView
 from skellycam.frontend.manager.skellycam_manager import SkellycamManager
 from skellycam.system.environment.default_paths import (get_default_skellycam_base_folder_path)
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class SkellyCamWidget(QWidget):
