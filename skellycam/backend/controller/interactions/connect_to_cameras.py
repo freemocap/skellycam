@@ -1,7 +1,7 @@
 import traceback
 from typing import Dict, Optional
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.interactions.base_models import BaseCommand, BaseRequest, \
     BaseInteraction, BaseResponse

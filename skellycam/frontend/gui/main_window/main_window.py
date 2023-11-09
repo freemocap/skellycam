@@ -4,7 +4,7 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.main_window.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget

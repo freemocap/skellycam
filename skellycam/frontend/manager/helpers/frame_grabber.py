@@ -1,7 +1,7 @@
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QWidget
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
 
 

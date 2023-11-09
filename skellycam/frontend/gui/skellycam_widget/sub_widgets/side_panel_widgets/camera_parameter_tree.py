@@ -4,7 +4,7 @@ from typing import Dict, Union
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          USE_THIS_CAMERA_STRING)
 from skellycam.models.cameras.camera_config import CameraConfig

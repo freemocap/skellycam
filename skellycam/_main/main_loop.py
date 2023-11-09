@@ -1,6 +1,6 @@
 import time
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam._main.helpers import shut_down, reset_events, start_up
 
 

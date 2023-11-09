@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 
 import cv2
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path

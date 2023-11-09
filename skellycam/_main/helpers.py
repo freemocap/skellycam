@@ -1,7 +1,7 @@
 import multiprocessing
 from typing import Tuple
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.backend_main import backend_main
 from skellycam.frontend.frontend_main import frontend_main
 

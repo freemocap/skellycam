@@ -1,6 +1,6 @@
 import multiprocessing
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam._main.main_loop import main_loop
 
 

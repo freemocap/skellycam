@@ -6,7 +6,7 @@ from typing import Tuple
 
 import pandas as pd
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.models.timestamps.camera_timestamp_log import CameraTimestampLog

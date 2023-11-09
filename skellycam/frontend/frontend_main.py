@@ -1,6 +1,6 @@
 import multiprocessing.connection
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.frontend.application import create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
 

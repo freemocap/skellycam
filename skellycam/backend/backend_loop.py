@@ -2,7 +2,7 @@ import multiprocessing
 import time
 import traceback
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.controller import get_or_create_controller
 from skellycam.backend.controller.interactions.base_models import ErrorResponse
 

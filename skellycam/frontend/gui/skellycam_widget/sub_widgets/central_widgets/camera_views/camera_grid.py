@@ -4,7 +4,7 @@ import numpy as np
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.single_camera import \
     SingleCameraView
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string

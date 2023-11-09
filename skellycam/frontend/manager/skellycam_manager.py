@@ -1,7 +1,7 @@
 import multiprocessing
 from typing import TYPE_CHECKING, Dict
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.interactions.base_models import BaseResponse
 from skellycam.backend.controller.interactions.close_cameras import CloseCamerasInteraction, CloseCamerasResponse
 from skellycam.backend.controller.interactions.connect_to_cameras import ConnectToCamerasInteraction, \

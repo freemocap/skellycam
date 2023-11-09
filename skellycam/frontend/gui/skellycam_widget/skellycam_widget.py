@@ -13,9 +13,7 @@ from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.came
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import DirectoryView
 from skellycam.frontend.manager.skellycam_manager import SkellycamManager
 from skellycam.system.environment.default_paths import (get_default_skellycam_base_folder_path)
-
-import logging
-logger = logging.getLogger(__name__)
+from skellycam.system.environment.get_logger import logger
 
 
 class SkellyCamWidget(QWidget):

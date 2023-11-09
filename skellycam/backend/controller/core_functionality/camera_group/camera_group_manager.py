@@ -4,7 +4,7 @@ from typing import Dict, Optional, List
 
 import cv2
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_manager import \
     VideoRecorderManager

@@ -1,7 +1,7 @@
 import multiprocessing
 from typing import Optional
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera.internal_camera_thread import \
     VideoCaptureThread
 from skellycam.models.cameras.camera_config import CameraConfig
