@@ -1,4 +1,5 @@
 import multiprocessing
+from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
@@ -10,25 +11,31 @@ from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.came
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_parameter_tree import \
     CameraParameterTree
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import DirectoryView
-from skellycam.frontend.manager.skellycam_widget_manager import SkellycamWidgetManager
+from skellycam.frontend.manager.skellycam_manager import SkellycamManager
 from skellycam.system.environment.default_paths import (get_default_skellycam_base_folder_path)
 
 
 class SkellyCamWidget(QWidget):
 
     def __init__(self,
-                 messages_from_frontend: multiprocessing.Queue,
-                 messages_from_backend: multiprocessing.Queue,
-                 frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection,
-                 parent=None,
+                 messages_from_frontend: multiprocessing.Queue = None,
+                 messages_from_backend: multiprocessing.Queue = None,
+                 frontend_frame_pipe_receiver=None,  # multiprocessing.connection.Connection,
+                 parent: [Optional[QWidget]] = None,
+                 exit_event: multiprocessing.Event = None,
                  ):
         super().__init__(parent=parent)
+        self._parent = parent
         self._initUI()
+        self._exit_event = exit_event if exit_event is not None else multiprocessing.Event()
+        if self._parent is not None:
+            self._parent.closeEvent.connect(self._exit_event.set)
 
-        self._manager = SkellycamWidgetManager(main_widget=self,
-                                               messages_from_frontend=messages_from_frontend,
-                                               messages_from_backend=messages_from_backend,
-                                               frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
+        self._manager = SkellycamManager(main_widget=self,
+                                         exit_event=self._exit_event,
+                                         messages_from_frontend=messages_from_frontend,
+                                         messages_from_backend=messages_from_backend,
+                                         frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
 
     def _initUI(self):
         self._layout = QHBoxLayout()
@@ -77,3 +84,14 @@ class SkellyCamWidget(QWidget):
         camera_settings_widget = QWidget(parent=self)
         camera_settings_widget.setLayout(camera_settings_layout)
         return camera_settings_widget
+
+
+if __name__ == '__main__':
+    import sys
+
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    widget = SkellyCamWidget()
+    widget.show()
+    sys.exit(app.exec())

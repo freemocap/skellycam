@@ -28,27 +28,55 @@ if TYPE_CHECKING:
         CameraParameterTree
 
 
-class SkellycamWidgetManager:
+class SkellycamManager:
     def __init__(self,
                  main_widget: 'SkellyCamWidget',
-                 messages_from_frontend: multiprocessing.Queue,
-                 messages_from_backend: multiprocessing.Queue,
-                 frontend_frame_pipe_receiver  # multiprocessing.connection.Connection
+                 exit_event: multiprocessing.Event,
+                 messages_from_frontend: multiprocessing.Queue = None,
+                 messages_from_backend: multiprocessing.Queue = None,
+                 frontend_frame_pipe_receiver=None,  # multiprocessing.connection.Connection
                  ) -> None:
 
-        self.main_widget = main_widget
-        self._frame_grabber = FrameGrabber(parent=self.main_widget,
-                                           frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
+        self._exit_event = exit_event
 
-        self._backend_communicator = BackendCommunicator(messages_from_frontend=messages_from_frontend,
-                                                         messages_from_backend=messages_from_backend,
-                                                         frontend_frame_pipe_receiver=frontend_frame_pipe_receiver,
+        if any([messages_from_frontend is None,
+                messages_from_backend is None,
+                frontend_frame_pipe_receiver is None]):
+
+            if not all([messages_from_frontend is None,
+                        messages_from_backend is None,
+                        frontend_frame_pipe_receiver is None]):
+                raise ValueError("If any of the backend communication objects are None, all must be None")
+            self._start_backend_and_frontend_processes()
+            logger.info("Running in Widget-mode, spawning backend processes")
+
+        self.main_widget = main_widget
+
+        self._backend_communicator = BackendCommunicator(messages_from_frontend=self._messages_from_frontend,
+                                                         messages_from_backend=self._messages_from_backend,
+                                                         frontend_frame_pipe_receiver=self._frontend_frame_pipe_receiver,
                                                          handle_backend_response=self.handle_backend_response,
                                                          parent=self.main_widget)
+        self._frame_grabber = FrameGrabber(parent=self.main_widget,
+                                           frontend_frame_pipe_receiver=self._frontend_frame_pipe_receiver)
+
         self._frame_grabber.start()
         self._backend_communicator.start()
 
         self._connect_signals()
+
+    def _start_backend_and_frontend_processes(self):
+        from skellycam._main.helpers import create_queues_and_pipes, start_backend_process
+
+        (self._frontend_frame_pipe_receiver,
+         self._frontend_frame_pipe_sender,
+         self._messages_from_backend,
+         self._messages_from_frontend) = create_queues_and_pipes()
+
+        self._backend_process = start_backend_process(exit_event=self._exit_event,
+                                                      messages_from_frontend=self._messages_from_frontend,
+                                                      messages_from_backend=self._messages_from_backend,
+                                                      frontend_frame_pipe_sender=self._frontend_frame_pipe_sender)
 
     # Main Backend Response Handler
     def handle_backend_response(self, response: BaseResponse) -> None:
@@ -118,7 +146,6 @@ class SkellycamWidgetManager:
         self.camera_control_buttons.apply_camera_settings_button.clicked.connect(
             lambda: self._backend_communicator.send_interaction_to_backend(
                 UpdateCameraConfigsInteraction.as_request(camera_configs=self.camera_configs)))
-
 
     def _handle_start_session_signal(self):
         self.main_widget.welcome.hide()
