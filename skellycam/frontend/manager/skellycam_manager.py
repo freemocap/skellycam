@@ -91,9 +91,9 @@ class SkellycamManager:
         elif isinstance(response, StopRecordingResponse):
             self._handle_stop_recording_response()
         elif isinstance(response, BaseResponse):
-            logger.warning(f"Received BaseResponse with no 'response' behavior: {response}")
+            logger.debug(f"Received BaseResponse with no defined 'response' behavior: {response}")
         else:
-            raise ValueError(f"Unhandled response type: {response}")
+            raise ValueError(f"Unknown response type: {response}")
 
     @property
     def welcome(self) -> 'Welcome':
