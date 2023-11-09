@@ -31,7 +31,7 @@ class SkellyCamWidget(QWidget):
         self._exit_event = exit_event if exit_event is not None else multiprocessing.Event()
 
         if self._parent is not None:
-            self._parent.destroyed.connect(self._close)
+            self._parent.destroyed.connect(self.close)
 
         self._manager = SkellycamManager(main_widget=self,
                                          exit_event=self._exit_event,
@@ -87,10 +87,14 @@ class SkellyCamWidget(QWidget):
         camera_settings_widget.setLayout(camera_settings_layout)
         return camera_settings_widget
 
-    def _close(self):
-        logger.info("Closing SkellyCamWidget - SETTING EXIT EVENT")
+    def _set_exit_event(self):
+        logger.info("SETTING EXIT EVENT")
         self._exit_event.set()
 
+    def close(self):
+        logger.info("Closing SkellyCamWidget...")
+        self._set_exit_event()
+        super().close()
 
 if __name__ == '__main__':
     import sys
