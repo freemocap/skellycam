@@ -1,20 +1,17 @@
 from copy import deepcopy
 from typing import Dict, Union
 
-from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam import logger
 from skellycam.frontend.gui.utilities.qt_strings import (COPY_SETTINGS_TO_CAMERAS_STRING,
-                                                         rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
 from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.image_rotation_types import RotationTypes
 from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.models.cameras.camera_id import CameraId
+from skellycam.models.cameras.image_rotation_types import RotationTypes
 from skellycam.models.cameras.video_resolution import VideoResolution
-
 
 
 class CameraParameterTree(QWidget):
@@ -24,7 +21,7 @@ class CameraParameterTree(QWidget):
         super().__init__(parent=parent)
         self._camera_configs = None
         self._available_cameras = None
-        self._parameter_groups = None
+        self._parameter_groups = {}
         self._parameter_tree = ParameterTree(parent=self, showHeader=False)
 
         self.initUI()
@@ -51,23 +48,30 @@ class CameraParameterTree(QWidget):
         return self._camera_configs
 
     def update_available_cameras(self, available_cameras: Dict[CameraId, CameraDeviceInfo]):
-        logger.debug("Updating camera configs in parameter tree")
+        camera_str_for_debug = {camera_id: camera_info.description for camera_id, camera_info in
+                                available_cameras.items()}
+        logger.debug(f"Updating available cameras in parameter tree for cameras: {camera_str_for_debug}")
         self._available_cameras = available_cameras
         self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in available_cameras.keys()}
         self._update_parameter_tree()
+        print("done updating parameter tree")
 
     def _update_parameter_tree(self):
-        logger.debug("Updating parameter tree")
-        self._parameter_tree.clear()
+        logger.debug(f"Updating parameter tree with new camera configs: {self._camera_configs}")
+        if len(self._parameter_groups) > 0:
+            print("qqqqqqqqqqqqqqqqqqqqqqasldadasadasd")
+            self._parameter_tree.clear()
+            print("asldadasadasd")
         self._parameter_groups = {}
         for camera_config, camera_info in zip(self._camera_configs.values(), self._available_cameras.values()):
+            print(f"l;opploppl - {camera_config}")
             self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config=camera_config,
                                                                                          camera_info=camera_info)
             self._parameter_tree.addParameters(self._parameter_groups[camera_config.camera_id])
 
     def _convert_to_parameter(self, camera_config: CameraConfig,
                               camera_info: CameraDeviceInfo) -> Parameter:
-
+        logger.debug(f"Converting camera config to parameter: {camera_config}")
         camera_parameter_group = Parameter.create(
             name="Camera_" + str(camera_config.camera_id),
             type="group",
