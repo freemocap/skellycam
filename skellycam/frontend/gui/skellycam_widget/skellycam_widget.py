@@ -3,6 +3,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
+from skellycam import logger
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import CameraGrid
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.record_buttons import RecordButtons
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.welcome import Welcome
@@ -21,15 +22,16 @@ class SkellyCamWidget(QWidget):
                  messages_from_frontend: multiprocessing.Queue = None,
                  messages_from_backend: multiprocessing.Queue = None,
                  frontend_frame_pipe_receiver=None,  # multiprocessing.connection.Connection,
-                 parent: [Optional[QWidget]] = None,
+                 parent: Optional[QWidget] = None,
                  exit_event: multiprocessing.Event = None,
                  ):
         super().__init__(parent=parent)
         self._parent = parent
         self._initUI()
         self._exit_event = exit_event if exit_event is not None else multiprocessing.Event()
+
         if self._parent is not None:
-            self._parent.closeEvent.connect(self._exit_event.set)
+            self._parent.destroyed.connect(self._close)
 
         self._manager = SkellycamManager(main_widget=self,
                                          exit_event=self._exit_event,
@@ -84,6 +86,10 @@ class SkellyCamWidget(QWidget):
         camera_settings_widget = QWidget(parent=self)
         camera_settings_widget.setLayout(camera_settings_layout)
         return camera_settings_widget
+
+    def _close(self):
+        logger.info("Closing SkellyCamWidget - SETTING EXIT EVENT")
+        self._exit_event.set()
 
 
 if __name__ == '__main__':

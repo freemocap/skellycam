@@ -11,8 +11,10 @@ __repo_issues_url__ = f"{__repo_url__}issues"
 
 import logging
 
+from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
 from skellycam.system.environment.configure_logging import configure_logging, LogLevel
 
 configure_logging(LogLevel.TRACE)
 
 logger = logging.getLogger(__name__)
+
