@@ -1,0 +1,16 @@
+from enum import Enum
+
+import cv2
+
+NO_ROTATION_STRING = "No Rotation"
+ROTATE_90_CLOCKWISE_STRING = "90 Clockwise"
+ROTATE_90_COUNTERCLOCKWISE_STRING = "90 Counterclockwise"
+ROTATE_180_STRING = "180"
+
+class RotationTypes(Enum):
+    NO_ROTATION = None
+    CLOCKWISE_90 = cv2.ROTATE_90_CLOCKWISE
+    COUNTERCLOCKWISE_90 = cv2.ROTATE_90_COUNTERCLOCKWISE
+    ROTATE_180 = cv2.ROTATE_180
+
+

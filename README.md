@@ -93,7 +93,7 @@ This is currently the most tested method for interacting with the cameras.
 
 #### Example 1 - Connecting to a single Camera and showing the video feed
 
-[Example 1 Python Fle](skellycam/examples/example1_single_camera_connection.py)
+[Example 1 Python Fle](skellycam/experiments/examples/example1_single_camera_connection.py)
 
 In this example, we connect a camera at index 0. Calling `show` allows us to view the cameras frames allowing us
 to see video.
@@ -101,7 +101,8 @@ to see video.
 > NOTE - Work in progress, no clean way to kill this window yet
 
 ```python
-from skellycam import CameraConfig, Camera
+from skellycam.models.cameras.camera_config import CameraConfig
+, Camera
 
 if __name__ == "__main__":
     cam1 = Camera(CameraConfig(cam_id=0))
@@ -114,7 +115,7 @@ if __name__ == "__main__":
 
 > NOTE - Experimental and under development, might be unstable
  
-[Example 2 Python Fle](skellycam/examples/example1_single_camera_connection.py)
+[Example 2 Python Fle](skellycam/experiments/examples/example1_single_camera_connection.py)
 ```python
 from skellycam.experiments import MultiCameraVideoRecorder
 
