@@ -4,8 +4,8 @@ from copy import deepcopy
 from typing import List, Union
 
 import cv2
-from PyQt6.QtCore import pyqtSignal, Qt, QThread
-from PyQt6.QtGui import QImage
+from PySide6.QtCore import Signal, Qt, QThread
+from PySide6.QtGui import QImage
 from skellycam.detection.charuco.charuco_definition import CharucoBoardDefinition
 from skellycam.detection.charuco.charuco_detection import draw_charuco_on_image
 
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 class CamGroupThreadWorker(QThread):
-    new_image_signal = pyqtSignal(CameraId, QImage, dict)
-    cameras_connected_signal = pyqtSignal()
-    cameras_closed_signal = pyqtSignal()
-    camera_group_created_signal = pyqtSignal(dict)
-    videos_saved_to_this_folder_signal = pyqtSignal(str)
+    new_image_signal = Signal(CameraId, QImage, dict)
+    cameras_connected_signal = Signal()
+    cameras_closed_signal = Signal()
+    camera_group_created_signal = Signal(dict)
+    videos_saved_to_this_folder_signal = Signal(str)
 
     def __init__(
             self,

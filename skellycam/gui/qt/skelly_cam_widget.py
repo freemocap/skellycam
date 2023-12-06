@@ -2,9 +2,9 @@ import logging
 from typing import Dict, List, Union
 
 import cv2
-from PyQt6.QtCore import pyqtSignal, Qt, pyqtSlot
-from PyQt6.QtGui import QImage
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal, Qt, Slot
+from PySide6.QtGui import QImage
+from PySide6.QtWidgets import (
     QGridLayout,
     QLabel,
     QPushButton,
@@ -32,10 +32,10 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class SkellyCamWidget(QWidget):
-    cameras_connected_signal = pyqtSignal()
-    camera_group_created_signal = pyqtSignal(dict)
-    incoming_camera_configs_signal = pyqtSignal(dict)
-    videos_saved_to_this_folder_signal = pyqtSignal(str)
+    cameras_connected_signal = Signal()
+    camera_group_created_signal = Signal(dict)
+    incoming_camera_configs_signal = Signal(dict)
+    videos_saved_to_this_folder_signal = Signal(str)
 
     def __init__(
             self,
@@ -257,7 +257,7 @@ class SkellyCamWidget(QWidget):
         self.cameras_connected_signal.emit()
         self._reset_detect_available_cameras_button()
 
-    @pyqtSlot(str, QImage, dict)
+    @Slot(str, QImage, dict)
     def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary: Dict):
         self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image,
                                                                                       frame_diagnostics_dictionary=frame_diagnostics_dictionary)
@@ -320,7 +320,7 @@ class SkellyCamWidget(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt6.QtWidgets import QApplication, QMainWindow
+    from PySide6.QtWidgets import QApplication, QMainWindow
 
     app = QApplication(sys.argv)
     main_window = QMainWindow()

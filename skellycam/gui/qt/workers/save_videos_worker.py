@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import Union
 
-from PyQt6.QtCore import pyqtSignal, QThread
+from PySide6.QtCore import Signal, QThread
 
 from skellycam.opencv.video_recorder.save_synchronized_videos import (
     save_synchronized_videos,
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class SaveVideosWorker(QThread):
-    done_saving_videos_signal = pyqtSignal()
+    done_saving_videos_signal = Signal()
 
     def __init__(
             self, video_recorder_dictionary: dict, save_video_path: Union[str, Path]

@@ -2,8 +2,8 @@ import logging
 from copy import deepcopy
 from typing import Dict
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 class SkellyCamParameterTreeWidget(QWidget):
-    emitting_camera_configs_signal = pyqtSignal(dict)
+    emitting_camera_configs_signal = Signal(dict)
 
     def __init__(self,
                  camera_viewer_widget: SkellyCamWidget):
@@ -293,7 +293,7 @@ class SkellyCamParameterTreeWidget(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget(camera_viewer_widget=SkellyCamWidget())

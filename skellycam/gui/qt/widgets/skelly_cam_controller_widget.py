@@ -1,7 +1,7 @@
 import logging
 from typing import Callable, Dict
 
-from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
