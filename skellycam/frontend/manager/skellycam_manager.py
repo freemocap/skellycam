@@ -49,6 +49,11 @@ class SkellycamManager:
                 raise ValueError("If any of the backend communication objects are None, all must be None")
             self._start_backend_and_frontend_processes()
             logger.info("Running in Widget-mode, spawning backend processes")
+        else:
+            self._frontend_frame_pipe_receiver = frontend_frame_pipe_receiver
+            self._messages_from_backend = messages_from_backend
+            self._messages_from_frontend = messages_from_frontend
+            logger.info("Running in App-mode, using existing backend processes")
 
         self.main_widget = main_widget
 
