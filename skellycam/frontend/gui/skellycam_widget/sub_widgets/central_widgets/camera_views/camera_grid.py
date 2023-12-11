@@ -4,9 +4,10 @@ import numpy as np
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.single_camera import \
+    SingleCameraView
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
-from skellycam.frontend.gui.widgets.camera_views.single_camera import SingleCameraView
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
@@ -80,7 +81,7 @@ class CameraGrid(QWidget):
     def update_camera_grid(self, camera_configs: Dict[CameraId, CameraConfig]):
         logger.info(f"Updating camera grid with cameras: {camera_configs.keys()}")
         self._camera_configs = camera_configs
-        self._handle_text_labels()
+        # self._handle_text_labels()
         self._close_vestigial_views()
 
         for camera_id, config in camera_configs.items():

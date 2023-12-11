@@ -2,7 +2,7 @@ import multiprocessing
 import time
 from typing import Dict, List
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import \
     GroupedProcessStrategy
 from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import Strategy

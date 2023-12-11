@@ -1,4 +1,4 @@
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 
 
 def clear_layout(layout):

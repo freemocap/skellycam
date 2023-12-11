@@ -6,7 +6,7 @@ from typing import Union
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QFileSystemModel, QLabel, QMenu
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 
 
 class DirectoryView(QWidget):

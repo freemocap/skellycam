@@ -1,4 +1,4 @@
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.backend.controller.interactions.base_models import BaseInteraction, BaseResponse, \
     ErrorResponse

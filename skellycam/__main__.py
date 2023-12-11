@@ -1,7 +1,7 @@
 # __main__.py
 from multiprocessing import freeze_support
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam._main.main import main
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 

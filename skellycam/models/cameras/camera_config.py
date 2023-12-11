@@ -11,16 +11,16 @@ class CameraConfig(BaseModel):
 
     use_this_camera: bool = Field(default=True,
                                   description="Whether or not to use this camera for streaming/recording")
-
     resolution: VideoResolution = Field(default=VideoResolution(width=1280,
                                                                 height=720),
                                         description="The current resolution of the camera, in pixels.")
-    framerate: float = Field(default=30,
-                             description="The framerate of the camera (in frames per second).")
     exposure: int = Field(default=-6,
                           description="The exposure of the camera using the opencv convention - "
                                       "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/")
-    rotation: RotationTypes = Field(default=RotationTypes.COUNTERCLOCKWISE_90,
+    framerate: float = Field(default=30,
+                             description="The framerate of the camera (in frames per second).")
+
+    rotation: RotationTypes = Field(default=RotationTypes.NO_ROTATION,
                                     description="The rotation to apply to the images "
                                                 "of this camera (after they are captured)")
     capture_fourcc: str = Field(default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else

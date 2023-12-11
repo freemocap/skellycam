@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 
 import cv2
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path
@@ -34,6 +34,12 @@ class VideoRecorder:
         return len(self._frame_payload_list) > 0
 
     @property
+    def finished(self):
+        frames_save_done = not self.has_frames_to_save
+        video_writer_done = not self._cv2_video_writer.isOpened() if self._cv2_video_writer is not None else True
+        return frames_save_done and video_writer_done
+
+    @property
     def first_frame_timestamp(self) -> int:
         return self._initialization_frame.timestamp_ns
 
@@ -44,16 +50,32 @@ class VideoRecorder:
 
     def one_frame_to_disk(self):
         if len(self._frame_payload_list) == 0:
-            return
+            raise AssertionError("No frames to save, but `one_frame_to_disk` was called! "
+                                 "There's a buggo in the application logic somewhere...")
+        self._check_if_writer_open()
         frame = self._frame_payload_list.pop(-1)
         self._validate_frame(frame=frame)
         image = frame.get_image()
         self._cv2_video_writer.write(image)
 
+    def _check_if_writer_open(self):
 
+        if self._cv2_video_writer is None:
+            raise AssertionError("VideoWriter is None, but `_check_if_writer_open` was called! "
+                                 "There's a buggo in the application logic somewhere...")
+
+        if not self._cv2_video_writer.isOpened():
+            if Path(self._video_save_path).exists():
+                raise AssertionError(
+                    f"VideoWriter is not open, but video file already exists at {self._video_save_path} - looks like the VideoWriter initialized properly but closed unexpectedly!")
+            else:
+                raise AssertionError(
+                    "VideoWriter is not open and video file doesn't exist - looks like the VideoWriter failed to initialize!")
 
     def finish_and_close(self):
         self.finish()
+        if self.has_frames_to_save:
+            raise AssertionError("VideoRecorder `finish` was returned, but there are still frames to save!")
         self.close()
 
     def finish(self):
@@ -64,14 +86,22 @@ class VideoRecorder:
     def close(self):
         logger.debug(f"Closing video recorder for camera {self._camera_config.camera_id}")
         if self.has_frames_to_save:
-            logger.warning(f"Video recorder for camera {self._camera_config.camera_id} has frames to save!")
-            self.finish()
-        self._cv2_video_writer.release()
+            raise AssertionError("VideoRecorder has frames to save, but `close` was called! Theres a buggo in the logic somewhere...")
+        self._close_video_writer() if self._cv2_video_writer is not None else None
 
     def _initialize_on_first_frame(self, frame_payload):
         self._initialization_frame = frame_payload.copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
+        self._check_if_writer_open()
         self._previous_frame_timestamp = frame_payload.timestamp_ns
+
+    def _close_video_writer(self):
+        logger.debug(
+            f"Closing video writer for camera {self._camera_config.camera_id} to save video at: {self._video_save_path}")
+        if self._cv2_video_writer is None:
+            raise AssertionError(
+                "VideoWriter is None, but `_close_video_writer` was called! There's a buggo in the application logic somewhere...")
+        self._cv2_video_writer.release()
 
     def _create_video_writer(
             self,
@@ -87,8 +117,7 @@ class VideoRecorder:
         )
 
         if not video_writer_object.isOpened():
-            logger.error(f"cv2.VideoWriter failed to initialize!")
-            raise Exception("cv2.VideoWriter is not open")
+            raise Exception("cv2.VideoWriter failed to initialize!")
 
         return video_writer_object
 

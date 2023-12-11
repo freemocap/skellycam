@@ -5,7 +5,7 @@ import time
 
 import cv2
 
-from skellycam import logger
+from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.config.apply_config import apply_camera_configuration
 from skellycam.backend.controller.core_functionality.config.determine_backend import determine_backend
 from skellycam.models.cameras.camera_config import CameraConfig

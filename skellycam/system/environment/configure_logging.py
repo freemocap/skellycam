@@ -124,7 +124,7 @@ class LoggerBuilder:
                 if handler not in logging.getLogger("").handlers:
                     logging.getLogger("").handlers.append(handler)
         else:
-            from skellycam import logger
+            from skellycam.system.environment.get_logger import logger
             logger.info("Logging already configured")
 
 
@@ -210,7 +210,8 @@ def log_test_messages(logger):
 
 if __name__ == "__main__":
 
-    from skellycam import logger
+    from skellycam.system.environment.get_logger import logger
+
     configure_logging(LogLevel.TRACE)  # Setting the root logger level to TRACE
     log_test_messages(logger)
     logger.success(
