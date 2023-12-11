@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtCore import pyqtSignal, QThread
+from PySide6.QtCore import Signal, QThread
 
 from skellycam.detection.detect_cameras import detect_cameras
 
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class DetectCamerasWorker(QThread):
-    cameras_detected_signal = pyqtSignal(list)
+    cameras_detected_signal = Signal(list)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)

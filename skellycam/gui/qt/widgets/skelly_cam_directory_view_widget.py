@@ -4,8 +4,7 @@ from copy import copy
 from pathlib import Path
 from typing import Union
 
-from PyQt6.QtGui import QFileSystemModel
-from PyQt6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
 from qtpy import QtGui
 
 logger = logging.getLogger(__name__)
@@ -87,7 +86,7 @@ class SkellyCamDirectoryViewWidget(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     skellycam_directory_view_widget = SkellyCamDirectoryViewWidget(folder_path=Path.home())

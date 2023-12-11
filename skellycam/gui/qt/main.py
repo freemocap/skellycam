@@ -1,12 +1,11 @@
 import logging
 import sys
+from PySide6.QtCore import QTimer
 
 from skellycam.gui.qt.skelly_cam_main_window import SkellyCamMainWindow
 from skellycam.gui.qt.utilities.get_qt_app import get_qt_app
 
 logger = logging.getLogger(__name__)
-
-from PyQt6.QtCore import QTimer
 
 
 def qt_gui_main():

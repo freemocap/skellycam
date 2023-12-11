@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG
 
@@ -47,7 +47,7 @@ class WelcomeToSkellyCamWidget(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()

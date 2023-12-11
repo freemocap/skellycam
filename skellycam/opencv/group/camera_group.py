@@ -3,7 +3,7 @@ import multiprocessing
 import time
 from typing import Dict, List
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from skellycam import CameraConfig
 from skellycam.detection.detect_cameras import detect_cameras
@@ -129,7 +129,7 @@ class CameraGroup:
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
             return GroupedProcessStrategy(cam_ids)
 
-    def close(self, wait_for_exit: bool = True, cameras_closed_signal: pyqtSignal = None):
+    def close(self, wait_for_exit: bool = True, cameras_closed_signal: Signal = None):
         logger.info("Closing camera group")
         self._set_exit_event()
         # self._terminate_processes()

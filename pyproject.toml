@@ -64,7 +64,7 @@ dependencies = [
 "Pillow",
 "psutil",
 "setproctitle",
-"pyqt6",
+"pyside6",
 "matplotlib",
 "scipy",
 "rich",
