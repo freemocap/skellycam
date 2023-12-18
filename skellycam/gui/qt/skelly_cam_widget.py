@@ -210,6 +210,7 @@ class SkellyCamWidget(QWidget):
                                                            border-radius: 10px;
                                                            """)
         detect_available_cameras_push_button.setProperty("recommended_next", True)
+        detect_available_cameras_push_button.setObjectName("detect_available_cameras_button")
 
         return detect_available_cameras_push_button
 
