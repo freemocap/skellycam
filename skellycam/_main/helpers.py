@@ -9,14 +9,17 @@ from skellycam.frontend.frontend_main import frontend_main
 def start_up(exit_event):
     # pretend they are one-way pipes
     frontend_frame_pipe_receiver, frontend_frame_pipe_sender, messages_from_backend, messages_from_frontend = create_queues_and_pipes()
+
     backend_process = start_backend_process(exit_event=exit_event,
                                             messages_from_backend=messages_from_backend,
                                             messages_from_frontend=messages_from_frontend,
                                             frontend_frame_pipe_sender=frontend_frame_pipe_sender)
+
     frontend_process, reboot_event = start_frontend_process(exit_event=exit_event,
                                                             messages_from_backend=messages_from_backend,
                                                             messages_from_frontend=messages_from_frontend,
                                                             frontend_frame_pipe_receiver=frontend_frame_pipe_receiver)
+
     return backend_process, frontend_process, reboot_event, messages_from_frontend, messages_from_backend
 
 

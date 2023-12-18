@@ -65,4 +65,4 @@ class CameraDeviceInfo(BaseModel):
         return video_formats
 
     def __str__(self):
-        return f"{self.description}"
+        return self.description

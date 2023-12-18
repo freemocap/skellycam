@@ -1,9 +1,7 @@
-import pprint
 from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.timestamp import Timestamp
 
 if TYPE_CHECKING:
@@ -42,7 +40,8 @@ class BaseResponse(BaseMessage):
 
 
 class ErrorResponse(BaseResponse):
-    error: str
+    success: bool
+    data: Dict[str, Any]
 
     @classmethod
     def from_exception(cls, exception: Exception):
@@ -61,8 +60,7 @@ class BaseCommand(BaseModel):
         raise NotImplementedError
 
     def __str__(self):
-
-        return  {"name": self.__class__.__name__}
+        return {"name": self.__class__.__name__}
 
 
 class BaseInteraction(BaseModel):
@@ -89,4 +87,3 @@ class BaseInteraction(BaseModel):
             return f"{self.__class__.__name__}: {self.request} -> {self.command}"
         else:
             return f"{self.__class__.__name__}: {self.request} -> {self.command} -> {self.response}"
-

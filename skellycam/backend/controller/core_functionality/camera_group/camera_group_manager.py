@@ -4,13 +4,13 @@ from typing import Dict, Optional, List
 
 import cv2
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_manager import \
     VideoRecorderManager
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload, MultiFramePayload
+from skellycam.system.environment.get_logger import logger
 
 
 class CameraGroupManager:
@@ -18,7 +18,6 @@ class CameraGroupManager:
     def __init__(self,
                  frontend_frame_pipe_sender  # multiprocessing.connection.Connection
                  ) -> None:
-
 
         self.frontend_frame_pipe_sender = frontend_frame_pipe_sender
         self._camera_group: Optional[CameraGroup] = None
@@ -41,7 +40,7 @@ class CameraGroupManager:
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
-        if self._video_recorder_manager is  None:
+        if self._video_recorder_manager is None:
             raise AssertionError("Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! "
                                  "There's a buggo in the application logic somewhere")
         self._video_recorder_manager.stop_recording()

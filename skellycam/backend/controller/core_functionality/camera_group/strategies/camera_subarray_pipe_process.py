@@ -153,8 +153,8 @@ class CamSubarrayPipeProcess:
 
         while not close_cameras_event.is_set():
             # logger.trace(f"CamGroupProcess {process_name} is checking for new configs")
-            time.sleep(1.0)  # check for new configs every 0.5 seconds
-            if camera_config_queue.qsize() > 0:
+            time.sleep(1.0)  # check for new configs every 1.0 seconds
+            if not camera_config_queue.empty():
                 logger.info(
                     "Camera config dict queue has items - updating cameras configs"
                 )
