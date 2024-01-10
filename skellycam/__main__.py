@@ -2,7 +2,7 @@
 import multiprocessing
 from multiprocessing import freeze_support
 
-from skellycam.api.fastapi_app import run_api_server
+from skellycam.api.run_backend_server import run_backend_server
 from skellycam.frontend.run_frontend import run_frontend
 from skellycam.system.environment.configure_logging import configure_logging, LogLevel
 
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     setup_app_id_for_windows()
 
     logger.info(f"Starting backend/server process")
-    server_process = multiprocessing.Process(target=run_api_server, args = ())
+    server_process = multiprocessing.Process(target=run_backend_server, args = ())
     server_process.start()
 
     logger.info(f"Starting frontend/client process")

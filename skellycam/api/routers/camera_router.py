@@ -3,6 +3,11 @@ from fastapi import APIRouter
 router = APIRouter()
 
 DUMMY_CAMERAS = {"0": "its camera 0!", "1": "its camera 1!"}
+
+@router.get("/detect/")
+async def detect_available_cameras():
+    return DUMMY_CAMERAS
+
 @router.get("/camera/")
 async def get_cameras():
     return DUMMY_CAMERAS
