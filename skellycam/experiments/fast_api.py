@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional, Annotated
 
-from fastapi import FastAPI, Query, File, UploadFile
+from fastapi import FastAPI, File, UploadFile
 from pydantic import BaseModel
 
 # pip install fastapi uvicorn pydantic python-multipart

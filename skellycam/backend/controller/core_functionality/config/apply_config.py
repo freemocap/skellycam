@@ -2,8 +2,8 @@ import traceback
 
 import cv2
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.models.cameras.camera_config import CameraConfig
+from skellycam.system.environment.get_logger import logger
 
 
 class FailedToApplyCameraConfigurationError(Exception):

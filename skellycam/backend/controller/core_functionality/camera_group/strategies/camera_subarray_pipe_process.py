@@ -5,12 +5,12 @@ from typing import Dict, List, Any, Optional
 
 from setproctitle import setproctitle
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera.camera import Camera
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload
 from skellycam.models.cameras.image_rotation_types import RotationTypes
+from skellycam.system.environment.get_logger import logger
 
 
 class CamSubarrayPipeProcess:

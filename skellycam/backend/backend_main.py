@@ -1,8 +1,8 @@
 import multiprocessing
 from multiprocessing import Event
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.backend_loop import backend_loop
+from skellycam.system.environment.get_logger import logger
 from skellycam.utilities.clean_up import remove_empty_directories
 
 CONTROLLER = None

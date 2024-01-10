@@ -1,7 +1,6 @@
 import multiprocessing
 from typing import TYPE_CHECKING, Dict
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.interactions.base_models import BaseResponse
 from skellycam.backend.controller.interactions.close_cameras import CloseCamerasInteraction, CloseCamerasResponse
 from skellycam.backend.controller.interactions.connect_to_cameras import ConnectToCamerasInteraction, \
@@ -16,6 +15,7 @@ from skellycam.frontend.gui.skellycam_widget.helpers.backend_communicator import
 from skellycam.frontend.manager.helpers.frame_grabber import FrameGrabber
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
+from skellycam.system.environment.get_logger import logger
 
 if TYPE_CHECKING:
     from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget

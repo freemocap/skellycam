@@ -7,7 +7,7 @@ license = "AGPLv3"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">3.9, <3.12"
+python = ">3.9, <3.13"
 numpy = "^1.26.2"
 opencv-contrib-python = "4.8.*"
 pydantic = "<2"
@@ -24,6 +24,8 @@ tabulate = "^0.9.0"
 tzlocal = "^5.1"
 pyside6 = "^6.5.3"
 pyqtgraph = "^0.13.3"
+uvicorn = "^0.25.0"
+fastapi = "^0.108.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"
@@ -60,7 +62,6 @@ py-modules = ["skellycam"]
 
 
 classifiers = [
-    "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",

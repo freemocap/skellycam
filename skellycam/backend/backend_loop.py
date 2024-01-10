@@ -2,9 +2,9 @@ import multiprocessing
 import time
 import traceback
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.controller import get_or_create_controller
 from skellycam.backend.controller.interactions.base_models import ErrorResponse
+from skellycam.system.environment.get_logger import logger
 
 
 def backend_loop(exit_event: multiprocessing.Event,

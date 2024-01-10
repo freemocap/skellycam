@@ -5,7 +5,6 @@ from typing import Dict, Optional, Tuple, List, Any, Hashable
 
 import pandas as pd
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger import \
     CameraTimestampLogger
 from skellycam.models.cameras.camera_config import CameraConfig
@@ -14,6 +13,7 @@ from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.models.timestamp import Timestamp
 from skellycam.models.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.models.timestamps.multi_frame_timestamp_log import MultiFrameTimestampLog
+from skellycam.system.environment.get_logger import logger
 
 
 class TimestampLoggerManager:

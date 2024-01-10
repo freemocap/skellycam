@@ -4,13 +4,13 @@ from typing import Dict, Optional, List
 
 import cv2
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import CameraGroup
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_manager import \
     VideoRecorderManager
 from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.cameras.camera_id import CameraId
 from skellycam.models.cameras.frames.frame_payload import FramePayload, MultiFramePayload
+from skellycam.system.environment.get_logger import logger
 
 
 class CameraGroupManager:

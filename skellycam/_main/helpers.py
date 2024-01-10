@@ -1,9 +1,9 @@
 import multiprocessing
 from typing import Tuple
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.backend_main import backend_main
-from skellycam.frontend.frontend_main import frontend_main
+from skellycam.frontend.run_frontend import frontend_main
+from skellycam.system.environment.get_logger import logger
 
 
 def start_up(exit_event):

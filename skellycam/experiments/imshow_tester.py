@@ -2,6 +2,7 @@ import asyncio
 
 from skellycam.backend.controller.core_functionality.detection import detect_cameras
 from skellycam.backend.controller.core_functionality.opencv import Camera
+
 from skellycam.models.cameras.camera_config import CameraConfig
 
 

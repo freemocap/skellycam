@@ -1,9 +1,7 @@
-import pprint
 from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from skellycam.models.cameras.camera_config import CameraConfig
 from skellycam.models.timestamp import Timestamp
 
 if TYPE_CHECKING:

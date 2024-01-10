@@ -3,8 +3,8 @@ from typing import Callable
 
 from PySide6.QtCore import QTimer
 
-from skellycam.system.environment.get_logger import logger
 from skellycam.backend.controller.interactions.base_models import BaseResponse, BaseInteraction
+from skellycam.system.environment.get_logger import logger
 
 
 class BackendCommunicator:

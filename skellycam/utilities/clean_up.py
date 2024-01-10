@@ -1,5 +1,5 @@
-from skellycam.system.environment.get_logger import logger
 from skellycam.system.environment.default_paths import get_default_skellycam_base_folder_path
+from skellycam.system.environment.get_logger import logger
 
 
 def remove_empty_directories():

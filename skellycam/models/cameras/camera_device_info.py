@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Any
 
 from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
