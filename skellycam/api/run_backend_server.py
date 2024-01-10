@@ -17,7 +17,7 @@ def find_available_port(start_port):
                 port += 1
                 if port > 65535:  # No more ports available
                     raise e
-def run_backend_server():
+def run_backend_api_server():
     app_instance = FastAPIApp()
     port = find_available_port(8000)
 
@@ -30,5 +30,5 @@ def run_backend_server():
 if __name__ == '__main__':
     from multiprocessing import Process
 
-    server_process = Process(target=run_backend_server)
+    server_process = Process(target=run_backend_api_server)
     server_process.start()
