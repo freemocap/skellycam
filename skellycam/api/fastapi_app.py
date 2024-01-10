@@ -30,6 +30,7 @@ class FastAPIApp:
                 description="wow cameras :O ",
                 routes=self.app.routes,
             )
+            # TODO - add SkellyCam logo?
             openapi_schema["info"]["x-logo"] = {
                 "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
             }
@@ -37,6 +38,8 @@ class FastAPIApp:
             return self.app.openapi_schema
 
         self.app.openapi = custom_openapi
+
+        # TODO - ask the machine what this stuff below is and what it is good for
         # self.app.swagger_ui_init_oauth = {
         #     "clientId": "your-client-id",
         #     "clientSecret": "your-client-secret-if-required",
