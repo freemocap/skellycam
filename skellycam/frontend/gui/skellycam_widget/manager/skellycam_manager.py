@@ -1,22 +1,9 @@
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Signal, Slot
+from PySide6.QtCore import Signal
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
-    CamerasDetectedResponse,
     AvailableCameras,
-)
-from skellycam.backend.controller.interactions.close_cameras import (
-    CloseCamerasInteraction,
-)
-from skellycam.backend.controller.interactions.start_recording_interaction import (
-    StartRecordingInteraction,
-)
-from skellycam.backend.controller.interactions.stop_recording_interaction import (
-    StopRecordingInteraction,
-)
-from skellycam.backend.controller.interactions.update_camera_configs import (
-    UpdateCameraConfigsInteraction,
 )
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.frontend.application.api_client.api_client import FrontendApiClient
@@ -98,6 +85,7 @@ class SkellyCamManager:
         # )
 
     async def handle_start_session_button_clicked(self):
+        logger.debug("Start session button clicked!")
         self.main_widget.welcome.hide()
         self.main_widget.camera_grid.show()
         self.main_widget.record_buttons.show()

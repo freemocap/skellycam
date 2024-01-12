@@ -2,11 +2,11 @@ import multiprocessing
 from typing import Callable
 
 from PySide6.QtCore import QTimer
-
 from skellycam.backend.controller.interactions.base_models import (
     BaseModel,
     BaseInteraction,
 )
+
 from skellycam.backend.system.environment.get_logger import logger
 
 

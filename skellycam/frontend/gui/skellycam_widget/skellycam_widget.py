@@ -1,5 +1,12 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
+from skellycam.backend.system.environment.default_paths import (
+    get_default_skellycam_base_folder_path,
+)
+from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.gui.skellycam_widget.manager.skellycam_manager import (
+    SkellyCamManager,
+)
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import (
     CameraGrid,
 )
@@ -18,17 +25,15 @@ from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.came
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import (
     DirectoryView,
 )
-from skellycam.backend.system.environment.default_paths import (
-    get_default_skellycam_base_folder_path,
-)
-from skellycam.backend.system.environment.get_logger import logger
 
 
 class SkellyCamWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        # self._app_state_manager = AppStateManager()
         self._initUI()
+
+        # self._app_state_manager = AppStateManager()
+        self._manager = SkellyCamManager(main_widget=self)
 
     def _initUI(self):
         self._layout = QHBoxLayout()

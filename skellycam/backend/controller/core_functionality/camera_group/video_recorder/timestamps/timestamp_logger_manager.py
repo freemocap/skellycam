@@ -16,7 +16,6 @@ from skellycam.backend.models.timestamps.camera_timestamp_log import CameraTimes
 from skellycam.backend.models.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
-
 from skellycam.backend.system.environment.get_logger import logger
 
 

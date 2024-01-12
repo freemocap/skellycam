@@ -3,12 +3,12 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 
-from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
 from skellycam.backend.system.environment.default_paths import (
     PATH_TO_SKELLY_CAM_LOGO_PNG,
 )
 from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
+from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
 
 
 class SkellyCamMainWindow(QMainWindow):

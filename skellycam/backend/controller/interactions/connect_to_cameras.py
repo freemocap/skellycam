@@ -3,7 +3,6 @@ from typing import Dict
 
 from pydantic import BaseModel
 
-from skellycam.backend.controller import controller
 from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import (
     CameraGroupManager,
 )

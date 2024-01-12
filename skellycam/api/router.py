@@ -1,5 +1,3 @@
-from datetime import time
-
 from fastapi import APIRouter
 from starlette.websockets import WebSocket
 

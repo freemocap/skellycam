@@ -1,8 +1,6 @@
 from collections import defaultdict
 from copy import deepcopy
-from typing import List, Dict, Any
-
-from pydantic import BaseModel
+from typing import List, Any
 
 from skellycam.backend.models.timestamp import Timestamp
 

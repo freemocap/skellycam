@@ -5,7 +5,6 @@ from PySide6.QtMultimedia import QMediaDevices
 from pydantic import BaseModel
 
 from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfo
-from skellycam.backend.models.cameras.camera_id import CameraId
 
 AvailableCameras = Dict[str, CameraDeviceInfo]
 

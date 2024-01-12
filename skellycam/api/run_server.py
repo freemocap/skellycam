@@ -1,11 +1,11 @@
 import socket
+from multiprocessing import Process
 from typing import Tuple
 
 import uvicorn
 
 from skellycam.api.fastapi_app import FastApiApp
 from skellycam.backend.system.environment.get_logger import logger
-from multiprocessing import Process
 
 
 def find_available_port(start_port):
