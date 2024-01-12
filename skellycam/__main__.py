@@ -2,7 +2,7 @@
 import multiprocessing
 from multiprocessing import freeze_support
 
-from skellycam.api.run_backend_server import run_backend_api_server
+from skellycam.api.run_server import run_backend_api_server, run_backend
 from skellycam.frontend.run_frontend import run_frontend
 from skellycam.backend.system.environment.configure_logging import configure_logging, LogLevel
 
@@ -17,14 +17,16 @@ if __name__ == "__main__":
     freeze_support()
     setup_app_id_for_windows()
 
-    server_process = run_backend_api_server()
+    logger.info("Starting backend server...")
+    backend_process, api_url = run_backend()
 
-    exit_code = run_frontend()
+    exit_code = run_frontend(api_url)
+
+    ###
 
     logger.info(f"Frontend ended with exit code: {exit_code}")
-
     logger.info(f"Shutting down backend/server process")
-    server_process.terminate()
+    backend_process.terminate()
 
     print("\n--------------------------------------------------")
     print("Thank you for using Skelly Cam \U0001F480 \U0001F4F8")

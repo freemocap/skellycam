@@ -1,6 +1,7 @@
 import traceback
 from typing import Dict, Optional
 
+from skellycam.backend.controller import controller
 from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.interactions.base_models import BaseCommand, BaseRequest, \
     BaseInteraction, BaseResponse
@@ -24,14 +25,8 @@ class ConnectToCamerasRequest(BaseRequest):
 class ConnectToCamerasResponse(BaseResponse):
     pass
 
-class ConnectToCamerasCommand(BaseCommand):
-    camera_configs: Dict[CameraId, CameraConfig]
-
-    def execute(self,
-                controller: Controller,
-                **kwargs) -> ConnectToCamerasResponse:
+def connect_to_cameras(ConnectToCamerasRequest: ConnectToCamerasRequest) -> ConnectToCamerasResponse:
         try:
-            camera_configs = kwargs.get('camera_configs')
             controller.camera_group_manager.start(camera_configs=camera_configs)
             return ConnectToCamerasResponse(success=True)
         except Exception as e:

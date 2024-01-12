@@ -4,12 +4,12 @@ import numpy as np
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
 
+from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.single_camera import \
     SingleCameraView
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.models import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
 
 title_label_style_string = """

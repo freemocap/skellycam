@@ -3,9 +3,10 @@ from typing import Tuple
 
 import uvicorn
 
-from skellycam.api.fastapi_app import FastAPIApp
+from skellycam.api.fastapi_app import FastApiApp
 from skellycam.backend.system.environment.get_logger import logger
 from multiprocessing import Process
+
 
 def find_available_port(start_port):
     port = start_port
@@ -26,19 +27,21 @@ def run_backend()->Tuple[Process, str]:
 
     backend_process = Process(target=run_backend_api_server, args=(hostname, port))
     backend_process.start()
-    api_location = f"http://{hostname}:{port}"
-    return backend_process, api_location
+    if backend_process.is_alive():
+        logger.info(f"Backend server started on port {port}.")
+        api_location = f"http://{hostname}:{port}"
+        return backend_process, api_location
+
+    raise Exception(f"Backend server failed to start on port {port} :(")
 
 
 def run_backend_api_server(hostname:str, port:int):
-    logger.info(f"Starting backend/server process")
+    app = FastApiApp().app
 
-    app_instance = FastAPIApp()
-
-    uvicorn.run(app_instance.app,
+    uvicorn.run(app,
                 host=hostname,
                 port=port,
-                # reload=True # TODO - Figure out how to enable `reload` for the FastAPI app
+                # reload=True
                 )
 
 

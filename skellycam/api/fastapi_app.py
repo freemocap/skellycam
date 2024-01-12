@@ -3,19 +3,19 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 import skellycam
-from skellycam.api.routers import camera_router
+from skellycam.api.routers import router
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import \
     detect_available_cameras
 
 
-class FastAPIApp:
+class FastApiApp:
     def __init__(self):
         self.app = FastAPI()
         self._register_routes()
         self._customize_swagger_ui()
 
     def _register_routes(self):
-        self.app.include_router(camera_router.router)
+        self.app.include_router(router.router)
         self.app.get("/")(self.read_root)
         self.app.get("/detect/")(detect_available_cameras)
 

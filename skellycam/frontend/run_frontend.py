@@ -5,7 +5,7 @@ from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
 from skellycam.backend.system.environment.get_logger import logger
 
 
-def run_frontend():
+def run_frontend(api_url):
     logger.info(f"Starting frontend/client process...")
     app = create_or_recreate_qt_application()
     main_window = SkellyCamMainWindow()

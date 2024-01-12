@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from skellycam.backend.models import Timestamp
+from skellycam.backend.models.timestamp import Timestamp
 
 if TYPE_CHECKING:
     from skellycam.backend.controller.controller import Controller

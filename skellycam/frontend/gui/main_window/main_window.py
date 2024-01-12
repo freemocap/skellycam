@@ -32,5 +32,4 @@ class SkellyCamMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         logger.info("Closing MainWindow...")
-        self.shortcuts.quit()
         event.accept()

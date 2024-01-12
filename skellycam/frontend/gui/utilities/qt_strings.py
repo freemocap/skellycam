@@ -1,8 +1,10 @@
 import cv2
 
 import skellycam
-from skellycam.backend.models import ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING, \
-    ROTATE_180_STRING
+
+from skellycam.backend.models.cameras.image_rotation_types import ROTATE_90_CLOCKWISE_STRING, \
+    ROTATE_90_COUNTERCLOCKWISE_STRING, ROTATE_180_STRING
+
 from skellycam.backend.system.environment.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING, \
     CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING, RED_X_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
 

@@ -9,18 +9,14 @@ from skellycam.backend.controller.core_functionality.camera_group.video_recorder
     VideoRecorderManager
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.models import FramePayload, MultiFramePayload
+from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload, FramePayload
 from skellycam.backend.system.environment.get_logger import logger
 
 
 class CameraGroupManager:
 
-    def __init__(self,
-                 frontend_frame_pipe_sender  # multiprocessing.connection.Connection
-                 ) -> None:
+    def __init__(self) -> None:
 
-
-        self.frontend_frame_pipe_sender = frontend_frame_pipe_sender
         self._camera_group: Optional[CameraGroup] = None
         self._video_recorder_manager: Optional[VideoRecorderManager] = None
         self._camera_runner_thread: Optional[threading.Thread] = None
@@ -41,7 +37,7 @@ class CameraGroupManager:
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
-        if self._video_recorder_manager is  None:
+        if self._video_recorder_manager is None:
             raise AssertionError("Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! "
                                  "There's a buggo in the application logic somewhere")
         self._video_recorder_manager.stop_recording()
