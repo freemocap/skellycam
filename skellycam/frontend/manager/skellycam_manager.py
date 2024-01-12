@@ -13,9 +13,9 @@ from skellycam.backend.controller.interactions.stop_recording_interaction import
 from skellycam.backend.controller.interactions.update_camera_configs import UpdateCameraConfigsInteraction
 from skellycam.frontend.gui.skellycam_widget.helpers.backend_communicator import BackendCommunicator
 from skellycam.frontend.manager.helpers.frame_grabber import FrameGrabber
-from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.system.environment.get_logger import logger
 
 if TYPE_CHECKING:
     from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget

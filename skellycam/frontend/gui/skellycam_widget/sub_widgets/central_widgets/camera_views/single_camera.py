@@ -4,8 +4,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 
-from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.frames.frame_payload import FramePayload
+from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models import FramePayload
 
 
 class SingleCameraView(QWidget):

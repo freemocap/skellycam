@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QApplication
 
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.system.environment.get_logger import logger
 
 _QT_APPLICATION = None
 

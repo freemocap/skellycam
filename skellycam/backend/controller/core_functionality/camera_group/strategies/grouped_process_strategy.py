@@ -3,9 +3,9 @@ from typing import Dict, List, Tuple
 
 from skellycam.backend.controller.core_functionality.camera_group.strategies.camera_subarray_pipe_process import \
     CamSubarrayPipeProcess
-from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frames.frame_payload import FramePayload
+from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.models import FramePayload
 from skellycam.utilities.array_split_by import dict_split_by
 
 ### Don't change this? Users should submit the actual value they want
@@ -15,7 +15,7 @@ _DEFAULT_CAM_PER_PROCESS = 2
 
 # https://refactoring.guru/design-patterns/strategy
 
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.system.environment.get_logger import logger
 
 
 class GroupedProcessStrategy:

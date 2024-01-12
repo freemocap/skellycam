@@ -4,8 +4,8 @@ from typing import Tuple, Dict, List
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.timestamps.camera_timestamp_log import CameraTimestampLog
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.models.timestamps.camera_timestamp_log import CameraTimestampLog
 
 
 class MultiFrameTimestampLog(BaseModel):

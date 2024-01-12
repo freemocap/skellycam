@@ -5,8 +5,8 @@ from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
-from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_PNG
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_PNG
+from skellycam.backend.system.environment.get_logger import logger
 
 
 class SkellyCamMainWindow(QMainWindow):

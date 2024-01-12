@@ -1,6 +1,6 @@
 import numpy as np
 
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.system.environment.get_logger import logger
 
 
 def test_frame_timestamp_synchronization(synchronized_frame_list_dictionary):

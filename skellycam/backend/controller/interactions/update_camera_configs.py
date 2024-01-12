@@ -3,8 +3,8 @@ from typing import Dict, Optional
 from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
     BaseInteraction
-from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.camera_id import CameraId
+from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_id import CameraId
 
 
 class UpdateCameraConfigsException(Exception):

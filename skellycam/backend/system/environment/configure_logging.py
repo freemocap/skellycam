@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from logging.config import dictConfig
 
-from skellycam.system.environment.default_paths import get_log_file_path
+from skellycam.backend.system.environment.default_paths import get_log_file_path
 
 # Suppress some annoying log messages
 logging.getLogger('tzlocal').setLevel(logging.WARNING)
@@ -124,7 +124,7 @@ class LoggerBuilder:
                 if handler not in logging.getLogger("").handlers:
                     logging.getLogger("").handlers.append(handler)
         else:
-            from skellycam.system.environment.get_logger import logger
+            from skellycam.backend.system.environment.get_logger import logger
             logger.info("Logging already configured")
 
 
@@ -210,7 +210,7 @@ def log_test_messages(logger):
 
 if __name__ == "__main__":
 
-    from skellycam.system.environment.get_logger import logger
+    from skellycam.backend.system.environment.get_logger import logger
 
     configure_logging(LogLevel.TRACE)  # Setting the root logger level to TRACE
     log_test_messages(logger)

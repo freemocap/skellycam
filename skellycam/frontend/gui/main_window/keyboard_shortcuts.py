@@ -2,7 +2,7 @@ import multiprocessing
 
 from PySide6.QtGui import QShortcut, QKeySequence
 
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.system.environment.get_logger import logger
 
 
 class KeyboardShortcuts:

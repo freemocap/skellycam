@@ -6,10 +6,10 @@ from typing import Tuple
 
 import pandas as pd
 
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frames.frame_payload import FramePayload
-from skellycam.models.timestamps.camera_timestamp_log import CameraTimestampLog
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.models import FramePayload
+from skellycam.backend.models.timestamps import CameraTimestampLog
+from skellycam.backend.system.environment.get_logger import logger
 
 
 class CameraTimestampLogger:

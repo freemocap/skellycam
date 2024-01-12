@@ -1,8 +1,8 @@
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QWidget
 
-from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.models import MultiFramePayload
+from skellycam.backend.system.environment.get_logger import logger
 
 
 class FrameGrabber(QThread):

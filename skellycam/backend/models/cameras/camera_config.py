@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.image_rotation_types import RotationTypes
-from skellycam.models.cameras.video_resolution import VideoResolution
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.models.cameras.image_rotation_types import RotationTypes
+from skellycam.backend.models.cameras.video_resolution import VideoResolution
 
 
 class CameraConfig(BaseModel):

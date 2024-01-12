@@ -10,7 +10,7 @@ from PySide6.QtGui import QImage
 from pydantic import BaseModel, Field
 from tabulate import tabulate
 
-from skellycam.models.cameras.camera_id import CameraId
+from skellycam.backend.models.cameras.camera_id import CameraId
 
 FRAME_PAYLOAD_BYTES_HEADER = 'bqiq'
 RAW_IMAGE_BYTES_HEADER = '5i'

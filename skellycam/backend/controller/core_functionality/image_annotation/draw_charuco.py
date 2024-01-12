@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from skellycam.models.charuco_definition import CharucoBoardDefinition
+from skellycam.backend.models import CharucoBoardDefinition
 
 
 def draw_charuco_on_image(image: np.ndarray, charuco_board: CharucoBoardDefinition) -> None:

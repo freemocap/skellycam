@@ -5,10 +5,10 @@ from typing import Dict, Tuple
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger_manager import \
     TimestampLoggerManager
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder import VideoRecorder
-from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frames.frame_payload import MultiFramePayload
-from skellycam.system.environment.default_paths import get_default_recording_folder_path
+from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.models import MultiFramePayload
+from skellycam.backend.system.environment.default_paths import get_default_recording_folder_path
 
 
 class VideoRecorderManager:

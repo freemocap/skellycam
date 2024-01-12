@@ -1,6 +1,6 @@
 import numpy as np
 
-from skellycam.models.cameras.frames.frame_payload import FramePayload, RawImage, MultiFramePayload
+from skellycam.backend.models import FramePayload, RawImage, MultiFramePayload
 
 
 def test_raw_image_to_and_from_bytes():

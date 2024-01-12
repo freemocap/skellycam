@@ -1,7 +1,7 @@
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton, QWidget
 
-from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_PNG, CAMERA_WITH_FLASH_EMOJI_STRING, \
+from skellycam.backend.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_PNG, CAMERA_WITH_FLASH_EMOJI_STRING, \
     SPARKLES_EMOJI_STRING
 
 

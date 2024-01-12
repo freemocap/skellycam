@@ -2,10 +2,11 @@ import multiprocessing.connection
 
 from skellycam.frontend.application import create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.system.environment.get_logger import logger
 
 
 def run_frontend():
+    logger.info(f"Starting frontend/client process...")
     app = create_or_recreate_qt_application()
     main_window = SkellyCamMainWindow()
     exit_code = 0

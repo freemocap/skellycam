@@ -3,8 +3,8 @@ from typing import Tuple
 
 from pydantic import BaseModel, Field
 
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.models.cameras.frames.frame_payload import FramePayload
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 
 
 class CameraTimestampLog(BaseModel):

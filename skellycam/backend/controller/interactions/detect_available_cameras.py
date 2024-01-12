@@ -4,8 +4,7 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     detect_available_cameras
 from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
     BaseInteraction
-from skellycam.models.cameras.camera_device_info import CameraDeviceInfo
-from skellycam.models.cameras.camera_id import CameraId
+from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfofrom skellycam.backend.models.cameras.camera_id import CameraId
 
 
 class DetectAvailableCamerasRequest(BaseRequest):

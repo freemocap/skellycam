@@ -4,9 +4,9 @@ from typing import Dict, Optional
 from skellycam.backend.controller.controller import Controller
 from skellycam.backend.controller.interactions.base_models import BaseCommand, BaseRequest, \
     BaseInteraction, BaseResponse
-from skellycam.models.cameras.camera_config import CameraConfig
-from skellycam.models.cameras.camera_id import CameraId
-from skellycam.system.environment.get_logger import logger
+from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.system.environment.get_logger import logger
 
 
 class ConnectToCamerasRequest(BaseRequest):
