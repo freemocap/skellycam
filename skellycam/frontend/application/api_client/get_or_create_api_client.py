@@ -1,7 +1,7 @@
 from typing import Optional
 
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.application.api_client import FrontendApiClient
+from skellycam.frontend.application.api_client.api_client import FrontendApiClient
 
 API_CLIENT: Optional[FrontendApiClient] = None
 

@@ -1,8 +1,8 @@
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QWidget
+from starlette.websockets import WebSocket
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
-
 from skellycam.backend.system.environment.get_logger import logger
 
 
@@ -11,25 +11,24 @@ class FrameGrabber(QThread):
 
     def __init__(
         self,
-        frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection
+        multiframe_websocket: WebSocket,
         parent=QWidget,
     ):
         super().__init__(parent=parent)
-        self.frontend_frame_pipe_receiver = frontend_frame_pipe_receiver
+        self.multiframe_websocket = multiframe_websocket
         self.daemon = True
 
-    def run(self):
+    async def run(self):
         logger.info(f"FrameGrabber starting...")
         while True:
             try:
                 multi_frame_payload_bytes = (
-                    self.frontend_frame_pipe_receiver.recv_bytes()
-                )  # waits here until there is something to receive
-                multi_frame_payload = MultiFramePayload.from_bytes(
-                    multi_frame_payload_bytes
+                    await self.multiframe_websocket.receive_bytes()
                 )
-                self.new_frames.emit(multi_frame_payload)
+
+                self.new_frames.emit(
+                    MultiFramePayload.from_bytes(multi_frame_payload_bytes)
+                )
             except Exception as e:
                 logger.error(str(e))
                 logger.exception(e)
-                raise e

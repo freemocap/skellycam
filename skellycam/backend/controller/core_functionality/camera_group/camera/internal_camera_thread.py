@@ -1,3 +1,4 @@
+import asyncio
 import multiprocessing
 import pprint
 import threading
@@ -48,15 +49,15 @@ class VideoCaptureThread(threading.Thread):
         self._cv2_video_capture = self._create_cv2_capture()
         self._start_frame_loop()
 
-    def _start_frame_loop(self):
+    async def _start_frame_loop(self):
         logger.info(
             f"Camera ID: [{self._config.camera_id}] starting frame capture loop..."
         )
         self._wait_for_all_cameras_ready()
         self._frame_number = -1
-        self._frame_loop()  # main frame loop
+        await self._frame_loop()  # main frame loop
 
-    def _frame_loop(self):
+    async def _frame_loop(self):
         """
         This loop is responsible for capturing frames from the camera and stuffing them into the pipe
         """
@@ -67,7 +68,7 @@ class VideoCaptureThread(threading.Thread):
         try:
             while not self._close_cameras_event.is_set():
                 if self._updating_config:
-                    time.sleep(0.001)
+                    await asyncio.sleep(0.001)
                     continue
                 frame = self._get_next_frame()
                 frame_bytes = frame.to_bytes()
@@ -111,10 +112,10 @@ class VideoCaptureThread(threading.Thread):
             camera_id=self._config.camera_id,
         )
 
-    def _wait_for_all_cameras_ready(self):
+    async def _wait_for_all_cameras_ready(self):
         logger.debug(f"Waiting for all cameras to be ready...")
         while not self._all_cameras_ready_event.is_set():
-            time.sleep(0.001)
+            await asyncio.sleep(0.001)
             continue
         logger.debug(f"All cameras ready!")
 

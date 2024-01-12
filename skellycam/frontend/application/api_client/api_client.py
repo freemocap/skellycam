@@ -35,6 +35,16 @@ class FrontendApiClient(QObject):
             logger.error(f"Failed to parse response: {e}")
             return None
 
+    async def connect_to_cameras(self):
+        logger.debug("Sending request to the frontend API `connect` endpoint")
+        response = await self.client.get("connect")
+        try:
+            cameras_detected_response = CamerasConnectedResponse.parse_obj()
+            return cameras_detected_response
+        except ValidationError as e:
+            logger.error(f"Failed to parse response: {e}")
+            return None
+
 
 if __name__ == "__main__":
     from skellycam.api.run_server import run_backend

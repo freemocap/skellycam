@@ -22,7 +22,7 @@ def backend_loop(
             if exit_event.is_set():
                 logger.info(f"Exit or reboot event set, exiting...")
                 break
-            time.sleep(1.0)
+            await asyncio.sleep(1.0)
 
             if not messages_from_frontend.empty():
                 message = messages_from_frontend.get()

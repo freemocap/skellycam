@@ -8,9 +8,6 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     detect_available_cameras,
     CamerasDetectedResponse,
 )
-from skellycam.backend.controller.interactions.connect_to_cameras import (
-    ConnectToCamerasResponse,
-)
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.system.environment.get_logger import logger
@@ -47,11 +44,11 @@ class Controller:
 
         try:
             self.camera_group_manager.start(camera_configs=camera_configs)
-            return ConnectToCamerasResponse(success=True)
+            return CamerasConnectedResopnse(success=True)
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             logger.exception(e)
-            return ConnectToCamerasResponse(
+            return CamerasConnectedResopnse(
                 success=False,
                 metadata={"error": str(e), "traceback": str(traceback.format_exc())},
             )

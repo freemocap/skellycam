@@ -7,9 +7,11 @@ from pydantic import BaseModel
 from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.backend.models.cameras.camera_id import CameraId
 
+AvailableCameras = Dict[str, CameraDeviceInfo]
+
 
 class CamerasDetectedResponse(BaseModel):
-    available_cameras: Dict[CameraId, CameraDeviceInfo]
+    available_cameras: AvailableCameras
 
 
 def detect_available_cameras() -> CamerasDetectedResponse:

@@ -1,3 +1,4 @@
+import asyncio
 import time
 from pathlib import Path
 from typing import Dict, Tuple
@@ -87,13 +88,13 @@ class VideoRecorderManager:
         for video_recorder in self._video_recorders.values():
             video_recorder.one_frame_to_disk()
 
-    def finish_and_close(self):
+    async def finish_and_close(self):
         for camera_id, video_recorder in self._video_recorders.items():
             video_recorder.finish_and_close()
         self._timestamp_manager.close()
 
         while not self.finished:
-            time.sleep(0.001)
+            await asyncio.sleep(0.001)
 
     def _make_video_file_path(self, camera_id: CameraId, video_format: str = "avi"):
         """

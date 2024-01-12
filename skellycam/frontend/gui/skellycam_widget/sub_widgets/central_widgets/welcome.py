@@ -1,3 +1,4 @@
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QPushButton, QWidget
 
@@ -55,7 +56,7 @@ class Welcome(QWidget):
         self._layout.addWidget(self.start_session_button)
         self._layout.addStretch()
 
-    def _add_logo(self, skellycam_logo_label):
+    def _add_logo(self):
         skellycam_logo_label = QLabel(self)
         self._layout.addWidget(skellycam_logo_label)
         skellycam_logo_pixmap = QPixmap(PATH_TO_SKELLY_CAM_LOGO_PNG)
@@ -78,4 +79,3 @@ class Welcome(QWidget):
                            width: 50%;
                            """
         )
-        self.start_session_button.clicked.connect(self._api_client.detect_cameras)

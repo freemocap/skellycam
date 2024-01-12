@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Dict, Union
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
@@ -17,7 +18,7 @@ from skellycam.backend.system.environment.get_logger import logger
 
 
 class CameraParameterTree(QWidget):
-    # camera_configs_changed = Signal(dict)
+    camera_configs_changed = Signal(Dict[str, CameraConfig])
 
     def __init__(self, parent: Union[QMainWindow, QWidget]):
         super().__init__(parent=parent)
@@ -67,6 +68,7 @@ class CameraParameterTree(QWidget):
             for camera_id in available_cameras.keys()
         }
         self._update_parameter_tree()
+        self.camera_configs_changed.emit(self._camera_configs)
         print("done updating parameter tree")
 
     def _update_parameter_tree(self):

@@ -1,3 +1,4 @@
+import asyncio
 import multiprocessing
 import time
 from typing import Dict, List
@@ -55,14 +56,14 @@ class CameraGroup:
 
         self._wait_for_cameras_to_start()
 
-    def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
+    async def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.trace(f"Waiting for cameras {self._camera_configs.keys()} to start")
 
         while (
             not self._all_cameras_ready_event.is_set()
             and not self._close_cameras_event.is_set()
         ):
-            time.sleep(1.0)
+            await asyncio.sleep(1.0)
             camera_started_check = dict.fromkeys(self._camera_configs.keys(), False)
 
             for camera_id, event in self._is_capturing_events_by_camera.items():
@@ -84,12 +85,12 @@ class CameraGroup:
                 all_cameras_ready_event=self._all_cameras_ready_event,
             )
 
-    def close(self):
+    async def close(self):
         logger.debug("Closing camera group")
         self._close_cameras_event.set()
         while self.any_capturing:
             logger.trace("Waiting for cameras to stop capturing")
-            time.sleep(1.0)
+            await asyncio.sleep(1.0)
         logger.info("All cameras have stopped capturing")
 
     def _create_events(self):

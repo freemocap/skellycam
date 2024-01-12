@@ -1,3 +1,4 @@
+import asyncio
 import multiprocessing
 import time
 from multiprocessing import Process
@@ -143,7 +144,7 @@ class CamSubarrayPipeProcess:
         return cameras
 
     @staticmethod
-    def _run_process(
+    async def _run_process(
         camera_configs: Dict[CameraId, CameraConfig],
         pipe_connections: Dict[str, Any],  # multiprocessing.connection.Connection
         camera_config_queue: multiprocessing.Queue,
@@ -171,7 +172,7 @@ class CamSubarrayPipeProcess:
 
         while not close_cameras_event.is_set():
             # logger.trace(f"CamGroupProcess {process_name} is checking for new configs")
-            time.sleep(1.0)  # check for new configs every 0.5 seconds
+            await asyncio.sleep(1.0)  # check for new configs every 0.5 seconds
             if camera_config_queue.qsize() > 0:
                 logger.info(
                     "Camera config dict queue has items - updating cameras configs"

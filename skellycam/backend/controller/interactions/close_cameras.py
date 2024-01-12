@@ -19,7 +19,7 @@ class CloseCamerasResponse(BaseModel):
 
 class CloseCamerasCommand(BaseCommand):
     def execute(self, controller: "Controller", **kwargs) -> CloseCamerasResponse:
-        controller.camera_group_manager.close()
+        await controller.camera_group_manager.close()
         return CloseCamerasResponse(success=True)
 
 
