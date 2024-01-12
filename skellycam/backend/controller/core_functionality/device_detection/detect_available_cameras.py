@@ -9,7 +9,6 @@ from skellycam.backend.models.cameras.camera_id import CameraId
 
 
 class CamerasDetectedResponse(BaseModel):
-    success: bool
     available_cameras: Dict[CameraId, CameraDeviceInfo]
 
 
@@ -23,7 +22,7 @@ def detect_available_cameras() -> CamerasDetectedResponse:
         cameras[camera_number] = CameraDeviceInfo.from_q_camera_device(
             camera_number=camera_number, camera=camera
         )
-    return CamerasDetectedResponse(success=True, available_cameras=cameras)
+    return CamerasDetectedResponse(available_cameras=cameras)
 
 
 if __name__ == "__main__":

@@ -1,18 +1,17 @@
 import multiprocessing
 from typing import TYPE_CHECKING, Dict
 
-from skellycam.backend.controller.interactions.base_models import BaseModel
+from pydantic import BaseModel
+
+from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
+    CamerasDetectedResponse,
+)
 from skellycam.backend.controller.interactions.close_cameras import (
     CloseCamerasInteraction,
     CloseCamerasResponse,
 )
 from skellycam.backend.controller.interactions.connect_to_cameras import (
-    ConnectToCamerasInteraction,
     ConnectToCamerasResponse,
-)
-from skellycam.backend.controller.interactions.detect_available_cameras import (
-    CamerasDetectedResponse,
-    DetectAvailableCamerasInteraction,
 )
 from skellycam.backend.controller.interactions.start_recording_interaction import (
     StartRecordingInteraction,
@@ -24,10 +23,6 @@ from skellycam.backend.controller.interactions.stop_recording_interaction import
 from skellycam.backend.controller.interactions.update_camera_configs import (
     UpdateCameraConfigsInteraction,
 )
-from skellycam.frontend.gui.skellycam_widget.helpers.backend_communicator import (
-    BackendCommunicator,
-)
-from skellycam.frontend.manager.helpers.frame_grabber import FrameGrabber
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.system.environment.get_logger import logger

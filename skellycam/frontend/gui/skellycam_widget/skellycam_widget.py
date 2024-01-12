@@ -1,6 +1,5 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
-from skellycam.frontend.app_state.app_state import AppStateManager
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import (
     CameraGrid,
 )
@@ -23,17 +22,13 @@ from skellycam.backend.system.environment.default_paths import (
     get_default_skellycam_base_folder_path,
 )
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.manager.skellycam_manager import SkellyCamManager
 
 
 class SkellyCamWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self._state = {}
-        self._manager = AppStateManager()
+        # self._app_state_manager = AppStateManager()
         self._initUI()
-
-        # self._manager = SkellycamManager(main_widget=self)
 
     def _initUI(self):
         self._layout = QHBoxLayout()

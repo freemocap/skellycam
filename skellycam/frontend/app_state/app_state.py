@@ -15,6 +15,9 @@ class AppState(defaultdict):
         self.seconds_since_update: float = 0
 
     def __setitem__(self, key: str, value: Any) -> None:
+        """
+        Override the default __setitem__ to log the timestamp when the AppState changes
+        """
         super().__setitem__(key, value)
         now = Timestamp().now()
         self.seconds_since_update = (
@@ -30,9 +33,9 @@ class AppStateManager:
     def __init__(self):
         self.current_state = AppState()
 
-    def update(self, key: str, value: any):
+    def update(self, parent: str, key: str, value: any):
         self.history.append(deepcopy(self.current_state))
-        self.current_state[key] = value
+        self.current_state[parent][key] = value  # fancy pantsy
 
 
 if __name__ == "__main__":
