@@ -1,6 +1,8 @@
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
+
+import skellycam
 from skellycam.api.routers import camera_router
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import \
     detect_available_cameras
@@ -26,14 +28,12 @@ class FastAPIApp:
                 return self.app.openapi_schema
             openapi_schema = get_openapi(
                 title="Welcome to the SkellyCam API 💀📸✨",
-                version="insert version number here",
-                description="wow cameras :O ",
+                version=skellycam.__version__,
+                description=f"The FastAPI/Uvicorn/Swagger Backend UI for SkellyCam: {skellycam.__description__}",
                 routes=self.app.routes,
             )
             # TODO - add SkellyCam logo?
-            openapi_schema["info"]["x-logo"] = {
-                "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
-            }
+
             self.app.openapi_schema = openapi_schema
             return self.app.openapi_schema
 
