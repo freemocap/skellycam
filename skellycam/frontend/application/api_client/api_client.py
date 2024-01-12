@@ -45,4 +45,4 @@ if __name__ == "__main__":
     client = FrontendApiClient(api_base_url=api_location_out)
     hello_response = asyncio.run(client.hello())
     pprint(hello_response.json())
-    logger.info(f"Done!")
+    print(f"Done!")
