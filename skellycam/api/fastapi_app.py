@@ -1,11 +1,10 @@
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
+from starlette.responses import RedirectResponse
 
 import skellycam
-from skellycam.api.routers import router
-from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import \
-    detect_available_cameras
+from skellycam.api import router
 
 
 class FastApiApp:
@@ -15,12 +14,12 @@ class FastApiApp:
         self._customize_swagger_ui()
 
     def _register_routes(self):
-        self.app.include_router(router.router)
         self.app.get("/")(self.read_root)
-        self.app.get("/detect/")(detect_available_cameras)
+        self.app.include_router(router.router)
 
     async def read_root(self):
-        return {"message": "Hello from SkellyCam 💀📸✨"}
+        # return {"message": "Hello from SkellyCam 💀📸✨"}
+        return RedirectResponse("/docs")
 
     def _customize_swagger_ui(self):
         def custom_openapi():

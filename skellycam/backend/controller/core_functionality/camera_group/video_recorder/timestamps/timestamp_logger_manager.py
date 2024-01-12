@@ -9,10 +9,11 @@ from skellycam.backend.controller.core_functionality.camera_group.video_recorder
     CameraTimestampLogger
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.models import MultiFramePayload
-from skellycam.backend.models import Timestamp
-from skellycam.backend.models.timestamps import CameraTimestampLog
-from skellycam.backend.models.timestamps import MultiFrameTimestampLog
+from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
+from skellycam.backend.models.timestamp import Timestamp
+from skellycam.backend.models.timestamps.camera_timestamp_log import CameraTimestampLog
+from skellycam.backend.models.timestamps.multi_frame_timestamp_log import MultiFrameTimestampLog
+
 from skellycam.backend.system.environment.get_logger import logger
 
 

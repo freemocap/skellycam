@@ -5,7 +5,7 @@ from skellycam.backend.controller.core_functionality.camera_group.strategies.cam
     CamSubarrayPipeProcess
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.models import FramePayload
+from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 from skellycam.utilities.array_split_by import dict_split_by
 
 ### Don't change this? Users should submit the actual value they want
