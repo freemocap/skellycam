@@ -1,7 +1,7 @@
 import multiprocessing
 from typing import TYPE_CHECKING, Dict
 
-from skellycam.backend.controller.interactions.base_models import BaseResponse
+from skellycam.backend.controller.interactions.base_models import BaseModel
 from skellycam.backend.controller.interactions.close_cameras import CloseCamerasInteraction, CloseCamerasResponse
 from skellycam.backend.controller.interactions.connect_to_cameras import ConnectToCamerasInteraction, \
     ConnectToCamerasResponse
@@ -79,7 +79,7 @@ class SkellycamManager:
                                                       frontend_frame_pipe_sender=self._frontend_frame_pipe_sender)
 
     # Main Backend Response Handler
-    def handle_backend_response(self, response: BaseResponse) -> None:
+    def handle_backend_response(self, response: BaseModel) -> None:
         logger.debug(f"Handling Backend response: {response}")
 
         if isinstance(response, CamerasDetectedResponse):
@@ -90,8 +90,8 @@ class SkellycamManager:
             self._handle_cameras_closed_response()
         elif isinstance(response, StopRecordingResponse):
             self._handle_stop_recording_response()
-        elif isinstance(response, BaseResponse):
-            logger.debug(f"Received BaseResponse with no defined 'response' behavior: {response}")
+        elif isinstance(response, BaseModel):
+            logger.debug(f"Received BaseModel with no defined 'response' behavior: {response}")
         else:
             raise ValueError(f"Unknown response type: {response}")
 

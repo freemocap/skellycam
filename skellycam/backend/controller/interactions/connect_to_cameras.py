@@ -1,33 +1,24 @@
 import traceback
-from typing import Dict, Optional
+from typing import Dict
+
+from pydantic import BaseModel
 
 from skellycam.backend.controller import controller
-from skellycam.backend.controller.controller import Controller
-from skellycam.backend.controller.interactions.base_models import BaseCommand, BaseRequest, \
-    BaseInteraction, BaseResponse
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.system.environment.get_logger import logger
 
 
-class ConnectToCamerasRequest(BaseRequest):
+class ConnectToCamerasRequest(BaseModel):
     camera_configs: Dict[CameraId, CameraConfig]
 
-    @classmethod
-    def create(cls, camera_configs: Dict[CameraId, CameraConfig]):
-        if len(camera_configs) == 0:
-            raise ValueError("Must have at least one camera")
-        return cls(camera_configs=camera_configs)
+class ConnectToCamerasResponse(BaseModel):
+    success: bool
+    metadata: Dict[str, str]
 
-
-
-
-class ConnectToCamerasResponse(BaseResponse):
-    pass
-
-def connect_to_cameras(ConnectToCamerasRequest: ConnectToCamerasRequest) -> ConnectToCamerasResponse:
+def connect_to_cameras(request: ConnectToCamerasRequest) -> ConnectToCamerasResponse:
         try:
-            controller.camera_group_manager.start(camera_configs=camera_configs)
+            controller.camera_group_manager.start(camera_configs=request.camera_configs)
             return ConnectToCamerasResponse(success=True)
         except Exception as e:
             logger.error(f"An error occurred: {e}")
@@ -37,19 +28,3 @@ def connect_to_cameras(ConnectToCamerasRequest: ConnectToCamerasRequest) -> Conn
                                                       "traceback": str(traceback.format_exc())})
 
 
-
-
-class ConnectToCamerasInteraction(BaseInteraction):
-    request: ConnectToCamerasRequest
-    command: Optional[ConnectToCamerasCommand]
-    response: Optional[ConnectToCamerasResponse]
-
-    @classmethod
-    def as_request(cls, camera_configs: Dict[CameraId, CameraConfig]):
-        return cls(request=ConnectToCamerasRequest.create(camera_configs=camera_configs))
-
-    def execute_command(self, controller: Controller, **kwargs) -> BaseResponse:
-        self.command = ConnectToCamerasCommand(camera_configs=self.request.camera_configs)
-        self.response = self.command.execute(controller=controller,
-                                             camera_configs=self.request.camera_configs)
-        return self.response

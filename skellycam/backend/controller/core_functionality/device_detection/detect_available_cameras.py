@@ -2,13 +2,13 @@ from pprint import pprint
 from typing import Dict
 
 from PySide6.QtMultimedia import QMediaDevices
+from pydantic import BaseModel
 
-from skellycam.backend.controller.interactions.base_models import BaseResponse
 from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.backend.models.cameras.camera_id import CameraId
 
 
-class CamerasDetectedResponse(BaseResponse):
+class CamerasDetectedResponse(BaseModel):
     success: bool
     available_cameras: Dict[CameraId, CameraDeviceInfo]
 

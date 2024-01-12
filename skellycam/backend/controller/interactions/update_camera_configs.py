@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 
 from skellycam.backend.controller.controller import Controller
-from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
+from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseModel, BaseCommand, \
     BaseInteraction
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
@@ -19,7 +19,7 @@ class UpdateCameraConfigsRequest(BaseRequest):
         return cls(camera_configs=camera_configs)
 
 
-class UpdateCameraConfigsResponse(BaseResponse):
+class UpdateCameraConfigsResponse(BaseModel):
     pass
 
 

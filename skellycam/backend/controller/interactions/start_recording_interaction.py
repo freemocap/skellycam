@@ -1,7 +1,7 @@
 from typing import Optional
 
 from skellycam.backend.controller.controller import Controller
-from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseResponse, BaseCommand, \
+from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseModel, BaseCommand, \
     BaseInteraction
 
 
@@ -9,7 +9,7 @@ class StartRecordingRequest(BaseRequest):
     pass
 
 
-class StartRecordingResponse(BaseResponse):
+class StartRecordingResponse(BaseModel):
     pass
 
 

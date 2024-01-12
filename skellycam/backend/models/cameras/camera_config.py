@@ -6,7 +6,7 @@ from skellycam.backend.models.cameras.video_resolution import VideoResolution
 
 
 class CameraConfig(BaseModel):
-    camera_id: CameraId = Field(description="The id of the camera to use, "
+    camera_id: CameraId = Field(default=0, description="The id of the camera to use, "
                                             "e.g. cv2.VideoCapture uses `0` for the first camera")
 
     use_this_camera: bool = Field(default=True,
@@ -36,3 +36,7 @@ class CameraConfig(BaseModel):
     @property
     def aspect_ratio(self) -> float:
         return self.resolution.aspect_ratio
+
+if __name__ == "__main__":
+    from pprint import pprint
+    pprint(CameraConfig().dict())

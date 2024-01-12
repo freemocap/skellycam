@@ -3,7 +3,7 @@ from typing import Callable
 
 from PySide6.QtCore import QTimer
 
-from skellycam.backend.controller.interactions.base_models import BaseResponse, BaseInteraction
+from skellycam.backend.controller.interactions.base_models import BaseModel, BaseInteraction
 from skellycam.backend.system.environment.get_logger import logger
 
 
@@ -12,7 +12,7 @@ class BackendCommunicator:
                  messages_from_frontend: multiprocessing.Queue,
                  messages_from_backend: multiprocessing.Queue,
                  frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection,
-                 handle_backend_response: Callable[[BaseResponse], None],
+                 handle_backend_response: Callable[[BaseModel], None],
                  parent=None,
 
                  ):
@@ -29,7 +29,7 @@ class BackendCommunicator:
 
     def _check_for_messages_from_backend(self):
         if not self._messages_from_backend.empty():
-            response: BaseResponse = self._messages_from_backend.get()
+            response: BaseModel = self._messages_from_backend.get()
             logger.info(f"frontend_main received message from backend: {response}")
             if not response.success:
                 logger.error(f"Backend sent error message: {response}!")
