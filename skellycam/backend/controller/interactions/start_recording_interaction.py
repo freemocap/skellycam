@@ -1,8 +1,12 @@
 from typing import Optional
 
 from skellycam.backend.controller.controller import Controller
-from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseModel, BaseCommand, \
-    BaseInteraction
+from skellycam.backend.controller.interactions.base_models import (
+    BaseRequest,
+    BaseModel,
+    BaseCommand,
+    BaseInteraction,
+)
 
 
 class StartRecordingRequest(BaseRequest):
@@ -28,7 +32,9 @@ class StartRecordingInteraction(BaseInteraction):
     def as_request(cls, **kwargs):
         return cls(request=StartRecordingRequest.create(**kwargs))
 
-    def execute_command(self, controller: "Controller", **kwargs) -> StartRecordingResponse:
+    def execute_command(
+        self, controller: "Controller", **kwargs
+    ) -> StartRecordingResponse:
         self.command = StartRecordingCommand()
         self.response = self.command.execute(controller)
         return self.response

@@ -4,7 +4,14 @@ from pathlib import Path
 from typing import Union
 
 from PySide6 import QtGui
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeView, QFileSystemModel, QLabel, QMenu
+from PySide6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QTreeView,
+    QFileSystemModel,
+    QLabel,
+    QMenu,
+)
 
 from skellycam.backend.system.environment.get_logger import logger
 
@@ -39,7 +46,9 @@ class DirectoryView(QWidget):
         if self._folder_path is not None:
             self.set_folder_as_root(self._folder_path)
 
-    def expand_directory_to_path(self, directory_path: Union[str, Path], collapse_other_directories: bool = True):
+    def expand_directory_to_path(
+        self, directory_path: Union[str, Path], collapse_other_directories: bool = True
+    ):
         if collapse_other_directories:
             logger.info("Collapsing other directories")
             self._tree_view_widget.collapseAll()
@@ -80,4 +89,3 @@ class DirectoryView(QWidget):
         file_path = self._file_system_model.filePath(index)
         logger.info(f"Opening file from file_system_view_widget: {file_path}")
         os.startfile(file_path)
-

@@ -16,7 +16,8 @@ def test_frame_payload_to_and_from_bytes():
 
     # Create a FramePayload
     original_payload = FramePayload.create(
-        success=True, image=image, timestamp_ns=123456789, frame_number=10, camera_id=2)
+        success=True, image=image, timestamp_ns=123456789, frame_number=10, camera_id=2
+    )
 
     # Convert to bytes
     byte_obj = original_payload.to_bytes()
@@ -31,10 +32,16 @@ def test_frame_payload_to_and_from_bytes():
     assert original_payload.camera_id == recovered_payload.camera_id
     assert np.array_equal(
         np.frombuffer(original_payload.raw_image.image_bytes, dtype=np.uint8).reshape(
-            original_payload.raw_image.height, original_payload.raw_image.width, original_payload.raw_image.channels),
+            original_payload.raw_image.height,
+            original_payload.raw_image.width,
+            original_payload.raw_image.channels,
+        ),
         np.frombuffer(recovered_payload.raw_image.image_bytes, dtype=np.uint8).reshape(
-            recovered_payload.raw_image.height, recovered_payload.raw_image.width,
-            recovered_payload.raw_image.channels))
+            recovered_payload.raw_image.height,
+            recovered_payload.raw_image.width,
+            recovered_payload.raw_image.channels,
+        ),
+    )
 
 
 def test_multi_frame_payload_to_and_from_bytes():
@@ -45,13 +52,18 @@ def test_multi_frame_payload_to_and_from_bytes():
     for id in range(5):
         image = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
         original_multi_frame_payload.add_frame(
-            FramePayload.create(success=True,
-                                image=image,
-                                timestamp_ns=123456789,
-                                frame_number=10,
-                                camera_id=id))
+            FramePayload.create(
+                success=True,
+                image=image,
+                timestamp_ns=123456789,
+                frame_number=10,
+                camera_id=id,
+            )
+        )
 
-    assert original_multi_frame_payload.full, "MultiFramePayload didn't show 'full' after adding the frames, something is wrong!"
+    assert (
+        original_multi_frame_payload.full
+    ), "MultiFramePayload didn't show 'full' after adding the frames, something is wrong!"
 
     # Convert to bytes
     multi_frame_bytes = original_multi_frame_payload.to_bytes()
@@ -60,21 +72,29 @@ def test_multi_frame_payload_to_and_from_bytes():
     recovered_multi_frame_payload = MultiFramePayload.from_bytes(multi_frame_bytes)
 
     # Check that everything matches
-    assert original_multi_frame_payload.camera_ids == recovered_multi_frame_payload.camera_ids
+    assert (
+        original_multi_frame_payload.camera_ids
+        == recovered_multi_frame_payload.camera_ids
+    )
     assert original_multi_frame_payload.full == recovered_multi_frame_payload.full
     for camera_id in original_multi_frame_payload.camera_ids:
         assert np.array_equal(
-            np.frombuffer(original_multi_frame_payload.frames[camera_id].raw_image.image_bytes,
-                          dtype=np.uint8).reshape(
+            np.frombuffer(
+                original_multi_frame_payload.frames[camera_id].raw_image.image_bytes,
+                dtype=np.uint8,
+            ).reshape(
                 original_multi_frame_payload.frames[camera_id].raw_image.height,
                 original_multi_frame_payload.frames[camera_id].raw_image.width,
-                original_multi_frame_payload.frames[camera_id].raw_image.channels),
-
-            np.frombuffer(recovered_multi_frame_payload.frames[camera_id].raw_image.image_bytes,
-                          dtype=np.uint8).reshape(
+                original_multi_frame_payload.frames[camera_id].raw_image.channels,
+            ),
+            np.frombuffer(
+                recovered_multi_frame_payload.frames[camera_id].raw_image.image_bytes,
+                dtype=np.uint8,
+            ).reshape(
                 recovered_multi_frame_payload.frames[camera_id].raw_image.height,
                 recovered_multi_frame_payload.frames[camera_id].raw_image.width,
-                recovered_multi_frame_payload.frames[camera_id].raw_image.channels)
+                recovered_multi_frame_payload.frames[camera_id].raw_image.channels,
+            ),
         )
 
 

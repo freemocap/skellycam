@@ -5,8 +5,9 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWidget
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.single_camera import \
-    SingleCameraView
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.single_camera import (
+    SingleCameraView,
+)
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
@@ -23,7 +24,6 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class CameraGrid(QWidget):
-
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
@@ -86,8 +86,9 @@ class CameraGrid(QWidget):
 
         for camera_id, config in camera_configs.items():
             if camera_id not in self._single_cameras:
-                self._single_cameras[camera_id] = SingleCameraView(camera_config=config,
-                                                                   parent=self)
+                self._single_cameras[camera_id] = SingleCameraView(
+                    camera_config=config, parent=self
+                )
 
         self._add_cameras_to_layout()
 
@@ -98,23 +99,47 @@ class CameraGrid(QWidget):
                 self._single_cameras.pop(camera_id)
 
     def _add_cameras_to_layout(self):
-        landscape_cameras = [camera_id for camera_id, config in self._camera_configs.items() if
-                             config.orientation == "landscape"]
-        portrait_cameras = [camera_id for camera_id, config in self._camera_configs.items() if
-                            config.orientation == "portrait"]
+        landscape_cameras = [
+            camera_id
+            for camera_id, config in self._camera_configs.items()
+            if config.orientation == "landscape"
+        ]
+        portrait_cameras = [
+            camera_id
+            for camera_id, config in self._camera_configs.items()
+            if config.orientation == "portrait"
+        ]
 
-        landscape_camera_dimensions = self._calculate_grid_dimensions(len(landscape_cameras), self._camera_configs[
-            landscape_cameras[0]].aspect_ratio) if landscape_cameras else (0, 0)
-        portrait_camera_dims = self._calculate_grid_dimensions(len(portrait_cameras), self._camera_configs[
-            portrait_cameras[0]].aspect_ratio) if portrait_cameras else (0, 0)
+        landscape_camera_dimensions = (
+            self._calculate_grid_dimensions(
+                len(landscape_cameras),
+                self._camera_configs[landscape_cameras[0]].aspect_ratio,
+            )
+            if landscape_cameras
+            else (0, 0)
+        )
+        portrait_camera_dims = (
+            self._calculate_grid_dimensions(
+                len(portrait_cameras),
+                self._camera_configs[portrait_cameras[0]].aspect_ratio,
+            )
+            if portrait_cameras
+            else (0, 0)
+        )
 
         for camera_number, camera_id in enumerate(landscape_cameras):
-            grid_row, grid_column = divmod(camera_number, landscape_camera_dimensions[1])
-            self._camera_landscape_grid_layout.addWidget(self._single_cameras[camera_id], grid_row, grid_column)
+            grid_row, grid_column = divmod(
+                camera_number, landscape_camera_dimensions[1]
+            )
+            self._camera_landscape_grid_layout.addWidget(
+                self._single_cameras[camera_id], grid_row, grid_column
+            )
 
         for camera_number, camera_id in enumerate(portrait_cameras):
             grid_row, grid_column = divmod(camera_number, portrait_camera_dims[1])
-            self._camera_portrait_grid_layout.addWidget(self._single_cameras[camera_id], grid_row, grid_column)
+            self._camera_portrait_grid_layout.addWidget(
+                self._single_cameras[camera_id], grid_row, grid_column
+            )
 
     def _calculate_grid_dimensions(self, num_cameras, aspect_ratio):
         if aspect_ratio > 1:  # Landscape mode

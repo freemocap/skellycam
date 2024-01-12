@@ -12,19 +12,20 @@ from skellycam.backend.system.environment.get_logger import logger
 class ConnectToCamerasRequest(BaseModel):
     camera_configs: Dict[CameraId, CameraConfig]
 
+
 class ConnectToCamerasResponse(BaseModel):
     success: bool
     metadata: Dict[str, str]
 
+
 def connect_to_cameras(request: ConnectToCamerasRequest) -> ConnectToCamerasResponse:
-        try:
-            controller.camera_group_manager.start(camera_configs=request.camera_configs)
-            return ConnectToCamerasResponse(success=True)
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-            logger.exception(e)
-            return ConnectToCamerasResponse(success=False,
-                                            metadata={"error": str(e),
-                                                      "traceback": str(traceback.format_exc())})
-
-
+    try:
+        controller.camera_group_manager.start(camera_configs=request.camera_configs)
+        return ConnectToCamerasResponse(success=True)
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        logger.exception(e)
+        return ConnectToCamerasResponse(
+            success=False,
+            metadata={"error": str(e), "traceback": str(traceback.format_exc())},
+        )

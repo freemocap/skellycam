@@ -19,7 +19,7 @@ def array_split_by(some_array: List, split_by: int):
     return [subarray.tolist() for subarray in splitted_arrays]
 
 
-def dict_split_by(some_dict: Dict[Any,Any], split_by:int):
+def dict_split_by(some_dict: Dict[Any, Any], split_by: int):
     """
     Take a dictionary, and split into subdictionaries by a factor.
     :param some_dict:
@@ -32,4 +32,7 @@ def dict_split_by(some_dict: Dict[Any,Any], split_by:int):
     as_nparray = np.array(list(some_dict.keys()))
     splitted_arrays = np.array_split(as_nparray, split_by)
     # convert back to lists.
-    return [{key: some_dict[key] for key in subarray.tolist()} for subarray in splitted_arrays]
+    return [
+        {key: some_dict[key] for key in subarray.tolist()}
+        for subarray in splitted_arrays
+    ]

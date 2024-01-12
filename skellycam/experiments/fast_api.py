@@ -13,16 +13,19 @@ app = FastAPI()
 
 ###############
 
+
 class ModelName(str, Enum):
     alexnet = "alexnet"
     resnet = "resnet"
     lenet = "lenet"
+
 
 class Item(BaseModel):
     name: str
     description: Optional[str] = None
     price: float
     tax: Optional[float] = None
+
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
 
@@ -33,7 +36,7 @@ async def root():
 
 
 @app.get("/items/{item_id}")
-async def read_item(item_id:int):
+async def read_item(item_id: int):
     return {"item_id": item_id}
 
 
@@ -47,7 +50,6 @@ async def read_user(user_id: str):
     return {"user_id": user_id}
 
 
-
 @app.get("/models/{model_name}")
 async def get_model(model_name: ModelName):
     if model_name is ModelName.alexnet:
@@ -57,6 +59,7 @@ async def get_model(model_name: ModelName):
         return {"model_name": model_name, "message": "LeCNN all the images"}
 
     return {"model_name": model_name, "message": "Have some residuals"}
+
 
 @app.get("/items/")
 async def read_item(skip: int = 0, limit: int = 10):
@@ -71,11 +74,6 @@ async def read_user_item(
     return item
 
 
-
-
-
-
-
 @app.post("/items/")
 async def create_item(item: Item) -> Item:
     return item
@@ -85,29 +83,28 @@ async def create_item(item: Item) -> Item:
 async def read_items() -> list[Item]:
     return [
         Item(name="Portal Gun", price=42.0),
-        Item(name="Plumbus", price=32.0),]
-
-
+        Item(name="Plumbus", price=32.0),
+    ]
 
 
 class UserIn(BaseModel):
     username: str
     password: str
     email: str
-    full_name:Optional[str] = None
+    full_name: Optional[str] = None
 
 
 class UserOut(BaseModel):
     username: str
     email: str
-    full_name:Optional[str] = None
+    full_name: Optional[str] = None
 
 
 class UserInDB(BaseModel):
     username: str
     hashed_password: str
     email: str
-    full_name:Optional[str] = None
+    full_name: Optional[str] = None
 
 
 def fake_password_hasher(raw_password: str):
@@ -125,8 +122,6 @@ def fake_save_user(user_in: UserIn):
 async def create_user(user_in: UserIn):
     user_saved = fake_save_user(user_in)
     return user_saved
-
-
 
 
 @app.post("/files/")

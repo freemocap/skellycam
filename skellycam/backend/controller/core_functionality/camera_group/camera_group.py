@@ -2,9 +2,12 @@ import multiprocessing
 import time
 from typing import Dict, List
 
-from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import \
-    GroupedProcessStrategy
-from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import Strategy
+from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import (
+    GroupedProcessStrategy,
+)
+from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import (
+    Strategy,
+)
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
@@ -13,11 +16,10 @@ from skellycam.backend.system.environment.get_logger import logger
 
 class CameraGroup:
     def __init__(
-            self,
-            camera_configs: Dict[CameraId, CameraConfig],
-            strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
+        self,
+        camera_configs: Dict[CameraId, CameraConfig],
+        strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
     ):
-
         logger.info(
             f"Creating camera group with strategy {strategy} and camera configs {camera_configs}"
         )
@@ -56,7 +58,10 @@ class CameraGroup:
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.trace(f"Waiting for cameras {self._camera_configs.keys()} to start")
 
-        while not self._all_cameras_ready_event.is_set() and not self._close_cameras_event.is_set():
+        while (
+            not self._all_cameras_ready_event.is_set()
+            and not self._close_cameras_event.is_set()
+        ):
             time.sleep(1.0)
             camera_started_check = dict.fromkeys(self._camera_configs.keys(), False)
 
@@ -65,15 +70,19 @@ class CameraGroup:
             logger.trace(f"Camera started? {camera_started_check}")
 
             if all(list(camera_started_check.values())):
-                logger.success(f"All cameras {list(self._camera_configs.keys())} started!")
+                logger.success(
+                    f"All cameras {list(self._camera_configs.keys())} started!"
+                )
                 self._all_cameras_ready_event.set()  # start frame capture on all cameras
 
     def _resolve_strategy(self):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
-            return GroupedProcessStrategy(camera_configs=self._camera_configs,
-                                          is_capturing_events_by_camera=self._is_capturing_events_by_camera,
-                                          close_cameras_event=self._close_cameras_event,
-                                          all_cameras_ready_event=self._all_cameras_ready_event)
+            return GroupedProcessStrategy(
+                camera_configs=self._camera_configs,
+                is_capturing_events_by_camera=self._is_capturing_events_by_camera,
+                close_cameras_event=self._close_cameras_event,
+                all_cameras_ready_event=self._all_cameras_ready_event,
+            )
 
     def close(self):
         logger.debug("Closing camera group")

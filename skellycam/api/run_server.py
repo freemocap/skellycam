@@ -21,7 +21,8 @@ def find_available_port(start_port):
                 if port > 65535:  # No more ports available
                     raise e
 
-def run_backend()->Tuple[Process, str]:
+
+def run_backend() -> Tuple[Process, str]:
     hostname = "localhost"
     port = find_available_port(8000)
 
@@ -35,17 +36,18 @@ def run_backend()->Tuple[Process, str]:
     raise Exception(f"Backend server failed to start on port {port} :(")
 
 
-def run_backend_api_server(hostname:str, port:int):
+def run_backend_api_server(hostname: str, port: int):
     app = FastApiApp().app
 
-    uvicorn.run(app,
-                host=hostname,
-                port=port,
-                # reload=True
-                )
+    uvicorn.run(
+        app,
+        host=hostname,
+        port=port,
+        # reload=True
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     backend_process_out, api_location_out = run_backend()
     print(f"Backend server is running on: {api_location_out}")
     backend_process_out.join()

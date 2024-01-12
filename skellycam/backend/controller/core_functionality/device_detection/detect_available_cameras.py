@@ -20,8 +20,9 @@ def detect_available_cameras() -> CamerasDetectedResponse:
     for camera_number, camera in enumerate(available_cameras):
         if camera.isNull():
             continue
-        cameras[camera_number] = CameraDeviceInfo.from_q_camera_device(camera_number=camera_number,
-                                                                       camera=camera)
+        cameras[camera_number] = CameraDeviceInfo.from_q_camera_device(
+            camera_number=camera_number, camera=camera
+        )
     return CamerasDetectedResponse(success=True, available_cameras=cameras)
 
 

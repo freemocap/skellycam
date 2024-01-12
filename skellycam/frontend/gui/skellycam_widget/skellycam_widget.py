@@ -1,21 +1,36 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import CameraGrid
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.record_buttons import RecordButtons
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.welcome import Welcome
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_control_buttons import \
-    CameraControlButtons
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_parameter_tree import \
-    CameraParameterTree
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import DirectoryView
-from skellycam.backend.system.environment.default_paths import (get_default_skellycam_base_folder_path)
+from skellycam.frontend.app_state.app_state import AppStateManager
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import (
+    CameraGrid,
+)
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.record_buttons import (
+    RecordButtons,
+)
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.welcome import (
+    Welcome,
+)
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_control_buttons import (
+    CameraControlButtons,
+)
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_parameter_tree import (
+    CameraParameterTree,
+)
+from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import (
+    DirectoryView,
+)
+from skellycam.backend.system.environment.default_paths import (
+    get_default_skellycam_base_folder_path,
+)
 from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.manager.skellycam_manager import SkellyCamManager
 
 
 class SkellyCamWidget(QWidget):
-
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+        self._state = {}
+        self._manager = AppStateManager()
         self._initUI()
 
         # self._manager = SkellycamManager(main_widget=self)
@@ -31,7 +46,9 @@ class SkellyCamWidget(QWidget):
         self._central_layout.addWidget(self.welcome)
         self.camera_grid = CameraGrid(parent=self)
         self.camera_grid.resize(1280, 720)
-        self.record_buttons = RecordButtons(parent=self, )
+        self.record_buttons = RecordButtons(
+            parent=self,
+        )
         self._central_layout.addWidget(self.record_buttons)
         self._central_layout.addWidget(self.camera_grid)
         self.camera_grid.hide()
@@ -49,7 +66,9 @@ class SkellyCamWidget(QWidget):
         tab_widget.addTab(self.camera_settings_panel, "Camera Settings")
 
         tab_widget.setFixedWidth(300)
-        self.directory_view = DirectoryView(folder_path=get_default_skellycam_base_folder_path())
+        self.directory_view = DirectoryView(
+            folder_path=get_default_skellycam_base_folder_path()
+        )
         tab_widget.addTab(self.directory_view, "Directory View")
 
         return tab_widget
@@ -73,7 +92,7 @@ class SkellyCamWidget(QWidget):
         super().close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     from PySide6.QtWidgets import QApplication

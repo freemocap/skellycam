@@ -6,7 +6,9 @@ from skellycam.backend.system.environment.get_logger import logger
 
 
 class KeyboardShortcuts:
-    def __init__(self, exit_event: multiprocessing.Event, reboot_event: multiprocessing.Event):
+    def __init__(
+        self, exit_event: multiprocessing.Event, reboot_event: multiprocessing.Event
+    ):
         self.exit_event = exit_event
         self.reboot_event = reboot_event
 
@@ -16,7 +18,7 @@ class KeyboardShortcuts:
         self.connect_reboot(window)
 
     def connect_quit(self, window):
-        QShortcut(QKeySequence('Ctrl+Q'), window, activated=self.quit)
+        QShortcut(QKeySequence("Ctrl+Q"), window, activated=self.quit)
 
     def connect_reboot(self, window):
         # QShortcut(QKeySequence('Ctrl+R'), window, activated=self.reboot)

@@ -9,9 +9,11 @@ from skellycam.backend.system.environment.get_logger import logger
 class FrameGrabber(QThread):
     new_frames = Signal(MultiFramePayload)
 
-    def __init__(self,
-                 frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection
-                 parent=QWidget):
+    def __init__(
+        self,
+        frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection
+        parent=QWidget,
+    ):
         super().__init__(parent=parent)
         self.frontend_frame_pipe_receiver = frontend_frame_pipe_receiver
         self.daemon = True
@@ -20,8 +22,12 @@ class FrameGrabber(QThread):
         logger.info(f"FrameGrabber starting...")
         while True:
             try:
-                multi_frame_payload_bytes = self.frontend_frame_pipe_receiver.recv_bytes()  # waits here until there is something to receive
-                multi_frame_payload = MultiFramePayload.from_bytes(multi_frame_payload_bytes)
+                multi_frame_payload_bytes = (
+                    self.frontend_frame_pipe_receiver.recv_bytes()
+                )  # waits here until there is something to receive
+                multi_frame_payload = MultiFramePayload.from_bytes(
+                    multi_frame_payload_bytes
+                )
                 self.new_frames.emit(multi_frame_payload)
             except Exception as e:
                 logger.error(str(e))

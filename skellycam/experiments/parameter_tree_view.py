@@ -11,6 +11,7 @@ class ParameterTreeView(QTreeView):
     """
     A QTreeView that displays a pydantic model
     """
+
     def __init__(self, model: BaseModel):
         super(ParameterTreeView, self).__init__()
         self.standard_model = QStandardItemModel()
@@ -54,7 +55,9 @@ class CameraConfigView(ParameterTreeView):
             parent = self.standard_model.item(index)
             field_name = parent.text()
             field_value = parent.child(0).text()
-            model_dict[field_name] = type(self.model.__fields__[field_name].outer_type_)(field_value)
+            model_dict[field_name] = type(
+                self.model.__fields__[field_name].outer_type_
+            )(field_value)
         return CameraConfig(**model_dict)
 
 
@@ -69,7 +72,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    input_model = CameraConfig(camera_id='0')
+    input_model = CameraConfig(camera_id="0")
     pprint(f"Input model:\n\n {input_model}\n", indent=4)
 
     model = CameraConfigView(model=input_model)

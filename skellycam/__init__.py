@@ -12,4 +12,3 @@ __repo_issues_url__ = f"{__repo_url__}/issues"
 # from skellycam.system.environment.configure_logging import configure_logging, LogLevel
 #
 # configure_logging(LogLevel.TRACE)
-

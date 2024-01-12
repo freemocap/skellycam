@@ -1,13 +1,13 @@
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget
 
-from skellycam.frontend.gui.utilities.qt_strings import STOP_RECORDING_BUTTON_TEXT, START_RECORDING_BUTTON_TEXT
+from skellycam.frontend.gui.utilities.qt_strings import (
+    STOP_RECORDING_BUTTON_TEXT,
+    START_RECORDING_BUTTON_TEXT,
+)
 
 
 class RecordButtons(QWidget):
-    def __init__(
-            self,
-            parent=None
-    ):
+    def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self._initUI()
@@ -20,7 +20,6 @@ class RecordButtons(QWidget):
         self.setLayout(self._layout)
         self._button_layout = self._create_buttons()
         self._layout.addLayout(self._button_layout)
-
 
     def _create_buttons(self) -> QHBoxLayout:
         button_layout = QHBoxLayout()

@@ -1,8 +1,9 @@
 import multiprocessing
 from typing import Optional
 
-from skellycam.backend.controller.core_functionality.camera_group.camera.internal_camera_thread import \
-    VideoCaptureThread
+from skellycam.backend.controller.core_functionality.camera_group.camera.internal_camera_thread import (
+    VideoCaptureThread,
+)
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.system.environment.get_logger import logger
@@ -10,12 +11,12 @@ from skellycam.backend.system.environment.get_logger import logger
 
 class Camera:
     def __init__(
-            self,
-            config: CameraConfig,
-            pipe_sender_connection,  # multiprocessing.connection.Connection,
-            is_capturing_event: multiprocessing.Event,
-            all_cameras_ready_event: multiprocessing.Event,
-            close_cameras_event: multiprocessing.Event,
+        self,
+        config: CameraConfig,
+        pipe_sender_connection,  # multiprocessing.connection.Connection,
+        is_capturing_event: multiprocessing.Event,
+        all_cameras_ready_event: multiprocessing.Event,
+        close_cameras_event: multiprocessing.Event,
     ):
         self._config = config
         self._pipe_sender_connection = pipe_sender_connection

@@ -1,8 +1,12 @@
 from typing import Optional
 
 from skellycam.backend.controller.controller import Controller
-from skellycam.backend.controller.interactions.base_models import BaseRequest, BaseModel, BaseCommand, \
-    BaseInteraction
+from skellycam.backend.controller.interactions.base_models import (
+    BaseRequest,
+    BaseModel,
+    BaseCommand,
+    BaseInteraction,
+)
 
 
 class CloseCamerasRequest(BaseRequest):

@@ -9,9 +9,7 @@ from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 
 
 class SingleCameraView(QWidget):
-    def __init__(self,
-                 camera_config: CameraConfig,
-                 parent: QWidget = None):
+    def __init__(self, camera_config: CameraConfig, parent: QWidget = None):
         super().__init__(parent=parent)
 
         self._camera_id = camera_config.camera_id
@@ -27,16 +25,22 @@ class SingleCameraView(QWidget):
         self._camera_name_string = f"Camera {self._camera_id}"
         self._title_label = QLabel(self._camera_name_string, parent=self)
         self._layout.addWidget(self._title_label)
-        self._title_label.setStyleSheet("""
+        self._title_label.setStyleSheet(
+            """
                            font-size: 12px;
                            font-weight: bold;
                            font-family: "Dosis", sans-serif;
                            color: #000000;
-                           """)
+                           """
+        )
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._image_view = QLabel(f"\U0001F4F8 Connecting... \n\n {self._annotation_text}", parent=self)
+        self._image_view = QLabel(
+            f"\U0001F4F8 Connecting... \n\n {self._annotation_text}", parent=self
+        )
         self._image_view.setStyleSheet("border: 1px solid;")
-        self._image_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._image_view.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self._image_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._image_view)
 
@@ -52,14 +56,15 @@ class SingleCameraView(QWidget):
         image_label_widget_width = self._image_view.width()
         image_label_widget_height = self._image_view.height()
 
-        scaled_width = int(image_label_widget_width * .95)
-        scaled_height = int(image_label_widget_height * .95)
+        scaled_width = int(image_label_widget_width * 0.95)
+        scaled_height = int(image_label_widget_height * 0.95)
 
         pixmap = pixmap.scaled(
             scaled_width,
             scaled_height,
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation, )
+            Qt.TransformationMode.SmoothTransformation,
+        )
 
         self._image_view.setPixmap(pixmap)
         self._processing_frame = False
@@ -78,5 +83,3 @@ class SingleCameraView(QWidget):
         self._image_view.close()
         self._title_label.close()
         super().close()
-
-

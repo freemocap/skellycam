@@ -4,7 +4,10 @@ from multiprocessing import freeze_support
 
 from skellycam.api.run_server import run_backend_api_server, run_backend
 from skellycam.frontend.run_frontend import run_frontend
-from skellycam.backend.system.environment.configure_logging import configure_logging, LogLevel
+from skellycam.backend.system.environment.configure_logging import (
+    configure_logging,
+    LogLevel,
+)
 
 configure_logging(LogLevel.TRACE)
 

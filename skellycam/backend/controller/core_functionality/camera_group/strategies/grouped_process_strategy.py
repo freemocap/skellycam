@@ -1,8 +1,9 @@
 import multiprocessing
 from typing import Dict, List, Tuple
 
-from skellycam.backend.controller.core_functionality.camera_group.strategies.camera_subarray_pipe_process import \
-    CamSubarrayPipeProcess
+from skellycam.backend.controller.core_functionality.camera_group.strategies.camera_subarray_pipe_process import (
+    CamSubarrayPipeProcess,
+)
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
@@ -19,11 +20,13 @@ from skellycam.backend.system.environment.get_logger import logger
 
 
 class GroupedProcessStrategy:
-    def __init__(self,
-                 camera_configs: Dict[CameraId, CameraConfig],
-                 is_capturing_events_by_camera: Dict[CameraId, multiprocessing.Event],
-                 close_cameras_event: multiprocessing.Event,
-                 all_cameras_ready_event: multiprocessing.Event, ):
+    def __init__(
+        self,
+        camera_configs: Dict[CameraId, CameraConfig],
+        is_capturing_events_by_camera: Dict[CameraId, multiprocessing.Event],
+        close_cameras_event: multiprocessing.Event,
+        all_cameras_ready_event: multiprocessing.Event,
+    ):
         self._camera_configs = camera_configs
         self._is_capturing_events_by_camera = is_capturing_events_by_camera
         self._close_cameras_event = close_cameras_event
@@ -41,27 +44,30 @@ class GroupedProcessStrategy:
         return new_frames
 
     def _create_processes(
-            self,
-            cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
+        self, cameras_per_process: int = _DEFAULT_CAM_PER_PROCESS
     ) -> Tuple[List[CamSubarrayPipeProcess], Dict[CameraId, CamSubarrayPipeProcess]]:
-
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras were provided")
-        camera_config_subarrays = dict_split_by(some_dict=self._camera_configs,
-                                                split_by=cameras_per_process)
+        camera_config_subarrays = dict_split_by(
+            some_dict=self._camera_configs, split_by=cameras_per_process
+        )
 
         processes = []
         for subarray_configs in camera_config_subarrays:
             logger.debug(f"Creating process for {subarray_configs.keys()}")
             is_capturing_events_by_subarray = {}
             for camera_id in subarray_configs.keys():
-                is_capturing_events_by_subarray[camera_id] = self._is_capturing_events_by_camera[camera_id]
-            processes.append(CamSubarrayPipeProcess(subarray_camera_configs=subarray_configs,
-                                                    all_cameras_ready_event=self._all_cameras_ready_event,
-                                                    close_cameras_event=self._close_cameras_event,
-                                                    is_capturing_events_by_subarray_cameras=is_capturing_events_by_subarray,
-                                                    )
-                             )
+                is_capturing_events_by_subarray[
+                    camera_id
+                ] = self._is_capturing_events_by_camera[camera_id]
+            processes.append(
+                CamSubarrayPipeProcess(
+                    subarray_camera_configs=subarray_configs,
+                    all_cameras_ready_event=self._all_cameras_ready_event,
+                    close_cameras_event=self._close_cameras_event,
+                    is_capturing_events_by_subarray_cameras=is_capturing_events_by_subarray,
+                )
+            )
 
         processes_by_camera_id = {}
         for process in processes:

@@ -5,8 +5,12 @@ import time
 
 import cv2
 
-from skellycam.backend.controller.core_functionality.config.apply_config import apply_camera_configuration
-from skellycam.backend.controller.core_functionality.config.determine_backend import determine_backend
+from skellycam.backend.controller.core_functionality.config.apply_config import (
+    apply_camera_configuration,
+)
+from skellycam.backend.controller.core_functionality.config.determine_backend import (
+    determine_backend,
+)
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 from skellycam.backend.system.environment.get_logger import logger
@@ -18,12 +22,12 @@ class FailedToReadFrameFromCameraException(Exception):
 
 class VideoCaptureThread(threading.Thread):
     def __init__(
-            self,
-            config: CameraConfig,
-            pipe_sender_connection,  # multiprocessing.connection.Connection
-            is_capturing_event: multiprocessing.Event,
-            all_cameras_ready_event: multiprocessing.Event,
-            close_cameras_event: multiprocessing.Event,
+        self,
+        config: CameraConfig,
+        pipe_sender_connection,  # multiprocessing.connection.Connection
+        is_capturing_event: multiprocessing.Event,
+        all_cameras_ready_event: multiprocessing.Event,
+        close_cameras_event: multiprocessing.Event,
     ):
         super().__init__()
         self._config = config
@@ -45,7 +49,9 @@ class VideoCaptureThread(threading.Thread):
         self._start_frame_loop()
 
     def _start_frame_loop(self):
-        logger.info(f"Camera ID: [{self._config.camera_id}] starting frame capture loop...")
+        logger.info(
+            f"Camera ID: [{self._config.camera_id}] starting frame capture loop..."
+        )
         self._wait_for_all_cameras_ready()
         self._frame_number = -1
         self._frame_loop()  # main frame loop
@@ -55,11 +61,13 @@ class VideoCaptureThread(threading.Thread):
         This loop is responsible for capturing frames from the camera and stuffing them into the pipe
         """
         self._is_capturing_event.set()
-        logger.info(f"Camera ID: [{self._config.camera_id}] Frame capture loop is running")
+        logger.info(
+            f"Camera ID: [{self._config.camera_id}] Frame capture loop is running"
+        )
         try:
             while not self._close_cameras_event.is_set():
                 if self._updating_config:
-                    time.sleep(.001)
+                    time.sleep(0.001)
                     continue
                 frame = self._get_next_frame()
                 frame_bytes = frame.to_bytes()
@@ -70,7 +78,9 @@ class VideoCaptureThread(threading.Thread):
             raise e
         finally:
             self._is_capturing_event.clear()
-            logger.info(f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped")
+            logger.info(
+                f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped"
+            )
 
     def _get_next_frame(self) -> FramePayload:
         """
@@ -87,7 +97,10 @@ class VideoCaptureThread(threading.Thread):
         a frame drop)
         """
 
-        success, image = self._cv2_video_capture.read()  # THIS IS WHERE THE MAGIC HAPPENS
+        (
+            success,
+            image,
+        ) = self._cv2_video_capture.read()  # THIS IS WHERE THE MAGIC HAPPENS
         retrieval_timestamp = time.perf_counter_ns()
         self._frame_number += 1
         return FramePayload.create(
@@ -101,14 +114,16 @@ class VideoCaptureThread(threading.Thread):
     def _wait_for_all_cameras_ready(self):
         logger.debug(f"Waiting for all cameras to be ready...")
         while not self._all_cameras_ready_event.is_set():
-            time.sleep(.001)
+            time.sleep(0.001)
             continue
         logger.debug(f"All cameras ready!")
 
     def _create_cv2_capture(self):
         cap_backend = determine_backend()
-        logger.info(f"Creating cv.VideoCapture object for Camera: {self._config.camera_id} "
-                    f"using backend `{cap_backend.name}`...")
+        logger.info(
+            f"Creating cv.VideoCapture object for Camera: {self._config.camera_id} "
+            f"using backend `{cap_backend.name}`..."
+        )
 
         if self._cv2_video_capture is not None and self._cv2_video_capture.isOpened():
             self._cv2_video_capture.release()

@@ -3,19 +3,22 @@ from typing import Callable
 
 from PySide6.QtCore import QTimer
 
-from skellycam.backend.controller.interactions.base_models import BaseModel, BaseInteraction
+from skellycam.backend.controller.interactions.base_models import (
+    BaseModel,
+    BaseInteraction,
+)
 from skellycam.backend.system.environment.get_logger import logger
 
 
 class BackendCommunicator:
-    def __init__(self,
-                 messages_from_frontend: multiprocessing.Queue,
-                 messages_from_backend: multiprocessing.Queue,
-                 frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection,
-                 handle_backend_response: Callable[[BaseModel], None],
-                 parent=None,
-
-                 ):
+    def __init__(
+        self,
+        messages_from_frontend: multiprocessing.Queue,
+        messages_from_backend: multiprocessing.Queue,
+        frontend_frame_pipe_receiver,  # multiprocessing.connection.Connection,
+        handle_backend_response: Callable[[BaseModel], None],
+        parent=None,
+    ):
         self._parent = parent
         self._messages_from_frontend = messages_from_frontend
         self._messages_from_backend = messages_from_backend
