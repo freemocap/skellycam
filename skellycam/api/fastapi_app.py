@@ -3,7 +3,7 @@ from fastapi.openapi.utils import get_openapi
 from starlette.responses import RedirectResponse
 
 import skellycam
-from skellycam.api import router
+from skellycam.api.router import router
 
 
 class FastApiApp:
@@ -14,7 +14,7 @@ class FastApiApp:
 
     def _register_routes(self):
         self.app.get("/")(self.read_root)
-        self.app.include_router(router.router)
+        self.app.include_router(router)
 
     async def read_root(self):
         # return {"message": "Hello from SkellyCam 💀📸✨"}

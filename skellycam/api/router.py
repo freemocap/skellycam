@@ -29,8 +29,8 @@ def connect_to_cameras(request: ConnectToCamerasRequest):
     return controller.connect_to_cameras(request.camera_configs)
 
 
-@router.websocket("/multiframe_websocket")
-async def websocket_endpoint(websocket: WebSocket):
+@router.websocket("/websocket")
+async def websocket(websocket: WebSocket):
     await websocket.accept()
     while True:
         if controller.camera_group_manager.new_multiframe_available():

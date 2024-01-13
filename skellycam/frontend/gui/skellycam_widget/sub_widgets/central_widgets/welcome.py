@@ -6,20 +6,14 @@ from skellycam.backend.system.environment.default_paths import (
     CAMERA_WITH_FLASH_EMOJI_STRING,
     SPARKLES_EMOJI_STRING,
 )
-from skellycam.frontend.application.api_client.api_client import FrontendApiClient
-from skellycam.frontend.application.api_client.get_or_create_api_client import (
-    get_api_client,
-)
 
 
 class Welcome(QWidget):
     def __init__(
         self,
-        api_client: FrontendApiClient = get_api_client(),
         parent=None,
     ):
         super().__init__(parent=parent)
-        self._api_client = api_client
         self._initUI()
 
     def _initUI(self):

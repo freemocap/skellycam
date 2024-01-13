@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 
+from skellycam.api.frontend_client.api_client import FrontendApiClient
 from skellycam.backend.system.environment.default_paths import (
     PATH_TO_SKELLY_CAM_LOGO_PNG,
 )
@@ -12,9 +13,10 @@ from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWi
 
 
 class SkellyCamMainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, api_client: FrontendApiClient):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
+        self.api_client = api_client
         # self.shortcuts = KeyboardShortcuts()
         # self.shortcuts.connect_shortcuts(self)
         self._initUI()
@@ -30,7 +32,7 @@ class SkellyCamMainWindow(QMainWindow):
         self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
 
         self._layout = QVBoxLayout()
-        self.skellycam_widget = SkellyCamWidget(parent=self)
+        self.skellycam_widget = SkellyCamWidget(parent=self, api_client=self.api_client)
         self.setCentralWidget(self.skellycam_widget)
 
     def closeEvent(self, event):

@@ -6,6 +6,9 @@ import uvicorn
 
 from skellycam.api.fastapi_app import FastApiApp
 from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.application.api_client.get_or_create_api_client import (
+    create_api_client,
+)
 
 
 def find_available_port(start_port):
@@ -38,7 +41,7 @@ def run_backend() -> Tuple[Process, str]:
 
 def run_backend_api_server(hostname: str, port: int):
     app = FastApiApp().app
-
+    create_api_client(api_url=f"http://{hostname}:{port}")
     uvicorn.run(
         app,
         host=hostname,

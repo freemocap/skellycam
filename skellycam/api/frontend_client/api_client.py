@@ -1,12 +1,17 @@
 import asyncio
-from typing import Dict
+from typing import Dict, Optional
 
 import httpx
+import websockets
 from PySide6.QtCore import QObject, Signal
 from pydantic import ValidationError
+from websockets import WebSocketClientProtocol
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
+)
+from skellycam.backend.controller.interactions.connect_to_cameras import (
+    CamerasConnectedResponse,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
@@ -18,7 +23,9 @@ class FrontendApiClient(QObject):
 
     def __init__(self, api_base_url: str):
         super().__init__()
+        self.api_base_url = api_base_url
         self.client = httpx.AsyncClient(base_url=api_base_url)
+        self.websocket: Optional[WebSocketClientProtocol] = None
 
     async def hello(self):
         return await self.client.get("hello")
@@ -44,6 +51,16 @@ class FrontendApiClient(QObject):
         except ValidationError as e:
             logger.error(f"Failed to parse response: {e}")
             return None
+
+    async def get_websocket(self) -> Optional[WebSocketClientProtocol]:
+        websocket_url = self.api_base_url + "/websocket"
+        logger.debug(f"Establishing WebSocket connection to: {websocket_url}")
+        try:
+            self.websocket = await websockets.connect(websocket_url)
+        except Exception as e:
+            logger.error(f"Failed to establish WebSocket connection: {e}")
+            return None
+        return self.websocket
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import Signal
 
@@ -6,10 +6,6 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     AvailableCameras,
 )
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.application.api_client.api_client import FrontendApiClient
-from skellycam.frontend.application.api_client.get_or_create_api_client import (
-    get_api_client,
-)
 from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_grabber import (
     FrameGrabber,
 )
@@ -24,11 +20,10 @@ class SkellyCamManager:
     def __init__(
         self,
         main_widget: "SkellyCamWidget",
-        api_client: FrontendApiClient = get_api_client(),
     ):
         self.main_widget = main_widget
-        self.api_client = api_client
-        self.frame_grabber = FrameGrabber(self.api_client.multiframe_websocket)
+        self.api_client = self.main_widget.api_client
+        self.frame_grabber: Optional[FrameGrabber] = None
 
     def connect_signals(self) -> None:
         self.main_widget.welcome.start_session_button.clicked.connect(
@@ -111,7 +106,8 @@ class SkellyCamManager:
         )
         self.main_widget.camera_control_buttons.connect_to_cameras_button.setFocus()
 
-    def _handle_cameras_connected(self):
+    def handle_cameras_connected(self):
+        self.frame_grabber = FrameGrabber(websocket=self.api_client.get_websocket())
         self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(True)
         self.main_widget.camera_control_buttons.apply_camera_settings_button.setEnabled(
             True

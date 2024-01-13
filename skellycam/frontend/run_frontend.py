@@ -9,11 +9,11 @@ from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
 def run_frontend(api_url):
     logger.info(f"Starting frontend/client process...")
 
-    create_api_client(api_url)
+    api_client = create_api_client(api_url)
 
     qt_app = create_or_recreate_qt_application()
 
-    main_window = SkellyCamMainWindow()
+    main_window = SkellyCamMainWindow(api_client)
     exit_code = 0
     try:
         main_window.show()
