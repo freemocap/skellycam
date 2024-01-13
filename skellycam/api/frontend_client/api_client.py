@@ -2,8 +2,8 @@ import asyncio
 from typing import Dict, Optional
 
 import httpx
-import websockets
-from PySide6.QtCore import QObject, Signal
+import websocket
+from PySide6.QtCore import QObject, Signal, Slot
 from pydantic import ValidationError
 from websockets import WebSocketClientProtocol
 
@@ -13,7 +13,9 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
 from skellycam.backend.controller.interactions.connect_to_cameras import (
     CamerasConnectedResponse,
 )
+from skellycam.backend.models.cameras import camera_config
 from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.system.environment.get_logger import logger
 
@@ -24,15 +26,15 @@ class FrontendApiClient(QObject):
     def __init__(self, api_base_url: str):
         super().__init__()
         self.api_base_url = api_base_url
-        self.client = httpx.AsyncClient(base_url=api_base_url)
+        self.client = httpx.Client(base_url=api_base_url)
         self.websocket: Optional[WebSocketClientProtocol] = None
 
-    async def hello(self):
-        return await self.client.get("hello")
+    def hello(self):
+        return self.client.get("hello")
 
-    async def detect_cameras(self):
+    def detect_cameras(self):
         logger.debug("Sending request to the frontend API `detect` endpoint")
-        response = await self.client.get("detect")
+        response = self.client.get("detect")
         try:
             cameras_detected_response = CamerasDetectedResponse.parse_obj(
                 response.json()
@@ -42,21 +44,24 @@ class FrontendApiClient(QObject):
             logger.error(f"Failed to parse response: {e}")
             return None
 
-    async def connect_to_cameras(self):
+    def connect_to_cameras(self, camera_configs: CameraConfigs):
         logger.debug("Sending request to the frontend API `connect` endpoint")
-        response = await self.client.get("connect")
+        request_body = {
+            id: camera_config.dict() for id, camera_config in camera_configs.items()
+        }
+        response = self.client.post("connect", json=request_body)
         try:
-            cameras_detected_response = CamerasConnectedResponse.parse_obj()
+            cameras_detected_response = CamerasConnectedResponse.parse_obj(response)
             return cameras_detected_response
         except ValidationError as e:
             logger.error(f"Failed to parse response: {e}")
             return None
 
-    async def get_websocket(self) -> Optional[WebSocketClientProtocol]:
+    def get_websocket(self) -> Optional[websocket.WebSocket]:
         websocket_url = self.api_base_url + "/websocket"
         logger.debug(f"Establishing WebSocket connection to: {websocket_url}")
         try:
-            self.websocket = await websockets.connect(websocket_url)
+            self.websocket = websocket.create_connection(websocket_url)
         except Exception as e:
             logger.error(f"Failed to establish WebSocket connection: {e}")
             return None

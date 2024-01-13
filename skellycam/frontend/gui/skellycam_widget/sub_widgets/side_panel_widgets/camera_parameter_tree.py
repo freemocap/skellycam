@@ -18,7 +18,7 @@ from skellycam.frontend.gui.utilities.qt_strings import (
 
 
 class CameraParameterTree(QWidget):
-    camera_configs_changed = Signal(Dict[str, CameraConfig])
+    camera_configs_changed = Signal(object)
 
     def __init__(self, parent: Union[QMainWindow, QWidget]):
         super().__init__(parent=parent)

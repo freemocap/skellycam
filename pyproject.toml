@@ -29,6 +29,8 @@ fastapi = "^0.108.0"
 httpx = "^0.26.0"
 websocket = "^0.2.1"
 websockets = "^12.0"
+qasync = "^0.27.1"
+websocket-client = "^1.7.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"

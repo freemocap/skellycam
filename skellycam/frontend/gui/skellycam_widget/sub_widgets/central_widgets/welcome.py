@@ -72,3 +72,4 @@ class Welcome(QWidget):
                            width: 50%;
                            """
         )
+        self.start_session_button.clicked.connect(lambda: print("wieieiieiiiieii"))
