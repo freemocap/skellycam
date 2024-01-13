@@ -36,6 +36,7 @@ class SkellyCamWidget(QWidget):
 
         # self._app_state_manager = AppStateManager()
         self._manager = SkellyCamManager(main_widget=self)
+        self._manager.start()
 
     def _initUI(self):
         self._layout = QHBoxLayout()

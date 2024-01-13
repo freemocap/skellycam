@@ -47,7 +47,7 @@ class FrontendApiClient(QObject):
     def connect_to_cameras(self, camera_configs: CameraConfigs):
         logger.debug("Sending request to the frontend API `connect` endpoint")
         request_body = {
-            id: camera_config.dict() for id, camera_config in camera_configs.items()
+            id: camera_config.json() for id, camera_config in camera_configs.items()
         }
         response = self.client.post("connect", json=request_body)
         try:

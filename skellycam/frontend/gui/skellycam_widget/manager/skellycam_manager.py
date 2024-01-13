@@ -111,7 +111,7 @@ class SkellyCamManager(QThread):
         self.main_widget.camera_control_buttons.connect_to_cameras_button.setFocus()
 
     def handle_cameras_connected(self):
-        self.frame_grabber = FrameGrabber(websocket=self.api_client.get_websocket())
+        self.frame_grabber.start_loop()
         self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(True)
         self.main_widget.camera_control_buttons.apply_camera_settings_button.setEnabled(
             True
