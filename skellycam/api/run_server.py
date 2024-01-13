@@ -6,7 +6,7 @@ import uvicorn
 
 from skellycam.api.fastapi_app import FastApiApp
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.application.api_client.get_or_create_api_client import (
+from skellycam.api.frontend_client.get_or_create_api_client import (
     create_api_client,
 )
 
@@ -25,23 +25,30 @@ def find_available_port(start_port):
                     raise e
 
 
-def run_backend() -> Tuple[Process, str]:
-    hostname = "localhost"
-    port = find_available_port(8000)
+def run_backend(
+    hostname: str = "localhost",
+    preferred_port: int = 8000,
+    fail_if_blocked: bool = False,
+) -> Tuple[Process, str, int]:
+    port = find_available_port(preferred_port)
+
+    if fail_if_blocked and port != preferred_port:
+        logger.error(
+            f"Preferred port {port} is blocked  and `fail_if_blocked` is True, so I guess I'll die"
+        )
+        Exception(f"Preferred port ({preferred_port}) was blocked!")
 
     backend_process = Process(target=run_backend_api_server, args=(hostname, port))
     backend_process.start()
     if backend_process.is_alive():
         logger.info(f"Backend server started on port {port}.")
-        api_location = f"http://{hostname}:{port}"
-        return backend_process, api_location
+        return backend_process, hostname, port
 
     raise Exception(f"Backend server failed to start on port {port} :(")
 
 
 def run_backend_api_server(hostname: str, port: int):
     app = FastApiApp().app
-    create_api_client(api_url=f"http://{hostname}:{port}")
     uvicorn.run(
         app,
         host=hostname,

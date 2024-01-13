@@ -60,8 +60,13 @@ class IncomingFrameWrangler:
         return frontend_payload
 
     def set_new_frontend_payload(self, frontend_payload: MultiFramePayload):
-        self.latest_frontend_payload = frontend_payload
+        self._latest_frontend_payload = frontend_payload
         self.new_frontend_payload_available = True
+
+    @property
+    def latest_frontend_payload(self) -> MultiFramePayload:
+        self.new_frontend_payload_available = False
+        return self._latest_frontend_payload
 
 
 class CameraGroupManager:
@@ -77,6 +82,10 @@ class CameraGroupManager:
         self._stop_recording = False
 
     @property
+    def new_frontend_payload_available(self) -> bool:
+        return self._incoming_frame_wrangler.new_frontend_payload_available
+
+    @property
     def is_recording(self) -> bool:
         if self._is_recording and self._video_recorder_manager is None:
             logger.error(f"Video recorder manager not initialized")
@@ -84,6 +93,9 @@ class CameraGroupManager:
                 "Video recorder manager not initialized but `_is_recording` is True"
             )
         return self._is_recording
+
+    def get_latest_frontend_payload(self) -> MultiFramePayload:
+        return self._incoming_frame_wrangler.latest_frontend_payload
 
     def start_recording(self):
         logger.debug(f"Starting recording...")

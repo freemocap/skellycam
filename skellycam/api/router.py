@@ -1,3 +1,7 @@
+import asyncio
+from datetime import time
+from time import sleep
+
 from fastapi import APIRouter
 from starlette.websockets import WebSocket
 
@@ -33,8 +37,9 @@ def connect_to_cameras(request: ConnectToCamerasRequest):
 async def websocket(websocket: WebSocket):
     await websocket.accept()
     while True:
-        if controller.camera_group_manager.new_multiframe_available():
-            latest_multiframe = await controller.new_multiframe()
-            await websocket.send_bytes(len(latest_multiframe.to_bytes()))
+        if controller.camera_group_manager.new_frontend_payload_available():
+            print("Wow! new frame!")
+            latest_multiframe = controller.camera_group_manager.latest_frontend_payload
+            websocket.send_bytes(len(latest_multiframe.to_bytes()))
         else:
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.001)

@@ -23,11 +23,14 @@ from skellycam.backend.system.environment.get_logger import logger
 class FrontendApiClient(QObject):
     detected_cameras = Signal(Dict[CameraId, CameraConfig])
 
-    def __init__(self, api_base_url: str):
+    def __init__(self, hostname: str, port: int) -> None:
         super().__init__()
-        self.api_base_url = api_base_url
-        self.client = httpx.Client(base_url=api_base_url)
-        self.websocket: Optional[WebSocketClientProtocol] = None
+
+        self.api_base_url = f"http://{hostname}:{port}"
+        self.client = httpx.Client(base_url=self.api_base_url)
+
+        self.websocket_url = f"ws://{hostname}:{port}/websocket"
+        self.websocket = self.get_websocket()
 
     def hello(self):
         return self.client.get("hello")
@@ -51,17 +54,20 @@ class FrontendApiClient(QObject):
         }
         response = self.client.post("connect", json=request_body)
         try:
-            cameras_detected_response = CamerasConnectedResponse.parse_obj(response)
+            cameras_detected_response = CamerasConnectedResponse.parse_obj(
+                response.json()
+            )
             return cameras_detected_response
         except ValidationError as e:
             logger.error(f"Failed to parse response: {e}")
             return None
 
     def get_websocket(self) -> Optional[websocket.WebSocket]:
-        websocket_url = self.api_base_url + "/websocket"
-        logger.debug(f"Establishing WebSocket connection to: {websocket_url}")
+        logger.debug(f"Establishing WebSocket connection to: {self.websocket_url}")
         try:
-            self.websocket = websocket.create_connection(websocket_url)
+            self.websocket = websocket.create_connection(self.websocket_url)
+            if self.websocket is None:
+                Exception("WebSocket failed to connect")
         except Exception as e:
             logger.error(f"Failed to establish WebSocket connection: {e}")
             return None

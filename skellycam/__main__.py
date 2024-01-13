@@ -20,9 +20,9 @@ if __name__ == "__main__":
     setup_app_id_for_windows()
 
     logger.info("Starting backend server...")
-    backend_process, api_url = run_backend()
+    backend_process, hostname, port = run_backend()
 
-    exit_code = run_frontend(api_url)
+    exit_code = run_frontend(hostname, port)
 
     ###
 

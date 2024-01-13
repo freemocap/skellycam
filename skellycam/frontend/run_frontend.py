@@ -1,15 +1,15 @@
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.frontend.application import create_or_recreate_qt_application
-from skellycam.frontend.application.api_client.get_or_create_api_client import (
+from skellycam.api.frontend_client.get_or_create_api_client import (
     create_api_client,
 )
 from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
 
 
-def run_frontend(api_url):
+def run_frontend(hostname: str, port: int) -> None:
     logger.info(f"Starting frontend/client process...")
 
-    api_client = create_api_client(api_url)
+    api_client = create_api_client(hostname=hostname, port=port)
 
     qt_app = create_or_recreate_qt_application()
 

@@ -6,9 +6,9 @@ from skellycam.backend.system.environment.get_logger import logger
 API_CLIENT: Optional[FrontendApiClient] = None
 
 
-def create_api_client(api_url: str) -> FrontendApiClient:
-    logger.debug(f"Creating api client for url:  {api_url}")
+def create_api_client(hostname: str, port: int) -> FrontendApiClient:
+    logger.debug(f"Creating api client for host: {hostname}, port: {port}")
     global API_CLIENT
     if API_CLIENT is None:
-        API_CLIENT = FrontendApiClient(api_base_url=api_url)
+        API_CLIENT = FrontendApiClient(hostname=hostname, port=port)
     return API_CLIENT
