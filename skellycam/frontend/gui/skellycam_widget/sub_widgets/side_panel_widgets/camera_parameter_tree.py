@@ -105,7 +105,7 @@ class CameraParameterTree(QWidget):
                 dict(
                     name=self.tr("Rotate"),
                     type="list",
-                    limits=RotationTypes.names,
+                    limits=list(RotationTypes.__members__.keys()),
                     value=camera_config.rotation.name,
                 ),
                 dict(

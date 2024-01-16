@@ -1,3 +1,5 @@
+import time
+
 from PySide6.QtCore import Signal, QObject, QThread
 
 from skellycam.api.frontend_client.api_client import FrontendApiClient
@@ -17,11 +19,12 @@ class FrameGrabber(QThread):
         logger.info(f"FrameGrabber starting...")
 
         while self.should_continue:
+            time.sleep(0.001)
             try:
                 logger.trace(f"Grabbing new frames...")
-                response = self.api_client.get_latest_frames()
-                new_frames = MultiFramePayload.parse_obj(response.json())
-                self.new_frames(new_frames)
+                multi_frame_payload = self.api_client.get_latest_frames()
+                if multi_frame_payload:
+                    self.new_frames.emit(multi_frame_payload)
             except Exception as e:
                 logger.error(str(e))
                 logger.exception(e)

@@ -1,11 +1,7 @@
 import cv2
 
 import skellycam
-from skellycam.backend.models.cameras.image_rotation_types import (
-    ROTATE_90_CLOCKWISE_STRING,
-    ROTATE_90_COUNTERCLOCKWISE_STRING,
-    ROTATE_180_STRING,
-)
+
 from skellycam.backend.system.environment.default_paths import (
     MAGNIFYING_GLASS_EMOJI_STRING,
     CAMERA_WITH_FLASH_EMOJI_STRING,
@@ -18,28 +14,6 @@ COPY_SETTINGS_TO_CAMERAS_STRING = "Copy settings to all cameras"
 USE_THIS_CAMERA_STRING = "Use this camera?"
 EXPAND_ALL_STRING = "Expand All"
 COLLAPSE_ALL_STRING = "Collapse All"
-
-
-def rotate_image_str_to_cv2_code(rotate_str: str):
-    if rotate_str == ROTATE_90_CLOCKWISE_STRING:
-        return cv2.ROTATE_90_CLOCKWISE
-    elif rotate_str == ROTATE_90_COUNTERCLOCKWISE_STRING:
-        return cv2.ROTATE_90_COUNTERCLOCKWISE
-    elif rotate_str == ROTATE_180_STRING:
-        return cv2.ROTATE_180
-
-    return None
-
-
-def rotate_cv2_code_to_str(rotate_video_value):
-    if rotate_video_value is None:
-        return None
-    elif rotate_video_value == cv2.ROTATE_90_CLOCKWISE:
-        return ROTATE_90_CLOCKWISE_STRING
-    elif rotate_video_value == cv2.ROTATE_90_COUNTERCLOCKWISE:
-        return ROTATE_90_COUNTERCLOCKWISE_STRING
-    elif rotate_video_value == cv2.ROTATE_180:
-        return ROTATE_180_STRING
 
 
 no_cameras_found_message_string = "\n\n"

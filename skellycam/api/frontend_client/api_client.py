@@ -1,11 +1,8 @@
-import asyncio
-from typing import Dict, Optional
+from typing import Dict
 
 import httpx
-import websocket
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, Signal
 from pydantic import ValidationError
-from websockets import WebSocketClientProtocol
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
@@ -14,7 +11,6 @@ from skellycam.backend.controller.interactions.connect_to_cameras import (
     CamerasConnectedResponse,
     ConnectToCamerasRequest,
 )
-from skellycam.backend.models.cameras import camera_config
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_configs import (
     CameraConfigs,
