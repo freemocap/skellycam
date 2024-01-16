@@ -1,9 +1,4 @@
-import asyncio
-from datetime import time
-from time import sleep
-
 from fastapi import APIRouter
-from starlette.websockets import WebSocket
 
 from skellycam.backend.controller.controller import get_or_create_controller
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
@@ -13,6 +8,8 @@ from skellycam.backend.controller.interactions.connect_to_cameras import (
     CamerasConnectedResponse,
     ConnectToCamerasRequest,
 )
+from skellycam.backend.models.cameras.camera_configs import CameraConfigs
+from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 
 router = APIRouter()
 controller = get_or_create_controller()
@@ -33,13 +30,11 @@ def connect_to_cameras(request: ConnectToCamerasRequest):
     return controller.connect_to_cameras(request.camera_configs)
 
 
-@router.websocket("/websocket")
-async def websocket(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        if controller.camera_group_manager.new_frontend_payload_available():
-            print("Wow! new frame!")
-            latest_multiframe = controller.camera_group_manager.latest_frontend_payload
-            websocket.send_bytes(len(latest_multiframe.to_bytes()))
-        else:
-            await asyncio.sleep(0.001)
+@router.get("/cameras", response_model=CameraConfigs)
+def get_cameras() -> CameraConfigs:
+    return controller.camera_group_manager.camera_configs
+
+
+@router.get("/cameras/latest_frontend_payload", response_model=MultiFramePayload)
+def get_latest_frames() -> MultiFramePayload:
+    return controller.camera_group_manager.get_latest_frontend_payload()

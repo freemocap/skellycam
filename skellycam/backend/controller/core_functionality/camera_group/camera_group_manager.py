@@ -12,6 +12,7 @@ from skellycam.backend.controller.core_functionality.camera_group.video_recorder
     VideoRecorderManager,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import (
     MultiFramePayload,
@@ -80,6 +81,10 @@ class CameraGroupManager:
 
         self._is_recording = False
         self._stop_recording = False
+
+    @property
+    def camera_configs(self) -> CameraConfigs:
+        return self._camera_configs
 
     @property
     def new_frontend_payload_available(self) -> bool:

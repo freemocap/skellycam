@@ -15,13 +15,14 @@ class FrameGrabber(QObject):
 
     def start_loop(self):
         logger.info(f"FrameGrabber starting...")
-        websocket = self.api_client.get_websocket()
+        # websocket = self.api_client.get_websocket()
 
         while self.should_continue:
             try:
-                multi_frame_payload_bytes = websocket.recv()
+                response = self.api_client.get_latest_frames()
+                new_frames = MultiFramePayload.parse_obj(response.json())
 
-                self.new_frames(MultiFramePayload.from_bytes(multi_frame_payload_bytes))
+                self.new_frames(new_frames)
             except Exception as e:
                 logger.error(str(e))
                 logger.exception(e)

@@ -62,16 +62,8 @@ class FrontendApiClient(QObject):
             logger.error(f"Failed to parse response: {e}")
             return None
 
-    def get_websocket(self) -> Optional[websocket.WebSocket]:
-        logger.debug(f"Establishing WebSocket connection to: {self.websocket_url}")
-        try:
-            self.websocket = websocket.create_connection(self.websocket_url)
-            if self.websocket is None:
-                Exception("WebSocket failed to connect")
-        except Exception as e:
-            logger.error(f"Failed to establish WebSocket connection: {e}")
-            return None
-        return self.websocket
+    def get_latest_frames(self):
+        logger.trace("Sending request for the get latest frames endpoint")
 
 
 if __name__ == "__main__":
