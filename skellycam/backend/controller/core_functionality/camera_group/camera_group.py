@@ -1,5 +1,6 @@
 import asyncio
 import multiprocessing
+import time
 from typing import Dict, List
 
 from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import (
@@ -55,24 +56,22 @@ class CameraGroup:
 
         self._wait_for_cameras_to_start()
 
-    async def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
-        logger.trace(f"Waiting for cameras {self._camera_configs.keys()} to start")
+    def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
+        logger.debug(f"Waiting for cameras {self._camera_configs.keys()} to start")
 
         while (
             not self._all_cameras_ready_event.is_set()
             and not self._close_cameras_event.is_set()
         ):
-            await asyncio.sleep(1.0)
+            time.sleep(1.0)
             camera_started_check = dict.fromkeys(self._camera_configs.keys(), False)
 
             for camera_id, event in self._is_capturing_events_by_camera.items():
                 camera_started_check[camera_id] = event.is_set()
-            logger.trace(f"Camera started? {camera_started_check}")
+            logger.debug(f"Camera started? {camera_started_check}")
 
             if all(list(camera_started_check.values())):
-                logger.success(
-                    f"All cameras {list(self._camera_configs.keys())} started!"
-                )
+                logger.info(f"All cameras {list(self._camera_configs.keys())} started!")
                 self._all_cameras_ready_event.set()  # start frame capture on all cameras
 
     def _resolve_strategy(self):

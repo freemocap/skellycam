@@ -22,9 +22,15 @@ from skellycam.backend.system.environment.get_logger import logger
 
 
 class IncomingFrameWrangler:
-    def __init__(self):
+    def __init__(self, camera_configs: CameraConfigs):
+        self._camera_configs = camera_configs
+        self._video_recorder_manager = VideoRecorderManager(
+            camera_configs=self._camera_configs
+        )
+
         self._latest_frontend_payload: Optional[MultiFramePayload] = None
         self.new_frontend_payload_available: bool = False
+        self._is_recording = False
 
     def handle_new_frames(
         self, multi_frame_payload: MultiFramePayload, new_frames: List[FramePayload]
@@ -69,15 +75,41 @@ class IncomingFrameWrangler:
         self.new_frontend_payload_available = False
         return self._latest_frontend_payload
 
+    def start_recording(self):
+        logger.debug(f"Starting recording...")
+        if self._video_recorder_manager is not None:
+            raise AssertionError("Video recorder manager already initialized! ")
 
-class CameraGroupManager:
-    def __init__(self) -> None:
-        self._camera_configs: Optional[Dict[CameraId, CameraConfig]] = None
-        self._camera_group: Optional[CameraGroup] = None
+        self._video_recorder_manager.start_recording(
+            start_time_perf_counter_ns_to_unix_mapping=(
+                time.perf_counter_ns(),
+                time.time_ns(),
+            )
+        )
+        self._is_recording = True
+        self._stop_recording = False
+
+    def stop_recording(self):
+        logger.debug(f"Stopping recording...")
+        if self._video_recorder_manager is None:
+            raise AssertionError(
+                "Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! This shouldn't happen..."
+            )
+        self._video_recorder_manager.stop_recording()
+        self._stop_recording = True
+
+
+class CameraGroupManager(threading.Thread):
+    def __init__(self, camera_configs: [Dict[CameraId, CameraConfig]]) -> None:
+        super().__init__()
+        self.daemon = True
+        self._camera_configs = camera_configs
+        self._camera_group = CameraGroup(camera_configs=self._camera_configs)
         self._camera_runner_thread: Optional[threading.Thread] = None
 
-        self._video_recorder_manager: Optional[VideoRecorderManager] = None
-        self._incoming_frame_wrangler: IncomingFrameWrangler = IncomingFrameWrangler()
+        self._incoming_frame_wrangler: IncomingFrameWrangler = IncomingFrameWrangler(
+            camera_configs=self._camera_configs
+        )
 
         self._is_recording = False
         self._stop_recording = False
@@ -99,35 +131,10 @@ class CameraGroupManager:
             )
         return self._is_recording
 
-    def get_latest_frontend_payload(self) -> MultiFramePayload:
+    def get_latest_frames(self) -> MultiFramePayload:
         return self._incoming_frame_wrangler.latest_frontend_payload
 
-    def start_recording(self):
-        logger.debug(f"Starting recording...")
-        if self._video_recorder_manager is not None:
-            raise AssertionError("Video recorder manager already initialized! ")
-        self._video_recorder_manager = VideoRecorderManager(
-            camera_configs=self._camera_configs
-        )
-        self._video_recorder_manager.start_recording(
-            start_time_perf_counter_ns_to_unix_mapping=(
-                time.perf_counter_ns(),
-                time.time_ns(),
-            )
-        )
-        self._is_recording = True
-        self._stop_recording = False
-
-    def stop_recording(self):
-        logger.debug(f"Stopping recording...")
-        if self._video_recorder_manager is None:
-            raise AssertionError(
-                "Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! This shouldn't happen..."
-            )
-        self._video_recorder_manager.stop_recording()
-        self._stop_recording = True
-
-    async def _run_camera_group_loop(self):
+    def start(self):
         self._camera_group.start()
         multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
@@ -148,21 +155,21 @@ class CameraGroupManager:
                         )
                         self._close_video_recorder_manager()
             else:
-                await asyncio.sleep(0.001)
+                time.sleep(0.001)
 
     async def _close_video_recorder_manager(self):
         await self._video_recorder_manager.finish_and_close()
         self._video_recorder_manager = None
         self._is_recording = False
 
-    def start(self, camera_configs: Dict[CameraId, CameraConfig]):
-        logger.debug(f"Starting camera group thread...")
-        self._camera_configs = camera_configs
-        self._camera_group = CameraGroup(camera_configs=self._camera_configs)
-        self._camera_runner_thread = threading.Thread(
-            target=self._run_camera_group_loop, daemon=True
-        )
-        self._camera_runner_thread.start()
+    # def start(self, camera_configs: Dict[CameraId, CameraConfig]):
+    #     logger.debug(f"Starting camera group thread...")
+    #     self._camera_configs = camera_configs
+    #     self._camera_group = CameraGroup(camera_configs=self._camera_configs)
+    #     self._camera_runner_thread = threading.Thread(
+    #         target=self._run_camera_group_loop, daemon=True
+    #     )
+    #     self._camera_runner_thread.start()
 
     async def close(self):
         logger.debug(f"Stopping camera group thread...")

@@ -12,11 +12,16 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
 )
 from skellycam.backend.controller.interactions.connect_to_cameras import (
     CamerasConnectedResponse,
+    ConnectToCamerasRequest,
 )
 from skellycam.backend.models.cameras import camera_config
 from skellycam.backend.models.cameras.camera_config import CameraConfig
-from skellycam.backend.models.cameras.camera_configs import CameraConfigs
+from skellycam.backend.models.cameras.camera_configs import (
+    CameraConfigs,
+    DEFAULT_CAMERA_CONFIGS,
+)
 from skellycam.backend.models.cameras.camera_id import CameraId
+from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
 
 
@@ -30,7 +35,6 @@ class FrontendApiClient(QObject):
         self.client = httpx.Client(base_url=self.api_base_url)
 
         self.websocket_url = f"ws://{hostname}:{port}/websocket"
-        self.websocket = self.get_websocket()
 
     def hello(self):
         return self.client.get("hello")
@@ -49,10 +53,8 @@ class FrontendApiClient(QObject):
 
     def connect_to_cameras(self, camera_configs: CameraConfigs):
         logger.debug("Sending request to the frontend API `connect` endpoint")
-        request_body = {
-            id: camera_config.json() for id, camera_config in camera_configs.items()
-        }
-        response = self.client.post("connect", json=request_body)
+        request = ConnectToCamerasRequest(camera_configs=camera_configs).dict()
+        response = self.client.post("connect", json=request)
         try:
             cameras_detected_response = CamerasConnectedResponse.parse_obj(
                 response.json()
@@ -63,16 +65,45 @@ class FrontendApiClient(QObject):
             return None
 
     def get_latest_frames(self):
-        logger.trace("Sending request for the get latest frames endpoint")
+        logger.debug("Sending request for the get latest frames endpoint")
+        response = self.client.get("cameras/latest_frames", follow_redirects=True)
+
+        if response.status_code != 200:
+            logger.error(
+                f"Failed to fetch latest frames, status code: {response.status_code}"
+            )
+            return None
+
+        try:
+            byte_chunks = response.iter_bytes()
+            content = b"".join(byte_chunks)
+
+            multi_frame_payload = MultiFramePayload.from_bytes(content)
+            return multi_frame_payload
+        except ValidationError as e:
+            logger.error(f"Failed to parse response: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+            return None
 
 
-if __name__ == "__main__":
+def check_frontend_camera_connection():
     from skellycam.api.run_server import run_backend
     from pprint import pprint
 
-    backend_process_out, api_location_out = run_backend()
-    print(f"Backend server is running on: {api_location_out}")
-    client = FrontendApiClient(api_base_url=api_location_out)
-    hello_response = asyncio.run(client.hello())
+    backend_process_out, hostname, port = run_backend()
+    print(f"Backend server is running on: https://{hostname}:{port}")
+    client = FrontendApiClient(hostname, port)
+    hello_response = client.hello()
     pprint(hello_response.json())
+    c = DEFAULT_CAMERA_CONFIGS
+    print(client.connect_to_cameras(c))
+
+    payload = client.get_latest_frames()
+    pprint(payload)
+
+
+if __name__ == "__main__":
+    check_frontend_camera_connection()
     print(f"Done!")

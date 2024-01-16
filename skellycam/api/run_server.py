@@ -58,7 +58,7 @@ def run_backend_api_server(hostname: str, port: int):
 
 
 if __name__ == "__main__":
-    backend_process_out, api_location_out = run_backend()
-    print(f"Backend server is running on: {api_location_out}")
+    backend_process_out, localhost, port = run_backend()
+    print(f"Backend server is running on: http://{localhost}:{port}")
     backend_process_out.join()
     logger.info(f"Done!")

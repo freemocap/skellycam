@@ -1,5 +1,6 @@
 import asyncio
 import multiprocessing
+import time
 from multiprocessing import Process
 from typing import Dict, List, Any, Optional
 
@@ -112,7 +113,7 @@ class CamSubarrayPipeProcess:
         for frame in new_frames:
             config = self._subarray_camera_configs[frame.camera_id]
             if config.rotation != RotationTypes.NO_ROTATION:
-                frame.rotate(config.rotation.value)
+                frame.rotate(config.rotation.to_opencv_constant())
 
     def _create_pipes(self):
         self._pipe_receiver_connections = {}
@@ -129,7 +130,7 @@ class CamSubarrayPipeProcess:
         all_cameras_ready_event: multiprocessing.Event,
         close_cameras_event: multiprocessing.Event,
         is_capturing_events_by_camera: Dict[CameraId, multiprocessing.Event],
-    ) -> Dict[str, Camera]:
+    ) -> Dict[CameraId, Camera]:
         cameras = {
             camera_id: Camera(
                 config=camera_config,
@@ -143,7 +144,7 @@ class CamSubarrayPipeProcess:
         return cameras
 
     @staticmethod
-    async def _run_process(
+    def _run_process(
         camera_configs: Dict[CameraId, CameraConfig],
         pipe_connections: Dict[str, Any],  # multiprocessing.connection.Connection
         camera_config_queue: multiprocessing.Queue,
@@ -171,7 +172,7 @@ class CamSubarrayPipeProcess:
 
         while not close_cameras_event.is_set():
             # logger.trace(f"CamGroupProcess {process_name} is checking for new configs")
-            await asyncio.sleep(1.0)  # check for new configs every 0.5 seconds
+            time.sleep(1.0)  # check for new configs every so often
             if camera_config_queue.qsize() > 0:
                 logger.info(
                     "Camera config dict queue has items - updating cameras configs"

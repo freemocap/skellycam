@@ -14,7 +14,7 @@ def backend_main(
     frontend_frame_pipe_sender,  # multiprocessing.connection.Connection
     exit_event: Event,
 ):
-    logger.success(f"Backend main started!")
+    logger.info(f"Backend main started!")
     backend_loop(
         exit_event=exit_event,
         frontend_frame_pipe_sender=frontend_frame_pipe_sender,
@@ -27,4 +27,4 @@ def backend_main(
         exit_event.set()
 
     remove_empty_directories()
-    logger.success(f"Backend main exiting!")
+    logger.info(f"Backend main exiting!")
