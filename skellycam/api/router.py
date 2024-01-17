@@ -12,11 +12,11 @@ from skellycam.backend.controller.interactions.connect_to_cameras import (
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 
-router = APIRouter()
+http_router = APIRouter()
 controller = get_or_create_controller()
 
 
-@router.get("/hello", summary="Simple health check")
+@http_router.get("/hello", summary="Simple health check")
 async def hello():
     """
     A simple endpoint to greet the user of the SkellyCam API.
@@ -25,7 +25,7 @@ async def hello():
     return {"message": "Hello from the SkellyCam API 💀📸✨"}
 
 
-@router.get(
+@http_router.get(
     "/detect",
     response_model=CamerasDetectedResponse,
     summary="Detect available cameras",
@@ -39,7 +39,7 @@ def detect_available_cameras() -> CamerasDetectedResponse:
     return controller.detect_available_cameras()
 
 
-@router.post(
+@http_router.post(
     "/connect",
     status_code=202,
     summary="Connect to specified cameras in a BackgroundTask",
@@ -60,7 +60,7 @@ async def connect_to_cameras(
     return CamerasConnectedResponse(success=True)
 
 
-@router.get(
+@http_router.get(
     "/cameras",
     response_model=CameraConfigs,
     summary="Get configurations of connected cameras",
@@ -73,7 +73,7 @@ def get_cameras() -> CameraConfigs:
     return controller.camera_group_manager.camera_configs
 
 
-@router.get(
+@http_router.get(
     "/cameras/latest_frames",
     summary="Get the latest synchronized multi-frame from all cameras",
     responses={200: {"content": {"application/octet-stream": {}}}},
@@ -84,7 +84,9 @@ def get_latest_frames():
     Returns the raw bytes of the MultiFramePayload object.
     """
     try:
-        latest_multiframe_payload = controller.camera_group_manager.get_latest_frames()
+        latest_multiframe_payload: MultiFramePayload = (
+            controller.camera_group_manager.get_latest_frames()
+        )
         return StreamingResponse(
             iter([latest_multiframe_payload.to_bytes()]),
             media_type="application/octet-stream",

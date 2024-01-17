@@ -1,7 +1,6 @@
-import asyncio
 import threading
 import time
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union
 
 import cv2
 
@@ -75,6 +74,18 @@ class IncomingFrameWrangler:
         self.new_frontend_payload_available = False
         return self._latest_frontend_payload
 
+    def wait_for_new_frontend_payload(
+        self, wait_for_new: bool, max_wait_seconds: float
+    ) -> Union[MultiFramePayload, bool]:
+        max_wait_ns = max_wait_seconds * 1e9
+        start_wait_time = time.perf_counter_ns()
+        if wait_for_new:
+            while not self.new_frontend_payload_available:
+                time.sleep(0.0001)
+                if time.perf_counter_ns() - start_wait_time >= max_wait_ns:
+                    return False
+        return self.latest_frontend_payload
+
     def start_recording(self):
         logger.debug(f"Starting recording...")
         if self._video_recorder_manager is not None:
@@ -133,6 +144,9 @@ class CameraGroupManager(threading.Thread):
 
     def get_latest_frames(self) -> MultiFramePayload:
         return self._incoming_frame_wrangler.latest_frontend_payload
+
+    def wait_for_new_frames(self) -> Union[MultiFramePayload, bool]:
+        return self._incoming_frame_wrangler.wait_for_new_frontend_payload
 
     def start(self):
         self._camera_group.start()

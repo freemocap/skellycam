@@ -3,17 +3,17 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 
-from skellycam.api.frontend_client.api_client import FrontendApiClient
 from skellycam.backend.system.environment.default_paths import (
     PATH_TO_SKELLY_CAM_LOGO_PNG,
 )
 from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.api_client.api_client import ApiClient
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
 
 
 class SkellyCamMainWindow(QMainWindow):
-    def __init__(self, api_client: FrontendApiClient):
+    def __init__(self, api_client: ApiClient):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
         self.api_client = api_client

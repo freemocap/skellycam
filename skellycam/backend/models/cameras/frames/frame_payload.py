@@ -4,6 +4,7 @@ from io import BytesIO
 from typing import Dict, Optional, List, Literal
 
 import cv2
+import msgpack
 import numpy as np
 from PIL import Image
 from PySide6.QtGui import QImage
@@ -136,6 +137,25 @@ class RawImage(BaseModel):
             QImage.Format_RGB888,
         )
 
+    def to_msgpack(self) -> bytes:
+        # Convert the RawImage instance to a dictionary suitable for serializing
+        raw_image_dict = {
+            "image_bytes": self.image_bytes,
+            "width": self.width,
+            "height": self.height,
+            "channels": self.channels,
+            "data_type": self.data_type,
+            "compression": self.compression,
+        }
+        return msgpack.packb(raw_image_dict, use_bin_type=True)
+
+    @classmethod
+    def from_msgpack(cls, msgpack_data: bytes):
+        # Unpack the bytes using MessagePack to a dictionary
+        raw_image_dict = msgpack.unpackb(msgpack_data, raw=False)
+        # Use the dictionary to instantiate a RawImage object
+        return cls(**raw_image_dict)
+
 
 class FramePayload(BaseModel):
     success: bool = Field(
@@ -200,6 +220,25 @@ class FramePayload(BaseModel):
             self.camera_id,
         )
         return byte_string + self.raw_image.to_bytes()
+
+    def to_msgpack(self) -> bytes:
+        # Convert the complex objects into simpler representations first
+        raw_image_data = self.raw_image.to_dict()
+        frame_payload_dict = {
+            "success": self.success,
+            "timestamp_ns": self.timestamp_ns,
+            "frame_number": self.frame_number,
+            "camera_id": self.camera_id,
+            "raw_image": raw_image_data,
+        }
+        return msgpack.packb(frame_payload_dict, use_bin_type=True)
+
+    @classmethod
+    def from_msgpack(cls, msgpack_bytes: bytes):
+        payload_dict = msgpack.unpackb(msgpack_bytes, raw=False)
+        # Create the RawImage from the dictionary data
+        raw_image = RawImage(**payload_dict.pop("raw_image"))
+        return cls(raw_image=raw_image, **payload_dict)
 
     @classmethod
     def from_bytes(cls, byte_obj: bytes):
@@ -300,6 +339,26 @@ class MultiFramePayload(BaseModel):
             byte_offset += length
 
         return cls(frames={frame.camera_id: frame for frame in frames})
+
+    def to_msgpack(self) -> bytes:
+        # Convert the payload to a simpler dict representation
+        frames_data = {
+            camera_id: frame.to_msgpack() if frame else None
+            for camera_id, frame in self.frames.items()
+        }
+        return msgpack.packb(frames_data, use_bin_type=True)
+
+    @classmethod
+    def from_msgpack(cls, msgpack_bytes: bytes):
+        frames_dict = msgpack.unpackb(msgpack_bytes, raw=False)
+        # Convert back to FramePayload objects
+        frames = {
+            CameraId(camera_id): FramePayload.from_msgpack(frame_bytes)
+            if frame_bytes
+            else None
+            for camera_id, frame_bytes in frames_dict.items()
+        }
+        return cls(frames=frames)
 
 
 def evaluate_multi_frame_compression():

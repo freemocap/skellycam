@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from starlette.responses import RedirectResponse
+from starlette.websockets import WebSocket
 
 import skellycam
-from skellycam.api.router import router
+from skellycam.api.router import http_router
+from skellycam.api.websocket_api import camera_websocket_endpoint
 
 
 class FastApiApp:
@@ -13,12 +15,15 @@ class FastApiApp:
         self._customize_swagger_ui()
 
     def _register_routes(self):
-        self.app.get("/")(self.read_root)
-        self.app.include_router(router)
+        @self.app.get("/")
+        async def read_root():
+            return RedirectResponse("/docs")
 
-    async def read_root(self):
-        # return {"message": "Hello from SkellyCam 💀📸✨"}
-        return RedirectResponse("/docs")
+        self.app.include_router(http_router)
+
+        @self.app.websocket("/websocket")
+        async def websocket_route(websocket: WebSocket):
+            await camera_websocket_endpoint(websocket)
 
     def _customize_swagger_ui(self):
         def custom_openapi():
@@ -36,13 +41,3 @@ class FastApiApp:
             return self.app.openapi_schema
 
         self.app.openapi = custom_openapi
-
-        # TODO - ask the machine what this stuff below is and what it is good for
-        # self.app.swagger_ui_init_oauth = {
-        #     "clientId": "your-client-id",
-        #     "clientSecret": "your-client-secret-if-required",
-        #     "realm": "your-realms",
-        #     "appName": "your-app-name",
-        #     "scopeSeparator": " ",
-        #     "additionalQueryStringParams": {"test": "Hello World"},
-        # }

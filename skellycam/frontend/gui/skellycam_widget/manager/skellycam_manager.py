@@ -1,14 +1,13 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-import qasync
-from PySide6.QtCore import Signal, QObject, QThread
+from PySide6.QtCore import Signal, QThread
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     AvailableCameras,
 )
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_grabber import (
-    FrameGrabber,
+    FrameRequester,
 )
 
 if TYPE_CHECKING:
@@ -25,7 +24,9 @@ class SkellyCamManager(QThread):
         super().__init__()
         self.main_widget = main_widget
         self.api_client = self.main_widget.api_client
-        self.frame_grabber = FrameGrabber(api_client=self.api_client, parent=self)
+        self.frame_requester = FrameRequester(
+            camera_websocket=self.api_client.websocket_connection, parent=self
+        )
         self.connect_signals()
 
     def connect_signals(self) -> None:
@@ -37,7 +38,7 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_grid.update_camera_grid
         )
 
-        self.frame_grabber.new_frames.connect(
+        self.frame_requester.new_frames.connect(
             self.main_widget.camera_grid.handle_new_images
         )
 
@@ -118,7 +119,7 @@ class SkellyCamManager(QThread):
 
     def handle_cameras_connected(self):
         logger.info("Handling cameras connected signal")
-        self.frame_grabber.run()
+        self.frame_requester.run()
         self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(True)
         self.main_widget.camera_control_buttons.apply_camera_settings_button.setEnabled(
             True

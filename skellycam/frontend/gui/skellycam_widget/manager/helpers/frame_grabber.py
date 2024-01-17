@@ -1,30 +1,49 @@
-import time
+from PySide6.QtCore import Signal, QObject, QThread, QTimer
+from pydantic import BaseModel
 
-from PySide6.QtCore import Signal, QObject, QThread
-
-from skellycam.api.frontend_client.api_client import FrontendApiClient
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.api_client.camera_websocket import CameraWebsocket
 
 
-class FrameGrabber(QThread):
+class GetFramesRequest(BaseModel):
+    command: str = "get_latest_frames"
+
+
+class FrameRequester(QThread):
     new_frames = Signal(MultiFramePayload)
 
-    def __init__(self, api_client: FrontendApiClient, parent: QObject):
+    def __init__(
+        self,
+        camera_websocket: CameraWebsocket,
+        parent: QObject,
+        frontend_framerate: float = 30,
+    ):
         super().__init__(parent=parent)
-        self.api_client = api_client
+        self.camera_websocket = camera_websocket
+        self.camera_websocket.frames_received.connect(self.new_frames)
         self.should_continue = True
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._request_frames)
+        self.frontend_framerate = frontend_framerate
 
-    def run(self):
+    def start(self):
         logger.info(f"FrameGrabber starting...")
+        self.camera_websocket.connect_websocket()
 
-        while self.should_continue:
-            time.sleep(0.001)
-            try:
-                logger.trace(f"Grabbing new frames...")
-                multi_frame_payload = self.api_client.get_latest_frames()
-                if multi_frame_payload:
-                    self.new_frames.emit(multi_frame_payload)
-            except Exception as e:
-                logger.error(str(e))
-                logger.exception(e)
+        # Fetch the framerate from the config and calculate interval.
+        framerate = self.config.get(
+            "framerate", 30
+        )  # Define a default framerate if not set
+        interval_ms = 1000 // framerate
+        self.timer.start(interval_ms)
+
+    def stop(self):
+        logger.info("FrameGrabber stopping...")
+        self.timer.stop()
+        self.camera_websocket.disconnect_websocket()
+
+    def _request_frames(self):
+        logger.trace("Requesting new frames...")
+        get_frames_request = GetFramesRequest()
+        self.camera_websocket.send_outgoing_message(get_frames_request.dict())

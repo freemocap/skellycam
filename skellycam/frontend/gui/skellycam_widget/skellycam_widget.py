@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
-from skellycam.api.frontend_client.api_client import FrontendApiClient
 from skellycam.backend.system.environment.default_paths import (
     get_default_skellycam_base_folder_path,
 )
 from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.api_client.api_client import ApiClient
 from skellycam.frontend.gui.skellycam_widget.manager.skellycam_manager import (
     SkellyCamManager,
 )
@@ -29,7 +29,7 @@ from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.dire
 
 
 class SkellyCamWidget(QWidget):
-    def __init__(self, api_client: FrontendApiClient, parent=None):
+    def __init__(self, api_client: ApiClient, parent=None):
         super().__init__(parent=parent)
         self.api_client = api_client
         self._initUI()

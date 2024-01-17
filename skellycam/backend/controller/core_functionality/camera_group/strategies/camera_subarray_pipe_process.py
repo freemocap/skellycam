@@ -1,4 +1,3 @@
-import asyncio
 import multiprocessing
 import time
 from multiprocessing import Process

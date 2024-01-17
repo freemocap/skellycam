@@ -1,5 +1,3 @@
-import cv2
-
 import skellycam
 
 from skellycam.backend.system.environment.default_paths import (
