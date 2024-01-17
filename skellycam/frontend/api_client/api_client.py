@@ -18,7 +18,7 @@ from skellycam.backend.models.cameras.camera_configs import (
 )
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.api_client.camera_websocket import CameraWebsocket
+from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketConnection
 
 
 class ApiClient(QObject):
@@ -31,7 +31,7 @@ class ApiClient(QObject):
         self.client = httpx.Client(base_url=self.api_base_url)
 
         self.websocket_url = f"ws://{hostname}:{port}/websocket"
-        self.websocket_connection = CameraWebsocket(url=self.websocket_url)
+        self.websocket_connection = FrontendWebsocketConnection(url=self.websocket_url)
 
     def hello(self):
         return self.client.get("hello")

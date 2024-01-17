@@ -3,11 +3,7 @@ from pydantic import BaseModel
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.api_client.camera_websocket import CameraWebsocket
-
-
-class GetFramesRequest(BaseModel):
-    command: str = "get_latest_frames"
+from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketConnection
 
 
 class FrameRequester(QThread):
@@ -15,7 +11,7 @@ class FrameRequester(QThread):
 
     def __init__(
         self,
-        camera_websocket: CameraWebsocket,
+        camera_websocket: FrontendWebsocketConnection,
         parent: QObject,
         frontend_framerate: float = 30,
     ):

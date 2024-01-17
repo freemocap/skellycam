@@ -1,7 +1,6 @@
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.api_client import (
-    create_api_client,
-)
+from skellycam.frontend.api_client.get_or_create_api_client import create_api_client
+
 from skellycam.frontend.application import create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
 

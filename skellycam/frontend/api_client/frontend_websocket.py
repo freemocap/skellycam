@@ -1,16 +1,24 @@
 import json
+from typing import Literal, Union
 
-from PySide6.QtCore import Signal, QObject
+from PySide6.QtCore import Signal, QObject, QTimer
 from PySide6.QtWebSockets import QWebSocket
+from pydantic import BaseModel
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_grabber import (
-    GetFramesRequest,
-)
 
 
-class CameraWebsocket(QWebSocket):
+class WebsocketRequest(BaseModel):
+    command: Literal["get_frames", "ping"]
+
+
+class WebsocketResponse(BaseModel):
+    success: bool
+    data: Union[MultiFramePayload, Literal["pong"]]
+
+
+class FrontendWebsocketConnection(QWebSocket):
     connected = Signal()
     disconnected = Signal()
     error_occurred = Signal(str)
@@ -24,6 +32,14 @@ class CameraWebsocket(QWebSocket):
         self.disconnected.connect(self.on_disconnected)
         self.textMessageReceived.connect(self.on_text_message_received)
         self.error.connect(self.on_error)
+        self.reconnect_timer = QTimer(self)
+        self.reconnect_timer.timeout.connect(self.check_connection)
+        self.reconnect_timer.start(1000)  # Time in milliseconds (e.g., 10000ms = 10s)
+
+    def check_connection(self):
+        if not self.isValid():
+            logger.warning("WebSocket connection dropped. Attempting to reconnect...")
+            self.connect_websocket()
 
     def open_connection(self, url: str):
         self.open(url)
@@ -73,5 +89,5 @@ class CameraWebsocket(QWebSocket):
 
     def request_frames(self):
         # Create a request to fetch frames
-        get_frames_request = GetFramesRequest()
+        get_frames_request = WebsocketRequest()
         self.send_outgoing_message(get_frames_request.dict())
