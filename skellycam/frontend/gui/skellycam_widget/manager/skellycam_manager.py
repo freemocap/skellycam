@@ -6,7 +6,7 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     AvailableCameras,
 )
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_grabber import (
+from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_requester import (
     FrameRequester,
 )
 
@@ -25,7 +25,7 @@ class SkellyCamManager(QThread):
         self.main_widget = main_widget
         self.api_client = self.main_widget.api_client
         self.frame_requester = FrameRequester(
-            camera_websocket=self.api_client.websocket_connection, parent=self
+            websocket_connection=self.api_client.websocket_connection, parent=self
         )
         self.connect_signals()
 
@@ -119,7 +119,7 @@ class SkellyCamManager(QThread):
 
     def handle_cameras_connected(self):
         logger.info("Handling cameras connected signal")
-        self.frame_requester.run()
+        self.frame_requester.start()
         self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(True)
         self.main_widget.camera_control_buttons.apply_camera_settings_button.setEnabled(
             True

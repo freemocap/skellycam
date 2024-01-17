@@ -5,7 +5,9 @@ from starlette.websockets import WebSocket
 
 import skellycam
 from skellycam.api.router import http_router
-from skellycam.api.backend_websocket import backend_websocket_connection
+from skellycam.api.backend_websocket import (
+    WebSocketConnectionManager,
+)
 
 
 class FastApiApp:
@@ -23,7 +25,9 @@ class FastApiApp:
 
         @self.app.websocket("/websocket")
         async def websocket_route(websocket: WebSocket):
-            await backend_websocket_connection(websocket)
+            ws_manager = WebSocketConnectionManager(websocket)
+            await ws_manager.accept_connection()
+            await ws_manager.receive_and_process_messages()
 
     def _customize_swagger_ui(self):
         def custom_openapi():

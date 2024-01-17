@@ -12,6 +12,14 @@ from skellycam.backend.system.environment.get_logger import logger
 class WebsocketRequest(BaseModel):
     command: Literal["get_frames", "ping"]
 
+    @classmethod
+    def ping(cls):
+        return cls(command="ping")
+
+    @classmethod
+    def get_frames(cls):
+        return cls(command="get_frames")
+
 
 class WebsocketResponse(BaseModel):
     success: bool
@@ -35,11 +43,14 @@ class FrontendWebsocketConnection(QWebSocket):
         self.reconnect_timer = QTimer(self)
         self.reconnect_timer.timeout.connect(self.check_connection)
         self.reconnect_timer.start(1000)  # Time in milliseconds (e.g., 10000ms = 10s)
+        self.destroyed.connect(self.disconnect_websocket)
 
     def check_connection(self):
+        logger.debug(f"Checking connection to {self.url}")
         if not self.isValid():
             logger.warning("WebSocket connection dropped. Attempting to reconnect...")
             self.connect_websocket()
+        logger.debug(f"WebSocket connection is working!")
 
     def open_connection(self, url: str):
         self.open(url)
