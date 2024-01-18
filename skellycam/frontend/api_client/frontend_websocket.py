@@ -27,8 +27,6 @@ class WebsocketResponse(BaseModel):
 
 
 class FrontendWebsocketConnection(QWebSocket):
-    connected = Signal()
-    disconnected = Signal()
     error_occurred = Signal(str)
     message_received = Signal(dict)
     frames_received = Signal(MultiFramePayload)
@@ -57,11 +55,9 @@ class FrontendWebsocketConnection(QWebSocket):
 
     def on_connected(self):
         logger.info("WebSocket connected!")
-        self.connected.emit()
 
     def on_disconnected(self):
         logger.info("WebSocket disconnected")
-        self.disconnected.emit()
 
     def on_error(self, error_code):
         error_message = self.errorString()
@@ -82,7 +78,7 @@ class FrontendWebsocketConnection(QWebSocket):
 
     def handle_incoming_message(self, message: str):
         try:
-            # data = json.loads(message)
+            print("incoming message ...")
             multi_frame_payload = MultiFramePayload.from_bytes(message)
             self.frames_received.emit(multi_frame_payload)
         except Exception as e:
