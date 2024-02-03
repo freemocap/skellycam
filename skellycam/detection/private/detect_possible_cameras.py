@@ -34,6 +34,7 @@ class DetectPossibleCameras:
                 time1 = time.perf_counter()
 
                 # TODO: This cant work. Needs a new solution
+                # TODO: Issue with OBS implies we could potentially filter out the NV12 fourcc code for this: https://github.com/obsproject/obs-studio/issues/3635
                 if time1 - time0 > 0.5:
                     logger.debug(
                         f"Camera {cam_id} took {time1 - time0} seconds to produce a 2nd "
