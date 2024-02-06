@@ -3,7 +3,6 @@ import time
 from copy import deepcopy
 from typing import List, Union
 
-import cv2
 from PySide6.QtCore import Signal, Qt, QThread
 from PySide6.QtGui import QImage
 from skellycam.detection.charuco.charuco_definition import CharucoBoardDefinition
@@ -146,12 +145,11 @@ class CamGroupThreadWorker(QThread):
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
         # image = cv2.flip(image, 1)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         converted_frame = QImage(
             image.data,
             image.shape[1],
             image.shape[0],
-            QImage.Format.Format_RGB888,
+            QImage.Format.Format_BGR888,
         )
 
         return converted_frame.scaled(int(image.shape[1] / 2), int(image.shape[0] / 2),
