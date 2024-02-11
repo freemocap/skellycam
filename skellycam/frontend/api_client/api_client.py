@@ -57,7 +57,7 @@ class ApiClient(QObject):
             cameras_detected_response = CamerasConnectedResponse.parse_obj(
                 response.json()
             )
-            if cameras_detected_response.sucess:
+            if cameras_detected_response.success:
                 self.cameras_connected.emit()
             return cameras_detected_response
         except ValidationError as e:

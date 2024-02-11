@@ -39,8 +39,8 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_grid.update_camera_grid
         )
 
-        self.frame_requester.new_frames.connect(
-            self.main_widget.camera_grid.handle_new_images
+        self.api_client.websocket_connection.frames_received.connect(
+            self.main_widget.camera_grid.handle_new_frames
         )
 
         self.api_client.detected_cameras.connect(self.handle_cameras_detected)
@@ -88,7 +88,6 @@ class SkellyCamManager(QThread):
         # )
 
     def handle_start_session_button_clicked(self):
-        print("hello!!!!")
         logger.debug("Start session button clicked!")
         self.main_widget.welcome.hide()
         self.main_widget.camera_grid.show()

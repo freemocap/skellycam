@@ -43,7 +43,7 @@ class CameraGrid(QWidget):
         self.sizePolicy().setVerticalStretch(1)
 
     @Slot(MultiFramePayload)
-    def handle_new_images(self, payload: MultiFramePayload):
+    def handle_new_frames(self, payload: MultiFramePayload):
         # logger.trace(f"Got new images Updating camera views")
         try:
             # cv2.imshow("wow", payload)

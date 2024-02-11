@@ -1,135 +1,80 @@
 import json
-from typing import Literal, Union, Optional
 
 from PySide6.QtCore import Signal, QObject, QTimer
 from PySide6.QtWebSockets import QWebSocket
 from pydantic import BaseModel
+from pydantic import ValidationError
+from typing_extensions import Literal
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
-
-
-from pydantic import BaseModel
-from typing_extensions import Literal
 
 
 class BaseWebsocketRequest(BaseModel):
     command: str
 
 
-class GetFramesWebsocketRequest(BaseWebsocketRequest):
-    command: Literal["get_frames"] = "get_frames"
-
-    @classmethod
-    def create(cls):
-        return cls()
-
-
-class PingWebsocketRequest(BaseWebsocketRequest):
-    command: Literal["ping"] = "ping"
-
-    @classmethod
-    def create(cls):
-        return cls()
-
-
-class BaseWebsocketResponse(BaseModel):
-    success: bool = True
-    data: Union[MultiFramePayload, str]
-
-
-class GetFramesWebsocketResponse(BaseWebsocketResponse):
-    success: bool = True
-    data: Optional[MultiFramePayload]
-
-    @classmethod
-    def create(cls, data: Optional[MultiFramePayload], success: bool = True):
-        return cls(success=success, data=data)
-
-
-class PingWebsocketResponse(BaseWebsocketResponse):
-    success: bool = True
-    data: str = "Pong!"
-
-
-class WebsocketResponse(BaseModel):
-    success: bool
-    data: Union[MultiFramePayload, Literal["pong"]]
-
-
 class FrontendWebsocketManager(QWebSocket):
-    error_occurred = Signal(str)
-    message_received = Signal(dict)
     frames_received = Signal(MultiFramePayload)
 
     def __init__(self, url: str, parent: QObject = None):
         super().__init__(parent)
         self.url = url
-        self.connected.connect(self.on_connected)
-        self.disconnected.connect(self.on_disconnected)
-        self.textMessageReceived.connect(self.on_text_message_received)
-        self.error.connect(self.on_error)
-        self.reconnect_timer = QTimer(self)
-        self.reconnect_timer.timeout.connect(self.check_connection)
-        self.reconnect_timer.start(1000)  # Time in milliseconds (e.g., 10000ms = 10s)
+        self.connected.connect(self._handle_connected)
+        self.disconnected.connect(self._handle_disconnected)
+        self.textMessageReceived.connect(self._handle_incoming_message)
+        self.error.connect(self._handle_error)
+
         self.destroyed.connect(self.disconnect_websocket)
 
-    def check_connection(self):
+        # Check connection every second and reconnect if necessary
+        self.reconnect_timer = QTimer(self)
+        self.reconnect_timer.timeout.connect(self._check_connection)
+        self.reconnect_timer.start(1000)  # Time in milliseconds (e.g., 10000ms = 10s)
+
+    def connect_websocket(self):
+        logger.info(f"Connecting to websocket...")
+        self._open_connection()
+        logger.info("Successfully connected to websocket")
+
+    def disconnect_websocket(self):
+        logger.info("Disconnecting from websocket")
+        self.close()
+
+    def request_frames(self):
+        # Create a request to fetch frames
+        self.sendTextMessage("give frames, plz")
+
+    def _open_connection(self):
+        logger.debug(f"Opening websocket connection to {self.url}")
+        self.open(self.url)
+
+    def _check_connection(self):
         logger.debug(f"Checking connection to {self.url}")
         if not self.isValid():
             logger.warning("WebSocket connection dropped. Attempting to reconnect...")
             self.connect_websocket()
         logger.debug(f"WebSocket connection is working!")
 
-    def open_connection(self):
-        self.open(self.url)
-
-    def on_connected(self):
+    def _handle_connected(self):
         logger.info("WebSocket connected!")
 
-    def on_disconnected(self):
+    def _handle_disconnected(self):
         logger.info("WebSocket disconnected")
 
-    def on_error(self, error_code):
+    def _handle_error(self, error_code):
         error_message = self.errorString()
         logger.error(f"WebSocket error ({error_code}): {error_message}")
-        self.error_occurred.emit(error_message)
 
-    def on_text_message_received(self, message: str):
+    def _handle_incoming_message(self, message: bytes):
         try:
-            data = json.loads(message)
-            self.message_received.emit(data)
-        except json.JSONDecodeError as e:
-            logger.info(f"Error decoding message: {e}")
-            self.error_occurred.emit(str(e))
+            logger.debug(f"incoming message with length: {len(message)}")
 
-    def send_outgoing_message(self, message: dict):
-        message_str = json.dumps(message)
-        self.sendTextMessage(message_str)
-
-    def handle_incoming_message(self, message: str):
-        try:
-            print("incoming message ...")
             multi_frame_payload = MultiFramePayload.from_bytes(message)
             self.frames_received.emit(multi_frame_payload)
+        except ValidationError as e:
+            logger.error(f"Failed to parse response as MultiFramePayload: {e}")
+            raise e
         except Exception as e:
             logger.error(f"Failed to handle websocket message: {e}")
-
-    def disconnect_websocket(self):
-        logger.info("Disconnecting from websocket")
-        self.close()
-
-    def connect_websocket(self):
-        logger.info(f"Connecting to websocket...")
-        self.message_received.connect(self.handle_incoming_message)
-        self.open_connection(self.url)
-        logger.info("Successfully connected to websocket")
-
-    def request_frames(self):
-        # Create a request to fetch frames
-        get_frames_request = GetFramesWebsocketRequest.create()
-        self.send_outgoing_message(get_frames_request.dict())
-
-    def send_ping(self):
-        ping_request = PingWebsocketRequest.create()
-        self.send_outgoing_message(ping_request.dict())
+            raise e
