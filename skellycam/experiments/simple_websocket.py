@@ -52,6 +52,10 @@ class SimpleWebSocketClient:
         print("Sending ping to server")
         self.websocket.sendBinaryMessage(b"ping")
 
+    def send_beep(self):
+        print("Sending beep to server")
+        self.websocket.sendBinaryMessage(b"beep")
+
     def on_binary_message_received(self, message):
         print(f"Received binary message: {message}")
 

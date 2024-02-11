@@ -3,6 +3,7 @@ from multiprocessing import Process
 from typing import Tuple
 
 import uvicorn
+from PySide6.QtCore import QTimer
 
 from fastapi.routing import APIRoute
 from starlette.routing import WebSocketRoute
@@ -86,6 +87,9 @@ if __name__ == "__main__":
             self.main_window = QPushButton("Send Ping")
             self.main_window.clicked.connect(self.client.send_ping)
             self.main_window.show()
+            self.beep_timer = QTimer(self)
+            self.beep_timer.timeout.connect(self.client.send_beep)
+            self.beep_timer.start(1000)  # Set interval in milliseconds
 
     backend_process_out, localhost, port = run_backend()
     print(f"Backend server is running on: http://{localhost}:{port}")
