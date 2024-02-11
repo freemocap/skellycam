@@ -9,7 +9,7 @@ from skellycam.backend.system.environment.get_logger import logger
 controller = get_or_create_controller()
 
 
-class BackendWebSocketConnectionManager:
+class BackendWebsocketConnectionManager:
     """
     A class to manage the connection to the BACKEND websocket server.
     This connection has one purpose: to receive requests from the frontend and respond with the latest frames via MultiFramePayload.to_bytes().
@@ -29,10 +29,12 @@ class BackendWebSocketConnectionManager:
         try:
             while self._should_continue:
                 incoming_bytes = await self.websocket.receive_bytes()
+                logger.debug(f"Received bytes: {incoming_bytes}")
+                await self.websocket.send_bytes(
+                    bytes(f"received bytes: {incoming_bytes}", "utf-8")
+                )
 
-                if incoming_bytes == b"ping":
-                    logger.info(f"Received Ping!")
-                elif incoming_bytes == b"give-frames-plz":
+                if incoming_bytes == b"give-frames-plz":
                     await self.send_latest_frames()
 
         except WebSocketDisconnect:

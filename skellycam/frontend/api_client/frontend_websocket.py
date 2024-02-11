@@ -16,6 +16,7 @@ class FrontendWebsocketClient:
         self.websocket = QWebSocket()
         self.websocket.connected.connect(self.on_connected)
         self.websocket.binaryMessageReceived.connect(self.on_binary_message_received)
+
         self.connect_to_server()
 
     def connect_to_server(self):
@@ -28,7 +29,7 @@ class FrontendWebsocketClient:
 
     def send_ping(self):
         logger.info("Sending ping to server")
-        self.websocket.sendBinaryMessage(b"ping")
+        self.websocket.ping(b"Ping!")
 
     def on_binary_message_received(self, message):
         logger.info(f"Received binary message: {message}")

@@ -65,7 +65,7 @@ class ApiClient(QObject):
 
 
 def check_frontend_camera_connection():
-    from skellycam.api.run_backend_server import run_backend
+    from skellycam.api.run_server import run_backend
     from pprint import pprint
 
     backend_process_out, hostname, port = run_backend()

@@ -1,31 +1,12 @@
 import multiprocessing
-import socket
-import time
 from multiprocessing import Process
 from typing import Tuple
 
-import uvicorn
 from PySide6.QtCore import QTimer
 
-from fastapi.routing import APIRoute
-from starlette.routing import WebSocketRoute
-
-from skellycam.api.fastapi_app import FastApiApp
+from skellycam.api.find_available_port import find_available_port
+from skellycam.api.run_uvicorn_server import run_uvicorn_server
 from skellycam.backend.system.environment.get_logger import logger
-
-
-def find_available_port(start_port):
-    port = start_port
-    while True:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("localhost", port))
-                return port
-            except socket.error as e:
-                print(f"Port {port} is in use.")
-                port += 1
-                if port > 65535:  # No more ports available
-                    raise e
 
 
 def run_backend(
@@ -43,7 +24,7 @@ def run_backend(
         Exception(f"Preferred port ({preferred_port}) was blocked!")
 
     backend_process = Process(
-        target=run_backend_api_server, args=(hostname, port, ready_event)
+        target=run_uvicorn_server, args=(hostname, port, ready_event)
     )
     backend_process.start()
     if backend_process.is_alive():
@@ -51,34 +32,6 @@ def run_backend(
         return backend_process, hostname, port
 
     raise Exception(f"Backend server failed to start on port {port} :(")
-
-
-def run_backend_api_server(
-    hostname: str, port: int, ready_event: multiprocessing.Event = None
-):
-    app = FastApiApp(ready_event).app
-    log_api_routes(app, hostname, port)
-    uvicorn.run(
-        app,
-        host=hostname,
-        port=port,
-        log_level="debug"
-        # reload=True
-    )
-
-
-def log_api_routes(app, hostname, port):
-    debug_string = f"Starting Uvicorn server on `{hostname}:{port}` serving routes:\n"
-    api_routes = ""
-    websocket_routes = ""
-    for route in app.routes:
-        if isinstance(route, APIRoute):
-            api_routes += f"\tRoute: `{route.name}`, path: `{route.path}`, methods: {route.methods}\n"
-
-        elif isinstance(route, WebSocketRoute):
-            websocket_routes += f"\tRoute: `{route.name}`, path: `{route.path}`"
-    debug_string += f"HTTP routes: \n{api_routes}\nWebsockets: \n{websocket_routes}\n"
-    logger.info(debug_string)
 
 
 if __name__ == "__main__":
