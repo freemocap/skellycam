@@ -1,11 +1,10 @@
-from PySide6.QtCore import Signal, QObject, QThread, QTimer
-from pydantic import BaseModel
+from PySide6.QtCore import Signal, QObject, QTimer
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.frontend.api_client.frontend_websocket import (
-    FrontendWebsocketConnection,
-    WebsocketRequest,
+    FrontendWebsocketManager,
+    GetFramesWebsocketRequest,
 )
 
 
@@ -14,7 +13,7 @@ class FrameRequester(QObject):
 
     def __init__(
         self,
-        websocket_connection: FrontendWebsocketConnection,
+        websocket_connection: FrontendWebsocketManager,
         parent: QObject,
         frontend_framerate: float = 30,
     ):
@@ -27,7 +26,7 @@ class FrameRequester(QObject):
         self.frontend_framerate = frontend_framerate
 
     def start(self):
-        logger.info(f"FrameGrabber starting...")
+        logger.info(f"FrameRequester starting...")
         self.websocket_connection.connect_websocket()
 
         interval_ms = 1000 // self.frontend_framerate
@@ -39,6 +38,6 @@ class FrameRequester(QObject):
         self.websocket_connection.disconnect_websocket()
 
     def _request_frames(self):
-        logger.trace("Requesting new frames...")
-        get_frames_request = WebsocketRequest.get_frames()
-        self.websocket_connection.send_outgoing_message(get_frames_request.dict())
+        logger.debug("Requesting new frames...")
+        self.websocket_connection.send_ping()
+        # self.websocket_connection.request_frames()

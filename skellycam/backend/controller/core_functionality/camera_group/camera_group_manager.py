@@ -148,7 +148,7 @@ class CameraGroupManager(threading.Thread):
     def wait_for_new_frames(self) -> Union[MultiFramePayload, bool]:
         return self._incoming_frame_wrangler.wait_for_new_frontend_payload
 
-    def start(self):
+    def run(self):
         self._camera_group.start()
         multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())

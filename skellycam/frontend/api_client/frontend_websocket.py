@@ -1,5 +1,5 @@
 import json
-from typing import Literal, Union
+from typing import Literal, Union, Optional
 
 from PySide6.QtCore import Signal, QObject, QTimer
 from PySide6.QtWebSockets import QWebSocket
@@ -9,16 +9,47 @@ from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayl
 from skellycam.backend.system.environment.get_logger import logger
 
 
-class WebsocketRequest(BaseModel):
-    command: Literal["get_frames", "ping"]
+from pydantic import BaseModel
+from typing_extensions import Literal
+
+
+class BaseWebsocketRequest(BaseModel):
+    command: str
+
+
+class GetFramesWebsocketRequest(BaseWebsocketRequest):
+    command: Literal["get_frames"] = "get_frames"
 
     @classmethod
-    def ping(cls):
-        return cls(command="ping")
+    def create(cls):
+        return cls()
+
+
+class PingWebsocketRequest(BaseWebsocketRequest):
+    command: Literal["ping"] = "ping"
 
     @classmethod
-    def get_frames(cls):
-        return cls(command="get_frames")
+    def create(cls):
+        return cls()
+
+
+class BaseWebsocketResponse(BaseModel):
+    success: bool = True
+    data: Union[MultiFramePayload, str]
+
+
+class GetFramesWebsocketResponse(BaseWebsocketResponse):
+    success: bool = True
+    data: Optional[MultiFramePayload]
+
+    @classmethod
+    def create(cls, data: Optional[MultiFramePayload], success: bool = True):
+        return cls(success=success, data=data)
+
+
+class PingWebsocketResponse(BaseWebsocketResponse):
+    success: bool = True
+    data: str = "Pong!"
 
 
 class WebsocketResponse(BaseModel):
@@ -26,7 +57,7 @@ class WebsocketResponse(BaseModel):
     data: Union[MultiFramePayload, Literal["pong"]]
 
 
-class FrontendWebsocketConnection(QWebSocket):
+class FrontendWebsocketManager(QWebSocket):
     error_occurred = Signal(str)
     message_received = Signal(dict)
     frames_received = Signal(MultiFramePayload)
@@ -50,8 +81,8 @@ class FrontendWebsocketConnection(QWebSocket):
             self.connect_websocket()
         logger.debug(f"WebSocket connection is working!")
 
-    def open_connection(self, url: str):
-        self.open(url)
+    def open_connection(self):
+        self.open(self.url)
 
     def on_connected(self):
         logger.info("WebSocket connected!")
@@ -96,5 +127,9 @@ class FrontendWebsocketConnection(QWebSocket):
 
     def request_frames(self):
         # Create a request to fetch frames
-        get_frames_request = WebsocketRequest()
+        get_frames_request = GetFramesWebsocketRequest.create()
         self.send_outgoing_message(get_frames_request.dict())
+
+    def send_ping(self):
+        ping_request = PingWebsocketRequest.create()
+        self.send_outgoing_message(ping_request.dict())

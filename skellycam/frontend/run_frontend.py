@@ -1,3 +1,5 @@
+import multiprocessing
+
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.frontend.api_client.get_or_create_api_client import create_api_client
 
@@ -5,7 +7,10 @@ from skellycam.frontend.application import create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
 
 
-def run_frontend(hostname: str, port: int) -> None:
+def run_frontend(
+    hostname: str,
+    port: int,
+) -> int:
     logger.info(f"Starting frontend/client process...")
 
     api_client = create_api_client(hostname=hostname, port=port)
@@ -23,4 +28,5 @@ def run_frontend(hostname: str, port: int) -> None:
         exit_code = 1
     finally:
         main_window.close()
-        return exit_code
+
+    return exit_code

@@ -27,20 +27,24 @@ def get_or_create_controller() -> "Controller":
 
 class Controller:
     def __init__(self):
-        self.available_cameras = None
+        self.detected_cameras = None
         self.camera_group_manager: Optional[CameraGroupManager] = None
 
     def detect_available_cameras(self) -> CamerasDetectedResponse:
         cameras_detected_response = detect_available_cameras()
-        self.available_cameras = cameras_detected_response.available_cameras
-        if not self.available_cameras:
+        self.detected_cameras = cameras_detected_response.detected_cameras
+        if not self.detected_cameras:
             logger.warning("No cameras detected!")
         return cameras_detected_response
 
     def connect_to_cameras(self, camera_configs: Dict[CameraId, CameraConfig]):
-        # if not self.available_cameras:
-        #     logger.error("No cameras available")
-        #     Exception("No cameras available")
+        for camera_id in camera_configs.keys():
+            if not camera_id in self.detected_cameras:
+                logger.warning(
+                    f"Camera {camera_id} was not found in list of previously detected cameras "
+                    f"{list(self.detected_cameras.keys())} - (We'll still try to contect to it though)"
+                )
+
         if not camera_configs:
             logger.error("Must provide at least one camera config")
             Exception("Must provide at least one camera config")
@@ -50,7 +54,7 @@ class Controller:
                 camera_configs=camera_configs
             )
             self.camera_group_manager.start()
-            self.camera_group_manager.join()
+            # self.camera_group_manager.join()
             return CamerasConnectedResponse(success=True)
         except Exception as e:
             logger.error(f"An error occurred: {e}")

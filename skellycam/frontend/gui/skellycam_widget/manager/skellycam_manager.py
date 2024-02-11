@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Signal, QThread
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
-    AvailableCameras,
+    DetectedCameras,
+    CamerasDetectedResponse,
 )
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_requester import (
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class SkellyCamManager(QThread):
-    cameras_detected = Signal(AvailableCameras)
+    cameras_detected = Signal(DetectedCameras)
 
     def __init__(
         self,
@@ -41,6 +42,9 @@ class SkellyCamManager(QThread):
         self.frame_requester.new_frames.connect(
             self.main_widget.camera_grid.handle_new_images
         )
+
+        self.api_client.detected_cameras.connect(self.handle_cameras_detected)
+        self.api_client.cameras_connected.connect(self.handle_cameras_connected)
 
         #
         # self.main_widget.record_buttons.start_recording_button.clicked.connect(
@@ -91,22 +95,22 @@ class SkellyCamManager(QThread):
         self.main_widget.record_buttons.show()
         self.main_widget.side_panel.show()
 
-        self._request_detect_cameras()
+        self.api_client.detect_available_cameras()
         self._request_connect_to_cameras()
 
     def _request_connect_to_cameras(self):
+        logger.info("Sending connect to cameras request...")
         self.api_client.connect_to_cameras(
             self.main_widget.camera_parameter_tree.camera_configs
         )
-        self.handle_cameras_connected()
+        self.frame_requester.start()
+        # self.handle_cameras_connected()
 
-    def _request_detect_cameras(self):
-        detected_cameras_response = self.api_client.detect_cameras()
-        self.handle_cameras_detected(detected_cameras_response.available_cameras)
-
-    def handle_cameras_detected(self, available_cameras: AvailableCameras):
+    def handle_cameras_detected(
+        self, detected_cameras_response: CamerasDetectedResponse
+    ) -> None:
         self.main_widget.camera_parameter_tree.update_available_cameras(
-            available_cameras=available_cameras
+            available_cameras=detected_cameras_response.detected_cameras
         )
 
         self.main_widget.camera_control_buttons.detect_available_cameras_button.setEnabled(
@@ -119,7 +123,6 @@ class SkellyCamManager(QThread):
 
     def handle_cameras_connected(self):
         logger.info("Handling cameras connected signal")
-        self.frame_requester.start()
         self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(True)
         self.main_widget.camera_control_buttons.apply_camera_settings_button.setEnabled(
             True

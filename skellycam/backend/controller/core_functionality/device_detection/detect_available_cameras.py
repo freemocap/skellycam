@@ -6,26 +6,26 @@ from pydantic import BaseModel
 
 from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfo
 
-AvailableCameras = Dict[str, CameraDeviceInfo]
+DetectedCameras = Dict[str, CameraDeviceInfo]
 
 
 class CamerasDetectedResponse(BaseModel):
-    available_cameras: AvailableCameras
+    detected_cameras: DetectedCameras
 
 
 def detect_available_cameras() -> CamerasDetectedResponse:
     devices = QMediaDevices()
-    available_cameras = devices.videoInputs()
+    detected_cameras = devices.videoInputs()
     cameras = {}
-    for camera_number, camera in enumerate(available_cameras):
+    for camera_number, camera in enumerate(detected_cameras):
         if camera.isNull():
             continue
         cameras[camera_number] = CameraDeviceInfo.from_q_camera_device(
             camera_number=camera_number, camera=camera
         )
-    return CamerasDetectedResponse(available_cameras=cameras)
+    return CamerasDetectedResponse(detected_cameras=cameras)
 
 
 if __name__ == "__main__":
     cameras_out = detect_available_cameras()
-    pprint(cameras_out.available_cameras, indent=4)
+    pprint(cameras_out.detected_cameras, indent=4)

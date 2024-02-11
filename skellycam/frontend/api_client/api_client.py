@@ -1,61 +1,64 @@
-from typing import Dict
-
 import httpx
 from PySide6.QtCore import QObject, Signal
+from httpx import Timeout
 from pydantic import ValidationError
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
+    DetectedCameras,
 )
 from skellycam.backend.controller.interactions.connect_to_cameras import (
     CamerasConnectedResponse,
     ConnectToCamerasRequest,
 )
-from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_configs import (
     CameraConfigs,
     DEFAULT_CAMERA_CONFIGS,
 )
-from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketConnection
+from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketManager
 
 
 class ApiClient(QObject):
-    detected_cameras = Signal(Dict[CameraId, CameraConfig])
+    detected_cameras = Signal(CamerasDetectedResponse)
+    cameras_connected = Signal()
 
-    def __init__(self, hostname: str, port: int) -> None:
+    def __init__(self, hostname: str, port: int, timeout: float = 10) -> None:
         super().__init__()
 
         self.api_base_url = f"http://{hostname}:{port}"
-        self.client = httpx.Client(base_url=self.api_base_url)
+        self.client = httpx.Client(base_url=self.api_base_url, timeout=timeout)
 
         self.websocket_url = f"ws://{hostname}:{port}/websocket"
-        self.websocket_connection = FrontendWebsocketConnection(url=self.websocket_url)
+        self.websocket_connection = FrontendWebsocketManager(url=self.websocket_url)
 
     def hello(self):
         return self.client.get("hello")
 
-    def detect_cameras(self):
+    def detect_available_cameras(self):
         logger.debug("Sending request to the frontend API `detect` endpoint")
         response = self.client.get("detect")
         try:
             cameras_detected_response = CamerasDetectedResponse.parse_obj(
                 response.json()
             )
-            return cameras_detected_response
+            self.detected_cameras.emit(cameras_detected_response)
+
         except ValidationError as e:
             logger.error(f"Failed to parse response: {e}")
             return None
 
-    def connect_to_cameras(self, camera_configs: CameraConfigs):
+    def connect_to_cameras(self, camera_configs: CameraConfigs, timeout: float = 60):
         logger.debug("Sending request to the frontend API `connect` endpoint")
         request = ConnectToCamerasRequest(camera_configs=camera_configs).dict()
-        response = self.client.post("connect", json=request)
+        custom_timeout = Timeout(timeout)
+        response = self.client.post("connect", json=request, timeout=custom_timeout)
         try:
             cameras_detected_response = CamerasConnectedResponse.parse_obj(
                 response.json()
             )
+            if cameras_detected_response.sucess:
+                self.cameras_connected.emit()
             return cameras_detected_response
         except ValidationError as e:
             logger.error(f"Failed to parse response: {e}")
