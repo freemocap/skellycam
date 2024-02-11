@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
-    DetectedCameras,
 )
 from skellycam.backend.controller.interactions.connect_to_cameras import (
     CamerasConnectedResponse,
@@ -16,21 +15,17 @@ from skellycam.backend.models.cameras.camera_configs import (
     DEFAULT_CAMERA_CONFIGS,
 )
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketManager
 
 
 class ApiClient(QObject):
     detected_cameras = Signal(CamerasDetectedResponse)
     cameras_connected = Signal()
 
-    def __init__(self, hostname: str, port: int, timeout: float = 10) -> None:
+    def __init__(self, url: str, timeout: float = 10) -> None:
         super().__init__()
 
-        self.api_base_url = f"http://{hostname}:{port}"
+        self.api_base_url = url
         self.client = httpx.Client(base_url=self.api_base_url, timeout=timeout)
-
-        self.websocket_url = f"ws://{hostname}:{port}/websocket"
-        self.websocket_connection = FrontendWebsocketManager(url=self.websocket_url)
 
     def hello(self):
         return self.client.get("hello")
@@ -64,29 +59,6 @@ class ApiClient(QObject):
             logger.error(f"Failed to parse response: {e}")
             return None
 
-    # def get_latest_frames(self):
-    #     logger.debug("Sending request for the get latest frames endpoint")
-    #     response = self.client.get("cameras/latest_frames", follow_redirects=True)
-    #
-    #     if response.status_code != 200:
-    #         logger.error(
-    #             f"Failed to fetch latest frames, status code: {response.status_code}"
-    #         )
-    #         return None
-    #
-    #     try:
-    #         byte_chunks = response.iter_bytes()
-    #         content = b"".join(byte_chunks)
-    #
-    #         multi_frame_payload = MultiFramePayload.from_bytes(content)
-    #         return multi_frame_payload
-    #     except ValidationError as e:
-    #         logger.error(f"Failed to parse response: {e}")
-    #         return None
-    #     except Exception as e:
-    #         logger.error(f"An unexpected error occurred: {e}")
-    #         return None
-
 
 def check_frontend_camera_connection():
     from skellycam.api.run_server import run_backend
@@ -99,9 +71,6 @@ def check_frontend_camera_connection():
     pprint(hello_response.json())
     c = DEFAULT_CAMERA_CONFIGS
     print(client.connect_to_cameras(c))
-
-    payload = client.get_latest_frames()
-    pprint(payload)
 
 
 if __name__ == "__main__":

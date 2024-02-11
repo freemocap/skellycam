@@ -25,9 +25,9 @@ class SkellyCamManager(QThread):
         super().__init__()
         self.main_widget = main_widget
         self.api_client = self.main_widget.api_client
-        self.frame_requester = FrameRequester(
-            websocket_connection=self.api_client.websocket_connection, parent=self
-        )
+        # self.frame_requester = FrameRequester(
+        #     websocket_connection=self.api_client.websocket_connection, parent=self
+        # )
         self.connect_signals()
 
     def connect_signals(self) -> None:
@@ -39,9 +39,9 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_grid.update_camera_grid
         )
 
-        self.api_client.websocket_connection.frames_received.connect(
-            self.main_widget.camera_grid.handle_new_frames
-        )
+        # self.api_client.websocket_connection.frames_received.connect(
+        #     self.main_widget.camera_grid.handle_new_frames
+        # )
 
         self.api_client.detected_cameras.connect(self.handle_cameras_detected)
         self.api_client.cameras_connected.connect(self.handle_cameras_connected)
@@ -102,7 +102,7 @@ class SkellyCamManager(QThread):
         self.api_client.connect_to_cameras(
             self.main_widget.camera_parameter_tree.camera_configs
         )
-        self.frame_requester.start()
+        # self.frame_requester.start()
         # self.handle_cameras_connected()
 
     def handle_cameras_detected(

@@ -8,15 +8,19 @@ from skellycam.backend.system.environment.default_paths import (
 )
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.frontend.api_client.api_client import ApiClient
+from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketClient
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
 
 
 class SkellyCamMainWindow(QMainWindow):
-    def __init__(self, api_client: ApiClient):
+    def __init__(
+        self, api_client: ApiClient, websocket_client: FrontendWebsocketClient
+    ):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
         self.api_client = api_client
+        self.websocket_client = websocket_client
         # self.shortcuts = KeyboardShortcuts()
         # self.shortcuts.connect_shortcuts(self)
         self._initUI()
@@ -32,7 +36,11 @@ class SkellyCamMainWindow(QMainWindow):
         self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
 
         self._layout = QVBoxLayout()
-        self.skellycam_widget = SkellyCamWidget(parent=self, api_client=self.api_client)
+        self.skellycam_widget = SkellyCamWidget(
+            parent=self,
+            api_client=self.api_client,
+            websocket_client=self.websocket_client,
+        )
         self.setCentralWidget(self.skellycam_widget)
 
     def closeEvent(self, event):

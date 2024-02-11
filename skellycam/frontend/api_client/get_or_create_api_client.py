@@ -6,9 +6,9 @@ from skellycam.frontend.api_client.api_client import ApiClient
 API_CLIENT: Optional[ApiClient] = None
 
 
-def create_api_client(hostname: str, port: int) -> ApiClient:
-    logger.debug(f"Creating api client for host: {hostname}, port: {port}")
+def create_api_client(url: str) -> ApiClient:
+    logger.debug(f"Creating api client at url: {url}")
     global API_CLIENT
     if API_CLIENT is None:
-        API_CLIENT = ApiClient(hostname=hostname, port=port)
+        API_CLIENT = ApiClient(url)
     return API_CLIENT

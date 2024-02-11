@@ -1,13 +1,10 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from starlette.responses import RedirectResponse
-from starlette.websockets import WebSocket
+from fastapi.responses import RedirectResponse
+from fastapi.websockets import WebSocket
 
 import skellycam
 from skellycam.api.router import http_router
-from skellycam.api.backend_websocket import (
-    BackendWebSocketConnectionManager,
-)
 from skellycam.backend.system.environment.get_logger import logger
 
 
@@ -27,9 +24,14 @@ class FastApiApp:
         @self.app.websocket("/websocket")
         async def websocket_route(websocket: WebSocket):
             logger.info("WebSocket connection received")
-            ws_manager = BackendWebSocketConnectionManager(websocket)
-            await ws_manager.accept_connection()
-            await ws_manager.receive_and_process_messages()
+            await websocket.accept()
+            while True:
+                data = await websocket.receive_bytes()
+                logger.info(f"Data received: {data}")
+                await websocket.send_bytes(b"received bytes: {data}")
+            # ws_manager = BackendWebSocketConnectionManager(websocket)
+            # await ws_manager.accept_connection()
+            # await ws_manager.receive_and_process_messages()
 
     def _customize_swagger_ui(self):
         def custom_openapi():

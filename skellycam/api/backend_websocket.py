@@ -28,11 +28,11 @@ class BackendWebSocketConnectionManager:
     async def receive_and_process_messages(self):
         try:
             while self._should_continue:
-                incoming_message = await self.websocket.receive_bytes()
+                incoming_bytes = await self.websocket.receive_bytes()
 
-                if incoming_message == b"ping":
+                if incoming_bytes == b"ping":
                     logger.info(f"Received Ping!")
-                elif incoming_message == b"give-frames-plz":
+                elif incoming_bytes == b"give-frames-plz":
                     await self.send_latest_frames()
 
         except WebSocketDisconnect:
