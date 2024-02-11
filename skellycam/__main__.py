@@ -1,5 +1,6 @@
 # __main__.py
 import multiprocessing
+import time
 from multiprocessing import freeze_support
 
 from skellycam.api.run_backend_server import run_backend
@@ -23,12 +24,15 @@ if __name__ == "__main__":
 
     while True:
         logger.info("Starting backend server process...")
+        ready_event = multiprocessing.Event()
+        backend_process, hostname, port = run_backend(ready_event)
+        while not ready_event.is_set():
+            logger.debug("Waiting for backend server to start...")
+            time.sleep(1)
 
-        backend_process, hostname, port = run_backend()
+        logger.info(f"Backend server is running on: https://{hostname}:{port}")
 
         exit_code = run_frontend(hostname, port)  # blocks until the frontend exits
-
-        ###
 
         logger.info(f"Frontend ended with exit code: {exit_code}")
         logger.info(f"Shutting down backend/server process")

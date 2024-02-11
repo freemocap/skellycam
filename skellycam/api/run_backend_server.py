@@ -1,4 +1,6 @@
+import multiprocessing
 import socket
+import time
 from multiprocessing import Process
 from typing import Tuple
 
@@ -27,6 +29,7 @@ def find_available_port(start_port):
 
 
 def run_backend(
+    ready_event: multiprocessing.Event,
     hostname: str = "localhost",
     preferred_port: int = 8000,
     fail_if_blocked: bool = False,
@@ -39,7 +42,9 @@ def run_backend(
         )
         Exception(f"Preferred port ({preferred_port}) was blocked!")
 
-    backend_process = Process(target=run_backend_api_server, args=(hostname, port))
+    backend_process = Process(
+        target=run_backend_api_server, args=(hostname, port, ready_event)
+    )
     backend_process.start()
     if backend_process.is_alive():
         logger.info(f"Backend server started on port {port}.")
@@ -48,8 +53,10 @@ def run_backend(
     raise Exception(f"Backend server failed to start on port {port} :(")
 
 
-def run_backend_api_server(hostname: str, port: int):
-    app = FastApiApp().app
+def run_backend_api_server(
+    hostname: str, port: int, ready_event: multiprocessing.Event = None
+):
+    app = FastApiApp(ready_event).app
     log_api_routes(app, hostname, port)
     uvicorn.run(
         app,
@@ -61,18 +68,16 @@ def run_backend_api_server(hostname: str, port: int):
 
 
 def log_api_routes(app, hostname, port):
-    debug_string = f"Starting Uvicorn server on {hostname}:{port} serving routes:\n\n "
+    debug_string = f"Starting Uvicorn server on `{hostname}:{port}` serving routes:\n"
     api_routes = ""
     websocket_routes = ""
     for route in app.routes:
         if isinstance(route, APIRoute):
-            api_routes += (
-                f"name: {route.name}, path: {route.path}, methods: {route.methods}\n"
-            )
+            api_routes += f"\tRoute: `{route.name}`, path: `{route.path}`, methods: {route.methods}\n"
 
         elif isinstance(route, WebSocketRoute):
-            websocket_routes += f"name: {route.name}, path: {route.path}"
-    debug_string += f"HTTP routes: \n{api_routes}\n Websockets: \n{websocket_routes}\n"
+            websocket_routes += f"\tRoute: `{route.name}`, path: `{route.path}`"
+    debug_string += f"HTTP routes: \n{api_routes}\nWebsockets: \n{websocket_routes}\n"
     logger.info(debug_string)
 
 
@@ -91,9 +96,9 @@ if __name__ == "__main__":
             self.beep_timer.timeout.connect(self.client.send_beep)
             self.beep_timer.start(1000)  # Set interval in milliseconds
 
-    backend_process_out, localhost, port = run_backend()
-    print(f"Backend server is running on: http://{localhost}:{port}")
-    ws_url_outer = f"ws://{localhost}:{port}/websocket"
+    backend_process_out, localhost_outer, port_outer = run_backend()
+    print(f"Backend server is running on: http://{localhost_outer}:{port_outer}")
+    ws_url_outer = f"ws://{localhost_outer}:{port_outer}/websocket"
     app = SimpleApp(ws_url_outer)
     app.exec()
     logger.info(f"Done!")

@@ -1,3 +1,5 @@
+import multiprocessing
+
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
@@ -9,10 +11,11 @@ from skellycam.backend.system.environment.get_logger import logger
 
 
 class FastApiApp:
-    def __init__(self):
+    def __init__(self, ready_event: multiprocessing.Event):
         self.app = FastAPI()
         self._register_routes()
         self._customize_swagger_ui()
+        ready_event.set()
 
     def _register_routes(self):
         @self.app.get("/")

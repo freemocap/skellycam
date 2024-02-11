@@ -11,19 +11,16 @@ from skellycam.backend.system.environment.get_logger import logger
 
 class FrontendWebsocketClient:
     def __init__(self, url: str):
+        logger.debug(f"Creating websocket client at url: {url}")
+        self.url = QUrl(url)
         self.websocket = QWebSocket()
-        self.url = url
         self.websocket.connected.connect(self.on_connected)
         self.websocket.binaryMessageReceived.connect(self.on_binary_message_received)
         self.connect_to_server()
 
-    def connect_to_server(self, max_attempts: int = 5, interval: int = 2):
+    def connect_to_server(self):
         logger.info("Connecting to websocket server")
         self.websocket.open(self.url)
-        attempts = 0
-        while not self.websocket.isValid() and attempts < max_attempts:
-            logger.error(f"Failed to connect to websocket server at {self.url}")
-            time.sleep(interval)
 
     def on_connected(self):
         logger.info("WebSocket connected!")
@@ -34,7 +31,7 @@ class FrontendWebsocketClient:
         self.websocket.sendBinaryMessage(b"ping")
 
     def on_binary_message_received(self, message):
-        print(f"Received binary message: {message}")
+        logger.info(f"Received binary message: {message}")
 
 
 class FrontendWebsocketManager(QWebSocket):

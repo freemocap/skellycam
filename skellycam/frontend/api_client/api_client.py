@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 from PySide6.QtCore import QObject, Signal
 from httpx import Timeout
@@ -15,6 +17,8 @@ from skellycam.backend.models.cameras.camera_configs import (
     DEFAULT_CAMERA_CONFIGS,
 )
 from skellycam.backend.system.environment.get_logger import logger
+
+logging.getLogger("httpx").setLevel("INFO")
 
 
 class ApiClient(QObject):
