@@ -28,7 +28,8 @@ class FastApiApp:
             while True:
                 data = await websocket.receive_bytes()
                 logger.info(f"Data received: {data}")
-                await websocket.send_bytes(b"received bytes: {data}")
+                response_message = f"received bytes: {data}"
+                await websocket.send_bytes(bytes(response_message, "utf-8"))
             # ws_manager = BackendWebSocketConnectionManager(websocket)
             # await ws_manager.accept_connection()
             # await ws_manager.receive_and_process_messages()

@@ -1,9 +1,10 @@
-import multiprocessing
 import socket
 from multiprocessing import Process
 from typing import Tuple
 
 import uvicorn
+from fastapi.routing import APIRoute
+from starlette.routing import WebSocketRoute
 
 from skellycam.api.fastapi_app import FastApiApp
 from skellycam.backend.system.environment.get_logger import logger
@@ -47,6 +48,7 @@ def run_backend(
 
 def run_backend_api_server(hostname: str, port: int):
     app = FastApiApp().app
+    log_api_routes(app, hostname, port)
     uvicorn.run(
         app,
         host=hostname,
@@ -54,6 +56,22 @@ def run_backend_api_server(hostname: str, port: int):
         log_level="debug"
         # reload=True
     )
+
+
+def log_api_routes(app, hostname, port):
+    debug_string = f"Starting Uvicorn server on {hostname}:{port} serving routes:\n\n "
+    api_routes = ""
+    websocket_routes = ""
+    for route in app.routes:
+        if isinstance(route, APIRoute):
+            api_routes += (
+                f"name: {route.name}, path: {route.path}, methods: {route.methods}\n"
+            )
+
+        elif isinstance(route, WebSocketRoute):
+            websocket_routes += f"name: {route.name}, path: {route.path}"
+    debug_string += f"HTTP routes: \n{api_routes}\n Websockets: \n{websocket_routes}\n"
+    logger.info(debug_string)
 
 
 if __name__ == "__main__":
