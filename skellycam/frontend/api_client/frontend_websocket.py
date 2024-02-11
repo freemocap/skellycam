@@ -2,19 +2,19 @@ import json
 
 from PySide6.QtCore import Signal, QObject, QTimer
 from PySide6.QtWebSockets import QWebSocket
-from pydantic import BaseModel
 from pydantic import ValidationError
-from typing_extensions import Literal
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
 
 
-class BaseWebsocketRequest(BaseModel):
-    command: str
-
-
 class FrontendWebsocketManager(QWebSocket):
+    """
+    A class to manage the connection to the FRONTEND websocket server.
+    This connection has one purpose: to receive frames from the backend and emit them as a signal.
+    Other communication happens through the REST API.
+    """
+
     frames_received = Signal(MultiFramePayload)
 
     def __init__(self, url: str, parent: QObject = None):
@@ -22,7 +22,7 @@ class FrontendWebsocketManager(QWebSocket):
         self.url = url
         self.connected.connect(self._handle_connected)
         self.disconnected.connect(self._handle_disconnected)
-        self.textMessageReceived.connect(self._handle_incoming_message)
+        self.binaryMessageReceived.connect(self._handle_incoming_message)
         self.error.connect(self._handle_error)
 
         self.destroyed.connect(self.disconnect_websocket)
@@ -43,7 +43,7 @@ class FrontendWebsocketManager(QWebSocket):
 
     def request_frames(self):
         # Create a request to fetch frames
-        self.sendTextMessage("give frames, plz")
+        self.sendBinaryMessage(b"give-frames-plz")
 
     def _open_connection(self):
         logger.debug(f"Opening websocket connection to {self.url}")
@@ -57,7 +57,8 @@ class FrontendWebsocketManager(QWebSocket):
         logger.debug(f"WebSocket connection is working!")
 
     def _handle_connected(self):
-        logger.info("WebSocket connected!")
+        logger.info("WebSocket connected! Sending Ping...")
+        self.sendBinaryMessage(b"ping")
 
     def _handle_disconnected(self):
         logger.info("WebSocket disconnected")
@@ -67,6 +68,9 @@ class FrontendWebsocketManager(QWebSocket):
         logger.error(f"WebSocket error ({error_code}): {error_message}")
 
     def _handle_incoming_message(self, message: bytes):
+        if message == b"pong":
+            logger.info("Received Pong!")
+            return
         try:
             logger.debug(f"incoming message with length: {len(message)}")
 

@@ -14,6 +14,7 @@ def run_frontend(
     logger.info(f"Starting frontend/client process...")
 
     api_client = create_api_client(hostname=hostname, port=port)
+    api_client.websocket_connection.connect_websocket()
 
     qt_app = create_or_recreate_qt_application()
 

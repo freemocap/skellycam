@@ -6,8 +6,9 @@ from starlette.websockets import WebSocket
 import skellycam
 from skellycam.api.router import http_router
 from skellycam.api.backend_websocket import (
-    WebSocketConnectionManager,
+    BackendWebSocketConnectionManager,
 )
+from skellycam.backend.system.environment.get_logger import logger
 
 
 class FastApiApp:
@@ -25,7 +26,8 @@ class FastApiApp:
 
         @self.app.websocket("/websocket")
         async def websocket_route(websocket: WebSocket):
-            ws_manager = WebSocketConnectionManager(websocket)
+            logger.info("WebSocket connection received")
+            ws_manager = BackendWebSocketConnectionManager(websocket)
             await ws_manager.accept_connection()
             await ws_manager.receive_and_process_messages()
 

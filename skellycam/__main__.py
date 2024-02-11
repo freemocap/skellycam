@@ -9,7 +9,6 @@ from skellycam.backend.system.environment.configure_logging import (
 )
 from skellycam.frontend.run_frontend import run_frontend
 
-configure_logging(LogLevel.TRACE)
 
 from skellycam.backend.system.environment.get_logger import logger
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
