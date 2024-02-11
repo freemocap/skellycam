@@ -1,10 +1,9 @@
 import multiprocessing
 
 from skellycam.backend.system.environment.get_logger import logger
+from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketClient
 from skellycam.frontend.api_client.get_or_create_api_client import create_api_client
-from skellycam.frontend.api_client.get_or_create_websocket_client import (
-    create_websocket_client,
-)
+
 
 from skellycam.frontend.application import create_or_recreate_qt_application
 from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
@@ -20,7 +19,7 @@ def run_frontend(
     api_client = create_api_client(backend_http_url)
 
     backend_websocket_url = f"ws://{hostname}:{port}/websocket"
-    websocket_client = create_websocket_client(backend_websocket_url)
+    websocket_client = FrontendWebsocketClient(backend_websocket_url)
     websocket_client.connect_to_server()
     websocket_client.send_ping()
 

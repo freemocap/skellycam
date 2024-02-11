@@ -12,7 +12,7 @@ from skellycam.backend.system.environment.get_logger import logger
 class FrontendWebsocketClient:
     def __init__(self, url: str):
         self.websocket = QWebSocket()
-        self.url = QUrl(url)
+        self.url = url
         self.websocket.connected.connect(self.on_connected)
         self.websocket.binaryMessageReceived.connect(self.on_binary_message_received)
         self.connect_to_server()

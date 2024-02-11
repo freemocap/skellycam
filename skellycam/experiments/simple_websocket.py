@@ -33,7 +33,8 @@ class SimpleFastApiWebSocketApp:
 
 
 class SimpleWebSocketClient:
-    def __init__(self):
+    def __init__(self, url: str):
+        self.url = QUrl(url)
         self.websocket = QWebSocket()
         self.websocket.connected.connect(self.on_connected)
         self.websocket.binaryMessageReceived.connect(self.on_binary_message_received)
@@ -41,7 +42,7 @@ class SimpleWebSocketClient:
 
     def connect_to_server(self):
         print("Connecting to websocket server")
-        self.websocket.open(QUrl("ws://localhost:8000/websocket"))
+        self.websocket.open(self.url)
 
     def on_connected(self):
         print("WebSocket connected")
@@ -62,17 +63,17 @@ def run_websocket_client():
     client.send_ping()
 
 
-def run_fastapi_app():
+def run_fastapi_app(host: str = "localhost", port: int = 8000):
     print("Running FastAPI app")
     app = SimpleFastApiWebSocketApp().app
     print("Starting Uvicorn server...")
-    uvicorn.run(app, host="localhost", port=8000, log_level="debug")
+    uvicorn.run(app, host=host, port=port, log_level="debug")
 
 
 class SimpleApp(QApplication):
-    def __init__(self, sys_argv):
-        super().__init__(sys_argv)
-        self.client = SimpleWebSocketClient()
+    def __init__(self, ws_url: str):
+        super().__init__()
+        self.client = SimpleWebSocketClient(ws_url)
         self.main_window = QPushButton("Send Ping")
         self.main_window.clicked.connect(self.client.send_ping)
         self.main_window.show()
@@ -81,12 +82,14 @@ class SimpleApp(QApplication):
 if __name__ == "__main__":
     import multiprocessing
 
-    fastapi_process = multiprocessing.Process(target=run_fastapi_app)
+    host = "localhost"
+    port = 8000
+    fastapi_process = multiprocessing.Process(target=run_fastapi_app, args=(host, port))
 
     print("Starting processes...")
     fastapi_process.start()
-
-    app = SimpleApp(sys.argv)
+    ws_url_outer = f"ws://{host}:{port}/websocket"
+    app = SimpleApp(ws_url_outer)
     app.exec()
 
     print("Done!")

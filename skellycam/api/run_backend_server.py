@@ -3,6 +3,7 @@ from multiprocessing import Process
 from typing import Tuple
 
 import uvicorn
+
 from fastapi.routing import APIRoute
 from starlette.routing import WebSocketRoute
 
@@ -75,7 +76,20 @@ def log_api_routes(app, hostname, port):
 
 
 if __name__ == "__main__":
+    from skellycam.experiments.simple_websocket import SimpleWebSocketClient
+    from PySide6.QtWidgets import QPushButton, QApplication
+
+    class SimpleApp(QApplication):
+        def __init__(self, ws_url: str):
+            super().__init__()
+            self.client = SimpleWebSocketClient(ws_url)
+            self.main_window = QPushButton("Send Ping")
+            self.main_window.clicked.connect(self.client.send_ping)
+            self.main_window.show()
+
     backend_process_out, localhost, port = run_backend()
     print(f"Backend server is running on: http://{localhost}:{port}")
-    backend_process_out.join()
+    ws_url_outer = f"ws://{localhost}:{port}/websocket"
+    app = SimpleApp(ws_url_outer)
+    app.exec()
     logger.info(f"Done!")

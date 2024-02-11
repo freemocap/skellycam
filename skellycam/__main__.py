@@ -2,7 +2,7 @@
 import multiprocessing
 from multiprocessing import freeze_support
 
-from skellycam.api.run_server import run_backend
+from skellycam.api.run_backend_server import run_backend
 from skellycam.backend.system.environment.configure_logging import (
     configure_logging,
     LogLevel,
