@@ -18,6 +18,7 @@ def create_or_recreate_qt_application(
         _QT_APPLICATION = SkellyCamQtApplication(hostname, port)
     else:
         logger.info(f"Recreating QApplication...")
+        _QT_APPLICATION.quit()
         _QT_APPLICATION.deleteLater()
         _QT_APPLICATION = SkellyCamQtApplication(hostname, port)
     return _QT_APPLICATION
@@ -45,9 +46,7 @@ class SkellyCamQtApplication(QApplication):
         self.websocket_client = FrontendWebsocketClient(self._backend_websocket_url)
 
     def _create_api_client(self):
-        self._backend_http_url = (
-            f"https://{self._backend_hostname}:{self._backend_port}"
-        )
+        self._backend_http_url = f"http://{self._backend_hostname}:{self._backend_port}"
         self.api_client = ApiClient(self._backend_http_url)
 
     def _create_keep_alive_timer(self, interval: int = 10000):

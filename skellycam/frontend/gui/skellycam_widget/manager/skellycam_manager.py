@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import numpy as np
 from PySide6.QtCore import Signal, QThread
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
@@ -25,9 +26,9 @@ class SkellyCamManager(QThread):
         super().__init__()
         self.main_widget = main_widget
         self.api_client = self.main_widget.api_client
-        # self.frame_requester = FrameRequester(
-        #     websocket_connection=self.api_client.websocket_connection, parent=self
-        # )
+        self.frame_requester = FrameRequester(
+            websocket_client=self.main_widget.websocket_client, parent=self
+        )
         self.connect_signals()
 
     def connect_signals(self) -> None:
@@ -39,9 +40,9 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_grid.update_camera_grid
         )
 
-        # self.api_client.websocket_connection.frames_received.connect(
-        #     self.main_widget.camera_grid.handle_new_frames
-        # )
+        self.main_widget.websocket_client.new_frames_received.connect(
+            self.main_widget.camera_grid.handle_new_frames
+        )
 
         self.api_client.detected_cameras.connect(self.handle_cameras_detected)
         self.api_client.cameras_connected.connect(self.handle_cameras_connected)
@@ -128,6 +129,13 @@ class SkellyCamManager(QThread):
         )
         self.main_widget.record_buttons.start_recording_button.setEnabled(True)
         self.main_widget.record_buttons.start_recording_button.setFocus()
+        mean_framerate = np.mean(
+            [
+                config.framerate
+                for config in self.main_widget.camera_parameter_tree.camera_configs.values()
+            ]
+        )
+        self.frame_requester.start(mean_framerate)
 
     # def _handle_cameras_closed_response(self)):
     #     main_widget.camera_control_buttons.close_cameras_button.setEnabled(False)

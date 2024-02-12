@@ -1,27 +1,25 @@
 from PySide6.QtCore import QObject, QTimer, QThread
 
 from skellycam.backend.system.environment.get_logger import logger
-from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketManager
+from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketClient
 
 
 class FrameRequester(QObject):
     def __init__(
         self,
-        websocket_connection: FrontendWebsocketManager,
+        websocket_client: FrontendWebsocketClient,
         parent: QObject,
-        frontend_framerate: float = 30,
     ):
         super().__init__(parent=parent)
-        self.websocket_connection = websocket_connection
+        self.websocket_connection = websocket_client
         self.should_continue = True
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._request_frames)
-        self.frontend_framerate = frontend_framerate
 
-    def start(self):
+    def start(self, target_frames_per_second: float):
         logger.info(f"FrameRequester starting...")
 
-        interval_ms = 1000 // self.frontend_framerate
+        interval_ms = 1000 // target_frames_per_second
         self.timer.start(int(interval_ms))
 
     def stop(self):

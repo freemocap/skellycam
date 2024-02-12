@@ -27,18 +27,3 @@ class CamerasConnectedResponse(BaseModel):
     # TODO - Return the actual settings that the cameras are running, in case they quietly reject any of the requested camera settings
     success: bool
     metadata: Optional[Dict[str, str]]
-
-
-def connect_to_cameras(
-    camera_group_manager: CameraGroupManager, camera_configs: CameraConfigs
-) -> CamerasConnectedResponse:
-    try:
-        camera_group_manager.start(camera_configs=camera_configs)
-        return CamerasConnectedResponse(success=True)
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-        logger.exception(e)
-        return CamerasConnectedResponse(
-            success=False,
-            metadata={"error": str(e), "traceback": str(traceback.format_exc())},
-        )

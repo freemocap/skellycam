@@ -47,7 +47,10 @@ class BackendWebsocketConnectionManager:
             latest_multi_frame_payload = (
                 controller.camera_group_manager.get_latest_frames()
             )
-            await self.websocket.send_bytes(latest_multi_frame_payload.to_bytes())
+            if latest_multi_frame_payload is None:
+                pass
+            else:
+                await self.websocket.send_bytes(latest_multi_frame_payload.to_bytes())
         except Exception as exc:
             logger.error(f"Error obtaining latest frames: {exc}")
             await self.websocket.send_text("Error obtaining latest frames.")

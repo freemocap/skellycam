@@ -1,16 +1,20 @@
 import json
 import time
 
-from PySide6.QtCore import Signal, QObject, QTimer, QUrl
+from PySide6.QtCore import Signal, QUrl
 from PySide6.QtWebSockets import QWebSocket
+from PySide6.QtWidgets import QWidget
 from pydantic import ValidationError
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.backend.system.environment.get_logger import logger
 
 
-class FrontendWebsocketClient:
+class FrontendWebsocketClient(QWidget):
+    new_frames_received = Signal(MultiFramePayload)
+
     def __init__(self, url: str):
+        super().__init__()
         logger.debug(f"Creating websocket client at url: {url}")
         self.url = QUrl(url)
         self.websocket = QWebSocket()
@@ -31,75 +35,12 @@ class FrontendWebsocketClient:
         logger.info("Sending ping to server")
         self.websocket.ping(b"Ping!")
 
-    def on_binary_message_received(self, message):
-        logger.info(f"Received binary message: {message}")
-
-
-class FrontendWebsocketManager(QWebSocket):
-    """
-    A class to manage the connection to the FRONTEND websocket server.
-    This connection has one purpose: to receive frames from the backend and emit them as a signal.
-    Other communication happens through the REST API.
-    """
-
-    frames_received = Signal(MultiFramePayload)
-
-    def __init__(self, url: str, parent: QObject = None):
-        super().__init__(parent)
-        self.url = url
-        self.binaryMessageReceived.connect(self._handle_incoming_message)
-        self.error.connect(self._handle_error)
-
-        self.destroyed.connect(self.disconnect_websocket)
-
-        self.pong.connect(self._handle_pong)
-
-        # Check connection every second and reconnect if necessary
-        self.reconnect_timer = QTimer(self)
-        self.reconnect_timer.timeout.connect(self._check_connection)
-        self.reconnect_timer.start(1000)  # Time in milliseconds (e.g., 10000ms = 10s)
-
-    def connect_websocket(self):
-        logger.info(f"Connecting to websocket...")
-        self._open_connection()
-        while not self.isValid():
-            logger.warning(f"Failed to connect to websocket. Retrying...")
-            time.sleep(1)
-            self._open_connection()
-        logger.info("Successfully connected to websocket")
-
-    def disconnect_websocket(self):
-        logger.info("Disconnecting from websocket")
-        self.close()
-
     def request_frames(self):
         # Create a request to fetch frames
-        self.sendBinaryMessage(b"give-frames-plz")
+        self.websocket.sendBinaryMessage(b"give-frames-plz")
 
-    def _handle_pong(self, elapsedTime: int, payload: bytes):
-        logger.debug(
-            f"Received PONG with payload: {payload} and round-trip time: {elapsedTime} ms"
-        )
-
-    def _open_connection(self):
-        logger.debug(f"Opening websocket connection to {self.url}")
-        self.open(self.url)
-        self.pingTimer = QTimer(self)
-        self.pingTimer.timeout.connect(lambda: self.ping(b"Ping!"))
-        self.pingTimer.start(30000)  # Send ping every 30 seconds
-
-    def _check_connection(self):
-        logger.debug(f"Checking connection to {self.url}")
-        if not self.isValid():
-            logger.warning("WebSocket connection dropped. Attempting to reconnect...")
-            self.connect_websocket()
-        logger.debug(f"WebSocket connection is working!")
-
-    def _handle_error(self, error_code):
-        error_message = self.errorString()
-        logger.error(f"WebSocket error ({error_code}): {error_message}")
-
-    def _handle_incoming_message(self, message: bytes):
+    def on_binary_message_received(self, message):
+        logger.info(f"Received binary message: {message}")
         if message == b"pong":
             logger.info("Received Pong!")
             return
@@ -107,10 +48,92 @@ class FrontendWebsocketManager(QWebSocket):
             logger.debug(f"incoming message with length: {len(message)}")
 
             multi_frame_payload = MultiFramePayload.from_bytes(message)
-            self.frames_received.emit(multi_frame_payload)
+            self.new_frames_received.emit(multi_frame_payload)
         except ValidationError as e:
             logger.error(f"Failed to parse response as MultiFramePayload: {e}")
             raise e
         except Exception as e:
             logger.error(f"Failed to handle websocket message: {e}")
             raise e
+
+
+#
+# class FrontendWebsocketManager(QWebSocket):
+#     """
+#     A class to manage the connection to the FRONTEND websocket server.
+#     This connection has one purpose: to receive frames from the backend and emit them as a signal.
+#     Other communication happens through the REST API.
+#     """
+#
+#     frames_received = Signal(MultiFramePayload)
+#
+#     def __init__(self, url: str, parent: QObject = None):
+#         super().__init__(parent)
+#         self.url = url
+#         self.binaryMessageReceived.connect(self._handle_incoming_message)
+#         self.error.connect(self._handle_error)
+#
+#         self.destroyed.connect(self.disconnect_websocket)
+#
+#         self.pong.connect(self._handle_pong)
+#
+#         # Check connection every second and reconnect if necessary
+#         self.reconnect_timer = QTimer(self)
+#         self.reconnect_timer.timeout.connect(self._check_connection)
+#         self.reconnect_timer.start(1000)  # Time in milliseconds (e.g., 10000ms = 10s)
+#
+#     def connect_websocket(self):
+#         logger.info(f"Connecting to websocket...")
+#         self._open_connection()
+#         while not self.isValid():
+#             logger.warning(f"Failed to connect to websocket. Retrying...")
+#             time.sleep(1)
+#             self._open_connection()
+#         logger.info("Successfully connected to websocket")
+#
+#     def disconnect_websocket(self):
+#         logger.info("Disconnecting from websocket")
+#         self.close()
+#
+#     def request_frames(self):
+#         # Create a request to fetch frames
+#         self.sendBinaryMessage(b"give-frames-plz")
+#
+#     def _handle_pong(self, elapsedTime: int, payload: bytes):
+#         logger.debug(
+#             f"Received PONG with payload: {payload} and round-trip time: {elapsedTime} ms"
+#         )
+#
+#     def _open_connection(self):
+#         logger.debug(f"Opening websocket connection to {self.url}")
+#         self.open(self.url)
+#         self.pingTimer = QTimer(self)
+#         self.pingTimer.timeout.connect(lambda: self.ping(b"Ping!"))
+#         self.pingTimer.start(30000)  # Send ping every 30 seconds
+#
+#     def _check_connection(self):
+#         logger.debug(f"Checking connection to {self.url}")
+#         if not self.isValid():
+#             logger.warning("WebSocket connection dropped. Attempting to reconnect...")
+#             self.connect_websocket()
+#         logger.debug(f"WebSocket connection is working!")
+#
+#     def _handle_error(self, error_code):
+#         error_message = self.errorString()
+#         logger.error(f"WebSocket error ({error_code}): {error_message}")
+#
+#     def _handle_incoming_message(self, message: bytes):
+#         if message == b"pong":
+#             logger.info("Received Pong!")
+#             return
+#         try:
+#             logger.debug(f"incoming message with length: {len(message)}")
+#
+#             multi_frame_payload = MultiFramePayload.from_bytes(message)
+#             self.frames_received.emit(multi_frame_payload)
+#         except ValidationError as e:
+#             logger.error(f"Failed to parse response as MultiFramePayload: {e}")
+#             raise e
+#         except Exception as e:
+#             logger.error(f"Failed to handle websocket message: {e}")
+#             raise e

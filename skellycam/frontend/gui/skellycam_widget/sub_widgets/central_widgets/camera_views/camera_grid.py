@@ -29,7 +29,7 @@ class CameraGrid(QWidget):
 
         self._initUI()
         self._camera_configs: Dict[CameraId, CameraConfig] = {}
-        self._single_cameras: Dict[str, SingleCameraView] = {}
+        self._single_cameras: Dict[CameraId, SingleCameraView] = {}
 
     def _initUI(self):
         self._layout = QVBoxLayout()
