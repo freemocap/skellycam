@@ -25,10 +25,7 @@ logging.getLogger("httpx").setLevel("INFO")
 
 
 class ApiClient(QObject):
-    detected_cameras = Signal(CamerasDetectedResponse)
-    cameras_connected = Signal()
-
-    def __init__(self, url: str, timeout: float = 10) -> None:
+    def __init__(self, url: str, timeout: float = 60) -> None:
         super().__init__()
 
         self.api_base_url = url
@@ -44,7 +41,8 @@ class ApiClient(QObject):
             cameras_detected_response = CamerasDetectedResponse.parse_obj(
                 response.json()
             )
-            self.detected_cameras.emit(cameras_detected_response)
+            logger.success(f"Detected cameras: {cameras_detected_response}")
+            return cameras_detected_response
 
         except ValidationError as e:
             logger.error(f"Failed to parse response: {e}")
@@ -61,7 +59,7 @@ class ApiClient(QObject):
             )
             if cameras_detected_response.success:
                 logger.success("Connected to cameras!")
-                self.cameras_connected.emit()
+                return cameras_detected_response
             else:
                 logger.error(
                     f"Failed to connect to cameras: {cameras_detected_response}"

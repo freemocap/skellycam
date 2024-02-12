@@ -51,8 +51,7 @@ class CameraParameterTree(QWidget):
 
     @property
     def camera_configs(self) -> Dict[CameraId, CameraConfig]:
-        self._extract_camera_configs_from_tree()
-        return self._camera_configs
+        return self._extract_camera_configs_from_tree()
 
     def update_available_cameras(
         self, available_cameras: Dict[CameraId, CameraDeviceInfo]
@@ -165,7 +164,7 @@ class CameraParameterTree(QWidget):
         )
         return button
 
-    def _extract_camera_configs_from_tree(self):
+    def _extract_camera_configs_from_tree(self) -> Dict[CameraId, CameraConfig]:
         logger.info("Extracting camera configs from parameter tree")
         self._camera_configs = {}
         for (
@@ -184,6 +183,8 @@ class CameraParameterTree(QWidget):
                 writer_fourcc=parameter_group.param("Video Writer FourCC").value(),
                 rotation=RotationTypes[parameter_group.param("Rotate").value()],
             )
+
+        return self._camera_configs
 
     def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: CameraId):
         logger.info(

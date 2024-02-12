@@ -10,6 +10,7 @@ from skellycam.backend.controller.core_functionality.camera_group.camera_group_m
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     detect_available_cameras,
     CamerasDetectedResponse,
+    DetectedCameras,
 )
 
 
@@ -36,7 +37,9 @@ class Controller:
 
     def detect_available_cameras(self) -> CamerasDetectedResponse:
         cameras_detected_response = detect_available_cameras()
-        self.detected_cameras = cameras_detected_response.detected_cameras
+        self.detected_cameras: DetectedCameras = (
+            cameras_detected_response.detected_cameras
+        )
         if not self.detected_cameras:
             logger.warning("No cameras detected!")
         return cameras_detected_response
