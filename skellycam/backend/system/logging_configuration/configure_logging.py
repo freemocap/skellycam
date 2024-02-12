@@ -1,12 +1,12 @@
 import logging
 
-from skellycam.backend.system.environment.logging_configuration.log_level_enum import (
+from skellycam.backend.system.logging_configuration.log_level_enum import (
     LogLevel,
 )
-from skellycam.backend.system.environment.logging_configuration.log_test_messages import (
+from skellycam.backend.system.logging_configuration.log_test_messages import (
     log_test_messages,
 )
-from skellycam.backend.system.environment.logging_configuration.logger_builder import (
+from skellycam.backend.system.logging_configuration.logger_builder import (
     LoggerBuilder,
 )
 

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 
-from skellycam.backend.system.environment.default_paths import (
+from skellycam.backend.system.default_paths import (
     get_default_skellycam_base_folder_path,
 )
 import logging

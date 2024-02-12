@@ -1,6 +1,6 @@
 import skellycam
 
-from skellycam.backend.system.environment.default_paths import (
+from skellycam.backend.system.default_paths import (
     MAGNIFYING_GLASS_EMOJI_STRING,
     CAMERA_WITH_FLASH_EMOJI_STRING,
     CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING,

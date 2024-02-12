@@ -4,10 +4,10 @@ import time
 from multiprocessing import freeze_support
 
 from skellycam.api.run_backend import run_backend
-from skellycam.backend.system.environment.logging_configuration.configure_logging import (
+from skellycam.backend.system.logging_configuration import (
     configure_logging,
 )
-from skellycam.backend.system.environment.logging_configuration.log_level_enum import (
+from skellycam.backend.system.logging_configuration import (
     LogLevel,
 )
 from skellycam.frontend.run_frontend import run_frontend
