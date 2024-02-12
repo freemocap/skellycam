@@ -8,7 +8,9 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.websockets import WebSocket
 
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleFastApiWebSocketApp:

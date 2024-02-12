@@ -7,7 +7,9 @@ from skellycam.backend.controller.interactions.base_models import (
     BaseInteraction,
 )
 
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BackendCommunicator:

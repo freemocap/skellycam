@@ -6,7 +6,9 @@ from PySide6.QtCore import QTimer
 
 from skellycam.api.find_available_port import find_available_port
 from skellycam.api.run_uvicorn_server import run_uvicorn_server
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def run_backend(

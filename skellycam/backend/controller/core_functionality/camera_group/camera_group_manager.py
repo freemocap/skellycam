@@ -17,7 +17,9 @@ from skellycam.backend.models.cameras.frames.frame_payload import (
     MultiFramePayload,
     FramePayload,
 )
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class IncomingFrameWrangler:

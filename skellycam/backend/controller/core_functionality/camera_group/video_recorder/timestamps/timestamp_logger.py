@@ -9,7 +9,9 @@ import pandas as pd
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 from skellycam.backend.models.timestamps.camera_timestamp_log import CameraTimestampLog
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CameraTimestampLogger:

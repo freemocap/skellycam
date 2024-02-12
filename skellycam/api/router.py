@@ -11,7 +11,9 @@ from skellycam.backend.controller.interactions.connect_to_cameras import (
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 http_router = APIRouter()
 controller = get_or_create_controller()

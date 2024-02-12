@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 
 import httpx
 from PySide6.QtCore import QObject, Signal
@@ -16,7 +17,9 @@ from skellycam.backend.models.cameras.camera_configs import (
     CameraConfigs,
     DEFAULT_CAMERA_CONFIGS,
 )
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 logging.getLogger("httpx").setLevel("INFO")
 
@@ -58,17 +61,20 @@ class ApiClient(QObject):
             )
             if cameras_detected_response.success:
                 self.cameras_connected.emit()
-            return cameras_detected_response
+            else:
+                logger.error(
+                    f"Failed to connect to cameras: {cameras_detected_response}"
+                )
         except ValidationError as e:
-            logger.error(f"Failed to parse response: {e}")
-            return None
+            logger.error(f"Failed to parse CamerasConnectedResponse with error: '{e}'")
 
 
 def check_frontend_camera_connection():
     from skellycam.api.run_backend import run_backend
     from pprint import pprint
 
-    backend_process_out, hostname, port = run_backend()
+    ready_event = multiprocessing.Event()
+    backend_process_out, hostname, port = run_backend(ready_event)
     print(f"Backend server is running on: https://{hostname}:{port}")
     client = ApiClient(hostname, port)
     hello_response = client.hello()

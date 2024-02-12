@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from skellycam.backend.controller.controller import get_or_create_controller
-from skellycam.backend.system.environment.get_logger import logger
+import logging
 
 controller = get_or_create_controller()
 

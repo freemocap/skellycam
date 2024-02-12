@@ -14,7 +14,9 @@ from skellycam.backend.controller.interactions.connect_to_cameras import (
 
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 CONTROLLER = None
 

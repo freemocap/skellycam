@@ -3,7 +3,9 @@ import traceback
 import cv2
 
 from skellycam.backend.models.cameras.camera_config import CameraConfig
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FailedToApplyCameraConfigurationError(Exception):

@@ -12,7 +12,9 @@ from skellycam.backend.models.cameras.camera_configs import (
     DEFAULT_CAMERA_CONFIGS,
 )
 from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectToCamerasRequest(BaseModel):

@@ -6,7 +6,9 @@ from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 from skellycam.backend.system.environment.default_paths import (
     PATH_TO_SKELLY_CAM_LOGO_PNG,
 )
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 from skellycam.frontend.api_client.api_client import ApiClient
 from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketClient
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING

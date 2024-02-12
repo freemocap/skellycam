@@ -1,4 +1,6 @@
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def clear_layout(layout):

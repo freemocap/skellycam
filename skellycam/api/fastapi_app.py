@@ -8,7 +8,9 @@ from fastapi.websockets import WebSocket
 import skellycam
 from skellycam.api.backend_websocket import BackendWebsocketConnectionManager
 from skellycam.api.router import http_router
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FastApiApp:

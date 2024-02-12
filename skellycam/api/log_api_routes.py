@@ -1,7 +1,9 @@
 from fastapi.routing import APIRoute
 from starlette.routing import WebSocketRoute
 
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def log_api_routes(app, hostname, port):

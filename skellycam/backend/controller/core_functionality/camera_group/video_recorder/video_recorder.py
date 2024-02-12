@@ -9,7 +9,9 @@ from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 from skellycam.backend.system.environment.default_paths import (
     get_default_skellycam_base_folder_path,
 )
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FailedToWriteFrameToVideoException(Exception):

@@ -4,15 +4,21 @@ import time
 from multiprocessing import freeze_support
 
 from skellycam.api.run_backend import run_backend
-from skellycam.backend.system.environment.configure_logging import (
+from skellycam.backend.system.environment.logging_configuration.configure_logging import (
     configure_logging,
+)
+from skellycam.backend.system.environment.logging_configuration.log_level_enum import (
     LogLevel,
 )
 from skellycam.frontend.run_frontend import run_frontend
 
-
-from skellycam.backend.system.environment.get_logger import logger
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
+
+configure_logging(LogLevel.TRACE)
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 REBOOT_EXIT_CODE = 123  # reboot if exit code is 123
 

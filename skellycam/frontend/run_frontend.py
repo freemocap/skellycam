@@ -1,4 +1,6 @@
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 from skellycam.frontend.api_client.api_client import ApiClient
 from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketClient
 

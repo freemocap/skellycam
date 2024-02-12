@@ -7,7 +7,9 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     DetectedCameras,
     CamerasDetectedResponse,
 )
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_requester import (
     FrameRequester,
 )
@@ -96,6 +98,7 @@ class SkellyCamManager(QThread):
         self.main_widget.side_panel.show()
 
         self.api_client.detect_available_cameras()
+
         self._request_connect_to_cameras()
 
     def _request_connect_to_cameras(self):
@@ -135,7 +138,7 @@ class SkellyCamManager(QThread):
                 for config in self.main_widget.camera_parameter_tree.camera_configs.values()
             ]
         )
-        self.frame_requester.start(mean_framerate)
+        self.frame_requester.start_request_timer(mean_framerate)
 
     # def _handle_cameras_closed_response(self)):
     #     main_widget.camera_control_buttons.close_cameras_button.setEnabled(False)

@@ -3,7 +3,9 @@ from typing import Union
 
 import cv2
 
-from skellycam.backend.system.environment.get_logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_number_of_frames_of_videos_in_a_folder(folder_path: Union[str, Path]):
