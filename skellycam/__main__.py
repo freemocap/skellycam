@@ -3,7 +3,7 @@ import multiprocessing
 import time
 from multiprocessing import freeze_support
 
-from skellycam.api.run_backend import run_backend
+from skellycam.backend.run_backend import run_backend
 from skellycam.system.logging_configuration.configure_logging import (
     configure_logging,
 )

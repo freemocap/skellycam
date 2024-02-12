@@ -1,11 +1,11 @@
 import multiprocessing
 
 import httpx
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject
 from httpx import Timeout
 from pydantic import ValidationError
 
-from skellycam.api.requests_responses.connect_to_cameras_request_response import (
+from skellycam.backend.api_server import (
     CamerasConnectedResponse,
     ConnectToCamerasRequest,
 )
@@ -69,7 +69,7 @@ class ApiClient(QObject):
 
 
 def check_frontend_camera_connection():
-    from skellycam.api.run_backend import run_backend
+    from skellycam.backend.run_backend import run_backend
     from pprint import pprint
 
     ready_event = multiprocessing.Event()

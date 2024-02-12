@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Body
 
-from skellycam.api.requests_responses.connect_to_cameras_request_response import (
+from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_response import (
     ConnectToCamerasRequest,
     CamerasConnectedResponse,
 )

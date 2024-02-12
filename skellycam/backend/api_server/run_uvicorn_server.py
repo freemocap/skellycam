@@ -2,8 +2,8 @@ import multiprocessing
 
 import uvicorn
 
-from skellycam.api.fastapi_app import FastApiApp
-from skellycam.api.log_api_routes import log_api_routes
+from skellycam.backend.api_server.fastapi_app import FastApiApp
+from skellycam.backend.api_server.log_api_routes import log_api_routes
 
 
 def run_uvicorn_server(

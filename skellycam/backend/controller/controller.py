@@ -1,7 +1,7 @@
 import traceback
 from typing import Dict, Optional
 
-from skellycam.api.requests_responses.connect_to_cameras_request_response import (
+from skellycam.backend.api_server import (
     CamerasConnectedResponse,
 )
 from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import (

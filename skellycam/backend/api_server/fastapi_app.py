@@ -6,8 +6,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.websockets import WebSocket
 
 import skellycam
-from skellycam.api.backend_websocket import BackendWebsocketConnectionManager
-from skellycam.api.router import http_router
+from skellycam.backend.api_server.backend_websocket import BackendWebsocketConnectionManager
+from skellycam.backend.api_server.router import http_router
 import logging
 
 logger = logging.getLogger(__name__)

@@ -4,8 +4,8 @@ from typing import Tuple
 
 from PySide6.QtCore import QTimer
 
-from skellycam.api.find_available_port import find_available_port
-from skellycam.api.run_uvicorn_server import run_uvicorn_server
+from skellycam.backend.api_server.find_available_port import find_available_port
+from skellycam.backend.api_server.run_uvicorn_server import run_uvicorn_server
 import logging
 
 logger = logging.getLogger(__name__)
