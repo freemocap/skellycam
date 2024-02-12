@@ -1,4 +1,4 @@
-from skellycam.backend.system.default_paths import (
+from skellycam.system import (
     get_default_skellycam_base_folder_path,
 )
 import logging

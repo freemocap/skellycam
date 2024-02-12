@@ -1,4 +1,3 @@
-import logging
 import multiprocessing
 
 import httpx
@@ -6,13 +5,14 @@ from PySide6.QtCore import QObject, Signal
 from httpx import Timeout
 from pydantic import ValidationError
 
-from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
-    CamerasDetectedResponse,
-)
-from skellycam.backend.controller.interactions.connect_to_cameras import (
+from skellycam.api.requests_responses.connect_to_cameras_request_response import (
     CamerasConnectedResponse,
     ConnectToCamerasRequest,
 )
+from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
+    CamerasDetectedResponse,
+)
+
 from skellycam.backend.models.cameras.camera_configs import (
     CameraConfigs,
     DEFAULT_CAMERA_CONFIGS,
@@ -60,6 +60,7 @@ class ApiClient(QObject):
                 response.json()
             )
             if cameras_detected_response.success:
+                logger.success("Connected to cameras!")
                 self.cameras_connected.emit()
             else:
                 logger.error(

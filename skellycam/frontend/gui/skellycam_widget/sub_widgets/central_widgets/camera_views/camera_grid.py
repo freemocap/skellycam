@@ -7,11 +7,14 @@ from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWi
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
-import logging
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.single_camera import (
     SingleCameraView,
 )
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 title_label_style_string = """
                            font-size: 18px;

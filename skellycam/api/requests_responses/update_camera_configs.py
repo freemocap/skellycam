@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 
-from skellycam.backend.controller.interactions.base_models import (
+from skellycam.api.requests_responses import (
     BaseRequest,
     BaseModel,
     BaseCommand,

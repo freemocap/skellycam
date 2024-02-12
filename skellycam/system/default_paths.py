@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Union
 
 import skellycam
-from skellycam.backend.system.home_dir import os_independent_home_dir
+from skellycam.system.home_dir import os_independent_home_dir
 
 DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skellycam_data"
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"

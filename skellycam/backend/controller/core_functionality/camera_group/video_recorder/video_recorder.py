@@ -6,10 +6,10 @@ import cv2
 
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
-from skellycam.backend.system.default_paths import (
-    get_default_skellycam_base_folder_path,
-)
+
 import logging
+
+from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)
 

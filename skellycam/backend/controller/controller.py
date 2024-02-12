@@ -1,6 +1,9 @@
 import traceback
 from typing import Dict, Optional
 
+from skellycam.api.requests_responses.connect_to_cameras_request_response import (
+    CamerasConnectedResponse,
+)
 from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import (
     CameraGroupManager,
 )
@@ -8,9 +11,7 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     detect_available_cameras,
     CamerasDetectedResponse,
 )
-from skellycam.backend.controller.interactions.connect_to_cameras import (
-    CamerasConnectedResponse,
-)
+
 
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
@@ -42,7 +43,7 @@ class Controller:
 
     def connect_to_cameras(self, camera_configs: Dict[CameraId, CameraConfig]):
         for camera_id in camera_configs.keys():
-            if not camera_id in self.detected_cameras:
+            if camera_id not in self.detected_cameras.keys():
                 logger.warning(
                     f"Camera {camera_id} was not found in list of previously detected cameras "
                     f"{list(self.detected_cameras.keys())} - (We'll still try to contect to it though)"

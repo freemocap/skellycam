@@ -1,17 +1,16 @@
-from fastapi import APIRouter, Body, BackgroundTasks, HTTPException
-from starlette.responses import StreamingResponse
+import logging
 
+from fastapi import APIRouter, Body
+
+from skellycam.api.requests_responses.connect_to_cameras_request_response import (
+    ConnectToCamerasRequest,
+    CamerasConnectedResponse,
+)
 from skellycam.backend.controller.controller import get_or_create_controller
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
-from skellycam.backend.controller.interactions.connect_to_cameras import (
-    CamerasConnectedResponse,
-    ConnectToCamerasRequest,
-)
-from skellycam.backend.models.cameras.camera_configs import CameraConfigs
-from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
-import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +55,9 @@ async def connect_to_cameras(
     )
     if response.success:
         logger.info("Connected to cameras!")
+        return response
+    else:
+        logger.error("Failed to connect to cameras")
         return response
 
 
