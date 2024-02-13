@@ -5,7 +5,7 @@ from PySide6.QtCore import QObject
 from httpx import Timeout
 from pydantic import ValidationError
 
-from skellycam.backend.api_server import (
+from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_response import (
     CamerasConnectedResponse,
     ConnectToCamerasRequest,
 )
