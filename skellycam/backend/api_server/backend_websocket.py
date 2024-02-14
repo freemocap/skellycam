@@ -26,42 +26,34 @@ class BackendWebsocketManager:
         self._should_continue = True
         self._time_since_last_message = 0
         self._max_time_since_last_message = timeout
+        self._most_recent_message_timestamp = None
 
     async def accept_connection(self):
         logger.debug("Awaiting websocket connection...")
         await self.websocket.accept()
         logger.info("WebSocket Backend client connected!")
+        await self.receive_and_process_text_messages()
         keepalive_task = asyncio.create_task(self.keepalive_handler())
-        await self.receive_and_process_messages()
         await keepalive_task
 
     def shut_down(self):
         logger.info("Shutting down WebSocket Backend client...")
         self._should_continue = False
 
-    async def receive_and_process_messages(self):
+    async def receive_and_process_text_messages(self):
         logger.debug("Starting to receive and process messages...")
-        previous_message_time = (
-            time.perf_counter()
-        )  # dummy time to initialize the variable before the first message
+        self._most_recent_message_timestamp = time.perf_counter()
 
         try:
             while self._should_continue:
-                incoming_bytes = await self.websocket.receive_bytes()
+                incoming_message: str = await self.websocket.receive_text()
+                logger.debug(f"Received message: {incoming_message}")
 
-                current_message_time = time.perf_counter()
-                self._time_since_last_message = (
-                    current_message_time - previous_message_time
-                )
-                previous_message_time = current_message_time
+                self._most_recent_message_timestamp = time.perf_counter()
 
-                logger.debug(f"Received bytes: {incoming_bytes}")
-                await self.websocket.send_bytes(
-                    bytes(f"received bytes: {incoming_bytes}", "utf-8")
-                )
-
-                if incoming_bytes == b"give-frames-plz":
-                    await self.send_latest_frames()
+                if incoming_message == "Ping!":
+                    logger.info("Received ping from client.")
+                    await self.websocket.send_text("Pong!")
 
         except Exception as e:
             logger.info(f"Exception in receive_and_process_messages: {e}")
@@ -94,7 +86,10 @@ class BackendWebsocketManager:
                     )
                     break
 
-                if self._time_since_last_message > self._max_time_since_last_message:
+                time_since_last_message = (
+                    time.perf_counter() - self._most_recent_message_timestamp
+                )
+                if time_since_last_message > self._max_time_since_last_message:
                     logger.error(
                         f"WebSocket connection closed due to timeout of {self._max_time_since_last_message} seconds."
                     )

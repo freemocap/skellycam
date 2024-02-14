@@ -48,7 +48,7 @@ class FastApiApp:
                 timeout=self._timeout,
             )
             await ws_manager.accept_connection()
-            await ws_manager.receive_and_process_messages()
+            await ws_manager.receive_and_process_text_messages()
 
             logger.info("WebSocket connection closed, shutting down...")
             self.shutdown_event.set()
