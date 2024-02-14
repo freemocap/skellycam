@@ -59,7 +59,7 @@ class VideoRecorder:
         if len(self._frame_payload_list) == 0:
             raise AssertionError(
                 "No frames to save, but `one_frame_to_disk` was called! "
-                "There's a buggo in the application logic somewhere..."
+                "There's a buggo in the qt_application logic somewhere..."
             )
         self._check_if_writer_open()
         frame = self._frame_payload_list.pop(-1)
@@ -71,7 +71,7 @@ class VideoRecorder:
         if self._cv2_video_writer is None:
             raise AssertionError(
                 "VideoWriter is None, but `_check_if_writer_open` was called! "
-                "There's a buggo in the application logic somewhere..."
+                "There's a buggo in the qt_application logic somewhere..."
             )
 
         if not self._cv2_video_writer.isOpened():
@@ -121,7 +121,7 @@ class VideoRecorder:
         )
         if self._cv2_video_writer is None:
             raise AssertionError(
-                "VideoWriter is None, but `_close_video_writer` was called! There's a buggo in the application logic somewhere..."
+                "VideoWriter is None, but `_close_video_writer` was called! There's a buggo in the qt_application logic somewhere..."
             )
         self._cv2_video_writer.release()
 

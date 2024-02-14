@@ -25,17 +25,20 @@ logging.getLogger("httpx").setLevel("INFO")
 
 class ApiClient(QObject):
     def __init__(self, url: str, timeout: float = 60) -> None:
+        logger.info(f"Initializing API client with base URL: {url}")
         super().__init__()
 
         self.api_base_url = url
         self.client = httpx.Client(base_url=self.api_base_url, timeout=timeout)
 
     def hello(self):
+        logger.debug("Sending request to the frontend API `hello` endpoint")
         return self.client.get("hello")
 
     def detect_available_cameras(self):
         logger.debug("Sending request to the frontend API `detect` endpoint")
         response = self.client.get("detect")
+        logger.debug(f"Response: {response.json()}")
         try:
             cameras_detected_response = CamerasDetectedResponse.parse_obj(
                 response.json()
@@ -52,6 +55,7 @@ class ApiClient(QObject):
         request = ConnectToCamerasRequest(camera_configs=camera_configs).dict()
         custom_timeout = Timeout(timeout)
         response = self.client.post("connect", json=request, timeout=custom_timeout)
+        logger.debug(f"Response: {response.json()}")
         try:
             cameras_detected_response = CamerasConnectedResponse.parse_obj(
                 response.json()

@@ -10,43 +10,6 @@ from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow
 
 logger = logging.getLogger(__name__)
 
-_QT_APPLICATION = None
-
-
-def create_or_recreate_qt_application(
-    hostname: str,
-    port: int,
-    backend_timeout: float,
-    reboot_event: multiprocessing.Event,
-    shutdown_event: multiprocessing.Event,
-) -> "SkellyCamQtApplication":
-    global _QT_APPLICATION
-
-    def _delete_qt_application():
-        if _QT_APPLICATION is not None:
-            _QT_APPLICATION.quit()
-            _QT_APPLICATION.deleteLater()
-
-    def _create_qt_application():
-        return SkellyCamQtApplication(
-            hostname=hostname,
-            port=port,
-            backend_timeout=backend_timeout,
-            reboot_event=reboot_event,
-            shutdown_event=shutdown_event,
-        )
-
-    if _QT_APPLICATION is None:
-        logger.info(f"Creating QApplication...")
-        _QT_APPLICATION = _create_qt_application()
-
-    else:
-        logger.info(f"Recreating QApplication...")
-        _delete_qt_application()
-        _QT_APPLICATION = _create_qt_application()
-
-    return _QT_APPLICATION
-
 
 class SkellyCamQtApplication(QApplication):
     def __init__(
@@ -57,31 +20,32 @@ class SkellyCamQtApplication(QApplication):
         reboot_event: multiprocessing.Event,
         shutdown_event: multiprocessing.Event,
     ):
+        logger.info("Initializing SkellyCamQtApplication...")
         super().__init__()
-        self._backend_hostname = hostname
-        self._backend_port = port
+        self._construct_urls(hostname, port)
         self._backend_timeout = backend_timeout
         self._reboot_event = reboot_event
         self._shutdown_event = shutdown_event
 
-        self._create_backend_clients(self._backend_hostname, self._backend_port)
+        self._create_backend_clients()
 
         self._main_window = SkellyCamMainWindow(self.api_client, self.websocket_client)
         self._main_window.show()
 
-    def _create_backend_clients(self, hostname: str, port: int):
-        self._create_api_client()
-        self._create_websocket_client()
-
-    def _create_websocket_client(self):
+    def _construct_urls(self, hostname, port):
+        self._backend_hostname = hostname
+        self._backend_port = port
+        self._backend_http_url = f"http://{self._backend_hostname}:{self._backend_port}"
         self._backend_websocket_url = (
             f"ws://{self._backend_hostname}:{self._backend_port}/websocket"
         )
-        self.websocket_client = FrontendWebsocketClient(self._backend_websocket_url)
 
-    def _create_api_client(self):
-        self._backend_http_url = f"http://{self._backend_hostname}:{self._backend_port}"
+    def _create_backend_clients(self):
+        logger.info("Creating API client...")
         self.api_client = ApiClient(self._backend_http_url)
+
+        logger.info("Creating WebSocket client...")
+        self.websocket_client = FrontendWebsocketClient(self._backend_websocket_url)
 
     def _create_keep_alive_timer(self):
         self._keep_alive_timer = QTimer(self)

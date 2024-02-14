@@ -1,4 +1,4 @@
-def ensure_min_brightness(value, threshold=50):
+def ensure_min_brightness(value, threshold=100):
     """Ensure the RGB value is above a certain threshold."""
     return max(value, threshold)
 

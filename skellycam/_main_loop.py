@@ -56,8 +56,15 @@ def main_loop():
                 backend_process.terminate()
                 backend_process.join(timeout=5)
 
-        if frontend_process.is_alive() or backend_process.is_alive():
-            logger.error("Failed to cleanly shutdown all processes")
+        if frontend_process is not None and frontend_process.is_alive():
+            logger.error(
+                "Failed to shut down frontend process. It may still be running."
+            )
+
+        if backend_process is not None and backend_process.is_alive():
+            logger.error(
+                "Failed to shut down backend process. It may still be running."
+            )
 
     logger.info("Shut down successfully!")
 

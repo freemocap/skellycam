@@ -32,6 +32,7 @@ def run_backend(
         )
         Exception(f"Preferred port ({preferred_port}) was blocked!")
 
+    # TODO - Name this process
     backend_process = Process(
         target=run_uvicorn_server,
         args=(hostname, port, ready_event, shutdown_event, timeout),

@@ -37,6 +37,7 @@ def detect_available_cameras() -> CamerasDetectedResponse:
     This will return a list of cameras that the system can attempt to connect to, along with
     their available resolutions and framerates
     """
+    logger.info("Detecting available cameras...")
     return controller.detect_available_cameras()
 
 
@@ -64,7 +65,7 @@ async def connect_to_cameras(
 # @http_router.get(
 #     "/cameras/latest_frames",
 #     summary="Get the latest synchronized multi-frame from all cameras",
-#     responses={200: {"content": {"application/octet-stream": {}}}},
+#     responses={200: {"content": {"qt_application/octet-stream": {}}}},
 # )
 # def get_latest_frames():
 #     """
@@ -77,7 +78,7 @@ async def connect_to_cameras(
 #         )
 #         return StreamingResponse(
 #             iter([latest_multiframe_payload.to_bytes()]),
-#             media_type="application/octet-stream",
+#             media_type="qt_application/octet-stream",
 #         )
 #     except Exception as exc:
 #         raise HTTPException(status_code=500, detail=str(exc))
