@@ -11,7 +11,6 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     CamerasDetectedResponse,
 )
 
-
 logger = logging.getLogger(__name__)
 
 http_router = APIRouter()

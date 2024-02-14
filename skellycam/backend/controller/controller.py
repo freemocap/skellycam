@@ -1,3 +1,4 @@
+import logging
 import traceback
 from typing import Dict, Optional
 
@@ -12,11 +13,8 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     CamerasDetectedResponse,
     DetectedCameras,
 )
-
-
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-import logging
 
 logger = logging.getLogger(__name__)
 

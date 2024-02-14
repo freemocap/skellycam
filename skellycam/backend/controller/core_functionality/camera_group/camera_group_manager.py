@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from typing import Dict, Optional, List, Union
@@ -17,7 +18,6 @@ from skellycam.backend.models.cameras.frames.frame_payload import (
     MultiFramePayload,
     FramePayload,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

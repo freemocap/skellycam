@@ -1,4 +1,4 @@
-import sys
+import logging
 
 import uvicorn
 from PySide6.QtCore import QUrl
@@ -7,8 +7,6 @@ from PySide6.QtWidgets import QApplication, QPushButton
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.websockets import WebSocket
-
-import logging
 
 logger = logging.getLogger(__name__)
 

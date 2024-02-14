@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 
 import numpy as np
@@ -11,8 +12,6 @@ from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_
     SingleCameraView,
 )
 from skellycam.frontend.gui.utilities.qt_strings import no_cameras_found_message_string
-
-import logging
 
 logger = logging.getLogger(__name__)
 

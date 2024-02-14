@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 
 import httpx
@@ -12,12 +13,10 @@ from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
-
 from skellycam.backend.models.cameras.camera_configs import (
     CameraConfigs,
     DEFAULT_CAMERA_CONFIGS,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

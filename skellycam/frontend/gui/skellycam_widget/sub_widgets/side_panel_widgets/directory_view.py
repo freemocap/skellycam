@@ -1,3 +1,4 @@
+import logging
 import os
 from copy import copy
 from pathlib import Path
@@ -12,8 +13,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QMenu,
 )
-
-import logging
 
 logger = logging.getLogger(__name__)
 

@@ -1,13 +1,12 @@
+import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import Signal, QThread
+from PySide6.QtCore import QThread
 
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
-    DetectedCameras,
     CamerasDetectedResponse,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_requester import (

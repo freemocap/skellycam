@@ -16,7 +16,9 @@ def run_uvicorn_server(
     shutdown_event: multiprocessing.Event,
     timeout: float,
 ):
-    logger.info(f"Starting uvicorn server on: https://{hostname}:{port}")
+    logger.info(
+        f"Starting uvicorn server on with hostname: `{hostname}` on port: `{port}`"
+    )
     try:
         app = FastApiApp(
             ready_event=ready_event, shutdown_event=shutdown_event, timeout=timeout

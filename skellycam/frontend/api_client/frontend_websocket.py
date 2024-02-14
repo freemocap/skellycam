@@ -1,5 +1,4 @@
-import json
-import time
+import logging
 
 from PySide6.QtCore import Signal, QUrl
 from PySide6.QtWebSockets import QWebSocket
@@ -7,7 +6,6 @@ from PySide6.QtWidgets import QWidget
 from pydantic import ValidationError
 
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +36,7 @@ class FrontendWebsocketClient(QWidget):
         self.websocket.ping(b"Ping!")
 
     def request_frames(self):
+        logger.trace("Sending request for frames")
         # Create a request to fetch frames
         self.websocket.sendBinaryMessage(b"give-frames-plz")
 

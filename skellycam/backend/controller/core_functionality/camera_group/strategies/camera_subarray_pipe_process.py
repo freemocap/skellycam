@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import time
 from multiprocessing import Process
@@ -12,7 +13,6 @@ from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 from skellycam.backend.models.cameras.image_rotation_types import RotationTypes
-import logging
 
 logger = logging.getLogger(__name__)
 

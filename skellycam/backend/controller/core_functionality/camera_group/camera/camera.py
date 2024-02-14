@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 from typing import Optional
 
@@ -6,7 +7,6 @@ from skellycam.backend.controller.core_functionality.camera_group.camera.interna
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-import logging
 
 logger = logging.getLogger(__name__)
 

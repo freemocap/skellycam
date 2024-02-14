@@ -1,11 +1,10 @@
 import asyncio
+import logging
 import time
 
 from starlette.websockets import WebSocket
 
 from skellycam.backend.controller.controller import get_or_create_controller
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +40,7 @@ class BackendWebsocketManager:
         self._should_continue = False
 
     async def receive_and_process_messages(self):
+        logger.debug("Starting to receive and process messages...")
         previous_message_time = (
             time.perf_counter()
         )  # dummy time to initialize the variable before the first message
@@ -69,16 +69,18 @@ class BackendWebsocketManager:
             await self.websocket.close()
 
     async def send_latest_frames(self):
+        logger.trace("Sending latest frames...")
         try:
             latest_multi_frame_payload = (
                 controller.camera_group_manager.get_latest_frames()
             )
             if latest_multi_frame_payload is None:
+                logger.trace("No frames to send - returning nothing.")
                 pass
             else:
                 await self.websocket.send_bytes(latest_multi_frame_payload.to_bytes())
-        except Exception as exc:
-            logger.error(f"Error obtaining latest frames: {exc}")
+        except Exception as e:
+            logger.error(f"Error obtaining latest frames: {e}")
             await self.websocket.send_text("Error obtaining latest frames.")
 
     async def keepalive_handler(self):
@@ -93,10 +95,16 @@ class BackendWebsocketManager:
                     break
 
                 if self._time_since_last_message > self._max_time_since_last_message:
+                    logger.error(
+                        f"WebSocket connection closed due to timeout of {self._max_time_since_last_message} seconds."
+                    )
                     raise asyncio.TimeoutError
+
                 await asyncio.sleep(1)
 
             except asyncio.TimeoutError:
                 self._should_continue = False  # This will stop the main loop as well
                 await self.websocket.close()
                 logger.error("WebSocket connection closed due to timeout.")
+
+        logger.info("WebSocket connection `keepalive_handler` finished.")

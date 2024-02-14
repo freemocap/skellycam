@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import pprint
 import threading
@@ -13,7 +14,6 @@ from skellycam.backend.controller.core_functionality.config.determine_backend im
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
-import logging
 
 logger = logging.getLogger(__name__)
 

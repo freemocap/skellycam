@@ -1,8 +1,7 @@
+import logging
 import multiprocessing
 
 from PySide6.QtGui import QShortcut, QKeySequence
-
-import logging
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,8 @@
+import logging
+
 from skellycam.system import (
     get_default_skellycam_base_folder_path,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

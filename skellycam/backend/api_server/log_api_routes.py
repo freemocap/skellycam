@@ -1,7 +1,7 @@
+import logging
+
 from fastapi.routing import APIRoute
 from starlette.routing import WebSocketRoute
-
-import logging
 
 logger = logging.getLogger(__name__)
 

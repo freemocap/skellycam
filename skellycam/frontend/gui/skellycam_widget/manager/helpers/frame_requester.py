@@ -1,6 +1,6 @@
-from PySide6.QtCore import QObject, QTimer, QThread
-
 import logging
+
+from PySide6.QtCore import QObject, QTimer
 
 logger = logging.getLogger(__name__)
 

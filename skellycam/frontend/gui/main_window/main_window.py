@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from PySide6.QtGui import QIcon
@@ -6,7 +7,6 @@ from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 from skellycam.system.default_paths import (
     PATH_TO_SKELLY_CAM_LOGO_PNG,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 from skellycam.frontend.api_client.api_client import ApiClient

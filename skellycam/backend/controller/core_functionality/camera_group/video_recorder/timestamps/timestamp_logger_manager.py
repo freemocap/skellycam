@@ -1,4 +1,5 @@
 import json
+import logging
 import pprint
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List, Any, Hashable
@@ -16,7 +17,6 @@ from skellycam.backend.models.timestamps.camera_timestamp_log import CameraTimes
 from skellycam.backend.models.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

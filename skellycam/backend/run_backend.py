@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import time
 from multiprocessing import Process
@@ -7,7 +8,8 @@ from PySide6.QtCore import QTimer
 
 from skellycam.backend.api_server.find_available_port import find_available_port
 from skellycam.backend.api_server.run_uvicorn_server import run_uvicorn_server
-import logging
+
+logger = logging.getLogger(__name__)
 
 
 def run_backend(
@@ -18,6 +20,10 @@ def run_backend(
     preferred_port: int = 8000,
     fail_if_blocked: bool = False,
 ) -> Tuple[Process, str, int]:
+    logger.info(
+        f"Starting backend server with hostname: `{hostname}` on port: `{preferred_port}`"
+    )
+
     port = find_available_port(preferred_port)
 
     if fail_if_blocked and port != preferred_port:
@@ -36,16 +42,15 @@ def run_backend(
         logger.debug("Waiting for backend server to start...")
         time.sleep(1)
 
-    logger.info(f"Backend server is running on: https://{hostname}:{port}")
+    logger.info(
+        f"Backend server is running with hostname: `{hostname}` on port: `{port}`"
+    )
 
     if backend_process.is_alive():
         logger.info(f"Backend server started on port {port}.")
         return backend_process, hostname, port
 
     raise Exception(f"Backend server failed to start on port {port} :(")
-
-
-logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":

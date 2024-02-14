@@ -1,13 +1,13 @@
+import logging
 import multiprocessing
 from typing import Callable
 
 from PySide6.QtCore import QTimer
+
 from skellycam.backend.api_server import (
     BaseModel,
     BaseInteraction,
 )
-
-import logging
 
 logger = logging.getLogger(__name__)
 

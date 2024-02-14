@@ -1,18 +1,13 @@
-import traceback
+import logging
 from typing import Dict, Optional
 
 from pydantic import BaseModel
 
-from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import (
-    CameraGroupManager,
-)
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_configs import (
-    CameraConfigs,
     DEFAULT_CAMERA_CONFIGS,
 )
 from skellycam.backend.models.cameras.camera_id import CameraId
-import logging
 
 logger = logging.getLogger(__name__)
 

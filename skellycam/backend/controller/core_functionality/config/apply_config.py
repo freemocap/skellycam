@@ -1,9 +1,9 @@
+import logging
 import traceback
 
 import cv2
 
 from skellycam.backend.models.cameras.camera_config import CameraConfig
-import logging
 
 logger = logging.getLogger(__name__)
 

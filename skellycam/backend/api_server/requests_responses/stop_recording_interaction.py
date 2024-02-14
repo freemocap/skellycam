@@ -6,7 +6,6 @@ from skellycam.backend.api_server.requests_responses import (
     BaseCommand,
     BaseInteraction,
 )
-
 from skellycam.backend.controller.controller import Controller
 
 

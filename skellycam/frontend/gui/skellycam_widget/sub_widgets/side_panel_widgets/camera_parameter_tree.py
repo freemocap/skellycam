@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 from typing import Dict, Union
 
@@ -10,7 +11,6 @@ from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.image_rotation_types import RotationTypes
 from skellycam.backend.models.cameras.video_resolution import VideoResolution
-import logging
 
 logger = logging.getLogger(__name__)
 from skellycam.frontend.gui.utilities.qt_strings import (
