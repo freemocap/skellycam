@@ -28,7 +28,10 @@ def apply_camera_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConf
                 f"Failed to apply configuration to Camera {config.camera_id} - camera is "
                 f"not open"
             )
-            return
+            raise FailedToApplyCameraConfigurationError(
+                f"Failed to apply configuration to Camera {config.camera_id} - camera is "
+                f"not open"
+            )
     except Exception as e:
         logger.error(
             f"Failed when trying to check if Camera {config.camera_id} is open"
@@ -46,7 +49,9 @@ def apply_camera_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConf
     except Exception as e:
         logger.error(f"Problem applying configuration for camera: {config.camera_id}")
         traceback.print_exc()
-        raise e
+        raise FailedToApplyCameraConfigurationError(
+            f"Failed to apply configuration to Camera {config.camera_id} - {e}"
+        )
 
     if not cv2_vid_cap.isOpened():
         logger.error(

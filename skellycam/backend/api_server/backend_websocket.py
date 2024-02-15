@@ -47,7 +47,7 @@ class BackendWebsocketManager:
         try:
             while self._should_continue:
                 incoming_message: str = await self.websocket.receive_text()
-                logger.debug(f"Received message: {incoming_message}")
+                logger.trace(f"Received message: {incoming_message}")
 
                 self._most_recent_message_timestamp = time.perf_counter()
 

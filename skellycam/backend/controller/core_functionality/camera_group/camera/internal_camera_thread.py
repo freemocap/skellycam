@@ -128,6 +128,9 @@ class VideoCaptureThread(threading.Thread):
         )
 
         if self._cv2_video_capture is not None and self._cv2_video_capture.isOpened():
+            logger.warning(
+                f"A VideoCapture object already exists for Camera: {self._config.camera_id} - releasing it and creating a new one..."
+            )
             self._cv2_video_capture.release()
 
         capture = cv2.VideoCapture(self._config.camera_id, cap_backend.value)

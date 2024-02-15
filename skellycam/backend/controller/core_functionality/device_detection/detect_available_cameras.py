@@ -18,6 +18,7 @@ def detect_available_cameras() -> CamerasDetectedResponse:
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
     cameras = {}
+
     for camera_number, camera in enumerate(detected_cameras):
         if camera.isNull():
             continue

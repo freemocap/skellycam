@@ -38,12 +38,14 @@ class ApiClient(QObject):
     def detect_available_cameras(self):
         logger.debug("Sending request to the frontend API `detect` endpoint")
         response = self.client.get("detect")
-        logger.debug(f"Response: {response.json()}")
+        logger.debug(f"Response: {response}")
         try:
             cameras_detected_response = CamerasDetectedResponse.parse_obj(
                 response.json()
             )
-            logger.success(f"Detected cameras: {cameras_detected_response}")
+            logger.success(
+                f"Detected cameras: {cameras_detected_response.detected_cameras.keys()}"
+            )
             return cameras_detected_response
 
         except ValidationError as e:

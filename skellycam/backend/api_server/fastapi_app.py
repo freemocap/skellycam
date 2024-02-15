@@ -10,7 +10,7 @@ import skellycam
 from skellycam.backend.api_server.backend_websocket import (
     BackendWebsocketManager,
 )
-from skellycam.backend.api_server.router import http_router
+from skellycam.backend.api_server.http_router import http_router
 
 logger = logging.getLogger(__name__)
 
