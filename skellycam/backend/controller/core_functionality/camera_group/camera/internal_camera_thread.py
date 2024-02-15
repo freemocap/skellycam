@@ -22,6 +22,10 @@ class FailedToReadFrameFromCameraException(Exception):
     pass
 
 
+class FailedToOpenCameraException(Exception):
+    pass
+
+
 class VideoCaptureThread(threading.Thread):
     def __init__(
         self,
@@ -102,7 +106,9 @@ class VideoCaptureThread(threading.Thread):
         (
             success,
             image,
-        ) = self._cv2_video_capture.read()  # THIS IS WHERE THE MAGIC HAPPENS
+        ) = (
+            self._cv2_video_capture.read()
+        )  # THIS IS WHERE THE MAGIC HAPPENS <- This is the empirical measurement
         retrieval_timestamp = time.perf_counter_ns()
         self._frame_number += 1
         return FramePayload.create(
@@ -134,6 +140,10 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.release()
 
         capture = cv2.VideoCapture(self._config.camera_id, cap_backend.value)
+        if not capture.isOpened():
+            raise FailedToOpenCameraException(
+                f"Failed to open camera with config: {pprint.pformat(self._config)}"
+            )
         apply_camera_configuration(capture, self._config)
 
         success, image = capture.read()

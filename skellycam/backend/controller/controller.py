@@ -50,7 +50,7 @@ class Controller:
                     f"{list(self.detected_cameras.keys())} - (We'll still try to contect to it though)"
                 )
 
-        if not camera_configs:
+        if not camera_configs or len(camera_configs) == 0:
             logger.error("Must provide at least one camera config")
             Exception("Must provide at least one camera config")
 

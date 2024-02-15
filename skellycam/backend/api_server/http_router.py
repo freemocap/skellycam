@@ -38,7 +38,12 @@ def detect_available_cameras() -> CamerasDetectedResponse:
     their available resolutions and framerates
     """
     logger.info("Detecting available cameras...")
-    return controller.detect_available_cameras()
+    try:
+        return controller.detect_available_cameras()
+    except Exception as e:
+        logger.error(f"Failed to detect available cameras: {e}")
+        logger.exception(e)
+        raise e
 
 
 @http_router.post(
@@ -50,15 +55,20 @@ async def connect_to_cameras(
     ),
 ):
     logger.info("Connecting to cameras")
-    response: CamerasConnectedResponse = controller.connect_to_cameras(
-        request.camera_configs
-    )
-    if response.success:
-        logger.info("Connected to cameras!")
-        return response
-    else:
-        logger.error("Failed to connect to cameras")
-        return response
+    try:
+        response: CamerasConnectedResponse = controller.connect_to_cameras(
+            request.camera_configs
+        )
+        if response.success:
+            logger.info("Connected to cameras!")
+            return response
+        else:
+            logger.error("Failed to connect to cameras")
+            return response
+    except Exception as e:
+        logger.error(f"Failed to connect to cameras: {e}")
+        logger.exception(e)
+        raise e
 
 
 #
