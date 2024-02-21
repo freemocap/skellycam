@@ -72,6 +72,12 @@ class ApiClient(QObject):
         except ValidationError as e:
             logger.error(f"Failed to parse CamerasConnectedResponse with error: '{e}'")
 
+    def get_latest_frames(self):
+        logger.debug("Sending request to the frontend API `latest_frame` endpoint")
+        response = self.client.get("latest_frames")
+        logger.debug(f"Response: {response}")
+        return response
+
 
 def check_frontend_camera_connection():
     from skellycam.backend.run_backend import run_backend

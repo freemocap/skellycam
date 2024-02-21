@@ -1,4 +1,5 @@
 import itertools
+import json
 import struct
 from io import BytesIO
 from typing import Dict, Optional, List, Literal
@@ -359,6 +360,13 @@ class MultiFramePayload(BaseModel):
             for camera_id, frame_bytes in frames_dict.items()
         }
         return cls(frames=frames)
+
+    def to_json(self) -> str:
+        frames_data = {
+            str(camera_id): frame.dict() if frame else None
+            for camera_id, frame in self.frames.items()
+        }
+        return json.dumps(frames_data)
 
 
 def evaluate_multi_frame_compression():

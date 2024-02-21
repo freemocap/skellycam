@@ -26,7 +26,7 @@ class FrontendWebsocketClient(QWidget):
 
         self.websocket.error.connect(self.on_error)
 
-        self.connect_to_server()
+        # self.connect_to_server()
 
     def connect_to_server(self):
         logger.info("Connecting to websocket server")
@@ -50,16 +50,32 @@ class FrontendWebsocketClient(QWidget):
         self.websocket.sendTextMessage(FRAMES_REQUEST_STRING)
 
     def on_binary_message_received(self, binary_message: bytes):
-        logger.trace(f"Received binary message with length: {len(binary_message)}")
+        logger.trace(
+            f"Received binary message with length: {len(binary_message)} bytes"
+        )
+
+        multi_frame_payload = self._parse_multiframe_payload(binary_message)
+
+        logger.trace(
+            f"Emmitting new_frames_received signal with {len(multi_frame_payload.frames)} frames"
+        )
+        self.new_frames_received.emit(multi_frame_payload)
+
+    def _parse_multiframe_payload(self, binary_message: bytes) -> MultiFramePayload:
+        logger.trace(f"Parsing binary message into MultiFramePayload")
         try:
-            multi_frame_payload = MultiFramePayload.from_bytes(binary_message)
-            self.new_frames_received.emit(multi_frame_payload)
+            multi_frame_payload = MultiFramePayload.from_msgpack(binary_message)
         except ValidationError as e:
             logger.error(f"Failed to parse response as MultiFramePayload: {e}")
             raise e
         except Exception as e:
             logger.error(f"Failed to handle websocket message: {e}")
             raise e
+
+        logger.trace(
+            f"Received MultiFramePayload with {len(multi_frame_payload.frames)} frames"
+        )
+        return multi_frame_payload
 
     def on_text_message_received(self, text_message: str):
         logger.info(f"Received text message: {text_message}")

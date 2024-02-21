@@ -26,7 +26,9 @@ class SkellyCamManager(QThread):
         self.main_widget = main_widget
         self.api_client = self.main_widget.api_client
         self.frame_requester = FrameRequester(
-            websocket_client=self.main_widget.websocket_client, parent=self
+            websocket_client=self.main_widget.websocket_client,
+            api_client=self.api_client,
+            parent=self,
         )
         self.connect_signals()
 

@@ -5,6 +5,8 @@ import time
 from starlette.websockets import WebSocket
 
 from skellycam.backend.controller.controller import get_or_create_controller
+from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
+from skellycam.frontend.api_client.frontend_websocket import FRAMES_REQUEST_STRING
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ class BackendWebsocketManager:
         self._shutdown_event = shutdown_event
         self._should_continue = True
         self._time_since_last_message = 0
-        self._max_time_since_last_message = timeout
+        self._max_time_since_last_message = timeout * 10
         self._most_recent_message_timestamp = None
 
     async def accept_connection(self):
@@ -47,30 +49,40 @@ class BackendWebsocketManager:
         try:
             while self._should_continue:
                 incoming_message: str = await self.websocket.receive_text()
-                logger.trace(f"Received message: '{incoming_message}'")
 
                 self._most_recent_message_timestamp = time.perf_counter()
 
                 if incoming_message == "Ping!":
                     logger.info("Received ping from client.")
                     await self.websocket.send_text("Pong!")
+                elif incoming_message == FRAMES_REQUEST_STRING:
+                    logger.trace("Received request for frames.")
+                    await self.send_latest_frames()
+                else:
+                    logger.error(f"Received unknown message: '{incoming_message}'")
+                    raise ValueError(f"Bogus message received: '{incoming_message}'")
 
         except Exception as e:
             logger.info(f"Exception in receive_and_process_messages: {e}")
         finally:
             await self.websocket.close()
+            self._should_continue = False
+            self._shutdown_event.set()
+            logger.info("WebSocket Backend client connection closed.")
 
     async def send_latest_frames(self):
         logger.trace("Sending latest frames...")
         try:
-            latest_multi_frame_payload = (
+            latest_multi_frame_payload: MultiFramePayload = (
                 controller.camera_group_manager.get_latest_frames()
             )
             if latest_multi_frame_payload is None:
                 logger.trace("No frames to send - returning nothing.")
                 pass
             else:
-                await self.websocket.send_bytes(latest_multi_frame_payload.to_bytes())
+                bytes_message = latest_multi_frame_payload.to_msgpack()
+
+                await self.websocket.send_bytes(bytes_message)
         except Exception as e:
             logger.error(f"Error obtaining latest frames: {e}")
             await self.websocket.send_text("Error obtaining latest frames.")
