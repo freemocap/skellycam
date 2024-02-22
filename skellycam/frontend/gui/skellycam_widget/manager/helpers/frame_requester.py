@@ -49,7 +49,6 @@ class FrameRequester(QObject):
             image_bytes = base64.b64decode(base64_image)
             image_array = np.frombuffer(image_bytes, dtype=np.uint8)
             image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            cv2.imshow(f"Camera {camera_id}", image)
 
         if response:
             logger.trace(f"Received {len(response)} frames")
