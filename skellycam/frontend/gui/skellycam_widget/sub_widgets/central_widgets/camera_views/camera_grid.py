@@ -44,14 +44,15 @@ class CameraGrid(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-    @Slot(MultiFramePayload)
-    def handle_new_frames(self, payload: MultiFramePayload):
-        # logger.trace(f"Got new images Updating camera views")
+    @Slot(dict)
+    def handle_new_frames(self, payload: Dict[CameraId, np.ndarray]):
+        logger.trace(f"Received new frames from cameras: {payload.keys()}")
         try:
-            # cv2.imshow("wow", payload)
-            for camera_id, frame in payload.frames.items():
-                if camera_id in self._single_cameras.keys():
-                    self._single_cameras[camera_id].handle_image_update(frame=frame)
+            for camera_id, image in payload.items():
+                if CameraId(camera_id) in self._single_cameras.keys():
+                    self._single_cameras[CameraId(camera_id)].handle_image_update(
+                        image=image
+                    )
                     # cv2.imshow(f"Camera {camera_id}", frame.image)
                 else:
                     raise KeyError(f"Camera ID {camera_id} not found in camera grid")
@@ -88,7 +89,7 @@ class CameraGrid(QWidget):
 
         for camera_id, config in camera_configs.items():
             if camera_id not in self._single_cameras:
-                self._single_cameras[camera_id] = SingleCameraView(
+                self._single_cameras[CameraId(camera_id)] = SingleCameraView(
                     camera_config=config, parent=self
                 )
 

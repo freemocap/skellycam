@@ -84,6 +84,12 @@ def get_latest_frames():
     Obtain the latest captured frames from each connected camera.
     Returns the raw bytes of the MultiFramePayload object.
     """
+    if not controller.camera_group_manager:
+        response = {
+            "message": "Camera group has not been initialized - cannot get latest frames, call `detect_available_cameras` then `connect_to_cameras` first."
+        }
+        logger.error(response["message"])
+        return response
     try:
         latest_multiframe_payload: MultiFramePayload = (
             controller.camera_group_manager.get_latest_frames()

@@ -1,7 +1,8 @@
 import pprint
 
+import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QPainter
+from PySide6.QtGui import QPixmap, QPainter, QImage
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 
 from skellycam.backend.models.cameras.camera_config import CameraConfig
@@ -44,13 +45,22 @@ class SingleCameraView(QWidget):
         self._image_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._image_view)
 
-    def handle_image_update(self, frame: FramePayload):
+    def handle_image_update(self, image: np.ndarray):
         if self._processing_frame:
             return  # Don't process frames faster than we can display them
         else:
             self._processing_frame = True
 
-        q_image = frame.to_q_image()
+        image_bytes = image.tobytes()
+        height, width, channels = image.shape
+
+        q_image = QImage(
+            image_bytes,
+            width,
+            height,
+            channels * width,
+            QImage.Format_RGB888,
+        )
         pixmap = QPixmap.fromImage(q_image)
 
         image_label_widget_width = self._image_view.width()

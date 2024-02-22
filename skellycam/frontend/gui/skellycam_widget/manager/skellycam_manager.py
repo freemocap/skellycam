@@ -41,7 +41,7 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_grid.update_camera_grid
         )
 
-        self.main_widget.websocket_client.new_frames_received.connect(
+        self.frame_requester.new_frames_received.connect(
             self.main_widget.camera_grid.handle_new_frames
         )
 

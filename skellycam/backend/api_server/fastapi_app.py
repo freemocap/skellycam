@@ -27,7 +27,7 @@ class FastApiApp:
         logger.info("Creating FastAPI app")
         self.app = FastAPI()
         self._register_routes()
-        self._register_middleware()
+        # self._register_middleware()
         self._customize_swagger_ui()
         self.shutdown_event = shutdown_event
         self._timeout = timeout
