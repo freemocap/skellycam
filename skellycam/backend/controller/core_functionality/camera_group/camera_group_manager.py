@@ -25,7 +25,6 @@ class CameraGroupManager(threading.Thread):
         self.daemon = True
         self._camera_configs = camera_configs
         self._camera_group = CameraGroup(camera_configs=self._camera_configs)
-        self._camera_runner_thread: Optional[threading.Thread] = None
 
         self._incoming_frame_wrangler: IncomingFrameWrangler = IncomingFrameWrangler(
             camera_configs=self._camera_configs
@@ -83,6 +82,7 @@ class CameraGroupManager(threading.Thread):
                 time.sleep(0.001)
 
     def _close_video_recorder_manager(self):
+        logger.debug(f"Closing video recorder manager...")
         self._video_recorder_manager.finish_and_close()
         self._video_recorder_manager = None
         self._is_recording = False
@@ -91,8 +91,7 @@ class CameraGroupManager(threading.Thread):
         logger.debug(f"Stopping camera group thread...")
 
         self._camera_group.close()
-        # self._video_recorder_manager.finish_and_close()
-        self._camera_runner_thread.join()
+        self._video_recorder_manager.finish_and_close()
 
     def update_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Updating camera configs to \n{camera_configs}")
