@@ -28,7 +28,7 @@ def run_uvicorn_server(
             app,
             host=hostname,
             port=port,
-            log_level="info",
+            log_level="warning",
             # reload=True
         )
     except Exception as e:

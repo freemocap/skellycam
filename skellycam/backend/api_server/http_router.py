@@ -15,6 +15,7 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
 )
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 
+
 logger = logging.getLogger(__name__)
 
 http_router = APIRouter()

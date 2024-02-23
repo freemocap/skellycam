@@ -73,9 +73,9 @@ class ApiClient(QObject):
             logger.error(f"Failed to parse CamerasConnectedResponse with error: '{e}'")
 
     def get_latest_frames(self):
-        logger.debug("Sending request to the frontend API `latest_frame` endpoint")
+        logger.trace("Sending request to the frontend API `latest_frame` endpoint")
         response = self.client.get("latest_frames")
-        logger.debug(f"Response: {response}")
+        logger.trace(f"Response: {response}")
         return response
 
 
