@@ -89,3 +89,9 @@ class Controller:
             self.camera_group_manager.update_camera_configs(camera_configs)
             return {"success": True}
         return {"success": False, "error": "No camera group manager found"}
+
+    def stop_recording(self):
+        logger.info("Stopping recording...")
+        if self.camera_group_manager is not None:
+            self.camera_group_manager.stop_recording()
+            return True

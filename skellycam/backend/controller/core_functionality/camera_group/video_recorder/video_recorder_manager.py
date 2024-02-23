@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 
@@ -101,10 +102,13 @@ class VideoRecorderManager:
         }
 
     def stop_recording(self):
+        logger.debug(f"Stopping recording...")
         self._is_recording = False
+        self.finish_and_close()
 
     def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         self._multi_frame_number += 1
+        logger.trace(f"Handling multi frame payload #{self._multi_frame_number}...")
         for camera_id, frame_payload in multi_frame_payload.frames.items():
             self._video_recorders[camera_id].append_frame_payload_to_list(
                 frame_payload=frame_payload
@@ -115,16 +119,20 @@ class VideoRecorderManager:
         )
 
     def one_frame_to_disk(self):
+        logger.trace(f"Saving one multi_frame to disk...")
         for video_recorder in self._video_recorders.values():
             video_recorder.one_frame_to_disk()
 
-    async def finish_and_close(self):
+    def finish_and_close(self):
         for camera_id, video_recorder in self._video_recorders.items():
+            logger.debug(
+                f"Finishing and closing video recorder for camera {camera_id}..."
+            )
             video_recorder.finish_and_close()
         self._timestamp_manager.close()
 
         while not self.finished:
-            await asyncio.sleep(0.001)
+            time.sleep(0.1)
 
     def _make_video_file_path(
         self, camera_id: CameraId, recording_folder_path: str, video_format: str = "mp4"

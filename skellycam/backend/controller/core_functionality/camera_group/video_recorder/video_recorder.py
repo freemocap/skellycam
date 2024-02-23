@@ -56,16 +56,15 @@ class VideoRecorder:
         self._frame_payload_list.append(frame_payload)
 
     def one_frame_to_disk(self):
-        if len(self._frame_payload_list) == 0:
-            raise AssertionError(
-                "No frames to save, but `one_frame_to_disk` was called! "
-                "There's a buggo in the qt_application logic somewhere..."
+        if self.has_frames_to_save:
+            logger.trace(
+                f"Saving frame to disk for camera {self._camera_config.camera_id}"
             )
-        self._check_if_writer_open()
-        frame = self._frame_payload_list.pop(-1)
-        self._validate_frame(frame=frame)
-        image = frame.get_image()
-        self._cv2_video_writer.write(image)
+            self._check_if_writer_open()
+            frame = self._frame_payload_list.pop(-1)
+            self._validate_frame(frame=frame)
+            image = frame.get_image()
+            self._cv2_video_writer.write(image)
 
     def _check_if_writer_open(self):
         if self._cv2_video_writer is None:
@@ -96,8 +95,13 @@ class VideoRecorder:
         logger.debug(
             f"Finishing video recording for camera {self._camera_config.camera_id}"
         )
-        while len(self._frame_payload_list) > 0:
+        while self.has_frames_to_save:
             self.one_frame_to_disk()
+
+        logger.info(
+            f"Released video writer for camera {self._camera_config.camera_id} - video saved at: {self._video_save_path}"
+        )
+        self._cv2_video_writer.release()
 
     def close(self):
         logger.debug(

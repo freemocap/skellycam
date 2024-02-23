@@ -17,6 +17,7 @@ from skellycam.backend.models.cameras.frames.frame_payload import (
 )
 
 logger = logging.getLogger(__name__)
+logging.getLogger(__name__).setLevel(5)
 
 
 class CameraGroupManager(threading.Thread):
@@ -42,6 +43,10 @@ class CameraGroupManager(threading.Thread):
         logger.debug(f"Starting recording...")
         self._incoming_frame_wrangler.start_recording(recording_folder_path)
 
+    def stop_recording(self):
+        logger.debug(f"Stopping recording...")
+        self._incoming_frame_wrangler.stop_recording()
+
     def get_latest_frames(self) -> MultiFramePayload:
         return self._incoming_frame_wrangler.latest_frontend_payload
 
@@ -57,19 +62,20 @@ class CameraGroupManager(threading.Thread):
                     multi_frame_payload, new_frames
                 )
             else:
-                time.sleep(0.001)
-
-    def _close_video_recorder_manager(self):
-        logger.debug(f"Closing video recorder manager...")
-        self._video_recorder_manager.finish_and_close()
-        self._video_recorder_manager = None
-        self._is_recording = False
+                if self._incoming_frame_wrangler.frames_to_save:
+                    logger.trace(
+                        f"No new frames, saving one frame from each camera to disk"
+                    )
+                    self._incoming_frame_wrangler.save_one_frame_to_disk()
+                else:
+                    time.sleep(0.001)
 
     def close(self):
         logger.debug(f"Stopping camera group thread...")
 
         self._camera_group.close()
-        self._video_recorder_manager.finish_and_close()
+        if self._incoming_frame_wrangler.is_recording:
+            self._incoming_frame_wrangler.stop_recording()
 
     def update_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Updating camera configs to \n{camera_configs}")

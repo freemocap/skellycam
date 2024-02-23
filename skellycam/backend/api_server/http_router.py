@@ -151,6 +151,22 @@ def start_recording(request: StartRecordingRequest):
         raise Exception(f"Failed to start recording: {e}")
 
 
+@http_router.get(
+    "/stop_recording",
+    summary="Stop recording videos from all connected cameras",
+)
+def start_recording():
+    """
+    Stop recording videos from all connected cameras.
+    """
+    logger.info(f"Stopping recording videos...")
+    try:
+        controller.stop_recording()
+        return {"message": "Recording stopped"}
+    except Exception as e:
+        raise Exception(f"Failed to stop recording: {e}")
+
+
 @http_router.post(
     "/update_camera_configs",
     summary="Update camera configurations",

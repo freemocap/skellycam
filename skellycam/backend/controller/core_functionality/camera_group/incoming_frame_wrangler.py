@@ -27,6 +27,14 @@ class IncomingFrameWrangler:
         self.new_frontend_payload_available: bool = False
         self._is_recording = False
 
+    @property
+    def frames_to_save(self):
+        return self._video_recorder_manager.has_frames_to_save
+
+    @property
+    def is_recording(self):
+        return self._is_recording
+
     def handle_new_frames(
         self, multi_frame_payload: MultiFramePayload, new_frames: List[FramePayload]
     ) -> MultiFramePayload:
@@ -91,5 +99,12 @@ class IncomingFrameWrangler:
             raise AssertionError(
                 "Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! This shouldn't happen..."
             )
-        self._video_recorder_manager.stop_recording()
         self._is_recording = False
+        self._video_recorder_manager.stop_recording()
+
+    def save_one_frame_to_disk(self):
+        if self._video_recorder_manager is None:
+            raise AssertionError(
+                "Video recorder manager isn't initialized, but `SaveOneFrameInteraction` was called! This shouldn't happen..."
+            )
+        self._video_recorder_manager.one_frame_to_disk()
