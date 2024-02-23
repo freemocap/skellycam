@@ -60,11 +60,14 @@ class VideoRecorder:
             logger.trace(
                 f"Saving frame to disk for camera {self._camera_config.camera_id}"
             )
-            self._check_if_writer_open()
             frame = self._frame_payload_list.pop(-1)
-            self._validate_frame(frame=frame)
-            image = frame.get_image()
-            self._cv2_video_writer.write(image)
+            self._write_image_to_video_file(frame)
+
+    def _write_image_to_video_file(self, frame: FramePayload):
+        self._check_if_writer_open()
+        self._validate_frame(frame=frame)
+        image = frame.get_image()
+        self._cv2_video_writer.write(image)
 
     def _check_if_writer_open(self):
         if self._cv2_video_writer is None:
