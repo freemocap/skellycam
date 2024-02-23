@@ -68,3 +68,16 @@ class Controller:
                 success=False,
                 metadata={"error": str(e), "traceback": str(traceback.format_exc())},
             )
+
+    def close_cameras(self):
+        if self.camera_group_manager is not None:
+            self.camera_group_manager.close()
+            self.camera_group_manager = None
+            return True
+        return False
+
+    def start_recording(self):
+        if self.camera_group_manager is not None:
+            self.camera_group_manager.start_recording()
+            return True
+        return False

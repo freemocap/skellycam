@@ -9,6 +9,9 @@ from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_
     ConnectToCamerasRequest,
     CamerasConnectedResponse,
 )
+from skellycam.backend.api_server.requests_responses.start_recording_request import (
+    StartRecordingRequest,
+)
 from skellycam.backend.controller.controller import get_or_create_controller
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
@@ -112,3 +115,18 @@ def get_latest_frames():
         return json.dumps(compressed_payload)
     except Exception as e:
         raise Exception(f"Failed to get latest frames: {e}")
+
+
+@http_router.post(
+    "/start_recording",
+    summary="Start recording videos from all connected cameras",
+)
+def start_recording(start_recording_request: StartRecordingRequest):
+    """
+    Start recording videos from all connected cameras.
+    """
+    try:
+        controller.start_recording(start_recording_request)
+        return {"message": "Recording started"}
+    except Exception as e:
+        raise Exception(f"Failed to start recording: {e}")

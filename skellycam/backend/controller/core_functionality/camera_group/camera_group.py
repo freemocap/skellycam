@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import multiprocessing
 import time
@@ -85,12 +84,12 @@ class CameraGroup:
                 all_cameras_ready_event=self._all_cameras_ready_event,
             )
 
-    async def close(self):
+    def close(self):
         logger.debug("Closing camera group")
         self._close_cameras_event.set()
         while self.any_capturing:
             logger.trace("Waiting for cameras to stop capturing")
-            await asyncio.sleep(1.0)
+            time.sleep(0.1)
         logger.info("All cameras have stopped capturing")
 
     def _create_events(self):
