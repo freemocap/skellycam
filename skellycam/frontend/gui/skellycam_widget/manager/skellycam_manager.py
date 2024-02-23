@@ -124,6 +124,7 @@ class SkellyCamManager(QThread):
         )
 
         logger.info(f"Start recording response: {start_recording_response}")
+        self._handle_start_recording()
 
     def _stop_recording(self):
         logger.info("Sending stop recording request...")

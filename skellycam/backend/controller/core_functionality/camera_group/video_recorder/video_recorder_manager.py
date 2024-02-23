@@ -127,7 +127,7 @@ class VideoRecorderManager:
             await asyncio.sleep(0.001)
 
     def _make_video_file_path(
-        self, camera_id: CameraId, recording_folder_path: str, video_format: str = "avi"
+        self, camera_id: CameraId, recording_folder_path: str, video_format: str = "mp4"
     ):
         Path(recording_folder_path).mkdir(parents=True, exist_ok=True)
         file_name = (
