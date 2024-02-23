@@ -1,7 +1,6 @@
 import logging
 import threading
 import time
-from typing import Dict, Optional, Union
 
 from skellycam.backend.controller.core_functionality.camera_group.camera_group import (
     CameraGroup,
@@ -9,9 +8,7 @@ from skellycam.backend.controller.core_functionality.camera_group.camera_group i
 from skellycam.backend.controller.core_functionality.camera_group.incoming_frame_wrangler import (
     IncomingFrameWrangler,
 )
-from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
-from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import (
     MultiFramePayload,
 )

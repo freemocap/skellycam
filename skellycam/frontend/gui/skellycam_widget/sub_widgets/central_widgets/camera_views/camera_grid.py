@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QWi
 
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.single_camera import (
     SingleCameraView,
 )

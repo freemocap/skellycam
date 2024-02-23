@@ -1,4 +1,3 @@
-import pytest
 import multiprocessing
 
 from skellycam.backend.run_backend import run_backend

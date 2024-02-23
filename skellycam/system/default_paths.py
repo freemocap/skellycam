@@ -1,7 +1,6 @@
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
 import skellycam
 from skellycam.system.home_dir import os_independent_home_dir

@@ -1,8 +1,7 @@
+import logging
 import multiprocessing
 
 from skellycam.frontend.qt_application import create_or_recreate_qt_application
-
-import logging
 
 logger = logging.getLogger(__name__)
 

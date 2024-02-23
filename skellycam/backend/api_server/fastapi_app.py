@@ -1,17 +1,11 @@
 import logging
 import multiprocessing
-from datetime import datetime
-from typing import Callable
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
-from fastapi.websockets import WebSocket
 
 import skellycam
-from skellycam.backend.api_server.backend_websocket import (
-    BackendWebsocketManager,
-)
 from skellycam.backend.api_server.http_router import http_router
 
 logger = logging.getLogger(__name__)
@@ -41,20 +35,6 @@ class FastApiApp:
             return RedirectResponse("/docs")
 
         self.app.include_router(http_router)
-
-        @self.app.websocket("/websocket")
-        async def websocket_route(websocket: WebSocket):
-            logger.info("WebSocket connection received")
-            ws_manager = BackendWebsocketManager(
-                websocket=websocket,
-                shutdown_event=self.shutdown_event,
-                timeout=self._timeout,
-            )
-            await ws_manager.accept_connection()
-            await ws_manager.receive_and_process_text_messages()
-
-            logger.info("WebSocket connection closed, shutting down...")
-            self.shutdown_event.set()
 
     def _customize_swagger_ui(self):
         logger.info(f"Customizing Swagger UI at `/docs` endpoint")

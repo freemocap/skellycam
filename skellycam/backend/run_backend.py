@@ -4,8 +4,6 @@ import time
 from multiprocessing import Process
 from typing import Tuple
 
-from PySide6.QtCore import QTimer
-
 from skellycam.backend.api_server.find_available_port import find_available_port
 from skellycam.backend.api_server.run_uvicorn_server import run_uvicorn_server
 
@@ -52,26 +50,3 @@ def run_backend(
         return backend_process, hostname, port
 
     raise Exception(f"Backend server failed to start on port {port} :(")
-
-
-if __name__ == "__main__":
-    from skellycam.experiments.simple_websocket import SimpleWebSocketClient
-    from PySide6.QtWidgets import QPushButton, QApplication
-
-    class SimpleApp(QApplication):
-        def __init__(self, ws_url: str):
-            super().__init__()
-            self.client = SimpleWebSocketClient(ws_url)
-            self.main_window = QPushButton("Send Ping")
-            self.main_window.clicked.connect(self.client.send_ping)
-            self.main_window.show()
-            self.beep_timer = QTimer(self)
-            self.beep_timer.timeout.connect(self.client.send_beep)
-            self.beep_timer.start(1000)  # Set interval in milliseconds
-
-    backend_process_out, localhost_outer, port_outer = run_backend()
-    print(f"Backend server is running on: http://{localhost_outer}:{port_outer}")
-    ws_url_outer = f"ws://{localhost_outer}:{port_outer}/websocket"
-    app = SimpleApp(ws_url_outer)
-    app.exec()
-    logger.info(f"Done!")

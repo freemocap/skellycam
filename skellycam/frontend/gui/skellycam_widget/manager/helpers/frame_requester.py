@@ -5,13 +5,10 @@ import logging
 import cv2
 import numpy as np
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QWidget
 
 from skellycam.frontend.api_client.api_client import ApiClient
 
 logger = logging.getLogger(__name__)
-
-from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketClient
 
 
 class FrameRequester(QObject):
@@ -20,12 +17,10 @@ class FrameRequester(QObject):
 
     def __init__(
         self,
-        websocket_client: FrontendWebsocketClient,
         api_client: ApiClient,
         parent: QObject,
     ):
         super().__init__(parent=parent)
-        self.websocket_connection = websocket_client
         self.api_client = api_client
         self.should_continue = True
         self.timer = QTimer(self)
@@ -43,7 +38,6 @@ class FrameRequester(QObject):
 
     def _request_frames(self):
         logger.trace("Requesting new frames...")
-        # self.websocket_connection.request_frames()  # sends a message to the server to request frames, which will be caught by the websocket handler and emitted as a signal
         response = self.api_client.get_latest_frames()
 
         if response:

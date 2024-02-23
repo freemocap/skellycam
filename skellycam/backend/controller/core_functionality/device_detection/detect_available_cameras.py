@@ -1,4 +1,5 @@
 import concurrent
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from pprint import pprint
 from typing import Dict
@@ -9,8 +10,6 @@ from pydantic import BaseModel
 
 from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfo
 from skellycam.backend.models.cameras.camera_id import CameraId
-
-import logging
 
 logger = logging.getLogger(__name__)
 

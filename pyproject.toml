@@ -53,10 +53,10 @@ Homepage = "https://github.com/freemocap/skellycam"
 current_version = "v2023.09.1086"
 
 version_pattern = "vYYYY.0M.BUILD[-TAG]"
-commit_message  = "Bump version {old_version} -> {new_version}"
-commit          = true
-tag             = true
-push            = true
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
 
 [tool.bumpver.file_patterns]
 "skellycam/__init__.py" = ["{version}"]
@@ -97,7 +97,7 @@ classifiers = [
     "Topic :: System :: Hardware",
     "Topic :: System :: Hardware :: Universal Serial Bus (USB)",
     "Topic :: System :: Hardware :: Universal Serial Bus (USB) :: Video (UVC)",
-    ]
+]
 keywords = [
     "camera",
     "stream",

@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Optional, List
 
@@ -11,7 +12,6 @@ from skellycam.backend.models.cameras.frames.frame_payload import (
     MultiFramePayload,
     FramePayload,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

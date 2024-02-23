@@ -6,7 +6,6 @@ from skellycam.system.default_paths import get_default_skellycam_base_folder_pat
 
 logger = logging.getLogger(__name__)
 from skellycam.frontend.api_client.api_client import ApiClient
-from skellycam.frontend.api_client.frontend_websocket import FrontendWebsocketClient
 from skellycam.frontend.gui.skellycam_widget.manager.skellycam_manager import (
     SkellyCamManager,
 )
@@ -34,12 +33,10 @@ class SkellyCamWidget(QWidget):
     def __init__(
         self,
         api_client: ApiClient,
-        websocket_client: FrontendWebsocketClient,
         parent=None,
     ):
         super().__init__(parent=parent)
         self.api_client = api_client
-        self.websocket_client = websocket_client
         self._initUI()
 
         # self._app_state_manager = AppStateManager()
