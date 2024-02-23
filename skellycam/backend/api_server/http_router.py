@@ -79,6 +79,22 @@ async def connect_to_cameras(
         raise e
 
 
+@http_router.get("/close", summary="Close all connected cameras")
+def close_cameras():
+    """
+    Close all connected cameras.
+    This will release all resources and stop capturing frames from all connected cameras.
+    """
+    logger.info("Closing cameras...")
+    try:
+        controller.close_cameras()
+        return {"message": "Cameras closed"}
+    except Exception as e:
+        logger.error(f"Failed to close cameras: {e}")
+        logger.exception(e)
+        raise e
+
+
 @http_router.get(
     "/latest_frames",
     summary="Get the latest synchronized multi-frame from all cameras",

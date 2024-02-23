@@ -45,6 +45,25 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_grid.handle_new_frames
         )
 
+        self.main_widget.camera_control_buttons.close_cameras_button.clicked.connect(
+            self._close_cameras
+        )
+        self.main_widget.camera_control_buttons.connect_to_cameras_button.clicked.connect(
+            self._connect_to_cameras
+        )
+
+        self.main_widget.camera_control_buttons.detect_available_cameras_button.clicked.connect(
+            self._detect_available_cameras
+        )
+        #
+        # self.main_widget.camera_control_buttons.apply_camera_settings_button.clicked.connect(
+        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
+        #         UpdateCameraConfigsInteraction.as_request(
+        #             camera_configs=self.main_widget.camera_configs
+        #         )
+        #     )
+        # )
+
         #
         # self.main_widget.record_buttons.start_recording_button.clicked.connect(
         #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
@@ -58,33 +77,6 @@ class SkellyCamManager(QThread):
         #     )
         # )
         #
-        # self.main_widget.camera_control_buttons.close_cameras_button.clicked.connect(
-        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
-        #         CloseCamerasInteraction.as_request()
-        #     )
-        # )
-        #
-        # self.main_widget.camera_control_buttons.connect_to_cameras_button.clicked.connect(
-        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
-        #         ConnectToCamerasInteraction.as_request(
-        #             camera_configs=self.main_widget.camera_configs
-        #         )
-        #     )
-        # )
-        #
-        # self.main_widget.camera_control_buttons.detect_available_cameras_button.clicked.connect(
-        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
-        #         DetectAvailableCamerasInteraction.as_request()
-        #     )
-        # )
-        #
-        # self.main_widget.camera_control_buttons.apply_camera_settings_button.clicked.connect(
-        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
-        #         UpdateCameraConfigsInteraction.as_request(
-        #             camera_configs=self.main_widget.camera_configs
-        #         )
-        #     )
-        # )
 
     def handle_start_session_button_clicked(self):
         logger.debug("Start session button clicked!")
@@ -93,9 +85,9 @@ class SkellyCamManager(QThread):
         self.main_widget.record_buttons.show()
         self.main_widget.side_panel.show()
 
-        self.detect_available_cameras()
+        self._detect_available_cameras()
 
-    def detect_available_cameras(self):
+    def _detect_available_cameras(self):
         logger.debug("Sending detect available cameras request...")
 
         detected_cameras_response = self.api_client.detect_available_cameras()
@@ -103,6 +95,41 @@ class SkellyCamManager(QThread):
         self.handle_cameras_detected(
             detected_cameras_response, link_connect_to_cameras=True
         )
+
+    def _connect_to_cameras(self):
+        logger.info("Sending connect to cameras request...")
+
+        connect_to_cameras_response = self.api_client.connect_to_cameras(
+            self.main_widget.camera_parameter_tree.camera_configs
+        )
+
+        if connect_to_cameras_response.success:
+            self.handle_cameras_connected()
+        else:
+            logger.error("Failed to connect to cameras")
+
+    def _close_cameras(self):
+        logger.info("Sending close cameras request...")
+
+        close_cameras_response = self.api_client.close_cameras()
+
+        self._handle_cameras_closed_response()
+
+    def handle_cameras_connected(self):
+        logger.info("Handling cameras connected signal")
+        self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(True)
+        self.main_widget.camera_control_buttons.apply_camera_settings_button.setEnabled(
+            True
+        )
+        self.main_widget.record_buttons.start_recording_button.setEnabled(True)
+        self.main_widget.record_buttons.start_recording_button.setFocus()
+        mean_framerate = np.mean(
+            [
+                config.framerate
+                for config in self.main_widget.camera_parameter_tree.camera_configs.values()
+            ]
+        )
+        self.frame_requester.start_request_timer(mean_framerate)
 
     def handle_cameras_detected(
         self,
@@ -134,42 +161,15 @@ class SkellyCamManager(QThread):
 
         if link_connect_to_cameras:
             logger.debug("Linking `connect to cameras` request...")
-            self._request_connect_to_cameras()
+            self._connect_to_cameras()
 
-    def _request_connect_to_cameras(self):
-        logger.info("Sending connect to cameras request...")
+    def _handle_cameras_closed_response(self):
+        logger.debug("Handling cameras closed response")
+        self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(False)
+        self.main_widget.camera_control_buttons.connect_to_cameras_button.hasFocus()
+        self.main_widget.record_buttons.start_recording_button.setEnabled(False)
 
-        connect_to_cameras_response = self.api_client.connect_to_cameras(
-            self.main_widget.camera_parameter_tree.camera_configs
-        )
-
-        if connect_to_cameras_response.success:
-            self.handle_cameras_connected()
-        else:
-            logger.error("Failed to connect to cameras")
-
-    def handle_cameras_connected(self):
-        logger.info("Handling cameras connected signal")
-        self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(True)
-        self.main_widget.camera_control_buttons.apply_camera_settings_button.setEnabled(
-            True
-        )
+    def _handle_stop_recording_response(self):
+        logger.debug("Handling stop recording response")
         self.main_widget.record_buttons.start_recording_button.setEnabled(True)
-        self.main_widget.record_buttons.start_recording_button.setFocus()
-        mean_framerate = np.mean(
-            [
-                config.framerate
-                for config in self.main_widget.camera_parameter_tree.camera_configs.values()
-            ]
-        )
-        self.frame_requester.start_request_timer(mean_framerate)
-
-    # def _handle_cameras_closed_response(self)):
-    #     main_widget.camera_control_buttons.close_cameras_button.setEnabled(False)
-    #     main_widget.camera_control_buttons.connect_to_cameras_button.hasFocus()
-    #     main_widget.record_buttons.start_recording_button.setEnabled(False)
-    #
-    #
-    # def _handle_stop_recording_response(self)):
-    #     main_widget.record_buttons.start_recording_button.setEnabled(True)
-    #     main_widget.record_buttons.stop_recording_button.setEnabled(False)
+        self.main_widget.record_buttons.stop_recording_button.setEnabled(False)

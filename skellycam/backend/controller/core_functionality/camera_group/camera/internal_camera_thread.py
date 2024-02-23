@@ -84,6 +84,7 @@ class VideoCaptureThread(threading.Thread):
             raise e
         finally:
             self._is_capturing_event.clear()
+            self.stop()
             logger.info(
                 f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped"
             )

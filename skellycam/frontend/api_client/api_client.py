@@ -78,6 +78,12 @@ class ApiClient(QObject):
         logger.trace(f"Response: {response}")
         return response
 
+    def close_cameras(self):
+        logger.info("Sending request to the frontend API `close` endpoint")
+        response = self.client.get("close")
+        logger.info(f"Response: {response}")
+        return response
+
 
 def check_frontend_camera_connection():
     from skellycam.backend.run_backend import run_backend
