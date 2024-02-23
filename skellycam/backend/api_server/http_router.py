@@ -61,7 +61,7 @@ def detect_available_cameras() -> CamerasDetectedResponse:
 )
 async def connect_to_cameras(
     request: ConnectToCamerasRequest = Body(
-        ..., example=ConnectToCamerasRequest.default().dict()
+        ..., examples=[ConnectToCamerasRequest.default().dict()]
     ),
 ):
     logger.info("Connecting to cameras")
