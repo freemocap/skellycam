@@ -1,4 +1,3 @@
-import json
 import logging
 import multiprocessing
 
@@ -110,6 +109,7 @@ class ApiClient(QObject):
         response = self.client.get("stop_recording")
         logger.info(f"Response: {response}")
         return response
+
 
 def check_frontend_camera_connection():
     from skellycam.backend.run_backend import run_backend
