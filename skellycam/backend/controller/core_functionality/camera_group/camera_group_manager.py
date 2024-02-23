@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class CameraGroupManager(threading.Thread):
-    def __init__(self, camera_configs: [Dict[CameraId, CameraConfig]]) -> None:
+    def __init__(self, camera_configs: CameraConfigs) -> None:
         super().__init__()
         self.daemon = True
         self._camera_configs = camera_configs
@@ -94,7 +94,7 @@ class CameraGroupManager(threading.Thread):
         # self._video_recorder_manager.finish_and_close()
         self._camera_runner_thread.join()
 
-    def update_configs(self, camera_configs: Dict[CameraId, CameraConfig]):
-        logger.debug(f"Updating camera configs to {camera_configs.keys()}")
+    def update_camera_configs(self, camera_configs: CameraConfigs):
+        logger.debug(f"Updating camera configs to \n{camera_configs}")
         self._camera_configs = camera_configs
         self._camera_group.update_configs(camera_configs=camera_configs)

@@ -10,6 +10,7 @@ from skellycam.backend.controller.core_functionality.camera_group.strategies.str
     Strategy,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
 
@@ -41,7 +42,7 @@ class CameraGroup:
     def get_new_frames(self) -> List[FramePayload]:
         return self._strategy_class.get_new_frames()
 
-    def update_configs(self, camera_configs: Dict[CameraId, CameraConfig]):
+    def update_configs(self, camera_configs: CameraConfigs):
         logger.info(f"Updating camera configs to {camera_configs}")
         self._camera_configs = camera_configs
         self._strategy_class.update_camera_configs(camera_configs)

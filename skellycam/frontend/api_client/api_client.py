@@ -1,3 +1,4 @@
+import json
 import logging
 import multiprocessing
 
@@ -81,6 +82,18 @@ class ApiClient(QObject):
     def close_cameras(self):
         logger.info("Sending request to the frontend API `close` endpoint")
         response = self.client.get("close")
+        logger.info(f"Response: {response}")
+        return response
+
+    def update_camera_configs(self, camera_configs: CameraConfigs):
+        logger.info(
+            "Sending request to the frontend API `update_camera_configs` endpoint"
+        )
+        configs_as_dict = {
+            camera_id: camera_config.dict()
+            for camera_id, camera_config in camera_configs.items()
+        }
+        response = self.client.post("update_camera_configs", json=configs_as_dict)
         logger.info(f"Response: {response}")
         return response
 

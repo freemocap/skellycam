@@ -16,6 +16,7 @@ from skellycam.backend.controller.controller import get_or_create_controller
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
+from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
 
 
@@ -146,3 +147,19 @@ def start_recording(start_recording_request: StartRecordingRequest):
         return {"message": "Recording started"}
     except Exception as e:
         raise Exception(f"Failed to start recording: {e}")
+
+
+@http_router.post(
+    "/update_camera_configs",
+    summary="Update camera configurations",
+)
+def update_camera_configs(camera_configs: CameraConfigs):
+    """
+    Update camera configurations.
+    """
+    logger.info(f"Received camera configurations {camera_configs} - updating...")
+    try:
+        response = controller.update_camera_configs(camera_configs)
+        return response
+    except Exception as e:
+        raise Exception(f"Failed to update camera configurations: {e}")

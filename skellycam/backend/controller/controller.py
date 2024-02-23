@@ -14,6 +14,7 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     DetectedCameras,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.camera_id import CameraId
 
 logger = logging.getLogger(__name__)
@@ -81,3 +82,10 @@ class Controller:
             self.camera_group_manager.start_recording()
             return True
         return False
+
+    def update_camera_configs(self, camera_configs: CameraConfigs):
+        logger.info("Updating camera configs...")
+        if self.camera_group_manager is not None:
+            self.camera_group_manager.update_camera_configs(camera_configs)
+            return {"success": True}
+        return {"success": False, "error": "No camera group manager found"}

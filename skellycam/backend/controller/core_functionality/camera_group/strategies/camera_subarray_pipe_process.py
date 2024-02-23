@@ -178,7 +178,7 @@ class CamSubarrayPipeProcess:
                 logger.info(
                     "Camera config dict queue has items - updating cameras configs"
                 )
-                camera_config_dictionary = camera_config_queue.get()
+                camera_configs = camera_config_queue.get()
 
                 for camera_id, camera in cameras.items():
-                    camera.update_config(camera_config_dictionary[camera_id])
+                    camera.update_config(camera_configs[camera_id])

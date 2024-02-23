@@ -55,14 +55,10 @@ class SkellyCamManager(QThread):
         self.main_widget.camera_control_buttons.detect_available_cameras_button.clicked.connect(
             self._detect_available_cameras
         )
-        #
-        # self.main_widget.camera_control_buttons.apply_camera_settings_button.clicked.connect(
-        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
-        #         UpdateCameraConfigsInteraction.as_request(
-        #             camera_configs=self.main_widget.camera_configs
-        #         )
-        #     )
-        # )
+
+        self.main_widget.camera_control_buttons.apply_camera_settings_button.clicked.connect(
+            self._update_camera_configs
+        )
 
         #
         # self.main_widget.record_buttons.start_recording_button.clicked.connect(
@@ -107,6 +103,16 @@ class SkellyCamManager(QThread):
             self.handle_cameras_connected()
         else:
             logger.error("Failed to connect to cameras")
+
+    def _update_camera_configs(self):
+        logger.info("Sending update camera configs request...")
+
+        camera_configs = self.main_widget.camera_parameter_tree.camera_configs
+        update_camera_configs_response = self.api_client.update_camera_configs(
+            camera_configs
+        )
+
+        logger.info(f"Update camera configs response: {update_camera_configs_response}")
 
     def _close_cameras(self):
         logger.info("Sending close cameras request...")
