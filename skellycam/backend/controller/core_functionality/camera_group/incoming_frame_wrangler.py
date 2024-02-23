@@ -34,14 +34,7 @@ class IncomingFrameWrangler:
             multi_frame_payload.add_frame(frame=frame)
             if multi_frame_payload.full:
                 if self._is_recording:
-                    if self._video_recorder_manager is None:
-                        logger.error(f"Video recorder manager not initialized")
-                        raise AssertionError(
-                            "Video recorder manager not initialized but `_is_recording` is True"
-                        )
-                    self._video_recorder_manager.handle_multi_frame_payload(
-                        multi_frame_payload=multi_frame_payload
-                    )
+                    self._record_multi_frame(multi_frame_payload)
 
                 frontend_payload = self._prepare_frontend_payload(
                     multi_frame_payload=multi_frame_payload
@@ -51,6 +44,16 @@ class IncomingFrameWrangler:
                     camera_ids=list(self._camera_configs.keys())
                 )
         return multi_frame_payload
+
+    def _record_multi_frame(self, multi_frame_payload):
+        if self._video_recorder_manager is None:
+            logger.error(f"Video recorder manager not initialized")
+            raise AssertionError(
+                "Video recorder manager not initialized but `_is_recording` is True"
+            )
+        self._video_recorder_manager.handle_multi_frame_payload(
+            multi_frame_payload=multi_frame_payload
+        )
 
     def _prepare_frontend_payload(
         self, multi_frame_payload: MultiFramePayload, scale_images: float = 0.5
@@ -70,14 +73,15 @@ class IncomingFrameWrangler:
         self.new_frontend_payload_available = False
         return self._latest_frontend_payload
 
-    def start_recording(self):
+    def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")
 
         self._video_recorder_manager.start_recording(
             start_time_perf_counter_ns_to_unix_mapping=(
                 time.perf_counter_ns(),
                 time.time_ns(),
-            )
+            ),
+            recording_folder_path=recording_folder_path,
         )
         self._is_recording = True
 

@@ -77,9 +77,9 @@ class Controller:
             return True
         return False
 
-    def start_recording(self):
+    def start_recording(self, recording_folder_path: str):
         if self.camera_group_manager is not None:
-            self.camera_group_manager.start_recording()
+            self.camera_group_manager.start_recording(recording_folder_path)
             return True
         return False
 

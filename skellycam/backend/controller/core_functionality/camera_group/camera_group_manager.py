@@ -30,9 +30,6 @@ class CameraGroupManager(threading.Thread):
             camera_configs=self._camera_configs
         )
 
-        self._is_recording = False
-        self._stop_recording = False
-
     @property
     def camera_configs(self) -> CameraConfigs:
         return self._camera_configs
@@ -41,19 +38,9 @@ class CameraGroupManager(threading.Thread):
     def new_frontend_payload_available(self) -> bool:
         return self._incoming_frame_wrangler.new_frontend_payload_available
 
-    @property
-    def is_recording(self) -> bool:
-        if self._is_recording and self._video_recorder_manager is None:
-            logger.error(f"Video recorder manager not initialized")
-            raise AssertionError(
-                "Video recorder manager not initialized but `_is_recording` is True"
-            )
-        return self._is_recording
-
-    def start_recording(self):
+    def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")
-        self._incoming_frame_wrangler.start_recording()
-        self._is_recording = True
+        self._incoming_frame_wrangler.start_recording(recording_folder_path)
 
     def get_latest_frames(self) -> MultiFramePayload:
         return self._incoming_frame_wrangler.latest_frontend_payload
@@ -69,15 +56,6 @@ class CameraGroupManager(threading.Thread):
                 multi_frame_payload = self._incoming_frame_wrangler.handle_new_frames(
                     multi_frame_payload, new_frames
                 )
-            elif self.is_recording:
-                if self._video_recorder_manager.has_frames_to_save:
-                    self._video_recorder_manager.one_frame_to_disk()
-                else:
-                    if self._stop_recording:
-                        logger.debug(
-                            f"No more frames to save, and `_stop_recording` is True - closing video recorder manager"
-                        )
-                        self._close_video_recorder_manager()
             else:
                 time.sleep(0.001)
 

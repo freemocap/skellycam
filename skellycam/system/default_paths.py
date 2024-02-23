@@ -32,13 +32,13 @@ def get_default_skellycam_base_folder_path():
     return Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME
 
 
-def get_default_recording_folder_path(
+def create_default_recording_folder_path(
     create_folder: bool = True, string_tag: str = None
 ):
     folder_path = (
         get_default_skellycam_base_folder_path()
         / "recordings"
-        / default_session_name(string_tag=string_tag)
+        / default_recording_name(string_tag=string_tag)
     )
     if create_folder:
         folder_path.mkdir(parents=True, exist_ok=True)
@@ -78,31 +78,10 @@ def get_iso6201_time_string(
     return iso6201_timestamp_w_gmt
 
 
-def default_session_name(string_tag: str = None):
+def default_recording_name(string_tag: str = None):
     if string_tag is not None:
         string_tag = f"_{string_tag}"
     else:
         string_tag = ""
 
     return time.strftime(get_iso6201_time_string(timespec="seconds") + string_tag)
-
-
-def get_default_recording_name(string_tag: str = None):
-    if string_tag is not None and not string_tag == "":
-        string_tag = f"_{string_tag}"
-    else:
-        string_tag = ""
-
-    full_time = get_iso6201_time_string(timespec="seconds")
-    just_hours_minutes_seconds = full_time.split("T")[1]
-    recording_name = just_hours_minutes_seconds + string_tag
-
-    return recording_name
-
-
-def create_new_synchronized_videos_folder(
-    recording_folder_path: Union[str, Path],
-):
-    folder_path = Path(recording_folder_path) / SYNCHRONIZED_VIDEOS_FOLDER_NAME
-    folder_path.mkdir(parents=True, exist_ok=True)
-    return str(folder_path)

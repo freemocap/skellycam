@@ -7,6 +7,7 @@ from PySide6.QtCore import QThread
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
+from skellycam.system.default_paths import create_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
 from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_requester import (
@@ -60,19 +61,13 @@ class SkellyCamManager(QThread):
             self._update_camera_configs
         )
 
-        #
-        # self.main_widget.record_buttons.start_recording_button.clicked.connect(
-        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
-        #         StartRecordingInteraction.as_request()
-        #     )
-        # )
-        #
-        # self.main_widget.record_buttons.stop_recording_button.clicked.connect(
-        #     lambda: self.main_widget._backend_communicator.send_interaction_to_backend(
-        #         StopRecordingInteraction.as_request()
-        #     )
-        # )
-        #
+        self.main_widget.record_buttons.start_recording_button.clicked.connect(
+            self._start_recording
+        )
+
+        self.main_widget.record_buttons.stop_recording_button.clicked.connect(
+            self._stop_recording
+        )
 
     def handle_start_session_button_clicked(self):
         logger.debug("Start session button clicked!")
@@ -120,6 +115,22 @@ class SkellyCamManager(QThread):
         close_cameras_response = self.api_client.close_cameras()
 
         self._handle_cameras_closed_response()
+
+    def _start_recording(self):
+        logger.info("Sending start recording request...")
+
+        start_recording_response = self.api_client.start_recording(
+            recording_folder_path=create_default_recording_folder_path()
+        )
+
+        logger.info(f"Start recording response: {start_recording_response}")
+
+    def _stop_recording(self):
+        logger.info("Sending stop recording request...")
+
+        stop_recording_response = self.api_client.stop_recording()
+
+        self._handle_stop_recording_response()
 
     def handle_cameras_connected(self):
         logger.info("Handling cameras connected signal")
@@ -179,3 +190,9 @@ class SkellyCamManager(QThread):
         logger.debug("Handling stop recording response")
         self.main_widget.record_buttons.start_recording_button.setEnabled(True)
         self.main_widget.record_buttons.stop_recording_button.setEnabled(False)
+
+    def _handle_start_recording(self):
+        logger.debug("Handling start recording response")
+        self.main_widget.record_buttons.start_recording_button.setEnabled(False)
+        self.main_widget.record_buttons.stop_recording_button.setEnabled(True)
+        self.main_widget.record_buttons.stop_recording_button.setFocus()

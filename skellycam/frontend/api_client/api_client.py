@@ -97,6 +97,19 @@ class ApiClient(QObject):
         logger.info(f"Response: {response}")
         return response
 
+    def start_recording(self, recording_folder_path: str):
+        logger.info("Sending request to the frontend API `start_recording` endpoint")
+        response = self.client.post(
+            "start_recording", json={"recording_folder_path": recording_folder_path}
+        )
+        logger.info(f"Response: {response}")
+        return response
+
+    def stop_recording(self):
+        logger.info("Sending request to the frontend API `stop_recording` endpoint")
+        response = self.client.get("stop_recording")
+        logger.info(f"Response: {response}")
+        return response
 
 def check_frontend_camera_connection():
     from skellycam.backend.run_backend import run_backend

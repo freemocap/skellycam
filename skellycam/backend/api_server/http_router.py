@@ -12,6 +12,7 @@ from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_
 from skellycam.backend.api_server.requests_responses.start_recording_request import (
     StartRecordingRequest,
 )
+
 from skellycam.backend.controller.controller import get_or_create_controller
 from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
@@ -138,12 +139,13 @@ def get_latest_frames():
     "/start_recording",
     summary="Start recording videos from all connected cameras",
 )
-def start_recording(start_recording_request: StartRecordingRequest):
+def start_recording(request: StartRecordingRequest):
     """
     Start recording videos from all connected cameras.
     """
+    logger.info(f"Starting recording videos to: {request.recording_folder_path}")
     try:
-        controller.start_recording(start_recording_request)
+        controller.start_recording(request.recording_folder_path)
         return {"message": "Recording started"}
     except Exception as e:
         raise Exception(f"Failed to start recording: {e}")
