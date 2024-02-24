@@ -30,13 +30,9 @@ class MultiFramePayload(BaseModel):
         return all([frame is None for frame in self.frames.values()])
 
     @property
-    def oldest_timestamp_sec(self) -> Optional[float]:
+    def oldest_timestamp_ns(self) -> Optional[int]:
         return min(
-            [
-                frame.timestamp_ns / 1e9
-                for frame in self.frames.values()
-                if frame is not None
-            ]
+            [frame.timestamp_ns for frame in self.frames.values() if frame is not None]
         )
 
     def resize(self, scale_factor: float):

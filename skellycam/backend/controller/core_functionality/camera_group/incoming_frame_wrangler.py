@@ -1,9 +1,7 @@
 import logging
-import multiprocessing
-import threading
 import time
 from copy import deepcopy
-from typing import Optional, List, Dict, Callable
+from typing import Optional, List
 
 import cv2
 
@@ -11,7 +9,6 @@ from skellycam.backend.controller.core_functionality.camera_group.video_recorder
     VideoRecorderManager,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
-from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import (
     FramePayload,
 )
@@ -62,6 +59,10 @@ class IncomingFrameWrangler:
         return min(all_frame_rates)
 
     @property
+    def ideal_frame_duration(self):
+        return 1 / self.prescribed_framerate
+
+    @property
     def latest_frontend_payload(self) -> MultiFramePayload:
         self.new_frontend_payload_available = False
         return self._latest_frontend_payload
@@ -73,29 +74,27 @@ class IncomingFrameWrangler:
                 if not self._previous_multi_frame_payload.full:
                     return
 
-        while len(new_frames) > 0:
-            frame = new_frames.pop(0)
+        for frame in new_frames:
             self._current_multi_frame_payload.add_frame(frame=frame)
-            time_since_oldest_frame = (
-                time.perf_counter()
-                - self._current_multi_frame_payload.oldest_timestamp_sec
+
+        time_since_oldest_frame = (
+            time.perf_counter_ns()
+            - self._current_multi_frame_payload.oldest_timestamp_ns
+        ) / 1e9
+        frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
+        if frame_timeout or self._current_multi_frame_payload.full:
+            self._backfill_missing_with_previous_frame()
+            self._set_new_frontend_payload()
+
+            if self._is_recording:
+                self._record_multi_frame(self._current_multi_frame_payload)
+
+            self._previous_multi_frame_payload = deepcopy(
+                self._current_multi_frame_payload
             )
-
-            if self._current_multi_frame_payload.full or time_since_oldest_frame > (
-                1 / self.prescribed_framerate
-            ):
-                self._backfill_missing_with_previous_frame()
-                self._set_new_frontend_payload()
-
-                if self._is_recording:
-                    self._record_multi_frame(self._current_multi_frame_payload)
-
-                self._previous_multi_frame_payload = deepcopy(
-                    self._current_multi_frame_payload
-                )
-                self._current_multi_frame_payload = MultiFramePayload.create(
-                    camera_ids=list(self._camera_configs.keys())
-                )
+            self._current_multi_frame_payload = MultiFramePayload.create(
+                camera_ids=list(self._camera_configs.keys())
+            )
 
     def stop(self):
         logger.debug(f"Stopping incoming frame wrangler loop...")
@@ -131,16 +130,6 @@ class IncomingFrameWrangler:
                 self._current_multi_frame_payload.add_frame(
                     frame=self._previous_multi_frame_payload.frames[camera_id]
                 )
-
-    def _fill_previous_frames_dict(self) -> MultiFramePayload:
-        previous_multi_frame_payload = MultiFramePayload.create(
-            camera_ids=list(self._camera_configs.keys())
-        )
-        while not previous_multi_frame_payload.full:
-            if not self._incoming_frames_queue.empty():
-                frame = self._incoming_frames_queue.get()
-                previous_multi_frame_payload.add_frame(frame=frame)
-        return previous_multi_frame_payload
 
     def _save_frame_or_sleep(self):
         if self._video_recorder_manager.has_frames_to_save:
