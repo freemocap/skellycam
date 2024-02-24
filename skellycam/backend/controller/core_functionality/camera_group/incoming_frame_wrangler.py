@@ -1,6 +1,9 @@
 import logging
+import multiprocessing
+import threading
 import time
-from typing import Optional, List
+from copy import deepcopy
+from typing import Optional, List, Dict, Callable
 
 import cv2
 
@@ -8,16 +11,23 @@ from skellycam.backend.controller.core_functionality.camera_group.video_recorder
     VideoRecorderManager,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
+from skellycam.backend.models.cameras.camera_id import CameraId
 from skellycam.backend.models.cameras.frames.frame_payload import (
-    MultiFramePayload,
     FramePayload,
+)
+from skellycam.backend.models.cameras.frames.multi_frame_payload import (
+    MultiFramePayload,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class IncomingFrameWrangler:
-    def __init__(self, camera_configs: CameraConfigs):
+    def __init__(
+        self,
+        camera_configs: CameraConfigs,
+    ):
+        super().__init__()
         self._camera_configs = camera_configs
         self._video_recorder_manager = VideoRecorderManager(
             camera_configs=self._camera_configs
@@ -26,60 +36,70 @@ class IncomingFrameWrangler:
         self._latest_frontend_payload: Optional[MultiFramePayload] = None
         self.new_frontend_payload_available: bool = False
         self._is_recording = False
+        self._should_continue = True
 
-    @property
-    def frames_to_save(self):
-        return self._video_recorder_manager.has_frames_to_save
+        self._current_multi_frame_payload = MultiFramePayload.create(
+            camera_ids=list(self._camera_configs.keys())
+        )
+        self._previous_multi_frame_payload = MultiFramePayload.create(
+            camera_ids=list(self._camera_configs.keys())
+        )
 
     @property
     def is_recording(self):
         return self._is_recording
 
-    def handle_new_frames(
-        self, multi_frame_payload: MultiFramePayload, new_frames: List[FramePayload]
-    ) -> MultiFramePayload:
-        for frame in new_frames:
-            multi_frame_payload.add_frame(frame=frame)
-            if multi_frame_payload.full:
-                if self._is_recording:
-                    self._record_multi_frame(multi_frame_payload)
-
-                frontend_payload = self._prepare_frontend_payload(
-                    multi_frame_payload=multi_frame_payload
-                )
-                self.set_new_frontend_payload(frontend_payload=frontend_payload)
-                multi_frame_payload = MultiFramePayload.create(
-                    camera_ids=list(self._camera_configs.keys())
-                )
-        return multi_frame_payload
-
-    def _record_multi_frame(self, multi_frame_payload):
-        if self._video_recorder_manager is None:
-            logger.error(f"Video recorder manager not initialized")
-            raise AssertionError(
-                "Video recorder manager not initialized but `_is_recording` is True"
+    @property
+    def prescribed_framerate(self):
+        all_frame_rates = [
+            camera_config.framerate for camera_config in self._camera_configs.values()
+        ]
+        # throw a warning if the frame rates are not all the same
+        if len(set(all_frame_rates)) > 1:
+            logger.warning(
+                f"Frame rates are not all the same: {all_frame_rates} - Defaulting to the slowest frame rate"
             )
-        self._video_recorder_manager.handle_multi_frame_payload(
-            multi_frame_payload=multi_frame_payload
-        )
-
-    def _prepare_frontend_payload(
-        self, multi_frame_payload: MultiFramePayload, scale_images: float = 0.5
-    ) -> MultiFramePayload:
-        frontend_payload = multi_frame_payload.copy(deep=True)
-        frontend_payload.resize(scale_factor=scale_images)
-        for frame in frontend_payload.frames.values():
-            frame.set_image(image=cv2.cvtColor(frame.get_image(), cv2.COLOR_BGR2RGB))
-        return frontend_payload
-
-    def set_new_frontend_payload(self, frontend_payload: MultiFramePayload):
-        self._latest_frontend_payload = frontend_payload
-        self.new_frontend_payload_available = True
+        return min(all_frame_rates)
 
     @property
     def latest_frontend_payload(self) -> MultiFramePayload:
         self.new_frontend_payload_available = False
         return self._latest_frontend_payload
+
+    def handle_new_frames(self, new_frames: List[FramePayload]):
+        if not self._previous_multi_frame_payload.full:
+            for frame in new_frames:
+                self._previous_multi_frame_payload.add_frame(frame=frame)
+                if not self._previous_multi_frame_payload.full:
+                    return
+
+        while len(new_frames) > 0:
+            frame = new_frames.pop(0)
+            self._current_multi_frame_payload.add_frame(frame=frame)
+            time_since_oldest_frame = (
+                time.perf_counter()
+                - self._current_multi_frame_payload.oldest_timestamp_sec
+            )
+
+            if self._current_multi_frame_payload.full or time_since_oldest_frame > (
+                1 / self.prescribed_framerate
+            ):
+                self._backfill_missing_with_previous_frame()
+                self._set_new_frontend_payload()
+
+                if self._is_recording:
+                    self._record_multi_frame(self._current_multi_frame_payload)
+
+                self._previous_multi_frame_payload = deepcopy(
+                    self._current_multi_frame_payload
+                )
+                self._current_multi_frame_payload = MultiFramePayload.create(
+                    camera_ids=list(self._camera_configs.keys())
+                )
+
+    def stop(self):
+        logger.debug(f"Stopping incoming frame wrangler loop...")
+        self._should_continue = False
 
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")
@@ -102,9 +122,57 @@ class IncomingFrameWrangler:
         self._is_recording = False
         self._video_recorder_manager.stop_recording()
 
-    def save_one_frame_to_disk(self):
+    def _backfill_missing_with_previous_frame(self):
+        if self._current_multi_frame_payload.full:
+            return
+
+        for camera_id in self._previous_multi_frame_payload.camera_ids:
+            if self._current_multi_frame_payload.frames[camera_id] is None:
+                self._current_multi_frame_payload.add_frame(
+                    frame=self._previous_multi_frame_payload.frames[camera_id]
+                )
+
+    def _fill_previous_frames_dict(self) -> MultiFramePayload:
+        previous_multi_frame_payload = MultiFramePayload.create(
+            camera_ids=list(self._camera_configs.keys())
+        )
+        while not previous_multi_frame_payload.full:
+            if not self._incoming_frames_queue.empty():
+                frame = self._incoming_frames_queue.get()
+                previous_multi_frame_payload.add_frame(frame=frame)
+        return previous_multi_frame_payload
+
+    def _save_frame_or_sleep(self):
+        if self._video_recorder_manager.has_frames_to_save:
+            self._video_recorder_manager.one_frame_to_disk()
+        else:
+            time.sleep(0.01)
+
+    def _record_multi_frame(self, multi_frame_payload):
         if self._video_recorder_manager is None:
+            logger.error(f"Video recorder manager not initialized")
             raise AssertionError(
-                "Video recorder manager isn't initialized, but `SaveOneFrameInteraction` was called! This shouldn't happen..."
+                "Video recorder manager not initialized but `_is_recording` is True"
             )
-        self._video_recorder_manager.one_frame_to_disk()
+        self._video_recorder_manager.handle_multi_frame_payload(
+            multi_frame_payload=multi_frame_payload
+        )
+
+    def _prepare_frontend_payload(
+        self,
+        scaled_image_long_side: int = 640,
+    ) -> MultiFramePayload:
+        frontend_payload = self._current_multi_frame_payload.copy(deep=True)
+
+        scale_factor = scaled_image_long_side / max(
+            frontend_payload.frames[0].get_resolution()
+        )
+
+        frontend_payload.resize(scale_factor=scale_factor)
+        for frame in frontend_payload.frames.values():
+            frame.set_image(image=cv2.cvtColor(frame.get_image(), cv2.COLOR_BGR2RGB))
+        return frontend_payload
+
+    def _set_new_frontend_payload(self):
+        self._latest_frontend_payload = self._prepare_frontend_payload()
+        self.new_frontend_payload_available = True

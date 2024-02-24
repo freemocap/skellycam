@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import threading
 import time
 
@@ -9,7 +10,7 @@ from skellycam.backend.controller.core_functionality.camera_group.incoming_frame
     IncomingFrameWrangler,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
-from skellycam.backend.models.cameras.frames.frame_payload import (
+from skellycam.backend.models.cameras.frames.multi_frame_payload import (
     MultiFramePayload,
 )
 
@@ -25,7 +26,7 @@ class CameraGroupManager(threading.Thread):
         self._camera_group = CameraGroup(camera_configs=self._camera_configs)
 
         self._incoming_frame_wrangler: IncomingFrameWrangler = IncomingFrameWrangler(
-            camera_configs=self._camera_configs
+            camera_configs=self._camera_configs,
         )
 
     @property
@@ -49,23 +50,11 @@ class CameraGroupManager(threading.Thread):
 
     def run(self):
         self._camera_group.start()
-        multi_frame_payload = MultiFramePayload.create(
-            camera_ids=list(self._camera_configs.keys())
-        )
         while self._camera_group.any_capturing:
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
-                multi_frame_payload = self._incoming_frame_wrangler.handle_new_frames(
-                    multi_frame_payload, new_frames
-                )
-            else:
-                if self._incoming_frame_wrangler.frames_to_save:
-                    logger.trace(
-                        f"No new frames, saving one frame from each camera to disk"
-                    )
-                    self._incoming_frame_wrangler.save_one_frame_to_disk()
-                else:
-                    time.sleep(0.001)
+                self._incoming_frame_wrangler.handle_new_frames(new_frames)
+            time.sleep(0.001)
 
     def close(self):
         logger.debug(f"Stopping camera group thread...")
@@ -73,6 +62,8 @@ class CameraGroupManager(threading.Thread):
         self._camera_group.close()
         if self._incoming_frame_wrangler.is_recording:
             self._incoming_frame_wrangler.stop_recording()
+
+        self._incoming_frame_wrangler.stop()
 
     def update_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Updating camera configs to \n{camera_configs}")

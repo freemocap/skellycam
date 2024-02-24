@@ -93,7 +93,7 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_parameter_tree.camera_configs
         )
 
-        if connect_to_cameras_response.success:
+        if connect_to_cameras_response and connect_to_cameras_response.success:
             self.handle_cameras_connected()
         else:
             logger.error("Failed to connect to cameras")

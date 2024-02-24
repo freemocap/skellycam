@@ -17,7 +17,9 @@ from skellycam.backend.controller.core_functionality.device_detection.detect_ava
     CamerasDetectedResponse,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
-from skellycam.backend.models.cameras.frames.frame_payload import MultiFramePayload
+from skellycam.backend.models.cameras.frames.multi_frame_payload import (
+    MultiFramePayload,
+)
 
 logger = logging.getLogger(__name__)
 
