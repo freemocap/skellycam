@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger import (
     CameraTimestampLogger,
@@ -52,9 +53,18 @@ def test_logging_timestamps():
     logger.set_time_mapping(perf_counter_to_unix_mapping=(0, 0))
 
     # Act
-    log = logger.log_timestamp(multi_frame_number=1, frame=test_frame_payload)
+    iterations = 10
+    logs = []
+    for i in range(iterations):
+        test_frame_payload.timestamp_ns += 1
+        logs.append(
+            logger.log_timestamp(multi_frame_number=i, frame=test_frame_payload)
+        )
 
     # Assert
-    assert log.perf_counter_ns_timestamp == test_frame_payload.timestamp_ns
-    assert len(logger._timestamp_logs) == 1
-    # Add more asserts to validate the logged data
+    df = logger.as_dataframe
+    assert logs[-1].perf_counter_ns_timestamp == test_frame_payload.timestamp_ns
+    assert len(logger._timestamp_logs) == iterations
+    assert logger._previous_frame_timestamp == test_frame_payload.timestamp_ns
+    assert df.shape[0] == 10
+    assert df["perf_counter_ns_timestamp"].iloc[-1] == test_frame_payload.timestamp_ns
