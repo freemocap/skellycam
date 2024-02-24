@@ -14,11 +14,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
+    freeze_support()
+    print(f"Running from __main__: {__name__} - {__file__}")
     logger.info(f"Running from __main__: {__name__} - {__file__}")
 
-    freeze_support()
     setup_app_id_for_windows()
-
     main_loop()
 
     print("\n--------------------------------------------------")

@@ -26,6 +26,10 @@ PATH_TO_SKELLY_CAM_LOGO_PNG = str(
     Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.png"
 )
 
+PATH_TO_SKELLY_CAM_LOGO_SVG = str(
+    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.svg"
+)
+
 
 def get_default_skellycam_base_folder_path():
     return Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME

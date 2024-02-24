@@ -151,16 +151,31 @@ class VideoRecorderManager:
                 video_save_path=self._make_video_file_path(
                     camera_id=camera_id,
                     recording_folder_path=recording_folder_path,
+                    writer_fourcc=camera_config.writer_fourcc,
                 ),
             )
             for camera_id, camera_config in self._camera_configs.items()
         }
 
     def _make_video_file_path(
-        self, camera_id: CameraId, recording_folder_path: str, video_format: str = "mp4"
+        self, camera_id: CameraId, recording_folder_path: str, writer_fourcc: str
     ):
+        video_file_extension = fourcc_to_file_extension(writer_fourcc)
+
         Path(recording_folder_path).mkdir(parents=True, exist_ok=True)
-        file_name = (
-            f"{Path(recording_folder_path).stem}_camera_{camera_id}.{video_format}"
+        file_name = f"{Path(recording_folder_path).stem}_camera_{camera_id}.{video_file_extension}"
+        logger.debug(
+            f"Saving video from camera {camera_id} to: {Path(recording_folder_path) / file_name}..."
         )
         return str(Path(recording_folder_path) / file_name)
+
+
+def fourcc_to_file_extension(writer_fourcc: str) -> str:
+    if writer_fourcc == "MJPG" or writer_fourcc == "XVID":
+        video_format = "avi"
+    elif writer_fourcc == "H264":
+        video_format = "mp4"
+    else:
+        logger.warning(f"Unknown video format {writer_fourcc} - defaulting to avi")
+        video_format = "avi"
+    return video_format

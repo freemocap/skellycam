@@ -40,7 +40,7 @@ class CameraConfig(BaseModel):
     )
 
     writer_fourcc: str = Field(
-        default="XVID",  # Save videos as XVID/avi so video will still work even if crashses #TODO - auto-convert to mp4 on save? (obs does this for mkv->mp4 and calls it `remuxing`)
+        default="H264",  # Save videos as XVID/avi so video will still work even if crashses #TODO - auto-convert to mp4 on save? (obs does this for mkv->mp4 and calls it `remuxing`)
         description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object",
     )
 
