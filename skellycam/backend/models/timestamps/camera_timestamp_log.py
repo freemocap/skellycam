@@ -17,6 +17,9 @@ class CameraTimestampLog(BaseModel):
     camera_frame_number: int = Field(
         description="- The number of frames that have been received by the camera since it was started (NOTE, this won't match the other cameras or the frame number in saved videos)"
     )
+    perf_counter_ns_timestamp: int = Field(
+        description="- The timestamp of the frame, in nanoseconds as returned by time.perf_counter_ns() - this is the most accurate timestamp available, and is the timestamp returned in `FramePayload`"
+    )
     timestamp_from_zero_ns: int = Field(
         description="- The timestamp of the frame, in nanoseconds since the first frame was received by the camera group"
     )
@@ -56,6 +59,7 @@ class CameraTimestampLog(BaseModel):
             camera_id=frame_payload.camera_id,
             multi_frame_number=multi_frame_number,
             camera_frame_number=frame_payload.frame_number,
+            perf_counter_ns_timestamp=frame_payload.timestamp_ns,
             timestamp_from_zero_ns=frame_payload.timestamp_ns
             - first_frame_timestamp_ns,
             frame_duration_ns=frame_payload.timestamp_ns - previous_frame_timestamp_ns,
@@ -83,7 +87,7 @@ class CameraTimestampLog(BaseModel):
         document = "# Camera Timestamp Log Field Descriptions:\n"
         document += f"The following fields are included in the camera timestamp log, as defined in the {cls.__class__.__name__} data model/class:\n"
         for field_name, field in cls.__fields__.items():
-            document += f"- **{field_name}**:\n\n {field.field_info.description}\n\n"
+            document += f"- **{field_name}**:{field.field_info.description}\n\n"
             if field_name.startswith("_"):
                 document += f"    - note, this is a private field and is not included in the CSV output. You can find it in the `recording_start_timestamp.json` file in the recording folder\n"
         return document
