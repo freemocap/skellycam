@@ -77,10 +77,13 @@ class IncomingFrameWrangler:
         for frame in new_frames:
             self._current_multi_frame_payload.add_frame(frame=frame)
 
+        self._yeet_if_ready()
+
+    def _yeet_if_ready(self):
         time_since_oldest_frame = (
-            time.perf_counter_ns()
-            - self._current_multi_frame_payload.oldest_timestamp_ns
-        ) / 1e9
+                                          time.perf_counter_ns()
+                                          - self._current_multi_frame_payload.oldest_timestamp_ns
+                                  ) / 1e9
         frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
         if frame_timeout or self._current_multi_frame_payload.full:
             self._backfill_missing_with_previous_frame()
