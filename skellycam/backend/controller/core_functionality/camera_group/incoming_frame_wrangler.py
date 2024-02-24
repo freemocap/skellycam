@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import time
 from copy import deepcopy
 from typing import Optional, List
@@ -26,8 +27,10 @@ class IncomingFrameWrangler:
     ):
         super().__init__()
         self._camera_configs = camera_configs
+        self._multi_frame_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderManager(
-            camera_configs=self._camera_configs
+            camera_configs=self._camera_configs,
+            multi_frame_queue=self._multi_frame_queue,
         )
 
         self._latest_frontend_payload: Optional[MultiFramePayload] = None
@@ -51,7 +54,6 @@ class IncomingFrameWrangler:
         all_frame_rates = [
             camera_config.framerate for camera_config in self._camera_configs.values()
         ]
-        # throw a warning if the frame rates are not all the same
         if len(set(all_frame_rates)) > 1:
             logger.warning(
                 f"Frame rates are not all the same: {all_frame_rates} - Defaulting to the slowest frame rate"
@@ -67,40 +69,9 @@ class IncomingFrameWrangler:
         self.new_frontend_payload_available = False
         return self._latest_frontend_payload
 
-    def handle_new_frames(self, new_frames: List[FramePayload]):
-        if not self._previous_multi_frame_payload.full:
-            for frame in new_frames:
-                self._previous_multi_frame_payload.add_frame(frame=frame)
-                if not self._previous_multi_frame_payload.full:
-                    return
-
-        for frame in new_frames:
-            self._current_multi_frame_payload.add_frame(frame=frame)
-
-        self._yeet_if_ready()
-
-    def _yeet_if_ready(self):
-        time_since_oldest_frame = (
-                                          time.perf_counter_ns()
-                                          - self._current_multi_frame_payload.oldest_timestamp_ns
-                                  ) / 1e9
-        frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
-        if frame_timeout or self._current_multi_frame_payload.full:
-            self._backfill_missing_with_previous_frame()
-            self._set_new_frontend_payload()
-
-            if self._is_recording:
-                self._record_multi_frame(self._current_multi_frame_payload)
-
-            self._previous_multi_frame_payload = deepcopy(
-                self._current_multi_frame_payload
-            )
-            self._current_multi_frame_payload = MultiFramePayload.create(
-                camera_ids=list(self._camera_configs.keys())
-            )
-
     def stop(self):
         logger.debug(f"Stopping incoming frame wrangler loop...")
+        self._video_recorder_manager.stop()
         self._should_continue = False
 
     def start_recording(self, recording_folder_path: str):
@@ -124,6 +95,38 @@ class IncomingFrameWrangler:
         self._is_recording = False
         self._video_recorder_manager.stop_recording()
 
+    def handle_new_frames(self, new_frames: List[FramePayload]):
+        if not self._previous_multi_frame_payload.full:
+            for frame in new_frames:
+                self._previous_multi_frame_payload.add_frame(frame=frame)
+                if not self._previous_multi_frame_payload.full:
+                    return
+
+        for frame in new_frames:
+            self._current_multi_frame_payload.add_frame(frame=frame)
+
+        self._yeet_if_ready()
+
+    def _yeet_if_ready(self):
+        time_since_oldest_frame = (
+            time.perf_counter_ns()
+            - self._current_multi_frame_payload.oldest_timestamp_ns
+        ) / 1e9
+        frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
+        if frame_timeout or self._current_multi_frame_payload.full:
+            self._backfill_missing_with_previous_frame()
+            self._set_new_frontend_payload()
+
+            if self._is_recording:
+                self._multi_frame_queue.put(self._current_multi_frame_payload)
+
+            self._previous_multi_frame_payload = deepcopy(
+                self._current_multi_frame_payload
+            )
+            self._current_multi_frame_payload = MultiFramePayload.create(
+                camera_ids=list(self._camera_configs.keys())
+            )
+
     def _backfill_missing_with_previous_frame(self):
         if self._current_multi_frame_payload.full:
             return
@@ -133,22 +136,6 @@ class IncomingFrameWrangler:
                 self._current_multi_frame_payload.add_frame(
                     frame=self._previous_multi_frame_payload.frames[camera_id]
                 )
-
-    def _save_frame_or_sleep(self):
-        if self._video_recorder_manager.has_frames_to_save:
-            self._video_recorder_manager.one_frame_to_disk()
-        else:
-            time.sleep(0.01)
-
-    def _record_multi_frame(self, multi_frame_payload):
-        if self._video_recorder_manager is None:
-            logger.error(f"Video recorder manager not initialized")
-            raise AssertionError(
-                "Video recorder manager not initialized but `_is_recording` is True"
-            )
-        self._video_recorder_manager.handle_multi_frame_payload(
-            multi_frame_payload=multi_frame_payload
-        )
 
     def _prepare_frontend_payload(
         self,

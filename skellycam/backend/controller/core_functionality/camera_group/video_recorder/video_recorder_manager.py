@@ -1,5 +1,7 @@
 import logging
+import multiprocessing
 import time
+from multiprocessing import Process
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 
@@ -22,13 +24,21 @@ class VideoRecorderManager:
     def __init__(
         self,
         camera_configs: Dict[CameraId, CameraConfig],
+        multi_frame_queue: multiprocessing.Queue,
     ):
         self._timestamp_manager: Optional[TimestampLoggerManager] = None
         self._video_recorders: Dict[CameraId, VideoRecorder] = {}
         self._multi_frame_number = 0
         self._camera_configs = camera_configs
 
+        self._multi_frame_queue = multi_frame_queue
+
         self._is_recording = False
+        self._should_continue = True
+
+        self.process = Process(
+            target=self.save_frames_process, args=(self._multi_frame_queue,)
+        )
 
     @property
     def has_frames_to_save(self):
@@ -50,6 +60,14 @@ class VideoRecorderManager:
         timestamp_manager_finished = self._timestamp_manager.finished
         return all_video_recorders_finished and timestamp_manager_finished
 
+    def save_frames_process(self, frame_queue: multiprocessing.Queue):
+        logger.debug("Starting save frames process...")
+        while self._should_continue:
+            multi_frame_payload = (
+                frame_queue.get()
+            )  # This will block until an item is available
+            self._handle_multi_frame_payload(multi_frame_payload)
+
     def start_recording(
         self,
         start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int],
@@ -64,6 +82,44 @@ class VideoRecorderManager:
         )
 
         self._is_recording = True
+        self.process.start()
+
+    def stop_recording(self):
+        logger.debug(f"Stopping recording...")
+        self._is_recording = False
+        self.finish_and_close()
+        self._should_continue = False
+
+    def _handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
+        self._multi_frame_number += 1
+        logger.trace(f"Handling multi frame payload #{self._multi_frame_number}...")
+        for camera_id, frame_payload in multi_frame_payload.frames.items():
+            self._video_recorders[CameraId(camera_id)].append_frame_payload_to_list(
+                frame_payload=frame_payload
+            )
+        self._timestamp_manager.handle_multi_frame_payload(
+            multi_frame_payload=multi_frame_payload,
+            multi_frame_number=self._multi_frame_number,
+        )
+
+        # TODO - refactor to skip this weird double step method of saving a frame
+        self.one_frame_to_disk()
+
+    def one_frame_to_disk(self):
+        logger.trace(f"Saving one multi_frame to disk...")
+        for video_recorder in self._video_recorders.values():
+            video_recorder.one_frame_to_disk()
+
+    def finish_and_close(self):
+        for camera_id, video_recorder in self._video_recorders.items():
+            logger.debug(
+                f"Finishing and closing video recorder for camera {camera_id}..."
+            )
+            video_recorder.finish_and_close()
+        self._timestamp_manager.close()
+
+        while not self.finished:
+            time.sleep(0.1)
 
     def _initialize_timestamp_manager(
         self,
@@ -90,7 +146,7 @@ class VideoRecorderManager:
         )
 
         self._video_recorders: Dict[CameraId, VideoRecorder] = {
-            camera_id: VideoRecorder(
+            CameraId(camera_id): VideoRecorder(
                 camera_config=camera_config,
                 video_save_path=self._make_video_file_path(
                     camera_id=camera_id,
@@ -99,39 +155,6 @@ class VideoRecorderManager:
             )
             for camera_id, camera_config in self._camera_configs.items()
         }
-
-    def stop_recording(self):
-        logger.debug(f"Stopping recording...")
-        self._is_recording = False
-        self.finish_and_close()
-
-    def handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
-        self._multi_frame_number += 1
-        logger.trace(f"Handling multi frame payload #{self._multi_frame_number}...")
-        for camera_id, frame_payload in multi_frame_payload.frames.items():
-            self._video_recorders[camera_id].append_frame_payload_to_list(
-                frame_payload=frame_payload
-            )
-        self._timestamp_manager.handle_multi_frame_payload(
-            multi_frame_payload=multi_frame_payload,
-            multi_frame_number=self._multi_frame_number,
-        )
-
-    def one_frame_to_disk(self):
-        logger.trace(f"Saving one multi_frame to disk...")
-        for video_recorder in self._video_recorders.values():
-            video_recorder.one_frame_to_disk()
-
-    def finish_and_close(self):
-        for camera_id, video_recorder in self._video_recorders.items():
-            logger.debug(
-                f"Finishing and closing video recorder for camera {camera_id}..."
-            )
-            video_recorder.finish_and_close()
-        self._timestamp_manager.close()
-
-        while not self.finished:
-            time.sleep(0.1)
 
     def _make_video_file_path(
         self, camera_id: CameraId, recording_folder_path: str, video_format: str = "mp4"
