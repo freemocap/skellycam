@@ -90,6 +90,9 @@ class CameraTimestampLogger:
         timestamp_df = pd.DataFrame(
             [timestamp_log.dict() for timestamp_log in self._timestamp_logs]
         )
+        logger.debug(
+            f"Saving timestamp logs for camera {self._camera_id} to {self._timestamp_csv_path} with {len(timestamp_df)} frames (rows) of timestamp data..."
+        )
         timestamp_df.to_csv(self._timestamp_csv_path, index=False)
 
     def _save_timestamp_stats(self):

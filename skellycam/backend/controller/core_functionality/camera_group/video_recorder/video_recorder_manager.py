@@ -34,17 +34,17 @@ class VideoRecorderManager:
         self._multi_frame_queue = multi_frame_queue
 
         self._is_recording = False
+        self._should_continue = True
 
         self.process = Process(
             target=self._save_frames_process, args=(self._multi_frame_queue, exit_event)
         )
-        self.process.start()
 
     def _save_frames_process(
         self, frame_queue: multiprocessing.Queue, exit_event: multiprocessing.Event
     ):
         logger.debug("Starting save frames process...")
-        while not exit_event.is_set():
+        while not exit_event.is_set() and self._should_continue:
             multi_frame_payload = (
                 frame_queue.get()
             )  # This will block until an item is available
@@ -73,6 +73,7 @@ class VideoRecorderManager:
         )
 
         self._is_recording = True
+        self.process.start()
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
@@ -103,6 +104,7 @@ class VideoRecorderManager:
             )
             video_recorder.close()
         self._timestamp_manager.close()
+        self._should_continue = False
 
     def _initialize_timestamp_manager(
         self,

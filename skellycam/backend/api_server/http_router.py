@@ -164,6 +164,8 @@ def start_recording():
         controller.stop_recording()
         return {"message": "Recording stopped"}
     except Exception as e:
+        logger.error(f"Error when stopping recording: {e}")
+        logger.exception(e)
         raise Exception(f"Failed to stop recording: {e}")
 
 
