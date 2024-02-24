@@ -19,14 +19,21 @@ logging.getLogger(__name__).setLevel(5)
 
 
 class CameraGroupManager(threading.Thread):
-    def __init__(self, camera_configs: CameraConfigs) -> None:
+    def __init__(
+        self, camera_configs: CameraConfigs, exit_event: multiprocessing.Event
+    ) -> None:
         super().__init__()
         self.daemon = True
         self._camera_configs = camera_configs
-        self._camera_group = CameraGroup(camera_configs=self._camera_configs)
+        self._exit_event = exit_event
+
+        self._camera_group = CameraGroup(
+            camera_configs=self._camera_configs, exit_event=self._exit_event
+        )
 
         self._incoming_frame_wrangler: IncomingFrameWrangler = IncomingFrameWrangler(
             camera_configs=self._camera_configs,
+            exit_event=self._exit_event,
         )
 
     @property

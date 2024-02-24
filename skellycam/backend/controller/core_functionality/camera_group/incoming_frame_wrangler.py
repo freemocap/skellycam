@@ -24,6 +24,7 @@ class IncomingFrameWrangler:
     def __init__(
         self,
         camera_configs: CameraConfigs,
+        exit_event: multiprocessing.Event,
     ):
         super().__init__()
         self._camera_configs = camera_configs
@@ -31,6 +32,7 @@ class IncomingFrameWrangler:
         self._video_recorder_manager = VideoRecorderManager(
             camera_configs=self._camera_configs,
             multi_frame_queue=self._multi_frame_queue,
+            exit_event=exit_event,
         )
 
         self._latest_frontend_payload: Optional[MultiFramePayload] = None
@@ -113,6 +115,7 @@ class IncomingFrameWrangler:
             - self._current_multi_frame_payload.oldest_timestamp_ns
         ) / 1e9
         frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
+
         if frame_timeout or self._current_multi_frame_payload.full:
             self._backfill_missing_with_previous_frame()
             self._set_new_frontend_payload()

@@ -21,11 +21,13 @@ class CameraGroup:
     def __init__(
         self,
         camera_configs: Dict[CameraId, CameraConfig],
+        exit_event: multiprocessing.Event,
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
     ):
         logger.info(
             f"Creating camera group with strategy {strategy} and camera configs {camera_configs}"
         )
+        self._exit_event = exit_event
         self._strategy_enum = strategy
         self._camera_configs = camera_configs
 
@@ -83,6 +85,7 @@ class CameraGroup:
                 is_capturing_events_by_camera=self._is_capturing_events_by_camera,
                 close_cameras_event=self._close_cameras_event,
                 all_cameras_ready_event=self._all_cameras_ready_event,
+                exit_event=self._exit_event,
             )
 
     def close(self):

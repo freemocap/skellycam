@@ -28,11 +28,13 @@ class GroupedProcessStrategy:
         is_capturing_events_by_camera: Dict[CameraId, multiprocessing.Event],
         close_cameras_event: multiprocessing.Event,
         all_cameras_ready_event: multiprocessing.Event,
+        exit_event: multiprocessing.Event,
     ):
         self._camera_configs = camera_configs
         self._is_capturing_events_by_camera = is_capturing_events_by_camera
         self._close_cameras_event = close_cameras_event
         self._all_cameras_ready_event = all_cameras_ready_event
+        self._exit_event = exit_event
         self._processes, self._processes_by_camera_id = self._create_processes()
 
     def start_capture(self):
@@ -67,6 +69,7 @@ class GroupedProcessStrategy:
                     subarray_camera_configs=subarray_configs,
                     all_cameras_ready_event=self._all_cameras_ready_event,
                     close_cameras_event=self._close_cameras_event,
+                    exit_event=self._exit_event,
                     is_capturing_events_by_subarray_cameras=is_capturing_events_by_subarray,
                 )
             )

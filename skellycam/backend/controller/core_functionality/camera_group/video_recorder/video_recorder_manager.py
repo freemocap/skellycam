@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import time
 from multiprocessing import Process
 from pathlib import Path
 from typing import Dict, Tuple, Optional
@@ -25,6 +24,7 @@ class VideoRecorderManager:
         self,
         camera_configs: Dict[CameraId, CameraConfig],
         multi_frame_queue: multiprocessing.Queue,
+        exit_event: multiprocessing.Event,
     ):
         self._timestamp_manager: Optional[TimestampLoggerManager] = None
         self._video_recorders: Dict[CameraId, VideoRecorder] = {}
@@ -34,39 +34,30 @@ class VideoRecorderManager:
         self._multi_frame_queue = multi_frame_queue
 
         self._is_recording = False
-        self._should_continue = True
 
         self.process = Process(
-            target=self.save_frames_process, args=(self._multi_frame_queue,)
+            target=self._save_frames_process, args=(self._multi_frame_queue, exit_event)
         )
+        self.process.start()
 
-    @property
-    def has_frames_to_save(self):
-        return any(
-            [
-                video_recorder.has_frames_to_save
-                for video_recorder in self._video_recorders.values()
-            ]
-        )
-
-    @property
-    def finished(self):
-        all_video_recorders_finished = all(
-            [
-                video_recorder.finished
-                for video_recorder in self._video_recorders.values()
-            ]
-        )
-        timestamp_manager_finished = self._timestamp_manager.finished
-        return all_video_recorders_finished and timestamp_manager_finished
-
-    def save_frames_process(self, frame_queue: multiprocessing.Queue):
+    def _save_frames_process(
+        self, frame_queue: multiprocessing.Queue, exit_event: multiprocessing.Event
+    ):
         logger.debug("Starting save frames process...")
-        while self._should_continue:
+        while not exit_event.is_set():
             multi_frame_payload = (
                 frame_queue.get()
             )  # This will block until an item is available
             self._handle_multi_frame_payload(multi_frame_payload)
+
+        if exit_event.is_set():
+            logger.debug("Exiting save frames process due to exit event...")
+        else:
+            logger.debug("Exiting save frames process due to should_continue flag...")
+
+        for camera_id, video_recorder in self._video_recorders.items():
+            logger.debug(f"Closing video recorder for camera {camera_id}...")
+            video_recorder.close()
 
     def start_recording(
         self,
@@ -82,44 +73,36 @@ class VideoRecorderManager:
         )
 
         self._is_recording = True
-        self.process.start()
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
         self._is_recording = False
-        self.finish_and_close()
-        self._should_continue = False
+        self.close()
 
     def _handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         self._multi_frame_number += 1
         logger.trace(f"Handling multi frame payload #{self._multi_frame_number}...")
-        for camera_id, frame_payload in multi_frame_payload.frames.items():
-            self._video_recorders[CameraId(camera_id)].append_frame_payload_to_list(
-                frame_payload=frame_payload
-            )
+        self._save_frame_to_disk(multi_frame_payload)
+
         self._timestamp_manager.handle_multi_frame_payload(
             multi_frame_payload=multi_frame_payload,
             multi_frame_number=self._multi_frame_number,
         )
 
-        # TODO - refactor to skip this weird double step method of saving a frame
-        self.one_frame_to_disk()
+    def _save_frame_to_disk(self, multi_frame_payload: MultiFramePayload):
+        """
+        Save each frame from this multi-frame payload to disk.
+        """
+        for camera_id, video_recorder in self._video_recorders.items():
+            video_recorder.save_frame_to_disk(multi_frame_payload.frames[camera_id])
 
-    def one_frame_to_disk(self):
-        logger.trace(f"Saving one multi_frame to disk...")
-        for video_recorder in self._video_recorders.values():
-            video_recorder.one_frame_to_disk()
-
-    def finish_and_close(self):
+    def close(self):
         for camera_id, video_recorder in self._video_recorders.items():
             logger.debug(
                 f"Finishing and closing video recorder for camera {camera_id}..."
             )
-            video_recorder.finish_and_close()
+            video_recorder.close()
         self._timestamp_manager.close()
-
-        while not self.finished:
-            time.sleep(0.1)
 
     def _initialize_timestamp_manager(
         self,
@@ -148,7 +131,7 @@ class VideoRecorderManager:
         self._video_recorders: Dict[CameraId, VideoRecorder] = {
             CameraId(camera_id): VideoRecorder(
                 camera_config=camera_config,
-                video_save_path=self._make_video_file_path(
+                video_save_path=make_video_file_path(
                     camera_id=camera_id,
                     recording_folder_path=recording_folder_path,
                     writer_fourcc=camera_config.writer_fourcc,
@@ -157,25 +140,29 @@ class VideoRecorderManager:
             for camera_id, camera_config in self._camera_configs.items()
         }
 
-    def _make_video_file_path(
-        self, camera_id: CameraId, recording_folder_path: str, writer_fourcc: str
-    ):
-        video_file_extension = fourcc_to_file_extension(writer_fourcc)
 
-        Path(recording_folder_path).mkdir(parents=True, exist_ok=True)
-        file_name = f"{Path(recording_folder_path).stem}_camera_{camera_id}.{video_file_extension}"
-        logger.debug(
-            f"Saving video from camera {camera_id} to: {Path(recording_folder_path) / file_name}..."
-        )
-        return str(Path(recording_folder_path) / file_name)
+def make_video_file_path(
+    camera_id: CameraId, recording_folder_path: str, writer_fourcc: str
+):
+    video_file_extension = fourcc_to_file_extension(writer_fourcc)
+
+    Path(recording_folder_path).mkdir(parents=True, exist_ok=True)
+    file_name = (
+        f"{Path(recording_folder_path).stem}_camera_{camera_id}.{video_file_extension}"
+    )
+    logger.debug(
+        f"Saving video from camera {camera_id} to: {Path(recording_folder_path) / file_name}..."
+    )
+    return str(Path(recording_folder_path) / file_name)
 
 
 def fourcc_to_file_extension(writer_fourcc: str) -> str:
     if writer_fourcc == "MJPG" or writer_fourcc == "XVID":
         video_format = "avi"
-    elif writer_fourcc == "H264":
+    elif writer_fourcc == "H264" or writer_fourcc == "MP4V":
         video_format = "mp4"
     else:
-        logger.warning(f"Unknown video format {writer_fourcc} - defaulting to avi")
-        video_format = "avi"
+        logger.error(f"Unknown video format {writer_fourcc}")
+        raise ValueError(f"Unknown video format {writer_fourcc}")
+
     return video_format

@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import traceback
 from typing import Dict, Optional
 
@@ -31,8 +32,13 @@ def get_or_create_controller() -> "Controller":
 
 class Controller:
     def __init__(self):
+        self._exit_event: Optional[multiprocessing.Event] = None
         self.detected_cameras = None
         self.camera_group_manager: Optional[CameraGroupManager] = None
+
+    def set_exit_event(self, exit_event: multiprocessing.Event):
+        logger.info("Setting exit event for controller")
+        self._exit_event = exit_event
 
     def detect_available_cameras(self) -> CamerasDetectedResponse:
         cameras_detected_response = detect_available_cameras()
@@ -56,8 +62,13 @@ class Controller:
             Exception("Must provide at least one camera config")
 
         try:
+            if self._exit_event is None:
+                logger.error("No exit event found")
+                raise Exception(
+                    "No exit event found - something happened out-of-order!"
+                )
             self.camera_group_manager = CameraGroupManager(
-                camera_configs=camera_configs
+                camera_configs=camera_configs, exit_event=self._exit_event
             )
             self.camera_group_manager.start()
             # self.camera_group_manager.join()

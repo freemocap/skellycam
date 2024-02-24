@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 
 import skellycam
 from skellycam.backend.api_server.http_router import http_router
+from skellycam.backend.controller.controller import get_or_create_controller, Controller
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,21 @@ class FastApiApp:
     ):
         logger.info("Creating FastAPI app")
         self.app = FastAPI()
+
+        self._set_controller_exit_event(shutdown_event)
+
         self._register_routes()
         # self._register_middleware()
         self._customize_swagger_ui()
-        self.shutdown_event = shutdown_event
         self._timeout = timeout
+
         ready_event.set()
+
+    def _set_controller_exit_event(self, shutdown_event: multiprocessing.Event):
+        self.shutdown_event = shutdown_event
+        controller: Controller = get_or_create_controller()
+        # TODO - this is a weird work around, there is probably a better way to do this
+        controller.set_exit_event(self.shutdown_event)
 
     def _register_routes(self):
         logger.info("Registering routes")
