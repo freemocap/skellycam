@@ -135,6 +135,7 @@ class CamSubarrayPipeProcess:
         all_cameras_ready_event: multiprocessing.Event,
         close_cameras_event: multiprocessing.Event,
         is_capturing_events_by_camera: Dict[CameraId, multiprocessing.Event],
+        exit_event: multiprocessing.Event,
     ) -> Dict[CameraId, Camera]:
         cameras = {
             camera_id: Camera(
@@ -143,6 +144,7 @@ class CamSubarrayPipeProcess:
                 is_capturing_event=is_capturing_events_by_camera[camera_id],
                 all_cameras_ready_event=all_cameras_ready_event,
                 close_cameras_event=close_cameras_event,
+                exit_event=exit_event,
             )
             for camera_id, camera_config in camera_configs.items()
         }
@@ -171,6 +173,7 @@ class CamSubarrayPipeProcess:
             all_cameras_ready_event=all_cameras_ready_event,
             close_cameras_event=close_cameras_event,
             is_capturing_events_by_camera=is_capturing_events_by_camera,
+            exit_event=exit_event,
         )
 
         for camera in cameras.values():

@@ -34,6 +34,7 @@ class VideoCaptureThread(threading.Thread):
         is_capturing_event: multiprocessing.Event,
         all_cameras_ready_event: multiprocessing.Event,
         close_cameras_event: multiprocessing.Event,
+        exit_event: multiprocessing.Event,
     ):
         super().__init__()
         self._config = config
@@ -41,6 +42,7 @@ class VideoCaptureThread(threading.Thread):
         self._is_capturing_event = is_capturing_event
         self._all_cameras_ready_event = all_cameras_ready_event
         self._close_cameras_event = close_cameras_event
+        self._exit_event = exit_event
 
         self.daemon = True
         self._cv2_video_capture = None
@@ -71,7 +73,9 @@ class VideoCaptureThread(threading.Thread):
             f"Camera ID: [{self._config.camera_id}] Frame capture loop is running"
         )
         try:
-            while not self._close_cameras_event.is_set():
+            while (
+                not self._close_cameras_event.is_set() and not self._exit_event.is_set()
+            ):
                 if self._updating_config:
                     time.sleep(0.001)
                     continue
@@ -162,6 +166,8 @@ class VideoCaptureThread(threading.Thread):
 
     def stop(self):
         logger.debug("Stopping frame capture loop...")
+        self._is_capturing_event.clear()
+        self._close_cameras_event.set()
         if self._cv2_video_capture is not None:
             self._cv2_video_capture.release()
 

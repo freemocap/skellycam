@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class CameraTimestampLogger:
     def __init__(self, main_timestamps_directory: str, camera_id: CameraId):
+        logger.debug(f"Initializing CameraTimestampLogger for camera {camera_id}...")
         self._save_directory = main_timestamps_directory
         self._camera_id = camera_id
         self._create_save_paths()
@@ -77,6 +78,7 @@ class CameraTimestampLogger:
         )
         self._previous_frame_timestamp = frame.timestamp_ns
         self._timestamp_logs.append(log)
+        print(f"Camera {self._camera_id} log len: {len(self._timestamp_logs)}")
         return log
 
     def close(self):

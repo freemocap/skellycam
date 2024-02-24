@@ -19,12 +19,14 @@ class Camera:
         is_capturing_event: multiprocessing.Event,
         all_cameras_ready_event: multiprocessing.Event,
         close_cameras_event: multiprocessing.Event,
+        exit_event: multiprocessing.Event,
     ):
         self._config = config
         self._pipe_sender_connection = pipe_sender_connection
         self._is_capturing_event = is_capturing_event
         self._all_cameras_ready_event = all_cameras_ready_event
         self._close_cameras_event = close_cameras_event
+        self._exit_event = exit_event
 
         self._capture_thread: Optional[VideoCaptureThread] = None
 
@@ -43,6 +45,7 @@ class Camera:
             is_capturing_event=self._is_capturing_event,
             all_cameras_ready_event=self._all_cameras_ready_event,
             close_cameras_event=self._close_cameras_event,
+            exit_event=self._exit_event,
         )
         self._capture_thread.start()
 
