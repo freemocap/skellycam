@@ -60,7 +60,7 @@ class CameraDeviceInfo(BaseModel):
         device_address =camera.id().data().decode("utf-8")
         cv2_port = device_address.split("video")[1]
         return cls(
-            description=f"{camera_number} - {camera.description()}",
+            description=f"{device_address} - {camera.description()}",
             available_video_formats=cls._get_available_video_formats(camera=camera),
             device_address=device_address,
             cv2_port=cv2_port
