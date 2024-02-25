@@ -27,12 +27,8 @@ pyqtgraph = "^0.13.3"
 uvicorn = "^0.25.0"
 fastapi = "^0.108.0"
 httpx = "^0.26.0"
-websocket = "^0.2.1"
-websockets = "^12.0"
 qasync = "^0.27.1"
-websocket-client = "^1.7.0"
 pytest = "^7.4.4"
-pytest-asyncio = "^0.23.3"
 respx = "^0.20.2"
 
 [tool.poetry.group.dev.dependencies]

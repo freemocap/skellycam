@@ -23,31 +23,27 @@ class CamerasDetectedResponse(BaseModel):
 def detect_available_cameras() -> CamerasDetectedResponse:
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
+
     cameras = {}
+    for camera_number, camera in enumerate(detected_cameras):
+        camera_device_info = CameraDeviceInfo.from_q_camera_device(
+            camera_number=camera_number, camera=camera
+        )
+        cameras[camera_device_info.cv2_port] = camera_device_info
 
-    # for camera_number, camera in enumerate(detected_cameras):
-    #     if camera.isNull():
-    #         continue
-    #     if not _check_camera_available(camera_number):
-    #         continue
+    # with ThreadPoolExecutor(max_workers=len(detected_cameras)) as executor:
+    #     future_camera_checks = {
+    #         executor.submit(_check_camera_available, camera_number): camera_number
+    #         for camera_number, camera in enumerate(detected_cameras)
+    #         if not camera.isNull()
+    #     }
     #
-    #     cameras[camera_number] = CameraDeviceInfo.from_q_camera_device(
-    #         camera_number=camera_number, camera=camera
-    #     )
-
-    with ThreadPoolExecutor(max_workers=len(detected_cameras)) as executor:
-        future_camera_checks = {
-            executor.submit(_check_camera_available, camera_number): camera_number
-            for camera_number, camera in enumerate(detected_cameras)
-            if not camera.isNull()
-        }
-
-        for future in concurrent.futures.as_completed(future_camera_checks):
-            camera_number = future_camera_checks[future]
-            if future.result():
-                cameras[camera_number] = CameraDeviceInfo.from_q_camera_device(
-                    camera_number=camera_number, camera=detected_cameras[camera_number]
-                )
+    #     for future in concurrent.futures.as_completed(future_camera_checks):
+    #         camera_number = future_camera_checks[future]
+    #         if future.result():
+    #             cameras[camera_number] = CameraDeviceInfo.from_q_camera_device(
+    #                 camera_number=camera_number, camera=detected_cameras[camera_number]
+    #             )
     return CamerasDetectedResponse(detected_cameras=cameras)
 
 
