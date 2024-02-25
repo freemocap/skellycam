@@ -24,7 +24,7 @@ logging.getLogger("httpx").setLevel("INFO")
 
 
 class ApiClient(QObject):
-    def __init__(self, url: str, timeout: float = 60) -> None:
+    def __init__(self, url: str, timeout: float = 600) -> None:
         logger.info(f"Initializing API client with base URL: {url}")
         super().__init__()
 

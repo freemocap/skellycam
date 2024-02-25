@@ -56,16 +56,6 @@ def main_loop():
                 backend_process.terminate()
                 backend_process.join(timeout=5)
 
-        if frontend_process is not None and frontend_process.is_alive():
-            logger.error(
-                "Failed to shut down frontend process. It may still be running."
-            )
-
-        if backend_process is not None and backend_process.is_alive():
-            logger.error(
-                "Failed to shut down backend process. It may still be running."
-            )
-
     logger.info("Shut down successfully!")
 
     shutdown_event.set()
@@ -73,7 +63,17 @@ def main_loop():
     frontend_process.join()
     backend_process.join()
 
+    terminate_all_processes()
+
     logger.info("Shut down successfully!")
+
+
+def terminate_all_processes() -> None:
+    logger.info("Terminating any active sub-processes...")
+    for process in multiprocessing.active_children():
+        if process.is_alive():
+            logger.debug(f"Terminating process {process.name}...")
+        process.terminate()
 
 
 def create_sub_processes(

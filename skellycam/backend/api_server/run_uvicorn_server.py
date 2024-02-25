@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 
 import uvicorn
+from setproctitle import setproctitle
 
 from skellycam.backend.api_server.fastapi_app import FastApiApp
 from skellycam.backend.api_server.log_api_routes import log_api_routes
@@ -16,6 +17,7 @@ def run_uvicorn_server(
     shutdown_event: multiprocessing.Event,
     timeout: float,
 ):
+    setproctitle("backend_server")
     logger.info(
         f"Starting uvicorn server on with hostname: `{hostname}` on port: `{port}`"
     )

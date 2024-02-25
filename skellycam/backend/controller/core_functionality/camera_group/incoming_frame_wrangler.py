@@ -7,7 +7,7 @@ from typing import Optional, List
 import cv2
 
 from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_manager import (
-    VideoRecorderManager,
+    VideoRecorderProcessManager,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs
 from skellycam.backend.models.cameras.frames.frame_payload import (
@@ -29,7 +29,7 @@ class IncomingFrameWrangler:
         super().__init__()
         self._camera_configs = camera_configs
         self._multi_frame_queue = multiprocessing.Queue()
-        self._video_recorder_manager = VideoRecorderManager(
+        self._video_recorder_manager = VideoRecorderProcessManager(
             camera_configs=self._camera_configs,
             multi_frame_queue=self._multi_frame_queue,
             exit_event=exit_event,
@@ -38,7 +38,6 @@ class IncomingFrameWrangler:
         self._latest_frontend_payload: Optional[MultiFramePayload] = None
         self.new_frontend_payload_available: bool = False
         self._is_recording = False
-        self._should_continue = True
 
         self._current_multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
@@ -73,8 +72,7 @@ class IncomingFrameWrangler:
 
     def stop(self):
         logger.debug(f"Stopping incoming frame wrangler loop...")
-        self._video_recorder_manager.stop()
-        self._should_continue = False
+        self._multi_frame_queue.put(None)
 
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")

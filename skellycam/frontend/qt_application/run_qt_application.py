@@ -1,6 +1,8 @@
 import logging
 import multiprocessing
 
+from setproctitle import setproctitle
+
 from skellycam.frontend.qt_application import create_or_recreate_qt_application
 
 logger = logging.getLogger(__name__)
@@ -13,6 +15,7 @@ def run_qt_application(
     reboot_event: multiprocessing.Event,
     shutdown_event: multiprocessing.Event,
 ):
+    setproctitle("gui_process")
     skellycam_qt_app = None
     try:
         skellycam_qt_app = create_or_recreate_qt_application(

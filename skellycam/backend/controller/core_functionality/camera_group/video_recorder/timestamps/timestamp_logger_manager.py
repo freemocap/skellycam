@@ -49,7 +49,13 @@ class TimestampLoggerManager:
         )
 
     @property
-    def as_dataframe(self) -> pd.DataFrame:
+    def log_counts(self) -> Dict[CameraId, int]:
+        return {
+            camera_id: timestamp_logger.log_count
+            for camera_id, timestamp_logger in self._timestamp_loggers.items()
+        }
+
+    def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(
             [timestamp_log.dict() for timestamp_log in self._multi_frame_timestamp_logs]
         )
@@ -98,11 +104,14 @@ class TimestampLoggerManager:
         )
 
     def close(self):
-        self._save_documentation()
+        logger.debug(
+            f"Closing timestamp logger manager with {len(self._multi_frame_timestamp_logs)} multi-frame logs and {self.log_counts} per-camera logs..."
+        )
 
         for timestamp_logger in self._timestamp_loggers.values():
             timestamp_logger.close()
 
+        self._save_documentation()
         self._convert_to_dataframe_and_save()
         self._save_timestamp_stats()
         if not self.check_if_finished():
@@ -137,12 +146,13 @@ class TimestampLoggerManager:
         self._multi_frame_timestamp_logs.append(multi_frame_timestamp_log)
 
     def _convert_to_dataframe_and_save(self):
-        self.as_dataframe.to_csv(self._timestamps_csv_path, index=False)
+        df = self.to_dataframe()
+        df.to_csv(self._timestamps_csv_path, index=False)
         logger.info(
             f"Saved multi-frame timestamp logs to {self._timestamps_csv_path} \n\n"
             f"Total frames: {len(self._multi_frame_timestamp_logs)}\n\n"
             f"First/last 5 frames:\n\n"
-            f"{self.as_dataframe.head()}\n\n...\n\n{self.as_dataframe.tail()}"
+            f"{df.head()}\n\n...\n\n{df.tail()}"
         )
 
     def _save_timestamp_stats(self):
@@ -190,7 +200,7 @@ class TimestampLoggerManager:
         return stats
 
     def _calculate_stats(self) -> Dict[str, float]:
-        df = self.as_dataframe  # get the dataframe to avoid recalculating
+        df = self.to_dataframe()  # get the dataframe to avoid recalculating
         return {
             "mean_frame_duration_s": df["mean_frame_duration_s"].mean(),
             "std_frame_duration_s": df["mean_frame_duration_s"].std(),

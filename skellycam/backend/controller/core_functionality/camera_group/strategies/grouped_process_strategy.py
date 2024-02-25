@@ -38,6 +38,7 @@ class GroupedProcessStrategy:
         self._processes, self._processes_by_camera_id = self._create_processes()
 
     def start_capture(self):
+        logger.debug(f"Starting camera capture processes...")
         for process in self._processes:
             process.start_capture()
 

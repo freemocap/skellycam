@@ -33,20 +33,23 @@ class CameraTimestampLogger:
         return self._camera_id
 
     @property
+    def log_count(self) -> int:
+        return len(self._timestamp_logs)
+
+    @property
     def file_name_prefix(self) -> str:
         return f"{Path(self._save_directory).stem}_camera_{self._camera_id}"
 
     @property
     def stats(self):
-        df = self.as_dataframe  # snag the dataframe to avoid recalculating
+        df = self.to_dataframe()  # snag the dataframe to avoid recalculating
         return {
             "mean_frame_duration_s": df["frame_duration_ns"].mean() / 1e9,
             "std_dev_frame_duration_s": df["frame_duration_ns"].std() / 1e9,
             "mean_frames_per_second": (df["frame_duration_ns"].mean() / 1e9) ** -1,
         }
 
-    @property
-    def as_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(
             [timestamp_log.dict() for timestamp_log in self._timestamp_logs]
         )
@@ -82,6 +85,9 @@ class CameraTimestampLogger:
         return log
 
     def close(self):
+        logger.debug(
+            f"Closing CameraTimestampLogger for camera {self._camera_id} with {len(self._timestamp_logs)} logs..."
+        )
         self._save_logs_as_csv()
         self._save_documentation()
         self._save_timestamp_stats()
@@ -121,7 +127,7 @@ class CameraTimestampLogger:
         logger.debug(
             f"Saving timestamp logs for camera {self._camera_id} to {self._timestamp_csv_path} with {len(self._timestamp_logs)} frames (rows) of timestamp data..."
         )
-        self.as_dataframe.to_csv(self._timestamp_csv_path, index=False)
+        self.to_dataframe().to_csv(self._timestamp_csv_path, index=False)
 
     def _save_timestamp_stats(self):
         stats = self.stats  # snag the stats to avoid recalculating

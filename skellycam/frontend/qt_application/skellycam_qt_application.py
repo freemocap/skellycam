@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 
 from PySide6.QtWidgets import QApplication
+from setproctitle import setproctitle
 
 from skellycam.frontend.api_client.api_client import ApiClient
 from skellycam.frontend.gui.main_window.main_window import SkellyCamMainWindow

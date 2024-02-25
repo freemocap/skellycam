@@ -41,14 +41,6 @@ class CameraGroup:
                 return True
         return False
 
-    def get_new_frames(self) -> List[FramePayload]:
-        return self._strategy_class.get_new_frames()
-
-    def update_configs(self, camera_configs: CameraConfigs):
-        logger.info(f"Updating camera configs to {camera_configs}")
-        self._camera_configs = camera_configs
-        self._strategy_class.update_camera_configs(camera_configs)
-
     def start(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
@@ -59,6 +51,14 @@ class CameraGroup:
         self._strategy_class.start_capture()
 
         self._wait_for_cameras_to_start()
+
+    def get_new_frames(self) -> List[FramePayload]:
+        return self._strategy_class.get_new_frames()
+
+    def update_configs(self, camera_configs: CameraConfigs):
+        logger.info(f"Updating camera configs to {camera_configs}")
+        self._camera_configs = camera_configs
+        self._strategy_class.update_camera_configs(camera_configs)
 
     def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.debug(f"Waiting for cameras {self._camera_configs.keys()} to start")

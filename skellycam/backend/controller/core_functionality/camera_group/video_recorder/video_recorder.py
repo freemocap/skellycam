@@ -31,14 +31,7 @@ class VideoRecorder:
         self._cv2_video_writer: Optional[cv2.VideoWriter] = None
         self._timestamp_file = None
 
-    @property
-    def finished(self):
-        video_writer_done = (
-            not self._cv2_video_writer.isOpened()
-            if self._cv2_video_writer is not None
-            else True
-        )
-        return video_writer_done
+
 
     def save_frame_to_disk(self, frame_payload: FramePayload):
         """
@@ -79,6 +72,9 @@ class VideoRecorder:
         self._cv2_video_writer.release() if self._cv2_video_writer is not None else None
 
     def _initialize_on_first_frame(self, frame_payload):
+        logger.debug(
+            f"Initializing video writer for camera {self._camera_config.camera_id} to save video at: {self._video_save_path} using first frame with resolution: {frame_payload.get_resolution()}"
+        )
         self._initialization_frame = frame_payload.copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
         self._check_if_writer_open()
