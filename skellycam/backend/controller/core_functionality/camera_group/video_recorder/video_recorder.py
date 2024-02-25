@@ -31,8 +31,6 @@ class VideoRecorder:
         self._cv2_video_writer: Optional[cv2.VideoWriter] = None
         self._timestamp_file = None
 
-
-
     def save_frame_to_disk(self, frame_payload: FramePayload):
         """
         Save a single frame directly to the video file on disk.

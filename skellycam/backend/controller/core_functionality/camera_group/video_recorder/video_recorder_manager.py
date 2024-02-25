@@ -2,8 +2,9 @@ import logging
 import multiprocessing
 from typing import Dict, Tuple, Optional
 
-from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_process import \
-    VideoRecorderProcess
+from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_process import (
+    VideoRecorderProcess,
+)
 from skellycam.backend.models.cameras.camera_config import CameraConfig
 from skellycam.backend.models.cameras.camera_id import CameraId
 
@@ -38,7 +39,3 @@ class VideoRecorderProcessManager:
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
         self._multi_frame_queue.put(None)
-
-
-
-
