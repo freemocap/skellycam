@@ -68,7 +68,7 @@ class Controller:
                     "No exit event found - something happened out-of-order!"
                 )
             self.camera_group_manager = CameraGroupManager(
-                camera_configs=camera_configs, exit_event=self._exit_event
+                camera_configs=camera_configs
             )
             self.camera_group_manager.start()
             # self.camera_group_manager.join()

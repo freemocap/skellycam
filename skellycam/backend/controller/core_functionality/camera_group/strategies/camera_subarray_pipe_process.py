@@ -23,7 +23,6 @@ class CamSubarrayPipeProcess:
         subarray_camera_configs: Dict[CameraId, CameraConfig],
         all_cameras_ready_event: multiprocessing.Event,
         close_cameras_event: multiprocessing.Event,
-        exit_event: multiprocessing.Event,
         is_capturing_events_by_subarray_cameras: Dict[CameraId, multiprocessing.Event],
     ):
         if len(subarray_camera_configs) == 0:
@@ -39,7 +38,6 @@ class CamSubarrayPipeProcess:
         self._subarray_camera_configs = subarray_camera_configs
         self._all_cameras_ready_event = all_cameras_ready_event
         self._close_cameras_event = close_cameras_event
-        self._exit_event = exit_event
 
         self._is_capturing_events_by_subarray_cameras = (
             is_capturing_events_by_subarray_cameras
@@ -175,7 +173,7 @@ class CamSubarrayPipeProcess:
             logger.debug(f"Connecting to camera {camera.camera_id}")
             camera.connect()
 
-        while not close_cameras_event.is_set() and not exit_event.is_set():
+        while not close_cameras_event.is_set():
             # logger.trace(f"CamGroupProcess {process_name} is checking for new configs")
             time.sleep(1.0)  # check for new configs every so often
             if camera_config_queue.qsize() > 0:

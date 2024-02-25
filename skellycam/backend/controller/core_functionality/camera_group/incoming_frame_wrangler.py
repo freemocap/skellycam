@@ -24,7 +24,6 @@ class IncomingFrameWrangler:
     def __init__(
         self,
         camera_configs: CameraConfigs,
-        exit_event: multiprocessing.Event,
     ):
         super().__init__()
         self._camera_configs = camera_configs
@@ -32,7 +31,6 @@ class IncomingFrameWrangler:
         self._video_recorder_manager = VideoRecorderProcessManager(
             camera_configs=self._camera_configs,
             multi_frame_queue=self._multi_frame_queue,
-            exit_event=exit_event,
         )
 
         self._latest_frontend_payload: Optional[MultiFramePayload] = None
