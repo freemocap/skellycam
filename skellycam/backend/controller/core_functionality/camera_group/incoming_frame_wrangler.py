@@ -142,11 +142,13 @@ class IncomingFrameWrangler:
     ) -> MultiFramePayload:
         frontend_payload = self._current_multi_frame_payload.copy(deep=True)
 
-        scale_factor = scaled_image_long_side / max(
-            frontend_payload.frames[0].get_resolution()
-        )
+        if scaled_image_long_side is not None:
+            scale_factor = scaled_image_long_side / max(
+                frontend_payload.frames[0].get_resolution()
+            )
 
-        frontend_payload.resize(scale_factor=scale_factor)
+            frontend_payload.resize(scale_factor=scale_factor)
+
         for frame in frontend_payload.frames.values():
             frame.set_image(image=cv2.cvtColor(frame.get_image(), cv2.COLOR_BGR2RGB))
         return frontend_payload

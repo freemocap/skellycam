@@ -81,7 +81,6 @@ class CameraTimestampLogger:
         )
         self._previous_frame_timestamp = frame.timestamp_ns
         self._timestamp_logs.append(log)
-        print(f"Camera {self._camera_id} log len: {len(self._timestamp_logs)}")
         return log
 
     def close(self):
