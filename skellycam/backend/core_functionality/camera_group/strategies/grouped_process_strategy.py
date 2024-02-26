@@ -51,29 +51,42 @@ class GroupedProcessStrategy:
     ) -> Tuple[List[CamSubarrayPipeProcess], Dict[CameraId, CamSubarrayPipeProcess]]:
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras were provided")
-        camera_config_subarrays = dict_split_by(
-            some_dict=self._camera_configs, split_by=cameras_per_process
-        )
 
-        camera_config_subarrays = dict_split_by(
-            some_dict=self._camera_configs, split_by=cameras_per_process
-        )
         processes = []
-        for subarray_configs in camera_config_subarrays:
-            logger.debug(f"Creating process for {subarray_configs.keys()}")
-            is_capturing_events_by_subarray = {}
-            for camera_id in subarray_configs.keys():
+        if _DEFAULT_CAM_PER_PROCESS == 1:
+            for camera_id, config  in self._camera_configs.items():
+                is_capturing_events_by_subarray = {}
                 is_capturing_events_by_subarray[
                     camera_id
                 ] = self._is_capturing_events_by_camera[camera_id]
-            processes.append(
-                CamSubarrayPipeProcess(
-                    subarray_camera_configs=subarray_configs,
-                    all_cameras_ready_event=self._all_cameras_ready_event,
-                    close_cameras_event=self._close_cameras_event,
-                    is_capturing_events_by_subarray_cameras=is_capturing_events_by_subarray,
+                processes.append(
+                    CamSubarrayPipeProcess(
+                        subarray_camera_configs={camera_id: config},
+                        all_cameras_ready_event=self._all_cameras_ready_event,
+                        close_cameras_event=self._close_cameras_event,
+                        is_capturing_events_by_subarray_cameras=is_capturing_events_by_subarray,
+                    )
                 )
+        else:
+            camera_config_subarrays = dict_split_by(
+                some_dict=self._camera_configs, split_by=cameras_per_process
             )
+
+            for subarray_configs in camera_config_subarrays:
+                logger.debug(f"Creating process for {subarray_configs.keys()}")
+                is_capturing_events_by_subarray = {}
+                for camera_id in subarray_configs.keys():
+                    is_capturing_events_by_subarray[
+                        camera_id
+                    ] = self._is_capturing_events_by_camera[camera_id]
+                processes.append(
+                    CamSubarrayPipeProcess(
+                        subarray_camera_configs=subarray_configs,
+                        all_cameras_ready_event=self._all_cameras_ready_event,
+                        close_cameras_event=self._close_cameras_event,
+                        is_capturing_events_by_subarray_cameras=is_capturing_events_by_subarray,
+                    )
+                )
 
         processes_by_camera_id = {}
         for process in processes:

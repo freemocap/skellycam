@@ -17,7 +17,7 @@ class CameraConfig(BaseModel):
         description="Whether or not to use this camera for streaming/recording",
     )
     resolution: VideoResolution = Field(
-        default=VideoResolution(width=1920, height=1080),
+        default=VideoResolution(width=1280, height=720),
         description="The current resolution of the camera, in pixels.",
     )
     exposure: int = Field(
