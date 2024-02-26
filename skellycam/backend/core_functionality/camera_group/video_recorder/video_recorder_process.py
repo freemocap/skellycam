@@ -6,10 +6,10 @@ from typing import Dict, Tuple
 
 from setproctitle import setproctitle
 
-from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger_manager import (
+from skellycam.backend.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger_manager import (
     TimestampLoggerManager,
 )
-from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder import (
+from skellycam.backend.core_functionality.camera_group.video_recorder.video_recorder import (
     VideoRecorder,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig

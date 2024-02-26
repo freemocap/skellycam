@@ -12,8 +12,8 @@ from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_
 from skellycam.backend.api_server.requests_responses.start_recording_request import (
     StartRecordingRequest,
 )
-from skellycam.backend.controller.controller import get_or_create_controller
-from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
+from skellycam.backend.controller import get_or_create_controller
+from skellycam.backend.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs

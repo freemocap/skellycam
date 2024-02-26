@@ -1,12 +1,11 @@
 import logging
-import multiprocessing
 import threading
 import time
 
-from skellycam.backend.controller.core_functionality.camera_group.camera_group import (
+from skellycam.backend.core_functionality.camera_group.camera_group import (
     CameraGroup,
 )
-from skellycam.backend.controller.core_functionality.camera_group.incoming_frame_wrangler import (
+from skellycam.backend.core_functionality.camera_group.incoming_frame_wrangler import (
     IncomingFrameWrangler,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs

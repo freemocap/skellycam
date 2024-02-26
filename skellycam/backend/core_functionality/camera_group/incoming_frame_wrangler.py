@@ -6,7 +6,7 @@ from typing import Optional, List
 
 import cv2
 
-from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_manager import (
+from skellycam.backend.core_functionality.camera_group.video_recorder.video_recorder_manager import (
     VideoRecorderProcessManager,
 )
 from skellycam.backend.models.cameras.camera_configs import CameraConfigs

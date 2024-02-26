@@ -10,7 +10,7 @@ from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_
     CamerasConnectedResponse,
     ConnectToCamerasRequest,
 )
-from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
+from skellycam.backend.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
 from skellycam.backend.models.cameras.camera_configs import (

@@ -1,3 +1,4 @@
+import platform
 from typing import List, Any
 
 from PySide6.QtMultimedia import QCameraDevice
@@ -5,6 +6,8 @@ from pydantic import BaseModel
 
 from skellycam.backend.models.cameras.video_resolution import VideoResolution
 
+import logging
+logger = logging.getLogger(__name__)
 
 class DeviceVideoFormat(BaseModel):
     """
@@ -58,7 +61,12 @@ class CameraDeviceInfo(BaseModel):
     @classmethod
     def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice):
         device_address =camera.id().data().decode("utf-8")
-        cv2_port = device_address.split("video")[1]
+        if platform.system() == 'Windows':
+            logger.debug(f"Windows detected, using camera number as cv2 port")
+            cv2_port = camera_number
+        else:
+            logger.trace(f"Non-Windows detected, using camera address as cv2 port")
+            cv2_port = device_address.split("video")[1]
         return cls(
             description=f"{device_address} - {camera.description()}",
             available_video_formats=cls._get_available_video_formats(camera=camera),

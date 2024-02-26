@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 from typing import Dict, Tuple, Optional
 
-from skellycam.backend.controller.core_functionality.camera_group.video_recorder.video_recorder_process import (
+from skellycam.backend.core_functionality.camera_group.video_recorder.video_recorder_process import (
     VideoRecorderProcess,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig

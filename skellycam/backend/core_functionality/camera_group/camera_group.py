@@ -3,10 +3,10 @@ import multiprocessing
 import time
 from typing import Dict, List
 
-from skellycam.backend.controller.core_functionality.camera_group.strategies.grouped_process_strategy import (
+from skellycam.backend.core_functionality.camera_group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
-from skellycam.backend.controller.core_functionality.camera_group.strategies.strategies import (
+from skellycam.backend.core_functionality.camera_group.strategies.strategies import (
     Strategy,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig

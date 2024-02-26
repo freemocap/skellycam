@@ -6,10 +6,9 @@ from typing import Dict, Optional
 from skellycam.backend.api_server.requests_responses.connect_to_cameras_request_response import (
     CamerasConnectedResponse,
 )
-from skellycam.backend.controller.core_functionality.camera_group.camera_group_manager import (
-    CameraGroupManager,
-)
-from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
+from skellycam.backend.core_functionality.camera_group.camera_group_manager import CameraGroupManager
+
+from skellycam.backend.core_functionality.device_detection.detect_available_cameras import (
     detect_available_cameras,
     CamerasDetectedResponse,
     DetectedCameras,

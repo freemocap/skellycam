@@ -6,7 +6,7 @@ from typing import Dict, List, Any, Optional
 
 from setproctitle import setproctitle
 
-from skellycam.backend.controller.core_functionality.camera_group.camera.camera import (
+from skellycam.backend.core_functionality.camera_group.camera.camera import (
     Camera,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PySide6.QtCore import QThread
 
-from skellycam.backend.controller.core_functionality.device_detection.detect_available_cameras import (
+from skellycam.backend.core_functionality.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
 from skellycam.system.default_paths import create_default_recording_folder_path

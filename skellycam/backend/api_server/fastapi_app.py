@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 
 import skellycam
 from skellycam.backend.api_server.http_router import http_router
-from skellycam.backend.controller.controller import get_or_create_controller, Controller
+from skellycam.backend.controller import get_or_create_controller, Controller
 
 logger = logging.getLogger(__name__)
 

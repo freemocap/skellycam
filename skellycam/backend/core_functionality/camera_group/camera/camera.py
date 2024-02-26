@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 from typing import Optional
 
-from skellycam.backend.controller.core_functionality.camera_group.camera.internal_camera_thread import (
+from skellycam.backend.core_functionality.camera_group.camera.internal_camera_thread import (
     VideoCaptureThread,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig

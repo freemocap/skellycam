@@ -8,3 +8,4 @@ __description__ = "A simple python API for efficiently connecting to and recordi
 __package_name__ = "skellycam"
 __repo_url__ = f"https://github.com/freemocap/{__package_name__}"
 __repo_issues_url__ = f"{__repo_url__}/issues"
+__pypi_url__ = f"https://pypi.org/project/{__package_name__}"

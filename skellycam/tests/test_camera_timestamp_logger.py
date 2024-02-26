@@ -1,7 +1,6 @@
 import numpy as np
-import pytest
 
-from skellycam.backend.controller.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger import (
+from skellycam.backend.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger import (
     CameraTimestampLogger,
 )
 from skellycam.backend.models.cameras.camera_id import CameraId

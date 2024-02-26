@@ -1,7 +1,7 @@
 import multiprocessing
 from typing import Dict, List, Tuple
 
-from skellycam.backend.controller.core_functionality.camera_group.strategies.camera_subarray_pipe_process import (
+from skellycam.backend.core_functionality.camera_group.strategies.camera_subarray_pipe_process import (
     CamSubarrayPipeProcess,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
@@ -12,7 +12,7 @@ from skellycam.utilities.array_split_by import dict_split_by
 ### Don't change this? Users should submit the actual value they want
 ### this is our library default.
 ### This should only change based off of real world experimenting with CPUs
-_DEFAULT_CAM_PER_PROCESS = 2
+_DEFAULT_CAM_PER_PROCESS = 1
 
 # https://refactoring.guru/design-patterns/strategy
 
@@ -55,6 +55,9 @@ class GroupedProcessStrategy:
             some_dict=self._camera_configs, split_by=cameras_per_process
         )
 
+        camera_config_subarrays = dict_split_by(
+            some_dict=self._camera_configs, split_by=cameras_per_process
+        )
         processes = []
         for subarray_configs in camera_config_subarrays:
             logger.debug(f"Creating process for {subarray_configs.keys()}")

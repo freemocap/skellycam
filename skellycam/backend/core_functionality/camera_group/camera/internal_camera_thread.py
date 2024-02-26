@@ -3,13 +3,14 @@ import multiprocessing
 import pprint
 import threading
 import time
+from typing import Optional
 
 import cv2
 
-from skellycam.backend.controller.core_functionality.config.apply_config import (
+from skellycam.backend.core_functionality.config.apply_config import (
     apply_camera_configuration,
 )
-from skellycam.backend.controller.core_functionality.config.determine_backend import (
+from skellycam.backend.core_functionality.config.determine_backend import (
     determine_backend,
 )
 from skellycam.backend.models.cameras.camera_config import CameraConfig
@@ -76,6 +77,9 @@ class VideoCaptureThread(threading.Thread):
                     time.sleep(0.001)
                     continue
                 frame = self._get_next_frame()
+                if frame is None:
+                    time.sleep(0.001)
+                    continue
                 frame_bytes = frame.to_bytes()
                 self._pipe_sender_connection.send_bytes(frame_bytes)
         except Exception as e:
@@ -89,7 +93,7 @@ class VideoCaptureThread(threading.Thread):
                 f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped"
             )
 
-    def _get_next_frame(self) -> FramePayload:
+    def _get_next_frame(self) -> Optional[FramePayload]:
         """
         THIS IS WHERE THE MAGIC HAPPENS
 
@@ -98,7 +102,7 @@ class VideoCaptureThread(threading.Thread):
           within the field of view of the camera ) is absorbed by the camera's sensor and converted into a digital
           representation of that pattern (i.e. a 2D array of pixel values in 3 channels).
 
-        This is the empirical measurement, whereupon all future inference will derive their empirical grounding.
+        This is the empirical measurement, whereupon all future inference will derive their epistemological grounding.
 
         This sweet baby must be protected at all costs. Nothing is allowed to block this call (which could result in
         a frame drop)
@@ -110,6 +114,11 @@ class VideoCaptureThread(threading.Thread):
         ) = (
             self._cv2_video_capture.read()
         )  # THIS IS WHERE THE MAGIC HAPPENS <- This is the empirical measurement
+
+        if not success or image is None:
+            logger.warning(f"Failed to read frame from camera: {self._config.camera_id}")
+            return
+
         retrieval_timestamp = time.perf_counter_ns()
         self._frame_number += 1
         return FramePayload.create(
