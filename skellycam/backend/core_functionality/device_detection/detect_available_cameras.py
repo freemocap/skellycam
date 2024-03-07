@@ -25,9 +25,6 @@ def detect_available_cameras() -> CamerasDetectedResponse:
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
 
-    print("-------detected cameras-------")
-    print(detected_cameras)
-
     if platform.system() == "Darwin":
         camera_ports = detect_opencv_ports()
         for camera in detected_cameras:
@@ -45,8 +42,7 @@ def detect_available_cameras() -> CamerasDetectedResponse:
                 camera_number=camera_number, camera=camera
             )
             cameras[camera_device_info.cv2_port] = camera_device_info
-        except ValueError as e:
-            print(e)
+        except ValueError:
             logger.warning(f"Could not use camera: {camera_number}")
 
     # with ThreadPoolExecutor(max_workers=len(detected_cameras)) as executor:
