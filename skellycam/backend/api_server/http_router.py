@@ -108,7 +108,7 @@ def get_latest_frames():
     """
     if not controller.camera_group_manager:
         response = {
-            "message": "Camera group has not been initialized - cannot get latest frames, call `detect_available_cameras` then `connect_to_cameras` first."
+            "message": "Camera group has not been initialized - cannot get latest frames, call `detect_available_cameras` then `connect_to_cameras`."
         }
         logger.error(response["message"])
         return response
