@@ -59,14 +59,21 @@ class CameraDeviceInfo(BaseModel):
         return unique_framerates
 
     @classmethod
-    def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice):
+    def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice) -> "CameraDeviceInfo":
         device_address =camera.id().data().decode("utf-8")
         if platform.system() == 'Windows':
             logger.debug(f"Windows detected, using camera number as cv2 port")
-            cv2_port = camera_number
+            cv2_port = int(camera_number)
+        elif platform.system() == 'Darwin':
+            logger.debug(f"Darwin detected, using modified camera address as cv2 port")
+            cv2_port = int(camera_number)
         else:
             logger.trace(f"Non-Windows detected, using camera address as cv2 port")
-            cv2_port = device_address.split("video")[1]
+            if len(device_address.split("video")) > 1:
+                cv2_port = int(device_address.split("video")[1])
+            else:
+                logger.info("Could not extract cv2 port from device address")
+                raise ValueError("Could not extract cv2 port from device address")
         return cls(
             description=f"{device_address} - {camera.description()}",
             available_video_formats=cls._get_available_video_formats(camera=camera),
