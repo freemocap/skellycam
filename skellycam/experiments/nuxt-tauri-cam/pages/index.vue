@@ -27,7 +27,8 @@ onMounted(() => {
 
 <style>
 .webcam-viewer video {
-  width: 100%;
-  height: auto;
+  width: 90vw;
+  height: 90vh;
+  object-fit: contain;
 }
 </style>

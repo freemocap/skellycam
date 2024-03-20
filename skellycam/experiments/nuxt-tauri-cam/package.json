@@ -8,7 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "all": "npm run tauri dev"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.3",
