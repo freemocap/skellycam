@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Webcam from 'react-webcam';
 import { saveAs } from 'file-saver';
 
+const ffmpeg = createFFmpeg({ log: true });
+
 const WebcamComponent = ({
   device,
   isGlobalRecording,
