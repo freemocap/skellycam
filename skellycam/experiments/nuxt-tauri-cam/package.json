@@ -9,7 +9,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "tauri": "tauri",
-    "all": "npm run tauri dev"
+    "tauri-dev": "npm run tauri dev"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.3",
