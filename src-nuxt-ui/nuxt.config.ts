@@ -7,7 +7,8 @@ export default defineNuxtConfig({
   experimental: {
     localLayerAliases: true,
   },
-
+  //disable server side rendering bc nuxt doesn't do that, I guess
+  ssr: false,
   // app config
   app: {
     // global transition
@@ -19,6 +20,7 @@ export default defineNuxtConfig({
   // todo: feat/strict-type-check
   // typescript: {
   //   strict: true,
+  //   typeCheck: true,
   //   typeCheck: true,
   // },
 
