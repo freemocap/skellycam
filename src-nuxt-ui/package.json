@@ -6,7 +6,7 @@
   "private": false,
   "license": "MIT",
   "type": "module",
-  "main": "./nuxt.config.ts",
+  "main": "nuxt.config.ts",
   "repository": {
     "type": "git",
     "url": "git://github.com/viandwi24/nuxt3-awesome-starter"
@@ -28,14 +28,14 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "build": "nuxt build ./app",
-    "dev": "nuxt dev ./app --no-clear",
-    "generate": "nuxt generate ./app",
-    "preview": "nuxt preview ./app",
-    "postinstall": "nuxt prepare ./app",
+    "build": "nuxt build app",
+    "dev": "nuxt dev app --no-clear",
+    "generate": "nuxt generate app",
+    "preview": "nuxt preview app",
+    "postinstall": "nuxt prepare app",
     "dev:starter": "nuxt dev ./examples/starter",
-    "lint": "eslint --ext \".ts,.js,.vue\" --ignore-path .eslintignore .",
-    "lint:fix": "eslint --fix --ext \".ts,.js,.vue\" --ignore-path .eslintignore .",
+    "lint": "eslint --ext \\\".ts,.js,.vue\\\" --ignore-path .eslintignore .",
+    "lint:fix": "eslint --fix --ext \\\".ts,.js,.vue\\\" --ignore-path .eslintignore .",
     "release": "release-it"
   },
   "dependencies": {
