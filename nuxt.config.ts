@@ -1,14 +1,15 @@
 export default defineNuxtConfig({
-  // (optional) Enable the Nuxt devtools
   devtools: {
     enabled: true,
-
     timeline: {
       enabled: true,
     },
   },
-  // Enable SSG
-  ssr: false,
+  modules: ['@tresjs/nuxt', '@nuxt/devtools' ],
+  tres: {
+    devtools: true,
+  },
+  ssr: false, // Disable Server Side rendering for Tauri
   vite: {
     // Better support for Tauri CLI output
     clearScreen: false,
@@ -31,5 +32,15 @@ export default defineNuxtConfig({
         port: 5183,
       },
     },
+
   },
+  // TailwindCSS
+  css: ['~/assets/css/main.css'],
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    },
+  },
+
 });

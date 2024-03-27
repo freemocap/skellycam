@@ -13,11 +13,20 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.3",
+    "@tresjs/cientos": "^3.8.0",
+    "@tresjs/core": "^3.7.0",
+    "@tresjs/nuxt": "^2.1.1",
     "nuxt": "^3.11.1",
+    "three": "^0.162.0",
     "vue": "^3.4.21",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "vue-sidebar-menu": "^5.3.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.5.11"
+    "@tauri-apps/cli": "^1.5.11",
+    "@types/three": "^0.162.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.1"
   }
 }

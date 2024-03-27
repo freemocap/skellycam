@@ -1,5 +1,5 @@
 <template>
-  <div class="webcam-grid">
+  <div class="webcam-grid" @mousedown="initDrag">
     <SingleCameraView
       v-for="camera in cameras"
       :key="camera.deviceId"
