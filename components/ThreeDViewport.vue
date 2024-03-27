@@ -7,6 +7,7 @@
       <TresBoxGeometry />
       <TresMeshNormalMaterial  />
     </TresMesh>
+    <TresGridHelper :size="10" :divisions="10" />
   </TresCanvas>
 </template>
 
