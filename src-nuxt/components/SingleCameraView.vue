@@ -1,6 +1,12 @@
 <template>
   <div class="camera-container" >
-    <video  ref="video" autoplay muted></video>
+    <video
+        ref="video"
+        @loadedmetadata="onLoadedMetadata"
+        autoplay
+        muted
+        class="w-full h-full object-contain"
+    ></video>
   </div>
 </template>
 
@@ -15,6 +21,9 @@ const props = defineProps({
 const video = ref(null);
 const stream = ref(null);
 
+
+
+
 const startWebcam = async () => {
   try {
     const constraints = {
@@ -22,15 +31,12 @@ const startWebcam = async () => {
         deviceId: props.camera ? { exact: props.camera.deviceId } : undefined,
         width: { ideal: 1920 },
         height: { ideal: 1080 },
-        facingMode: 'user',
       },
     };
     stream.value = await navigator.mediaDevices.getUserMedia(constraints);
     if (video.value) {
       video.value.srcObject = stream.value;
     }
-
-    provide('getStream', () => stream.value); // Provide the stream to the parent component
 
   } catch (error) {
     console.error("Error accessing the webcam", error);
@@ -54,10 +60,12 @@ onMounted(() => {
 });
 
 onUnmounted( () => {
-  if (stream.value) {
+  if (video.value && video.value.srcObject) {
     console.log("Stopping stream");
-    let tracks = stream.value.getTracks();
+    const tracks = video.value.srcObject.getTracks();
     tracks.forEach(track => track.stop());
+    video.value.srcObject = null;
+
   }
 });
 </script>
@@ -70,8 +78,9 @@ onUnmounted( () => {
   overflow: hidden;
 }
 
-.border-active {
-  border: 2px solid red;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+video {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 </style>

@@ -11,7 +11,6 @@ export default defineNuxtConfig({
   },
   ssr: false, // Disable Server Side rendering for Tauri
   vite: {
-    // Better support for Tauri CLI output
     clearScreen: false,
     // Enable environment variables
     // Additional environment variables can be found at
