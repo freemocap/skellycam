@@ -42,8 +42,7 @@ onMounted(() => {
 <style>
 .webcam-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  grid-auto-rows: minmax(200px, auto);
+  grid-template-columns: repeat(auto-fit, minmax(640px, 1fr));
   gap: 10px;
   padding: 10px;
   height: 100vh;

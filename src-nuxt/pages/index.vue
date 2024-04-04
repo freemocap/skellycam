@@ -1,7 +1,8 @@
 <template>
   <div class="viewport-container">
-    <ThreeDViewport />
-    <CameraGrid class="overlay"/>
+    <CameraGrid />
+<!--    <ThreeDViewport />-->
+<!--    <CameraGrid class="overlay"/>-->
   </div>
 </template>
 
@@ -16,6 +17,7 @@
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  background-color: #01012d;
 }
 .overlay {
   position: absolute;
