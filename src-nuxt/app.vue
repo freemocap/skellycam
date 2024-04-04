@@ -1,5 +1,22 @@
 <template>
-  <NuxtLayout>
+  <div>
+    <!-- Your layout wrapper -->
+
+    <header>
+      <!-- Your header -->
+    </header>
+    <!-- Your page content (default is pages/index.vue) -->
     <NuxtPage />
-  </NuxtLayout>
+    <footer>
+      <!-- Your footer -->
+    </footer>
+  </div>
 </template>
+
+<script setup>
+// Any script you might need
+</script>
+
+<style>
+/* Your styles */
+</style>
