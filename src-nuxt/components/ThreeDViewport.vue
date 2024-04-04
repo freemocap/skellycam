@@ -26,6 +26,7 @@ onLoop(({ delta, elapsed, clock, dt }) => {
   if(boxRef.value) {
     boxRef.value.rotation.y += delta
     boxRef.value.rotation.z = elapsed * 0.2
+    boxRef.value.rotation.x = delta * 0.2
   }
 })
 const gl = reactive({

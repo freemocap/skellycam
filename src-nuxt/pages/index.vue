@@ -15,17 +15,13 @@
   position: relative;
   width: 100%;
   height: 100vh;
+  overflow: hidden;
 }
 .overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 33vw;
-  height: 33vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  width: 100%;
+  height: 100vh;
 }
-
 </style>

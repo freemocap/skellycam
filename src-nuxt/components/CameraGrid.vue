@@ -1,5 +1,5 @@
 <template>
-  <div class="webcam-grid" @mousedown="initDrag">
+  <div class="webcam-grid">
     <SingleCameraView
       v-for="camera in cameras"
       :key="camera.deviceId"
@@ -42,16 +42,13 @@ onMounted(() => {
 <style>
 .webcam-grid {
   display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(200px, 600px)
-  ); /* Creates as many columns as it can */
-  gap: 10px; /* Spacing between webcam feeds */
-}
-
-video {
-  width: 100%;
-  height: auto;
-  object-fit: cover; /* Ensures the video fills the space without distorting */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-auto-rows: minmax(200px, auto);
+  gap: 10px;
+  padding: 10px;
+  height: 100vh;
+  width: 100vw;
+  box-sizing: border-box;
+  overflow: auto;
 }
 </style>
