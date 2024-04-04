@@ -24,9 +24,9 @@ const { onLoop } = useRenderLoop()
 onLoop(({ delta, elapsed, clock, dt }) => {
   // I will run at every frame ~ 60FPS (depending of your monitor)
   if(boxRef.value) {
-    boxRef.value.rotation.y += delta
-    boxRef.value.rotation.z = elapsed * 0.2
-    boxRef.value.rotation.x = delta * 0.2
+    boxRef.value.rotation.y += delta * 0.1;
+    boxRef.value.rotation.z = elapsed * 0.1;
+    boxRef.value.rotation.x = delta * 0.1;
   }
 })
 const gl = reactive({
