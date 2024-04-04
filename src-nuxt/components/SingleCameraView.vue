@@ -1,12 +1,11 @@
 <template>
   <div class="camera-container" >
     <video  ref="video" autoplay muted></video>
-
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, provide } from 'vue';
 import { defineProps } from 'vue';
 
 const props = defineProps({
@@ -14,7 +13,7 @@ const props = defineProps({
 });
 
 const video = ref(null);
-const showBorder = ref(false);
+const stream = ref(null);
 
 const startWebcam = async () => {
   try {
@@ -26,10 +25,13 @@ const startWebcam = async () => {
         facingMode: 'user',
       },
     };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    stream.value = await navigator.mediaDevices.getUserMedia(constraints);
     if (video.value) {
-      video.value.srcObject = stream;
+      video.value.srcObject = stream.value;
     }
+
+    provide('getStream', () => stream.value); // Provide the stream to the parent component
+
   } catch (error) {
     console.error("Error accessing the webcam", error);
   }
@@ -51,6 +53,13 @@ onMounted(() => {
   }
 });
 
+onUnmounted( () => {
+  if (stream.value) {
+    console.log("Stopping stream");
+    let tracks = stream.value.getTracks();
+    tracks.forEach(track => track.stop());
+  }
+});
 </script>
 
 <style>

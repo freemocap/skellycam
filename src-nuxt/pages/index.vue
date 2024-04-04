@@ -1,8 +1,6 @@
 <template>
   <div class="viewport-container">
     <CameraGrid />
-<!--    <ThreeDViewport />-->
-<!--    <CameraGrid class="overlay"/>-->
   </div>
 </template>
 
