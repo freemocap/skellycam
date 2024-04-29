@@ -25,7 +25,7 @@ def run_uvicorn_server(
             "skellycam.backend.api.app.app_factory:create_app",
             host=hostname,
             port=port,
-            log_level="debug",
+            log_level="info",
             reload=True,
             factory=True
         )

@@ -17,6 +17,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 
+
 logging.addLevelName(LogLevel.TRACE.value, "TRACE")
 logging.addLevelName(LogLevel.SUCCESS.value, "SUCCESS")
 
