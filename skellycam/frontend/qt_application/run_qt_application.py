@@ -11,9 +11,6 @@ logger = logging.getLogger(__name__)
 def run_qt_application(
     hostname: str,
     port: int,
-    backend_timeout: float,
-    reboot_event: multiprocessing.Event,
-    shutdown_event: multiprocessing.Event,
 ):
     setproctitle("gui_process")
     skellycam_qt_app = None
@@ -21,9 +18,6 @@ def run_qt_application(
         skellycam_qt_app = create_or_recreate_qt_application(
             hostname=hostname,
             port=port,
-            backend_timeout=backend_timeout,
-            reboot_event=reboot_event,
-            shutdown_event=shutdown_event,
         )
         ## TODO - Add some method to detect a "reboot" exit code and delete/recreate the qt app
         exit_code = skellycam_qt_app.exec()
@@ -35,4 +29,3 @@ def run_qt_application(
         if skellycam_qt_app is not None:
             skellycam_qt_app.quit()
             skellycam_qt_app.deleteLater()
-        shutdown_event.set()

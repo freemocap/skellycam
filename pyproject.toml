@@ -30,6 +30,7 @@ httpx = "^0.26.0"
 qasync = "^0.27.1"
 pytest = "^7.4.4"
 respx = "^0.20.2"
+websockets = "^12.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"

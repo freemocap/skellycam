@@ -3,7 +3,7 @@ import logging
 import uvicorn
 from setproctitle import setproctitle
 
-from skellycam.backend.api.app.fastapi import FastApiApp
+from skellycam.backend.api.app.fastapi_app import FastApiApp
 from skellycam.backend.api.utilities.log_api_routes import log_api_routes
 
 logger = logging.getLogger(__name__)

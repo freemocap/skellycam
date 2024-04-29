@@ -13,9 +13,6 @@ _QT_APPLICATION = None
 def create_or_recreate_qt_application(
     hostname: str,
     port: int,
-    backend_timeout: float,
-    reboot_event: multiprocessing.Event,
-    shutdown_event: multiprocessing.Event,
 ) -> "SkellyCamQtApplication":
     global _QT_APPLICATION
 
@@ -30,9 +27,6 @@ def create_or_recreate_qt_application(
             return SkellyCamQtApplication(
                 hostname=hostname,
                 port=port,
-                backend_timeout=backend_timeout,
-                reboot_event=reboot_event,
-                shutdown_event=shutdown_event,
             )
 
         if _QT_APPLICATION is None:

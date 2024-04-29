@@ -9,21 +9,20 @@ from skellycam.system.default_paths import (
 )
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.api_client.api_client import ApiClient
+from skellycam.frontend.api_client.api_client import HttpClient
 from skellycam.frontend.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.frontend.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
 
 
 class SkellyCamMainWindow(QMainWindow):
-    def __init__(self, api_client: ApiClient):
+    def __init__(self, hostname: str, port: int):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__()
-        self.api_client = api_client
         # self.shortcuts = KeyboardShortcuts()
         # self.shortcuts.connect_shortcuts(self)
-        self._initUI()
+        self._initUI(hostname, port)
 
-    def _initUI(self):
+    def _initUI(self, hostname: str, port: int):
         self.setGeometry(100, 100, 1600, 900)
         if not Path(PATH_TO_SKELLY_CAM_LOGO_PNG).is_file():
             raise FileNotFoundError(
@@ -36,7 +35,8 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout = QVBoxLayout()
         self.skellycam_widget = SkellyCamWidget(
             parent=self,
-            api_client=self.api_client,
+            hostname=hostname,
+            port=port,
         )
         self.setCentralWidget(self.skellycam_widget)
 

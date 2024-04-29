@@ -7,11 +7,12 @@ from PySide6.QtCore import QThread
 from skellycam.backend.core.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
+from skellycam.frontend.api_client.api_client import HttpClient
 from skellycam.system.default_paths import create_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.gui.skellycam_widget.manager.helpers.frame_requester import (
-    FrameRequester,
+from skellycam.frontend.gui.skellycam_widget.manager.helpers.websocket_client import (
+    WebsocketClient,
 )
 
 if TYPE_CHECKING:
@@ -22,14 +23,18 @@ class SkellyCamManager(QThread):
     def __init__(
         self,
         main_widget: "SkellyCamWidget",
+        hostname: str,
+        port: int,
     ):
         super().__init__()
         self.main_widget = main_widget
-        self.api_client = self.main_widget.api_client
-        self.frame_requester = FrameRequester(
-            api_client=self.api_client,
+        self.http_client = HttpClient(hostname=hostname, port=port)
+        self.ws_client = WebsocketClient(
+            hostname=hostname,
+            port=port,
             parent=self,
         )
+        self.ws_client.start()
         self.connect_signals()
 
     def connect_signals(self) -> None:
@@ -41,7 +46,7 @@ class SkellyCamManager(QThread):
             self.main_widget.camera_grid.update_camera_grid
         )
 
-        self.frame_requester.new_frames_received.connect(
+        self.ws_client.new_frames_received.connect(
             self.main_widget.camera_grid.handle_new_frames
         )
 
@@ -80,7 +85,7 @@ class SkellyCamManager(QThread):
     def _detect_available_cameras(self):
         logger.debug("Sending detect available cameras request...")
 
-        detected_cameras_response = self.api_client.detect_available_cameras()
+        detected_cameras_response = self.http_client.detect_available_cameras()
 
         self.handle_cameras_detected(
             detected_cameras_response, link_connect_to_cameras=True
@@ -89,8 +94,8 @@ class SkellyCamManager(QThread):
     def _connect_to_cameras(self):
         logger.info("Sending connect to cameras request...")
 
-        connect_to_cameras_response = self.api_client.connect_to_cameras(
-            self.main_widget.camera_parameter_tree.camera_configs
+        connect_to_cameras_response = self.http_client.connect_to_cameras(
+            camera_configs=self.main_widget.camera_parameter_tree.camera_configs
         )
 
         if connect_to_cameras_response and connect_to_cameras_response.success:
@@ -102,7 +107,7 @@ class SkellyCamManager(QThread):
         logger.info("Sending update camera configs request...")
 
         camera_configs = self.main_widget.camera_parameter_tree.camera_configs
-        update_camera_configs_response = self.api_client.update_camera_configs(
+        update_camera_configs_response = self.http_client.update_camera_configs(
             camera_configs
         )
 
@@ -111,14 +116,14 @@ class SkellyCamManager(QThread):
     def _close_cameras(self):
         logger.info("Sending close cameras request...")
 
-        close_cameras_response = self.api_client.close_cameras()
+        close_cameras_response = self.http_client.close_cameras()
 
         self._handle_cameras_closed_response()
 
     def _start_recording(self):
         logger.info("Sending start recording request...")
 
-        start_recording_response = self.api_client.start_recording(
+        start_recording_response = self.http_client.start_recording(
             recording_folder_path=create_default_recording_folder_path()
         )
 
@@ -128,7 +133,7 @@ class SkellyCamManager(QThread):
     def _stop_recording(self):
         logger.info("Sending stop recording request...")
 
-        stop_recording_response = self.api_client.stop_recording()
+        stop_recording_response = self.http_client.stop_recording()
 
         self._handle_stop_recording_response()
 
@@ -140,13 +145,7 @@ class SkellyCamManager(QThread):
         )
         self.main_widget.record_buttons.start_recording_button.setEnabled(True)
         self.main_widget.record_buttons.start_recording_button.setFocus()
-        mean_framerate = np.mean(
-            [
-                config.framerate
-                for config in self.main_widget.camera_parameter_tree.camera_configs.values()
-            ]
-        )
-        self.frame_requester.start_request_timer(mean_framerate)
+        self.ws_client.start()
 
     def handle_cameras_detected(
         self,

@@ -10,14 +10,11 @@ logger = logging.getLogger(__name__)
 def run_frontend(
     hostname: str,
     port: int,
-    backend_timeout: float,
-    reboot_event: multiprocessing.Event,
-    shutdown_event: multiprocessing.Event,
 ) -> Process:
     logger.info(f"Starting frontend process...")
     frontend_process = Process(
         target=run_qt_application,
-        args=(hostname, port, backend_timeout, reboot_event, shutdown_event),
+        args=(hostname, port),
     )
     frontend_process.start()
     if frontend_process.is_alive():
