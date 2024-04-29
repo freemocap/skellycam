@@ -1,26 +1,28 @@
 import logging
 import time
-from typing import TYPE_CHECKING, Awaitable, Coroutine
 
+import cv2
+import numpy as np
+from starlette.websockets import WebSocket
+
+from skellycam.backend.core.camera.config.camera_config import CameraConfigs, DEFAULT_CAMERA_CONFIGS
 from skellycam.backend.core.camera_group.camera_group import (
     CameraGroup,
 )
 from skellycam.backend.core.frames.incoming_frame_wrangler import (
     IncomingFrameWrangler,
 )
-
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.backend.core.camera.config.camera_config import CameraConfigs, DEFAULT_CAMERA_CONFIGS
 
 logger = logging.getLogger(__name__)
 logging.getLogger(__name__).setLevel(5)
 
 
 class CameraGroupManager:
-    def __init__(self, websocket_send_multiframe, websocket_send_message) -> None:
+    def __init__(self, websocket: WebSocket) -> None:
         super().__init__()
-        self._websocket_send_multiframe: Awaitable = websocket_send_multiframe
-        self._websocket_send_message: Awaitable = websocket_send_message
+
+        self.websocket = websocket
         self._camera_configs: CameraConfigs = DEFAULT_CAMERA_CONFIGS
 
         self._camera_group: CameraGroup = CameraGroup(
@@ -55,6 +57,13 @@ class CameraGroupManager:
         while self._camera_group.any_capturing:
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
+                image: np.ndarray = new_frames[0].get_image()
+                success, image_jpg = cv2.imencode(".jpg", image)
+                if not success:
+                    logger.error(f"Failed to encode image to jpg")
+                else:
+                    logger.debug(f"Sending image to frontend of size {len(image_jpg.tobytes())} res {image.shape}...")  # noqa: E501
+                    await self.websocket.send_bytes(image_jpg.tobytes())
                 self._incoming_frame_wrangler.handle_new_frames(new_frames)
             time.sleep(0.001)
 
