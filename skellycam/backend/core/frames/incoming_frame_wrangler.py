@@ -5,6 +5,8 @@ from copy import deepcopy
 from typing import Optional, List
 
 import cv2
+import numpy as np
+from starlette.websockets import WebSocket
 
 from skellycam.backend.core.video_recorder.video_recorder_manager import VideoRecorderProcessManager
 from skellycam.backend.core.camera.config.camera_config import CameraConfigs
@@ -18,8 +20,10 @@ class IncomingFrameWrangler:
     def __init__(
         self,
         camera_configs: CameraConfigs,
+        websocket: WebSocket,
     ):
         super().__init__()
+        self._websocket = websocket
         self._camera_configs = camera_configs
         self._multi_frame_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderProcessManager(
@@ -87,9 +91,10 @@ class IncomingFrameWrangler:
         self._is_recording = False
         self._video_recorder_manager.stop_recording()
 
-    def handle_new_frames(self, new_frames: List[FramePayload]):
+    async def handle_new_frames(self, new_frames: List[FramePayload]):
         if not self._previous_multi_frame_payload.full:
             for frame in new_frames:
+                await self.send_frame_down_websocket(frame)
                 self._previous_multi_frame_payload.add_frame(frame=frame)
                 if not self._previous_multi_frame_payload.full:
                     return
@@ -98,6 +103,15 @@ class IncomingFrameWrangler:
             self._current_multi_frame_payload.add_frame(frame=frame)
 
         self._yeet_if_ready()
+    async def send_frame_down_websocket(self, frame:FramePayload):
+        image: np.ndarray = frame.get_image()
+        success, image_jpg = cv2.imencode(".jpg", image)
+        if not success:
+            logger.error(f"Failed to encode image to jpg")
+        else:
+            logger.debug(
+                f"Sending image to frontend of size {len(image_jpg.tobytes())} res {image.shape}...")
+            await self._websocket.send_bytes(image_jpg.tobytes())
 
     def _yeet_if_ready(self):
         time_since_oldest_frame = (

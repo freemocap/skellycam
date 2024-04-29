@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 
@@ -22,7 +23,6 @@ class CameraGroupManager:
     def __init__(self, websocket: WebSocket) -> None:
         super().__init__()
 
-        self.websocket = websocket
         self._camera_configs: CameraConfigs = DEFAULT_CAMERA_CONFIGS
 
         self._camera_group: CameraGroup = CameraGroup(
@@ -31,6 +31,7 @@ class CameraGroupManager:
 
         self._incoming_frame_wrangler: IncomingFrameWrangler = IncomingFrameWrangler(
             camera_configs=self._camera_configs,
+            websocket=websocket,
         )
 
     @property
@@ -57,15 +58,10 @@ class CameraGroupManager:
         while self._camera_group.any_capturing:
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
-                image: np.ndarray = new_frames[0].get_image()
-                success, image_jpg = cv2.imencode(".jpg", image)
-                if not success:
-                    logger.error(f"Failed to encode image to jpg")
-                else:
-                    logger.debug(f"Sending image to frontend of size {len(image_jpg.tobytes())} res {image.shape}...")  # noqa: E501
-                    await self.websocket.send_bytes(image_jpg.tobytes())
-                self._incoming_frame_wrangler.handle_new_frames(new_frames)
-            time.sleep(0.001)
+                await self._incoming_frame_wrangler.handle_new_frames(new_frames)
+            else:
+                await asyncio.sleep(0.001)
+
 
     def close(self):
         logger.debug(f"Stopping camera group thread...")
