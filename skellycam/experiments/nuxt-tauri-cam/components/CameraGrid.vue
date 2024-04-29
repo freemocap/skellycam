@@ -15,7 +15,7 @@ const cameras = ref([]);
 
 const getCameras = async () => {
   try {
-    console.log("Getting available cameras");
+    console.log("Getting available core");
     const devices = await navigator.mediaDevices.enumerateDevices();
     console.log("All available devices", devices);
 
@@ -25,11 +25,11 @@ const getCameras = async () => {
 
     console.log("Filtered video devices", videoDevices);
 
-    cameras.value = videoDevices; //.slice(0, 4); // Get at most 4 cameras
+    cameras.value = videoDevices; //.slice(0, 4); // Get at most 4 core
 
-    console.log("Using cameras", cameras.value);
+    console.log("Using core", cameras.value);
   } catch (error) {
-    console.error("Error listing cameras", error);
+    console.error("Error listing core", error);
   }
 };
 

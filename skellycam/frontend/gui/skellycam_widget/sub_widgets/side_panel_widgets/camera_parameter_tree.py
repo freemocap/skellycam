@@ -6,11 +6,11 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
-from skellycam.backend.models.cameras.camera_config import CameraConfig
-from skellycam.backend.models.cameras.camera_device_info import CameraDeviceInfo
-from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.models.cameras.image_rotation_types import RotationTypes
-from skellycam.backend.models.cameras.video_resolution import VideoResolution
+from skellycam.backend.core.camera.config.camera_config import CameraConfig
+from skellycam.backend.core.device_detection.camera_device_info import CameraDeviceInfo
+from skellycam.backend.core.device_detection.camera_id import CameraId
+from skellycam.backend.core.device_detection.image_rotation_types import RotationTypes
+from skellycam.backend.core.device_detection.video_resolution import VideoResolution
 
 logger = logging.getLogger(__name__)
 from skellycam.frontend.gui.utilities.qt_strings import (

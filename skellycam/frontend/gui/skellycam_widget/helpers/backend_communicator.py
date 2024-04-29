@@ -4,7 +4,7 @@ from typing import Callable
 
 from PySide6.QtCore import QTimer
 
-from skellycam.backend.api_server import (
+from skellycam.backend.api import (
     BaseModel,
     BaseInteraction,
 )

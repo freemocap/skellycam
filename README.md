@@ -114,13 +114,13 @@ to see video.
 > NOTE - Work in progress, no clean way to kill this window yet
 
 ```python
-from skellycam.backend.models.cameras.camera_config import CameraConfig
+from skellycam.backend.core.camera.config.camera_config import CameraConfig
 , Camera
 
 if __name__ == "__main__":
-    cam1 = Camera(CameraConfig(cam_id=0))
-    cam1.connect()
-    cam1.show()
+  cam1 = Camera(CameraConfig(cam_id=0))
+  cam1.connect()
+  cam1.show()
 ```
 
 #### Example 2 - Connect to all available cameras and record synchronized videos

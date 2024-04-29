@@ -2,7 +2,7 @@ import multiprocessing
 
 from pytest_mock import MockerFixture
 
-from skellycam.backend.api_server.run_uvicorn_server import run_uvicorn_server
+from skellycam.backend.api.app.app_factory import run_uvicorn_server
 
 
 def test_run_uvicorn_server(mocker: MockerFixture) -> None:

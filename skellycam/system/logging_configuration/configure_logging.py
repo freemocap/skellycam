@@ -13,7 +13,6 @@ from skellycam.system.logging_configuration.logger_builder import (
 # Suppress some annoying log messages
 logging.getLogger("tzlocal").setLevel(logging.WARNING)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 

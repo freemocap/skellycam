@@ -23,11 +23,11 @@ CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING = "\U0001F503"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
 PATH_TO_SKELLY_CAM_LOGO_PNG = str(
-    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.png"
+    Path(skellycam.__file__).parent / "assets" / "logo" / "skelly-cam-logo.png"
 )
 
 PATH_TO_SKELLY_CAM_LOGO_SVG = str(
-    Path(skellycam.__file__).parent / "assets/logo/skelly-cam-logo.svg"
+    Path(skellycam.__file__).parent / "assets" / "logo" / "skelly-cam-logo.svg"
 )
 
 
@@ -36,12 +36,12 @@ def get_default_skellycam_base_folder_path():
 
 
 def create_default_recording_folder_path(
-    create_folder: bool = True, string_tag: str = None
+        create_folder: bool = True, string_tag: str = None
 ):
     folder_path = (
-        get_default_skellycam_base_folder_path()
-        / "recordings"
-        / default_recording_name(string_tag=string_tag)
+            get_default_skellycam_base_folder_path()
+            / "recordings"
+            / default_recording_name(string_tag=string_tag)
     )
     if create_folder:
         folder_path.mkdir(parents=True, exist_ok=True)
@@ -50,9 +50,9 @@ def create_default_recording_folder_path(
 
 def get_log_file_path():
     log_folder_path = (
-        Path(get_default_skellycam_base_folder_path())
-        / LOGS_INFO_AND_SETTINGS_FOLDER_NAME
-        / LOG_FILE_FOLDER_NAME
+            Path(get_default_skellycam_base_folder_path())
+            / LOGS_INFO_AND_SETTINGS_FOLDER_NAME
+            / LOG_FILE_FOLDER_NAME
     )
     log_folder_path.mkdir(exist_ok=True, parents=True)
     log_file_path = log_folder_path / create_log_file_name()
@@ -70,7 +70,7 @@ def create_log_file_name():
 
 
 def get_iso6201_time_string(
-    timespec: str = "milliseconds", make_filename_friendly: bool = True
+        timespec: str = "milliseconds", make_filename_friendly: bool = True
 ):
     iso6201_timestamp = datetime.now().isoformat(timespec=timespec)
     gmt_offset_string = f"_gmt{get_gmt_offset_string()}"

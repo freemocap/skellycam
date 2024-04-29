@@ -1,10 +1,10 @@
 import numpy as np
 
-from skellycam.backend.core_functionality.camera_group.video_recorder.timestamps.timestamp_logger import (
+from skellycam.backend.core.video_recorder import (
     CameraTimestampLogger,
 )
-from skellycam.backend.models.cameras.camera_id import CameraId
-from skellycam.backend.models.cameras.frames.frame_payload import FramePayload
+from skellycam.backend.core.device_detection.camera_id import CameraId
+from skellycam.backend.models import FramePayload
 
 
 def create_dummy_frame_payload(camera_id):

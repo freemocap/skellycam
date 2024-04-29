@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PySide6.QtCore import QThread
 
-from skellycam.backend.core_functionality.device_detection.detect_available_cameras import (
+from skellycam.backend.core.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
 from skellycam.system.default_paths import create_default_recording_folder_path
@@ -170,18 +170,18 @@ class SkellyCamManager(QThread):
             not detected_cameras_response
             or len(detected_cameras_response.detected_cameras.keys()) == 0
         ):
-            logger.warning("No cameras detected!")
+            logger.warning("No core detected!")
             self.main_widget.camera_control_buttons.detect_available_cameras_button.setFocus()
             return
 
         self.main_widget.camera_control_buttons.connect_to_cameras_button.setFocus()
 
         if link_connect_to_cameras:
-            logger.debug("Linking `connect to cameras` request...")
+            logger.debug("Linking `connect to core` request...")
             self._connect_to_cameras()
 
     def _handle_cameras_closed_response(self):
-        logger.debug("Handling cameras closed response")
+        logger.debug("Handling core closed response")
         self.main_widget.camera_control_buttons.close_cameras_button.setEnabled(False)
         self.main_widget.camera_control_buttons.connect_to_cameras_button.hasFocus()
         self.main_widget.record_buttons.start_recording_button.setEnabled(False)

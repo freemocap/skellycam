@@ -4,19 +4,19 @@ import time
 from multiprocessing import Process
 from typing import Tuple
 
-from skellycam.backend.api_server.find_available_port import find_available_port
-from skellycam.backend.api_server.run_uvicorn_server import run_uvicorn_server
+from skellycam.backend.api.utilities.find_available_port import find_available_port
+from skellycam.backend.api.app.app_factory import run_uvicorn_server
 
 logger = logging.getLogger(__name__)
 
 
 def run_backend(
-    ready_event: multiprocessing.Event,
-    shutdown_event: multiprocessing.Event,
-    timeout: float,
-    hostname: str = "localhost",
-    preferred_port: int = 8000,
-    fail_if_blocked: bool = False,
+        ready_event: multiprocessing.Event = multiprocessing.Event(),
+        shutdown_event: multiprocessing.Event = multiprocessing.Event(),
+        timeout: float = 30,
+        hostname: str = "localhost",
+        preferred_port: int = 8000,
+        fail_if_blocked: bool = False,
 ) -> Tuple[Process, str, int]:
     logger.info(
         f"Starting backend server with hostname: `{hostname}` on port: `{preferred_port}`"
@@ -30,10 +30,9 @@ def run_backend(
         )
         Exception(f"Preferred port ({preferred_port}) was blocked!")
 
-    # TODO - Name this process
     backend_process = Process(
         target=run_uvicorn_server,
-        args=(hostname, port, ready_event, shutdown_event, timeout),
+        args=(hostname, port),
     )
     backend_process.start()
 
@@ -50,3 +49,12 @@ def run_backend(
         return backend_process, hostname, port
 
     raise Exception(f"Backend server failed to start on port {port} :(")
+
+
+if __name__ == "__main__":
+    from skellycam.system.logging_configuration.configure_logging import configure_logging
+    configure_logging()
+    logger = logging.getLogger(__name__)
+
+    logger.info("Running script app")
+    run_backend()
