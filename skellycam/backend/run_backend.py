@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def run_backend(
         hostname: str = "localhost",
-        preferred_port: int = 8000,
+        preferred_port: int = 8003,
 ) -> Tuple[Process, str, int]:
     port = find_available_port(preferred_port)
 
