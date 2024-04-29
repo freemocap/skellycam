@@ -9,7 +9,7 @@ from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 logger = logging.getLogger(__name__)
 
 cam_ws_router = APIRouter()
-@cam_ws_router.websocket("/ws/connect/{webcam_id}")
+@cam_ws_router.websocket("/ws/connect}")
 async def start_camera_group(websocket: WebSocket, webcam_id: str):
     logger.info(f"Received websocket `connect` request for camera group on webcam {webcam_id}")
     await websocket.accept()

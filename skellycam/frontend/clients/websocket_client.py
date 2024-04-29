@@ -25,7 +25,7 @@ class WebsocketClient(QThread):
 
     def run(self):
         logger.info("WebsocketClient starting...")
-        ws_url = f"ws://{self.hostname}:{self.port}/ws"
+        ws_url = f"ws://{self.hostname}:{self.port}/ws/connect"
         logger.info(f"Connecting to websocket server at: {ws_url}")
         with connect(ws_url) as websocket:
             while self.should_continue:

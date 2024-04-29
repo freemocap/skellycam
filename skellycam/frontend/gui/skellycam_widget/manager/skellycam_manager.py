@@ -1,17 +1,16 @@
 import logging
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PySide6.QtCore import QThread
 
 from skellycam.backend.core.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
-from skellycam.frontend.api_client.api_client import HttpClient
+from skellycam.frontend.clients.http_client import HttpClient
 from skellycam.system.default_paths import create_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.gui.skellycam_widget.manager.helpers.websocket_client import (
+from skellycam.frontend.clients.websocket_client import (
     WebsocketClient,
 )
 
