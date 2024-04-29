@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 
 import uvicorn
 from setproctitle import setproctitle
@@ -15,17 +14,13 @@ def create_app(*args, **kwargs):
     _app = FastApiApp().app
     return _app
 
-def run_uvicorn_server(
-    hostname: str,
-    port: int,
-):
-    setproctitle("backend_server")
-    logger.info(
-        f"Starting uvicorn server on with hostname: `{hostname}` on port: `{port}`"
-    )
-    try:
-        log_api_routes(create_app(), hostname, port)
 
+def run_uvicorn_server(
+        hostname: str,
+        port: int,
+):
+
+    try:
         uvicorn.run(
             "skellycam.backend.api.app.app_factory:create_app",
             host=hostname,

@@ -17,7 +17,7 @@ class CamerasDetectedResponse(BaseModel):
     detected_cameras: DetectedCameras
 
 
-def detect_available_cameras() -> CamerasDetectedResponse:
+async def detect_available_cameras() -> CamerasDetectedResponse:
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
 

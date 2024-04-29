@@ -14,13 +14,14 @@ from skellycam.system.logging_configuration.logger_builder import (
 logging.getLogger("tzlocal").setLevel(logging.WARNING)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 
 logging.addLevelName(LogLevel.TRACE.value, "TRACE")
 logging.addLevelName(LogLevel.SUCCESS.value, "SUCCESS")
 
 
-def configure_logging(level: LogLevel = LogLevel.INFO):
+def configure_logging(level: LogLevel = LogLevel.DEBUG):
     def trace(self, message, *args, **kws):
         if self.isEnabledFor(LogLevel.TRACE.value):
             self._log(LogLevel.TRACE.value, message, args, **kws, stacklevel=2)

@@ -14,7 +14,7 @@ camera_router = APIRouter()
     response_model=CamerasDetectedResponse,
     summary="Detect available cameras",
 )
-def detect_available_cameras_route() -> CamerasDetectedResponse:
+async def detect_cameras_route() -> CamerasDetectedResponse:
     """
     Detect all available cameras connected to the system.
     This will return a list of cameras that the system can attempt to connect to, along with
@@ -22,7 +22,7 @@ def detect_available_cameras_route() -> CamerasDetectedResponse:
     """
     logger.info("Detecting available cameras...")
     try:
-        return detect_available_cameras()
+        return await detect_available_cameras()
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")
         logger.exception(e)

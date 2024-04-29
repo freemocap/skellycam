@@ -15,7 +15,6 @@ class FastApiApp:
     def __init__(
         self,
     ):
-        logger.info("Creating FastAPI app")
         self.app = FastAPI()
 
         cors(self.app)
@@ -24,20 +23,14 @@ class FastApiApp:
         self._customize_swagger_ui()
 
     def _register_routes(self):
-
-        logger.info("Registering routes")
-
         @self.app.get("/")
         async def read_root():
             return RedirectResponse("/docs")
 
         for router in enabled_routers:
-            logger.info(f"Registering router {router}")
             self.app.include_router(router)
 
     def _customize_swagger_ui(self):
-        logger.info(f"Customizing Swagger UI at `/docs` endpoint")
-
         def custom_openapi():
             if self.app.openapi_schema:
                 return self.app.openapi_schema
