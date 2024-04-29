@@ -6,6 +6,7 @@ from typing import Dict, Tuple
 
 from setproctitle import setproctitle
 
+from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.backend.core.timestamps.timestamp_logger_manager import (
     TimestampLoggerManager,
 )
@@ -14,9 +15,7 @@ from skellycam.backend.core.video_recorder.video_recorder import (
 )
 from skellycam.backend.core.camera.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_id import CameraId
-from skellycam.backend.models.cameras.frames.multi_frame_payload import (
-    MultiFramePayload,
-)
+
 
 logger = logging.getLogger(__name__)
 

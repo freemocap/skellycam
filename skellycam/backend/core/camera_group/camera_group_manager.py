@@ -1,7 +1,6 @@
 import logging
-import threading
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Awaitable, Coroutine
 
 from skellycam.backend.core.camera_group.camera_group import (
     CameraGroup,
@@ -10,21 +9,23 @@ from skellycam.backend.core.frames.incoming_frame_wrangler import (
     IncomingFrameWrangler,
 )
 
-if TYPE_CHECKING:
-    from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
-    from skellycam.backend.core.camera.config.camera_config import CameraConfigs
+from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
+from skellycam.backend.core.camera.config.camera_config import CameraConfigs, DEFAULT_CAMERA_CONFIGS
 
 logger = logging.getLogger(__name__)
 logging.getLogger(__name__).setLevel(5)
 
 
-class CameraGroupManager(threading.Thread):
-    def __init__(self, camera_configs: CameraConfigs) -> None:
+class CameraGroupManager:
+    def __init__(self, websocket_send_multiframe, websocket_send_message) -> None:
         super().__init__()
-        self.daemon = True
-        self._camera_configs = camera_configs
+        self._websocket_send_multiframe: Awaitable = websocket_send_multiframe
+        self._websocket_send_message: Awaitable = websocket_send_message
+        self._camera_configs: CameraConfigs = DEFAULT_CAMERA_CONFIGS
 
-        self._camera_group = CameraGroup(camera_configs=self._camera_configs)
+        self._camera_group: CameraGroup = CameraGroup(
+            camera_configs=self._camera_configs,
+        )
 
         self._incoming_frame_wrangler: IncomingFrameWrangler = IncomingFrameWrangler(
             camera_configs=self._camera_configs,
@@ -49,8 +50,8 @@ class CameraGroupManager(threading.Thread):
     def get_latest_frames(self) -> MultiFramePayload:
         return self._incoming_frame_wrangler.latest_frontend_payload
 
-    def run(self):
-        self._camera_group.start()
+    async def run(self):
+        await self._camera_group.start()
         while self._camera_group.any_capturing:
             new_frames = self._camera_group.get_new_frames()
             if len(new_frames) > 0:
@@ -70,3 +71,10 @@ class CameraGroupManager(threading.Thread):
         logger.debug(f"Updating camera configs to \n{camera_configs}")
         self._camera_configs = camera_configs
         self._camera_group.update_configs(camera_configs=camera_configs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._camera_group.close()
+        self.close()

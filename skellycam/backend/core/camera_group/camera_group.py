@@ -38,7 +38,7 @@ class CameraGroup:
                 return True
         return False
 
-    def start(self):
+    async def start(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
         :return:
@@ -47,7 +47,7 @@ class CameraGroup:
 
         self._strategy_class.start_capture()
 
-        self._wait_for_cameras_to_start()
+        await self._wait_for_cameras_to_start()
 
     def get_new_frames(self) -> List[FramePayload]:
         return self._strategy_class.get_new_frames()
@@ -57,7 +57,7 @@ class CameraGroup:
         self._camera_configs = camera_configs
         self._strategy_class.update_camera_configs(camera_configs)
 
-    def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
+    async def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
         logger.debug(f"Waiting for camera {self._camera_configs.keys()} to start")
 
         while (

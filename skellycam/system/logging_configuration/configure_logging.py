@@ -15,7 +15,7 @@ logging.getLogger("tzlocal").setLevel(logging.WARNING)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
-
+logging.getLogger("websockets").setLevel(logging.INFO)
 
 
 logging.addLevelName(LogLevel.TRACE.value, "TRACE")

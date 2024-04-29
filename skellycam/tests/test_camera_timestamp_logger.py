@@ -4,7 +4,7 @@ from skellycam.backend.core.video_recorder import (
     CameraTimestampLogger,
 )
 from skellycam.backend.core.device_detection.camera_id import CameraId
-from skellycam.backend.models import FramePayload
+from skellycam.backend.core.frames.frame_payload import FramePayload
 
 
 def create_dummy_frame_payload(camera_id):
