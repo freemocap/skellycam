@@ -1,10 +1,8 @@
 import logging
-import multiprocessing
-import time
 from multiprocessing import Process
 from typing import Tuple
 
-from skellycam.backend.api.utilities.find_available_port import find_available_port
+from skellycam.backend.api.app.find_available_port import find_available_port
 from skellycam.backend.api.app.server import run_uvicorn_server
 
 logger = logging.getLogger(__name__)

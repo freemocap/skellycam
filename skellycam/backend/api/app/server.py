@@ -1,9 +1,6 @@
 import logging
 
 import uvicorn
-from setproctitle import setproctitle
-
-from skellycam.backend.api.utilities.log_api_routes import log_api_routes
 
 logger = logging.getLogger(__name__)
 

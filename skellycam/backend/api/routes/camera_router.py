@@ -54,12 +54,12 @@ async def close_camera_connections():
     return {"message": "Camera connections closed"}
 
 
-@camera_router.get("/show",
-                   summary="Show camera views in cv2 windows")
-async def show_camera_windows():
-    global controller
-    if not controller.connected:
-        return {"message": "No camera connections to show"}
-    logger.info("Showing camera windows...")
-    controller.show_camera_windows()
-    return {"message": "Camera viewer started"}
+# @camera_router.get("/show",
+#                    summary="Show camera views in cv2 windows")
+# async def show_camera_windows():
+#     global controller
+#     if not controller.connected:
+#         return {"message": "No camera connections to show"}
+#     logger.info("Showing camera windows...")
+#     controller.show_camera_windows()
+#     return {"message": "Camera viewer started"}
