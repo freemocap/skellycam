@@ -94,7 +94,6 @@ class IncomingFrameWrangler:
     async def handle_new_frames(self, new_frames: List[FramePayload]):
         if not self._previous_multi_frame_payload.full:
             for frame in new_frames:
-                await self.send_frame_down_websocket(frame)
                 self._previous_multi_frame_payload.add_frame(frame=frame)
                 if not self._previous_multi_frame_payload.full:
                     return
@@ -102,7 +101,7 @@ class IncomingFrameWrangler:
         for frame in new_frames:
             self._current_multi_frame_payload.add_frame(frame=frame)
 
-        self._yeet_if_ready()
+        await self._yeet_if_ready()
     async def send_frame_down_websocket(self, frame:FramePayload):
         image: np.ndarray = frame.get_image()
         success, image_jpg = cv2.imencode(".jpg", image)
@@ -113,7 +112,7 @@ class IncomingFrameWrangler:
                 f"Sending image to frontend of size {len(image_jpg.tobytes())} res {image.shape}...")
             await self._websocket.send_bytes(image_jpg.tobytes())
 
-    def _yeet_if_ready(self):
+    async def _yeet_if_ready(self):
         time_since_oldest_frame = (
             time.perf_counter_ns()
             - self._current_multi_frame_payload.oldest_timestamp_ns
@@ -122,7 +121,9 @@ class IncomingFrameWrangler:
 
         if frame_timeout or self._current_multi_frame_payload.full:
             self._backfill_missing_with_previous_frame()
-            self._set_new_frontend_payload()
+            # self._set_new_frontend_payload()
+            await self.send_frame_down_websocket()
+
 
             if self._is_recording:
                 self._multi_frame_queue.put(self._current_multi_frame_payload)
