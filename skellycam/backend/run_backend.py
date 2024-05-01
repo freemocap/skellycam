@@ -3,7 +3,7 @@ from multiprocessing import Process
 from typing import Tuple
 
 from skellycam.backend.api.app.find_available_port import find_available_port
-from skellycam.backend.api.app.server import run_uvicorn_server
+from skellycam.backend.api.app.run_server import run_uvicorn_server
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +11,13 @@ logger = logging.getLogger(__name__)
 def run_backend(
         hostname: str = "localhost",
         preferred_port: int = 8003,
+        fail_if_port_unavailable: bool = True,
 ) -> Tuple[Process, str, int]:
+
     port = find_available_port(preferred_port)
+
+    if fail_if_port_unavailable and port != preferred_port:
+        raise Exception(f"Port {preferred_port} is not available")
 
     backend_process = Process(
         target=run_uvicorn_server,

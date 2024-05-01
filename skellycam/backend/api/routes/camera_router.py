@@ -2,14 +2,12 @@ import logging
 
 from fastapi import APIRouter
 
-from skellycam.backend.api.models.connect import CamerasConnectedResponse
-from skellycam.backend.core.controller import get_or_create_controller, reset_controller
 from skellycam.backend.core.device_detection.detect_available_cameras import CamerasDetectedResponse
 
 logger = logging.getLogger(__name__)
 
 camera_router = APIRouter()
-controller = get_or_create_controller()
+# controller = get_or_create_controller()
 
 
 @camera_router.get(
@@ -24,7 +22,8 @@ async def detect_cameras_route() -> CamerasDetectedResponse:
     global controller
     logger.info("Detecting available cameras...")
     try:
-        return await controller.detect()
+        # return await controller.detect()
+        return {"message": "Cameras detected"}
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")
         logger.exception(e)
@@ -32,26 +31,16 @@ async def detect_cameras_route() -> CamerasDetectedResponse:
 
 
 
-@camera_router.get("/reset",
-                   summary="Reset the backend controller",
-                   description="Reset the backend controller, closing all camera connections and processes")
-async def reset_controller_route():
-    global controller
-    logger.info("Resetting the controller...")
-    await reset_controller()
-    controller = get_or_create_controller()
-    return {"message": "Controller reset"}
 
-
-@camera_router.get("/close",
-                   summary="Close camera connections")
-async def close_camera_connections():
-    global controller
-    if not controller.connected:
-        return {"message": "No camera connections to close"}
-    logger.info("Closing camera connections...")
-    await controller.close()
-    return {"message": "Camera connections closed"}
+# @camera_router.get("/close",
+#                    summary="Close camera connections")
+# async def close_camera_connections():
+#     global controller
+#     if not controller.connected:
+#         return {"message": "No camera connections to close"}
+#     logger.info("Closing camera connections...")
+#     await controller.close()
+#     return {"message": "Camera connections closed"}
 
 
 # @camera_router.get("/show",

@@ -2,17 +2,18 @@ import asyncio
 import logging
 import multiprocessing
 import time
-from typing import Dict, List
+from typing import Dict, Coroutine, Callable
 
+from starlette.websockets import WebSocket
+
+from skellycam.backend.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.backend.core.camera_group.strategies.grouped_process_strategy import (
     GroupedProcessStrategy,
 )
 from skellycam.backend.core.camera_group.strategies.strategies import (
     Strategy,
 )
-from skellycam.backend.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.backend.core.device_detection.camera_id import CameraId
-from skellycam.backend.core.frames.frame_payload import FramePayload
 from skellycam.backend.core.frames.frame_wrangler import FrameWrangler
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ class CameraGroup:
     def __init__(
         self,
         camera_configs: Dict[CameraId, CameraConfig],
+        ws_send_bytes: Callable[[bytes], Coroutine],
         strategy: Strategy = Strategy.X_CAM_PER_PROCESS,
     ):
         logger.info(
@@ -30,11 +32,13 @@ class CameraGroup:
         self._strategy_enum = strategy
         self._camera_configs = camera_configs
 
+
         self._create_events()
         self._strategy_class = self._resolve_strategy()
 
         self._frame_wrangler = FrameWrangler(
             camera_configs=self._camera_configs,
+            ws_send_bytes=ws_send_bytes,
         )
 
     @property
@@ -62,8 +66,7 @@ class CameraGroup:
             if len(new_frames) > 0:
                 await self._frame_wrangler.handle_new_frames(new_frames)
             else:
-                await asyncio.sleep(0.001)
-
+                await asyncio.sleep(0.01)
 
     def update_configs(self, camera_configs: CameraConfigs):
         logger.info(f"Updating camera configs to {camera_configs}")

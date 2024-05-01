@@ -4,10 +4,6 @@ import uvicorn
 
 logger = logging.getLogger(__name__)
 
-
-
-
-
 def run_uvicorn_server(
         hostname: str,
         port: int,
