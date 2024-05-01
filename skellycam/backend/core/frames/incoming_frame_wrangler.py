@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import Optional, List
 
 import cv2
+import msgpack
 import numpy as np
 from starlette.websockets import WebSocket
 
@@ -94,7 +95,6 @@ class IncomingFrameWrangler:
     async def handle_new_frames(self, new_frames: List[FramePayload]):
         if not self._previous_multi_frame_payload.full:
             for frame in new_frames:
-                await self.send_frame_down_websocket(frame)
                 self._previous_multi_frame_payload.add_frame(frame=frame)
                 if not self._previous_multi_frame_payload.full:
                     return
@@ -102,8 +102,21 @@ class IncomingFrameWrangler:
         for frame in new_frames:
             self._current_multi_frame_payload.add_frame(frame=frame)
 
-        self._yeet_if_ready()
-    async def send_frame_down_websocket(self, frame:FramePayload):
+        await self._yeet_if_ready()
+
+    async def send_multi_frame_down_websocket(self, multi_frame_payload: MultiFramePayload):
+        websocket_payload = {}
+        for frame in multi_frame_payload.frames.values():
+            image_jpg = await self.frame_to_jpg_bytes(frame)
+            websocket_payload[frame.camera_id] = image_jpg
+
+        # Use MessagePack to serialize the dictionary into binary data
+        websocket_payload_bytes = msgpack.packb(websocket_payload, use_bin_type=True)
+
+        # Send the binary data over the WebSocket
+        await self._websocket.send_bytes(websocket_payload_bytes)
+
+    async def frame_to_jpg_bytes(self, frame:FramePayload) -> bytes:
         image: np.ndarray = frame.get_image()
         success, image_jpg = cv2.imencode(".jpg", image)
         if not success:
@@ -111,9 +124,9 @@ class IncomingFrameWrangler:
         else:
             logger.debug(
                 f"Sending image to frontend of size {len(image_jpg.tobytes())} res {image.shape}...")
-            await self._websocket.send_bytes(image_jpg.tobytes())
+        return image_jpg.tobytes()
 
-    def _yeet_if_ready(self):
+    async def _yeet_if_ready(self):
         time_since_oldest_frame = (
             time.perf_counter_ns()
             - self._current_multi_frame_payload.oldest_timestamp_ns
@@ -122,7 +135,8 @@ class IncomingFrameWrangler:
 
         if frame_timeout or self._current_multi_frame_payload.full:
             self._backfill_missing_with_previous_frame()
-            self._set_new_frontend_payload()
+            # self._set_new_frontend_payload()
+            await self.send_multi_frame_down_websocket(self._current_multi_frame_payload)
 
             if self._is_recording:
                 self._multi_frame_queue.put(self._current_multi_frame_payload)
