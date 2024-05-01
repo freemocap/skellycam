@@ -38,9 +38,6 @@ class Controller:
         self._available_cameras = detected_cameras_response.detected_cameras
         return detected_cameras_response
 
-    def show_camera_windows(self):
-        self._camera_group.frame_wrangler.start_camera_viewer()
-
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")
         self._camera_group.frame_wrangler.start_recording(recording_folder_path)

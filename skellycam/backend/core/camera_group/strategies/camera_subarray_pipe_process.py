@@ -11,37 +11,22 @@ from skellycam.backend.core.camera.camera import (
 )
 from skellycam.backend.core.camera.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_id import CameraId
-from skellycam.backend.core.frames.frame_payload import FramePayload
 from skellycam.backend.core.device_detection.image_rotation_types import RotationTypes
+from skellycam.backend.core.frames.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
 
 class CamSubarrayPipeProcess:
     def __init__(
-        self,
-        subarray_camera_configs: Dict[CameraId, CameraConfig],
-        all_cameras_ready_event: multiprocessing.Event,
-        close_cameras_event: multiprocessing.Event,
-        is_capturing_events_by_subarray_cameras: Dict[CameraId, multiprocessing.Event],
+            self,
+            subarray_camera_configs: Dict[CameraId, CameraConfig],
     ):
         if len(subarray_camera_configs) == 0:
             raise ValueError("CamGroupProcess must have at least one camera")
-        if (
-            not subarray_camera_configs.keys()
-            == is_capturing_events_by_subarray_cameras.keys()
-        ):
-            raise ValueError(
-                "Camera configs and is_capturing_events_by_camera must have the same keys"
-            )
 
         self._subarray_camera_configs = subarray_camera_configs
-        self._all_cameras_ready_event = all_cameras_ready_event
-        self._close_cameras_event = close_cameras_event
 
-        self._is_capturing_events_by_subarray_cameras = (
-            is_capturing_events_by_subarray_cameras
-        )
         self._process: Optional[Process] = None
         self._payload = None
         self._is_capturing = False
@@ -71,15 +56,12 @@ class CamSubarrayPipeProcess:
                 self._subarray_camera_configs,
                 self._pipe_sender_connections,
                 self._camera_config_queue,
-                self._all_cameras_ready_event,
-                self._close_cameras_event,
-                self._is_capturing_events_by_subarray_cameras,
             ),
         )
         self._process.start()
 
     def update_camera_configs(
-        self, camera_config_dictionary: Dict[CameraId, CameraConfig]
+            self, camera_config_dictionary: Dict[CameraId, CameraConfig]
     ):
         for camera_id, camera_config in camera_config_dictionary.items():
             self._subarray_camera_configs[camera_id] = camera_config
@@ -113,7 +95,7 @@ class CamSubarrayPipeProcess:
 
     def _apply_image_rotation(self, new_frames: List[FramePayload]):
         for frame in new_frames:
-            config = self._subarray_camera_configs[frame.camera_id]
+            config = self._subarray_camera_configs[str(frame.camera_id)]
             if config.rotation != RotationTypes.NO_ROTATION:
                 frame.rotate(config.rotation.to_opencv_constant())
 
@@ -127,19 +109,13 @@ class CamSubarrayPipeProcess:
 
     @staticmethod
     def _create_cameras(
-        camera_configs: Dict[CameraId, CameraConfig],
-        pipe_sender_connections,  # multiprocessing.connection.Connection
-        all_cameras_ready_event: multiprocessing.Event,
-        close_cameras_event: multiprocessing.Event,
-        is_capturing_events_by_camera: Dict[CameraId, multiprocessing.Event],
+            camera_configs: Dict[CameraId, CameraConfig],
+            pipe_sender_connections,  # multiprocessing.connection.Connection
     ) -> Dict[CameraId, Camera]:
         cameras = {
             camera_id: Camera(
                 config=camera_config,
                 pipe_sender_connection=pipe_sender_connections[camera_id],
-                is_capturing_event=is_capturing_events_by_camera[camera_id],
-                all_cameras_ready_event=all_cameras_ready_event,
-                close_cameras_event=close_cameras_event,
             )
             for camera_id, camera_config in camera_configs.items()
         }
@@ -147,12 +123,9 @@ class CamSubarrayPipeProcess:
 
     @staticmethod
     def _run_process(
-        camera_configs: Dict[CameraId, CameraConfig],
-        pipe_connections: Dict[str, Any],  # multiprocessing.connection.Connection
-        camera_config_queue: multiprocessing.Queue,
-        all_cameras_ready_event: multiprocessing.Event,
-        close_cameras_event: multiprocessing.Event,
-        is_capturing_events_by_camera: Dict[CameraId, multiprocessing.Event],
+            camera_configs: Dict[CameraId, CameraConfig],
+            pipe_connections: Dict[str, Any],  # multiprocessing.connection.Connection
+            camera_config_queue: multiprocessing.Queue,
     ):
         logger.debug(
             f"Starting frame loop capture in CamGroupProcess for cameras: {camera_configs.keys()}"
@@ -164,16 +137,13 @@ class CamSubarrayPipeProcess:
         cameras = CamSubarrayPipeProcess._create_cameras(
             camera_configs=camera_configs,
             pipe_sender_connections=pipe_connections,
-            all_cameras_ready_event=all_cameras_ready_event,
-            close_cameras_event=close_cameras_event,
-            is_capturing_events_by_camera=is_capturing_events_by_camera,
         )
 
         for camera in cameras.values():
             logger.debug(f"Connecting to camera {camera.camera_id}")
             camera.connect()
 
-        while not close_cameras_event.is_set():
+        while True:
             # logger.trace(f"CamGroupProcess {process_name} is checking for new configs")
             time.sleep(1.0)  # check for new configs every so often
             if camera_config_queue.qsize() > 0:
@@ -181,6 +151,9 @@ class CamSubarrayPipeProcess:
                     "Camera config dict queue has items - updating cameras configs"
                 )
                 camera_configs = camera_config_queue.get()
+                if camera_configs is None:
+                    logger.info("Received None - closing cameras")
+                    break
 
                 for camera_id, camera in cameras.items():
                     camera.update_config(camera_configs[camera_id])

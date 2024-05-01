@@ -100,7 +100,7 @@ class FrameWrangler:
     async def _yeet_if_ready(self):
 
         if self._frame_timeout or self._current_multi_frame_payload.full:
-
+            logger.trace(f"Yeeting multi-frame payload...")
             self._backfill_missing_with_previous_frame()
 
             if self._websocket_send_bytes is not None:

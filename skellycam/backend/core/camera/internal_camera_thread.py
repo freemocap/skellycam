@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import pprint
 import threading
 import time
@@ -10,10 +9,10 @@ import cv2
 from skellycam.backend.core.camera.config.apply_config import (
     apply_camera_configuration,
 )
-from skellycam.backend.core.camera.config.determine_backend import determine_backend
 from skellycam.backend.core.camera.config.camera_config import CameraConfig
+from skellycam.backend.core.camera.config.determine_backend import determine_backend
+from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,27 +27,18 @@ class FailedToOpenCameraException(Exception):
 
 class VideoCaptureThread(threading.Thread):
     def __init__(
-        self,
-        config: CameraConfig,
-        pipe_sender_connection,  # multiprocessing.connection.Connection
-        is_capturing_event: multiprocessing.Event,
-        all_cameras_ready_event: multiprocessing.Event,
-        close_cameras_event: multiprocessing.Event,
+            self,
+            config: CameraConfig,
+            pipe_sender_connection,  # multiprocessing.connection.Connection
     ):
         super().__init__()
         self._config = config
         self._pipe_sender_connection = pipe_sender_connection
-        self._is_capturing_event = is_capturing_event
-        self._all_cameras_ready_event = all_cameras_ready_event
-        self._close_cameras_event = close_cameras_event
 
         self.daemon = True
         self._cv2_video_capture = None
         self._updating_config = False
-
-    @property
-    def is_capturing_frames(self) -> bool:
-        return self._is_capturing_event.is_set()
+        self._should_continue = True
 
     def run(self):
         self._cv2_video_capture = self._create_cv2_capture()
@@ -58,7 +48,6 @@ class VideoCaptureThread(threading.Thread):
         logger.info(
             f"Camera ID: [{self._config.camera_id}] starting frame capture loop..."
         )
-        self._wait_for_all_cameras_ready()
         self._frame_number = -1
         self._frame_loop()  # main frame loop
 
@@ -66,12 +55,11 @@ class VideoCaptureThread(threading.Thread):
         """
         This loop is responsible for capturing frames from the camera and stuffing them into the pipe
         """
-        self._is_capturing_event.set()
         logger.info(
             f"Camera ID: [{self._config.camera_id}] Frame capture loop is running"
         )
         try:
-            while not self._close_cameras_event.is_set():
+            while self._should_continue:
                 if self._updating_config:
                     time.sleep(0.001)
                     continue
@@ -86,7 +74,6 @@ class VideoCaptureThread(threading.Thread):
             logger.exception(e)
             raise e
         finally:
-            self._is_capturing_event.clear()
             self.stop()
             logger.info(
                 f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped"
@@ -125,15 +112,8 @@ class VideoCaptureThread(threading.Thread):
             image=image,
             timestamp_ns=retrieval_timestamp,
             frame_number=self._frame_number,
-            camera_id=self._config.camera_id,
+            camera_id=CameraId(self._config.camera_id),
         )
-
-    def _wait_for_all_cameras_ready(self):
-        logger.debug(f"Waiting for all cameras to be ready...")
-        while not self._all_cameras_ready_event.is_set():
-            time.sleep(0.001)
-            continue
-        logger.debug(f"All cameras ready!")
 
     def _create_cv2_capture(self):
         cap_backend = determine_backend()
@@ -165,13 +145,11 @@ class VideoCaptureThread(threading.Thread):
             )
 
         logger.info(f"Successfully connected to Camera: {self._config.camera_id}!")
-        self._is_capturing_event.set()
         return capture
 
     def stop(self):
         logger.debug("Stopping frame capture loop...")
-        self._is_capturing_event.clear()
-        self._close_cameras_event.set()
+        self._should_continue = False
         if self._cv2_video_capture is not None:
             self._cv2_video_capture.release()
 

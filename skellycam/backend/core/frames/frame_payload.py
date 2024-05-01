@@ -8,6 +8,7 @@ from PySide6.QtGui import QImage
 from pydantic import BaseModel, Field
 from tabulate import tabulate
 
+from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.raw_image import RawImage
 
 FRAME_PAYLOAD_BYTES_HEADER = "bqiq"
@@ -28,7 +29,7 @@ class FramePayload(BaseModel):
         description="The frame number of the frame "
         "(`0` is the first frame pulled from this camera)"
     )
-    camera_id: int = Field(
+    camera_id: CameraId = Field(
         description="The camera ID of the camera that this frame came from,"
         " e.g. `0` if this is the `cap = cv2.VideoCapture(0)` camera"
     )
@@ -51,7 +52,7 @@ class FramePayload(BaseModel):
         image: np.ndarray,
         timestamp_ns: int,
         frame_number: int,
-        camera_id: int,
+        camera_id: CameraId,
         compression: Literal["RAW", "JPEG", "PNG"] = "RAW",
     ):
         return cls(

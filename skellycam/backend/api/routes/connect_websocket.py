@@ -15,7 +15,7 @@ async def listen_for_messages(websocket: WebSocket):
     while True:
         try:
             message = await websocket.receive_text()
-            logger.info(f"\n\nMessage from client:{message}\n\n")
+            logger.info(f"\n\nMessage from client: '{message}'\n\n")
         except Exception as e:
             logger.error(f"Error while receiving message: {e}")
             break
