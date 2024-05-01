@@ -23,6 +23,7 @@ async def detect_available_cameras() -> CamerasDetectedResponse:
 
     cameras = {}
     for camera_number, camera in enumerate(detected_cameras):
+        await _check_camera_available(camera_number)
         camera_device_info = CameraDeviceInfo.from_q_camera_device(
             camera_number=camera_number, camera=camera
         )
@@ -31,7 +32,7 @@ async def detect_available_cameras() -> CamerasDetectedResponse:
     return CamerasDetectedResponse(detected_cameras=cameras)
 
 
-def _check_camera_available(port: int) -> bool:
+async def _check_camera_available(port: int) -> bool:
     logger.debug(f"Checking if camera on port: {port} is available...")
     cap = cv2.VideoCapture(port)
     success, frame = cap.read()

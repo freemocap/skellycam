@@ -5,35 +5,59 @@ from copy import deepcopy
 from typing import Optional, List
 
 import cv2
+import msgpack
 import numpy as np
 from starlette.websockets import WebSocket
 
-from skellycam.backend.core.video_recorder.video_recorder_manager import VideoRecorderProcessManager
 from skellycam.backend.core.camera.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frame_payload import FramePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
+from skellycam.backend.core.video_recorder.video_recorder_manager import VideoRecorderProcessManager
 
 logger = logging.getLogger(__name__)
 
 
-class IncomingFrameWrangler:
+class CameraViewer:
+    def __init__(self, camera_configs: CameraConfigs):
+        self._camera_configs = camera_configs
+        self._windows = {}
+
+    def start(self):
+        for camera_id in self._camera_configs.keys():
+            cv2.namedWindow(self._create_window_name(camera_id), cv2.WINDOW_NORMAL)
+
+    def new_multi_frame(self, multi_frame_payload: MultiFramePayload):
+        for camera_id, frame in multi_frame_payload.frames.items():
+            if frame is not None:
+                cv2.imshow(self._create_window_name(camera_id), frame.get_image())
+        # q to quit
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            cv2.destroyAllWindows()
+            self._windows = {}
+
+    def _create_window_name(self, camera_id: str) -> str:
+        return f"Camera {camera_id} - Press `Q` to quit"
+
+
+class FrameWrangler:
     def __init__(
-        self,
-        camera_configs: CameraConfigs,
-        websocket: WebSocket,
+            self,
+            camera_configs: CameraConfigs,
     ):
         super().__init__()
-        self._websocket = websocket
+        self._websocket: Optional[WebSocket] = None
         self._camera_configs = camera_configs
         self._multi_frame_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderProcessManager(
             camera_configs=self._camera_configs,
             multi_frame_queue=self._multi_frame_queue,
         )
+        self._camera_viewer = CameraViewer(camera_configs=self._camera_configs)
 
         self._latest_frontend_payload: Optional[MultiFramePayload] = None
         self.new_frontend_payload_available: bool = False
         self._is_recording = False
+        self._show_camera_window = False
 
         self._current_multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
@@ -66,9 +90,19 @@ class IncomingFrameWrangler:
         self.new_frontend_payload_available = False
         return self._latest_frontend_payload
 
+    def attach_websocket(self, websocket: WebSocket):
+        self._websocket = websocket
+
     def stop(self):
         logger.debug(f"Stopping incoming frame wrangler loop...")
+        if self.is_recording:
+            self.stop_recording()
         self._multi_frame_queue.put(None)
+
+    def start_camera_viewer(self):
+        logger.debug(f"Starting camera viewer...")
+        self._show_camera_window = True
+        self._camera_viewer.start()
 
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")
@@ -115,7 +149,7 @@ class IncomingFrameWrangler:
         # Send the binary data over the WebSocket
         await self._websocket.send_bytes(websocket_payload_bytes)
 
-    async def frame_to_jpg_bytes(self, frame:FramePayload) -> bytes:
+    async def frame_to_jpg_bytes(self, frame: FramePayload) -> bytes:
         image: np.ndarray = frame.get_image()
         success, image_jpg = cv2.imencode(".jpg", image)
         if not success:
@@ -127,16 +161,18 @@ class IncomingFrameWrangler:
 
     async def _yeet_if_ready(self):
         time_since_oldest_frame = (
-            time.perf_counter_ns()
-            - self._current_multi_frame_payload.oldest_timestamp_ns
-        ) / 1e9
+                                          time.perf_counter_ns()
+                                          - self._current_multi_frame_payload.oldest_timestamp_ns
+                                  ) / 1e9
         frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
 
         if frame_timeout or self._current_multi_frame_payload.full:
             self._backfill_missing_with_previous_frame()
             # self._set_new_frontend_payload()
-            await self.send_multi_frame_down_websocket(self._current_multi_frame_payload)
-
+            if self._websocket is not None:
+                await self.send_multi_frame_down_websocket(self._current_multi_frame_payload)
+            if self._show_camera_window:
+                self._camera_viewer.new_multi_frame(self._current_multi_frame_payload)
             if self._is_recording:
                 self._multi_frame_queue.put(self._current_multi_frame_payload)
 
@@ -158,8 +194,8 @@ class IncomingFrameWrangler:
                 )
 
     def _prepare_frontend_payload(
-        self,
-        scaled_image_long_side: int = 640,
+            self,
+            scaled_image_long_side: int = 640,
     ) -> MultiFramePayload:
         frontend_payload = self._current_multi_frame_payload.copy(deep=True)
 

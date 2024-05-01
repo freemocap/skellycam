@@ -113,3 +113,4 @@ class MultiFramePayload(BaseModel):
             for camera_id, frame in self.frames.items()
         }
         return json.dumps(frames_data)
+

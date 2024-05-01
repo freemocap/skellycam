@@ -1,37 +1,47 @@
 import logging
 
-import uvicorn
-from setproctitle import setproctitle
+from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import RedirectResponse
 
-from skellycam.backend.api.app.fastapi_app import FastApiApp
-from skellycam.backend.api.utilities.log_api_routes import log_api_routes
+import skellycam
+from skellycam.backend.api.middleware.cors import cors
+from skellycam.backend.api.routes import enabled_routers
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(*args, **kwargs):
-    logger.info("Creating FastAPI app")
-    _app = FastApiApp().app
-    return _app
+def register_routes(app: FastAPI):
+    @app.get("/")
+    async def read_root():
+        return RedirectResponse("/docs")
+
+    for router in enabled_routers:
+        app.include_router(router)
 
 
-def run_uvicorn_server(
-        hostname: str,
-        port: int,
-):
-
-    try:
-        uvicorn.run(
-            "skellycam.backend.api.app.app_factory:create_app",
-            host=hostname,
-            port=port,
-            log_level="info",
-            reload=True,
-            factory=True
+def customize_swagger_ui(app: FastAPI):
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        openapi_schema = get_openapi(
+            title="Welcome to the SkellyCam API 💀📸✨",
+            version=skellycam.__version__,
+            description=f"The FastAPI/Uvicorn/Swagger Backend UI for SkellyCam: {skellycam.__description__}",
+            routes=app.routes,
         )
-    except Exception as e:
-        logger.error(f"A fatal error occurred in the uvicorn server: {e}")
-        logger.exception(e)
-        raise e
-    finally:
-        logger.info(f"Shutting down uvicorn server")
+        # TODO - add SkellyCam logo?
+
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
+
+
+def create_app(*args, **kwargs) -> FastAPI:
+    logger.info("Creating FastAPI app")
+    app = FastAPI()
+    cors(app)
+    register_routes(app)
+    customize_swagger_ui(app)
+    return app

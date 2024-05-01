@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import multiprocessing
 import time
@@ -12,6 +13,7 @@ from skellycam.backend.core.camera_group.strategies.strategies import (
 from skellycam.backend.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
+from skellycam.backend.core.frames.frame_wrangler import FrameWrangler
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,14 @@ class CameraGroup:
         self._create_events()
         self._strategy_class = self._resolve_strategy()
 
+        self._frame_wrangler = FrameWrangler(
+            camera_configs=self._camera_configs,
+        )
+
+    @property
+    def frame_wrangler(self) -> FrameWrangler:
+        return self._frame_wrangler
+
     @property
     def any_capturing(self):
         for is_capturing_event in self._is_capturing_events_by_camera.values():
@@ -38,7 +48,7 @@ class CameraGroup:
                 return True
         return False
 
-    async def start(self):
+    async def start_frame_loop(self):
         """
         Creates new processes to manage cameras. Use the `get` API to grab camera frames
         :return:
@@ -46,11 +56,14 @@ class CameraGroup:
         logger.info(f"Starting camera group with strategy {self._strategy_enum}")
 
         self._strategy_class.start_capture()
-
         await self._wait_for_cameras_to_start()
+        while self.any_capturing:
+            new_frames = self._strategy_class.get_new_frames()
+            if len(new_frames) > 0:
+                await self._frame_wrangler.handle_new_frames(new_frames)
+            else:
+                await asyncio.sleep(0.001)
 
-    def get_new_frames(self) -> List[FramePayload]:
-        return self._strategy_class.get_new_frames()
 
     def update_configs(self, camera_configs: CameraConfigs):
         logger.info(f"Updating camera configs to {camera_configs}")
@@ -87,6 +100,7 @@ class CameraGroup:
     def close(self):
         logger.debug("Closing camera group")
         self._close_cameras_event.set()
+        self._frame_wrangler.stop()
         while self.any_capturing:
             logger.trace("Waiting for cameras to stop capturing")
             time.sleep(0.1)

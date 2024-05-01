@@ -5,7 +5,7 @@ from multiprocessing import Process
 from typing import Tuple
 
 from skellycam.backend.api.utilities.find_available_port import find_available_port
-from skellycam.backend.api.app.app_factory import run_uvicorn_server
+from skellycam.backend.api.app.server import run_uvicorn_server
 
 logger = logging.getLogger(__name__)
 
