@@ -50,7 +50,7 @@ class CamSubarrayPipeProcess:
         logger.info(f"Starting capture `Process` for {self.camera_ids}")
 
         self._process = Process(
-            name=f"Cameras {self.camera_ids}",
+            name=f"Cameras {list(self._subarray_camera_configs.keys())}",
             target=CamSubarrayPipeProcess._run_process,
             args=(
                 self._subarray_camera_configs,
@@ -60,17 +60,28 @@ class CamSubarrayPipeProcess:
         )
         self._process.start()
 
+    def stop_capture(self):
+        """
+        Stop capturing frames. Only return if the underlying process is fully stopped.
+        :return:
+        """
+        logger.info(f"Stopping capture `Process` for {self.camera_ids}")
+
+        self._camera_config_queue.put(None)
+        self._process.join()
+        logger.info(f"Capture `Process` for {self.camera_ids} has stopped")
+
     def update_camera_configs(
             self, camera_config_dictionary: Dict[CameraId, CameraConfig]
     ):
         for camera_id, camera_config in camera_config_dictionary.items():
-            self._subarray_camera_configs[camera_id] = camera_config
+            self._subarray_camera_configs[CameraId(camera_id)] = camera_config
         self._camera_config_queue.put(camera_config_dictionary)
 
-    def get_new_frames_by_camera_id(self, camera_id) -> List[FramePayload]:
+    def get_new_frames_by_camera_id(self, camera_id: CameraId) -> List[FramePayload]:
         new_frames = []
         try:
-            if camera_id not in self._pipe_receiver_connections:
+            if camera_id not in self._pipe_receiver_connections.keys():
                 raise ValueError(
                     f"Camera {camera_id} not in pipes: {self._pipe_receiver_connections.keys()}"
                 )
@@ -79,8 +90,8 @@ class CamSubarrayPipeProcess:
 
             while pipe_receiver_connection.poll():
                 # logger.trace(f"Camera {camera_id} has a new frame!")
-                frame_bytes = pipe_receiver_connection.recv_bytes()
-                new_frames.append(FramePayload.from_bytes(frame_bytes))
+                frame_msgpack = pipe_receiver_connection.recv_bytes()
+                new_frames.append(FramePayload.from_msgpack(frame_msgpack))
 
             if len(new_frames) > 0:
                 self._apply_image_rotation(new_frames)
@@ -95,17 +106,17 @@ class CamSubarrayPipeProcess:
 
     def _apply_image_rotation(self, new_frames: List[FramePayload]):
         for frame in new_frames:
-            config = self._subarray_camera_configs[str(frame.camera_id)]
+            config = self._subarray_camera_configs[CameraId(frame.camera_id)]
             if config.rotation != RotationTypes.NO_ROTATION:
                 frame.rotate(config.rotation.to_opencv_constant())
 
     def _create_pipes(self):
         self._pipe_receiver_connections = {}
         self._pipe_sender_connections = {}
-        for camera_id in self.camera_ids:
+        for camera_id in list(self._subarray_camera_configs.keys()):
             receiver_connection, sender_connection = multiprocessing.Pipe(duplex=False)
-            self._pipe_receiver_connections[camera_id] = receiver_connection
-            self._pipe_sender_connections[camera_id] = sender_connection
+            self._pipe_receiver_connections[CameraId(camera_id)] = receiver_connection
+            self._pipe_sender_connections[CameraId(camera_id)] = sender_connection
 
     @staticmethod
     def _create_cameras(
@@ -113,9 +124,9 @@ class CamSubarrayPipeProcess:
             pipe_sender_connections,  # multiprocessing.connection.Connection
     ) -> Dict[CameraId, Camera]:
         cameras = {
-            camera_id: Camera(
+            CameraId(camera_id): Camera(
                 config=camera_config,
-                pipe_sender_connection=pipe_sender_connections[camera_id],
+                pipe_sender_connection=pipe_sender_connections[CameraId(camera_id)],
             )
             for camera_id, camera_config in camera_configs.items()
         }

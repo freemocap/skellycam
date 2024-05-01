@@ -36,5 +36,5 @@ class MultiFramePayload(BaseModel):
 
     @classmethod
     def from_msgpack(cls, msgpack_bytes: bytes):
-        frames_dict = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
-        return cls(**frames_dict)
+        unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
+        return cls(**unpacked)

@@ -40,7 +40,7 @@ async def start_camera_group(websocket: WebSocket):
 
         except Exception as e:
             logger.error(f"Error while running camera loop: {e}")
-            traceback.print_exc()
+            logger.exception(e)
         finally:
             listener_task.cancel()
             logger.info("Websocket ended")

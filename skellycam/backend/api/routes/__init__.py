@@ -1,5 +1,5 @@
 from skellycam.backend.api.routes.camera_router import camera_router
-from skellycam.backend.api.routes.connect_websocket import cam_ws_router
+from skellycam.backend.api.websocket.websocket_server import cam_ws_router
 from skellycam.backend.api.routes.health import healthcheck_router
 from skellycam.backend.api.routes.startup import startup_router
 

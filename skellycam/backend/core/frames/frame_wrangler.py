@@ -62,7 +62,6 @@ class FrameWrangler:
         logger.debug(f"Stopping incoming frame wrangler loop...")
         if self.is_recording:
             self.stop_recording()
-        self._multi_frame_queue.put(None)
 
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")
@@ -100,11 +99,13 @@ class FrameWrangler:
     async def _yeet_if_ready(self):
 
         if self._frame_timeout or self._current_multi_frame_payload.full:
-            logger.trace(f"Yeeting multi-frame payload...")
+            logger.debug(f"Yeeting multi-frame payload...")
             self._backfill_missing_with_previous_frame()
 
             if self._websocket_send_bytes is not None:
-                await self._pack_and_send_bytes()
+                await self._websocket_send_bytes(
+                    self._current_multi_frame_payload.to_msgpack()
+                )
 
             if self._is_recording:
                 self._multi_frame_queue.put(self._current_multi_frame_payload)
@@ -121,9 +122,6 @@ class FrameWrangler:
         frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
         return frame_timeout
 
-    async def _pack_and_send_bytes(self):
-        websocket_payload_bytes = msgpack.packb(self._current_multi_frame_payload, use_bin_type=True)
-        await self._websocket_send_bytes(websocket_payload_bytes)
 
     def _backfill_missing_with_previous_frame(self):
         if self._current_multi_frame_payload.full:

@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 import cv2
+import msgpack
 
 from skellycam.backend.core.camera.config.apply_config import (
     apply_camera_configuration,
@@ -67,8 +68,8 @@ class VideoCaptureThread(threading.Thread):
                 if frame is None:
                     time.sleep(0.001)
                     continue
-                frame_bytes = frame.to_bytes()
-                self._pipe_sender_connection.send_bytes(frame_bytes)
+                else:
+                    self._pipe_sender_connection.send_bytes(frame.to_msgpack())
         except Exception as e:
             logger.error(f"Error in frame capture loop: {e}")
             logger.exception(e)

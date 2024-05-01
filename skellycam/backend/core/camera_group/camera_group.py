@@ -36,16 +36,12 @@ class CameraGroup:
             ws_send_bytes=ws_send_bytes,
         )
 
+        self._should_continue = True
+
     @property
     def frame_wrangler(self) -> FrameWrangler:
         return self._frame_wrangler
 
-    @property
-    def any_capturing(self):
-        for is_capturing_event in self._is_capturing_events_by_camera.values():
-            if is_capturing_event.is_set():
-                return True
-        return False
 
     async def start_frame_loop(self):
         """
@@ -55,11 +51,8 @@ class CameraGroup:
         logger.info(f"Starting camera group with strategy {self._strategy_enum}")
 
         self._strategy_class.start_capture()
-        await self._wait_for_cameras_to_start()
 
-        logger.success("All cameras started capturing - beginning frame loop")
-
-        while self.any_capturing:
+        while self._should_continue:
             new_frames = self._strategy_class.get_new_frames()
             if len(new_frames) > 0:
                 await self._frame_wrangler.handle_new_frames(new_frames)
@@ -71,23 +64,6 @@ class CameraGroup:
         self._camera_configs = camera_configs
         self._strategy_class.update_camera_configs(camera_configs)
 
-    async def _wait_for_cameras_to_start(self, restart_process_if_it_dies: bool = True):
-        logger.debug(f"Waiting for camera {self._camera_configs.keys()} to start")
-
-        while (
-                not self._all_cameras_ready_event.is_set()
-                and not self._close_cameras_event.is_set()
-        ):
-            time.sleep(1.0)
-            camera_started_check = dict.fromkeys(self._camera_configs.keys(), False)
-
-            for camera_id, event in self._is_capturing_events_by_camera.items():
-                camera_started_check[camera_id] = event.is_set()
-            logger.debug(f"Camera started? {camera_started_check}")
-
-            if all(list(camera_started_check.values())):
-                logger.info(f"All cameras {list(self._camera_configs.keys())} started!")
-                self._all_cameras_ready_event.set()  # start frame capture on all core
 
     def _resolve_strategy(self):
         if self._strategy_enum == Strategy.X_CAM_PER_PROCESS:
@@ -96,7 +72,5 @@ class CameraGroup:
     def close(self):
         logger.debug("Closing camera group")
         self._frame_wrangler.stop()
-        while self.any_capturing:
-            logger.trace("Waiting for cameras to stop capturing")
-            time.sleep(0.1)
+        self._strategy_class.stop_capture()
         logger.info("All cameras have stopped capturing")

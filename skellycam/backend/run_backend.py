@@ -2,6 +2,8 @@ import logging
 from multiprocessing import Process
 from typing import Tuple
 
+from setproctitle import setproctitle
+
 from skellycam.backend.api.app.find_available_port import find_available_port
 from skellycam.backend.api.app.run_server import run_uvicorn_server
 
@@ -33,6 +35,7 @@ def run_backend(
 
 
 if __name__ == "__main__":
-
+    process_name = f"Backend{find_available_port(8003)}"
+    setproctitle(process_name)
     logger.info("Running script app")
     run_backend()

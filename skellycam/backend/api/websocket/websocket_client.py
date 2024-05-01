@@ -2,6 +2,7 @@ import asyncio
 import multiprocessing
 
 import websockets
+from setproctitle import setproctitle
 from tenacity import retry, wait_fixed, stop_after_attempt, RetryError
 
 from skellycam import configure_logging
@@ -21,6 +22,7 @@ async def websocket_client(uri: str):
     async with websockets.connect(uri) as websocket:
         logger.success("Connected to websocket server!")
         await websocket.send("Hello, server!")
+
         while True:
             message = await websocket.recv()
             if isinstance(message, str):
@@ -48,5 +50,7 @@ def start_websocket_client():
 
 
 if __name__ == "__main__":
+    process_name = f"Websocket Client"
+    setproctitle(process_name)
     start_websocket_client()
     logger.info("Done!")

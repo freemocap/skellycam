@@ -33,10 +33,15 @@ class GroupedProcessStrategy:
         for process in self._processes:
             process.start_capture()
 
+    def stop_capture(self):
+        logger.debug(f"Stopping camera capture processes...")
+        for process in self._processes:
+            process.stop_capture()
+
     def get_new_frames(self) -> List[FramePayload]:
         new_frames = []
         for camera_id, process in self._processes_by_camera_id.items():
-            new_frames.extend(process.get_new_frames_by_camera_id(camera_id))
+            new_frames.extend(process.get_new_frames_by_camera_id(CameraId(camera_id)))
         return new_frames
 
     def _create_processes(
@@ -46,7 +51,7 @@ class GroupedProcessStrategy:
             raise ValueError("No cameras were provided")
 
         processes = []
-        if _DEFAULT_CAM_PER_PROCESS == 1:
+        if cameras_per_process == 1:
             for camera_id, config in self._camera_configs.items():
                 processes.append(
                     CamSubarrayPipeProcess(subarray_camera_configs={camera_id: config})
@@ -57,12 +62,10 @@ class GroupedProcessStrategy:
             )
 
             for subarray_configs in camera_config_subarrays:
-                logger.debug(f"Creating process for {subarray_configs.keys()}")
-                for camera_id in subarray_configs.keys():
-                    processes.append(
-                        CamSubarrayPipeProcess(
-                            subarray_camera_configs=subarray_configs,
-                        )
+                processes.append(
+                    CamSubarrayPipeProcess(
+                        subarray_camera_configs=subarray_configs,
+                    )
                 )
 
         processes_by_camera_id = {}
