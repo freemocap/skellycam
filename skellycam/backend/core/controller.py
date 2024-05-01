@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger(__name__).setLevel(5)
 
 
-class CameraGroupManager:
+class Controller:
     def __init__(self, websocket: WebSocket) -> None:
         super().__init__()
 

@@ -5,7 +5,6 @@ from copy import deepcopy
 from typing import Optional, List
 
 import cv2
-import msgpack
 import numpy as np
 from starlette.websockets import WebSocket
 
