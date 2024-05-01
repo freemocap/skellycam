@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import msgpack
 import numpy as np
 from pydantic import BaseModel, Field
@@ -14,7 +12,7 @@ class FramePayload(BaseModel):
     image_data: bytes = Field(
         description="The raw image from `cv2.VideoCapture.read() as bytes`"
     )
-    image_shape: Tuple[int, int, int] = Field("The shape of the image as a tuple of `(height, width, channels)`")
+    image_shape: tuple = Field("The shape of the image as a tuple of `(height, width, channels)`")
 
     timestamp_ns: int = Field(
         description="The timestamp of the frame in nanoseconds from `time.perf_counter_ns()`"
@@ -45,6 +43,11 @@ class FramePayload(BaseModel):
     @property
     def image(self) -> np.ndarray:
         return np.frombuffer(self.image_data, dtype=np.uint8).reshape(self.image_shape)
+
+    @image.setter
+    def image(self, image: np.ndarray):
+        self.image_data = image.tobytes()
+        self.image_shape = image.shape
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.dict(), use_bin_type=True)

@@ -32,7 +32,7 @@ class MultiFramePayload(BaseModel):
         self.frames[frame.camera_id] = frame
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(self, use_bin_type=True)
+        return msgpack.packb(self.dict(), use_bin_type=True)
 
     @classmethod
     def from_msgpack(cls, msgpack_bytes: bytes):

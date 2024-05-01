@@ -35,6 +35,7 @@ async def start_camera_group(websocket: WebSocket):
 
     with Controller(websocket_send_bytes) as controller:
         try:
+            await controller.detect()
             camera_loop = controller.start_camera_group()
             await camera_loop
 

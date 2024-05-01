@@ -20,15 +20,10 @@ class Controller:
         self._camera_configs: Optional[CameraConfigs] = None
         self._camera_group: Optional[CameraGroup] = None
 
-    @property
-    def connected(self) -> bool:
-        return self._camera_group.any_capturing if self._camera_group else False
 
     @property
     def camera_configs(self) -> CameraConfigs:
-        if self._camera_configs is None and self._available_cameras is None:
-            self._camera_configs = DEFAULT_CAMERA_CONFIGS
-        elif self._camera_configs is None:
+        if self._camera_configs is None:
             self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
                                     list(self._available_cameras.keys())}
         return self._camera_configs
@@ -62,8 +57,6 @@ class Controller:
         if self._camera_group:
             self._camera_group.update_configs(camera_configs=camera_configs)
 
-    # def get_latest_frames(self) -> MultiFramePayload:
-    #     return self._camera_group.frame_wrangler.latest_frontend_payload
 
     def __enter__(self):
         logger.debug(f"Entering Controller context manager...")
