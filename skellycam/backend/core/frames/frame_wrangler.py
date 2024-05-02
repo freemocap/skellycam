@@ -9,6 +9,7 @@ import msgpack
 
 from skellycam.backend.core.camera.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frame_payload import FramePayload
+from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.backend.core.video_recorder.video_recorder_manager import VideoRecorderProcessManager
 
@@ -99,13 +100,14 @@ class FrameWrangler:
     async def _yeet_if_ready(self):
 
         if self._frame_timeout or self._current_multi_frame_payload.full:
-            logger.debug(f"Yeeting multi-frame payload...")
             self._backfill_missing_with_previous_frame()
 
             if self._websocket_send_bytes is not None:
-                await self._websocket_send_bytes(
-                    self._current_multi_frame_payload.to_msgpack()
-                )
+                ws_payload = FrontendImagePayload.from_multi_frame_payload(
+                    multi_frame_payload=self._current_multi_frame_payload
+                ).to_msgpack()
+                logger.debug(f"Sending multi-frame payload to websocket server ({len(ws_payload) / 1024}kb)...")
+                await self._websocket_send_bytes(ws_payload)
 
             if self._is_recording:
                 self._multi_frame_queue.put(self._current_multi_frame_payload)
