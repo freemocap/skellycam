@@ -26,8 +26,11 @@ class CameraGroup:
         self._frame_wrangler = FrameWrangler(
             camera_configs=camera_configs,
         )
-
         self._should_continue = True
+
+    @property
+    def cameras_ready(self) -> bool:
+        return self._camera_process_manager.cameras_ready
 
     @property
     def frame_wrangler(self) -> FrameWrangler:
@@ -37,11 +40,13 @@ class CameraGroup:
     def latest_frontend_payload(self) -> FrontendImagePayload:
         return self._frame_wrangler.latest_frontend_payload
 
-    async def start_frame_loop(self):
-        logger.info(f"Starting camera group processes")
+    async def start_cameras(self):
+        logger.info("Starting cameras...")
+        self._camera_process_manager.start_cameras()
+        await self._start_frame_loop()
 
-        self._camera_process_manager.start_capture()
-
+    async def _start_frame_loop(self):
+        logger.info(f"Starting frame loop...")
         while self._should_continue:
             new_frames = self._camera_process_manager.get_new_frames()
             if len(new_frames) > 0:

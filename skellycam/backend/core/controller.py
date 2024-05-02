@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import pprint
 from typing import Optional, Coroutine, Callable
@@ -27,7 +28,19 @@ class Controller:
                                     list(self._available_cameras.keys())}
         return self._camera_configs
 
+    @property
+    def cameras_ready(self) -> bool:
+        if self._camera_group:
+            return self._camera_group.cameras_ready
+        return False
+
+    async def wait_for_cameras_ready(self) -> bool:
+        while not self.cameras_ready:
+            await asyncio.sleep(0.1)
+        return True
+
     async def detect(self):
+        logger.debug(f"Detecting available cameras...")
         detected_cameras_response = await detect_available_cameras()
         self._available_cameras = detected_cameras_response.detected_cameras
         return detected_cameras_response
@@ -48,7 +61,7 @@ class Controller:
     async def start_camera_group(self) -> None:
         logger.debug(f"Starting camera group...")
         self._camera_group = CameraGroup(camera_configs=self.camera_configs)
-        await self._camera_group.start_frame_loop()
+        await self._camera_group.start_cameras()
 
     def close(self):
         logger.debug(f"Stopping camera group thread...")

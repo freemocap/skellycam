@@ -21,7 +21,7 @@ class LoggerBuilder:
     DEFAULT_LOGGING = {"version": 1, "disable_existing_loggers": False}
 
     format_string = (
-        "---------------------------------------| %(asctime)s | %(delta_t)s | %(levelname)s | %(name)s:%(funcName)s():%(lineno)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
+        "---------------------------------------| %(levelname)s | %(name)s:%(funcName)s():%(lineno)s | %(asctime)s | %(delta_t)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
     )
 
     def __init__(self, level: LogLevel):

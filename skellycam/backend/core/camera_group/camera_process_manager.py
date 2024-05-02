@@ -27,7 +27,11 @@ class CameraProcessManager:
         self._camera_configs = camera_configs
         self._camera_processes: Dict[CameraId, CameraProcess] = self._create_processes()
 
-    def start_capture(self):
+    @property
+    def cameras_ready(self) -> bool:
+        return all([process.camera_ready for process in self._camera_processes.values()])
+
+    def start_cameras(self):
         logger.debug(f"Starting camera capture processes...")
         for process in self._camera_processes.values():
             process.start_capture()
@@ -39,8 +43,11 @@ class CameraProcessManager:
 
     def get_new_frames(self) -> List[FramePayload]:
         new_frames = []
+        log_string = "Found new frames: "
         for camera_id, process in self._camera_processes.items():
+            log_string += f"{camera_id}: {len(process.get_new_frames())} "
             new_frames.extend(process.get_new_frames())
+        logger.trace(log_string)
         return new_frames
 
     def _create_processes(self) -> Dict[CameraId, CameraProcess]:

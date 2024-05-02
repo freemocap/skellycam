@@ -28,6 +28,11 @@ class CameraProcess:
         self._process: Optional[Process] = None
         self._communication_queue = multiprocessing.Queue()
         self._receiver, self._sender = multiprocessing.Pipe(duplex=False)
+        self._camera_ready = False
+
+    @property
+    def camera_ready(self) -> bool:
+        return self._camera_ready
 
     @property
     def camera_id(self) -> CameraId:
@@ -38,7 +43,7 @@ class CameraProcess:
 
     def start_capture(self):
         """
-        Start capturing frames. Only return if the underlying process is fully running.
+        Start capturing frames.
         :return:
         """
 
@@ -54,6 +59,16 @@ class CameraProcess:
             ),
         )
         self._process.start()
+        self._wait_for_camera_to_start()
+        logger.info(f"Capture `Process` for {self.camera_id} has started!")
+
+    def _wait_for_camera_to_start(self):
+        while self._communication_queue.empty():
+            time.sleep(0.1)
+        message = self._communication_queue.get()
+        if not message == "ready":
+            raise ValueError(f"Expected 'ready' message, but got {message} instead")
+        self._camera_ready = True
 
     def stop_capture(self):
         """
