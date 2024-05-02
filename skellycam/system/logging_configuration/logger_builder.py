@@ -21,7 +21,7 @@ class LoggerBuilder:
     DEFAULT_LOGGING = {"version": 1, "disable_existing_loggers": False}
 
     format_string = (
-        "|---------------------------------------%(asctime)s | %(delta_t)s | %(levelname)s | %(name)s:%(funcName)s():%(lineno)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n| %(message)s"
+        "---------------------------------------| %(asctime)s | %(delta_t)s | %(levelname)s | %(name)s:%(funcName)s():%(lineno)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
     )
 
     def __init__(self, level: LogLevel):
@@ -78,8 +78,10 @@ class LoggerBuilder:
                 .replace(f"PID:{record.process}:{record.processName}", record.process_colored)
                 .replace(f"TID:{record.thread}:{record.threadName}", record.thread_colored)
             )
-            formatted_record = color_code + formatted_record + "\033[0m"
 
+            formatted_record = formatted_record.replace(record.getMessage(),
+                                                        color_code + record.getMessage() + "\033[0m")
+            formatted_record = color_code + formatted_record + "\033[0m"
             # Output the final colorized and formatted record to the console
             print(formatted_record)
 
