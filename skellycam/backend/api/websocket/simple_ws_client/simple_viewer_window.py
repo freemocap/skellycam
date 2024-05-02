@@ -54,7 +54,7 @@ class SimpleViewerWindow(BaseModel):
             self.frames_received += 1
             image_rgb = self._convert_image(jpeg_image)
 
-            if self._should_draw_frame():
+            if self._should_draw_frame() or True:
                 self.frames_shown += 1
                 self._draw_frame(image_rgb)
 
