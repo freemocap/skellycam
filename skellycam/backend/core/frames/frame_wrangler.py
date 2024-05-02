@@ -2,10 +2,7 @@ import logging
 import multiprocessing
 import time
 from copy import deepcopy
-from typing import Optional, List, Coroutine, Callable
-
-import cv2
-import msgpack
+from typing import List
 
 from skellycam.backend.core.camera.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frame_payload import FramePayload
@@ -20,10 +17,8 @@ class FrameWrangler:
     def __init__(
             self,
             camera_configs: CameraConfigs,
-            ws_send_bytes: Callable[[bytes], Coroutine],
     ):
         super().__init__()
-        self._websocket_send_bytes = ws_send_bytes
         self._camera_configs = camera_configs
         self._multi_frame_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderProcessManager(
@@ -59,6 +54,12 @@ class FrameWrangler:
     def ideal_frame_duration(self):
         return 1 / self.prescribed_framerate
 
+    @property
+    def latest_frontend_payload(self) -> FrontendImagePayload:
+        return FrontendImagePayload.from_multi_frame_payload(
+            multi_frame_payload=self._previous_multi_frame_payload
+        )
+
     def stop(self):
         logger.debug(f"Stopping incoming frame wrangler loop...")
         if self.is_recording:
@@ -93,17 +94,12 @@ class FrameWrangler:
                     return
 
         for frame in new_frames:
-            await self._send_down_websocket(frame)
             self._current_multi_frame_payload.add_frame(frame=frame)
+            if self._current_multi_frame_payload.full:
+                self._new_frontend_payload_available = True
 
         if self._is_recording:
             await self._record_if_ready()
-
-    async def _send_down_websocket(self, frame):
-        if self._websocket_send_bytes is not None:
-            ws_payload = FrontendImagePayload.from_frame_payload(frame=frame).to_msgpack()
-            logger.debug(f"Sending multi-frame payload to websocket server ({len(ws_payload) / 1024}kb)...")
-            await self._websocket_send_bytes(ws_payload)
 
     async def _record_if_ready(self):
 
@@ -122,7 +118,6 @@ class FrameWrangler:
         frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
         return frame_timeout
 
-
     def _backfill_missing_with_previous_frame(self):
         if self._current_multi_frame_payload.full:
             return
@@ -132,4 +127,3 @@ class FrameWrangler:
                 self._current_multi_frame_payload.add_frame(
                     frame=self._previous_multi_frame_payload.frames[camera_id]
                 )
-

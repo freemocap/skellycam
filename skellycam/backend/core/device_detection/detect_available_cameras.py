@@ -17,13 +17,16 @@ class CamerasDetectedResponse(BaseModel):
     detected_cameras: DetectedCameras
 
 
-async def detect_available_cameras() -> CamerasDetectedResponse:
+async def detect_available_cameras(check_if_available:bool=False) -> CamerasDetectedResponse:
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
 
     cameras = {}
     for camera_number, camera in enumerate(detected_cameras):
-        await _check_camera_available(camera_number)
+
+        if check_if_available:
+            await _check_camera_available(camera_number)
+
         camera_device_info = CameraDeviceInfo.from_q_camera_device(
             camera_number=camera_number, camera=camera
         )

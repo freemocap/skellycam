@@ -99,7 +99,7 @@ class SimpleViewerWindow(BaseModel):
 
     def _annotate_image(self, image_rgb: np.ndarray) -> np.ndarray:
         annotation_text = [
-            f"Camera ID: {self.window_name}",
+            f"Camera ID: {self.camera_id}",
             f"Frames Received: {self.frames_received} - Frames Skipped: {self.frames_skipped}",
             f"Viewer FPS: {self.draw_fps:.2f} (Ideal FPS: {self.framerate})",
             f"% Frames Shown: {self.percent_frames_shown:.2f}",
