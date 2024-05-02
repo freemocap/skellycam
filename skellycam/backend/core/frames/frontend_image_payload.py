@@ -12,13 +12,13 @@ from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 
 
 class FrontendImagePayload(BaseModel):
-    jpeg_images: Dict[CameraId, Optional[bytes]]
+    jpeg_images_by_camera: Dict[CameraId, Optional[bytes]]
 
     @classmethod
     def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload):
         images = {camera_id: frame.image for camera_id, frame in multi_frame_payload.frames.items() if frame is not None}
         jpeg_images = {camera_id: cls._image_to_jpeg(image) for camera_id, image in images.items()}
-        return cls(jpeg_images=jpeg_images)
+        return cls(jpeg_images_by_camera=jpeg_images)
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.dict(), use_bin_type=True)
