@@ -44,30 +44,43 @@ class LoggerBuilder:
 
     class ColoredConsoleHandler(logging.StreamHandler):
         COLORS = {
+            # Define color codes for different log levels with ANSI escape codes
             "TRACE": "\033[37m",  # Dark White (grey)
             "DEBUG": "\033[34m",  # Blue
             "INFO": "\033[96m",  # Cyan
             "SUCCESS": "\033[95m",  # Magenta
             "WARNING": "\033[33m",  # Yellow
-            "ERROR": "\033[101m",  # Background Dark Red
+            "ERROR": "\033[30m\033[41m",  # Black text on Red background
         }
 
         def emit(self, record):
-            color_code = self.COLORS.get(record.levelname, "\033[0m")
-            formatted_record = color_code + self.format(record) + "\033[0m"
-
+            """
+            Overrides the emit method to colorize logs according to the level when
+            outputting to the console.
+            """
+            # Apply color to indicate the process ID (PID) first
             pid_color = get_hashed_color(record.process)
+            record.process_colored = pid_color + f"PID:{record.process}:{record.processName}" + "\033[0m"
+
+            # Then apply color to indicate the thread ID (TID)
             tid_color = get_hashed_color(record.thread)
+            record.thread_colored = tid_color + f"TID:{record.thread}:{record.threadName}" + "\033[0m"
 
-            formatted_record = formatted_record.replace(
-                f"PID:{record.process}:{record.processName}",
-                pid_color + f"PID:{record.process}:{record.processName}" + "\033[0m",
-            )
-            formatted_record = formatted_record.replace(
-                f"TID:{record.thread}:{record.threadName}",
-                tid_color + f"TID:{record.thread}:{record.threadName}" + "\033[0m",
-            )
 
+
+            # Use the CustomFormatter to format the record
+            formatted_record = self.format(record)
+
+            # Apply color code to the formatted record except PID and TID
+            color_code = self.COLORS.get(record.levelname, "\033[0m")
+            formatted_record = (
+                formatted_record
+                .replace(f"PID:{record.process}:{record.processName}", record.process_colored)
+                .replace(f"TID:{record.thread}:{record.threadName}", record.thread_colored)
+            )
+            formatted_record = color_code + formatted_record + "\033[0m"
+
+            # Output the final colorized and formatted record to the console
             print(formatted_record)
 
     def build_console_handler(self):
