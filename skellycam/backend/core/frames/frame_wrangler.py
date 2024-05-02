@@ -93,25 +93,23 @@ class FrameWrangler:
                     return
 
         for frame in new_frames:
+            await self._send_down_websocket(frame)
             self._current_multi_frame_payload.add_frame(frame=frame)
 
-        await self._yeet_if_ready()
+        if self._is_recording:
+            await self._record_if_ready()
 
-    async def _yeet_if_ready(self):
+    async def _send_down_websocket(self, frame):
+        if self._websocket_send_bytes is not None:
+            ws_payload = FrontendImagePayload.from_frame_payload(frame=frame).to_msgpack()
+            logger.debug(f"Sending multi-frame payload to websocket server ({len(ws_payload) / 1024}kb)...")
+            await self._websocket_send_bytes(ws_payload)
+
+    async def _record_if_ready(self):
 
         if self._frame_timeout or self._current_multi_frame_payload.full:
             self._backfill_missing_with_previous_frame()
-
-            if self._websocket_send_bytes is not None:
-                ws_payload = FrontendImagePayload.from_multi_frame_payload(
-                    multi_frame_payload=self._current_multi_frame_payload
-                ).to_msgpack()
-                logger.debug(f"Sending multi-frame payload to websocket server ({len(ws_payload) / 1024}kb)...")
-                await self._websocket_send_bytes(ws_payload)
-
-            if self._is_recording:
-                self._multi_frame_queue.put(self._current_multi_frame_payload)
-
+            self._multi_frame_queue.put(self._current_multi_frame_payload)
             self._previous_multi_frame_payload = deepcopy(
                 self._current_multi_frame_payload
             )

@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 from typing import Optional
 
-from skellycam.backend.core.camera.frame_capture_thread import (
+from skellycam.backend.core.camera.capture_thread import (
     FrameCaptureThread,
 )
 from skellycam.backend.core.camera.config.camera_config import CameraConfig

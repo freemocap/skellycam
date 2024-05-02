@@ -19,26 +19,32 @@ MAX_RETRIES = 5
 
 
 @retry(wait=wait_fixed(RETRY_DELAY), stop=stop_after_attempt(MAX_RETRIES), reraise=True)
-async def websocket_client(uri: str, view = True):
+async def websocket_client(uri: str, show_cameras=True):
     logger.info(f"Attempting to connect to websocket server at {uri}...")
-    viewer = SimpleViewer() if view else None
-    async with websockets.connect(uri) as websocket:
-        logger.success("Connected to websocket server!")
-        await websocket.send("Hello, server!")
+    viewer = SimpleViewer() if show_cameras else None
+    try:
+        async with websockets.connect(uri) as websocket:
+            logger.success("Connected to websocket server!")
+            await websocket.send("Hello, server!")
 
-        while True:
-            message = await websocket.recv()
-            if isinstance(message, str):
-                logger.info(f"Received text from server: '{message}'")
-            elif isinstance(message, bytes):
-                logger.debug(f"Received binary data with size: {len(message) / 1024}kb")
-                if view:
-                    if view.should_quit:
-                        logger.info("Viewer quit. Closing connection.")
-                        break
-                    jpeg_images = FrontendImagePayload.from_msgpack(message).jpeg_images_by_camera
-                    viewer.display_images(jpeg_images)
-
+            while True:
+                message = await websocket.recv()
+                if isinstance(message, str):
+                    logger.info(f"Received text from server: '{message}'")
+                elif isinstance(message, bytes):
+                    logger.debug(f"Received binary data with size: {len(message) / 1024}kb")
+                    if show_cameras:
+                        if viewer.should_quit:
+                            logger.info("Viewer quit. Closing connection.")
+                            break
+                        jpeg_images = FrontendImagePayload.from_msgpack(message).jpeg_images_by_camera
+                        viewer.display_images(jpeg_images)
+    except websockets.exceptions.ConnectionClosedError:
+        logger.error("Connection to server closed unexpectedly.")
+        raise
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        raise
 
 
 def run_client(uri: str):
