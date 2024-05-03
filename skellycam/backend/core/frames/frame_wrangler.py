@@ -4,7 +4,7 @@ import time
 from copy import deepcopy
 from typing import List
 
-from skellycam.backend.core.camera.config.camera_config import CameraConfigs
+from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frame_payload import FramePayload
 from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload

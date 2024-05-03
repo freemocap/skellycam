@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple, List, Any, Hashable
 
 import pandas as pd
 
-from skellycam.backend.core.camera.config.camera_config import CameraConfigs
+from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.backend.core.timestamps.timestamp_logger import (

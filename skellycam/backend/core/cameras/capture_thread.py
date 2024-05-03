@@ -6,11 +6,11 @@ from typing import Optional
 
 import cv2
 
-from skellycam.backend.core.camera.config.apply_config import (
+from skellycam.backend.core.cameras.config.apply_config import (
     apply_camera_configuration,
 )
-from skellycam.backend.core.camera.config.camera_config import CameraConfig
-from skellycam.backend.core.camera.config.determine_backend import determine_backend
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig
+from skellycam.backend.core.cameras.config.determine_backend import determine_backend
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
 

@@ -6,7 +6,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMainWindow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
-from skellycam.backend.core.camera.config.camera_config import CameraConfig
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_device_info import CameraDeviceInfo
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.device_detection.image_rotation_types import RotationTypes

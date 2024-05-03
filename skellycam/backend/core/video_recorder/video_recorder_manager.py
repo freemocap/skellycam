@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Optional
 from skellycam.backend.core.video_recorder.video_recorder_process import (
     VideoRecorderProcess,
 )
-from skellycam.backend.core.camera.config.camera_config import CameraConfig
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_id import CameraId
 
 logger = logging.getLogger(__name__)

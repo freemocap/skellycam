@@ -4,7 +4,7 @@ from typing import Optional, Dict
 
 import cv2
 
-from skellycam.backend.core.camera.config.camera_config import CameraConfig
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 from skellycam.backend.core.frames.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)

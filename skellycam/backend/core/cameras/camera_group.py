@@ -2,8 +2,8 @@ import asyncio
 import logging
 from typing import Dict
 
-from skellycam.backend.core.camera.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.backend.core.camera_group.camera_process_manager import (
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.backend.core.cameras.camera_process_manager import (
     CameraProcessManager,
 )
 from skellycam.backend.core.device_detection.camera_id import CameraId

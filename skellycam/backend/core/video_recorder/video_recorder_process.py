@@ -13,7 +13,7 @@ from skellycam.backend.core.timestamps.timestamp_logger_manager import (
 from skellycam.backend.core.video_recorder.video_recorder import (
     VideoRecorder,
 )
-from skellycam.backend.core.camera.config.camera_config import CameraConfig
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_id import CameraId
 
 

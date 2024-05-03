@@ -3,8 +3,8 @@ import logging
 import pprint
 from typing import Optional, Coroutine, Callable
 
-from skellycam.backend.core.camera.config.camera_config import CameraConfigs, CameraConfig
-from skellycam.backend.core.camera_group.camera_group import (
+from skellycam.backend.core.cameras.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.backend.core.cameras.camera_group import (
     CameraGroup,
 )
 from skellycam.backend.core.device_detection.detect_available_cameras import detect_available_cameras, DetectedCameras
@@ -30,13 +30,16 @@ class Controller:
 
     @property
     def cameras_ready(self) -> bool:
-        if self._camera_group:
+        if self._camera_group is not None:
             return self._camera_group.cameras_ready
+        else:
+            logger.trace(f"Camera group not initialized yet...")
         return False
 
     async def wait_for_cameras_ready(self) -> bool:
         while not self.cameras_ready:
-            await asyncio.sleep(0.1)
+            logger.trace(f"Waiting for cameras to be ready...")
+            await asyncio.sleep(1)
         return True
 
     async def detect(self):
@@ -47,7 +50,7 @@ class Controller:
 
     async def send_latest_frames(self):
         ws_payload = self._camera_group.latest_frontend_payload.to_msgpack()
-        logger.trace(f"Sending multi-frame payload to websocket server ({len(ws_payload) / 1024}kb)...")
+        logger.trace(f"Sending multi-frame payload ({len(ws_payload) / 1024}kb)...")
         await self._ws_send_bytes(ws_payload)
 
     def start_recording(self, recording_folder_path: str):
@@ -61,6 +64,7 @@ class Controller:
     async def start_camera_group(self) -> None:
         logger.debug(f"Starting camera group...")
         self._camera_group = CameraGroup(camera_configs=self.camera_configs)
+        logger.debug(f"Camera group created! Starting cameras...")
         await self._camera_group.start_cameras()
 
     def close(self):

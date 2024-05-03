@@ -7,10 +7,10 @@ from typing import List, Optional
 import cv2
 from setproctitle import setproctitle
 
-from skellycam.backend.core.camera.camera import (
+from skellycam.backend.core.cameras.camera import (
     Camera,
 )
-from skellycam.backend.core.camera.config.camera_config import CameraConfig
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.device_detection.image_rotation_types import RotationTypes
 from skellycam.backend.core.frames.frame_payload import FramePayload
@@ -28,11 +28,11 @@ class CameraProcess:
         self._process: Optional[Process] = None
         self._communication_queue = multiprocessing.Queue()
         self._receiver, self._sender = multiprocessing.Pipe(duplex=False)
-        self._camera_ready = False
+        self._camera_ready = multiprocessing.Value("b", False)
 
     @property
     def camera_ready(self) -> bool:
-        return self._camera_ready
+        return self._camera_ready.value
 
     @property
     def camera_id(self) -> CameraId:
@@ -46,7 +46,6 @@ class CameraProcess:
         Start capturing frames.
         :return:
         """
-
         logger.info(f"Starting capture `Process` for {self.camera_id}")
 
         self._process = Process(
@@ -63,12 +62,11 @@ class CameraProcess:
         logger.info(f"Capture `Process` for {self.camera_id} has started!")
 
     def _wait_for_camera_to_start(self):
-        while self._communication_queue.empty():
-            time.sleep(0.1)
-        message = self._communication_queue.get()
-        if not message == "ready":
-            raise ValueError(f"Expected 'ready' message, but got {message} instead")
-        self._camera_ready = True
+        while not self._receiver.poll():
+            logger.info(f"Waiting for camera {self.camera_id} to start...")
+            time.sleep(1)
+        logger.success(f"Camera {self.camera_id} ready!")
+        self._camera_ready.value = True
 
     def stop_capture(self):
         """
@@ -82,18 +80,25 @@ class CameraProcess:
         logger.info(f"Capture `Process` for {self.camera_id} has stopped")
 
     def get_new_frames(self) -> List[FramePayload]:
+
+        if not self.camera_ready:
+            logger.trace(f"Camera {self.camera_id} is not ready yet - returning empty list.")
+            return []
+
+        logger.trace(f"Getting latest frames from camera {self.camera_id}")
         new_frames = []
         try:
             while self._receiver.poll():
                 frame_msgpack = self._receiver.recv_bytes()
-                new_frames.append(FramePayload.from_msgpack(frame_msgpack))
+                frame = FramePayload.from_msgpack(frame_msgpack)
+                new_frames.append(frame)
 
             if len(new_frames) > 0:
                 self._apply_image_rotation(new_frames)
 
         except Exception as e:
             logger.error(
-                f"Problem when grabbing a frame from: Camera {self.camera_id} - {e}"
+                f"Problem when grabbing a frame from: Camera {self.camera_id} - {type(e).__name__} : {e}"
             )
             logger.exception(e)
             raise e
@@ -121,8 +126,8 @@ class CameraProcess:
         camera.connect()
 
         while True:
-            # logger.trace(f"CamGroupProcess {process_name} is checking for new configs")
-            time.sleep(1.0)  # check for new configs every so often
+            time.sleep(1.0)  # check for messages every second
+            logger.trace(f"Checking camera {camera.camera_id} process communication queue...")
             if not communication_queue.empty():
                 message = communication_queue.get()
                 if message is None:

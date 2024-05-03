@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel
 
-from skellycam.backend.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_CONFIGS
+from skellycam.backend.core.cameras.config.camera_config import CameraConfig, DEFAULT_CAMERA_CONFIGS
 from skellycam.backend.core.device_detection.camera_id import CameraId
 
 

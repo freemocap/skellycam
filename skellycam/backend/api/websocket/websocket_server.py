@@ -16,7 +16,7 @@ async def listen_for_client_messages(websocket: WebSocket, controller: Controlle
     while True:
         try:
             message = await websocket.receive_text()
-            logger.info(f"Message from client: '{message}'")
+            logger.trace(f"Message from client: '{message}'")
             if message == LATEST_FRAMES_REQUEST:
                 await controller.send_latest_frames()
         except Exception as e:
@@ -36,15 +36,22 @@ async def start_camera_group(websocket: WebSocket):
 
     async with Controller(websocket_send_bytes) as controller:
         try:
+
+            logger.info("Starting listener task...")
             listener_task = asyncio.create_task(listen_for_client_messages(websocket, controller))
+
             logger.info("Detecting cameras...")
             await controller.detect()
+
             logger.info("Starting camera group...")
             camera_loop = controller.start_camera_group()
-            # logger.info("Waiting for cameras to be ready...")
-            # await controller.wait_for_cameras_ready()
-            # logger.success("Cameras are ready! Sending `cameras_ready` message to client...")
+
+            logger.info("Waiting for cameras to be ready...")
+            await controller.wait_for_cameras_ready()
+
+            logger.success("Cameras are ready! Sending `cameras_ready` message to client...")
             await websocket.send_text(CAMERA_READY_MESSAGE)
+
             logger.info("Waiting for camera loop to finish...")
             await camera_loop
             logger.info("Camera loop finished! Shutting down...")
