@@ -18,7 +18,7 @@ class CamerasDetectedResponse(BaseModel):
     detected_cameras: DetectedCameras
 
 
-async def detect_available_cameras(check_if_available: bool = True) -> CamerasDetectedResponse:
+async def detect_available_cameras(check_if_available: bool = False) -> CamerasDetectedResponse:
     logger.debug("Detecting available cameras...")
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
