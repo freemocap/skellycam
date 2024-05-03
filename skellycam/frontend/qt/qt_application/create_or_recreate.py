@@ -1,7 +1,6 @@
 import logging
-import multiprocessing
 
-from skellycam.frontend.qt_application.skellycam_qt_application import (
+from skellycam.frontend.qt.qt_application.skellycam_qt_application import (
     SkellyCamQtApplication,
 )
 

@@ -1,4 +1,4 @@
-from skellycam.frontend.qt_application.create_or_recreate import (
+from skellycam.frontend.qt.qt_application.create_or_recreate import (
     create_or_recreate_qt_application,
 )
 

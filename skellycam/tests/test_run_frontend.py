@@ -3,7 +3,7 @@ from multiprocessing import Process
 
 from pytest_mock import MockerFixture
 
-from skellycam.frontend.run_frontend import run_frontend
+from skellycam.frontend import run_frontend
 
 
 def test_run_frontend_starts_process(mocker: MockerFixture) -> None:

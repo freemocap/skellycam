@@ -5,26 +5,25 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTabWidget
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.clients.http_client import HttpClient
-from skellycam.frontend.gui.skellycam_widget.manager.skellycam_manager import (
+from skellycam.frontend.qt.gui.skellycam_widget.manager.skellycam_manager import (
     SkellyCamManager,
 )
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import (
+from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.central_widgets.camera_views.camera_grid import (
     CameraGrid,
 )
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.record_buttons import (
+from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.central_widgets.record_buttons import (
     RecordButtons,
 )
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.central_widgets.welcome import (
+from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.central_widgets.welcome import (
     Welcome,
 )
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_control_buttons import (
+from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_control_buttons import (
     CameraControlButtons,
 )
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_parameter_tree import (
+from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_parameter_tree import (
     CameraParameterTree,
 )
-from skellycam.frontend.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import (
+from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.side_panel_widgets.directory_view import (
     DirectoryView,
 )
 

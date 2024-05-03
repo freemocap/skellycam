@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Node Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/msgpack5/4.5.1/msgpack5.min.js"></script>
+</head>
+<body>
+<!--host: <input type="text" id="host" value="localhost"> port: <input type="text" id="port" value="3000">-->
+<!--<button id="connect">Connect!!!</button>-->
+
+<script>
+    const msgpack = msgpack5();
+    const ws = new WebSocket('ws://localhost:8003/ws/connect');
+
+    ws.onopen = function () {
+        console.log('Connected to the server.');
+    };
+
+    ws.onmessage = function (event) {
+        if (typeof event.data === 'string') {
+            console.log('Received string message:', event.data);
+        } else if (event.data instanceof Blob) {
+            const reader = new FileReader();
+            reader.onload = function () {
+                const arrayBuffer = this.result;
+                const uint8Array = new Uint8Array(arrayBuffer);
+                const payload = msgpack.decode(uint8Array);
+                const jpegImagesByCamera = payload.jpeg_images_by_camera;
+
+                Object.keys(jpegImagesByCamera).forEach(cameraId => {
+                        const jpegImage = jpegImagesByCamera[cameraId];
+                        if (jpegImage) {
+                            const image = new Image()
+                            image.onload = () => {
+                                const canvas = document.getElementById(`camera${cameraId}`) || updateCanvasElements(jpegImagesByCamera)
+                                canvas.width = image.width
+                                canvas.height = image.height
+                                const context = canvas.getContext('2d')
+                                context.drawImage(image, 0, 0, canvas.width, canvas.height)
+                                URL.revokeObjectURL(image.src)
+                            }
+                            const blob = new Blob([jpegImage], {type: 'image/jpeg'});
+
+                            const url = URL.createObjectURL(blob)
+                            image.src = url
+                        }
+                    }
+                );
+            }
+            reader.readAsArrayBuffer(event.data);
+        } else {
+            console.error('Received message of unknown type:', event.data);
+        }
+    };
+
+        function updateCanvasElements(jpegImagesByCamera) {
+            const cameras = Object.keys(jpegImagesByCamera);
+            const body = document.body;
+
+            cameras.forEach(cameraId => {
+                if (!document.getElementById(`camera${cameraId}`)) {
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `camera${cameraId}`;
+
+                    body.appendChild(canvas);
+                }
+            });
+        }
+
+        ws.onerror = function (error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function () {
+            console.log('Disconnected from the server.');
+        };
+
+        document.getElementById('connect').addEventListener('click', function () {
+            var host = document.getElementById('host').value;
+            var port = document.getElementById('port').value;
+            console.log('connecting to ' + host + ':' + port);
+        });
+</script>
+</body>
+</html>

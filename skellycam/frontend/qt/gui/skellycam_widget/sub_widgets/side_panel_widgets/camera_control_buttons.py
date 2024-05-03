@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QVBoxLayout, QPushButton, QWidget
 
-from skellycam.frontend.gui.utilities.qt_strings import (
+from skellycam.frontend.qt.gui.utilities.qt_strings import (
     DETECT_AVAILABLE_CAMERAS_BUTTON_TEXT,
     CONNECT_TO_CAMERAS_BUTTON_TEXT,
     CLOSE_CAMERAS_BUTTON_TEXT,

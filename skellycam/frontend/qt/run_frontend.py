@@ -1,8 +1,7 @@
 import logging
-import multiprocessing
 from multiprocessing import Process
 
-from skellycam.frontend.qt_application.run_qt_application import run_qt_application
+from skellycam.frontend.qt.qt_application.run_qt_application import run_qt_application
 
 logger = logging.getLogger(__name__)
 

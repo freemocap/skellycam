@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 def run_client(uri: str):
     try:
         asyncio.run(websocket_client(uri))
-    except RetryError as e:
+    except RetryError:
         logger.error("Failed to connect after multiple retries.")
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        logger.error(f"An error occurred when running the websocket client: {type(e).__name__} - {e}")
 
 
 def start_websocket_client():

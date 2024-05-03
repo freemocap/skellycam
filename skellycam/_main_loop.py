@@ -3,7 +3,7 @@ import multiprocessing
 import time
 
 from skellycam.backend.run_backend import run_backend
-from skellycam.frontend.run_frontend import run_frontend
+from skellycam.frontend import run_frontend
 
 logger = logging.getLogger(__name__)
 

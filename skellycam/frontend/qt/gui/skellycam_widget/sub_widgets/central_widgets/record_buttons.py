@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget
 
-from skellycam.frontend.gui.utilities.qt_strings import (
+from skellycam.frontend.qt.gui.utilities.qt_strings import (
     STOP_RECORDING_BUTTON_TEXT,
     START_RECORDING_BUTTON_TEXT,
 )

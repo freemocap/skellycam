@@ -6,16 +6,16 @@ from PySide6.QtCore import QThread
 from skellycam.backend.core.device_detection.detect_available_cameras import (
     CamerasDetectedResponse,
 )
-from skellycam.frontend.clients.http_client import HttpClient
+from skellycam.frontend.qt.clients.http_client import HttpClient
 from skellycam.system.default_paths import create_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.clients.websocket_client import (
+from skellycam.frontend.qt.clients.websocket_client import (
     WebsocketClient,
 )
 
 if TYPE_CHECKING:
-    from skellycam.frontend import SkellyCamWidget
+    pass
 
 
 class SkellyCamManager(QThread):

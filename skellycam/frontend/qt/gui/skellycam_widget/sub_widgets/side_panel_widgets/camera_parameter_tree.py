@@ -13,7 +13,7 @@ from skellycam.backend.core.device_detection.image_rotation_types import Rotatio
 from skellycam.backend.core.device_detection.video_resolution import VideoResolution
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.gui.utilities.qt_strings import (
+from skellycam.frontend.qt.gui.utilities.qt_strings import (
     COPY_SETTINGS_TO_CAMERAS_STRING,
     USE_THIS_CAMERA_STRING,
 )

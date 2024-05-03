@@ -145,7 +145,7 @@ class FrameCaptureThread(threading.Thread):
         self._frame_number += 1
         return FramePayload.create(
             success=success,
-            image=image,
+            image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
             timestamp_ns=retrieval_timestamp,
             frame_number=self._frame_number,
             camera_id=CameraId(self._config.camera_id),
