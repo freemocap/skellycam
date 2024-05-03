@@ -1,2 +1,3 @@
+
 LATEST_FRAMES_REQUEST = "send_latest_frames"
-CAMERA_READY_MESSAGE = "cameras_ready"
+CAMERAS_NOT_READY_RESPONSE = "cameras_not_ready"

@@ -9,7 +9,6 @@ from skellycam.backend.api.app.find_available_port import find_available_port
 from skellycam.backend.api.app.run_server import run_uvicorn_server
 from skellycam.system.logging_configuration.log_level_enum import LogLevel
 
-configure_logging(level=LogLevel.TRACE)
 logger = logging.getLogger(__name__)
 
 

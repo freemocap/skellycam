@@ -8,7 +8,6 @@ from skellycam import configure_logging
 from skellycam.backend.api.websocket.simple_ws_client.websocket_client import websocket_client
 from skellycam.system.logging_configuration.log_level_enum import LogLevel
 
-configure_logging(level=LogLevel.TRACE)
 import logging
 
 logger = logging.getLogger(__name__)

@@ -22,26 +22,26 @@ logger = logging.getLogger(__name__)
 class CameraProcessManager:
     def __init__(
             self,
-            camera_configs: Dict[CameraId, CameraConfig],
     ):
+        self._camera_configs: CameraConfigs = {}
+        self._camera_processes: Dict[CameraId, CameraProcess] = {}
+
+    def set_camera_configs(self, camera_configs: CameraConfigs):
         self._camera_configs = camera_configs
-        self._camera_processes: Dict[CameraId, CameraProcess] = self._create_processes()
+        self._camera_processes = self._create_processes()
 
-    @property
-    def cameras_running(self) -> bool:
-        return all(list(self._cameras_running_state().values()))
-
-    def _cameras_running_state(self) -> Dict[CameraId, bool]:
-        state = {camera_id: process.camera_ready for camera_id, process in self._camera_processes.items()}
-        logger.trace(f"Cameras ready state: {state}")
-        return state
 
     def start_cameras(self):
+        if len(self._camera_processes) == 0:
+            raise ValueError("No cameras to start!")
+
         logger.debug(f"Starting camera capture processes...")
         for process in self._camera_processes.values():
             process.start_capture()
 
     def stop_capture(self):
+        if len(self._camera_processes) == 0:
+            raise ValueError("No cameras to stop!")
         logger.debug(f"Stopping camera capture processes...")
         for process in self._camera_processes.values():
             process.stop_capture()
@@ -56,6 +56,9 @@ class CameraProcessManager:
         return new_frames
 
     def _create_processes(self) -> Dict[CameraId, CameraProcess]:
+        if len(self._camera_configs) == 0:
+            raise ValueError("No cameras to create processes for!")
+
         logger.debug(f"Creating camera processes...")
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras were provided")

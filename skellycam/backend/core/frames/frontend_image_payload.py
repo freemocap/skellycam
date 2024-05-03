@@ -29,15 +29,6 @@ class FrontendImagePayload(BaseModel):
             jpeg_images[camera_id] = cls._image_to_jpeg(resized_image)
         return cls(jpeg_images_by_camera=jpeg_images)
 
-    @classmethod
-    def from_frame_payload(cls, frame: FramePayload, resize: Optional[float] = 1):
-        if resize is not None and resize != 1.0:
-            resized_image = cv2.resize(frame.image, (0, 0), fx=resize, fy=resize)
-        else:
-            resized_image = frame.image
-        jpeg_images = {frame.camera_id: cls._image_to_jpeg(resized_image)}
-        return cls(jpeg_images_by_camera=jpeg_images)
-
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.dict(), use_bin_type=True)
 

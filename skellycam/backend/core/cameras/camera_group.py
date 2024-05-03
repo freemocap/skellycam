@@ -16,21 +16,15 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
             self,
-            camera_configs: Dict[CameraId, CameraConfig],
     ):
-        logger.info(
-            f"Creating camera group with camera configs {camera_configs}"
-        )
-        self._camera_process_manager = CameraProcessManager(camera_configs=camera_configs)
+        self._camera_process_manager = CameraProcessManager()
 
-        self._frame_wrangler = FrameWrangler(
-            camera_configs=camera_configs,
-        )
+        self._frame_wrangler = FrameWrangler()
         self._should_continue = True
 
-    @property
-    def cameras_running(self) -> bool:
-        return self._camera_process_manager.cameras_ready
+    def set_camera_configs(self, camera_configs: CameraConfigs):
+        self._camera_process_manager.set_camera_configs(camera_configs)
+        self._frame_wrangler.set_camera_configs(camera_configs)
 
     @property
     def frame_wrangler(self) -> FrameWrangler:

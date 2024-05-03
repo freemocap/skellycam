@@ -30,16 +30,3 @@ class MultiFramePayload(BaseModel):
 
     def add_frame(self, frame: FramePayload):
         self.frames[frame.camera_id] = frame
-
-    def to_msgpack(self, jpeg_compression=True) -> bytes:
-
-        for frame in self.frames.values():
-            if frame is not None:
-                frame.to_msgpack(compression)
-
-        return msgpack.packb(self.dict(), use_bin_type=True)
-
-    @classmethod
-    def from_msgpack(cls, msgpack_bytes: bytes):
-        unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
-        return cls(**unpacked)

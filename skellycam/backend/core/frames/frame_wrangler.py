@@ -16,18 +16,21 @@ logger = logging.getLogger(__name__)
 class FrameWrangler:
     def __init__(
             self,
-            camera_configs: CameraConfigs,
     ):
         super().__init__()
-        self._camera_configs = camera_configs
+        self._camera_configs: CameraConfigs = {}
         self._multi_frame_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderProcessManager(
-            camera_configs=self._camera_configs,
             multi_frame_queue=self._multi_frame_queue,
         )
 
         self._is_recording = False
 
+        self._current_multi_frame_payload = MultiFramePayload.create(camera_ids=[])
+        self._previous_multi_frame_payload = MultiFramePayload.create(camera_ids=[])
+
+    def set_camera_configs(self, camera_configs: CameraConfigs):
+        self._camera_configs = camera_configs
         self._current_multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
         )
@@ -41,6 +44,9 @@ class FrameWrangler:
 
     @property
     def prescribed_framerate(self):
+        if len(self._camera_configs) == 0:
+            raise ValueError("No cameras to determine frame rate from!")
+
         all_frame_rates = [
             camera_config.framerate for camera_config in self._camera_configs.values()
         ]
@@ -66,9 +72,13 @@ class FrameWrangler:
             self.stop_recording()
 
     def start_recording(self, recording_folder_path: str):
+        if len(self._camera_configs) == 0:
+            raise ValueError("No cameras to record from!")
+
         logger.debug(f"Starting recording...")
 
         self._video_recorder_manager.start_recording(
+            camera_configs=self._camera_configs,
             start_time_perf_counter_ns_to_unix_mapping=(
                 time.perf_counter_ns(),
                 time.time_ns(),
@@ -79,15 +89,11 @@ class FrameWrangler:
 
     def stop_recording(self):
         logger.debug(f"Stopping recording...")
-        if self._video_recorder_manager is None:
-            raise AssertionError(
-                "Video recorder manager isn't initialized, but `StopRecordingInteraction` was called! This shouldn't happen..."
-            )
         self._is_recording = False
         self._video_recorder_manager.stop_recording()
 
     async def handle_new_frames(self, new_frames: List[FramePayload]):
-        if not self._previous_multi_frame_payload.full:
+        if len(self._camera_configs) > 0 and not self._previous_multi_frame_payload.full:
             for frame in new_frames:
                 self._previous_multi_frame_payload.add_frame(frame=frame)
                 if not self._previous_multi_frame_payload.full:
@@ -95,8 +101,6 @@ class FrameWrangler:
 
         for frame in new_frames:
             self._current_multi_frame_payload.add_frame(frame=frame)
-            if self._current_multi_frame_payload.full:
-                self._new_frontend_payload_available = True
 
         if self._is_recording:
             await self._record_if_ready()

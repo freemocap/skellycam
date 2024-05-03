@@ -16,6 +16,9 @@ class SimpleViewer(BaseModel):
     windows: Dict[CameraId, SimpleViewerWindow] = {}
 
     def display_images(self, jpeg_images: Dict[CameraId, Optional[bytes]]):
+        if len(jpeg_images) == 0:
+            logger.debug("No images received...")
+            return
         try:
             for camera_id, jpeg_image in jpeg_images.items():
                 if not jpeg_image:
