@@ -93,14 +93,11 @@ class FrameWrangler:
         self._video_recorder_manager.stop_recording()
 
     async def handle_new_frames(self, new_frames: List[FramePayload]):
-        if len(self._camera_configs) > 0 and not self._previous_multi_frame_payload.full:
-            for frame in new_frames:
-                self._previous_multi_frame_payload.add_frame(frame=frame)
-                if not self._previous_multi_frame_payload.full:
-                    return
-
         for frame in new_frames:
             self._current_multi_frame_payload.add_frame(frame=frame)
+
+        if self._current_multi_frame_payload.full:
+            self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
 
         if self._is_recording:
             await self._record_if_ready()
@@ -110,9 +107,6 @@ class FrameWrangler:
         if self._frame_timeout or self._current_multi_frame_payload.full:
             self._backfill_missing_with_previous_frame()
             self._multi_frame_queue.put(self._current_multi_frame_payload)
-            self._previous_multi_frame_payload = deepcopy(
-                self._current_multi_frame_payload
-            )
             self._current_multi_frame_payload = MultiFramePayload.create(
                 camera_ids=list(self._camera_configs.keys())
             )

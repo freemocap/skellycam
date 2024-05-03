@@ -20,6 +20,8 @@ class MultiFramePayload(BaseModel):
 
     @property
     def full(self):
+        if len(self.frames) == 0:
+            return False
         return not any([frame is None for frame in self.frames.values()])
 
     @property
