@@ -48,11 +48,8 @@ class CameraProcessManager:
 
     def get_new_frames(self) -> List[FramePayload]:
         new_frames = []
-        log_string = "Found new frames: "
         for camera_id, process in self._camera_processes.items():
-            log_string += f"{camera_id}: {len(process.get_new_frames())} "
             new_frames.extend(process.get_new_frames())
-        logger.trace(log_string)
         return new_frames
 
     def _create_processes(self) -> Dict[CameraId, CameraProcess]:

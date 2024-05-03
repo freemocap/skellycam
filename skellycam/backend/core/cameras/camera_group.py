@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import pprint
-from typing import Dict
+from typing import Dict, Coroutine, Callable
 
 from skellycam.backend.core.cameras.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.backend.core.cameras.camera_process_manager import (
@@ -17,10 +17,11 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
             self,
+            ws_send_bytes: Callable[[bytes], Coroutine],
     ):
         self._camera_process_manager = CameraProcessManager()
 
-        self._frame_wrangler = FrameWrangler()
+        self._frame_wrangler = FrameWrangler(ws_send_bytes=ws_send_bytes)
         self._should_continue = True
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
@@ -31,10 +32,6 @@ class CameraGroup:
     @property
     def frame_wrangler(self) -> FrameWrangler:
         return self._frame_wrangler
-
-    @property
-    def latest_frontend_payload(self) -> FrontendImagePayload:
-        return self._frame_wrangler.latest_frontend_payload
 
     async def start_cameras(self):
         logger.info("Starting cameras...")

@@ -3,7 +3,6 @@ import asyncio
 import websockets
 from tenacity import retry, wait_fixed, stop_after_attempt, before_sleep_log
 
-from skellycam.backend.api.websocket import LATEST_FRAMES_REQUEST
 from skellycam.backend.api.websocket.simple_ws_client.simple_viewer import SimpleViewer
 from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 
@@ -15,16 +14,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def request_frames_from_server(websocket: websockets.WebSocketClientProtocol, interval: float,
-                                     quit_event: asyncio.Event):
-    logger.info(f"Starting frame request loop with interval: {interval}")
-    while not quit_event.is_set():
-        await websocket.send(LATEST_FRAMES_REQUEST)
-        await asyncio.sleep(interval)
-
-    logger.info("`quit_event` set - frame request loop has stopped.")
-
-
 async def listen_for_server_messages(websocket: websockets.WebSocketClientProtocol,
                                      quit_event: asyncio.Event):
     viewer = SimpleViewer()
@@ -33,15 +22,14 @@ async def listen_for_server_messages(websocket: websockets.WebSocketClientProtoc
         if isinstance(message, str):
             logger.info(f"Received text from server: '{message}'")
         elif isinstance(message, bytes):
-
-            logger.trace(f"Received binary data with size: {len(message) / 1024}kb")
             if viewer.should_quit:
                 logger.info("Viewer quit - Closing client connection...")
                 quit_event.set()
                 break
-            jpeg_images = FrontendImagePayload.from_msgpack(message).jpeg_images_by_camera
-            if len(jpeg_images) > 0:
-                viewer.display_images(jpeg_images)
+            frontend_payload = FrontendImagePayload.from_msgpack(message)
+            logger.trace(f"Received ws binary message: {len(message) / 1024}kb with images from Cameras [{frontend_payload.camera_ids}]")
+            if len(frontend_payload) > 0:
+                viewer.display_images(frontend_payload)
     logger.info("`quit_event` set - listener loop has stopped.")
 
 
@@ -54,7 +42,6 @@ async def listen_for_server_messages(websocket: websockets.WebSocketClientProtoc
 async def websocket_client(uri: str, prescribed_framerate: float = 30):
     logger.info(f"Attempting to connect to websocket server at {uri}...")
     viewer = SimpleViewer(prescribed_framerate=prescribed_framerate)
-    frame_request_interval = 1 / viewer.prescribed_framerate
     quit_event = asyncio.Event()
     try:
         async with websockets.connect(uri) as websocket:
@@ -62,9 +49,7 @@ async def websocket_client(uri: str, prescribed_framerate: float = 30):
             await websocket.send("Hello, server!")
             message = await websocket.recv()
             logger.info(f"Initial message from server: '{message}'")
-            listener_task = listen_for_server_messages(websocket, quit_event)
-            frame_request_task = request_frames_from_server(websocket, frame_request_interval, quit_event)
-            await asyncio.gather(listener_task, frame_request_task)
+            await  listen_for_server_messages(websocket, quit_event)
     except ConnectionRefusedError:
         raise  # tenacity will catch this and retry
     except websockets.exceptions.ConnectionClosedOK:

@@ -17,12 +17,9 @@ class Controller:
                  ws_send_bytes: Callable[[bytes], Coroutine],
                  ) -> None:
         super().__init__()
-
-        self._ws_send_bytes = ws_send_bytes
-
         self._available_cameras: DetectedCameras = {}
         self._camera_configs: CameraConfigs = {}
-        self._camera_group = CameraGroup()
+        self._camera_group = CameraGroup(ws_send_bytes=ws_send_bytes)
 
     async def detect(self):
         logger.debug(f"Detecting available cameras...")
@@ -32,14 +29,6 @@ class Controller:
         self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in self._available_cameras.keys()}
         self._camera_group.set_camera_configs(self._camera_configs)
         return detected_cameras_response
-
-    async def send_latest_frames(self):
-        try:
-            ws_payload = self._camera_group.latest_frontend_payload.to_msgpack()
-            logger.trace(f"Sending multi-frame payload ({len(ws_payload) / 1024}kb)...")
-            await self._ws_send_bytes(ws_payload)
-        except Exception as e:
-            logger.error(f"Error while sending latest frames: {type(e).__name__} - {e}")
 
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")

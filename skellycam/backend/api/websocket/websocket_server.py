@@ -1,10 +1,8 @@
 import asyncio
 import logging
-from typing import Coroutine, Callable
 
 from fastapi import APIRouter, WebSocket
 
-from skellycam.backend.api.websocket import LATEST_FRAMES_REQUEST, CAMERAS_NOT_READY_RESPONSE
 from skellycam.backend.core.controller import Controller
 
 logger = logging.getLogger(__name__)
@@ -19,8 +17,6 @@ async def listen_for_client_messages(websocket: WebSocket,
         try:
             message = await websocket.receive_text()
             logger.trace(f"Message from client: '{message}'")
-            if message == LATEST_FRAMES_REQUEST:
-                await controller.send_latest_frames()
 
         except Exception as e:
             logger.error(f"Error while receiving message: {type(e).__name__} - {e}")
@@ -48,15 +44,14 @@ async def websocket_server_connect(websocket: WebSocket):
             await controller.detect()
 
             logger.important("Starting camera group...")
-            camera_group_task = asyncio.create_task(controller.start_camera_group())
+            await controller.start_camera_group()
 
-            logger.important("Websocket server loop started successfully!")
-            await asyncio.gather(listener_task, camera_group_task)
 
         except Exception as e:
-            logger.error(f"Error while running camera loop: {type(e).__name__}- {e}")
             logger.exception(e)
+            logger.error(f"Error while running camera loop: {type(e).__name__}- {e}")
         finally:
             logger.important("Websocket ended")
+            listener_task.cancel()
             await websocket.close()
             logger.important("Websocket closed")

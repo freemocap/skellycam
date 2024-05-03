@@ -15,6 +15,10 @@ from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 class FrontendImagePayload(BaseModel):
     jpeg_images_by_camera: Dict[CameraId, Optional[bytes]]
 
+    @property
+    def camera_ids(self):
+        return list(self.jpeg_images_by_camera.keys())
+
     @classmethod
     def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload, resize: Optional[float] = 1):
         jpeg_images = {}
@@ -46,3 +50,6 @@ class FrontendImagePayload(BaseModel):
         with io.BytesIO() as output:
             image.save(output, format='JPEG')
             return output.getvalue()
+
+    def __len__(self):
+        return len(self.jpeg_images_by_camera)

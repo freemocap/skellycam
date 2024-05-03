@@ -76,7 +76,6 @@ class CameraProcess:
         logger.info(f"Capture `Process` for {self.camera_id} has stopped")
 
     def get_new_frames(self) -> List[FramePayload]:
-        logger.trace(f"Getting latest frames from camera {self.camera_id}")
         new_frames = []
         try:
             while self._receiver.poll():
@@ -92,7 +91,7 @@ class CameraProcess:
                 f"Problem when grabbing a frame from: Camera {self.camera_id} - {type(e).__name__} : {e}"
             )
             logger.exception(e)
-            raise e
+            raise
         return new_frames
 
     def _apply_image_rotation(self, new_frames: List[FramePayload]):
@@ -113,12 +112,11 @@ class CameraProcess:
         process_name = f"Camera {camera_config.camera_id}"
         setproctitle(process_name)
 
-        camera = Camera(config=camera_config, frame_pipe=frame_pipe_sender, )
+        camera = Camera(config=camera_config, frame_pipe=frame_pipe_sender )
         camera.connect()
 
         while True:
             time.sleep(1.0)  # check for messages every second
-            logger.trace(f"Checking camera {camera.camera_id} process communication queue...")
             if not communication_queue.empty():
                 message = communication_queue.get()
                 if message is None:

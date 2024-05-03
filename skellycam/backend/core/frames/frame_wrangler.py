@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import time
 from copy import deepcopy
-from typing import List
+from typing import List, Coroutine, Callable
 
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frame_payload import FramePayload
@@ -16,27 +16,26 @@ logger = logging.getLogger(__name__)
 class FrameWrangler:
     def __init__(
             self,
+            ws_send_bytes: Callable[[bytes], Coroutine],
     ):
         super().__init__()
         self._camera_configs: CameraConfigs = {}
-        self._multi_frame_queue = multiprocessing.Queue()
+        self._multi_frame_recorder_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderProcessManager(
-            multi_frame_queue=self._multi_frame_queue,
+            multi_frame_queue=self._multi_frame_recorder_queue,
         )
-
+        self._ws_send_bytes = ws_send_bytes
         self._is_recording = False
 
-        self._current_multi_frame_payload = MultiFramePayload.create(camera_ids=[])
-        self._previous_multi_frame_payload = MultiFramePayload.create(camera_ids=[])
+        self._current_multi_frame_payload = None
+        self._previous_multi_frame_payload = None
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
         self._camera_configs = camera_configs
         self._current_multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
         )
-        self._previous_multi_frame_payload = MultiFramePayload.create(
-            camera_ids=list(self._camera_configs.keys())
-        )
+
 
     @property
     def is_recording(self):
@@ -59,12 +58,6 @@ class FrameWrangler:
     @property
     def ideal_frame_duration(self):
         return 1 / self.prescribed_framerate
-
-    @property
-    def latest_frontend_payload(self) -> FrontendImagePayload:
-        return FrontendImagePayload.from_multi_frame_payload(
-            multi_frame_payload=self._previous_multi_frame_payload
-        )
 
     def stop(self):
         logger.debug(f"Stopping incoming frame wrangler loop...")
@@ -93,27 +86,34 @@ class FrameWrangler:
         self._video_recorder_manager.stop_recording()
 
     async def handle_new_frames(self, new_frames: List[FramePayload]):
+
         for frame in new_frames:
             self._current_multi_frame_payload.add_frame(frame=frame)
+            if self._frame_timeout or self._current_multi_frame_payload.full:
 
-        if self._current_multi_frame_payload.full:
-            self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
+                await self._handle_full_or_timeout()
 
-        if self._is_recording:
-            await self._record_if_ready()
+    async def _handle_full_or_timeout(self):
+        self._backfill_missing_with_previous_frame()
+        self._multi_frame_recorder_queue.put(self._current_multi_frame_payload)
+        await self._send_frontend_payload()
+        self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
+        self._current_multi_frame_payload = MultiFramePayload.create(
+            camera_ids=list(self._camera_configs.keys())
+        )
 
-    async def _record_if_ready(self):
-
-        if self._frame_timeout or self._current_multi_frame_payload.full:
-            self._backfill_missing_with_previous_frame()
-            self._multi_frame_queue.put(self._current_multi_frame_payload)
-            self._current_multi_frame_payload = MultiFramePayload.create(
-                camera_ids=list(self._camera_configs.keys())
-            )
+    async def _send_frontend_payload(self):
+        frontend_payload = FrontendImagePayload.from_multi_frame_payload(
+            multi_frame_payload=self._current_multi_frame_payload
+        )
+        await self._ws_send_bytes(frontend_payload.to_msgpack())
 
     def _frame_timeout(self) -> bool:
-        time_since_oldest_frame = (time.perf_counter_ns() - self._current_multi_frame_payload.oldest_timestamp_ns) / 1e9
-        frame_timeout = time_since_oldest_frame > self.ideal_frame_duration
+        if self._previous_multi_frame_payload is None:
+            # don't activate the 'timeout' logic until we have at least one full multi-frame payload in the books
+            return False
+        time_since_oldest_frame_sec = (time.perf_counter_ns() - self._current_multi_frame_payload.oldest_timestamp_ns) / 1e9
+        frame_timeout = time_since_oldest_frame_sec > self.ideal_frame_duration
         return frame_timeout
 
     def _backfill_missing_with_previous_frame(self):

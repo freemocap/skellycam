@@ -32,3 +32,6 @@ class MultiFramePayload(BaseModel):
 
     def add_frame(self, frame: FramePayload):
         self.frames[frame.camera_id] = frame
+
+    def __len__(self):
+        return len(self.frames)
