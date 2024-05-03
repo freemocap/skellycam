@@ -40,7 +40,8 @@ async def listen_for_server_messages(websocket: websockets.WebSocketClientProtoc
                 quit_event.set()
                 break
             jpeg_images = FrontendImagePayload.from_msgpack(message).jpeg_images_by_camera
-            viewer.display_images(jpeg_images)
+            if len(jpeg_images) > 0:
+                viewer.display_images(jpeg_images)
     logger.info("`quit_event` set - listener loop has stopped.")
 
 

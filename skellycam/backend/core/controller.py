@@ -28,6 +28,9 @@ class Controller:
         logger.debug(f"Detecting available cameras...")
         detected_cameras_response = await detect_available_cameras()
         self._available_cameras = detected_cameras_response.detected_cameras
+        logger.debug(f"Detected {len(self._available_cameras)} cameras.")
+        self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in self._available_cameras.keys()}
+        self._camera_group.set_camera_configs(self._camera_configs)
         return detected_cameras_response
 
     async def send_latest_frames(self):
@@ -46,10 +49,11 @@ class Controller:
         logger.debug(f"Stopping recording...")
         self._camera_group.frame_wrangler.stop_recording()
 
-    async def start_camera_group(self) -> Coroutine:
-        logger.debug(f"Creating camera group...")
-        logger.debug(f"Camera group created! Starting cameras...")
-        return self._camera_group.start_cameras()
+    async def start_camera_group(self):
+        if len(self._available_cameras) == 0:
+            raise ValueError("No cameras available to start camera group!")
+        logger.debug(f"Starting camera group...")
+        await self._camera_group.start_cameras()
 
     def close(self):
         logger.debug(f"Stopping camera group thread...")

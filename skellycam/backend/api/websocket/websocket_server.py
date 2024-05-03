@@ -48,13 +48,13 @@ async def websocket_server_connect(websocket: WebSocket):
             await controller.detect()
 
             logger.important("Starting camera group...")
-            camera_group_task = controller.start_camera_group()
+            camera_group_task = asyncio.create_task(controller.start_camera_group())
 
             logger.important("Websocket server loop started successfully!")
             await asyncio.gather(listener_task, camera_group_task)
 
         except Exception as e:
-            logger.error(f"Error while running camera loop: {e}")
+            logger.error(f"Error while running camera loop: {type(e).__name__}- {e}")
             logger.exception(e)
         finally:
             logger.important("Websocket ended")

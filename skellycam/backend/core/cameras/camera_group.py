@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import pprint
 from typing import Dict
 
 from skellycam.backend.core.cameras.config.camera_config import CameraConfig, CameraConfigs
@@ -23,6 +24,7 @@ class CameraGroup:
         self._should_continue = True
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
+        logger.debug(f"Setting camera configs to {pprint.pformat(camera_configs, indent=2)}")
         self._camera_process_manager.set_camera_configs(camera_configs)
         self._frame_wrangler.set_camera_configs(camera_configs)
 
