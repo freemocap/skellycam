@@ -20,6 +20,7 @@ logging.getLogger("websockets").setLevel(logging.INFO)
 
 logging.addLevelName(LogLevel.TRACE.value, "TRACE")
 logging.addLevelName(LogLevel.SUCCESS.value, "SUCCESS")
+logging.addLevelName(LogLevel.IMPORTANT.value, "IMPORTANT")
 
 
 def configure_logging(level: LogLevel = LogLevel.DEBUG):
@@ -28,6 +29,12 @@ def configure_logging(level: LogLevel = LogLevel.DEBUG):
             self._log(LogLevel.TRACE.value, message, args, **kws, stacklevel=2)
 
     logging.Logger.trace = trace
+
+    def important(self, message, *args, **kws):
+        if self.isEnabledFor(LogLevel.IMPORTANT.value):
+            self._log(LogLevel.IMPORTANT.value, message, args, **kws, stacklevel=2)
+
+    logging.Logger.important = important
 
     def success(self, message, *args, **kws):
         if self.isEnabledFor(LogLevel.SUCCESS.value):

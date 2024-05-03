@@ -28,11 +28,11 @@ class CameraProcess:
         self._process: Optional[Process] = None
         self._communication_queue = multiprocessing.Queue()
         self._receiver, self._sender = multiprocessing.Pipe(duplex=False)
-        self._camera_ready = multiprocessing.Value("b", False)
+        self._camera_running = multiprocessing.Value("b", False)
 
     @property
-    def camera_ready(self) -> bool:
-        return self._camera_ready.value
+    def camera_running(self) -> bool:
+        return self._camera_running.value
 
     @property
     def camera_id(self) -> CameraId:
@@ -66,7 +66,7 @@ class CameraProcess:
             logger.info(f"Waiting for camera {self.camera_id} to start...")
             time.sleep(1)
         logger.success(f"Camera {self.camera_id} ready!")
-        self._camera_ready.value = True
+        self._camera_running.value = True
 
     def stop_capture(self):
         """
@@ -81,7 +81,7 @@ class CameraProcess:
 
     def get_new_frames(self) -> List[FramePayload]:
 
-        if not self.camera_ready:
+        if not self.camera_running:
             logger.trace(f"Camera {self.camera_id} is not ready yet - returning empty list.")
             return []
 

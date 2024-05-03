@@ -10,7 +10,6 @@ from skellycam.backend.core.cameras.camera_group import (
 from skellycam.backend.core.device_detection.detect_available_cameras import detect_available_cameras, DetectedCameras
 
 logger = logging.getLogger(__name__)
-logging.getLogger(__name__).setLevel(5)
 
 
 class Controller:
@@ -29,15 +28,15 @@ class Controller:
         return self._camera_configs
 
     @property
-    def cameras_ready(self) -> bool:
-        if self._camera_group is not None:
-            return self._camera_group.cameras_ready
-        else:
-            logger.trace(f"Camera group not initialized yet...")
-        return False
+    def cameras_running(self) -> bool:
+        try:
+            return self._camera_group.cameras_running
+        except AttributeError:
+            logger.debug(f"Camera group not yet started...")
+            return False
 
     async def wait_for_cameras_ready(self) -> bool:
-        while not self.cameras_ready:
+        while not self.cameras_running:
             logger.trace(f"Waiting for cameras to be ready...")
             await asyncio.sleep(1)
         return True
@@ -62,7 +61,7 @@ class Controller:
         self._camera_group.frame_wrangler.stop_recording()
 
     async def start_camera_group(self) -> None:
-        logger.debug(f"Starting camera group...")
+        logger.debug(f"Creating camera group...")
         self._camera_group = CameraGroup(camera_configs=self.camera_configs)
         logger.debug(f"Camera group created! Starting cameras...")
         await self._camera_group.start_cameras()

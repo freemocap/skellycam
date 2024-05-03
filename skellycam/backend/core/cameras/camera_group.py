@@ -29,7 +29,7 @@ class CameraGroup:
         self._should_continue = True
 
     @property
-    def cameras_ready(self) -> bool:
+    def cameras_running(self) -> bool:
         return self._camera_process_manager.cameras_ready
 
     @property

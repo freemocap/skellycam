@@ -28,13 +28,13 @@ class CameraProcessManager:
         self._camera_processes: Dict[CameraId, CameraProcess] = self._create_processes()
 
     @property
-    def cameras_ready(self) -> bool:
-        return all(list(self._cameras_ready_state().values()))
+    def cameras_running(self) -> bool:
+        return all(list(self._cameras_running_state().values()))
 
-    def _cameras_ready_state(self) -> Dict[CameraId, bool]:
-        ready_state = {camera_id: process.camera_ready for camera_id, process in self._camera_processes.items()}
-        logger.trace(f"Cameras ready state: {ready_state}")
-        return ready_state
+    def _cameras_running_state(self) -> Dict[CameraId, bool]:
+        state = {camera_id: process.camera_ready for camera_id, process in self._camera_processes.items()}
+        logger.trace(f"Cameras ready state: {state}")
+        return state
 
     def start_cameras(self):
         logger.debug(f"Starting camera capture processes...")

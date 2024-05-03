@@ -25,7 +25,7 @@ async def listen_for_client_messages(websocket: WebSocket, controller: Controlle
 
 
 @cam_ws_router.websocket("/ws/connect")
-async def start_camera_group(websocket: WebSocket):
+async def websocket_server_connect(websocket: WebSocket):
     await websocket.accept()
     logger.success(f"Websocket connection established!")
 
@@ -36,31 +36,27 @@ async def start_camera_group(websocket: WebSocket):
 
     async with Controller(websocket_send_bytes) as controller:
         try:
-
-            logger.info("Starting listener task...")
-            listener_task = asyncio.create_task(listen_for_client_messages(websocket, controller))
-
-            logger.info("Detecting cameras...")
+            logger.important("Detecting cameras...")
             await controller.detect()
 
-            logger.info("Starting camera group...")
-            camera_loop = controller.start_camera_group()
+            logger.important("Starting camera group...")
+            await controller.start_camera_group()
 
-            logger.info("Waiting for cameras to be ready...")
+            logger.important("Waiting for cameras to be ready...")
             await controller.wait_for_cameras_ready()
 
-            logger.success("Cameras are ready! Sending `cameras_ready` message to client...")
+            logger.important("Sending `cameras_ready` message to client...")
             await websocket.send_text(CAMERA_READY_MESSAGE)
 
-            logger.info("Waiting for camera loop to finish...")
-            await camera_loop
-            logger.info("Camera loop finished! Shutting down...")
+            logger.important("Listening for client messages...")
+            await listen_for_client_messages(websocket, controller)
+
 
         except Exception as e:
             logger.error(f"Error while running camera loop: {e}")
             logger.exception(e)
         finally:
             listener_task.cancel()
-            logger.info("Websocket ended")
+            logger.important("Websocket ended")
             await websocket.close()
-            logger.info("Websocket closed")
+            logger.important("Websocket closed")
