@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter
 
 from skellycam.backend.api.models.base_models import BaseResponse
-from skellycam.backend.core.controller.singleton import get_controller
+from skellycam.backend.core.controller.singleton import get_or_create_controller
 from skellycam.backend.core.device_detection.detect_available_cameras import DetectedCameras
 
 logger = logging.getLogger(__name__)
@@ -24,10 +24,11 @@ class CamerasDetectedResponse(BaseResponse):
                 "along with their available resolutions and framerates",
 )
 async def detect_cameras_route() -> CamerasDetectedResponse:
-    controller = get_controller()
-    logger.info("Detecting available cameras...")
+    controller = get_or_create_controller()
+    logger.api("Received `detect` request")
     try:
-        detected_cameras  = await controller.detect()
+        detected_cameras = await controller.detect()
+        logger.success(f"`detect` request handled successfully - detected cameras: [{detected_cameras}]")
         return CamerasDetectedResponse(detected_cameras=detected_cameras)
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")

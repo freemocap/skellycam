@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import Webcam from 'react-webcam';
-import { saveAs } from 'file-saver';
+import {saveAs} from 'file-saver';
 
 const ffmpeg = createFFmpeg({ log: true });
 

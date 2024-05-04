@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 from typing import Optional
 
 from skellycam.backend.core.cameras.capture_thread import (

@@ -1,12 +1,11 @@
 import asyncio
+import logging
 import multiprocessing
 
 from setproctitle import setproctitle
 from tenacity import RetryError
 
 from skellycam.frontend.simple_ws_client.websocket_client import websocket_client
-
-import logging
 
 logger = logging.getLogger(__name__)
 

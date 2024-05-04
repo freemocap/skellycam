@@ -1,11 +1,9 @@
-from typing import Literal, Optional
-
-import cv2
 import msgpack
 import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.backend.core.device_detection.camera_id import CameraId
+
 
 class FramePayload(BaseModel):
     success: bool = Field(description="The `success` part of `success, image = cv2.VideoCapture.read()`")

@@ -1,12 +1,11 @@
 import logging
 import multiprocessing
-from typing import Dict, Tuple, Optional
+from typing import Tuple, Optional
 
+from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.video_recorder.video_recorder_process import (
     VideoRecorderProcess,
 )
-from skellycam.backend.core.cameras.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.backend.core.device_detection.camera_id import CameraId
 
 logger = logging.getLogger(__name__)
 

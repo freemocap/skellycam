@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 DetectedCameras = Dict[CameraId, CameraDeviceInfo]
 
 async def detect_available_cameras(check_if_available: bool = False) -> DetectedCameras:
-    logger.important("Detecting available cameras...")
+    logger.info("Detecting available cameras...")
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
 

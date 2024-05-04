@@ -1,6 +1,5 @@
 from typing import Dict, Optional, List
 
-import msgpack
 from pydantic import BaseModel
 
 from skellycam.backend.core.device_detection.camera_id import CameraId

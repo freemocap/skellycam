@@ -7,15 +7,10 @@ logger = logging.getLogger(__name__)
 CONTROLLER = None
 
 
-def get_controller():
+def get_or_create_controller():
     global CONTROLLER
     if CONTROLLER is None:
-        raise ValueError("Controller not yet initialized!")
-    logger.debug(f"Getting controller: {CONTROLLER}")
+        logger.debug("Creating new controller...")
+        CONTROLLER = Controller()
     return CONTROLLER
 
-
-def set_controller(controller: Controller):
-    global CONTROLLER
-    CONTROLLER = controller
-    logger.debug(f"Set controller to {CONTROLLER}")

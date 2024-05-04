@@ -21,7 +21,7 @@ class LoggerBuilder:
     DEFAULT_LOGGING = {"version": 1, "disable_existing_loggers": False}
 
     format_string = (
-        "---------------------------------------| %(levelname)s | %(name)s:%(funcName)s():%(lineno)s | %(delta_t)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
+        "|--------------------------------------<| %(levelname)s | %(name)s:%(funcName)s():%(lineno)s | %(delta_t)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
     )
     def __init__(self, level: LogLevel):
         self.default_logging_formatter = CustomFormatter(
@@ -49,7 +49,7 @@ class LoggerBuilder:
             "DEBUG": "\033[34m",  # Blue
             "INFO": "\033[96m",  # Cyan
             "SUCCESS": "\033[95m",  # Magenta
-            "IMPORTANT": "\033[92m",  # Green
+            "API": "\033[92m",  # Green
             "WARNING": "\033[33m",  # Yellow
             "ERROR": "\033[30m\033[41m",  # Black text on Red background
         }
@@ -80,7 +80,7 @@ class LoggerBuilder:
             )
 
             formatted_record = formatted_record.replace(record.getMessage(),
-                                                        color_code + record.getMessage() + "\033[0m")
+                                                        color_code + "|> " + record.getMessage() + "\033[0m")
             formatted_record = color_code + formatted_record + "\033[0m"
             # Output the final colorized and formatted record to the console
             print(formatted_record)

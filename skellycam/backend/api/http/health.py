@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+
+from skellycam.backend.run_backend import logger
 
 healthcheck_router = APIRouter()
 
@@ -9,4 +10,5 @@ async def hello():
     A simple endpoint to greet the user of the SkellyCam API.
     This can be used as a sanity check to ensure the API is responding.
     """
-    return {"message": "Hello from the SkellyCam 💀📸✨"}
+    logger.api("Hello requested! Deploying Hello!")
+    return {"message": "Hello from the SkellyCam Backend 💀📸✨"}

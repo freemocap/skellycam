@@ -5,8 +5,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
-import { defineProps } from "vue";
+import {defineProps, onMounted, ref, watch} from "vue";
 
 const props = defineProps({
   camera: Object,

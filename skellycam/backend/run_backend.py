@@ -4,10 +4,8 @@ from typing import Tuple
 
 from setproctitle import setproctitle
 
-from skellycam import configure_logging
 from skellycam.backend.api.app.find_available_port import find_available_port
 from skellycam.backend.api.app.run_server import run_uvicorn_server
-from skellycam.system.logging_configuration.log_level_enum import LogLevel
 
 logger = logging.getLogger(__name__)
 

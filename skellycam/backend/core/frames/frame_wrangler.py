@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import time
 from copy import deepcopy
-from typing import List, Coroutine, Callable
+from typing import List, Coroutine, Callable, Optional
 
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frame_payload import FramePayload
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 class FrameWrangler:
     def __init__(
             self,
-            ws_send_bytes: Callable[[bytes], Coroutine],
     ):
         super().__init__()
         self._camera_configs: CameraConfigs = {}
@@ -24,11 +23,14 @@ class FrameWrangler:
         self._video_recorder_manager = VideoRecorderProcessManager(
             multi_frame_queue=self._multi_frame_recorder_queue,
         )
-        self._ws_send_bytes = ws_send_bytes
+        self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._is_recording = False
 
         self._current_multi_frame_payload = None
         self._previous_multi_frame_payload = None
+
+    def set_ws_send_bytes(self, ws_send_bytes: Callable[[bytes], Coroutine]):
+        self._ws_send_bytes = ws_send_bytes
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
         self._camera_configs = camera_configs
@@ -112,6 +114,8 @@ class FrameWrangler:
         )
 
     async def _send_frontend_payload(self):
+        if self._ws_send_bytes is None:
+            raise ValueError("Websocket `send bytes` function not set!")
         frontend_payload = FrontendImagePayload.from_multi_frame_payload(
             multi_frame_payload=self._current_multi_frame_payload
         )

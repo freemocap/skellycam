@@ -3,7 +3,7 @@ from typing import Dict, List
 from skellycam.backend.core.cameras.camera_process import (
     CameraProcess,
 )
-from skellycam.backend.core.cameras.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
 
@@ -55,8 +55,6 @@ class CameraProcessManager:
     def _create_processes(self) -> Dict[CameraId, CameraProcess]:
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras to create processes for!")
-
-        logger.debug(f"Creating camera processes...")
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras were provided")
         return {camera_id: CameraProcess(config)

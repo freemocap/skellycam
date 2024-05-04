@@ -15,12 +15,13 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
             self,
-            ws_send_bytes: Callable[[bytes], Coroutine],
     ):
         self._camera_process_manager = CameraProcessManager()
-
-        self._frame_wrangler = FrameWrangler(ws_send_bytes=ws_send_bytes)
+        self._frame_wrangler = FrameWrangler()
         self._should_continue = True
+
+    def set_ws_send_bytes(self, ws_send_bytes: Callable[[bytes], Coroutine]):
+        self._frame_wrangler.set_ws_send_bytes(ws_send_bytes)
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {pprint.pformat(camera_configs, indent=2)}")

@@ -1,8 +1,7 @@
 import asyncio
 
-from skellycam.backend.core import detect_cameras
 from skellycam.backend.core import Camera
-
+from skellycam.backend.core import detect_cameras
 from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 
 

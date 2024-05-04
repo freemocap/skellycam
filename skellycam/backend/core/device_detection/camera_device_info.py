@@ -1,3 +1,4 @@
+import logging
 import platform
 from typing import List, Any
 
@@ -6,7 +7,6 @@ from pydantic import BaseModel
 
 from skellycam.backend.core.device_detection.video_resolution import VideoResolution
 
-import logging
 logger = logging.getLogger(__name__)
 
 class DeviceVideoFormat(BaseModel):

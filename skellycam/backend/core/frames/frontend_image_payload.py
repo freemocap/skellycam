@@ -8,7 +8,6 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.backend.core.device_detection.camera_id import CameraId
-from skellycam.backend.core.frames.frame_payload import FramePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 
 

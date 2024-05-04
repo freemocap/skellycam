@@ -2,43 +2,44 @@ import logging
 import pprint
 from typing import Coroutine, Callable, Optional
 
-from skellycam.backend.api.http.detect import CamerasDetectedResponse
 from skellycam.backend.core.cameras.camera_group import (
     CameraGroup,
 )
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.backend.core.device_detection.detect_available_cameras import DetectedCameras, detect_available_cameras
 
-f
-
 logger = logging.getLogger(__name__)
 
 
 class Controller:
     def __init__(self,
-                 ws_send_bytes: Callable[[bytes], Coroutine],
                  ) -> None:
         super().__init__()
         self._available_cameras: DetectedCameras = {}
         self._camera_configs: CameraConfigs = {}
-        self._camera_group = CameraGroup(ws_send_bytes=ws_send_bytes)
+        self._camera_group = CameraGroup()
+
+    def set_ws_send_bytes(self, ws_send_bytes: Callable[[bytes], Coroutine]):
+        self._camera_group.set_ws_send_bytes(ws_send_bytes)
 
     async def detect(self) -> DetectedCameras:
-        logger.debug(f"Detecting available cameras...")
+        logger.info(f"Detecting available cameras...")
         detected_cameras = await detect_available_cameras()
         self._available_cameras = detected_cameras
         logger.debug(f"Detected cameras: {list(detected_cameras.keys())}")
-        self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in self._available_cameras.keys()}
+        self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
+                                self._available_cameras.keys()}
         self._camera_group.set_camera_configs(self._camera_configs)
         return detected_cameras
 
-    async def connect(self, camera_configs: Optional[CameraConfigs] = None) -> CamerasDetectedResponse:
-        logger.debug(f"Connecting to cameras...")
+    async def connect(self, camera_configs: Optional[CameraConfigs] = None):
+        logger.info(f"Connecting to available cameras...")
         if camera_configs:
             self.update_camera_configs(camera_configs)
+        if not self._available_cameras:
+            logger.info(f"Available cameras not set - Executing `detect` method...")
+            await self.detect()
         await self._start_camera_group()
-        return CamerasDetectedResponse(detected_cameras=self._available_cameras)
-
 
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")
