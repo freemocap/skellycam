@@ -6,81 +6,25 @@
     <title>💀📸✨</title>
 </head>
 <body>
-<h2>hi im skelly cam wow </h2>
-<script>
-    const ws = new WebSocket('ws://localhost:8003/ws/connect');
-
-    ws.onopen = function () {
-        console.log('Connected to the server.');
-    };
-
-    ws.onmessage = function (event) {
-        if (typeof event.data === 'string') {
-            console.log('Received string message:', event.data);
-        } else if (event.data instanceof Blob) {
-            const reader = new FileReader();
-            reader.onload = function () {
-                const arrayBuffer = this.result;
-                const uint8Array = new Uint8Array(arrayBuffer);
-                const payload = msgpack.decode(uint8Array);
-                const jpegImagesByCamera = payload.jpeg_images_by_camera;
-
-                Object.keys(jpegImagesByCamera).forEach(cameraId => {
-                        const jpegImage = jpegImagesByCamera[cameraId];
-                        if (jpegImage) {
-                            const image = new Image()
-                            image.onload = () => {
-                                const canvas = document.getElementById(`camera${cameraId}`) || updateCanvasElements(jpegImagesByCamera)
-                                canvas.width = image.width
-                                canvas.height = image.height
-                                const context = canvas.getContext('2d')
-                                context.drawImage(image, 0, 0, canvas.width, canvas.height)
-                                URL.revokeObjectURL(image.src)
-                            }
-                            const blob = new Blob([jpegImage], {type: 'image/jpeg'});
-
-                            const url = URL.createObjectURL(blob)
-                            image.src = url
-                        }
-                    }
-                );
-            }
-            reader.readAsArrayBuffer(event.data);
-        } else {
-            console.error('Received message of unknown type:', event.data);
-        }
-    };
-
-    function updateCanvasElements(jpegImagesByCamera) {
-        const cameras = Object.keys(jpegImagesByCamera);
-        const body = document.body;
-
-        cameras.forEach(cameraId => {
-            if (!document.getElementById(`camera${cameraId}`)) {
-                const canvas = document.createElement('canvas');
-                canvas.id = `camera${cameraId}`;
-
-                body.appendChild(canvas);
-            }
-        });
-    }
-
-    ws.onerror = function (error) {
-        console.error('WebSocket error:', error);
-    };
-
-    ws.onclose = function () {
-        console.log('Disconnected from the server.');
-    };
-
-
-</script>
+<h2>hi im skellycam wow </h2>
+<div id="websocket-status">WebSocket status: Not Connected </div><button class="small-button" id="reset-websocket">Websocket ⟲</button>
+<button id="detect-button">Detect Cameras</button>
+<button id="connect-button">Connect to cameras</button>
+<button id="close-button">Close Cameras</button>
+<button id="hello-button">👋💀</button>
+<div id="logContainer" style="height: 200px; overflow-y: scroll;"></div>
+<script src="main.js"></script>
 </body>
 
 <style>
     canvas {
         border: 3px solid red; /* Change 'red' to any color you want */
     }
+    button {
+        display: block;
+        margin: 10px;
+    }
+
 </style>
 
 </html>

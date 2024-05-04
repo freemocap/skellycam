@@ -60,7 +60,7 @@ class CameraDeviceInfo(BaseModel):
     def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice):
         device_address = camera.id().data().decode("utf-8")
         if platform.system() == 'Windows':
-            logger.debug(f"Windows detected, using camera number as cv2 port")
+            logger.trace(f"Windows detected, using camera number as cv2 port")
             cv2_port = camera_number
         else:
             logger.trace(f"Non-Windows detected, using camera address as cv2 port")

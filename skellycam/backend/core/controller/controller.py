@@ -15,26 +15,27 @@ class Controller:
     def __init__(self,
                  ) -> None:
         super().__init__()
-        self._target_camera_configs: CameraConfigs = {}
+        self._camera_configs: CameraConfigs = {}
         self._available_cameras: DetectedCameras = {}
         self._connected_cameras: Optional[CameraConfigs] = {}
         self._camera_group = CameraGroup()
 
     @property
     def camera_configs(self):
-        return {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
-                self._available_cameras.keys()}
+        default_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
+                           self._available_cameras.keys()}
+        if not self._camera_configs:
+            self._camera_configs = default_configs
+        return default_configs
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._camera_group.set_websocket_bytes_sender(ws_send_bytes)
 
     async def detect(self) -> DetectedCameras:
-        logger.info(f"Detecting available cameras...")
-        detected_cameras = await detect_available_cameras()
-        self._available_cameras = detected_cameras
-
-        self._camera_group.set_camera_configs(self._target_camera_configs)
-        return detected_cameras
+        logger.info(f"Detecting cameras...")
+        self._available_cameras = await detect_available_cameras()
+        self._camera_group.set_camera_configs(self.camera_configs)
+        return self._available_cameras
 
     async def connect(self, camera_configs: Optional[CameraConfigs] = None):
         logger.info(f"Connecting to available cameras...")
