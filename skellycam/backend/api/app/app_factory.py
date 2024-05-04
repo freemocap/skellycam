@@ -1,12 +1,13 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
 
 import skellycam
 from skellycam.backend.api.middleware.cors import cors
-from skellycam.backend.api.routes import enabled_routers
+from skellycam.backend.api.http import enabled_routers
 
 logger = logging.getLogger(__name__)
 

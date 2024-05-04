@@ -23,7 +23,7 @@ class CameraConfig(BaseModel):
         description="The current resolution of the camera, in pixels.",
     )
     exposure: int = Field(
-        default=-6,
+        default=-7,
         description="The exposure of the camera using the opencv convention - "
         "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
     )

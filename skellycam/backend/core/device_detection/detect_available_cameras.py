@@ -4,7 +4,6 @@ from typing import Dict
 
 import cv2
 from PySide6.QtMultimedia import QMediaDevices
-from pydantic import BaseModel
 
 from skellycam.backend.core.device_detection.camera_device_info import CameraDeviceInfo
 from skellycam.backend.core.device_detection.camera_id import CameraId
@@ -13,13 +12,8 @@ logger = logging.getLogger(__name__)
 
 DetectedCameras = Dict[CameraId, CameraDeviceInfo]
 
-
-class CamerasDetectedResponse(BaseModel):
-    detected_cameras: DetectedCameras
-
-
-async def detect_available_cameras(check_if_available: bool = False) -> CamerasDetectedResponse:
-    logger.debug("Detecting available cameras...")
+async def detect_available_cameras(check_if_available: bool = False) -> DetectedCameras:
+    logger.important("Detecting available cameras...")
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
 
@@ -34,7 +28,7 @@ async def detect_available_cameras(check_if_available: bool = False) -> CamerasD
         )
         cameras[camera_device_info.cv2_port] = camera_device_info
     logger.debug(f"Detected cameras: {list(cameras.keys())}")
-    return CamerasDetectedResponse(detected_cameras=cameras)
+    return cameras
 
 
 async def _check_camera_available(port: int) -> bool:
@@ -51,4 +45,4 @@ async def _check_camera_available(port: int) -> bool:
 
 if __name__ == "__main__":
     cameras_out = detect_available_cameras()
-    pprint(cameras_out.detected_cameras, indent=4)
+    pprint(cameras_out, indent=4)

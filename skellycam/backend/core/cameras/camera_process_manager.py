@@ -62,7 +62,7 @@ class CameraProcessManager:
         return {camera_id: CameraProcess(config)
                 for camera_id, config in self._camera_configs.items()}
 
-    def update_camera_configs(self, camera_configs: CameraConfigs):
+    def update_camera_configs(self, camera_configs: CameraConfigs, strict: bool = False):
         logger.info(f"Updating camera configs...")
         for camera_id, process in self._camera_processes.items():
-            process.update_config(camera_configs[camera_id])
+            process.update_config(camera_configs[camera_id], strict)

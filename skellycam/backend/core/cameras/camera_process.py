@@ -34,8 +34,9 @@ class CameraProcess:
     def camera_id(self) -> CameraId:
         return self._camera_config.camera_id
 
-    def update_config(self, camera_config: CameraConfig):
+    def update_config(self, camera_config: CameraConfig, strict: bool = False):
         self._communication_queue.put(camera_config)
+        # TODO: Return info about the settings of the camera after applying the new config (and raise exception if different and `strict` is True)
 
     def start_capture(self):
         """

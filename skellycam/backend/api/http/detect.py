@@ -2,15 +2,20 @@ import logging
 
 from fastapi import APIRouter
 
-from skellycam.backend.core.device_detection.detect_available_cameras import CamerasDetectedResponse
+from skellycam.backend.api.models.base_models import BaseResponse
+from skellycam.backend.core.controller.singleton import get_controller
+from skellycam.backend.core.device_detection.detect_available_cameras import DetectedCameras
 
 logger = logging.getLogger(__name__)
 
-camera_router = APIRouter()
-# controller = get_or_create_controller()
+detect_cameras_router = APIRouter()
 
 
-@camera_router.get(
+class CamerasDetectedResponse(BaseResponse):
+    detected_cameras: DetectedCameras
+
+
+@detect_cameras_router.get(
     "/detect",
     response_model=CamerasDetectedResponse,
     summary="Detect available cameras",
@@ -19,18 +24,15 @@ camera_router = APIRouter()
                 "along with their available resolutions and framerates",
 )
 async def detect_cameras_route() -> CamerasDetectedResponse:
-    global controller
+    controller = get_controller()
     logger.info("Detecting available cameras...")
     try:
-        # return await controller.detect()
-        return {"message": "Cameras detected"}
+        detected_cameras  = await controller.detect()
+        return CamerasDetectedResponse(detected_cameras=detected_cameras)
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")
         logger.exception(e)
-        raise e
-
-
-
+        return CamerasDetectedResponse.from_exception(e)
 
 # @camera_router.get("/close",
 #                    summary="Close camera connections")
@@ -41,14 +43,3 @@ async def detect_cameras_route() -> CamerasDetectedResponse:
 #     logger.info("Closing camera connections...")
 #     await controller.close()
 #     return {"message": "Camera connections closed"}
-
-
-# @camera_router.get("/show",
-#                    summary="Show camera views in cv2 windows")
-# async def show_camera_windows():
-#     global controller
-#     if not controller.connected:
-#         return {"message": "No camera connections to show"}
-#     logger.info("Showing camera windows...")
-#     controller.show_camera_windows()
-#     return {"message": "Camera viewer started"}

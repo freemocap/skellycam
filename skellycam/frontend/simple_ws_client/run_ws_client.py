@@ -4,9 +4,7 @@ import multiprocessing
 from setproctitle import setproctitle
 from tenacity import RetryError
 
-from skellycam import configure_logging
-from skellycam.backend.api.websocket.simple_ws_client.websocket_client import websocket_client
-from skellycam.system.logging_configuration.log_level_enum import LogLevel
+from skellycam.frontend.simple_ws_client.websocket_client import websocket_client
 
 import logging
 

@@ -1,15 +1,13 @@
 import asyncio
 import logging
 import pprint
-from typing import Dict, Coroutine, Callable
+from typing import Coroutine, Callable
 
-from skellycam.backend.core.cameras.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.backend.core.cameras.camera_process_manager import (
     CameraProcessManager,
 )
-from skellycam.backend.core.device_detection.camera_id import CameraId
+from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frame_wrangler import FrameWrangler
-from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +45,10 @@ class CameraGroup:
             else:
                 await asyncio.sleep(0.001)
 
-    def update_configs(self, camera_configs: CameraConfigs):
+    def update_configs(self, camera_configs: CameraConfigs, strict: bool = False):
         logger.info(f"Updating camera configs to {camera_configs}")
-        self._camera_process_manager.update_camera_configs(camera_configs)
+        self._camera_process_manager.update_camera_configs(camera_configs=camera_configs,
+                                                           strict=strict)
 
     def close(self):
         logger.debug("Closing camera group")
