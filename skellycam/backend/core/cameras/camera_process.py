@@ -78,6 +78,10 @@ class CameraProcess:
         Stop capturing frames. Only return if the underlying process is fully stopped.
         :return:
         """
+        if self._process is None:
+            logger.debug(f"Camera {self.camera_id} not running - nothing to stop")
+            return
+
         logger.info(f"Stopping capture `Process` for Camera {self.camera_id}")
 
         self._communication_queue.put(None)

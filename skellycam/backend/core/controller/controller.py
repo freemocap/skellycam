@@ -44,9 +44,9 @@ class Controller:
         if not self._available_cameras:
             logger.info(f"Available cameras not set - Executing `detect` method...")
             await self.detect()
-        self._connected_cameras = await self._start_camera_group()
+        await self._start_camera_group()
         logger.success(f"Connected to cameras: {self._camera_group.camera_ids}!")
-        return self._connected_cameras
+        return self._camera_group.camera_ids
 
     def start_recording(self, recording_folder_path: str):
         logger.debug(f"Starting recording...")

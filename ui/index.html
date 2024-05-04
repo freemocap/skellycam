@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>💀📸✨</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/msgpack5/5.2.1/msgpack5.min.js"></script>
 </head>
 <body>
 <h2>hi im skellycam wow </h2>
-<div id="websocket-status">WebSocket status: Not Connected </div><button class="small-button" id="reset-websocket">Websocket ⟲</button>
+<div id="websocket-status">WebSocket status: Not Connected </div><button id="reset-websocket">Websocket ⟲</button>
 <button id="detect-button">Detect Cameras</button>
 <button id="connect-button">Connect to cameras</button>
 <button id="close-button">Close Cameras</button>
 <button id="hello-button">👋💀</button>
-<div id="logContainer" style="height: 200px; overflow-y: scroll;"></div>
+<div id="logContainer" class="log-container"></div>
 <script src="main.js"></script>
 </body>
 
@@ -23,6 +24,14 @@
     button {
         display: block;
         margin: 10px;
+    }
+    .log-container {
+        border: 1px solid black;
+        padding: 10px;
+        margin: 10px;
+        overflow-y: scroll;
+        overflow-wrap: break-word;
+        height: 300px;
     }
 
 </style>

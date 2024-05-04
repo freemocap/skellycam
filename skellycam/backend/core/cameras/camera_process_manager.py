@@ -38,9 +38,10 @@ class CameraProcessManager:
             process.start_capture()
 
     def close(self):
-        if len(self._camera_processes) == 0:
-            raise ValueError("No cameras to stop!")
         logger.debug(f"Stopping camera capture processes...")
+        if len(self._camera_processes) == 0:
+            logger.debug("No cameras to close!")
+            return
         for process in self._camera_processes.values():
             process.stop_capture()
 

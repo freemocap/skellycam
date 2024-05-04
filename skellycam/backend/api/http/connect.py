@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Body
 
@@ -14,7 +14,7 @@ camera_connection_router = APIRouter()
 
 
 class CamerasConnectedResponse(BaseResponse):
-    connected_cameras: Optional[CameraConfigs]
+    connected_cameras: Optional[List[CameraId]]
 
 
 class ConnectCamerasRequest(BaseRequest):
@@ -42,5 +42,22 @@ async def connect_cameras_route(
         logger.exception(e)
         return CamerasConnectedResponse.from_exception(e)
 
+
+@camera_connection_router.get(
+    "/connect",
+    response_model=CamerasConnectedResponse,
+    summary="Connect to all available cameras with default settings",
+)
+async def connect_cameras_route() -> CamerasConnectedResponse:
+    controller = get_or_create_controller()
+    logger.api("Received `/connect` request...")
+    try:
+        connected_cameras = await controller.connect()
+        logger.api("`/connect` request handled successfully.")
+        return CamerasConnectedResponse(connected_cameras=connected_cameras)
+    except Exception as e:
+        logger.error(f"Failed to detect available cameras: {type(e).__name__} - {e}")
+        logger.exception(e)
+        return CamerasConnectedResponse.from_exception(e)
 
 

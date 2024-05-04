@@ -62,6 +62,6 @@ class CameraGroup:
         self._frame_wrangler.close()
         self._camera_process_manager.close()
         self._should_continue = False
-        await self._frame_loop_task
-
-        logger.info("All cameras have stopped capturing")
+        if self._frame_loop_task is not None:
+            await self._frame_loop_task
+        logger.info("Camera group closed.")

@@ -61,7 +61,7 @@ class FrameWrangler:
         return 1 / self.prescribed_framerate
 
     def close(self):
-        logger.debug(f"Closing incoming frame wrangler loop...")
+        logger.debug(f"Closing frame wrangler...")
         if self.is_recording:
             self.stop_recording()
 

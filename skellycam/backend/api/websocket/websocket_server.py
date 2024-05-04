@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 from skellycam.backend.core.controller.singleton import get_or_create_controller
 
@@ -19,7 +20,9 @@ async def listen_for_client_messages(websocket: WebSocket):
             if not message:
                 logger.api("Empty message received, ending listener task...")
                 break
-
+        except WebSocketDisconnect:
+            logger.api("Client disconnected, ending listener task...")
+            break
         except Exception as e:
             logger.error(f"Error while receiving message: {type(e).__name__} - {e}")
             break
@@ -27,11 +30,11 @@ async def listen_for_client_messages(websocket: WebSocket):
 
 class WebsocketRunner:
     async def __aenter__(self):
-        logger.api("WebsocketRunner started...")
+        logger.debug("WebsocketRunner started...")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        logger.api("WebsocketRunner ended...")
+        logger.debug("WebsocketRunner ended...")
         pass
 
 
@@ -40,7 +43,7 @@ async def websocket_server_connect(websocket: WebSocket):
     logger.success(f"Websocket connection established!")
 
     await websocket.accept()
-    await websocket.send_text("Hello, client!")
+    await websocket.send_text("👋Hello, client!")
 
     async def websocket_send_bytes(data: bytes):
         await websocket.send_bytes(data)
@@ -57,6 +60,8 @@ async def websocket_server_connect(websocket: WebSocket):
             logger.exception(e)
             logger.error(f"Error while running camera loop: {type(e).__name__}- {e}")
         finally:
-            logger.api("Websocket ended")
+            logger.info("Closing websocket...")
+            await controller.close()
+            await websocket.send_text("Goodbye, client👋")
             await websocket.close()
             logger.api("Websocket closed")

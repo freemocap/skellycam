@@ -47,10 +47,12 @@ class CaptureThread(threading.Thread):
         self._start_frame_loop()
 
     def stop(self):
-        logger.debug("Stopping frame capture loop...")
+        logger.trace(f"Stopping frame capture loop for Camera: {self._target_config.camera_id}...")
         self._should_continue = False
         if self._cv2_video_capture is not None:
+            logger.trace(f"Releasing cv.VideoCapture object for Camera: {self._target_config.camera_id}...")
             self._cv2_video_capture.release()
+        logger.debug(f"Frame capture loop for Camera: {self._target_config.camera_id} stopped!")
 
     def update_camera_config(self, new_config: CameraConfig, strict: bool = False) -> CameraConfig:
         logger.debug(f"Updating Camera: {self._target_config.camera_id} config to {new_config}")

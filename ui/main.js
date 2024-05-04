@@ -1,7 +1,9 @@
+const msgpack = msgpack5();
 const websocket_route = 'ws://localhost:8003/ws/connect'
 const detect_route = 'http://localhost:8003/detect';
 const connect_route = 'http://localhost:8003/connect';
 const close_route = 'http://localhost:8003/close';
+const hello_route = 'http://localhost:8003/hello';
 
 
 // Websocket
@@ -84,25 +86,50 @@ function updateCanvasElements(jpegImagesByCamera) {
 }
 
 
+let logCount = 0;
+
 function addLog(message) {
     console.log(message);
     const logContainer = document.getElementById('logContainer');
     const logEntry = document.createElement('div');
-    logEntry.textContent = "☞" + message;
+    logEntry.textContent = `${logCount++} ☞ ${message}`;
     logContainer.appendChild(logEntry);
     logContainer.scrollTop = logContainer.scrollHeight;
 }
 
 // buttons
+document.getElementById('reset-websocket').onclick = async function () {
+    await connectWebSocket();
+}
+
 document.getElementById('detect-button').onclick = async function () {
     const response = await fetch(detect_route, {
         method: 'GET',
     });
     const data = await response.json();
-    addLog('Detect request sent - response:', JSON.stringify(response));
+    addLog(`Detect request sent - response: ${JSON.stringify(data, null, 2)}`);
 }
 
-document.getElementById('reset-websocket').onclick = async function () {
-    await connectWebSocket();
+document.getElementById('connect-button').onclick = async function () {
+    const response = await fetch(connect_route, {
+        method: 'GET',
+    });
+    const data = await response.json();
+    addLog(`Connect request sent - response: ${JSON.stringify(data, null, 2)}`);
 }
 
+document.getElementById('close-button').onclick = async function () {
+    const response = await fetch(close_route, {
+        method: 'GET',
+    });
+    const data = await response.json();
+    addLog(`Close request sent - response: ${JSON.stringify(data, null, 2)}`);
+}
+
+document.getElementById('hello-button').onclick = async function () {
+    const response = await fetch(hello_route, {
+        method: 'GET',
+    });
+    const data = await response.json();
+    addLog(`Hello request sent - response: ${JSON.stringify(data, null, 2)}`);
+}
