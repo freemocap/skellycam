@@ -54,6 +54,10 @@ class CameraConfig(BaseModel):
     def aspect_ratio(self) -> float:
         return self.resolution.aspect_ratio
 
+    def __eq__(self, other):
+        return self.dict() == other.dict()
+
+
 CameraConfigs = Dict[CameraId, CameraConfig]
 
 DEFAULT_CAMERA_CONFIGS = camera_configs = {0: CameraConfig(camera_id=0)}

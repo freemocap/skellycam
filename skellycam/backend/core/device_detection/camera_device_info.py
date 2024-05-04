@@ -9,12 +9,10 @@ from skellycam.backend.core.device_detection.video_resolution import VideoResolu
 
 logger = logging.getLogger(__name__)
 
+
 class DeviceVideoFormat(BaseModel):
     """
-    A bit redundant with `CameraConfig`, but this is specifically to
-    be used by the `CameraDeviceInfo` class as it's main purpose is to
-    be a data structure to hold information about a camera's available
-    video formats (as reported by `QCameraDevice.videoFormats()`)
+    Information about a camera device's available video formats
     """
 
     width: int
@@ -25,11 +23,11 @@ class DeviceVideoFormat(BaseModel):
 
 class CameraDeviceInfo(BaseModel):
     """
-    Useful information pulled out of a QCameraDevice
+    Selected information pulled out of a QCameraDevice object
     """
 
     description: str
-    device_address:str
+    device_address: str
     cv2_port: int
     available_video_formats: List[DeviceVideoFormat]
 
@@ -60,7 +58,7 @@ class CameraDeviceInfo(BaseModel):
 
     @classmethod
     def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice):
-        device_address =camera.id().data().decode("utf-8")
+        device_address = camera.id().data().decode("utf-8")
         if platform.system() == 'Windows':
             logger.debug(f"Windows detected, using camera number as cv2 port")
             cv2_port = camera_number

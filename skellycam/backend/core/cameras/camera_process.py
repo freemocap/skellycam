@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import multiprocessing
 import time
@@ -5,6 +6,7 @@ from multiprocessing import Process
 from typing import List, Optional
 
 import cv2
+from pydantic import BaseModel, Field
 from setproctitle import setproctitle
 
 from skellycam.backend.core.cameras.camera import (
@@ -18,35 +20,42 @@ from skellycam.backend.core.frames.frame_payload import FramePayload
 logger = logging.getLogger(__name__)
 
 
+class UpdateConfigMessage(BaseModel):
+    camera_config: CameraConfig
+    strict: bool = Field(default=False,
+                         description="If True, will raise an error if the camera settings do not match the target config after updating.")
+
+
 class CameraProcess:
     def __init__(
             self,
             config: CameraConfig,
     ):
-
         self._camera_config = config
         self._process: Optional[Process] = None
         self._communication_queue = multiprocessing.Queue()
         self._receiver, self._sender = multiprocessing.Pipe(duplex=False)
 
-
     @property
     def camera_id(self) -> CameraId:
         return self._camera_config.camera_id
 
-    def update_config(self, camera_config: CameraConfig, strict: bool = False):
-        self._communication_queue.put(camera_config)
-        # TODO: Return info about the settings of the camera after applying the new config (and raise exception if different and `strict` is True)
+    async def update_config(self, camera_config: CameraConfig, strict: bool = False):
+        logger.debug(f"Updating camera config for {self.camera_id} to {camera_config}")
+        self._communication_queue.put(UpdateConfigMessage(camera_config=camera_config,
+                                                          strict=strict))
+        while True:
+            if self._communication_queue.empty():
+                await asyncio.sleep(0.1)
+            else:
+                message = self._communication_queue.get()
+                logger.debug(f"Response from camera {self.camera_id}: {message}")
 
     def start_capture(self):
-        """
-        Start capturing frames.
-        :return:
-        """
-        logger.info(f"Starting capture `Process` for {self.camera_id}")
+        logger.debug(f"Starting capture `Process` for {self.camera_id}")
 
         self._process = Process(
-            name=f"Camera {self.camera_id}",
+            name=f"Camera-{self.camera_id}",
             target=CameraProcess._run_process,
             args=(
                 self._camera_config,
@@ -56,14 +65,13 @@ class CameraProcess:
         )
         self._process.start()
         self._wait_for_camera_to_start()
-        logger.info(f"Capture `Process` for {self.camera_id} has started!")
+        logger.info(f"Capture `Process` for {self.camera_id} started!")
 
     def _wait_for_camera_to_start(self):
         while not self._receiver.poll():
             logger.info(f"Waiting for camera {self.camera_id} to start...")
             time.sleep(1)
-        logger.success(f"Camera {self.camera_id} ready!")
-
+        logger.info(f"Camera {self.camera_id} started!")
 
     def stop_capture(self):
         """
@@ -113,7 +121,7 @@ class CameraProcess:
         process_name = f"Camera {camera_config.camera_id}"
         setproctitle(process_name)
 
-        camera = Camera(config=camera_config, frame_pipe=frame_pipe_sender )
+        camera = Camera(config=camera_config, frame_pipe=frame_pipe_sender)
         camera.connect()
 
         while True:
@@ -123,8 +131,13 @@ class CameraProcess:
                 if message is None:
                     logger.info("Received None - closing cameras")
                     break
-                elif isinstance(message, CameraConfig):
-                    camera.update_config(message)
+                elif isinstance(message, UpdateConfigMessage):
+                    if message.camera_config == camera_config:
+                        communication_queue.put(f"Camera {camera.camera_id} config matches current config - skipping")
+                    else:
+                        logger.debug(f"Updating camera {camera.camera_id} config to {message}")
+                        camera.update_config(message.camera_config, strict=message.strict)
+                        communication_queue.put(f"Camera {camera.camera_id} config updated")
                 else:
                     raise ValueError(f"Unknown message type: `{type(message)}` with value: '{message}'")
 

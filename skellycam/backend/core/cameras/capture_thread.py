@@ -25,14 +25,15 @@ class FailedToOpenCameraException(Exception):
     pass
 
 
-class FrameCaptureThread(threading.Thread):
+class CaptureThread(threading.Thread):
     def __init__(
             self,
             config: CameraConfig,
             frame_pipe,  # multiprocessing.connection.Connection
     ):
         super().__init__()
-        self._config = config
+        self._target_config = config
+        self._extracted_config = None
         self.frame_pipe = frame_pipe
 
         self.daemon = True
@@ -42,7 +43,7 @@ class FrameCaptureThread(threading.Thread):
 
     def run(self):
         self._cv2_video_capture = self._create_cv2_capture()
-        self.update_camera_config(self._config)
+        self.update_camera_config(self._target_config)
         self._start_frame_loop()
 
     def stop(self):
@@ -51,40 +52,43 @@ class FrameCaptureThread(threading.Thread):
         if self._cv2_video_capture is not None:
             self._cv2_video_capture.release()
 
-    def update_camera_config(self, new_config: CameraConfig):
+    def update_camera_config(self, new_config: CameraConfig, strict: bool = False) -> CameraConfig:
+        logger.debug(f"Updating Camera: {self._target_config.camera_id} config to {new_config}")
         self._updating_config = True
-        self._config = new_config
-        logger.info(f"Updating Camera: {self._config.camera_id} config to {new_config}")
-        apply_camera_configuration(self._cv2_video_capture, new_config)
+        self._target_config = new_config
+        self._extracted_config = apply_camera_configuration(cv2_vid_capture=self._cv2_video_capture,
+                                                            config=new_config,
+                                                            strict=strict)
         self._updating_config = False
+        return self._extracted_config
 
     def _create_cv2_capture(self):
         cap_backend = determine_backend()
         logger.info(
-            f"Creating cv.VideoCapture object for Camera: {self._config.camera_id} "
+            f"Creating cv.VideoCapture object for Camera: {self._target_config.camera_id} "
             f"using backend `{cap_backend.name}`..."
         )
 
-        capture = cv2.VideoCapture(int(self._config.camera_id), cap_backend.value)
+        capture = cv2.VideoCapture(int(self._target_config.camera_id), cap_backend.value)
         if not capture.isOpened():
             raise FailedToOpenCameraException(
-                f"Failed to open camera with config: {pprint.pformat(self._config)}"
+                f"Failed to open camera with config: {pprint.pformat(self._target_config)}"
             )
         success, image = capture.read()
 
         if not success or image is None:
             raise FailedToReadFrameFromCameraException(
-                f"Failed to read frame from camera with config: {pprint.pformat(self._config)} "
+                f"Failed to read frame from camera with config: {pprint.pformat(self._target_config)} "
                 f"returned value: {success}, "
                 f"returned image: {image}"
             )
 
-        logger.info(f"Successfully connected to Camera: {self._config.camera_id}!")
+        logger.info(f"Successfully connected to Camera: {self._target_config.camera_id}!")
         return capture
 
     def _start_frame_loop(self):
         logger.info(
-            f"Camera ID: [{self._config.camera_id}] starting frame capture loop..."
+            f"Camera ID: [{self._target_config.camera_id}] starting frame capture loop..."
         )
         self._frame_number = -1
         self._frame_loop()  # main frame loop
@@ -94,7 +98,7 @@ class FrameCaptureThread(threading.Thread):
         This loop is responsible for capturing frames from the camera and stuffing them into the pipe
         """
         logger.info(
-            f"Camera ID: [{self._config.camera_id}] Frame capture loop is running"
+            f"Camera ID: [{self._target_config.camera_id}] Frame capture loop is running"
         )
         try:
             while self._should_continue:
@@ -117,7 +121,7 @@ class FrameCaptureThread(threading.Thread):
         finally:
             self.stop()
             logger.info(
-                f"Camera ID: [{self._config.camera_id}] Frame capture loop has stopped"
+                f"Camera ID: [{self._target_config.camera_id}] Frame capture loop has stopped"
             )
 
     def _get_next_frame(self) -> Optional[FramePayload]:
@@ -138,7 +142,7 @@ class FrameCaptureThread(threading.Thread):
         success, image = self._cv2_video_capture.read()  # THIS IS WHERE THE MAGIC HAPPENS <3
 
         if not success or image is None:
-            logger.warning(f"Failed to read frame from camera: {self._config.camera_id}")
+            logger.warning(f"Failed to read frame from camera: {self._target_config.camera_id}")
             return
 
         retrieval_timestamp = time.perf_counter_ns()
@@ -148,5 +152,5 @@ class FrameCaptureThread(threading.Thread):
             image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
             timestamp_ns=retrieval_timestamp,
             frame_number=self._frame_number,
-            camera_id=CameraId(self._config.camera_id),
+            camera_id=CameraId(self._target_config.camera_id),
         )

@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from skellycam.backend.core.cameras.capture_thread import (
-    FrameCaptureThread,
+    CaptureThread,
 )
 from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_id import CameraId
@@ -19,16 +19,18 @@ class Camera:
         self._config = config
         self._frame_pipe = frame_pipe
 
-        self._capture_thread: Optional[FrameCaptureThread] = None
+        self._capture_thread: Optional[CaptureThread] = None
 
     @property
     def camera_id(self) -> CameraId:
         return self._config.camera_id
 
+
+
     def connect(self):
         logger.info(f"Connecting to camera_id: {self.camera_id}")
 
-        self._capture_thread = FrameCaptureThread(
+        self._capture_thread = CaptureThread(
             config=self._config,
             frame_pipe=self._frame_pipe,
         )
@@ -40,9 +42,9 @@ class Camera:
         self._capture_thread = None
         logger.debug(f"Camera ID: [{self._config.camera_id}] has closed")
 
-    def update_config(self, camera_config: CameraConfig):
+    def update_config(self, camera_config: CameraConfig, strict: bool = False) -> CameraConfig:
         logger.info(
-            f"Updating config for camera_id: {self.camera_id}  -  {camera_config}"
+            f"Updating config for camera_id: {self.camera_id}  ->  {camera_config}"
         )
         if not camera_config.use_this_camera:
             self.close()
@@ -50,4 +52,5 @@ class Camera:
             if not self._capture_thread:
                 self.connect()
 
-        self._capture_thread.update_camera_config(camera_config)
+        return self._capture_thread.update_camera_config(new_config=camera_config,
+                                                         strict=strict)

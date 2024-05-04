@@ -12,5 +12,6 @@ startup_router = APIRouter()
 
 @startup_router.on_event("startup")
 async def handle_startup():
-    logger.api("Skellycam API started!")
+    logger.api("Skellycam API start-up event triggered.")
     Path(get_default_skellycam_base_folder_path()).mkdir(parents=True, exist_ok=True)
+    logger.success("Skellycam API started successfully 💀📸✨")

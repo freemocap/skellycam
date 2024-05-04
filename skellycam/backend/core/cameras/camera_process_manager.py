@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, List
 
 from skellycam.backend.core.cameras.camera_process import (
@@ -7,12 +8,6 @@ from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
 
-### Don't change this? Users should submit the actual value they want
-### this is our library default.
-### This should only change based off of real world experimenting with CPUs
-_DEFAULT_CAM_PER_PROCESS = 1
-
-# https://refactoring.guru/design-patterns/strategy
 
 import logging
 
@@ -26,10 +21,13 @@ class CameraProcessManager:
         self._camera_configs: CameraConfigs = {}
         self._camera_processes: Dict[CameraId, CameraProcess] = {}
 
+    @property
+    def camera_ids(self):
+        return list(self._camera_processes.keys())
+
     def set_camera_configs(self, camera_configs: CameraConfigs):
         self._camera_configs = camera_configs
         self._camera_processes = self._create_processes()
-
 
     def start_cameras(self):
         if len(self._camera_processes) == 0:
@@ -39,7 +37,7 @@ class CameraProcessManager:
         for process in self._camera_processes.values():
             process.start_capture()
 
-    def stop_capture(self):
+    def close(self):
         if len(self._camera_processes) == 0:
             raise ValueError("No cameras to stop!")
         logger.debug(f"Stopping camera capture processes...")
@@ -60,7 +58,10 @@ class CameraProcessManager:
         return {camera_id: CameraProcess(config)
                 for camera_id, config in self._camera_configs.items()}
 
-    def update_camera_configs(self, camera_configs: CameraConfigs, strict: bool = False):
+    async def update_camera_configs(self, camera_configs: CameraConfigs, strict: bool = False):
         logger.info(f"Updating camera configs...")
+        update_tasks = []
         for camera_id, process in self._camera_processes.items():
-            process.update_config(camera_configs[camera_id], strict)
+            update_tasks.append(asyncio.create_task(process.update_config(camera_configs[camera_id], strict)))
+
+        await asyncio.gather(*update_tasks)

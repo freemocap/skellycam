@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from fastapi import APIRouter
 
@@ -12,7 +13,7 @@ detect_cameras_router = APIRouter()
 
 
 class CamerasDetectedResponse(BaseResponse):
-    detected_cameras: DetectedCameras
+    detected_cameras: Optional[DetectedCameras]
 
 
 @detect_cameras_router.get(
@@ -25,22 +26,12 @@ class CamerasDetectedResponse(BaseResponse):
 )
 async def detect_cameras_route() -> CamerasDetectedResponse:
     controller = get_or_create_controller()
-    logger.api("Received `detect` request")
+    logger.api("Received `detect/` request")
     try:
         detected_cameras = await controller.detect()
-        logger.success(f"`detect` request handled successfully - detected cameras: [{detected_cameras}]")
+        logger.api(f"`detect/` request handled successfully - detected cameras: [{detected_cameras}]")
         return CamerasDetectedResponse(detected_cameras=detected_cameras)
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")
         logger.exception(e)
         return CamerasDetectedResponse.from_exception(e)
-
-# @camera_router.get("/close",
-#                    summary="Close camera connections")
-# async def close_camera_connections():
-#     global controller
-#     if not controller.connected:
-#         return {"message": "No camera connections to close"}
-#     logger.info("Closing camera connections...")
-#     await controller.close()
-#     return {"message": "Camera connections closed"}

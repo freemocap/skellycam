@@ -19,9 +19,9 @@ class FrameWrangler:
     ):
         super().__init__()
         self._camera_configs: CameraConfigs = {}
-        self._multi_frame_recorder_queue = multiprocessing.Queue()
+        self._recorder_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderProcessManager(
-            multi_frame_queue=self._multi_frame_recorder_queue,
+            multi_frame_queue=self._recorder_queue,
         )
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._is_recording = False
@@ -60,8 +60,8 @@ class FrameWrangler:
     def ideal_frame_duration(self):
         return 1 / self.prescribed_framerate
 
-    def stop(self):
-        logger.debug(f"Stopping incoming frame wrangler loop...")
+    def close(self):
+        logger.debug(f"Closing incoming frame wrangler loop...")
         if self.is_recording:
             self.stop_recording()
 
@@ -98,16 +98,15 @@ class FrameWrangler:
                 await self._handle_full_or_timeout()
 
     async def _handle_full_or_timeout(self):
-        if self._previous_multi_frame_payload is None:
-            if self._current_multi_frame_payload.full:
-                self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
-            else:
-                raise ValueError(
-                    "Current multi-frame payload is not full, but there is no previous payload to backfill from")
 
         self._backfill_missing_with_previous_frame()
-        self._multi_frame_recorder_queue.put(self._current_multi_frame_payload)
-        await self._send_frontend_payload()
+
+        if self._is_recording:
+            self._recorder_queue.put(self._current_multi_frame_payload)
+
+        if self._ws_send_bytes is not None:
+            await self._send_frontend_payload()
+
         self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
         self._current_multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
@@ -122,11 +121,19 @@ class FrameWrangler:
         await self._ws_send_bytes(frontend_payload.to_msgpack())
 
     def _frame_timeout(self) -> bool:
-        time_since_oldest_frame_sec = (
-                                                  time.perf_counter_ns() - self._current_multi_frame_payload.oldest_timestamp_ns) / 1e9
+        oldest_timestamp = self._current_multi_frame_payload.oldest_timestamp
+        time_since_oldest_frame_sec = (time.perf_counter_ns() - oldest_timestamp) / 1e9
         return time_since_oldest_frame_sec > self.ideal_frame_duration
 
     def _backfill_missing_with_previous_frame(self):
+
+        if self._previous_multi_frame_payload is None:
+            if self._current_multi_frame_payload.full:
+                self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
+            else:
+                raise ValueError(
+                    "Current multi-frame payload is not full, but there is no previous payload to backfill from")
+
         if self._current_multi_frame_payload.full:
             return
 
