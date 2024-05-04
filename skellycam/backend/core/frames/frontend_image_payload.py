@@ -19,14 +19,16 @@ class FrontendImagePayload(BaseModel):
         return list(self.jpeg_images_by_camera.keys())
 
     @classmethod
-    def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload, resize: Optional[float] = 1):
+    def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload, resize_long_axis: Optional[int] = 640):
         jpeg_images = {}
         for camera_id, frame in multi_frame_payload.frames.items():
             if frame is None:
                 continue
 
-            if resize is not None and resize != 1.0:
-                resized_image = cv2.resize(frame.image, (0, 0), fx=resize, fy=resize)
+            if resize_long_axis is not None:
+                long_axis = max(frame.image.shape[:2])
+                resize_proportion = resize_long_axis / long_axis
+                resized_image = cv2.resize(frame.image, (0, 0), fx=resize_proportion, fy=resize_proportion)
             else:
                 resized_image = frame.image
             jpeg_images[camera_id] = cls._image_to_jpeg(resized_image)
