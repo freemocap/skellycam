@@ -1,0 +1,38 @@
+{
+  "name": "skellycam",
+  "version": "1.0.0",
+  "description": "\"Recording synchronized videos from  multiple cameras 💀📸✨\"",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/freemocap/skellycam.git"
+  },
+  "keywords": [
+    "camera",
+    "stream",
+    "video",
+    "image",
+    "opencv",
+    "skelly",
+    "freemocap",
+    "motion capture",
+    "synchronization",
+    "computer vision"
+  ],
+  "author": "Skelly FreeMoCap",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/freemocap/skellycam/issues"
+  },
+  "homepage": "https://github.com/freemocap/skellycam#readme",
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.5.12"
+  },
+  "dependencies": {
+    "msgpack": "^1.0.3"
+  }
+}
