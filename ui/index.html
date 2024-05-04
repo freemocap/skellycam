@@ -2,29 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>💀📸✨</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/msgpack5/5.2.1/msgpack5.min.js"></script>
 </head>
-<body>
-<h2>hi im skellycam wow </h2>
-<div id="websocket-status">WebSocket status: Not Connected </div><button id="reset-websocket">Websocket ⟲</button>
-<button id="detect-button">Detect Cameras</button>
-<button id="connect-button">Connect to cameras</button>
-<button id="close-button">Close Cameras</button>
-<button id="hello-button">👋💀</button>
-<div id="logContainer" class="log-container"></div>
+<body style="background-color: #282c34; color: #c3c3c3; font-family: Arial, sans-serif;" >
+<div id="app" class="appContainer">
+    <h2>hi im skellycam wow </h2>
+    <div id="websocket-status">WebSocket status: Not Connected</div>
+    <button id="reset-websocket">Websocket ⟲</button>
+    <button id="detect-button">Detect Cameras</button>
+    <button id="connect-button">Connect to cameras</button>
+    <button id="close-button">Close Cameras</button>
+    <button id="hello-button">👋💀</button>
+    <div id="logContainer" class="log-container"></div>
+    <div id="videoContainer" class="video-container"></div>
+</div>
 <script src="main.js"></script>
 </body>
 
 <style>
+    .app {
+        font-family: Arial, sans-serif;
+        background-color: #282c34;
+        color: #c3c3c3;
+    }
+
     canvas {
         border: 3px solid red; /* Change 'red' to any color you want */
     }
+
     button {
-        display: block;
         margin: 10px;
     }
+
     .log-container {
         border: 1px solid black;
         padding: 10px;
@@ -32,6 +43,13 @@
         overflow-y: scroll;
         overflow-wrap: break-word;
         height: 300px;
+        background-color: #6a7495;
+    }
+
+    .video-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
 </style>

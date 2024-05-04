@@ -42,8 +42,6 @@ let connectWebSocket = async () => {
                             const image = new Image()
                             image.onload = () => {
                                 const canvas = document.getElementById(`camera${cameraId}`) || updateCanvasElements(jpegImagesByCamera)
-                                canvas.width = image.width
-                                canvas.height = image.height
                                 const context = canvas.getContext('2d')
                                 context.drawImage(image, 0, 0, canvas.width, canvas.height)
                                 URL.revokeObjectURL(image.src)
@@ -73,14 +71,13 @@ let connectWebSocket = async () => {
 
 function updateCanvasElements(jpegImagesByCamera) {
     const cameras = Object.keys(jpegImagesByCamera);
-    const body = document.body;
-
+    const videoContainer = document.getElementById('videoContainer');
     cameras.forEach(cameraId => {
         if (!document.getElementById(`camera${cameraId}`)) {
             const canvas = document.createElement('canvas');
             canvas.id = `camera${cameraId}`;
-
-            body.appendChild(canvas);
+            canvas.style.border = '1px solid green';
+            videoContainer.appendChild(canvas);
         }
     });
 }

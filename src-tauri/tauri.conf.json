@@ -56,10 +56,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 800,
+        "height": 1000,
         "resizable": true,
         "title": "SkellyCam 💀📸✨",
-        "width": 1400
+        "width": 1000
       }
     ]
   }
