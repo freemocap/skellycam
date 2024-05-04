@@ -29,8 +29,28 @@ class MultiFramePayload(BaseModel):
             [frame.timestamp_ns for frame in self.frames.values() if frame is not None]
         )
 
-    def add_frame(self, frame: FramePayload):
-        self.frames[frame.camera_id] = frame
-
     def __len__(self):
         return len(self.frames)
+
+    def __getitem__(self, key: CameraId):
+        return self.frames[key]
+
+    def __setitem__(self, key: CameraId, value: Optional[FramePayload]):
+        self.frames[key] = value
+
+
+    def __contains__(self, key: CameraId):
+        return key in self.frames
+
+    def __delitem__(self, key: CameraId):
+        del self.frames[key]
+
+    def __str__(self):
+        frame_strs = []
+        for camera_id, frame in self.frames.items():
+            if frame:
+                frame_strs.append(str(frame))
+            else:
+                frame_strs.append(f"{camera_id}: None")
+
+        return "\n".join(frame_strs)

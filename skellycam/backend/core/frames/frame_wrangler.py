@@ -26,10 +26,10 @@ class FrameWrangler:
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._is_recording = False
 
-        self._current_multi_frame_payload = None
-        self._previous_multi_frame_payload = None
+        self._current_multi_frame_payload: Optional[MultiFramePayload] = None
+        self._previous_multi_frame_payload: Optional[MultiFramePayload] = None
 
-    def set_ws_send_bytes(self, ws_send_bytes: Callable[[bytes], Coroutine]):
+    def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
@@ -88,7 +88,7 @@ class FrameWrangler:
 
     async def handle_new_frames(self, new_frames: List[FramePayload]):
         for frame in new_frames:
-            self._current_multi_frame_payload.add_frame(frame=frame)
+            self._current_multi_frame_payload[frame.camera_id] = frame
 
             if self._previous_multi_frame_payload is None and not self._current_multi_frame_payload.full:
                 # wait until we have a full frame to copy from the first go-around
@@ -105,6 +105,7 @@ class FrameWrangler:
             self._recorder_queue.put(self._current_multi_frame_payload)
 
         if self._ws_send_bytes is not None:
+            logger.trace(f"Sending multi-frame payload to frontend: {self._current_multi_frame_payload}")
             await self._send_frontend_payload()
 
         self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
@@ -121,8 +122,11 @@ class FrameWrangler:
         await self._ws_send_bytes(frontend_payload.to_msgpack())
 
     def _frame_timeout(self) -> bool:
-        oldest_timestamp = self._current_multi_frame_payload.oldest_timestamp
-        time_since_oldest_frame_sec = (time.perf_counter_ns() - oldest_timestamp) / 1e9
+        if self._current_multi_frame_payload is None:
+            # don't time out if we haven't received any frames yet
+            return False
+        oldest_timestamp_ns = self._current_multi_frame_payload.oldest_timestamp_ns
+        time_since_oldest_frame_sec = (time.perf_counter_ns() - oldest_timestamp_ns) / 1e9
         return time_since_oldest_frame_sec > self.ideal_frame_duration
 
     def _backfill_missing_with_previous_frame(self):
@@ -138,7 +142,5 @@ class FrameWrangler:
             return
 
         for camera_id in self._previous_multi_frame_payload.camera_ids:
-            if self._current_multi_frame_payload.frames[camera_id] is None:
-                self._current_multi_frame_payload.add_frame(
-                    frame=self._previous_multi_frame_payload.frames[camera_id]
-                )
+            if self._current_multi_frame_payload[camera_id] is None:
+                self._current_multi_frame_payload[camera_id] = self._previous_multi_frame_payload[camera_id]

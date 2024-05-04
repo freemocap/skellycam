@@ -40,6 +40,17 @@ class FramePayload(BaseModel):
         self.image_data = image.tobytes()
         self.image_shape = image.shape
 
+    @property
+    def width(self) -> int:
+        return self.image_shape[1]
+
+    @property
+    def height(self) -> int:
+        return self.image_shape[0]
+
+    @property
+    def resolution(self) -> tuple:
+        return self.width, self.height
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.dict(), use_bin_type=True)
@@ -48,3 +59,6 @@ class FramePayload(BaseModel):
     def from_msgpack(cls, msgpack_bytes: bytes):
         unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
         return cls(**unpacked)
+
+    def __str__(self):
+        return f"{self.camera_id}: {self.resolution} Frame#{self.frame_number}"

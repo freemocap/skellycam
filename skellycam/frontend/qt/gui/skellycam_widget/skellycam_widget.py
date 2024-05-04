@@ -17,7 +17,7 @@ from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.central_widgets.reco
 from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.central_widgets.welcome import (
     Welcome,
 )
-from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_control_buttons import (
+from skellycam.frontend import (
     CameraControlButtons,
 )
 from skellycam.frontend.qt.gui.skellycam_widget.sub_widgets.side_panel_widgets.camera_parameter_tree import (

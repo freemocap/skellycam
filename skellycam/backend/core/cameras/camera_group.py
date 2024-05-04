@@ -24,8 +24,8 @@ class CameraGroup:
     def camera_ids(self):
         return self._camera_process_manager.camera_ids
 
-    def set_ws_send_bytes(self, ws_send_bytes: Callable[[bytes], Coroutine]):
-        self._frame_wrangler.set_ws_send_bytes(ws_send_bytes)
+    def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
+        self._frame_wrangler.set_websocket_bytes_sender(ws_send_bytes)
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {camera_configs}")

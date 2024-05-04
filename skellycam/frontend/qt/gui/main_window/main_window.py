@@ -9,8 +9,8 @@ from skellycam.system.default_paths import (
 )
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.qt.gui.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.frontend.qt.gui.skellycam_widget.skellycam_widget import SkellyCamWidget
+from skellycam.frontend import QT_CSS_STYLE_SHEET_STRING
+from skellycam.frontend import SkellyCamWidget
 
 
 class SkellyCamMainWindow(QMainWindow):

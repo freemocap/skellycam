@@ -46,7 +46,7 @@ async def websocket_server_connect(websocket: WebSocket):
         await websocket.send_bytes(data)
 
     controller = get_or_create_controller()
-    controller.websocket_send_bytes = websocket_send_bytes
+    controller.set_websocket_bytes_sender(websocket_send_bytes)
 
     async with WebsocketRunner():
         try:

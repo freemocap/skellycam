@@ -2,7 +2,7 @@ import logging
 
 from PySide6.QtWidgets import QApplication
 
-from skellycam.frontend.qt.gui.main_window.main_window import SkellyCamMainWindow
+from skellycam.frontend import SkellyCamMainWindow
 
 logger = logging.getLogger(__name__)
 

@@ -10,7 +10,7 @@ from skellycam.frontend.qt.clients.http_client import HttpClient
 from skellycam.system.default_paths import create_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
-from skellycam.frontend.qt.clients.websocket_client import (
+from ui import (
     WebsocketClient,
 )
 

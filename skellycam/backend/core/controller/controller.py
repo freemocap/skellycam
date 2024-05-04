@@ -25,8 +25,8 @@ class Controller:
         return {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
                 self._available_cameras.keys()}
 
-    def set_ws_send_bytes(self, ws_send_bytes: Callable[[bytes], Coroutine]):
-        self._camera_group.set_ws_send_bytes(ws_send_bytes)
+    def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
+        self._camera_group.set_websocket_bytes_sender(ws_send_bytes)
 
     async def detect(self) -> DetectedCameras:
         logger.info(f"Detecting available cameras...")

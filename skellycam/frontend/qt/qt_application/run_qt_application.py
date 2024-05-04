@@ -2,7 +2,7 @@ import logging
 
 from setproctitle import setproctitle
 
-from skellycam.frontend.qt.qt_application import create_or_recreate_qt_application
+from skellycam.frontend import create_or_recreate_qt_application
 
 logger = logging.getLogger(__name__)
 
