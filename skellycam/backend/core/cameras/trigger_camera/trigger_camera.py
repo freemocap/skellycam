@@ -33,11 +33,11 @@ class TriggerCamera:
         await self._apply_config()
 
     async def connect(self):
-        logger.debug(f"Connecting to Camera: {self.camera_id}")
+        if self._cv2_video_capture is not None:
+            self._cv2_video_capture.release()
         self._cv2_video_capture = await create_cv2_capture(self._config)
 
     async def update_config(self, new_config: CameraConfig) -> CameraConfig:
-
         if self._config == new_config:
             logger.trace(f"Requested config is the same as current config - no update required")
             return self._config

@@ -54,5 +54,6 @@ class FramePayload(BaseModel):
     def resolution(self) -> tuple:
         return self.width, self.height
 
-    def __str__(self):
-        return f"{self.camera_id}: {self.resolution} Frame#{self.frame_number}"
+    @property
+    def size_in_kilobytes(self) -> float:
+        return len(self.image_data) / 1024

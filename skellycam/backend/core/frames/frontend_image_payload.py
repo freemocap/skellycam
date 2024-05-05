@@ -13,7 +13,7 @@ from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 
 class FrontendImagePayload(BaseModel):
     jpeg_images: Dict[CameraId, Optional[bytes]]
-    utc_ns_to_perf_ns: Dict[int, int] = Field(
+    utc_ns_to_perf_ns: Dict[str, int] = Field(
         description="A mapping of `time.time_ns()` to `time.perf_counter_ns()` "
                     "to allow conversion of `time.perf_counter_ns()`'s arbitrary "
                     "time base to unix time")

@@ -2,11 +2,13 @@ import asyncio
 import logging
 import multiprocessing
 from multiprocessing import Process
-from typing import Optional, Dict
+from typing import Dict
 
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.cameras.trigger_camera.trigger_camera import TriggerCamera
 from skellycam.backend.core.device_detection.camera_id import CameraId
+from skellycam.backend.core.frames.frame_payload import FramePayload
+from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ async def trigger_camera_factory(config) -> TriggerCamera:
 
 
 async def start_cameras(camera_configs: CameraConfigs) -> Dict[CameraId, TriggerCamera]:
-    logger.info(f"Connecting to cameras: {list(camera_configs.keys())}")
+    logger.info(f"Starting cameras: {list(camera_configs.keys())}")
     tasks = {camera_id: trigger_camera_factory(config) for camera_id, config in camera_configs.items()}
     results = await asyncio.gather(*tasks.values())
     cameras = dict(zip(tasks.keys(), results))
@@ -35,15 +37,21 @@ async def trigger_camera_read(cameras: Dict[CameraId, TriggerCamera],
     logger.loop("Triggering camera read...")
     tasks = [camera.get_frame() for camera in cameras.values()]
     frames = await asyncio.gather(*tasks)
+    logger.loop(f"Received: {len(frames)} frames from cameras {[frame.camera_id for frame in frames]}")
     for camera_id, frame in zip(cameras.keys(), frames):
-        payload[camera_id] = frame
-    logger.loop(f"Trigger returned - {payload}")
+        if frame is None:
+            continue
+        if not isinstance(frame, FramePayload):
+            logger.error(f"Received unexpected frame type: {type(frame)}")
+            continue
+        payload[CameraId(camera_id)] = frame
+    logger.loop(f"Trigger returned payload with frames from Cameras {list(payload.camera_ids)}")
     return payload
 
 
 async def communication_queue_loop(cameras: Dict[CameraId, TriggerCamera],
-                                    communication_queue: multiprocessing.Queue,
-                                    exit_event: asyncio.Event):
+                                   communication_queue: multiprocessing.Queue,
+                                   exit_event: asyncio.Event):
     logger.debug("Starting communication queue loop")
     while not exit_event.is_set():
         if not communication_queue.empty():
@@ -63,30 +71,30 @@ async def camera_trigger_loop(camera_configs: CameraConfigs,
                               frame_pipe,  # send-only pipe connection
                               communication_queue: multiprocessing.Queue,
                               exit_event: asyncio.Event):
-    logger.debug("Camera trigger loop started")
-
     cameras = await start_cameras(camera_configs)
+    # communication_queue_task = asyncio.create_task(communication_queue_loop(cameras, communication_queue, exit_event))
+    print('hi')
 
-    communication_queue_task = asyncio.create_task(communication_queue_loop(cameras, communication_queue, exit_event))
-    await asyncio.sleep(0.1) # Give the communication queue loop a chance to start
-
+    logger.info(f"Camera trigger loop started!")
     payload = MultiFramePayload.create(list(cameras.keys()))
     while not exit_event.is_set():
         payload = await trigger_camera_read(cameras, payload)
-        payload = await send_payload_down_pipe(frame_pipe, payload)
+        payload = send_payload_down_pipe(frame_pipe, payload)
 
-    if not communication_queue_task.done():
-        communication_queue.put(None)
-        await communication_queue_task
+    # if not communication_queue_task.done():
+    #     communication_queue.put(None)
+    #     await communication_queue_task
     logger.debug("Camera trigger loop complete")
 
 
-async def send_payload_down_pipe(frame_pipe, payload):
-    logger.loop(f"Sending payload: {payload}")
-    payload.log("before_putting_in_pipe_from_trigger_loop")
-    frame_pipe.send_bytes(payload.to_msgpack())
+def send_payload_down_pipe(frame_pipe,  # send-only pipe connection
+                           payload: MultiFramePayload) -> MultiFramePayload:
+    logger.loop(f"Sending payload with {len(payload)} frames down pipe...")
+    payload.add_log("before_putting_in_pipe_from_trigger_loop")
+    frame_pipe.send_bytes(b"whee")
+    logger.loop(f"Payload sent down pipe - creating next payload...")
     next_payload = MultiFramePayload.from_previous(payload)
-    frame_pipe.send_bytes(payload.to_msgpack())
+    logger.loop(f"Next payload created with  - looping...")
     return next_payload
 
 
@@ -138,5 +146,9 @@ class CameraTriggerProcess:
                      communication_queue: multiprocessing.Queue):
         logger.debug(f"CameraTriggerProcess started")
         exit_event = asyncio.Event()
-        asyncio.run(camera_trigger_loop(camera_configs, frame_pipe, communication_queue, exit_event))
+        try:
+            asyncio.run(camera_trigger_loop(camera_configs, frame_pipe, communication_queue, exit_event))
+        except Exception as e:
+            logger.error(f"Erorr in CameraTriggerProcess: {type(e).__name__} - {e}")
+            raise
         logger.debug(f"CameraTriggerProcess complete")

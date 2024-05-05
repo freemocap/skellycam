@@ -81,7 +81,7 @@ class FrameWrangler:
 
     async def _handle_payload(self, payload: MultiFramePayload):
         if self._is_recording:
-            payload.log("before_put_in_recorder_queue")
+            payload.add_log("before_put_in_recorder_queue")
             self._recorder_queue.put(payload)
 
         if self._ws_send_bytes is not None:

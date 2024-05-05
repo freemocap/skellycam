@@ -25,7 +25,7 @@ class MultiFramePayload(BaseModel):
                **kwargs):
         utc_ns = time.time_ns()
         perf_ns = time.perf_counter_ns()
-        return cls(frames={camera_id: None for camera_id in camera_ids},
+        return cls(frames={CameraId(camera_id): None for camera_id in camera_ids},
                    utc_ns_to_perf_ns={"time.time_ns": int(utc_ns), "time.perf_counter_ns": int(perf_ns)},
                    timestamp_trace_ns=cls.init_logs(),
                    **kwargs
@@ -33,7 +33,7 @@ class MultiFramePayload(BaseModel):
 
     @classmethod
     def from_previous(cls, previous: 'MultiFramePayload'):
-        return cls(frames={camera_id: None for camera_id in previous.frames.keys()},
+        return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    multi_frame_number=previous.multi_frame_number + 1,
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns.copy(),
                    timestamp_trace_ns=cls.init_logs(from_previous=True),
@@ -41,24 +41,24 @@ class MultiFramePayload(BaseModel):
 
     @property
     def camera_ids(self) -> List[CameraId]:
-        self.log("check_camera_ids")
+        self.add_log("check_camera_ids")
         return [CameraId(camera_id) for camera_id in self.frames.keys()]
 
     @property
     def full(self):
-        self.log("check_if_full")
+        self.add_log("check_if_full")
         if len(self.frames) == 0:
             return False
         return not any([frame is None for frame in self.frames.values()])
 
     @property
     def oldest_timestamp_ns(self) -> Optional[int]:
-        self.log("check_oldest_timestamp")
+        self.add_log("check_oldest_timestamp")
         return min(
             [frame.timestamp_ns for frame in self.frames.values() if frame is not None]
         )
 
-    def log(self, event_name: str, add_timestamp=True):
+    def add_log(self, event_name: str, add_timestamp=True):
         if add_timestamp:
             self.logs.append(f"{event_name}:{time.perf_counter_ns()}")
         else:
@@ -72,7 +72,7 @@ class MultiFramePayload(BaseModel):
             return [f"created:{time.perf_counter_ns()}"]
 
     def to_msgpack(self) -> bytes:
-        self.log("to_msgpack")
+        self.add_log("to_msgpack")
         return msgpack.packb(self.dict(), use_bin_type=True)
 
     @classmethod
@@ -80,39 +80,33 @@ class MultiFramePayload(BaseModel):
         received_event = f"before_unpacking_msgpack:{time.perf_counter_ns()}"
         unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
         instance = cls(**unpacked)
-        instance.log(received_event, add_timestamp=False)
-        instance.log("created_from_msgpack")
+        instance.add_log(received_event, add_timestamp=False)
+        instance.add_log("created_from_msgpack")
         return instance
 
     def __len__(self):
-        self.log("check_length")
+        self.add_log("check_length")
         return len(self.frames)
 
     def __getitem__(self, key: CameraId):
-        self.log(f"get_{key}")
+        self.add_log(f"get_{key}")
         return self.frames[key]
 
     def __setitem__(self, key: CameraId, value: Optional[FramePayload]):
-        self.log(f"set_{key}")
+        self.add_log(f"set_{key}")
         if self.full:
-            self.log("payload_full")
+            self.add_log("payload_full")
         self.frames[key] = value
 
     def __contains__(self, key: CameraId):
-        self.log(f"lookup_{key}")
+        self.add_log(f"lookup_{key}")
         return key in self.frames
 
     def __delitem__(self, key: CameraId):
-        self.log(f"deleted_{key}")
+        self.add_log(f"deleted_{key}")
         del self.frames[key]
 
-    def __str__(self):
-        self.log("cast_to_string")
-        frame_strs = []
-        for camera_id, frame in self.frames.items():
-            if frame:
-                frame_strs.append(str(frame))
-            else:
-                frame_strs.append(f"{camera_id}: None")
-
-        return ",".join(frame_strs)
+    @property
+    def size_in_kilobytes(self):
+        self.add_log("calculate_size")
+        return sum([frame.size_in_kilobytes for frame in self.frames.values() if frame is not None])

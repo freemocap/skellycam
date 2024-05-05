@@ -45,7 +45,7 @@ class VideoRecorderProcess(Process):
         setproctitle("Video Recorder Manager Process")
         while True:
             multi_frame_payload = self._multi_frame_queue.get()
-            # payload.log("before_put_in_recorder_queue")
+            # payload.add_log("before_put_in_recorder_queue")
 
             if multi_frame_payload is None:
                 logger.debug(
