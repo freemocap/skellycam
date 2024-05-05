@@ -10,7 +10,7 @@ from skellycam.backend.core.frames.frame_payload import FramePayload
 
 class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]]
-    utc_ns_to_perf_ns: Dict[int, int] = Field(
+    utc_ns_to_perf_ns: Dict[str, int] = Field(
         description="A mapping of `time.time_ns()` to `time.perf_counter_ns()` "
                     "to allow conversion of `time.perf_counter_ns()`'s arbitrary "
                     "time base to unix time")
@@ -26,7 +26,7 @@ class MultiFramePayload(BaseModel):
         utc_ns = time.time_ns()
         perf_ns = time.perf_counter_ns()
         return cls(frames={camera_id: None for camera_id in camera_ids},
-                   utc_ns_to_perf_ns={"time.time_ns": utc_ns, "time.perf_counter_ns": perf_ns},
+                   utc_ns_to_perf_ns={"time.time_ns": int(utc_ns), "time.perf_counter_ns": int(perf_ns)},
                    timestamp_trace_ns=cls.init_logs(),
                    **kwargs
                    )
@@ -77,11 +77,11 @@ class MultiFramePayload(BaseModel):
 
     @classmethod
     def from_msgpack(cls, msgpack_bytes: bytes):
-        received_event = f"received_msgpack:{time.perf_counter_ns()}"
+        received_event = f"before_unpacking_msgpack:{time.perf_counter_ns()}"
         unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
         instance = cls(**unpacked)
         instance.log(received_event, add_timestamp=False)
-        instance.log("from_msgpack")
+        instance.log("created_from_msgpack")
         return instance
 
     def __len__(self):

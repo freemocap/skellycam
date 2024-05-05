@@ -76,15 +76,17 @@ class FrameWrangler:
         while True:
             if self._receiver_pipe.poll():
                 payload_bytes = self._sender_pipe.recv()
-                self._multi_frame_payload = MultiFramePayload.from_msgpack(payload_bytes)
-                logger.trace(f"Received
+                payload = MultiFramePayload.from_msgpack(payload_bytes)
+                logger.trace(f"Received multi-frame payload: {payload}")
+                await self._handle_payload(payload)
 
-    async def _send_frames(self):
+    async def _handle_payload(self, payload: MultiFramePayload):
         if self._is_recording:
-            self._recorder_queue.put(self._multi_frame_payload)
+            payload.log("before_put_in_recorder_queue")
+            self._recorder_queue.put(payload)
 
         if self._ws_send_bytes is not None:
-            logger.trace(f"Sending multi-frame payload to frontend: {self._multi_frame_payload}")
+            logger.trace(f"Sending multi-frame payload to frontend: {payload}")
             await self._send_frontend_payload()
 
         self._previous_multi_frame_payload = deepcopy(self._multi_frame_payload)
