@@ -38,6 +38,43 @@ async def trigger_camera_read(cameras: Dict[CameraId, TriggerCamera],
     return payload
 
 
+async def communication_queue_loop(cameras: Dict[CameraId, TriggerCamera],
+                                    communication_queue: multiprocessing.Queue,
+                                    exit_event: asyncio.Event):
+    logger.debug("Starting communication queue loop")
+    while not exit_event.is_set():
+        if not communication_queue.empty():
+            message = communication_queue.get()
+            if message is None:
+                logger.debug("Received `None` - setting `exit` event")
+                exit_event.set()
+            elif isinstance(message, CameraConfigs):
+                logger.debug("Updating camera configs")
+                await update_camera_configs(cameras, message)
+    logger.debug("Communication queue loop complete")
+
+
+async def camera_trigger_loop(cameras: Dict[CameraId, TriggerCamera],
+                              frame_pipe,  # send-only pipe connection
+                              communication_queue: multiprocessing.Queue,
+                              exit_event: asyncio.Event):
+    payload = MultiFramePayload.create(list(cameras.keys()))
+    communication_queue_task = asyncio.create_task(communication_queue_loop(cameras, communication_queue, exit_event))
+    while not exit_event.is_set():
+
+        payload = await trigger_camera_read(cameras, payload)
+
+        logger.loop(f"Sending payload: {payload}")
+        payload.log("before_putting_in_pipe_from_trigger_loop")
+        frame_pipe.send_bytes(payload.to_msgpack())
+        payload = MultiFramePayload.from_previous(payload)
+        frame_pipe.send_bytes(payload.to_msgpack())
+
+    if not communication_queue_task.done():
+        communication_queue.put(None)
+        await communication_queue_task
+
+
 async def update_camera_configs(cameras: [CameraId, TriggerCamera], configs: CameraConfigs):
     tasks = []
     for camera, config in zip(cameras.values(), configs.values()):
@@ -87,21 +124,11 @@ class CameraTriggerProcess:
         logger.debug(f"Starting Camera Trigger Process")
 
         cameras = asyncio.run(connect_cameras(camera_configs))
-
+        exit_event = asyncio.Event()
         payload: Optional[MultiFramePayload] = None
         while True:
             if payload is None:
                 payload = MultiFramePayload.create(list(cameras.keys()))
             payload = asyncio.run(trigger_camera_read(cameras, payload))
 
-            if not communication_queue.empty():
-                message = communication_queue.get()
-                if message is None:
-                    logger.debug("Recieved `None` - breaking frame loop")
-                    break
-                elif isinstance(message, CameraConfigs):
-                    logger.debug("Updating camera configs")
-                    asyncio.run(update_camera_configs(cameras, message))
-                    payload.log("update_camera_configs")
-
-            frame_pipe.send_bytes(payload.to_msgpack())
+            asyncio.run(camera_trigger_loop(cameras, frame_pipe, communication_queue, exit_event))

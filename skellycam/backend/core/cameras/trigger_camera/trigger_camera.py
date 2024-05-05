@@ -77,6 +77,5 @@ class TriggerCamera:
             timestamp_ns=post_read_timestamp,
             frame_number=self._frame_number,
             camera_id=CameraId(self._config.camera_id),
-            trace_timestamps_ns={"pre_read_timestamp": pre_read_timestamp,
-                                 "post_read_timestamp": post_read_timestamp}
+            read_duration_ns=post_read_timestamp - pre_read_timestamp,
         )
