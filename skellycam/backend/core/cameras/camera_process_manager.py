@@ -29,11 +29,14 @@ class CameraProcessManager:
         self._camera_configs = camera_configs
         self._camera_processes = self._create_processes()
 
-    def start_cameras(self):
+    async def start_cameras(self):
         if len(self._camera_processes) == 0:
             raise ValueError("No cameras to start!")
 
         logger.debug(f"Starting camera capture processes...")
+        await asyncio.gather(*(process.start_process()
+                               for process in self._camera_processes.values()))
+        logger.debug(f"All camera capture processes ready - starting capture...")
         for process in self._camera_processes.values():
             process.start_capture()
 

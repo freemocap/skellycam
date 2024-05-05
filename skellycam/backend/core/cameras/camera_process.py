@@ -35,6 +35,8 @@ class CameraProcess:
         self._process: Optional[Process] = None
         self._communication_queue = multiprocessing.Queue()
         self._receiver, self._sender = multiprocessing.Pipe(duplex=False)
+        self._camera_ready_event = multiprocessing.Event()
+        self._camera_should_start_event = multiprocessing.Event()
 
     @property
     def camera_id(self) -> CameraId:
@@ -51,7 +53,10 @@ class CameraProcess:
                 message = self._communication_queue.get()
                 logger.debug(f"Response from camera {self.camera_id}: {message}")
 
-    def start_capture(self):
+    def start_capturing(self):
+        self._communication_queue.put("start")
+
+    async def start_process(self):
         logger.debug(f"Starting capture `Process` for {self.camera_id}")
 
         self._process = Process(
@@ -61,17 +66,21 @@ class CameraProcess:
                 self._camera_config,
                 self._sender,
                 self._communication_queue,
+                self._camera_ready_event,
+                self._camera_should_start_event,
             ),
         )
         self._process.start()
-        self._wait_for_camera_to_start()
-        logger.info(f"Capture `Process` for {self.camera_id} started!")
+        await self._wait_for_camera_ready()
+        logger.info(f"Capture `Process` for {self.camera_id} ready!")
 
-    def _wait_for_camera_to_start(self):
-        while not self._receiver.poll():
-            logger.info(f"Waiting for camera {self.camera_id} to start...")
-            time.sleep(1)
-        logger.info(f"Camera {self.camera_id} started!")
+    def start_capture(self):
+        logger.debug(f"Starting capture for camera {self.camera_id}")
+        self._camera_should_start_event.set()
+
+    async def _wait_for_camera_ready(self):
+        while not self._camera_ready_event.is_set():
+            await asyncio.sleep(1.0)
 
     def stop_capture(self):
         """
@@ -117,6 +126,8 @@ class CameraProcess:
             camera_config: CameraConfig,
             frame_pipe_sender,  # multiprocessing.connection.Connection
             communication_queue: multiprocessing.Queue,
+            camera_ready_event: multiprocessing.Event,
+            camera_should_start_event: multiprocessing.Event,
     ):
         logger.debug(
             f"Starting frame loop capture in CamGroupProcess for camera: {camera_config.camera_id}"
@@ -127,6 +138,13 @@ class CameraProcess:
 
         camera = Camera(config=camera_config, frame_pipe=frame_pipe_sender)
         camera.connect()
+        camera_ready_event.set()
+        logger.debug(f"Camera {camera_config.camera_id} ready - awaiting start signal")
+        while True:
+            if camera_should_start_event.is_set():
+                break
+            time.sleep(0.001)
+        logger.debug(f"Camera {camera_config.camera_id} capture started!")
 
         while True:
             time.sleep(1.0)  # check for messages every second

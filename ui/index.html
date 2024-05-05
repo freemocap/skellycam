@@ -6,7 +6,7 @@
     <title>💀📸✨</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/msgpack5/5.2.1/msgpack5.min.js"></script>
 </head>
-<body style="background-color: #282c34; color: #c3c3c3; font-family: Arial, sans-serif;" >
+<body style="background-color: #282c34; color: #c3c3c3; font-family: Arial, sans-serif;">
 <div id="app" class="appContainer">
     <h2>hi im skellycam wow </h2>
     <div id="websocket-status">WebSocket status: Not Connected</div>
@@ -15,8 +15,10 @@
     <button id="connect-button">Connect to cameras</button>
     <button id="close-button">Close Cameras</button>
     <button id="hello-button">👋💀</button>
+    <div id="videoContainer" class="video-container">
+        <h3 style="border: 1px solid black;">Camera Town</h3>
+    </div>
     <div id="logContainer" class="log-container"></div>
-    <div id="videoContainer" class="video-container">Camera Town</div>
 </div>
 <script src="main.js"></script>
 </body>
@@ -41,9 +43,11 @@
         padding: 10px;
         margin: 10px;
         overflow-y: scroll;
+
         overflow-wrap: break-word;
-        height: 300px;
+        height: 200px;
         background-color: #6a7495;
+        color: #000000;
     }
 
     .video-container {
@@ -52,7 +56,7 @@
         justify-content: center;
         border: 1px solid deeppink;
         background-color: #3c0623;
-        min-height: 300px;
+        min-height: 600px;
     }
 
 </style>

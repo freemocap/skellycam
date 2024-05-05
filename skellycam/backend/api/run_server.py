@@ -24,3 +24,7 @@ def run_uvicorn_server(
         raise e
     finally:
         logger.info(f"Shutting down uvicorn server")
+
+
+if __name__ == "__main__":
+    run_uvicorn_server("localhost", 8003)

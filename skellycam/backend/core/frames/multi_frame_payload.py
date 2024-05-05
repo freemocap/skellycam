@@ -53,4 +53,4 @@ class MultiFramePayload(BaseModel):
             else:
                 frame_strs.append(f"{camera_id}: None")
 
-        return "\n".join(frame_strs)
+        return ",".join(frame_strs)

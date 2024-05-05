@@ -38,29 +38,33 @@ class CameraGroup:
 
     async def start_cameras(self):
         logger.info("Starting cameras...")
-        self._camera_process_manager.start_cameras()
+        await self._camera_process_manager.start_cameras()
         self._frame_loop_task = asyncio.create_task(self._start_frame_loop())
 
-
     async def _start_frame_loop(self):
-        logger.info(f"Frame capture loop cameras: {self.camera_ids} started.")
+        logger.debug(f"Frame capture loop cameras: {self.camera_ids} started.")
         while self._should_continue:
             new_frames = self._camera_process_manager.get_new_frames()
             if len(new_frames) > 0:
                 await self._frame_wrangler.handle_new_frames(new_frames)
             else:
                 await asyncio.sleep(0.001)
-        logger.info("Frame capture loop has stopped.")
+        logger.debug("Frame capture loop has stopped. - closing camera group...")
+        await self.close()
+
 
     async def update_configs(self, camera_configs: CameraConfigs, strict: bool = False):
         logger.info(f"Updating camera configs to {camera_configs}")
         await self._camera_process_manager.update_camera_configs(camera_configs=camera_configs,
                                                                  strict=strict)
+        self._frame_wrangler.set_camera_configs(camera_configs)
+
 
     async def close(self):
         logger.debug("Closing camera group")
         self._frame_wrangler.close()
         self._camera_process_manager.close()
+        logger.debug("Setting `should_continue` to False")
         self._should_continue = False
         if self._frame_loop_task is not None:
             await self._frame_loop_task

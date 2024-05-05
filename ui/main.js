@@ -42,6 +42,8 @@ let connectWebSocket = async () => {
                             const image = new Image()
                             image.onload = () => {
                                 const canvas = document.getElementById(`camera${cameraId}`) || updateCanvasElements(jpegImagesByCamera)
+                                canvas.width = image.width
+                                canvas.height = image.height
                                 const context = canvas.getContext('2d')
                                 context.drawImage(image, 0, 0, canvas.width, canvas.height)
                                 URL.revokeObjectURL(image.src)
@@ -52,13 +54,15 @@ let connectWebSocket = async () => {
                             image.src = url
                         }
                     }
-                );
+                )
+                ;
             }
             reader.readAsArrayBuffer(event.data);
         } else {
             console.error(`Received message of unknown type: ${event.data}`);
         }
-    };
+    }
+    ;
     ws.onerror = function (error) {
         console.error('WebSocket error:', error);
     };
@@ -77,6 +81,8 @@ function updateCanvasElements(jpegImagesByCamera) {
             const canvas = document.createElement('canvas');
             canvas.id = `camera${cameraId}`;
             canvas.style.border = '1px solid green';
+            canvas.style.width = '100%';
+            canvas.style.height = 'auto';
             videoContainer.appendChild(canvas);
         }
     });
@@ -89,7 +95,7 @@ function addLog(message) {
     console.log(message);
     const logContainer = document.getElementById('logContainer');
     const logEntry = document.createElement('div');
-    logEntry.textContent = `${logCount++} ☞ ${message}`;
+    logEntry.textContent = `[${logCount++}] ☞ ${message}`;
     logContainer.appendChild(logEntry);
     logContainer.scrollTop = logContainer.scrollHeight;
 }

@@ -5,7 +5,7 @@ from typing import Tuple
 from setproctitle import setproctitle
 
 from skellycam.backend.api.app.find_available_port import find_available_port
-from skellycam.backend.api.app.run_server import run_uvicorn_server
+from skellycam.backend.api.run_server import run_uvicorn_server
 
 logger = logging.getLogger(__name__)
 

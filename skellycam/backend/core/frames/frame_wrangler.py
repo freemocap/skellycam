@@ -94,13 +94,10 @@ class FrameWrangler:
                 # wait until we have a full frame to copy from the first go-around
                 continue
 
-            if self._frame_timeout or self._current_multi_frame_payload.full:
-                await self._handle_full_or_timeout()
+            if self._current_multi_frame_payload.full:
+                await self._send_frames()
 
-    async def _handle_full_or_timeout(self):
-
-        self._backfill_missing_with_previous_frame()
-
+    async def _send_frames(self):
         if self._is_recording:
             self._recorder_queue.put(self._current_multi_frame_payload)
 
@@ -127,7 +124,7 @@ class FrameWrangler:
             return False
         oldest_timestamp_ns = self._current_multi_frame_payload.oldest_timestamp_ns
         time_since_oldest_frame_sec = (time.perf_counter_ns() - oldest_timestamp_ns) / 1e9
-        return time_since_oldest_frame_sec > self.ideal_frame_duration
+        return time_since_oldest_frame_sec > (self.ideal_frame_duration * 2)
 
     def _backfill_missing_with_previous_frame(self):
 
