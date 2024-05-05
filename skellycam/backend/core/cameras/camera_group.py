@@ -28,7 +28,7 @@ class CameraGroup:
     def set_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {camera_configs}")
         self._multi_camera_process = CameraTriggerProcess(camera_configs=camera_configs,
-                                                          frame_pipe=self._frame_wrangler.get_frame_pipe())
+                                                          frame_pipe=self._frame_wrangler.get_frame_input_pipe())
         self._frame_wrangler.set_camera_configs(camera_configs)
 
     @property

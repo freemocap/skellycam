@@ -88,3 +88,14 @@ class FrontendImagePayload(BaseModel):
     def __setitem__(self, key: CameraId, value: Optional[bytes]):
         self.log(f"set_{key}")
         self.jpeg_images[key] = value
+
+    def __str__(self):
+        self.log("cast_to_str")
+        frame_strs = []
+        for camera_id, frame in self.jpeg_images.items():
+            if frame:
+                frame_strs.append(f"{camera_id}: {len(frame)} bytes")
+            else:
+                frame_strs.append(f"{camera_id}: None")
+
+        return ",".join(frame_strs)

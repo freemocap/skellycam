@@ -107,7 +107,7 @@ class MultiFramePayload(BaseModel):
         del self.frames[key]
 
     def __str__(self):
-        self.log("cast_to_str")
+        self.log("cast_to_string")
         frame_strs = []
         for camera_id, frame in self.frames.items():
             if frame:

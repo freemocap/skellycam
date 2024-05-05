@@ -2,10 +2,9 @@ import logging
 import multiprocessing
 import time
 from copy import deepcopy
-from typing import List, Coroutine, Callable, Optional
+from typing import Coroutine, Callable, Optional
 
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
-from skellycam.backend.core.frames.frame_payload import FramePayload
 from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.backend.core.video_recorder.video_recorder_manager import VideoRecorderProcessManager
@@ -20,7 +19,7 @@ class FrameWrangler:
         super().__init__()
         self._camera_configs: CameraConfigs = {}
         self._recorder_queue = multiprocessing.Queue()
-        self._sender_pipe, self._receiver_pipe = multiprocessing.Pipe(duplex=False)
+        self._frame_output_pipe, self._frame_input_pipe = multiprocessing.Pipe(duplex=False)
         self._video_recorder_manager = VideoRecorderProcessManager(
             multi_frame_queue=self._recorder_queue,
         )
@@ -30,8 +29,8 @@ class FrameWrangler:
         self._multi_frame_payload: Optional[MultiFramePayload] = None
         self._previous_multi_frame_payload: Optional[MultiFramePayload] = None
 
-    def get_frame_pipe(self):
-        return self._receiver_pipe
+    def get_frame_input_pipe(self):
+        return self._frame_input_pipe
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
@@ -74,10 +73,10 @@ class FrameWrangler:
 
     async def listen_for_frames(self):
         while True:
-            if self._receiver_pipe.poll():
-                payload_bytes = self._sender_pipe.recv()
+            if self._frame_output_pipe.poll():
+                payload_bytes = self._frame_output_pipe.recv()
                 payload = MultiFramePayload.from_msgpack(payload_bytes)
-                logger.trace(f"Received multi-frame payload: {payload}")
+                logger.loop(f"Received multi-frame payload: {payload}")
                 await self._handle_payload(payload)
 
     async def _handle_payload(self, payload: MultiFramePayload):
@@ -86,7 +85,6 @@ class FrameWrangler:
             self._recorder_queue.put(payload)
 
         if self._ws_send_bytes is not None:
-            logger.trace(f"Sending multi-frame payload to frontend: {payload}")
             await self._send_frontend_payload()
 
         self._previous_multi_frame_payload = deepcopy(self._multi_frame_payload)
@@ -100,5 +98,6 @@ class FrameWrangler:
         frontend_payload = FrontendImagePayload.from_multi_frame_payload(
             multi_frame_payload=self._multi_frame_payload
         )
+        logger.loop(f"Sending frontend payload: {frontend_payload}")
         await self._ws_send_bytes(frontend_payload.to_msgpack())
 

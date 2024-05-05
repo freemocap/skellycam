@@ -19,17 +19,22 @@ async def trigger_camera_factory(config) -> TriggerCamera:
 
 
 async def connect_cameras(camera_configs: CameraConfigs) -> Dict[CameraId, TriggerCamera]:
+    logger.debug(f"Connecting cameras: {camera_configs}")
     tasks = {camera_id: trigger_camera_factory(config) for camera_id, config in camera_configs.items()}
-    cameras = await asyncio.gather(*tasks.values())
-    return dict(zip(tasks.keys(), cameras))
+    results = await asyncio.gather(*tasks.values())
+    cameras = dict(zip(tasks.keys(), results))
+    logger.debug(f"Connected cameras: {cameras.keys()}")
+    return cameras
 
 
 async def trigger_camera_read(cameras: Dict[CameraId, TriggerCamera],
                               payload: MultiFramePayload) -> MultiFramePayload:
+    logger.loop("Triggering camera read...")
     tasks = [camera.get_frame() for camera in cameras.values()]
     frames = await asyncio.gather(*tasks)
     for camera_id, frame in zip(cameras.keys(), frames):
         payload[camera_id] = frame
+    logger.loop(f"Trigger returned - {payload}")
     return payload
 
 
