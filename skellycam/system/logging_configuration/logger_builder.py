@@ -45,7 +45,9 @@ class LoggerBuilder:
 
         COLORS = {
             # Define color codes for different log levels with ANSI escape codes
-            "TRACE": "\033[37m",  # Dark White (grey)
+            # https://en.wikipedia.org/wiki/ANSI_escape_code
+            "LOOP": "\033[90m",  # Bright Black (grey)
+            "TRACE": "\033[37m",  # Dark White (also grey lol)
             "DEBUG": "\033[34m",  # Blue
             "INFO": "\033[96m",  # Cyan
             "SUCCESS": "\033[95m",  # Magenta
@@ -87,7 +89,7 @@ class LoggerBuilder:
 
     def build_console_handler(self):
         console_handler = self.ColoredConsoleHandler(stream=sys.stdout)
-        console_handler.setLevel(LogLevel.TRACE.value)
+        console_handler.setLevel(LogLevel.LOOP.value)
         console_handler.setFormatter(self.default_logging_formatter)
         console_handler.addFilter(DeltaTimeFilter())
         return console_handler
@@ -100,5 +102,4 @@ class LoggerBuilder:
                     logging.getLogger("").handlers.append(handler)
         else:
             logger = logging.getLogger(__name__)
-
-            logger.info("Logging already configured")
+            logger.trace("Logging already configured")
