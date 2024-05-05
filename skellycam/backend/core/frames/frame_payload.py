@@ -1,3 +1,5 @@
+from typing import Dict
+
 import msgpack
 import numpy as np
 from pydantic import BaseModel, Field
@@ -14,6 +16,8 @@ class FramePayload(BaseModel):
         description="The frame number of the frame (`0` is the first frame pulled from this camera)")
     camera_id: CameraId = Field(
         description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`")
+    trace_timestamps_ns: Dict[str, int] = Field(
+        description="A dictionary of timestamps for various points in the frame's lifecycle, for diagnostics")
 
     @classmethod
     def create(cls,
@@ -21,14 +25,16 @@ class FramePayload(BaseModel):
                image: np.ndarray,
                timestamp_ns: int,
                frame_number: int,
-               camera_id: CameraId):
+               camera_id: CameraId,
+               trace_timestamps_ns: Dict[str, int] = None):
         return cls(
             success=success,
             image_data=image.tobytes(),
             image_shape=image.shape,
             timestamp_ns=timestamp_ns,
             frame_number=frame_number,
-            camera_id=camera_id
+            camera_id=camera_id,
+            trace_timestamps_ns=trace_timestamps_ns or {}
         )
 
     @property
@@ -52,13 +58,6 @@ class FramePayload(BaseModel):
     def resolution(self) -> tuple:
         return self.width, self.height
 
-    def to_msgpack(self) -> bytes:
-        return msgpack.packb(self.dict(), use_bin_type=True)
-
-    @classmethod
-    def from_msgpack(cls, msgpack_bytes: bytes):
-        unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
-        return cls(**unpacked)
 
     def __str__(self):
         return f"{self.camera_id}: {self.resolution} Frame#{self.frame_number}"

@@ -17,14 +17,6 @@ from skellycam.backend.core.frames.frame_payload import FramePayload
 logger = logging.getLogger(__name__)
 
 
-class FailedToReadFrameFromCameraException(Exception):
-    pass
-
-
-class FailedToOpenCameraException(Exception):
-    pass
-
-
 class CaptureThread(threading.Thread):
     def __init__(
             self,

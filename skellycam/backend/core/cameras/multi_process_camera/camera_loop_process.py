@@ -9,8 +9,8 @@ import cv2
 from pydantic import BaseModel, Field
 from setproctitle import setproctitle
 
-from skellycam.backend.core.cameras.camera import (
-    Camera,
+from skellycam.backend.core.cameras.thread_loop_camera.loop_camera import (
+    LoopCamera,
 )
 from skellycam.backend.core.cameras.config.camera_config import CameraConfig
 from skellycam.backend.core.device_detection.camera_id import CameraId
@@ -26,7 +26,7 @@ class UpdateConfigMessage(BaseModel):
                          description="If True, will raise an error if the camera settings do not match the target config after updating.")
 
 
-class CameraProcess:
+class CameraLoopProcess:
     def __init__(
             self,
             config: CameraConfig,
@@ -61,7 +61,7 @@ class CameraProcess:
 
         self._process = Process(
             name=f"Camera-{self.camera_id}",
-            target=CameraProcess._run_process,
+            target=CameraLoopProcess._run_process,
             args=(
                 self._camera_config,
                 self._sender,
@@ -136,7 +136,7 @@ class CameraProcess:
         process_name = f"Camera {camera_config.camera_id}"
         setproctitle(process_name)
 
-        camera = Camera(config=camera_config, frame_pipe=frame_pipe_sender)
+        camera = LoopCamera(config=camera_config, frame_pipe=frame_pipe_sender)
         camera.connect()
         camera_ready_event.set()
         logger.debug(f"Camera {camera_config.camera_id} ready - awaiting start signal")

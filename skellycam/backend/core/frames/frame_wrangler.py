@@ -20,45 +20,31 @@ class FrameWrangler:
         super().__init__()
         self._camera_configs: CameraConfigs = {}
         self._recorder_queue = multiprocessing.Queue()
+        self._sender_pipe, self._receiver_pipe = multiprocessing.Pipe(duplex=False)
         self._video_recorder_manager = VideoRecorderProcessManager(
             multi_frame_queue=self._recorder_queue,
         )
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._is_recording = False
 
-        self._current_multi_frame_payload: Optional[MultiFramePayload] = None
+        self._multi_frame_payload: Optional[MultiFramePayload] = None
         self._previous_multi_frame_payload: Optional[MultiFramePayload] = None
+
+    def get_frame_pipe(self):
+        return self._receiver_pipe
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
         self._camera_configs = camera_configs
-        self._current_multi_frame_payload = MultiFramePayload.create(
+        self._multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
         )
 
     @property
     def is_recording(self):
         return self._is_recording
-
-    @property
-    def prescribed_framerate(self):
-        if len(self._camera_configs) == 0:
-            raise ValueError("No cameras to determine frame rate from!")
-
-        all_frame_rates = [
-            camera_config.framerate for camera_config in self._camera_configs.values()
-        ]
-        if len(set(all_frame_rates)) > 1:
-            logger.warning(
-                f"Frame rates are not all the same: {all_frame_rates} - Defaulting to the slowest frame rate"
-            )
-        return min(all_frame_rates)
-
-    @property
-    def ideal_frame_duration(self):
-        return 1 / self.prescribed_framerate
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
@@ -86,27 +72,23 @@ class FrameWrangler:
         self._is_recording = False
         self._video_recorder_manager.stop_recording()
 
-    async def handle_new_frames(self, new_frames: List[FramePayload]):
-        for frame in new_frames:
-            self._current_multi_frame_payload[frame.camera_id] = frame
-
-            if self._previous_multi_frame_payload is None and not self._current_multi_frame_payload.full:
-                # wait until we have a full frame to copy from the first go-around
-                continue
-
-            if self._current_multi_frame_payload.full:
-                await self._send_frames()
+    async def listen_for_frames(self):
+        while True:
+            if self._receiver_pipe.poll():
+                payload_bytes = self._sender_pipe.recv()
+                self._multi_frame_payload = MultiFramePayload.from_msgpack(payload_bytes)
+                logger.trace(f"Received
 
     async def _send_frames(self):
         if self._is_recording:
-            self._recorder_queue.put(self._current_multi_frame_payload)
+            self._recorder_queue.put(self._multi_frame_payload)
 
         if self._ws_send_bytes is not None:
-            logger.trace(f"Sending multi-frame payload to frontend: {self._current_multi_frame_payload}")
+            logger.trace(f"Sending multi-frame payload to frontend: {self._multi_frame_payload}")
             await self._send_frontend_payload()
 
-        self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
-        self._current_multi_frame_payload = MultiFramePayload.create(
+        self._previous_multi_frame_payload = deepcopy(self._multi_frame_payload)
+        self._multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
         )
 
@@ -114,30 +96,7 @@ class FrameWrangler:
         if self._ws_send_bytes is None:
             raise ValueError("Websocket `send bytes` function not set!")
         frontend_payload = FrontendImagePayload.from_multi_frame_payload(
-            multi_frame_payload=self._current_multi_frame_payload
+            multi_frame_payload=self._multi_frame_payload
         )
         await self._ws_send_bytes(frontend_payload.to_msgpack())
 
-    def _frame_timeout(self) -> bool:
-        if self._current_multi_frame_payload is None:
-            # don't time out if we haven't received any frames yet
-            return False
-        oldest_timestamp_ns = self._current_multi_frame_payload.oldest_timestamp_ns
-        time_since_oldest_frame_sec = (time.perf_counter_ns() - oldest_timestamp_ns) / 1e9
-        return time_since_oldest_frame_sec > (self.ideal_frame_duration * 2)
-
-    def _backfill_missing_with_previous_frame(self):
-
-        if self._previous_multi_frame_payload is None:
-            if self._current_multi_frame_payload.full:
-                self._previous_multi_frame_payload = deepcopy(self._current_multi_frame_payload)
-            else:
-                raise ValueError(
-                    "Current multi-frame payload is not full, but there is no previous payload to backfill from")
-
-        if self._current_multi_frame_payload.full:
-            return
-
-        for camera_id in self._previous_multi_frame_payload.camera_ids:
-            if self._current_multi_frame_payload[camera_id] is None:
-                self._current_multi_frame_payload[camera_id] = self._previous_multi_frame_payload[camera_id]

@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from skellycam.backend.core.cameras.capture_thread import (
+from skellycam.backend.core.cameras.thread_loop_camera.capture_thread import (
     CaptureThread,
 )
 from skellycam.backend.core.cameras.config.camera_config import CameraConfig
@@ -10,7 +10,7 @@ from skellycam.backend.core.device_detection.camera_id import CameraId
 logger = logging.getLogger(__name__)
 
 
-class Camera:
+class LoopCamera:
     def __init__(
         self,
         config: CameraConfig,

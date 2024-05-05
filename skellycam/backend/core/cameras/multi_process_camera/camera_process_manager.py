@@ -1,8 +1,8 @@
 import asyncio
 from typing import Dict, List
 
-from skellycam.backend.core.cameras.camera_process import (
-    CameraProcess,
+from skellycam.backend.core.cameras.multi_process_camera.camera_loop_process import (
+    CameraLoopProcess,
 )
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.device_detection.camera_id import CameraId
@@ -19,7 +19,7 @@ class CameraProcessManager:
             self,
     ):
         self._camera_configs: CameraConfigs = {}
-        self._camera_processes: Dict[CameraId, CameraProcess] = {}
+        self._camera_processes: Dict[CameraId, CameraLoopProcess] = {}
 
     @property
     def camera_ids(self):
@@ -54,12 +54,12 @@ class CameraProcessManager:
             new_frames.extend(process.get_new_frames())
         return new_frames
 
-    def _create_processes(self) -> Dict[CameraId, CameraProcess]:
+    def _create_processes(self) -> Dict[CameraId, CameraLoopProcess]:
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras to create processes for!")
         if len(self._camera_configs) == 0:
             raise ValueError("No cameras were provided")
-        return {camera_id: CameraProcess(config)
+        return {camera_id: CameraLoopProcess(config)
                 for camera_id, config in self._camera_configs.items()}
 
     async def update_camera_configs(self, camera_configs: CameraConfigs, strict: bool = False):

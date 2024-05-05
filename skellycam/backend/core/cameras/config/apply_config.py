@@ -13,8 +13,7 @@ class FailedToApplyCameraConfigurationError(Exception):
     pass
 
 
-def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig,
-                               strict: bool = False) -> CameraConfig:
+async def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> CameraConfig:
     # set camera stream parameters
     logger.info(
         f"Applying configuration to Camera {config.camera_id}:"
@@ -40,16 +39,6 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
         extracted_config = extract_config_from_cv2_capture(cv2_capture=cv2_vid_capture,
                                                            rotation=config.rotation,
                                                            use_this_camera=config.use_this_camera)
-
-        if strict:
-            if extracted_config != config:
-                logger.error(
-                    f"Failed to apply configuration to Camera {config.camera_id} - "
-                    f"Configuration mismatch: {config} != {extracted_config}"
-                )
-                raise FailedToApplyCameraConfigurationError(
-                    f"Failed to apply configuration to Camera {config.camera_id} - Configuration mismatch"
-                )
 
         return extracted_config
     except Exception as e:

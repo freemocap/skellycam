@@ -1,11 +1,8 @@
-import asyncio
 import logging
 from typing import Coroutine, Callable, Optional
 
-from skellycam.backend.core.cameras.camera_process_manager import (
-    CameraProcessManager,
-)
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
+from skellycam.backend.core.cameras.trigger_camera.camera_trigger_process import CameraTriggerProcess
 from skellycam.backend.core.frames.frame_wrangler import FrameWrangler
 
 logger = logging.getLogger(__name__)
@@ -15,21 +12,23 @@ class CameraGroup:
     def __init__(
             self,
     ):
-        self._camera_process_manager = CameraProcessManager()
+        self._multi_camera_process: Optional[CameraTriggerProcess] = None
+        # self._multi_camera_process =  CameraProcessManager()
         self._frame_wrangler = FrameWrangler()
-        self._frame_loop_task: Optional[asyncio.Task] = None
-        self._should_continue = True
 
     @property
     def camera_ids(self):
-        return self._camera_process_manager.camera_ids
+        if self._multi_camera_process is None:
+            return []
+        return self._multi_camera_process.camera_ids
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._frame_wrangler.set_websocket_bytes_sender(ws_send_bytes)
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {camera_configs}")
-        self._camera_process_manager.set_camera_configs(camera_configs)
+        self._multi_camera_process = CameraTriggerProcess(camera_configs=camera_configs,
+                                                          frame_pipe=self._frame_wrangler.get_frame_pipe())
         self._frame_wrangler.set_camera_configs(camera_configs)
 
     @property
@@ -38,34 +37,15 @@ class CameraGroup:
 
     async def start_cameras(self):
         logger.info("Starting cameras...")
-        await self._camera_process_manager.start_cameras()
-        self._frame_loop_task = asyncio.create_task(self._start_frame_loop())
+        self._multi_camera_process.start()
 
-    async def _start_frame_loop(self):
-        logger.debug(f"Frame capture loop cameras: {self.camera_ids} started.")
-        while self._should_continue:
-            new_frames = self._camera_process_manager.get_new_frames()
-            if len(new_frames) > 0:
-                await self._frame_wrangler.handle_new_frames(new_frames)
-            else:
-                await asyncio.sleep(0.001)
-        logger.debug("Frame capture loop has stopped. - closing camera group...")
-        await self.close()
-
-
-    async def update_configs(self, camera_configs: CameraConfigs, strict: bool = False):
+    async def update_configs(self, camera_configs: CameraConfigs):
         logger.info(f"Updating camera configs to {camera_configs}")
-        await self._camera_process_manager.update_camera_configs(camera_configs=camera_configs,
-                                                                 strict=strict)
+        await self._multi_camera_process.update_configs(camera_configs=camera_configs)
         self._frame_wrangler.set_camera_configs(camera_configs)
-
 
     async def close(self):
         logger.debug("Closing camera group")
         self._frame_wrangler.close()
-        self._camera_process_manager.close()
-        logger.debug("Setting `should_continue` to False")
-        self._should_continue = False
-        if self._frame_loop_task is not None:
-            await self._frame_loop_task
+        await self._multi_camera_process.close()
         logger.info("Camera group closed.")
