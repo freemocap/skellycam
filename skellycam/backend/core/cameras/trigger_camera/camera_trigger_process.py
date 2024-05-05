@@ -24,10 +24,11 @@ async def connect_cameras(camera_configs: CameraConfigs) -> Dict[CameraId, Trigg
     return dict(zip(tasks.keys(), cameras))
 
 
-async def trigger_camera_read(cameras: [CameraId, TriggerCamera], payload: MultiFramePayload) -> MultiFramePayload:
-    tasks = {camera_id: camera.get_frame for camera_id, camera in cameras}
-    frames = await asyncio.gather(*tasks.values())
-    for camera_id, frame in zip(tasks.keys(), frames):
+async def trigger_camera_read(cameras: Dict[CameraId, TriggerCamera],
+                              payload: MultiFramePayload) -> MultiFramePayload:
+    tasks = [camera.get_frame() for camera in cameras.values()]
+    frames = await asyncio.gather(*tasks)
+    for camera_id, frame in zip(cameras.keys(), frames):
         payload[camera_id] = frame
     return payload
 
@@ -57,8 +58,8 @@ class CameraTriggerProcess:
         )
 
     @property
-    def camera_ids(self):
-        return self._camera_configs.keys()
+    def camera_ids(self) -> [CameraId]:
+        return list(self._camera_configs.keys())
 
     def start(self):
         logger.debug("Stating CameraTriggerProcess...")
