@@ -45,7 +45,6 @@ class Controller:
             logger.info(f"Available cameras not set - Executing `detect` method...")
             await self.detect()
         await self._start_camera_group()
-        logger.success(f"Connected to cameras: {self._camera_group.camera_ids}!")
         return self._camera_group.camera_ids
 
     def start_recording(self, recording_folder_path: str):
@@ -57,7 +56,7 @@ class Controller:
         self._camera_group.frame_wrangler.stop_recording()
 
     async def _start_camera_group(self):
-        logger.info(f"Starting camera group...")
+        logger.debug(f"Starting camera group with cameras: {self._camera_group.camera_ids}")
         if len(self._available_cameras) == 0:
             raise ValueError("No cameras available to start camera group!")
         await self._camera_group.start_cameras()

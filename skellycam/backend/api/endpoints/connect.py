@@ -32,10 +32,10 @@ async def connect_cameras_route(
         request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest.default()])
 ) -> CamerasConnectedResponse:
     controller = get_or_create_controller()
-    logger.api("Received `/connect` request...")
+    logger.api("Received `/connect` POST request...")
     try:
         connected_cameras = await controller.connect(request.camera_configs)
-        logger.api("`/connect` request handled successfully.")
+        logger.api("`/connect` POST request handled successfully.")
         return CamerasConnectedResponse(connected_cameras=connected_cameras)
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {type(e).__name__} - {e}")
@@ -50,10 +50,10 @@ async def connect_cameras_route(
 )
 async def connect_cameras_route() -> CamerasConnectedResponse:
     controller = get_or_create_controller()
-    logger.api("Received `/connect` request...")
+    logger.api("Received `/connect` GET request...")
     try:
         connected_cameras = await controller.connect()
-        logger.api("`/connect` request handled successfully.")
+        logger.api("`/connect` GET request handled successfully.")
         return CamerasConnectedResponse(connected_cameras=connected_cameras)
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {type(e).__name__} - {e}")

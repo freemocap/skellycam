@@ -32,6 +32,7 @@ pytest = "^7.4.4"
 respx = "^0.20.2"
 websockets = "^12.0"
 tenacity = "^8.2.3"
+psutil = "^5.9.8"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"

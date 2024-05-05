@@ -14,36 +14,48 @@ logger = logging.getLogger(__name__)
 
 
 class TriggerCamera:
-    def __init__(
-            self,
-            config: CameraConfig,
-    ):
-        self._config: CameraConfig = config
+    def __init__(self):
+        self._config: Optional[CameraConfig] = None
         self._cv2_video_capture: Optional[cv2.VideoCapture] = None
         self._frame_number = 0
+
     @property
     def camera_id(self) -> CameraId:
         return self._config.camera_id
 
+    @property
+    def is_connected(self) -> bool:
+        return self._cv2_video_capture is not None and self._cv2_video_capture.isOpened()
+
+    async def start(self, config: CameraConfig):
+        self._config = config
+        await self.connect()
+        await self._apply_config()
+
     async def connect(self):
-        logger.info(f"Connecting to camera_id: {self.camera_id}")
+        logger.debug(f"Connecting to Camera: {self.camera_id}")
         self._cv2_video_capture = await create_cv2_capture(self._config)
 
     async def update_config(self, new_config: CameraConfig) -> CameraConfig:
-        logger.info(
-            f"Updating config for camera_id: {self.camera_id}  ->  {new_config}"
-        )
+
+        if self._config == new_config:
+            logger.trace(f"Requested config is the same as current config - no update required")
+            return self._config
+
+        logger.debug(f"Updating config for Camera: {self.camera_id}  ->  {new_config}")
         self._config = new_config
         if not self._config.use_this_camera:
-            self.close()
+            await self.close()
             return self._config
         else:
             if self._cv2_video_capture is None:
                 await self.connect()
+        return await self._apply_config()
 
+    async def _apply_config(self) -> CameraConfig:
         return await apply_camera_configuration(self._cv2_video_capture, self._config)
 
-    def close(self):
+    async def close(self):
         self._cv2_video_capture.release()
         self._cv2_video_capture = None
         logger.debug(f"Camera ID: [{self._config.camera_id}] closed")

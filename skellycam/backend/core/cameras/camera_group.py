@@ -36,7 +36,6 @@ class CameraGroup:
         return self._frame_wrangler
 
     async def start_cameras(self):
-        logger.info("Starting cameras...")
         self._multi_camera_process.start()
 
     async def update_configs(self, camera_configs: CameraConfigs):

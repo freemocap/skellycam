@@ -1,4 +1,6 @@
 import logging
+import os
+import psutil
 
 from skellycam.system.logging_configuration.log_level_enum import (
     LogLevel,
@@ -40,7 +42,8 @@ def configure_logging(level: LogLevel = LogLevel.DEBUG):
     builder = LoggerBuilder(level)
     builder.configure()
     logger = logging.getLogger(__name__)
-    logger.debug(f"Logging configured - level: {level}")
+
+    logger.debug(f"Logging configured for Process ID {os.getpid()} - log level: {level} (value: {level.value})")
 
 
 if __name__ == "__main__":
