@@ -81,8 +81,9 @@ function updateCanvasElements(jpegImagesByCamera) {
             const canvas = document.createElement('canvas');
             canvas.id = `camera${cameraId}`;
             canvas.style.border = '1px solid green';
-            canvas.style.width = '100%';
+            canvas.style.width = '50%';
             canvas.style.height = 'auto';
+            canvas.style.margin = '10px';
             videoContainer.appendChild(canvas);
         }
     });
