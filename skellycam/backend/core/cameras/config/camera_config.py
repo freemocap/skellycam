@@ -1,6 +1,6 @@
 from typing import Dict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.device_detection.image_rotation_types import RotationTypes
@@ -58,7 +58,40 @@ class CameraConfig(BaseModel):
         return self.dict() == other.dict()
 
 
-CameraConfigs = Dict[CameraId, CameraConfig]
+from typing import Dict
+from pydantic import BaseModel, Field
+
+
+class CameraConfigs(BaseModel):
+    __root__: Dict[CameraId, CameraConfig]
+
+    @validator('__root__')
+    def check_resolutions(cls, configs):
+        if len(configs) > 1:
+            first_resolution = next(iter(configs.values())).resolution
+            if not all(config.resolution == first_resolution for config in configs.values()):
+                #TODO: Support different resolutions
+                raise ValueError('All CameraConfig instances must have the same resolution because of the shared memory manager')
+
+        return configs
+
+    def __getitem__(self, key: CameraId) -> CameraConfig:
+        return self.__root__[key]
+
+    def __setitem__(self, key: CameraId, value: CameraConfig) -> None:
+        self.__root__[key] = value
+
+    def __iter__(self):
+        return iter(self.__root__)
+
+    def keys(self):
+        return self.__root__.keys()
+
+    def values(self):
+        return self.__root__.values()
+
+    def items(self):
+        return self.__root__.items()
 
 DEFAULT_CAMERA_CONFIGS = camera_configs = {0: CameraConfig(camera_id=0)}
 

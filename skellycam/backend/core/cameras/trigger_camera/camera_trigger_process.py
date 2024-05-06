@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import multiprocessing
+import threading
+import time
 from multiprocessing import Process, shared_memory
 from typing import Dict
 
@@ -52,43 +54,42 @@ async def trigger_camera_read(cameras: Dict[CameraId, TriggerCamera],
     return payload
 
 
-async def communication_queue_loop(cameras: Dict[CameraId, TriggerCamera],
-                                   communication_queue: multiprocessing.Queue,
+async def check_communication_queue(cameras: Dict[CameraId, TriggerCamera],
+                                   aqueue: asyncio.Queue,
                                    exit_event: asyncio.Event):
-    logger.debug("Starting communication queue loop")
-    while not exit_event.is_set():
-        if not communication_queue.empty():
-            message = communication_queue.get()
-            if message is None:
-                logger.debug("Received `None` - setting `exit` event")
-                exit_event.set()
-                close_tasks = [camera.close() for camera in cameras.values()]
-                await asyncio.gather(*close_tasks)
-            elif isinstance(message, CameraConfigs):
-                logger.debug("Updating camera configs")
-                await update_camera_configs(cameras, message)
-    logger.debug("Communication queue loop complete")
+    logger.loop("Checking communication queue")
+    if not aqueue.empty():
+        message = await aqueue.get()
+        if message is None:
+            logger.debug("Received `None` - setting `exit` event")
+            exit_event.set()
+            logger.debug("Closing cameras...")
+            close_tasks = [camera.close() for camera in cameras.values()]
+            await asyncio.gather(*close_tasks)
+            logger.debug("Cameras closed")
+        elif isinstance(message, CameraConfigs):
+            logger.debug("Received CameraConfigs - updating camera configs")
+            await update_camera_configs(cameras, message)
+            logger.debug("Camera configs updated")
 
 
 async def camera_trigger_loop(camera_configs: CameraConfigs,
-                              frame_pipe,  # send-only pipe connection
-                              communication_queue: multiprocessing.Queue,
+                              aqueue: asyncio.Queue,
                               shared_memory_manager: SharedImageMemoryManager,
                               exit_event: asyncio.Event):
     cameras = await start_cameras(camera_configs)
-    # communication_queue_task = asyncio.create_task(communication_queue_loop(cameras, communication_queue, exit_event))
-    print('hi')
 
     logger.info(f"Camera trigger loop started!")
     payload = MultiFramePayload.create(list(cameras.keys()))
     while not exit_event.is_set():
         payload = await trigger_camera_read(cameras, payload, shared_memory_manager)
-        frame_pipe.send(payload)
+        aqueue.put_nowait(payload)
         payload = MultiFramePayload.from_previous(payload)
+        await check_communication_queue(cameras, aqueue, exit_event)
 
-    # if not communication_queue_task.done():
-    #     communication_queue.put(None)
-    #     await communication_queue_task
+
+
+
     logger.debug("Camera trigger loop complete")
 
 
@@ -144,16 +145,40 @@ class CameraTriggerProcess:
                      shared_memory_name: str):
         logger.debug(f"CameraTriggerProcess started")
         exit_event = asyncio.Event()
+        async_queue = asyncio.Queue()
         existing_shared_memory = shared_memory.SharedMemory(name=shared_memory_name)
         shared_memory_manager = SharedImageMemoryManager(list(camera_configs.values())[0].resolution,
                                                          existing_shared_memory=existing_shared_memory)
+        relay_thread = threading.Thread(target=CameraTriggerProcess._relay_thread,
+                                        args=(async_queue, communication_queue, frame_pipe, exit_event))
+        relay_thread.start()
         try:
             asyncio.run(camera_trigger_loop(camera_configs=camera_configs,
-                                            frame_pipe=frame_pipe,
-                                            communication_queue=communication_queue,
+                                            aqueue=async_queue,
                                             shared_memory_manager=shared_memory_manager,
                                             exit_event=exit_event))
         except Exception as e:
             logger.error(f"Erorr in CameraTriggerProcess: {type(e).__name__} - {e}")
             raise
         logger.debug(f"CameraTriggerProcess complete")
+
+    @staticmethod
+    def _relay_thread(aqueue: asyncio.Queue,
+                      communication_queue: multiprocessing.Queue,
+                      frame_pipe,  # send-only pipe connection
+                      exit_event: asyncio.Event):
+        logger.trace("Relay thread started")
+        while not exit_event.is_set():
+            if not communication_queue.empty():
+                message = communication_queue.get()
+                logger.trace(f"Relay thread received message: {message}, relay to asyncio queue")
+                aqueue.put_nowait(message)
+
+            if not aqueue.empty():
+                message = aqueue.get_nowait()
+                if isinstance(message, MultiFramePayload):
+                    logger.trace(f"Relay thread received MultiFramePayload, sending to frame_pipe")
+                    frame_pipe.send(message)
+            time.sleep(0.001)
+
+        logger.debug("Relay thread complete")

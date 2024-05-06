@@ -19,10 +19,11 @@ from skellycam.system.logging_configuration.logging_color_helpers import (
 
 class LoggerBuilder:
     DEFAULT_LOGGING = {"version": 1, "disable_existing_loggers": False}
-    #h ttps://www.alt-codes.net/editor.php
+    # h ttps://www.alt-codes.net/editor.php
     format_string = (
-        "┌──────────────────────────────────────────┤ %(levelname)s | %(name)s | %(funcName)s():%(lineno)s | %(delta_t)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
+        "┌──────────────────────────────────────────┤ %(levelname)s |  %(name)s.%(funcName)s():%(lineno)s | %(delta_t)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
     )
+
     def __init__(self, level: LogLevel):
         self.default_logging_formatter = CustomFormatter(
             fmt=self.format_string, datefmt="%Y-%m-%dT%H:%M:%S"
@@ -55,6 +56,7 @@ class LoggerBuilder:
             "WARNING": "\033[33m",  # Yellow
             "ERROR": "\033[30m\033[41m",  # Black text on Red background
         }
+
         def emit(self, record):
             """
             Overrides the emit method to colorize logs according to the level when
@@ -67,8 +69,6 @@ class LoggerBuilder:
             # Then apply color to indicate the thread ID (TID)
             tid_color = get_hashed_color(record.thread)
             record.thread_colored = tid_color + f"TID:{record.thread}:{record.threadName}" + "\033[0m"
-
-
 
             # Use the CustomFormatter to format the record
             formatted_record = self.format(record)
