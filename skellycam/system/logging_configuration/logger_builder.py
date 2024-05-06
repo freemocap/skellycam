@@ -19,9 +19,9 @@ from skellycam.system.logging_configuration.logging_color_helpers import (
 
 class LoggerBuilder:
     DEFAULT_LOGGING = {"version": 1, "disable_existing_loggers": False}
-
+    #h ttps://www.alt-codes.net/editor.php
     format_string = (
-        "|--------------------------------------<| %(levelname)s | %(name)s:%(funcName)s():%(lineno)s | %(delta_t)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
+        "┌──────────────────────────────────────────┤ %(levelname)s | %(name)s | %(funcName)s():%(lineno)s | %(delta_t)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
     )
     def __init__(self, level: LogLevel):
         self.default_logging_formatter = CustomFormatter(
@@ -82,7 +82,7 @@ class LoggerBuilder:
             )
 
             formatted_record = formatted_record.replace(record.getMessage(),
-                                                        color_code + "|> " + record.getMessage() + "\033[0m")
+                                                        color_code + "└» " + record.getMessage() + "\033[0m")
             formatted_record = color_code + formatted_record + "\033[0m"
             # Output the final colorized and formatted record to the console
             print(formatted_record)
