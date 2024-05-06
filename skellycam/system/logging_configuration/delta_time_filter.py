@@ -9,7 +9,7 @@ class DeltaTimeFilter(logging.Filter):
 
     def filter(self, record):
         current_time = datetime.now().timestamp()
-        delta = current_time - self.prev_time
-        record.delta_t = f"Δt:{delta:.6f}s"
+        delta_ms = (current_time - self.prev_time) * 1000
+        record.delta_t = f"Δt:{delta_ms:.6f}ms"
         self.prev_time = current_time
         return True
