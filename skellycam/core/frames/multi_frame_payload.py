@@ -4,7 +4,7 @@ from typing import Dict, Optional, List
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.shared_image_memory import SharedImageMemoryManager
 

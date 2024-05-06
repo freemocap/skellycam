@@ -7,7 +7,7 @@ import cv2
 from skellycam.core.cameras.config.apply_config import apply_camera_configuration
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.create_cv2_video_capture import create_cv2_capture
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)

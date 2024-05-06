@@ -13,8 +13,8 @@ from skellycam.core.cameras.thread_loop_camera.loop_camera import (
     LoopCamera,
 )
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.device_detection.camera_id import CameraId
-from skellycam.core.device_detection.image_rotation_types import RotationTypes
+from skellycam.core.detection.camera_id import CameraId
+from skellycam.core.detection.image_rotation_types import RotationTypes
 from skellycam.core.frames.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)

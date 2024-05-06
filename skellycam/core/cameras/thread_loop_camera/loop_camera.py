@@ -5,7 +5,7 @@ from skellycam.core.cameras.thread_loop_camera.capture_thread import (
     CaptureThread,
 )
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 
 logger = logging.getLogger(__name__)
 

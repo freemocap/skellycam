@@ -4,7 +4,7 @@ from multiprocessing import shared_memory
 
 import numpy as np
 
-from skellycam.core.device_detection.video_resolution import VideoResolution
+from skellycam.core.detection.video_resolution import VideoResolution
 
 BUFFER_SIZE = 1024 * 1024 * 1024  # 1 GB
 

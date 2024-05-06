@@ -8,7 +8,7 @@ from typing import Dict, Optional
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.trigger_camera.trigger_camera import TriggerCamera
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.shared_image_memory import SharedImageMemoryManager

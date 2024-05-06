@@ -6,7 +6,7 @@ from fastapi import APIRouter, Body
 from skellycam.api.models.base_models import BaseResponse, BaseRequest
 from skellycam.core.cameras.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.controller.singleton import get_or_create_controller
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 
 logger = logging.getLogger(__name__)
 

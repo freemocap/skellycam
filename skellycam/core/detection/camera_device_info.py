@@ -5,7 +5,7 @@ from typing import List, Any
 from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
-from skellycam.core.device_detection.video_resolution import VideoResolution
+from skellycam.core.detection.video_resolution import VideoResolution
 
 logger = logging.getLogger(__name__)
 

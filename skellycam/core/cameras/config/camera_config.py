@@ -2,9 +2,9 @@ from typing import Dict
 
 from pydantic import BaseModel, Field, validator
 
-from skellycam.core.device_detection.camera_id import CameraId
-from skellycam.core.device_detection.image_rotation_types import RotationTypes
-from skellycam.core.device_detection.video_resolution import VideoResolution
+from skellycam.core.detection.camera_id import CameraId
+from skellycam.core.detection.image_rotation_types import RotationTypes
+from skellycam.core.detection.video_resolution import VideoResolution
 
 
 class CameraConfig(BaseModel):

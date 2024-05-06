@@ -5,8 +5,8 @@ from typing import Dict
 import cv2
 from PySide6.QtMultimedia import QMediaDevices
 
-from skellycam.core.device_detection.camera_device_info import CameraDeviceInfo
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_device_info import CameraDeviceInfo
+from skellycam.core.detection.camera_id import CameraId
 
 logger = logging.getLogger(__name__)
 

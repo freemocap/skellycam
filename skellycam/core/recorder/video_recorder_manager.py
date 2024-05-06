@@ -3,7 +3,7 @@ import multiprocessing
 from typing import Tuple, Optional
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.video_recorder.video_recorder_process import (
+from skellycam.core.recorder.video_recorder_process import (
     VideoRecorderProcess,
 )
 

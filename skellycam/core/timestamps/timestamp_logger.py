@@ -7,7 +7,7 @@ from typing import Tuple
 
 import pandas as pd
 
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 

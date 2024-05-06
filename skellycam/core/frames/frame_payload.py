@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 
 
 class FramePayload(BaseModel):

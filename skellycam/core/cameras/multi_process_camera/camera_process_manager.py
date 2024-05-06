@@ -5,7 +5,7 @@ from skellycam.core.cameras.multi_process_camera.camera_loop_process import (
     CameraLoopProcess,
 )
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 
 
