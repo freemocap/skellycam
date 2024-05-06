@@ -3,12 +3,12 @@ import logging
 import pytest
 
 from skellycam.system.logging_configuration.configure_logging import configure_logging
-from skellycam.system.logging_configuration.log_level_enum import LogLevel
+from skellycam.system.logging_configuration.log_level_enum import LogLevels
 
 
 @pytest.fixture
 def test_logger():
-    configure_logging(LogLevel.DEBUG)
+    configure_logging(LogLevels.DEBUG)
     logger = logging.getLogger(__name__)
     return logger
 

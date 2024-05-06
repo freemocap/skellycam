@@ -3,7 +3,7 @@ import os
 import psutil
 
 from skellycam.system.logging_configuration.log_level_enum import (
-    LogLevel,
+    LogLevels,
 )
 from skellycam.system.logging_configuration.log_test_messages import (
     log_test_messages,
@@ -19,13 +19,13 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.INFO)
 
-logging.addLevelName(LogLevel.LOOP.value, "LOOP")
-logging.addLevelName(LogLevel.TRACE.value, "TRACE")
-logging.addLevelName(LogLevel.SUCCESS.value, "SUCCESS")
-logging.addLevelName(LogLevel.API.value, "API")
+logging.addLevelName(LogLevels.LOOP.value, "LOOP")
+logging.addLevelName(LogLevels.TRACE.value, "TRACE")
+logging.addLevelName(LogLevels.SUCCESS.value, "SUCCESS")
+logging.addLevelName(LogLevels.API.value, "API")
 
 
-def add_log_method(level: LogLevel, name: str):
+def add_log_method(level: LogLevels, name: str):
     def log_method(self, message, *args, **kws):
         if self.isEnabledFor(level.value):
             self._log(level.value, message, args, **kws, stacklevel=2)
@@ -33,11 +33,11 @@ def add_log_method(level: LogLevel, name: str):
     setattr(logging.Logger, name, log_method)
 
 
-def configure_logging(level: LogLevel = LogLevel.DEBUG):
-    add_log_method(LogLevel.LOOP, 'loop')
-    add_log_method(LogLevel.TRACE, 'trace')
-    add_log_method(LogLevel.API, 'api')
-    add_log_method(LogLevel.SUCCESS, 'success')
+def configure_logging(level: LogLevels = LogLevels.DEBUG):
+    add_log_method(LogLevels.LOOP, 'loop')
+    add_log_method(LogLevels.TRACE, 'trace')
+    add_log_method(LogLevels.API, 'api')
+    add_log_method(LogLevels.SUCCESS, 'success')
 
     builder = LoggerBuilder(level)
     builder.configure()

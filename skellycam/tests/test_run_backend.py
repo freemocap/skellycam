@@ -1,6 +1,6 @@
 import multiprocessing
 
-from skellycam.backend.run_backend import run_backend
+from skellycam.run_backend import run_backend
 
 
 def test_run_backend_starts_process():

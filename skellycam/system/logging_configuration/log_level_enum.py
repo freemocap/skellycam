@@ -2,7 +2,7 @@ import logging
 from enum import Enum
 
 
-class LogLevel(Enum):
+class LogLevels(Enum):
     LOOP = 4  # For logs that are printed in a loop
     TRACE = 5  # Low level logs for deep debugging
     DEBUG = logging.DEBUG  # 10 # Detailed information for devs and curious folk

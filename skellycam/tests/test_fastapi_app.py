@@ -3,7 +3,7 @@ import multiprocessing
 import pytest
 from fastapi.testclient import TestClient
 
-from skellycam.backend.api.app.app_factory import FastApiApp
+from skellycam.api.app.app_factory import FastApiApp
 
 
 @pytest.fixture

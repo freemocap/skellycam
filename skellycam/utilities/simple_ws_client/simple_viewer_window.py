@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from pydantic import BaseModel
 
-from skellycam.backend.core.device_detection.camera_id import CameraId
+from skellycam.core.device_detection.camera_id import CameraId
 
 logger = logging.getLogger(__name__)
 

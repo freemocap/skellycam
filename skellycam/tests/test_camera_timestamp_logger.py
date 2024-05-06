@@ -1,8 +1,8 @@
 import numpy as np
 
-from skellycam.backend.core.device_detection.camera_id import CameraId
-from skellycam.backend.core.frames.frame_payload import FramePayload
-from skellycam.backend.core.video_recorder import (
+from skellycam.core.device_detection.camera_id import CameraId
+from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.video_recorder import (
     CameraTimestampLogger,
 )
 

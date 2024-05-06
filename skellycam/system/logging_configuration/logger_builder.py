@@ -10,7 +10,7 @@ from skellycam.system.logging_configuration.delta_time_filter import (
     DeltaTimeFilter,
 )
 from skellycam.system.logging_configuration.log_level_enum import (
-    LogLevel,
+    LogLevels,
 )
 from skellycam.system.logging_configuration.logging_color_helpers import (
     get_hashed_color,
@@ -24,7 +24,7 @@ class LoggerBuilder:
         "┌──────────────────────────────────────────────────────────────────────┤ %(levelname)s |  %(name)s.%(funcName)s():%(lineno)s | %(delta_t)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s \n%(message)s"
     )
 
-    def __init__(self, level: LogLevel):
+    def __init__(self, level: LogLevels):
         self.default_logging_formatter = CustomFormatter(
             fmt=self.format_string, datefmt="%Y-%m-%dT%H:%M:%S"
         )
@@ -32,12 +32,12 @@ class LoggerBuilder:
 
         self._set_logging_level(level)
 
-    def _set_logging_level(self, level: LogLevel):
+    def _set_logging_level(self, level: LogLevels):
         logging.root.setLevel(level.value)
 
     def build_file_handler(self):
         file_handler = logging.FileHandler(get_log_file_path(), encoding="utf-8")
-        file_handler.setLevel(LogLevel.TRACE.value)
+        file_handler.setLevel(LogLevels.TRACE.value)
         file_handler.setFormatter(self.default_logging_formatter)
         file_handler.addFilter(DeltaTimeFilter())
         return file_handler
@@ -87,7 +87,7 @@ class LoggerBuilder:
             # Output the final colorized and formatted record to the console
             print(formatted_record)
 
-        def word_wrap(self, text, width=144, look_for_breaks_withing: int = 10):
+        def word_wrap(self, text, width=200, look_for_breaks_withing: int = 10):
             """
             Wraps text to a specified width, preserving whole words if there is a break within the specified number of characters from the end of the line.
             """
@@ -112,7 +112,7 @@ class LoggerBuilder:
 
     def build_console_handler(self):
         console_handler = self.ColoredConsoleHandler(stream=sys.stdout)
-        console_handler.setLevel(LogLevel.LOOP.value)
+        console_handler.setLevel(LogLevels.LOOP.value)
         console_handler.setFormatter(self.default_logging_formatter)
         console_handler.addFilter(DeltaTimeFilter())
         return console_handler
