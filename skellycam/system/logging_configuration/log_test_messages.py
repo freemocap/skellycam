@@ -8,15 +8,13 @@ def log_test_messages(logger):
     logger.warning(
         "This is a WARNING message, value `30` -> Something unexpected happened, but it's necessarily an error")
     logger.error("This is an ERROR message, value `40` -> Something went wrong!")
-    logger.critical("This is a CRITICAL message, value `50` ->  Something went really wrong!")
 
-    print("----------This is a print message.------------------")
+    print("----------This is a regular ol' print message.------------------")
 
     import time
     iters = 10
     for iter in range(1, iters + 1):
         wait_time = iter / 10
-        print(f"TESTING LOG TIMESTAMPS (round: {iter} of {iters}):")
         logger.loop(
             "Starting timers loop (Δt should probably be near 0, unless you've got other stuff going on)"
         )
@@ -25,5 +23,5 @@ def log_test_messages(logger):
         toc = time.perf_counter_ns()
         elapsed_time = (toc - tic) / 1e9
         logger.trace(
-            f"Done {wait_time} sec timer - elapsed time:{elapsed_time} (Δt should be ~{wait_time}s)"
+            f"Done {wait_time} sec timer - elapsed time:{elapsed_time}s (Δt should be ~{wait_time}s)"
         )

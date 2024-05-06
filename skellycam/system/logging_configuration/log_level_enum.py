@@ -11,4 +11,3 @@ class LogLevel(Enum):
     API = logging.INFO + 5  # 25 # API calls/responses
     WARNING = logging.WARNING  # 30 # Something unexpected happened, but it's necessarily an error
     ERROR = logging.ERROR  # 40 # Something went wrong!
-    CRITICAL = logging.CRITICAL  # 50 # Something went really wrong!
