@@ -38,7 +38,7 @@ async def connect_cameras_route(
         logger.api("`/connect` POST request handled successfully.")
         return CamerasConnectedResponse(connected_cameras=connected_cameras)
     except Exception as e:
-        logger.error(f"Failed to detect available cameras: {type(e).__name__} - {e}")
+        logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)
         return CamerasConnectedResponse.from_exception(e)
 

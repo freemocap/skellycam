@@ -8,7 +8,7 @@ from typing import Coroutine, Callable, Optional
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.backend.core.frames.shared_memory import SharedImageMemoryManager
+from skellycam.backend.core.frames.shared_image_memory import SharedImageMemoryManager
 from skellycam.backend.core.video_recorder.video_recorder_manager import VideoRecorderProcessManager
 
 logger = logging.getLogger(__name__)

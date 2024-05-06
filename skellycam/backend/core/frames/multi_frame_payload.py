@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
-from skellycam.backend.core.frames.shared_memory import SharedImageMemoryManager
+from skellycam.backend.core.frames.shared_image_memory import SharedImageMemoryManager
 
 
 class MultiFramePayload(BaseModel):

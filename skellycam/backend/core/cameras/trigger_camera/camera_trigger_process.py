@@ -9,7 +9,7 @@ from skellycam.backend.core.cameras.trigger_camera.trigger_camera import Trigger
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.backend.core.frames.shared_memory import SharedImageMemoryManager
+from skellycam.backend.core.frames.shared_image_memory import SharedImageMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ class CameraTriggerProcess:
         logger.debug(f"CameraTriggerProcess started")
         exit_event = asyncio.Event()
         existing_shared_memory = shared_memory.SharedMemory(name=shared_memory_name)
-        shared_memory_manager = SharedImageMemoryManager(camera_configs=camera_configs,
+        shared_memory_manager = SharedImageMemoryManager(list(camera_configs.values())[0].resolution,
                                                          existing_shared_memory=existing_shared_memory)
         try:
             asyncio.run(camera_trigger_loop(camera_configs=camera_configs,
