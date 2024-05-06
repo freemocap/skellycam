@@ -36,7 +36,8 @@ async def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: 
         cv2_vid_capture.set(
             cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc)
         )
-        extracted_config = extract_config_from_cv2_capture(cv2_capture=cv2_vid_capture,
+        extracted_config = extract_config_from_cv2_capture(camera_id=config.camera_id,
+                                                           cv2_capture=cv2_vid_capture,
                                                            rotation=config.rotation,
                                                            use_this_camera=config.use_this_camera)
 

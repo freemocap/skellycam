@@ -96,16 +96,16 @@ async def camera_trigger_loop(camera_configs: CameraConfigs,
 
 
 async def check_loop_count(number_of_frames: int, payload: MultiFramePayload, exit_event: asyncio.Event):
-    log_loop_count(number_of_frames, payload, "completed")
+    await log_loop_count(number_of_frames, payload, "completed")
 
     if number_of_frames is not None:
         if payload.multi_frame_number >= number_of_frames:
-            logger.debug(f"Reached number of frames: {number_of_frames} - setting `exit` event")
+            logger.trace(f"Reached number of frames: {number_of_frames} - setting `exit` event")
             exit_event.set()
 
 
 async def log_loop_count(number_of_frames: int, payload: MultiFramePayload, suffix: str):
-    loop_str = f"Loop#{payload.multi_frame_number}"
+    loop_str = f"Loop# {payload.multi_frame_number+1}"
     if number_of_frames is not None and number_of_frames > 0:
         loop_str += f" of {number_of_frames} {suffix}"
     logger.loop(loop_str)
@@ -146,7 +146,7 @@ class CameraTriggerProcess:
 
     @property
     def camera_ids(self) -> [CameraId]:
-        return list(self._camera_configs.keys())
+        return list(CameraId(self._camera_configs.keys()))
 
     def start(self, number_of_frames: Optional[int] = None):
         logger.debug("Stating CameraTriggerProcess...")
@@ -189,7 +189,7 @@ class CameraTriggerProcess:
         except Exception as e:
             logger.error(f"Erorr in CameraTriggerProcess: {type(e).__name__} - {e}")
             raise
-        logger.debug(f"CameraTriggerProcess complete")
+        logger.debug(f"CameraTriggerProcess completed")
 
     @staticmethod
     def _relay_thread(aqueue: asyncio.Queue,
@@ -210,4 +210,4 @@ class CameraTriggerProcess:
                     frame_pipe.send(message)
             time.sleep(0.001)
 
-        logger.debug("Relay thread complete")
+        logger.trace("Relay thread complete")

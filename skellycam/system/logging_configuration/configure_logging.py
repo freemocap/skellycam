@@ -18,8 +18,9 @@ logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.INFO)
-logging.getLogger("watchfiles").setLevel(logging.INFO)
+logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
+# Add custom log levels
 logging.addLevelName(LogLevels.LOOP.value, "LOOP")
 logging.addLevelName(LogLevels.TRACE.value, "TRACE")
 logging.addLevelName(LogLevels.SUCCESS.value, "SUCCESS")

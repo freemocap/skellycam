@@ -14,7 +14,7 @@ camera_connection_router = APIRouter()
 
 
 class CamerasConnectedResponse(BaseResponse):
-    connected_cameras: Optional[List[CameraId]]
+    connected_cameras: Optional[List[CameraId]] = None
 
 
 class ConnectCamerasRequest(BaseRequest):

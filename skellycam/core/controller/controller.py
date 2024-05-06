@@ -6,6 +6,7 @@ from skellycam.core.cameras.camera_group import (
     CameraGroup,
 )
 from skellycam.core.cameras.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.detection.detect_available_cameras import DetectedCameras, detect_available_cameras
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ class Controller:
 
     @property
     def camera_configs(self):
-        default_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
+        default_configs = {camera_id: CameraConfig(camera_id=CameraId(camera_id)) for camera_id in
                            self._available_cameras.keys()}
         if not self._camera_configs:
             self._camera_configs = default_configs

@@ -28,20 +28,20 @@ def log_routes(name, router: APIRouter):
         if isinstance(route, APIRoute):
             description_str = str(route.description).splitlines()[0] if route.description else ""
             description_str = description_str.split(".")[0] if description_str else ""
-            routes_str += f"\t{list(route.methods)} {route.path} {description_str}\n"
+            routes_str += f"\n\t{list(route.methods)} {route.path} {description_str}"
         elif isinstance(route, APIWebSocketRoute):
-            routes_str += f"\t[WEBSOCKET] {route.path},\n"
+            routes_str += f"\n\t[WEBSOCKET] {route.path}"
     if len(router.on_startup) > 0:
-        routes_str += "\t[ON STARTUP]:\n"
+        routes_str += "\n\t[ON STARTUP]:"
         for startup_handler in router.on_startup:
-            routes_str += f"\t\t{startup_handler.__name__}\n"
+            routes_str += f"\n\t\t{startup_handler.__name__}"
 
     if len(router.on_shutdown) > 0:
-        routes_str += "\t[ON SHUTDOWN]:\n"
+        routes_str += "\n\t[ON SHUTDOWN]:"
         for shutdown_handler in router.on_shutdown:
-            routes_str += f"\t\t{shutdown_handler.__name__}\n"
+            routes_str += f"\n\t\t{shutdown_handler.__name__}"
 
-    logger.debug(f"Registering `{name}` router:\n{routes_str}")
+    logger.debug(f"Registering `{name}` router:{routes_str}")
 
 
 def customize_swagger_ui(app: FastAPI):

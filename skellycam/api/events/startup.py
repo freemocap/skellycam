@@ -17,4 +17,4 @@ async def handle_startup():
     logger.info(f"Skellycam API base folder path: {get_default_skellycam_base_folder_path()}")
     Path(get_default_skellycam_base_folder_path()).mkdir(parents=True, exist_ok=True)
     logger.success(f"Skellycam API started successfully 💀📸✨")
-    logger.api(f"Skellycam API  running on: {APP_URL} 👈[click to open backend UI in your browser]")
+    logger.api(f"Skellycam API  running on: {APP_URL} 👈[click to open backend UI in your browser]\n")
