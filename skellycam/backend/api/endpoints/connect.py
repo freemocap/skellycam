@@ -61,3 +61,20 @@ async def connect_cameras_route() -> CamerasConnectedResponse:
         return CamerasConnectedResponse.from_exception(e)
 
 
+@camera_connection_router.get(
+    "/connect/test",
+    response_model=BaseResponse,
+    summary="Test camera connection by recording a set number of frames",
+)
+async def test_camera_connection(number_of_frames: int = 10) -> BaseResponse:
+    controller = get_or_create_controller()
+    logger.api("Received `/connect/test` GET request...")
+    try:
+        # Record for the specified number of frames
+        connected_cameras = await controller.connect(number_of_frames=number_of_frames)
+        logger.api("`/connect/test` GET request handled successfully.")
+        return CamerasConnectedResponse(connected_cameras=connected_cameras)
+    except Exception as e:
+        logger.error(f"Error during camera test recording: {type(e).__name__} - {e}")
+        logger.exception(e)
+        return CamerasConnectedResponse.from_exception(e)

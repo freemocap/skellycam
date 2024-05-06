@@ -4,7 +4,7 @@ import multiprocessing
 import threading
 import time
 from multiprocessing import Process, shared_memory
-from typing import Dict
+from typing import Dict, Optional
 
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.cameras.trigger_camera.trigger_camera import TriggerCamera
@@ -38,26 +38,26 @@ async def trigger_camera_read(cameras: Dict[CameraId, TriggerCamera],
                               payload: MultiFramePayload,
                               shared_memory_manager: SharedImageMemoryManager,
                               ) -> MultiFramePayload:
-    logger.loop("Triggering camera read...")
-    tasks = [camera.get_frame() for camera in cameras.values()]
-    frames = await asyncio.gather(*tasks)
-    logger.loop(f"Received: {len(frames)} frames from cameras {[frame.camera_id for frame in frames]}")
+    logger.loop(f"Triggering camera read...")
+    get_frame_tasks = [camera.get_frame() for camera in cameras.values()]
+    frames = await asyncio.gather(*get_frame_tasks)
+    add_frame_tasks = []
     for camera_id, frame in zip(cameras.keys(), frames):
         if frame is None:
             continue
         if not isinstance(frame, FramePayload):
             logger.error(f"Received unexpected frame type: {type(frame)}")
             continue
-        payload.add_shared_memory_image(frame,
-                                        shared_memory_manager)
-    logger.loop(f"Trigger returned payload with frames from Cameras {list(payload.camera_ids)}")
+        add_frame_tasks = [payload.add_shared_memory_image(frame,
+                                                           shared_memory_manager)]
+    await asyncio.gather(*add_frame_tasks)
+    logger.loop(f"Received multi-frame payload from Cameras {list(payload.camera_ids)}")
     return payload
 
 
 async def check_communication_queue(cameras: Dict[CameraId, TriggerCamera],
-                                   aqueue: asyncio.Queue,
-                                   exit_event: asyncio.Event):
-    logger.loop("Checking communication queue")
+                                    aqueue: asyncio.Queue,
+                                    exit_event: asyncio.Event):
     if not aqueue.empty():
         message = await aqueue.get()
         if message is None:
@@ -76,21 +76,39 @@ async def check_communication_queue(cameras: Dict[CameraId, TriggerCamera],
 async def camera_trigger_loop(camera_configs: CameraConfigs,
                               aqueue: asyncio.Queue,
                               shared_memory_manager: SharedImageMemoryManager,
-                              exit_event: asyncio.Event):
+                              exit_event: asyncio.Event,
+                              number_of_frames: Optional[int] = None,
+                              ):
     cameras = await start_cameras(camera_configs)
 
     logger.info(f"Camera trigger loop started!")
-    payload = MultiFramePayload.create(list(cameras.keys()))
+    payload = MultiFramePayload.create()
+
     while not exit_event.is_set():
         payload = await trigger_camera_read(cameras, payload, shared_memory_manager)
+        await log_loop_count(number_of_frames, payload, "started")
         aqueue.put_nowait(payload)
         payload = MultiFramePayload.from_previous(payload)
         await check_communication_queue(cameras, aqueue, exit_event)
-
-
-
+        await check_loop_count(number_of_frames, payload, exit_event)
 
     logger.debug("Camera trigger loop complete")
+
+
+async def check_loop_count(number_of_frames: int, payload: MultiFramePayload, exit_event: asyncio.Event):
+    log_loop_count(number_of_frames, payload, "completed")
+
+    if number_of_frames is not None:
+        if payload.multi_frame_number >= number_of_frames:
+            logger.debug(f"Reached number of frames: {number_of_frames} - setting `exit` event")
+            exit_event.set()
+
+
+async def log_loop_count(number_of_frames: int, payload: MultiFramePayload, suffix: str):
+    loop_str = f"Loop#{payload.multi_frame_number}"
+    if number_of_frames is not None and number_of_frames > 0:
+        loop_str += f" of {number_of_frames} {suffix}"
+    logger.loop(loop_str)
 
 
 async def update_camera_configs(cameras: [CameraId, TriggerCamera], configs: CameraConfigs):
@@ -108,15 +126,21 @@ class CameraTriggerProcess:
             shared_memory_name: str
     ):
         self._camera_configs = camera_configs
-
+        self._frame_pipe = frame_pipe
+        self._shared_memory_name = shared_memory_name
         self._communication_queue = multiprocessing.Queue()
+        self._number_of_frames: Optional[int] = None
+        self._process: Optional[Process] = None
+
+    def _create_process(self):
         self._process = Process(
             name="CameraTriggerProcess",
             target=CameraTriggerProcess._run_process,
             args=(self._camera_configs,
-                  frame_pipe,
+                  self._frame_pipe,
                   self._communication_queue,
-                  shared_memory_name
+                  self._shared_memory_name,
+                  self._number_of_frames
                   )
         )
 
@@ -124,8 +148,10 @@ class CameraTriggerProcess:
     def camera_ids(self) -> [CameraId]:
         return list(self._camera_configs.keys())
 
-    def start(self):
+    def start(self, number_of_frames: Optional[int] = None):
         logger.debug("Stating CameraTriggerProcess...")
+        self._number_of_frames = number_of_frames
+        self._create_process()
         self._process.start()
 
     def update_configs(self, camera_configs: CameraConfigs):
@@ -142,7 +168,9 @@ class CameraTriggerProcess:
     def _run_process(camera_configs: CameraConfigs,
                      frame_pipe,  # send-only pipe connection
                      communication_queue: multiprocessing.Queue,
-                     shared_memory_name: str):
+                     shared_memory_name: str,
+                     number_of_frames: Optional[int] = None
+                     ):
         logger.debug(f"CameraTriggerProcess started")
         exit_event = asyncio.Event()
         async_queue = asyncio.Queue()
@@ -156,6 +184,7 @@ class CameraTriggerProcess:
             asyncio.run(camera_trigger_loop(camera_configs=camera_configs,
                                             aqueue=async_queue,
                                             shared_memory_manager=shared_memory_manager,
+                                            number_of_frames=number_of_frames,
                                             exit_event=exit_event))
         except Exception as e:
             logger.error(f"Erorr in CameraTriggerProcess: {type(e).__name__} - {e}")

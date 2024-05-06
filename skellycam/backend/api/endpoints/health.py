@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from skellycam.backend.run_backend import logger
-
+import logging
+logger = logging.getLogger(__name__)
 healthcheck_router = APIRouter()
 
 @healthcheck_router.get("/hello", summary="👋")

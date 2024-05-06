@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from pydantic import BaseModel, Field
 
@@ -8,7 +10,7 @@ class FramePayload(BaseModel):
     camera_id: CameraId = Field(
         description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`")
     success: bool = Field(description="The `success` part of `success, image = cv2.VideoCapture.read()`")
-    image_data: bytes = Field(description="The raw image from `cv2.VideoCapture.read() as bytes`")
+    image_data: Optional[bytes] = Field(description="The raw image from `cv2.VideoCapture.read() as bytes`")
     image_shape: tuple = Field("The shape of the image as a tuple of `(height, width, channels)`")
     timestamp_ns: int = Field(description="The timestamp of the frame in nanoseconds from `time.perf_counter_ns()`")
     frame_number: int = Field(

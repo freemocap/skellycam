@@ -46,6 +46,7 @@ async def websocket_server_connect(websocket: WebSocket):
     await websocket.send_text("👋Hello, client!")
 
     async def websocket_send_bytes(data: bytes):
+        logger.trace(f"Sending bytes to client: {data[:10]}...")
         await websocket.send_bytes(data)
 
     controller = get_or_create_controller()
