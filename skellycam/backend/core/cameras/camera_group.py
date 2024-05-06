@@ -4,6 +4,7 @@ from typing import Coroutine, Callable, Optional
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.cameras.trigger_camera.camera_trigger_process import CameraTriggerProcess
 from skellycam.backend.core.frames.frame_wrangler import FrameWrangler
+from skellycam.backend.core.frames.shared_memory import SharedImageMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ class CameraGroup:
         self._multi_camera_process: Optional[CameraTriggerProcess] = None
         # self._multi_camera_process =  CameraProcessManager()
         self._frame_wrangler = FrameWrangler()
+        self._shared_memory_manager: Optional[SharedImageMemoryManager] = None
 
     @property
     def camera_ids(self):
@@ -27,9 +29,12 @@ class CameraGroup:
 
     def set_camera_configs(self, camera_configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {camera_configs}")
+        self._shared_memory_manager = SharedImageMemoryManager(camera_configs=camera_configs)
         self._multi_camera_process = CameraTriggerProcess(camera_configs=camera_configs,
-                                                          frame_pipe=self._frame_wrangler.get_frame_input_pipe())
-        self._frame_wrangler.set_camera_configs(camera_configs)
+                                                          frame_pipe=self._frame_wrangler.get_frame_input_pipe(),
+                                                          shared_memory_name=self._shared_memory_manager.shared_memory_name)
+        self._frame_wrangler.set_camera_configs(camera_configs,
+                                                shared_memory_manager=self._shared_memory_manager)
 
     @property
     def frame_wrangler(self) -> FrameWrangler:

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import multiprocessing
 import time
@@ -7,27 +8,29 @@ from typing import Coroutine, Callable, Optional
 from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.backend.core.frames.multi_frame_payload import MultiFramePayload
+from skellycam.backend.core.frames.shared_memory import SharedImageMemoryManager
 from skellycam.backend.core.video_recorder.video_recorder_manager import VideoRecorderProcessManager
 
 logger = logging.getLogger(__name__)
 
 
 class FrameWrangler:
-    def __init__(
-            self,
-    ):
+    def __init__(self ):
         super().__init__()
         self._camera_configs: CameraConfigs = {}
-        self._recorder_queue = multiprocessing.Queue()
+        self._shared_memory_manager: Optional[SharedImageMemoryManager] = None
+        self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
+        self._multi_frame_payload: Optional[MultiFramePayload] = None
+
         self._frame_output_pipe, self._frame_input_pipe = multiprocessing.Pipe(duplex=False)
+        self._setup_recorder()
+
+    def _setup_recorder(self):
+        self._is_recording = False
+        self._recorder_queue = multiprocessing.Queue()
         self._video_recorder_manager = VideoRecorderProcessManager(
             multi_frame_queue=self._recorder_queue,
         )
-        self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
-        self._is_recording = False
-
-        self._multi_frame_payload: Optional[MultiFramePayload] = None
-        self._previous_multi_frame_payload: Optional[MultiFramePayload] = None
 
     def get_frame_input_pipe(self):
         return self._frame_input_pipe
@@ -35,7 +38,8 @@ class FrameWrangler:
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
 
-    def set_camera_configs(self, camera_configs: CameraConfigs):
+    def set_camera_configs(self, camera_configs: CameraConfigs, shared_memory_manager: SharedImageMemoryManager):
+        self._shared_memory_manager = shared_memory_manager
         self._camera_configs = camera_configs
         self._multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
@@ -74,20 +78,19 @@ class FrameWrangler:
     async def listen_for_frames(self):
         while True:
             if self._frame_output_pipe.poll():
-                payload_bytes = self._frame_output_pipe.recv()
-                payload = MultiFramePayload.from_msgpack(payload_bytes)
+                payload = self._frame_output_pipe.recv()
                 logger.loop(f"Received multi-frame payload: {payload}")
                 await self._handle_payload(payload)
+            await asyncio.sleep(0.001)
 
     async def _handle_payload(self, payload: MultiFramePayload):
+        payload.hydrate_shared_memory_images(self._shared_memory_manager)
         if self._is_recording:
-            payload.add_log("before_put_in_recorder_queue")
             self._recorder_queue.put(payload)
 
         if self._ws_send_bytes is not None:
             await self._send_frontend_payload()
 
-        self._previous_multi_frame_payload = deepcopy(self._multi_frame_payload)
         self._multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys())
         )
@@ -100,4 +103,3 @@ class FrameWrangler:
         )
         logger.loop(f"Sending frontend payload: {frontend_payload}")
         await self._ws_send_bytes(frontend_payload.to_msgpack())
-

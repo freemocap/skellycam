@@ -1,15 +1,21 @@
 import time
 from typing import Dict, Optional, List
 
-import msgpack
+import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frame_payload import FramePayload
+from skellycam.backend.core.frames.shared_memory import SharedImageMemoryManager
 
 
 class MultiFramePayload(BaseModel):
-    frames: Dict[CameraId, Optional[FramePayload]]
+    frames: Dict[CameraId, Optional[FramePayload]] = Field(default_factory=dict,
+                                                           description="A mapping of camera_id to FramePayload")
+    shared_memory_image: Dict[CameraId, Optional[int]] = Field(default_factory=dict,
+                                                               description="A mapping of camera_id to and index in the shared memory manager")
+    image_checksums: Dict[CameraId, int] = Field(default_factory=dict,
+                                                 description="The sum of the pixel values of the image, to verify integrity after shared memory hydration")
     utc_ns_to_perf_ns: Dict[str, int] = Field(
         description="A mapping of `time.time_ns()` to `time.perf_counter_ns()` "
                     "to allow conversion of `time.perf_counter_ns()`'s arbitrary "
@@ -27,7 +33,6 @@ class MultiFramePayload(BaseModel):
         perf_ns = time.perf_counter_ns()
         return cls(frames={CameraId(camera_id): None for camera_id in camera_ids},
                    utc_ns_to_perf_ns={"time.time_ns": int(utc_ns), "time.perf_counter_ns": int(perf_ns)},
-                   timestamp_trace_ns=cls.init_logs(),
                    **kwargs
                    )
 
@@ -36,77 +41,17 @@ class MultiFramePayload(BaseModel):
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    multi_frame_number=previous.multi_frame_number + 1,
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns.copy(),
-                   timestamp_trace_ns=cls.init_logs(from_previous=True),
                    )
 
     @property
     def camera_ids(self) -> List[CameraId]:
-        self.add_log("check_camera_ids")
         return [CameraId(camera_id) for camera_id in self.frames.keys()]
 
-    @property
-    def full(self):
-        self.add_log("check_if_full")
-        if len(self.frames) == 0:
-            return False
-        return not any([frame is None for frame in self.frames.values()])
+    def add_shared_memory_image(self, frame: FramePayload, shared_memory_manager: SharedImageMemoryManager):
+        self.shared_memory_image[frame.camera_id] = shared_memory_manager.put_image(frame.image)
+        self.image_checksums[frame.camera_id] = np.sum(frame.image)
 
-    @property
-    def oldest_timestamp_ns(self) -> Optional[int]:
-        self.add_log("check_oldest_timestamp")
-        return min(
-            [frame.timestamp_ns for frame in self.frames.values() if frame is not None]
-        )
-
-    def add_log(self, event_name: str, add_timestamp=True):
-        if add_timestamp:
-            self.logs.append(f"{event_name}:{time.perf_counter_ns()}")
-        else:
-            self.logs.append(event_name)
-
-    @staticmethod
-    def init_logs(from_previous: bool = False):
-        if from_previous:
-            return [f"created_from_previous:{time.perf_counter_ns()}"]
-        else:
-            return [f"created:{time.perf_counter_ns()}"]
-
-    def to_msgpack(self) -> bytes:
-        self.add_log("to_msgpack")
-        return msgpack.packb(self.dict(), use_bin_type=True)
-
-    @classmethod
-    def from_msgpack(cls, msgpack_bytes: bytes):
-        received_event = f"before_unpacking_msgpack:{time.perf_counter_ns()}"
-        unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
-        instance = cls(**unpacked)
-        instance.add_log(received_event, add_timestamp=False)
-        instance.add_log("created_from_msgpack")
-        return instance
-
-    def __len__(self):
-        self.add_log("check_length")
-        return len(self.frames)
-
-    def __getitem__(self, key: CameraId):
-        self.add_log(f"get_{key}")
-        return self.frames[key]
-
-    def __setitem__(self, key: CameraId, value: Optional[FramePayload]):
-        self.add_log(f"set_{key}")
-        if self.full:
-            self.add_log("payload_full")
-        self.frames[key] = value
-
-    def __contains__(self, key: CameraId):
-        self.add_log(f"lookup_{key}")
-        return key in self.frames
-
-    def __delitem__(self, key: CameraId):
-        self.add_log(f"deleted_{key}")
-        del self.frames[key]
-
-    @property
-    def size_in_kilobytes(self):
-        self.add_log("calculate_size")
-        return sum([frame.size_in_kilobytes for frame in self.frames.values() if frame is not None])
+    def hydrate_shared_memory_images(self, shared_memory_manager: SharedImageMemoryManager):
+        for camera_id, image_index in self.shared_memory_image.items():
+            if image_index is not None:
+                self.frames[camera_id].image = shared_memory_manager.get_image(image_index)
