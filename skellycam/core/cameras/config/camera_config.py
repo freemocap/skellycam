@@ -1,6 +1,6 @@
-from typing import Dict
-
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel as v1BaseModel
+from pydantic.v1 import validator
 
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.detection.image_rotation_types import RotationTypes
@@ -11,7 +11,7 @@ class CameraConfig(BaseModel):
     camera_id: CameraId = Field(
         default=0,
         description="The id of the camera to use, "
-        "e.g. cv2.VideoCapture uses `0` for the first camera",
+                    "e.g. cv2.VideoCapture uses `0` for the first camera",
     )
 
     use_this_camera: bool = Field(
@@ -25,7 +25,7 @@ class CameraConfig(BaseModel):
     exposure: int = Field(
         default=-7,
         description="The exposure of the camera using the opencv convention - "
-        "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
+                    "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
     )
     framerate: float = Field(
         default=30, description="The framerate of the camera (in frames per second)."
@@ -34,7 +34,7 @@ class CameraConfig(BaseModel):
     rotation: RotationTypes = Field(
         default=RotationTypes.NO_ROTATION,
         description="The rotation to apply to the images "
-        "of this camera (after they are captured)",
+                    "of this camera (after they are captured)",
     )
     capture_fourcc: str = Field(
         default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
@@ -59,19 +59,22 @@ class CameraConfig(BaseModel):
 
 
 from typing import Dict
-from pydantic import BaseModel, Field
 
 
-class CameraConfigs(BaseModel):
+class CameraConfigs(v1BaseModel):
     __root__: Dict[CameraId, CameraConfig]
 
-    @validator('__root__')
+    class Config:
+        arbitrary_types_allowed = True
+
+    @validator("__root__", pre=True)
     def check_resolutions(cls, configs):
         if len(configs) > 1:
             first_resolution = next(iter(configs.values())).resolution
             if not all(config.resolution == first_resolution for config in configs.values()):
-                #TODO: Support different resolutions
-                raise ValueError('All CameraConfig instances must have the same resolution because of the shared memory manager')
+                # TODO: Support different resolutions
+                raise ValueError(
+                    'All CameraConfig instances must have the same resolution because of the shared memory manager')
 
         return configs
 
@@ -93,7 +96,8 @@ class CameraConfigs(BaseModel):
     def items(self):
         return self.__root__.items()
 
-DEFAULT_CAMERA_CONFIGS = camera_configs = {0: CameraConfig(camera_id=0)}
+
+DEFAULT_CAMERA_CONFIGS = {0: CameraConfig(camera_id=CameraId(0))}
 
 if __name__ == "__main__":
     from pprint import pprint

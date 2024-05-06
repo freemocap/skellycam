@@ -12,12 +12,13 @@ from skellycam.system.logging_configuration.logger_builder import (
     LoggerBuilder,
 )
 
-# Suppress some annoying log messages
+# Suppress some external loggers that are too verbose for our context/taste
 logging.getLogger("tzlocal").setLevel(logging.WARNING)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.INFO)
+logging.getLogger("watchfiles").setLevel(logging.INFO)
 
 logging.addLevelName(LogLevels.LOOP.value, "LOOP")
 logging.addLevelName(LogLevels.TRACE.value, "TRACE")

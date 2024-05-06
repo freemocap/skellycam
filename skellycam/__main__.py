@@ -3,12 +3,8 @@ import logging
 import sys
 from multiprocessing import freeze_support
 
-from skellycam import LogLevels
 from skellycam.api.run_server import run_uvicorn_server
-from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
-
-configure_logging(level=LogLevels.LOOP)
 
 logger = logging.getLogger(__name__)
 

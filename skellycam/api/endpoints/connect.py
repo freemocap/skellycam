@@ -4,7 +4,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Body
 
 from skellycam.api.models.base_models import BaseResponse, BaseRequest
-from skellycam.core.cameras.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfigs, CameraConfig, DEFAULT_CAMERA_CONFIGS
 from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.detection.camera_id import CameraId
 
@@ -18,10 +18,7 @@ class CamerasConnectedResponse(BaseResponse):
 
 
 class ConnectCamerasRequest(BaseRequest):
-    camera_configs: CameraConfigs
-    @classmethod
-    def default(cls):
-        return cls(camera_configs={CameraId(0): CameraConfig(camera_id=0)})
+    camera_configs: Optional[CameraConfigs] = DEFAULT_CAMERA_CONFIGS
 
 @camera_connection_router.post(
     "/connect",
@@ -29,7 +26,7 @@ class ConnectCamerasRequest(BaseRequest):
     summary="Connect to cameras specified in the request",
 )
 async def connect_cameras_route(
-        request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest.default()])
+        request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
 ) -> CamerasConnectedResponse:
     controller = get_or_create_controller()
     logger.api("Received `/connect` POST request...")

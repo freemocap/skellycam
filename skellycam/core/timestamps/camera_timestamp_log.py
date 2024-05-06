@@ -33,13 +33,13 @@ class CameraTimestampLog(BaseModel):
         description="- The timestamp of the frame, in ISO 8601 format, e.g. 2021-01-01T00:00:00.000000"
     )
 
-    _timestamp_mapping: Tuple[int, int] = Field(
+    timestamp_mapping: Tuple[int, int] = Field(
         description="- Tuple of simultaneously recorded (time.perf_counter_ns(), time.time_ns()) that maps perf_counter_ns to a unix_timestamp_ns"
     )
-    _first_frame_timestamp_ns: int = Field(
+    first_frame_timestamp_ns: int = Field(
         description="- Timestamp of the first frame in the recording, in nanoseconds as returned by time.perf_counter_ns()"
     )
-    _previous_frame_timestamp_ns: int = Field(
+    previous_frame_timestamp_ns: int = Field(
         description="- Timestamp of the previous frame in the recording, in nanoseconds as returned by time.perf_counter_ns(). On the first frame, this will be a duplicate of `timestamp_from_zero_ns`"
     )
 
@@ -67,9 +67,9 @@ class CameraTimestampLog(BaseModel):
             timestamp_utc_iso8601=datetime.fromtimestamp(
                 unix_timestamp_ns / 1e9
             ).isoformat(),
-            _timestamp_mapping=timestamp_mapping,
-            _first_frame_timestamp_ns=first_frame_timestamp_ns,
-            _previous_frame_timestamp_ns=previous_frame_timestamp_ns,
+            timestamp_mapping=timestamp_mapping,
+            first_frame_timestamp_ns=first_frame_timestamp_ns,
+            previous_frame_timestamp_ns=previous_frame_timestamp_ns,
         )
 
     @classmethod

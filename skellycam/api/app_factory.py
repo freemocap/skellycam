@@ -1,8 +1,9 @@
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
+from fastapi.routing import APIWebSocketRoute, APIRoute
 
 import skellycam
 from skellycam.api.endpoints import enabled_routers
@@ -16,8 +17,31 @@ def register_routes(app: FastAPI):
     async def read_root():
         return RedirectResponse("/docs")
 
-    for router in enabled_routers:
+    for name, router in enabled_routers.items():
+        log_routes(name, router)
         app.include_router(router)
+
+
+def log_routes(name, router: APIRouter):
+    routes_str = ""
+    for route in router.routes:
+        if isinstance(route, APIRoute):
+            description_str = str(route.description).splitlines()[0] if route.description else ""
+            description_str = description_str.split(".")[0] if description_str else ""
+            routes_str += f"\t{list(route.methods)} {route.path} {description_str}\n"
+        elif isinstance(route, APIWebSocketRoute):
+            routes_str += f"\t[WEBSOCKET] {route.path},\n"
+    if len(router.on_startup) > 0:
+        routes_str += "\t[ON STARTUP]:\n"
+        for startup_handler in router.on_startup:
+            routes_str += f"\t\t{startup_handler.__name__}\n"
+
+    if len(router.on_shutdown) > 0:
+        routes_str += "\t[ON SHUTDOWN]:\n"
+        for shutdown_handler in router.on_shutdown:
+            routes_str += f"\t\t{shutdown_handler.__name__}\n"
+
+    logger.debug(f"Registering `{name}` router:\n{routes_str}")
 
 
 def customize_swagger_ui(app: FastAPI):

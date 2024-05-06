@@ -13,4 +13,4 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.log_level_enum import LogLevels
 
-configure_logging(level=LogLevels.LOOP)
+configure_logging(level=LogLevels.ALL)

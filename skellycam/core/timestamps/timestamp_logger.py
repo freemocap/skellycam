@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, List
 from typing import Tuple
 
-import pandas as pd
+import polars as pl
 
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
@@ -49,8 +49,8 @@ class CameraTimestampLogger:
             "mean_frames_per_second": (df["frame_duration_ns"].mean() / 1e9) ** -1,
         }
 
-    def to_dataframe(self) -> pd.DataFrame:
-        df = pd.DataFrame(
+    def to_dataframe(self) -> pl.DataFrame:
+        df = pl.DataFrame(
             [timestamp_log.dict() for timestamp_log in self._timestamp_logs]
         )
         return df

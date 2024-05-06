@@ -36,10 +36,10 @@ class MultiFrameTimestampLog(BaseModel):
         description="Individual CameraTimestampLog objects for each camera in the multi-frame"
     )
 
-    _timestamp_mapping: Tuple[int, int] = Field(
+    timestamp_mapping: Tuple[int, int] = Field(
         description="Tuple of simultaneously recorded (time.perf_counter_ns(), time.time_ns()) that maps perf_counter_ns to a unix_timestamp_ns"
     )
-    _first_frame_timestamp_ns: int = Field(
+    first_frame_timestamp_ns: int = Field(
         description="Timestamp of the first frame in the recording, in nanoseconds as returned by time.perf_counter_ns()"
     )
 
@@ -94,8 +94,8 @@ class MultiFrameTimestampLog(BaseModel):
             inter_camera_timestamp_range_s=inter_camera_timestamp_range_s,
             inter_camera_timestamp_stddev_s=inter_camera_timestamp_stddev_s,
             camera_logs=timestamp_logs,
-            _timestamp_mapping=timestamp_mapping,
-            _first_frame_timestamp_ns=first_frame_timestamp_ns,
+            timestamp_mapping=timestamp_mapping,
+            first_frame_timestamp_ns=first_frame_timestamp_ns,
         )
 
     @classmethod

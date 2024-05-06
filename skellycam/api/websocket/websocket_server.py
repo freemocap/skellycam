@@ -40,6 +40,9 @@ class WebsocketRunner:
 
 @websocket_router.websocket("/ws/connect")
 async def websocket_server_connect(websocket: WebSocket):
+    """
+    Websocket endpoint for client connection to the server - handles image data streaming to frontend.
+    """
     logger.success(f"Websocket connection established!")
 
     await websocket.accept()

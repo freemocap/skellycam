@@ -4,7 +4,7 @@ import pprint
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List, Any, Hashable
 
-import pandas as pd
+import polars as pl
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_id import CameraId
@@ -13,6 +13,7 @@ from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.core.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
+from skellycam.core.timestamps.timestamp import Timestamp
 from skellycam.core.timestamps.timestamp_logger import (
     CameraTimestampLogger,
 )
@@ -51,8 +52,8 @@ class TimestampLoggerManager:
             for camera_id, timestamp_logger in self._timestamp_loggers.items()
         }
 
-    def to_dataframe(self) -> pd.DataFrame:
-        df = pd.DataFrame(
+    def to_dataframe(self) -> pl.DataFrame:
+        df = pl.DataFrame(
             [timestamp_log.dict() for timestamp_log in self._multi_frame_timestamp_logs]
         )
         return df
