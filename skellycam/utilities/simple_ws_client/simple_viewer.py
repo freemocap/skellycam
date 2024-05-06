@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from skellycam.backend.core.device_detection.camera_id import CameraId
 from skellycam.backend.core.frames.frontend_image_payload import FrontendImagePayload
-from skellycam.frontend.simple_ws_client.simple_viewer_window import SimpleViewerWindow
+from skellycam.utilities.simple_ws_client.simple_viewer_window import SimpleViewerWindow
 
 logger = logging.getLogger(__name__)
 
