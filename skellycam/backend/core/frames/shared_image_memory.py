@@ -1,13 +1,14 @@
+import logging
 import multiprocessing
 from multiprocessing import shared_memory
-from typing import Tuple
 
 import numpy as np
 
-from skellycam.backend.core.cameras.config.camera_config import CameraConfigs
 from skellycam.backend.core.device_detection.video_resolution import VideoResolution
 
 BUFFER_SIZE = 1024 * 1024 * 1024  # 1 GB
+
+logger = logging.getLogger(__name__)
 
 
 class SharedImageMemoryManager:
@@ -25,9 +26,13 @@ class SharedImageMemoryManager:
         self.max_images = buffer_size // self.image_size
 
         if existing_shared_memory is not None:
+            logger.debug(
+                f"Recreating SharedImageMemoryManager from existing shared memory buffer - {existing_shared_memory.name}")
             self.shm = existing_shared_memory
         else:
             self.shm = shared_memory.SharedMemory(create=True, size=self.buffer_size)
+            logger.debug(
+                f"Created SharedImageMemoryManager with shared memory buffer - {self.shm.name} with size {self.buffer_size_str}")
 
         self.image_offsets = np.arange(0, self.buffer_size, self.image_size)
         self.next_image_index = 0
@@ -49,10 +54,25 @@ class SharedImageMemoryManager:
         """
         return self.shm.name
 
+    @property
+    def buffer_size_str(self) -> str:
+        """
+        Returns a human-readable string of the buffer size.
+        """
+        if len(str(self.buffer_size)) > 9:
+            return f"{self.buffer_size / 1024 ** 3:.2f} GB"
+        elif len(str(self.buffer_size)) > 6:
+            return f"{self.buffer_size / 1024 ** 2:.2f} MB"
+        elif len(str(self.buffer_size)) > 3:
+            return f"{self.buffer_size / 1024:.2f} KB"
+        else:
+            return f"{self.buffer_size} bytes"
+
     def put_image(self, image: np.ndarray) -> int:
         """
         Put an image into the shared memory buffer and return the index at which it was stored.
         """
+
         with self._lock:
             if image.shape != self.image_shape:
                 raise ValueError(
@@ -77,6 +97,7 @@ class SharedImageMemoryManager:
 
             index = self.next_image_index
             self.next_image_index += 1
+            logger.loop(f"put_image: {image.shape} at shared memory index {index} of {self.max_images}")
             return index
 
     def get_image(self, index: int) -> np.ndarray:
@@ -89,6 +110,7 @@ class SharedImageMemoryManager:
             image_shared = np.ndarray(self.image_shape, dtype=self.image_dtype,
                                       buffer=self.shm.buf[offset:offset + self.image_size])
 
+            logger.loop(f"Got image: {image_shared.shape} from shared memory index {index}")
             return image_shared.copy()  # Return a copy of the image not a reference
 
     def close(self):
