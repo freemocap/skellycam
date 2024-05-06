@@ -39,7 +39,7 @@ def customize_swagger_ui(app: FastAPI):
 
 
 def create_app(*args, **kwargs) -> FastAPI:
-    logger.info("Creating FastAPI app")
+    logger.api("Creating FastAPI app")
     app = FastAPI()
     cors(app)
     register_routes(app)
