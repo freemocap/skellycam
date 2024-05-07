@@ -13,15 +13,15 @@ class FailedToApplyCameraConfigurationError(Exception):
     pass
 
 
-async def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> CameraConfig:
+def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> CameraConfig:
     # set camera stream parameters
     logger.info(
-        f"Applying configuration to Camera {config.camera_id}:"
-        f"Exposure: {config.exposure}, "
-        f"Resolution width: {config.resolution.width}, "
-        f"Resolution height: {config.resolution.height}, "
-        f"Framerate: {config.framerate}, "
-        f"Fourcc: {config.capture_fourcc}"
+        f"\tApplying configuration to Camera {config.camera_id}:\n"
+        f"\tExposure: {config.exposure},\n"
+        f"\tResolution width: {config.resolution.width},\n"
+        f"\tResolution height: {config.resolution.height},\n"
+        f"\tFramerate: {config.framerate},\n"
+        f"\tFourcc: {config.capture_fourcc}"
     )
 
     try:

@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def create_cv2_capture(config: CameraConfig):
+def create_cv2_capture(config: CameraConfig):
     cap_backend = determine_backend()
     capture = cv2.VideoCapture(int(config.camera_id), cap_backend.value)
     if not capture.isOpened():

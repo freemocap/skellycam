@@ -21,7 +21,7 @@ class FrameWrangler:
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._multi_frame_payload: Optional[MultiFramePayload] = None
 
-        self._frame_output_pipe, self._frame_input_pipe = multiprocessing.Pipe(duplex=False)
+        self._frame_receiver_pipe, self._frame_sender_pipe = multiprocessing.Pipe()
         self._setup_recorder()
 
     def _setup_recorder(self):
@@ -31,8 +31,8 @@ class FrameWrangler:
             multi_frame_queue=self._recorder_queue,
         )
 
-    def get_frame_input_pipe(self):
-        return self._frame_input_pipe
+    def get_frame_sender_pipe(self):
+        return self._frame_sender_pipe
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
@@ -77,8 +77,8 @@ class FrameWrangler:
 
     async def listen_for_frames(self):
         while True:
-            if self._frame_output_pipe.poll():
-                payload = self._frame_output_pipe.recv()
+            if self._frame_receiver_pipe.poll():
+                payload = self._frame_receiver_pipe.recv()
                 logger.loop(f"Frame Wrangler - Received multi-frame payload: {payload}")
                 await self._handle_payload(payload)
             await asyncio.sleep(0.001)

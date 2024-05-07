@@ -12,10 +12,6 @@ from skellycam.core.frames.shared_image_memory import SharedImageMemoryManager
 class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]] = Field(default_factory=dict,
                                                            description="A mapping of camera_id to FramePayload")
-    shared_memory_index: Dict[CameraId, Optional[int]] = Field(default_factory=dict,
-                                                               description="A mapping of camera_id to and index in the shared memory manager")
-    image_checksums: Dict[CameraId, int] = Field(default_factory=dict,
-                                                 description="The sum of the pixel values of the image, to verify integrity after shared memory hydration")
     utc_ns_to_perf_ns: Dict[str, int] = Field(
         description="A mapping of `time.time_ns()` to `time.perf_counter_ns()` "
                     "to allow conversion of `time.perf_counter_ns()`'s arbitrary "
@@ -40,49 +36,35 @@ class MultiFramePayload(BaseModel):
     def from_previous(cls, previous: 'MultiFramePayload'):
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    multi_frame_number=previous.multi_frame_number + 1,
-                   utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns.copy(),
+                   utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
                    logs=[f"created_from_previous:{time.perf_counter_ns()}"]
                    )
 
-    @property
-    def camera_ids(self) -> List[CameraId]:
-        return [CameraId(camera_id) for camera_id in self.frames.keys()]
-
-    async def add_shared_memory_image(self,
-                                      frame: FramePayload,
-                                      shared_memory_manager: SharedImageMemoryManager):
-        tik = time.perf_counter_ns()
-        self.shared_memory_index[frame.camera_id] = shared_memory_manager.put_image(frame.image)
-        self.image_checksums[frame.camera_id] = np.sum(frame.image)
-        elapsed = time.perf_counter_ns() - tik
-        self.add_log(f"after_adding_shared_memory_image_for_camera_{frame.camera_id}_took_{elapsed}ns")
+    def add_frame(self, frame: FramePayload):
+        if self.multi_frame_number > 0:
+            if frame.camera_id not in self.frames.keys():
+                raise ValueError(f"Camera ID {frame.camera_id} not in MultiFramePayload")
+        self.frames[frame.camera_id] = frame
 
     def hydrate_shared_memory_images(self, shared_memory_manager: SharedImageMemoryManager):
+        tik = time.perf_counter_ns()
         for camera_id, frame in self.frames.items():
             if frame is not None:
-                tik = time.perf_counter_ns()
-                self.frames[camera_id].image = shared_memory_manager.get_image(self.shared_memory_index[camera_id])
-                elapsed = time.perf_counter_ns() - tik
-                self.add_log(f"shared_memory_image_for_camera_{camera_id}_took_{elapsed}ns")
-                self._validate_image(camera_id)
+                tik_frame = time.perf_counter_ns()
+                frame.hydrate_shared_memory_image(shared_memory_manager)
+                elapsed_frame = time.perf_counter_ns() - tik_frame
+                self.add_log(f"hydrating_shared_memory_image_for_camera_{camera_id}_took_{elapsed_frame}ns")
+        total_elapsed = time.perf_counter_ns() - tik
+        self.add_log(f"hydrating_shared_memory_images_took_{total_elapsed}ns")
 
-    def _validate_image(self, camera_id):
-        self.add_log(f"validate_image_for_camera_{camera_id}")
-        if self.frames[camera_id].image is None:
-            raise ValueError(f"Image is None for camera_id: {camera_id}")
-        if self.frames[camera_id].image.shape != self.frames[camera_id].image_shape:
-            raise ValueError(f"Image shape mismatch for camera_id: {camera_id} - "
-                             f"Expected: {self.frames[camera_id].image_shape}, "
-                             f"Actual: {self.frames[camera_id].image.shape}")
-        if self.frames[camera_id].image.dtype != self.frames[camera_id].image_dtype:
-            raise ValueError(f"Image dtype mismatch for camera_id: {camera_id} - "
-                             f"Expected: {self.frames[camera_id].image_dtype}, "
-                             f"Actual: {self.frames[camera_id].image.dtype}")
-
-        if np.sum(self.frames[camera_id].image) != self.image_checksums[camera_id]:
-            raise ValueError(f"Image checksum mismatch for camera_id: {camera_id} - "
-                             f"Expected: {self.image_checksums[camera_id]}, "
-                             f"Actual: {np.sum(self.frames[camera_id].image)}")
 
     def add_log(self, log: str):
         self.logs.append(f"{log}:{time.perf_counter_ns()}")
+
+    def __str__(self):
+        print_str = f""
+
+        for camera_id, frame in self.frames.items():
+            print_str += str(frame) + "\n"
+        return print_str
+

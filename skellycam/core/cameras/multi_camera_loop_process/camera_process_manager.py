@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict, List
 
-from skellycam.core.cameras.multi_process_camera.camera_loop_process import (
+from skellycam.core.cameras.multi_camera_loop_process.camera_loop_process import (
     CameraLoopProcess,
 )
 from skellycam.core.cameras.config.camera_config import CameraConfigs

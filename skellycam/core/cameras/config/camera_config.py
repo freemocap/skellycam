@@ -78,6 +78,9 @@ class CameraConfigs(v1BaseModel):
 
         return configs
 
+    @classmethod
+    def from_dict(cls, d: Dict[CameraId, CameraConfig]):
+        return cls(__root__=d)
     def __getitem__(self, key: CameraId) -> CameraConfig:
         return self.__root__[key]
 
@@ -97,7 +100,7 @@ class CameraConfigs(v1BaseModel):
         return self.__root__.items()
 
 
-DEFAULT_CAMERA_CONFIGS = {0: CameraConfig(camera_id=CameraId(0))}
+DEFAULT_CAMERA_CONFIGS = {CameraId(0): CameraConfig(camera_id=CameraId(0))}
 
 if __name__ == "__main__":
     from pprint import pprint
