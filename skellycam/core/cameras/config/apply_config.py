@@ -16,7 +16,7 @@ class FailedToApplyCameraConfigurationError(Exception):
 def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> CameraConfig:
     # set camera stream parameters
     logger.info(
-        f"\tApplying configuration to Camera {config.camera_id}:\n"
+        f"Applying configuration to Camera {config.camera_id}:\n"
         f"\tExposure: {config.exposure},\n"
         f"\tResolution width: {config.resolution.width},\n"
         f"\tResolution height: {config.resolution.height},\n"

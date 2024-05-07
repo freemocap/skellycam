@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
-from skellycam.core.frames.shared_image_memory import SharedImageMemoryManager
+from skellycam.core.frames.shared_image_memory import SharedPayloadMemoryManager
 
 
 class MultiFramePayload(BaseModel):
@@ -46,7 +46,7 @@ class MultiFramePayload(BaseModel):
                 raise ValueError(f"Camera ID {frame.camera_id} not in MultiFramePayload")
         self.frames[frame.camera_id] = frame
 
-    def hydrate_shared_memory_images(self, shared_memory_manager: SharedImageMemoryManager):
+    def hydrate_shared_memory_images(self, shared_memory_manager: SharedPayloadMemoryManager):
         tik = time.perf_counter_ns()
         for camera_id, frame in self.frames.items():
             if frame is not None:

@@ -1,10 +1,11 @@
 import logging
-from typing import Coroutine, Callable, Optional
+from typing import Coroutine, Callable, Optional, Dict
 
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_process_manager import MultiCameraTriggerProcess
+from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_wrangler import FrameWrangler
-from skellycam.core.frames.shared_image_memory import SharedImageMemoryManager
+from skellycam.core.frames.shared_image_memory import SharedPayloadMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,8 @@ class CameraGroup:
             self,
     ):
         self._multi_camera_process: Optional[MultiCameraTriggerProcess] = None
-        # self._multi_camera_process =  CameraProcessManager()
         self._frame_wrangler = FrameWrangler()
-        self._shared_memory_manager: Optional[SharedImageMemoryManager] = None
+        self._shared_memory_manager = SharedPayloadMemoryManager()
 
     @property
     def camera_ids(self):
@@ -37,8 +37,8 @@ class CameraGroup:
             # TODO: Support different resolutions
             raise ValueError("All cameras must have the same resolution for the shared memory thing to work (for now)")
 
-        self._shared_memory_manager = SharedImageMemoryManager(camera_ids=list(camera_configs.keys()),
-                                                               image_resolution=resolutions[0])
+        self._shared_memory_manager = SharedPayloadMemoryManager(camera_ids=list(camera_configs.keys()),
+                                                                 image_resolution=resolutions[0])
 
         self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=camera_configs,
                                                                frame_pipe=self._frame_wrangler.get_frame_sender_pipe(),

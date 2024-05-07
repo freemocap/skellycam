@@ -4,7 +4,7 @@ from typing import Dict, List
 from skellycam.core.cameras.multi_camera_loop_process.camera_loop_process import (
     CameraLoopProcess,
 )
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 

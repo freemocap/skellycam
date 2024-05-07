@@ -4,7 +4,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.core.detection.camera_id import CameraId
-from skellycam.core.frames.shared_image_memory import SharedImageMemoryManager
+from skellycam.core.frames.shared_image_memory import SharedPayloadMemoryManager
 
 
 class FramePayload(BaseModel):
@@ -25,7 +25,7 @@ class FramePayload(BaseModel):
 
     @classmethod
     def as_shared_memory(cls,
-                         shared_memory_manager: SharedImageMemoryManager,
+                         shared_memory_manager: SharedPayloadMemoryManager,
                          success: bool,
                          image: np.ndarray,
                          timestamp_ns: int,
@@ -48,7 +48,7 @@ class FramePayload(BaseModel):
         )
 
     def hydrate_shared_memory_image(self,
-                                    shared_memory_manager: SharedImageMemoryManager):
+                                    shared_memory_manager: SharedPayloadMemoryManager):
         image = shared_memory_manager.get_image(index=self.shared_memory_index,
                                                 camera_id=self.camera_id)
         if not np.sum(image) == self.image_checksum:

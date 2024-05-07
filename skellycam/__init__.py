@@ -14,3 +14,4 @@ from skellycam.system.logging_configuration.configure_logging import configure_l
 from skellycam.system.logging_configuration.log_level_enum import LogLevels
 
 configure_logging(level=LogLevels.ALL)
+

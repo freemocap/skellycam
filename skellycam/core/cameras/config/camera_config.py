@@ -1,6 +1,4 @@
 from pydantic import BaseModel, Field
-from pydantic.v1 import BaseModel as v1BaseModel
-from pydantic.v1 import validator
 
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.detection.image_rotation_types import RotationTypes
@@ -9,7 +7,7 @@ from skellycam.core.detection.video_resolution import VideoResolution
 
 class CameraConfig(BaseModel):
     camera_id: CameraId = Field(
-        default=0,
+        default=CameraId(0),
         description="The id of the camera to use, "
                     "e.g. cv2.VideoCapture uses `0` for the first camera",
     )
@@ -57,52 +55,15 @@ class CameraConfig(BaseModel):
     def __eq__(self, other):
         return self.dict() == other.dict()
 
+    def __str__(self):
+        out_str = f"BASE CONFIG:\n"
+        for key, value in self.dict().items():
+            out_str += f"\t{key} ({type(value).__name__}): {value} \n"
+        out_str += "COMPUTED:\n"
+        out_str += f"\taspect_ratio {self.aspect_ratio:.3f}\n"
+        out_str += f"\torientation: {self.orientation}\n"
+        return out_str
 
-from typing import Dict
-
-
-class CameraConfigs(v1BaseModel):
-    __root__: Dict[CameraId, CameraConfig]
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    @validator("__root__", pre=True)
-    def check_resolutions(cls, configs):
-        if len(configs) > 1:
-            first_resolution = next(iter(configs.values())).resolution
-            if not all(config.resolution == first_resolution for config in configs.values()):
-                # TODO: Support different resolutions
-                raise ValueError(
-                    'All CameraConfig instances must have the same resolution because of the shared memory manager')
-
-        return configs
-
-    @classmethod
-    def from_dict(cls, d: Dict[CameraId, CameraConfig]):
-        return cls(__root__=d)
-    def __getitem__(self, key: CameraId) -> CameraConfig:
-        return self.__root__[key]
-
-    def __setitem__(self, key: CameraId, value: CameraConfig) -> None:
-        self.__root__[key] = value
-
-    def __iter__(self):
-        return iter(self.__root__)
-
-    def keys(self):
-        return self.__root__.keys()
-
-    def values(self):
-        return self.__root__.values()
-
-    def items(self):
-        return self.__root__.items()
-
-
-DEFAULT_CAMERA_CONFIGS = {CameraId(0): CameraConfig(camera_id=CameraId(0))}
 
 if __name__ == "__main__":
-    from pprint import pprint
-
-    pprint(CameraConfig().dict())
+    print(CameraConfig())

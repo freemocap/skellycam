@@ -3,7 +3,7 @@ import multiprocessing
 from multiprocessing import Process
 from typing import Optional
 
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_trigger_loop import camera_trigger_loop
 from skellycam.core.detection.camera_id import CameraId
 

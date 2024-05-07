@@ -27,5 +27,5 @@ def create_cv2_capture(config: CameraConfig):
     if not success or image is None:
         raise FailedToReadFrameFromCameraException()
 
-    logger.debug(f"Created `cv2.VideoCapture` object for Camera: {config.camera_id}")
+    logger.info(f"Created `cv2.VideoCapture` object for Camera: {config.camera_id}")
     return capture

@@ -4,10 +4,10 @@ import multiprocessing
 import time
 from typing import Coroutine, Callable, Optional
 
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.frames.shared_image_memory import SharedImageMemoryManager
+from skellycam.core.frames.shared_image_memory import SharedPayloadMemoryManager
 from skellycam.core.recorder.video_recorder_manager import VideoRecorderProcessManager
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class FrameWrangler:
     def __init__(self ):
         super().__init__()
         self._camera_configs: CameraConfigs = {}
-        self._shared_memory_manager: Optional[SharedImageMemoryManager] = None
+        self._shared_memory_manager: Optional[SharedPayloadMemoryManager] = None
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._multi_frame_payload: Optional[MultiFramePayload] = None
 
@@ -38,7 +38,7 @@ class FrameWrangler:
         self._ws_send_bytes = ws_send_bytes
         logger.trace(f"Websocket bytes sender function set")
 
-    def set_camera_configs(self, camera_configs: CameraConfigs, shared_memory_manager: SharedImageMemoryManager):
+    def set_camera_configs(self, camera_configs: CameraConfigs, shared_memory_manager: SharedPayloadMemoryManager):
         self._shared_memory_manager = shared_memory_manager
         self._camera_configs = camera_configs
         self._multi_frame_payload = MultiFramePayload.create(
