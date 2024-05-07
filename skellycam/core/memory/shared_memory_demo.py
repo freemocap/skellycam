@@ -2,13 +2,17 @@ import logging
 import time
 
 import numpy as np
+import polars as ps
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
-
+from pprint import pprint
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+
 
 
 def shared_memory_demo():
@@ -62,12 +66,13 @@ def shared_memory_demo():
     shared_memory_time_elapsed_s = (time.perf_counter_ns() - tik) / 1e9
 
     stats = {"total_time (sec)": shared_memory_time_elapsed_s,
-             "average_time_per_put(ms)": np.mean(elapsed_put_times_ms),
-             "average_time_per_get(ms)": np.mean(elapsed_get_times_ms),
-             "average_time_per_loop(ms)": np.mean(elapsed_times_ms),
-             "std_dev(ms)": np.std(elapsed_times_ms),
-             "loops_per_second": 1 / np.mean(elapsed_times_ms) * 1e3}
-    print("\n\t".join([f"{k}: {v}" for k, v in stats.items()]))
+             "time_per_put(ms)": f"mean:{np.mean(elapsed_put_times_ms):.3f}, median:{np.median(elapsed_put_times_ms):.3f}, std:{np.std(elapsed_put_times_ms):.3f}",
+             "time_per_get(ms)": f"mean:{np.mean(elapsed_get_times_ms):.3f}, median:{np.median(elapsed_get_times_ms):.3f}, std:{np.std(elapsed_get_times_ms):.3f}",
+             "time_per_loop(ms)": f"mean:{np.mean(elapsed_times_ms):.3f}, median:{np.median(elapsed_times_ms):.3f}, std:{np.std(elapsed_times_ms):.3f}",
+             "loops_per_second": f"mean: {loop_count / shared_memory_time_elapsed_s:.3f}, median: {loop_count / np.median(elapsed_times_ms):.3f}, std: {loop_count / np.std(elapsed_times_ms):.3f}"}
+
+    for k, v in stats.items():
+        print(f"{k}: {v}")
 
 
 if __name__ == "__main__":
