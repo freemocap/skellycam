@@ -4,7 +4,6 @@ import time
 import numpy as np
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
@@ -40,27 +39,35 @@ def shared_memory_demo():
             print(
                 f"Camera{camera_id} - Test image checksum: {np.sum(test_image)} - Retrieved image checksum: {retrieved_frame.image_checksum}")
 
-    loop_count = 1000
+    loop_count = 800
     print(
         f"SHARED MEMORY TEST -  Sending and receiving {loop_count} images (shape: {test_image.shape}, dtype: {test_image.dtype}, size:{test_image_kb}kB).")
-    tik = time.perf_counter()
+    tik = time.perf_counter_ns()
     elapsed_times_ms = []
+    elapsed_put_times_ms = []
+    elapsed_get_times_ms = []
     for loop in range(loop_count):
         if loop % 100 == 0:
             print(f"Loop {loop} of {loop_count}")
         tik_loop = time.perf_counter_ns()
         for camera_id in camera_ids:
+            tik_before_put = time.perf_counter_ns()
             index = memory.put_frame(frame=test_frame)
+            elapsed_put_times_ms.append((time.perf_counter_ns() - tik_before_put) / 1e6)
+            tik_before_get = time.perf_counter_ns()
             test_frame = other_memory.retrieve_frame(index=index)
+            elapsed_get_times_ms.append((time.perf_counter_ns() - tik_before_get) / 1e6)
         elapsed_times_ms.append((time.perf_counter_ns() - tik_loop) / 1e6)
-    shared_memory_time_elapsed = (time.perf_counter_ns() - tik) / 1e6
 
-    stats = {"total_time": shared_memory_time_elapsed,
-             "average_time": np.mean(elapsed_times_ms),
-             "std_dev": np.std(elapsed_times_ms),
+    shared_memory_time_elapsed_s = (time.perf_counter_ns() - tik) / 1e9
+
+    stats = {"total_time (sec)": shared_memory_time_elapsed_s,
+             "average_time_per_put(ms)": np.mean(elapsed_put_times_ms),
+             "average_time_per_get(ms)": np.mean(elapsed_get_times_ms),
+             "average_time_per_loop(ms)": np.mean(elapsed_times_ms),
+             "std_dev(ms)": np.std(elapsed_times_ms),
              "loops_per_second": 1 / np.mean(elapsed_times_ms) * 1e3}
     print("\n\t".join([f"{k}: {v}" for k, v in stats.items()]))
-
 
 
 if __name__ == "__main__":
