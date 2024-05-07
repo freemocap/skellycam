@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import multiprocessing
 import time
@@ -12,7 +11,7 @@ from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.create_cv2_video_capture import create_cv2_capture
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
-from skellycam.core.frames.shared_image_memory import SharedPayloadMemoryManager
+from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +53,9 @@ class TriggerCameraProcess:
                      exit_event: multiprocessing.Event):
         logger.debug(f"Camera {config.camera_id} process started")
         existing_shared_memory = shared_memory.SharedMemory(name=shared_memory_name)
-        shared_memory_manager = SharedPayloadMemoryManager(camera_ids=all_camera_ids,
-                                                           image_resolution=config.resolution,
-                                                           existing_shared_memory=existing_shared_memory)
+        shared_memory_manager = CameraSharedMemoryManager(camera_ids=all_camera_ids,
+                                                          image_resolution=config.resolution,
+                                                          existing_shared_memory=existing_shared_memory)
         cv2_video_capture = create_cv2_capture(config)
         apply_camera_configuration(cv2_video_capture, config)
         run_trigger_listening_loop(config=config,
@@ -76,7 +75,7 @@ class TriggerCameraProcess:
 
 def run_trigger_listening_loop(config: CameraConfig,
                                cv2_video_capture: cv2.VideoCapture,
-                               shared_memory_manager: SharedPayloadMemoryManager,
+                               shared_memory_manager: CameraSharedMemoryManager,
                                frame_queue: multiprocessing.Queue,
                                config_update_queue: multiprocessing.Queue,
                                get_frame_trigger: multiprocessing.Event,
@@ -128,7 +127,7 @@ def get_frame(
         camera_id: CameraId,
         frame_number: int,
         previous_frame_timestamp_ns: int,
-        shared_memory_manager: SharedPayloadMemoryManager,
+        shared_memory_manager: CameraSharedMemoryManager,
         cv2_video_capture: cv2.VideoCapture,
 ) -> FramePayload:
     """

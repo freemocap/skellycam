@@ -10,7 +10,7 @@ from skellycam.core.cameras.trigger_camera.trigger_camera import TriggerCameraPr
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.frames.shared_image_memory import SharedPayloadMemoryManager
+from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -199,9 +199,9 @@ def log_loop_count(number_of_frames: int, payload: MultiFramePayload, suffix: st
 
 def recreate_shared_memory_manager(camera_configs: CameraConfigs,
                                    shared_memory_name: str
-                                   ) -> SharedPayloadMemoryManager:
+                                   ) -> CameraSharedMemoryManager:
     existing_shared_memory = shared_memory.SharedMemory(name=shared_memory_name)
-    shared_memory_manager = SharedPayloadMemoryManager(camera_ids=list(camera_configs.keys()),
-                                                       image_resolution=list(camera_configs.values())[0].resolution,
-                                                       existing_shared_memory=existing_shared_memory)
+    shared_memory_manager = CameraSharedMemoryManager(camera_ids=list(camera_configs.keys()),
+                                                      image_resolution=list(camera_configs.values())[0].resolution,
+                                                      existing_shared_memory=existing_shared_memory)
     return shared_memory_manager
