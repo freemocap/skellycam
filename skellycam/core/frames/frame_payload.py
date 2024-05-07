@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.detection.camera_id import CameraId
 
+BYTES_PER_PIXEL = 1
+
 
 class FramePayload(BaseModel):
     camera_id: CameraId = Field(
@@ -15,6 +17,7 @@ class FramePayload(BaseModel):
                                         description="The raw image from `cv2.VideoCapture.read() as bytes")
     image_checksum: int = Field(description="The sum of the pixel values of the image, to verify integrity")
     image_shape: tuple = Field("The shape of the image as a tuple of `(height, width, channels)`")
+    bytes_per_pixel: int = Field(default=BYTES_PER_PIXEL, description="The number of bytes per pixel in the image")
     timestamp_ns: int = Field(description="The timestamp of the frame in nanoseconds from `time.perf_counter_ns()`")
     read_duration_ns: int = Field(description="The time taken to read the frame in nanoseconds")
     frame_number: int = Field(description="The number of frames read from the camera since the camera was started")
@@ -22,6 +25,7 @@ class FramePayload(BaseModel):
 
     @classmethod
     def create_dummy(cls, image: np.ndarray = None) -> 'FramePayload':
+
         return cls(
             camera_id=CameraId(0),
             success=True,
@@ -38,6 +42,34 @@ class FramePayload(BaseModel):
     def to_unhydrated_bytes(self) -> bytes:
         without_image_data = self.dict(exclude={"image_data"})
         return pickle.dumps(without_image_data)
+
+    def to_buffer(self) -> bytes:
+        image_buffer = self.image_data
+        return image_buffer + self.to_unhydrated_bytes()
+
+    @classmethod
+    def from_buffer(cls,
+                    buffer: bytes,
+                    image_shape: Tuple[int, int, int],
+                    ) -> 'FramePayload':
+        if not len(image_shape) == 3:
+            raise ValueError(
+                f"Expected image shape to be a tuple of 3 integers (height, width, colors), got {image_shape}")
+        image_size = np.prod(
+            image_shape) * BYTES_PER_PIXEL  # TODO - don't use global here should be able to use the `cls`
+        image_data = buffer[:image_size]
+        unhydrated_data = buffer[image_size:]
+        unhydrated_frame = pickle.loads(unhydrated_data)
+        instance = cls(
+            **unhydrated_frame,
+            image_data=image_data,
+        )
+        instance._validate_image(image=instance.image)
+        return instance
+
+    @property
+    def hydrated(self) -> bool:
+        return self.image_data is not None
 
     @property
     def image(self) -> np.ndarray:
@@ -73,10 +105,6 @@ class FramePayload(BaseModel):
             raise ValueError(f"Image shape mismatch - "
                              f"Expected: {self.image_shape}, "
                              f"Actual: {image.shape}")
-        if self.image_dtype != image.dtype:
-            raise ValueError(f"Image dtype mismatch - "
-                             f"Expected: {self.image_dtype}, "
-                             f"Actual: {image.dtype}")
         check_sum = np.sum(image)
         if self.image_checksum != check_sum:
             raise ValueError(f"Image checksum mismatch - "
@@ -104,7 +132,7 @@ if __name__ == "__main__":
 
     tik = time.perf_counter_ns()
     test_image = np.random.randint(0, 255, size=image_shape, dtype=image_dtype)
-    read_duration_ns = time.perf_counter_ns() - tik #secretly timing the time it takes to generate a random image
+    read_duration_ns = time.perf_counter_ns() - tik  # secretly timing the time it takes to generate a random image
 
     frame = FramePayload(
         camera_id=camera_id,
@@ -118,16 +146,32 @@ if __name__ == "__main__":
         read_duration_ns=read_duration_ns,
     )
 
-    print(f"HYDRATED FRAME PAYLOAD:\n{frame}")
+    print(f"HYDRATED FRAME PAYLOAD:\n{frame}\n--\n")
 
     tik = time.perf_counter_ns()
     unhydrated_bytes = frame.to_unhydrated_bytes()
     unhydrated_frame = pickle.loads(unhydrated_bytes)
-    read_duration_ns = time.perf_counter_ns() - tik #secretly timing the image-dehydration duration
+    read_duration_ns = time.perf_counter_ns() - tik  # secretly timing the image-dehydration duration
 
     unhydrated_frame = FramePayload(
         **unhydrated_frame,
     )
     unhydrated_frame.read_duration_ns = read_duration_ns
 
-    print(f"UNHYDRATED FRAME PAYLOAD:\n{unhydrated_frame}")
+    print(f"UNHYDRATED FRAME PAYLOAD:\n{unhydrated_frame}\n--\n")
+
+    buffer = frame.to_buffer()
+    print(f"BUFFER SIZE: {len(buffer) / 1024:.2f} KB")
+    frame_from_buffer = FramePayload.from_buffer(buffer=buffer,
+                                                 image_shape=image_shape)
+    print(f"FRAME FROM BUFFER:\n{frame_from_buffer}\n--\n")
+
+    bad_buffer = bytearray(buffer)  # Lookit this utter embarrassment of a buffer
+    bad_buffer[0] = bad_buffer[0] + 1  # Terrible
+    bad_buffer = bytes(bad_buffer)  # Utter disgrace
+    try:
+        frame_from_bad_buffer = FramePayload.from_buffer(buffer=bad_buffer,
+                                                         image_shape=image_shape)
+    except ValueError as e:
+        print(f"ERROR: {type(e).__name__} - {e}")
+        print(f"FRAME FROM BAD BUFFER FAILED SUCCESSFULLY")
