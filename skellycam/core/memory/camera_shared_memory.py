@@ -24,6 +24,26 @@ class CameraSharedMemoryModel(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    @classmethod
+    def from_config(cls,
+                    camera_config: CameraConfig,
+                    buffer_size: int,
+                    shared_memory_name: str = None,
+                    **kwargs
+                    ):
+        shm = cls._get_or_create_shared_memory(camera_id=camera_config.camera_id,
+                                               buffer_size=buffer_size,
+                                               shared_memory_name=shared_memory_name)
+
+        image_size, unhydrated_payload_size = cls._calculate_buffer_sizes(camera_config)
+
+        return cls(camera_config=camera_config,
+                   buffer_size=buffer_size,
+                   image_shape=camera_config.image_shape,
+                   unhydrated_payload_size=unhydrated_payload_size,
+                   shm=shm,
+                   **kwargs)
+
     @property
     def image_size(self) -> int:
         return np.prod(self.image_shape) * self.bytes_per_pixel
@@ -44,25 +64,6 @@ class CameraSharedMemoryModel(BaseModel):
     def camera_id(self):
         return self.camera_config.camera_id
 
-    @classmethod
-    def from_config(cls,
-                    camera_config: CameraConfig,
-                    buffer_size: int,
-                    shared_memory_name: str = None,
-                    **kwargs
-                    ):
-        shm = cls._get_or_create_shared_memory(camera_id=camera_config.camera_id,
-                                               buffer_size=buffer_size,
-                                               shared_memory_name=shared_memory_name)
-
-        image_size, unhydrated_pyload_size = cls._calculate_buffer_sizes(camera_config)
-
-        return cls(camera_config=camera_config,
-                   buffer_size=buffer_size,
-                   image_shape=camera_config.image_shape,
-                   unhydrated_payload_size=unhydrated_pyload_size,
-                   shm=shm,
-                   **kwargs)
 
     @classmethod
     def _get_or_create_shared_memory(cls,
@@ -113,8 +114,6 @@ class CameraSharedMemory(CameraSharedMemoryModel):
         self.next_index += 1
         return index
 
-
-
     def retrieve_frame(self, index: int) -> FramePayload:
 
         if index >= len(self.offsets) or index < 0:
@@ -123,9 +122,6 @@ class CameraSharedMemory(CameraSharedMemoryModel):
         payload_buffer = bytearray(self.shm.buf[offset:offset + self.payload_size])
         return FramePayload.from_buffer(buffer=payload_buffer,
                                         image_shape=self.image_shape)
-
-
-
 
     def _increment_index(self):
         self.next_index += 1
