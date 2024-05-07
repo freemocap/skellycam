@@ -4,24 +4,34 @@ from multiprocessing import shared_memory
 from typing import List
 
 import numpy as np
+from pydantic import BaseModel
 
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.detection.video_resolution import VideoResolution
+from skellycam.core.frames.frame_payload import FramePayload
 
-BUFFER_SIZE = 1024 * 1024 * 1024  # 1 GB
+BUFFER_SIZE = 1024 * 1024 * 1024  # 1 GB buffer size for all cameras
 
 logger = logging.getLogger(__name__)
 
 
-class SharedImageMemoryManager:
+class SharedPayloadMemoryManager:
     def __init__(self,
-                 camera_ids: List[CameraId],
-                 image_resolution: VideoResolution,
-                 color_channels: int = 3,
-                 image_dtype: np.dtype = np.uint8,
-                 buffer_size: int = BUFFER_SIZE,
-                 existing_shared_memory: shared_memory.SharedMemory = None
+                 camera_configs: CameraConfigs,
+                 payload_model: BaseModel = FramePayload,
+                 total_buffer_size: int = BUFFER_SIZE,
+                 # existing_shared_memory: shared_memory.SharedMemory = None
                  ):
+        self._camera_configs = camera_configs
+        self._payload_model = payload_model
+        self._total_buffer_size = total_buffer_size
+
+    def allocate_shared_memory(self):
+        self._calculate_buffer_sizes()
+
+    def _calculate_buffer_sizes(self):
+        self._number_of_cameras = len(self._camera_configs)
         self.image_shape = (image_resolution.height, image_resolution.width, color_channels)
         self.image_dtype = image_dtype
         self.image_size = np.prod(self.image_shape) * np.dtype(self.image_dtype).itemsize  # bytes
@@ -158,7 +168,7 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
 
     camera_ids = [CameraId(0), CameraId(1), CameraId(2)]
-    manager = SharedImageMemoryManager(
+    manager = SharedPayloadMemoryManager(
         camera_ids=camera_ids,
         image_resolution=VideoResolution(width=1920, height=1080),
     )
