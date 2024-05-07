@@ -93,6 +93,7 @@ class CameraSharedMemoryModel(BaseModel):
 
 class CameraSharedMemory(CameraSharedMemoryModel):
     def put_frame(self, frame: FramePayload) -> int:
+
         if not frame.hydrated:
             raise ValueError(f"Frame payload for {self.camera_id} is must be hydrated before storing in shared memory.")
 
@@ -102,18 +103,31 @@ class CameraSharedMemory(CameraSharedMemoryModel):
                              f"Expected: {self.payload_size}, "
                              f"Actual: {len(payload_bytes)}")
 
-        if self.next_index >= len(self.offsets):
+        offset = self.offsets[self.next_index]
+        if offset + self.payload_size > self.buffer_size:
             self.next_index = 0
-        index = self.next_index
-        offset = self.offsets[index]
+            offset = self.offsets[self.next_index]
+
         self.shm.buf[offset:offset + self.payload_size] = payload_bytes
+        index = self.next_index
         self.next_index += 1
         return index
 
-    def get_frame(self, index: int) -> FramePayload:
+
+
+    def retrieve_frame(self, index: int) -> FramePayload:
+
         if index >= len(self.offsets) or index < 0:
             raise ValueError(f"Index {index} out of range for {self.camera_id}")
         offset = self.offsets[index]
         payload_buffer = bytearray(self.shm.buf[offset:offset + self.payload_size])
         return FramePayload.from_buffer(buffer=payload_buffer,
                                         image_shape=self.image_shape)
+
+
+
+
+    def _increment_index(self):
+        self.next_index += 1
+        if self.next_index >= len(self.offsets):
+            self.next_index = 0
