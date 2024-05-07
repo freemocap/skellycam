@@ -7,7 +7,7 @@ import numpy as np
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.detection.camera_id import CameraId
-from skellycam.core.detection.video_resolution import VideoResolution
+from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 from skellycam.core.memory.shared_memory_demo import camera_ids, manager, shm, test_image, index, retrieved_image, \
     loop_count

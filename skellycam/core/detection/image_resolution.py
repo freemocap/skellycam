@@ -1,12 +1,12 @@
 from pydantic import BaseModel
 
 
-class VideoResolution(BaseModel):
+class ImageResolution(BaseModel):
     width: int
     height: int
 
     @classmethod
-    def from_string(cls, tuple_str: str, split_on: str = "x") -> "VideoResolution":
+    def from_string(cls, tuple_str: str, split_on: str = "x") -> "ImageResolution":
         """
         Create a `VideoResolution` from a string like "(1280, 720)"
         """
@@ -24,13 +24,13 @@ class VideoResolution(BaseModel):
     def __hash__(self):
         return hash((self.width, self.height))
 
-    def __lt__(self, other: "VideoResolution") -> bool:
+    def __lt__(self, other: "ImageResolution") -> bool:
         """
         Define this so we can sort a list of `VideoResolution`s
         """
         return self.width * self.height < other.width * other.height
 
-    def __eq__(self, other: "VideoResolution") -> bool:
+    def __eq__(self, other: "ImageResolution") -> bool:
         """
         Define this so we can compare `VideoResolution`s
         """

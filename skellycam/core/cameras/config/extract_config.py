@@ -5,7 +5,7 @@ import cv2
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.detection.image_rotation_types import RotationTypes
-from skellycam.core.detection.video_resolution import VideoResolution
+from skellycam.core.detection.image_resolution import ImageResolution
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ def extract_config_from_cv2_capture(camera_id: CameraId,
         return CameraConfig(
             camera_id=camera_id,
             use_this_camera=use_this_camera,
-            resolution=VideoResolution(
+            resolution=ImageResolution(
                 width=cv2_capture.get(cv2.CAP_PROP_FRAME_WIDTH),
                 height=cv2_capture.get(cv2.CAP_PROP_FRAME_HEIGHT),
             ),

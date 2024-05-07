@@ -5,7 +5,7 @@ from typing import List, Any
 from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
-from skellycam.core.detection.video_resolution import VideoResolution
+from skellycam.core.detection.image_resolution import ImageResolution
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class CameraDeviceInfo(BaseModel):
         Get a list of all available resolutions, sorted from lowest ([0]) to highest ([-1])
         """
         all_resolutions = [
-            VideoResolution(width=video_format.width, height=video_format.height)
+            ImageResolution(width=video_format.width, height=video_format.height)
             for video_format in self.available_video_formats
         ]
         unique_resolutions = list(set(all_resolutions))

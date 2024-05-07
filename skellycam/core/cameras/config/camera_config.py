@@ -1,8 +1,10 @@
+from typing import Tuple
+
 from pydantic import BaseModel, Field
 
 from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.detection.image_rotation_types import RotationTypes
-from skellycam.core.detection.video_resolution import VideoResolution
+from skellycam.core.detection.image_resolution import ImageResolution
 
 
 class CameraConfig(BaseModel):
@@ -16,15 +18,19 @@ class CameraConfig(BaseModel):
         default=True,
         description="Whether or not to use this camera for streaming/recording",
     )
-    resolution: VideoResolution = Field(
-        default=VideoResolution(width=1920, height=1080),
+    resolution: ImageResolution = Field(
+        default=ImageResolution(width=1920, height=1080),
         description="The current resolution of the camera, in pixels.",
     )
+    color_channels: int = Field(
+        default=3,
+        description="The number of color channels in the image (3 for RGB, 1 for monochrome)", )
     exposure: int = Field(
         default=-7,
         description="The exposure of the camera using the opencv convention - "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
     )
+
     framerate: float = Field(
         default=30, description="The framerate of the camera (in frames per second)."
     )
@@ -51,6 +57,10 @@ class CameraConfig(BaseModel):
     @property
     def aspect_ratio(self) -> float:
         return self.resolution.aspect_ratio
+
+    @property
+    def image_shape(self) -> Tuple[int, int, int]:
+        return self.resolution.height, self.resolution.width, self.color_channels
 
     def __eq__(self, other):
         return self.dict() == other.dict()

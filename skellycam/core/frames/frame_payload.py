@@ -24,7 +24,7 @@ class FramePayload(BaseModel):
     time_since_last_frame_ns: int = Field(description="The time since the previous frame in nanoseconds")
 
     @classmethod
-    def create_dummy(cls, image: np.ndarray = None) -> 'FramePayload':
+    def create_dummy(cls, image: np.ndarray) -> 'FramePayload':
 
         return cls(
             camera_id=CameraId(0),
