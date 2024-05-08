@@ -19,8 +19,8 @@ class CameraConfigs(RootModel):
             out_str += f"Camera {camera_id}:\n{config}\n"
         return out_str
 
-    def __getitem__(self, item):
-        return self.root[item]
+    def __getitem__(self, key):
+        return self.root[CameraId(key)]
 
     def __setitem__(self, key, value):
         self.root[CameraId(key)] = value

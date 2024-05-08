@@ -1,3 +1,5 @@
+# from skellycam.core.frames.frame_lifecycle_timestamps import FrameLifeCycleTimestamps
+import logging
 import pickle
 import time
 from typing import Optional, Tuple
@@ -8,8 +10,7 @@ from pydantic import BaseModel, Field
 from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
 
-
-# from skellycam.core.frames.frame_lifecycle_timestamps import FrameLifeCycleTimestamps
+logger = logging.getLogger(__name__)
 
 
 class FramePayload(BaseModel):
@@ -32,6 +33,7 @@ class FramePayload(BaseModel):
                                         description="The time the frame was read from the camera in nanoseconds")
     previous_frame_timestamp_ns: int = Field(default_factory=lambda: time.perf_counter_ns(),
                                              description="Timestamp of the previous frame in nanoseconds (dummy value on frame 0)")
+    dummy: bool = Field(default=False, description="This is a dummy frame to be used to calculate the buffer size")
 
     # timestamps: FrameLifeCycleTimestamps = Field(
     #     default_factory=FrameLifeCycleTimestamps,
@@ -55,9 +57,10 @@ class FramePayload(BaseModel):
             image_data=image.tobytes() if image is not None else None,
             timestamp_ns=time.perf_counter_ns(),
             shared_memory_index=int(0),
-            image_checksum=cls.calculate_checksum(image) if image is not None else None,
+            image_checksum=cls.calculate_image_checksum(image) if image is not None else None,
             image_shape=image.shape,
             frame_number=0,
+            dummy=True,
         )
 
     def to_unhydrated_bytes(self) -> bytes:
@@ -65,6 +68,10 @@ class FramePayload(BaseModel):
         # self.timestamps.pre_pickle = time.perf_counter_ns()
         bytes_payload = pickle.dumps(without_image_data)
         # self.timestamps.post_pickle = time.perf_counter_ns()
+        if not self.dummy:
+            logger.trace(
+                f"Pickled frame payload to {len(bytes_payload)} bytes -"
+                f"(checksum: {self.calculate_pickle_checksum(bytes_payload)})")
         return bytes_payload
 
     @classmethod
@@ -75,14 +82,16 @@ class FramePayload(BaseModel):
         if not len(image_shape) == 3:
             raise ValueError(
                 f"Expected image shape to be a tuple of 3 integers (height, width, colors), got {image_shape}")
-        # TODO - don't use global for BYTES_PER_PIXEL here should be able to use the `cls`
+        # TODO - don't use global for BYTES_PER_PIXEL here should be able to use the `cls`, right?
         image_size = np.prod(image_shape) * BYTES_PER_PIXEL
         image_memoryview = buffer[:image_size]
 
         unhydrated_data = buffer[image_size:]
+        logger.trace(
+            f"Unpickling frame payload from {len(unhydrated_data)} bytes - checksum: {cls.calculate_pickle_checksum(unhydrated_data)}")
         unhydrated_frame = pickle.loads(unhydrated_data)
         instance = cls(
-            **unhydrated_frame,
+            **unhydrated_frame
         )
         instance.timestamps.post_create_frame_from_buffer = time.perf_counter_ns()
         image = np.ndarray(image_shape, dtype=np.uint8, buffer=image_memoryview)
@@ -123,8 +132,6 @@ class FramePayload(BaseModel):
     def resolution(self) -> tuple:
         return self.width, self.height
 
-
-
     @property
     def payload_size_in_kilobytes(self) -> float:
         return len(pickle.dumps(self.dict)) / 1024
@@ -145,8 +152,12 @@ class FramePayload(BaseModel):
                              f"Actual: {check_sum}")
 
     @staticmethod
-    def calculate_checksum(image: np.ndarray) -> int:
+    def calculate_image_checksum(image: np.ndarray) -> int:
         return int(np.sum(image))
+
+    @staticmethod
+    def calculate_pickle_checksum(pickle_bytes: bytes) -> int:
+        return np.sum(np.frombuffer(pickle_bytes, dtype=np.uint8))
 
     def __str__(self):
         print_str = (f"Camera{self.camera_id}:"

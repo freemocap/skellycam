@@ -74,12 +74,15 @@ class FrameWrangler:
         self._listener_task = asyncio.create_task(self.listen_for_frames())
 
     async def listen_for_frames(self):
-        while self._should_continue_listening:
-            logger.loop(f"Awaiting for multi-frame payload...")
-            self._multi_frame_payload = await self._shared_memory_manager.get_multi_frame_payload(
-                payload=self._multi_frame_payload)
-            logger.loop(f"Received multi-frame payload!\n {self._multi_frame_payload}")
-            await self._handle_payload()
+        try:
+            while self._should_continue_listening or self._shared_memory_manager.new_multi_frame_payload_available():
+                logger.loop(f"Awaiting multi-frame payload...")
+                self._multi_frame_payload = await self._shared_memory_manager.get_multi_frame_payload(payload=self._multi_frame_payload)
+                logger.loop(f"Received multi-frame payload!\n {self._multi_frame_payload}")
+                await self._handle_payload()
+        except Exception as e:
+            logger.error(f"Error in listen_for_frames: {type(e).__name__} - {e}")
+            logger.exception(e)
         logger.trace(f"Stopped listening for multi-frames")
 
 

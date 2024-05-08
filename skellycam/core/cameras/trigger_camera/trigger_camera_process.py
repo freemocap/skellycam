@@ -87,7 +87,7 @@ def run_trigger_listening_loop(config: CameraConfig,
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
     while not exit_event.is_set():
         time.sleep(0.001)
-        logger.trace(f"Camera {config.camera_id} read to get next frame")
+        logger.loop (f"Camera {config.camera_id} ready to get next frame")
         frame = get_frame(camera_id=config.camera_id,
                           cv2_video_capture=cv2_video_capture,
                           camera_shared_memory=camera_shared_memory,
@@ -134,10 +134,12 @@ def get_frame(camera_id: CameraId,
     next_frame = None
     while not grab_frame_trigger.is_set():
         time.sleep(0.0001)
-    logger.trace(f"Camera {camera_id} received `grab` trigger - calling `cv2.VideoCapture.grab()`")
+    logger.loop(f"Camera {camera_id} received `grab` trigger - calling `cv2.VideoCapture.grab()`")
 
     # frame.timestamps.pre_grab_timestamp = time.perf_counter_ns()
-    # decouple `grab` and `retrieve` for better sync - https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
+    # decouple `grab` and `retrieve` for better sync -
+    # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
+
     grab_success = cv2_video_capture.grab()  # grab the frame from the camera, but don't decode it yet
     # frame.timestamps.post_grab_timestamp = time.perf_counter_ns()
 
@@ -152,8 +154,8 @@ def get_frame(camera_id: CameraId,
         if next_frame is None:
             next_frame = FramePayload.create_empty(camera_id=camera_id,
                                                    frame_number=frame.frame_number + 1)  # create next frame in presumed downtime
-        time.sleep(0.0001)  # 0.1ms
-    logger.trace(f"Camera {camera_id} received `retrieve` trigger - calling `cv2.VideoCapture.retrieve()`")
+        time.sleep(0.0001)  # gotta go fast
+    logger.loop(f"Camera {camera_id} received `retrieve` trigger - calling `cv2.VideoCapture.retrieve()`")
 
     # frame.timestamps.pre_retrieve_timestamp = time.perf_counter_ns()
     retrieve_success, image = cv2_video_capture.retrieve()  # decode the frame into an image
@@ -164,7 +166,7 @@ def get_frame(camera_id: CameraId,
         raise ValueError(f"Failed to retrieve frame from camera {camera_id}")
 
     frame.success = grab_success and retrieve_success
-    frame.image_checksum = frame.calculate_checksum(image)
+    frame.image_checksum = frame.calculate_image_checksum(image)
     frame.image_shape = image.shape
     camera_shared_memory.put_frame(
         frame=frame,

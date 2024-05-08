@@ -48,8 +48,7 @@ class CameraSharedMemoryManager:
             await asyncio.sleep(0.001)
 
         for camera_id, camera_shared_memory in self._buffer_by_camera.items():
-            if not camera_shared_memory.new_frame_available:
-                raise ValueError(f"Camera {camera_id} did not have a new frame available when it was expected...")
+
             if get_type == "next":
                 payload.add_frame(camera_shared_memory.get_next_frame())
             elif get_type == "latest":

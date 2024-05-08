@@ -1,14 +1,14 @@
 import logging
 import multiprocessing
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.cameras.trigger_camera.trigger_camera import TriggerCameraProcess
+from skellycam.core.cameras.trigger_camera.trigger_camera_process import TriggerCameraProcess
 
 logger = logging.getLogger(__name__)
 
@@ -101,13 +101,14 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
                             camera_ready_events=camera_ready_events,
                             exit_event=exit_event
                             )
+
     logger.info(f"Camera trigger loop started for cameras: {list(camera_configs.keys())}")
 
     send_initial_triggers(camera_ready_events, initial_triggers)
 
     loop_count = 0
-    elapsed_in_trigger_ms = []
-    elapsed_per_loop_ms = []
+    elapsed_in_trigger_ns = []
+    elapsed_per_loop_ns = []
     while not exit_event.is_set():
         tik = time.perf_counter_ns()
 
@@ -116,29 +117,45 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
                                  retrieve_frame_triggers=retrieve_frame_triggers)
 
         check_loop_count(number_of_frames, loop_count, exit_event)
-        elapsed_in_trigger_ms.append((time.perf_counter_ns() - tik) / 1e6)
+        elapsed_in_trigger_ns.append((time.perf_counter_ns() - tik))
         loop_count += 1
 
         wait_for_grab_triggers_reset(grab_frame_triggers)
-        elapsed_per_loop_ms.append((time.perf_counter_ns() - tik) / 1e6)
+        elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
 
-    log_elapsed_time(elapsed_in_trigger_ms, elapsed_per_loop_ms)
+    log_time_stats(camera_configs=camera_configs,
+                   elapsed_in_trigger_ns=elapsed_in_trigger_ns,
+                   elapsed_per_loop_ns=elapsed_per_loop_ns)
 
     logger.debug(f"Closing camera trigger loop for cameras: {list(cameras.keys())}")
 
 
-def log_elapsed_time(elapsed_in_trigger_ms, elapsed_per_loop_ms):
-    logger.info(f"Average multi-camera trigger loop time:\n"
-                
-                f"\n\tTime elapsed in during multi-camera `grab` trigger - "
-                f"\n\t\tmean: {np.mean(elapsed_in_trigger_ms):.2f}ms, "
-                f"\n\t\tmedian: {np.median(elapsed_in_trigger_ms):.2f}ms, "
-                f"\n\t\tstd-dev: {np.std(elapsed_in_trigger_ms):.2f}ms\n"
-                
-                f"\n\tTime elapsed per multi-frame loop -  "
-                f"\n\t\tmean: {np.mean(elapsed_per_loop_ms):.2f}ms, "
-                f"\n\t\tmedian: {np.median(elapsed_per_loop_ms):.2f}ms, "
-                f"\n\t\tstd-dev: {np.std(elapsed_per_loop_ms):.2f}ms\n")
+def log_time_stats(camera_configs: CameraConfigs,
+                   elapsed_in_trigger_ns: List[int],
+                   elapsed_per_loop_ns: List[int]):
+    number_of_cameras = len(camera_configs)
+    resolution = str(camera_configs[0].resolution)
+    number_of_frames = len(elapsed_per_loop_ns)
+    ideal_framerate = min([camera_config.framerate for camera_config in camera_configs.values()])
+
+    logger.info(
+        f"Statistics: \n{number_of_cameras} camera(s) [{number_of_frames} x {resolution} images read from each camera]\n"
+         
+        f"\n\t\tTime elapsed per multi-frame loop  (ideal: {(ideal_framerate**-1)/1e6:.2f} ms) -  "
+        f"\n\t\t\tmean   : {np.mean(elapsed_per_loop_ns)/1e6:.2f} ms"
+        f"\n\t\t\tmedian : {np.median(elapsed_per_loop_ns)/1e6:.2f} ms"
+        f"\n\t\t\tstd-dev: {np.std(elapsed_per_loop_ns)/1e6:.2f} ms\n"
+
+        f"\n\t\tTime elapsed in during multi-camera `grab` trigger (ideal: 0 ms) - "
+        f"\n\t\t\tmean   : {np.mean(elapsed_in_trigger_ns)/1e6:.2f} ms"
+        f"\n\t\t\tmedian : {np.median(elapsed_in_trigger_ns)/1e6:.2f} ms"
+        f"\n\t\t\tstd-dev: {np.std(elapsed_in_trigger_ns)/1e6:.2f} ms\n"
+
+        f"\n\t\tMEASURED FRAMERATE (ideal: {ideal_framerate} fps): "
+        f"\n\t\t\tmean   : {(1e9 / np.mean(elapsed_per_loop_ns)):.2f} fps "
+        f"\n\t\t\tmedian : {(1e9 / np.median(elapsed_per_loop_ns)):.2f} fps \n"
+
+    )
 
 
 def wait_for_grab_triggers_reset(grab_frame_triggers):
