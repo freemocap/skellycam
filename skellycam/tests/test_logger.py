@@ -8,12 +8,15 @@ from skellycam.system.logging_configuration.log_level_enum import LogLevels
 
 @pytest.fixture
 def test_logger():
-    configure_logging(LogLevels.DEBUG)
+    configure_logging(LogLevels.LOOP)
     logger = logging.getLogger(__name__)
     return logger
 
 
 def test_logging_something(test_logger):
+    test_logger.loop("This is a test loop message")
+    assert True
+
     test_logger.trace("This is a test trace message")
     assert True
 
@@ -21,6 +24,12 @@ def test_logging_something(test_logger):
     assert True
 
     test_logger.info("This is a test info message")
+    assert True
+
+    test_logger.success("This is a test success message")
+    assert True
+
+    test_logger.api("This is a test api message")
     assert True
 
     test_logger.warning("This is a test warning message")
