@@ -87,7 +87,7 @@ class LoggerBuilder:
             # Output the final colorized and formatted record to the console
             print(formatted_record)
 
-        def word_wrap(self, text, width=200, look_for_breaks_withing: int = 10):
+        def word_wrap(self, text, width=200, look_for_breaks_within: int = 10):
             """
             Wraps text to a specified width, preserving whole words if there is a break within the specified number of characters from the end of the line.
             """
@@ -97,7 +97,7 @@ class LoggerBuilder:
             lines = []
             while len(text) > width:
                 # Find the last space within the look_for_breaks_withing characters from the end of the line
-                last_space = text.rfind(" ", 0, width - look_for_breaks_withing)
+                last_space = text.rfind(" ", 0, width - look_for_breaks_within)
                 if last_space == -1:
                     # If there is no space within the specified range, just break at the width
                     last_space = width

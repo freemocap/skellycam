@@ -9,6 +9,9 @@ from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
 
 
+# from skellycam.core.frames.frame_lifecycle_timestamps import FrameLifeCycleTimestamps
+
+
 class FramePayload(BaseModel):
     camera_id: CameraId = Field(
         description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`")
@@ -24,10 +27,15 @@ class FramePayload(BaseModel):
                                           description="The sum of the pixel values of the image, to verify integrity")
     image_shape: Optional[tuple] = Field(default=None,
                                          description="The shape of the image as a tuple of `(height, width, channels)`")
-    time_since_last_frame_ns: Optional[int] = Field(default=None,
-                                                    description="The time since the previous frame in nanoseconds")
+
     timestamp_ns: Optional[int] = Field(default=None,
                                         description="The time the frame was read from the camera in nanoseconds")
+    previous_frame_timestamp_ns: int = Field(default_factory=lambda: time.perf_counter_ns(),
+                                             description="Timestamp of the previous frame in nanoseconds (dummy value on frame 0)")
+
+    # timestamps: FrameLifeCycleTimestamps = Field(
+    #     default_factory=FrameLifeCycleTimestamps,
+    #     description="Record `time.perf_counter_ns()` at various points in the frame lifecycle")
 
     @classmethod
     def create_empty(cls,
@@ -50,14 +58,13 @@ class FramePayload(BaseModel):
             image_checksum=cls.calculate_checksum(image) if image is not None else None,
             image_shape=image.shape,
             frame_number=0,
-            time_since_last_frame_ns=0,
         )
 
     def to_unhydrated_bytes(self) -> bytes:
         without_image_data = self.dict(exclude={"image_data"})
         # self.timestamps.pre_pickle = time.perf_counter_ns()
         bytes_payload = pickle.dumps(without_image_data)
-        #self.timestamps.post_pickle = time.perf_counter_ns()
+        # self.timestamps.post_pickle = time.perf_counter_ns()
         return bytes_payload
 
     @classmethod
@@ -95,11 +102,10 @@ class FramePayload(BaseModel):
 
     @image.setter
     def image(self, image: np.ndarray):
-        #self.timestamps.pre_set_image_in_frame = time.perf_counter_ns()
+        # self.timestamps.pre_set_image_in_frame = time.perf_counter_ns()
         self.image_data = image.tobytes()
         self.image_shape = image.shape
-
-    #self.timestamps.post_set_image_in_frame = time.perf_counter_ns()
+        # self.timestamps.post_set_image_in_frame = time.perf_counter_ns()
 
     @property
     def height(self) -> int:
@@ -121,6 +127,10 @@ class FramePayload(BaseModel):
     def size_in_kilobytes(self) -> float:
         return len(pickle.dumps(self.dict)) / 1024
 
+    @property
+    def time_since_last_frame_ns(self) -> float:
+        return self.timestamp_ns - self.previous_frame_timestamp_ns
+
     def _validate_image(self, image: np.ndarray):
         if self.image_shape != image.shape:
             raise ValueError(f"Image shape mismatch - "
@@ -136,14 +146,11 @@ class FramePayload(BaseModel):
     def calculate_checksum(image: np.ndarray) -> int:
         return int(np.sum(image))
 
-
-
     def __str__(self):
         print_str = (f"Camera{self.camera_id}:"
                      f"\n\tFrame#{self.frame_number} - [height: {self.height}, width: {self.width}, color channels: {self.image_shape[2]}]"
-                     f"\n\tHydrated: {self.image_data is not None}, "
-                     f"\n\tPayload Size: {self.size_in_kilobytes:.2f} KB "
-                     f"\n\tSince previous: {self.time_since_last_frame_ns / 1e6:.6f}ms")
+                     f"\n\tPayload Size: {self.size_in_kilobytes:.2f} KB (Hydrated: {self.image_data is not None}),"
+                     f"\n\tSince previous: {self.time_since_last_frame_ns / 1e6:.3f}ms")
         return print_str
 
 

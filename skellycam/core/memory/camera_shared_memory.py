@@ -4,7 +4,7 @@ from multiprocessing import shared_memory
 from typing import List, Tuple
 
 import numpy as np
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, PrivateAttr, SkipValidation
 
 from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
@@ -22,7 +22,7 @@ class CameraSharedMemoryModel(BaseModel):
     unhydrated_payload_size: int
     next_index: int = 0
     shm: shared_memory.SharedMemory
-    lock: PrivateAttr() # multiprocessing.Lock
+    lock: SkipValidation[multiprocessing.Lock]
 
     class Config:
         arbitrary_types_allowed = True
@@ -157,12 +157,13 @@ class CameraSharedMemory(CameraSharedMemoryModel):
         self.shm.buf[offset:offset + self.payload_size] = full_payload
         self.last_frame_written_index = self.next_index
 
-        if self.last_frame_written_index == self.last_frame_read_index:
-            logger.warning(f"Overwriting unread frame for {self.camera_id}! Shared memory buffer is full!")
+        if not self.last_frame_written_index == 0:
+            if self.last_frame_written_index == self.last_frame_read_index:
+                logger.warning(f"Overwriting unread frame for {self.camera_id}! Shared memory buffer is full!")
 
         self.new_frame_available = True
+        logger.loop(f"Camera {self.camera_id} wrote frame #{frame.frame_number}) to shared memory at index#{self.next_index} offset {offset}\n{frame}")
         self.next_index += 1
-        logger.loop(f"Camera {self.camera_id} wrote frame ({frame}) to shared memory at offset {offset}")
 
     def retrieve_frame(self, index: int) -> FramePayload:
         if index >= len(self.offsets) or index < 0:

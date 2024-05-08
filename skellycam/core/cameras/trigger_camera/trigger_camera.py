@@ -86,6 +86,7 @@ def run_trigger_listening_loop(config: CameraConfig,
     ready_event.set()
     await_initial_trigger(config, grab_frame_trigger)
     frame = FramePayload.create_empty(camera_id=config.camera_id, frame_number=frame_number)
+
     while not exit_event.is_set():
         time.sleep(0.001)
 
@@ -95,11 +96,12 @@ def run_trigger_listening_loop(config: CameraConfig,
                               camera_shared_memory=camera_shared_memory,
                               frame=frame,
                               frame_number=frame_number,
-                              previous_frame_timestamp_ns=frame.timestamp_ns,
                               frame_grabbed_trigger=frame_grabbed_trigger,
                               retrieve_frame_trigger=retrieve_frame_trigger,
                               )
             frame_number += 1
+            retrieve_frame_trigger.clear()
+            frame_grabbed_trigger.clear()
             grab_frame_trigger.clear()
 
     logger.trace(f"Trigger listening loop for camera {config.camera_id} completed")
@@ -119,7 +121,6 @@ def get_frame(camera_id: CameraId,
               cv2_video_capture: cv2.VideoCapture,
               frame: FramePayload,
               frame_number: int,
-              previous_frame_timestamp_ns: int,
               frame_grabbed_trigger: multiprocessing.Event,
               retrieve_frame_trigger: multiprocessing.Event,
               ) -> FramePayload:
@@ -164,21 +165,13 @@ def get_frame(camera_id: CameraId,
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {camera_id}")
 
-    frame_grabbed_trigger.clear()
-    retrieve_frame_trigger.clear()
-
-    if previous_frame_timestamp_ns is None:
-        time_since_last_frame_ns = 0
-    else:
-        time_since_last_frame_ns = frame.timestamp_ns - previous_frame_timestamp_ns
-
     frame.success = grab_success and retrieve_success
     frame.image_checksum = frame.calculate_checksum(image)
     frame.image_shape = image.shape
-    frame.time_since_last_frame_ns = time_since_last_frame_ns
     camera_shared_memory.put_frame(
         frame=frame,
         image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
     )
+    next_frame.previous_frame_timestamp_ns = frame.timestamp_ns
 
     return next_frame
