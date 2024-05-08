@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class FrameWrangler:
-    def __init__(self ):
+    def __init__(self):
         super().__init__()
         self._camera_configs: Optional[CameraConfigs] = None
         self._shared_memory_manager: Optional[CameraSharedMemoryManager] = None
@@ -71,23 +71,23 @@ class FrameWrangler:
         self._video_recorder_manager.stop_recording()
 
     async def listen_for_frames(self):
+        multi_frame_number = 0
         while True:
             if self._shared_memory_manager.new_multi_frame_payload_available():
-                payload = self._shared_memory_manager.get_next_multi_frame_payload()
+                payload = await self._shared_memory_manager.get_multi_frame_payload(
+                    multi_frame_number=multi_frame_number)
                 logger.loop(f"Frame Wrangler - Received multi-frame payload: {payload}")
                 await self._handle_payload(payload)
             await asyncio.sleep(0.001)
 
     async def _handle_payload(self, payload: MultiFramePayload):
         logger.loop(f"FrameWrangler - Hydrating shared memory images")
-        payload.hydrate_from_shared_memory(self._shared_memory_manager)
         if self._is_recording:
             logger.loop(f"Sending payload to recorder with {len(payload.frames)} frames")
             self._recorder_queue.put(payload)
 
         if self._ws_send_bytes is not None:
             await self._send_frontend_payload(payload)
-
 
     async def _send_frontend_payload(self, payload: MultiFramePayload):
         if self._ws_send_bytes is None:

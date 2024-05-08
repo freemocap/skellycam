@@ -32,6 +32,8 @@ class FrontendImagePayload(BaseModel):
 
     @classmethod
     def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload, jpeg_quality: int = 90):
+        if not multi_frame_payload.hydrated:
+            raise ValueError("MultiFramePayload must be hydrated before converting to FrontendImagePayload")
 
         instance = cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                        prior_logs=multi_frame_payload.logs,

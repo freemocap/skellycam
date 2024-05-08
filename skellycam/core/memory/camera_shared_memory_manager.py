@@ -1,10 +1,12 @@
+import asyncio
 import logging
 import multiprocessing
-from typing import Dict
+from typing import Dict, Literal
 
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core import CameraId
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
@@ -38,7 +40,30 @@ class CameraSharedMemoryManager:
         return all([camera_shared_memory.new_frame_available for camera_shared_memory in
                     self._buffer_by_camera.values()])
 
-    async def get_next_frame(self, camera_id: CameraId) -> FramePayload:
+    async def get_multi_frame_payload(self,
+                                      multi_frame_number: int,
+                                      get_type: Literal["next", "latest"] = "next",
+                                      wait_for_it: bool = True) -> MultiFramePayload:
+        payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()),
+                                           multi_frame_number=multi_frame_number)
+        if wait_for_it:
+            while not self.new_multi_frame_payload_available():
+                await asyncio.sleep(0.001)
+
+        if not self.new_multi_frame_payload_available():
+            for camera_id, camera_shared_memory in self._buffer_by_camera.items():
+                if not camera_shared_memory.new_frame_available:
+                    raise ValueError(f"Camera {camera_id} did not have a new frame available when it was expected...")
+                if get_type == "next":
+                    payload.add_frame(camera_shared_memory.get_next_frame())
+                elif get_type == "latest":
+                    payload.add_frame(camera_shared_memory.get_latest_frame())
+
+        if wait_for_it and not payload.full:
+            raise ValueError("Did not read full multi-frame payload!")
+        return payload
+
+    def get_next_frame_by_camera(self, camera_id: CameraId) -> FramePayload:
         """
         Return the next frame after the last one that was read - good for recording every frame
         """
@@ -47,11 +72,12 @@ class CameraSharedMemoryManager:
                              f"not happen.")
         return self._buffer_by_camera[camera_id].get_next_frame()
 
-    def get_latest_frame(self, camera_id: CameraId) -> FramePayload:
+    def get_latest_frame_by_camera(self, camera_id: CameraId) -> FramePayload:
         """
         Return the last frame that was written, good for frontend and real-time applications
         """
         return self._buffer_by_camera[camera_id].get_latest_frame()
+
     def get_camera_shared_memory(self, camera_id: CameraId) -> CameraSharedMemory:
         return self._buffer_by_camera[camera_id]
 
