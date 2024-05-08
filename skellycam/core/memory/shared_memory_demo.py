@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import time
 
 import numpy as np
@@ -11,32 +12,32 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-
-
-
 def shared_memory_demo():
     camera_config = CameraConfig()
     # camera_config.resolution = ImageResolution(width=1280, height=720) #try different resolutions
     camera_ids = [camera_config.camera_id]
     buffer_size = 1024 * 1024 * 1024  # 1 GB buffer size for all cameras
+    lock = multiprocessing.Lock()
     memory = CameraSharedMemory.from_config(camera_config=camera_config,
-                                            buffer_size=buffer_size)
+                                            lock=lock)
+
     print(f"Shared memory name: {memory.shared_memory_name}")
 
     other_memory = CameraSharedMemory.from_config(camera_config=camera_config,
-                                                  buffer_size=buffer_size,
+                                                  lock=lock,
                                                   shared_memory_name=memory.shared_memory_name)
 
     test_image = np.random.randint(0, 255, size=camera_config.image_shape, dtype=np.uint8)
     test_image_kb = test_image.nbytes / 1024
-    test_frame = FramePayload.create_dummy(image=test_image)
+    test_frame = FramePayload.create_dummy()
     for _ in range(4):
         for camera_id in camera_ids:
             print(f"Camera{camera_id} - Test image shape: {test_image.shape}")
             print(f"Camera{camera_id} - Test image dtype: {test_image.dtype}")
-            index = memory.put_frame(frame=test_frame)
-            print(f"Camera{camera_id} - Image index: {index}")
-            retrieved_frame = other_memory.retrieve_frame(index=index)
+            memory.put_frame(frame=test_frame,
+                             image=test_image)
+            print(f"Camera{camera_id} - Test frame written to shared memory at index {memory.last_frame_written_index}")
+            retrieved_frame = other_memory.get_next_frame()
             print(
                 f"Camera{camera_id} - Test image shape: {test_image.shape} Retrieved image shape: {retrieved_frame.image_shape}")
             print(
@@ -55,10 +56,10 @@ def shared_memory_demo():
         tik_loop = time.perf_counter_ns()
         for camera_id in camera_ids:
             tik_before_put = time.perf_counter_ns()
-            index = memory.put_frame(frame=test_frame)
+            index = memory.put_frame(frame=test_frame, image=test_image)
             elapsed_put_times_ms.append((time.perf_counter_ns() - tik_before_put) / 1e6)
             tik_before_get = time.perf_counter_ns()
-            test_frame = other_memory.retrieve_frame(index=index)
+            test_frame = other_memory.get_next_frame()
             elapsed_get_times_ms.append((time.perf_counter_ns() - tik_before_get) / 1e6)
         elapsed_times_ms.append((time.perf_counter_ns() - tik_loop) / 1e6)
 

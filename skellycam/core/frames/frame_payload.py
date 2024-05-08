@@ -49,16 +49,15 @@ class FramePayload(BaseModel):
         )
 
     @classmethod
-    def create_dummy(cls,
-                     image: np.ndarray) -> 'FramePayload':
+    def create_dummy(cls) -> 'FramePayload':
         return cls(
             camera_id=CameraId(0),
             success=True,
-            image_data=image.tobytes() if image is not None else None,
+            image_data= None,
             timestamp_ns=time.perf_counter_ns(),
             shared_memory_index=int(0),
-            image_checksum=cls.calculate_image_checksum(image) if image is not None else None,
-            image_shape=image.shape,
+            image_checksum=int(0),
+            image_shape=[1920, 1080, 3],
             frame_number=0,
             dummy=True,
         )

@@ -38,7 +38,6 @@ class CameraSharedMemoryModel(BaseModel):
                     camera_config: CameraConfig,
                     lock: multiprocessing.Lock,
                     shared_memory_name: str = None,
-                    **kwargs
                     ):
         total_buffer_size, image_size, unhydrated_payload_size = cls._calculate_buffer_sizes(camera_config)
 
@@ -47,12 +46,11 @@ class CameraSharedMemoryModel(BaseModel):
                                                shared_memory_name=shared_memory_name)
 
         return cls(camera_config=camera_config,
-                   buffer_size=total_buffer_size,
                    image_shape=camera_config.image_shape,
+                   buffer_size=total_buffer_size,
                    unhydrated_payload_size=unhydrated_payload_size,
                    shm=shm,
-                   lock=lock,
-                   **kwargs)
+                   lock=lock)
 
     @property
     def new_frame_available(self) -> bool:
@@ -133,7 +131,7 @@ class CameraSharedMemoryModel(BaseModel):
                                         255,
                                         size=(image_resolution.height, image_resolution.width, color_channels),
                                         dtype=np.uint8)
-        dummy_frame = payload_model.create_dummy(image=dummy_image)
+        dummy_frame = payload_model.create_dummy()
         image_size_number_of_bytes = np.prod(dummy_image.shape) * BYTES_PER_PIXEL
         unhydrated_payload_number_of_bytes = len(dummy_frame.to_unhydrated_bytes())
         total_payload_size = image_size_number_of_bytes + unhydrated_payload_number_of_bytes
