@@ -82,33 +82,10 @@ class LoggerBuilder:
             )
 
             formatted_record = formatted_record.replace(record.getMessage(),
-                                                        color_code + "└» " + self.word_wrap(record.getMessage()) + "\033[0m")
+                                                        color_code + "└» " + record.getMessage() + "\033[0m")
             formatted_record = color_code + formatted_record + "\033[0m"
             # Output the final colorized and formatted record to the console
             print(formatted_record)
-
-        def word_wrap(self, text, width=200, look_for_breaks_within: int = 10):
-            """
-            Wraps text to a specified width, preserving whole words if there is a break within the specified number of characters from the end of the line.
-            """
-            if len(text) <= width:
-                return text
-
-            lines = []
-            while len(text) > width:
-                # Find the last space within the look_for_breaks_withing characters from the end of the line
-                last_space = text.rfind(" ", 0, width - look_for_breaks_within)
-                if last_space == -1:
-                    # If there is no space within the specified range, just break at the width
-                    last_space = width
-
-                log_line = text[:last_space].strip()
-                if len(lines) > 0:
-                    log_line = "\t" + log_line
-                lines.append(log_line)
-                text = text[last_space:].strip()
-            lines.append(f"\t{text}") if len(text) > 0 else None
-            return "\n".join(lines)
 
     def build_console_handler(self):
         console_handler = self.ColoredConsoleHandler(stream=sys.stdout)
