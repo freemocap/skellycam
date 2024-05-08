@@ -150,7 +150,7 @@ class FramePayload(BaseModel):
         print_str = (f"Camera{self.camera_id}:"
                      f"\n\tFrame#{self.frame_number} - [height: {self.height}, width: {self.width}, color channels: {self.image_shape[2]}]"
                      f"\n\tPayload Size: {self.size_in_kilobytes:.2f} KB (Hydrated: {self.image_data is not None}),"
-                     f"\n\tSince Previous: {self.time_since_last_frame_ns / 1e6:.3f}ms\n\n")
+                     f"\n\tSince Previous: {self.time_since_last_frame_ns / 1e6:.3f}ms")
         return print_str
 
 

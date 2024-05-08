@@ -41,25 +41,21 @@ class CameraSharedMemoryManager:
                     self._buffer_by_camera.values()])
 
     async def get_multi_frame_payload(self,
-                                      multi_frame_number: int,
-                                      get_type: Literal["next", "latest"] = "next",
-                                      wait_for_it: bool = True) -> MultiFramePayload:
-        payload = MultiFramePayload.create(camera_ids=list(self._camera_configs.keys()),
-                                           multi_frame_number=multi_frame_number)
-        if wait_for_it:
-            while not self.new_multi_frame_payload_available():
-                await asyncio.sleep(0.001)
+                                      payload: MultiFramePayload,
+                                      get_type: Literal["next", "latest"] = "next") -> MultiFramePayload:
+        payload = MultiFramePayload.from_previous(payload)
+        while not self.new_multi_frame_payload_available():
+            await asyncio.sleep(0.001)
 
-        if not self.new_multi_frame_payload_available():
-            for camera_id, camera_shared_memory in self._buffer_by_camera.items():
-                if not camera_shared_memory.new_frame_available:
-                    raise ValueError(f"Camera {camera_id} did not have a new frame available when it was expected...")
-                if get_type == "next":
-                    payload.add_frame(camera_shared_memory.get_next_frame())
-                elif get_type == "latest":
-                    payload.add_frame(camera_shared_memory.get_latest_frame())
+        for camera_id, camera_shared_memory in self._buffer_by_camera.items():
+            if not camera_shared_memory.new_frame_available:
+                raise ValueError(f"Camera {camera_id} did not have a new frame available when it was expected...")
+            if get_type == "next":
+                payload.add_frame(camera_shared_memory.get_next_frame())
+            elif get_type == "latest":
+                payload.add_frame(camera_shared_memory.get_latest_frame())
 
-        if wait_for_it and not payload.full:
+        if not payload.full:
             raise ValueError("Did not read full multi-frame payload!")
         return payload
 

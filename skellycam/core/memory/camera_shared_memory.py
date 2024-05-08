@@ -4,7 +4,7 @@ from multiprocessing import shared_memory
 from typing import List, Tuple
 
 import numpy as np
-from pydantic import BaseModel, PrivateAttr, SkipValidation
+from pydantic import BaseModel, SkipValidation, Field
 
 from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
@@ -24,6 +24,11 @@ class CameraSharedMemoryModel(BaseModel):
     shm: shared_memory.SharedMemory
     lock: SkipValidation[multiprocessing.Lock]
 
+    last_written_flag_buffer_index: int = Field(default=-1,
+                                                description="This index in the `buffer` is used to store the index of the last frame written")
+    last_read_flag_buffer_index: int = Field(default=-2,
+                                             description="This index in the `buffer` is used to store the index of the last frame read")
+
     class Config:
         arbitrary_types_allowed = True
 
@@ -40,47 +45,45 @@ class CameraSharedMemoryModel(BaseModel):
                                                buffer_size=total_buffer_size,
                                                shared_memory_name=shared_memory_name)
 
-        return cls(camera_config=camera_config,
-                   buffer_size=total_buffer_size,
-                   image_shape=camera_config.image_shape,
-                   unhydrated_payload_size=unhydrated_payload_size,
-                   shm=shm,
-                   lock=lock,
-                   **kwargs)
+        instance = cls(camera_config=camera_config,
+                       buffer_size=total_buffer_size,
+                       image_shape=camera_config.image_shape,
+                       unhydrated_payload_size=unhydrated_payload_size,
+                       shm=shm,
+                       lock=lock,
+                       **kwargs)
+        instance.last_frame_written_index = -1
+        instance.last_frame_read_index = -1
 
     @property
     def new_frame_available(self) -> bool:
         with self.lock:
-            return self.shm.buf[self.buffer_size - 1] == 1
-
-    @new_frame_available.setter
-    def new_frame_available(self, value: bool):
-        with self.lock:
-            self.shm.buf[self.buffer_size - 1] = 1 if value else 0
+            return (self.last_frame_written_index != self.last_frame_read_index) and (
+                    self.last_frame_written_index != -1)
 
     @property
     def last_frame_written_index(self) -> int:
         with self.lock:
-            return self.shm.buf[self.buffer_size - 2]
+            return self.shm.buf[self.buffer_size + self.last_written_flag_buffer_index]
 
     @last_frame_written_index.setter
     def last_frame_written_index(self, value: np.uint8):
         with self.lock:
             if not 0 <= value < 256:
                 raise ValueError(f"Index {value} out of range for {self.camera_id}")
-            self.shm.buf[self.buffer_size - 2] = value
+            self.shm.buf[self.buffer_size + self.last_written_flag_buffer_index] = value
 
     @property
     def last_frame_read_index(self) -> int:
         with self.lock:
-            return self.shm.buf[self.buffer_size - 3]
+            return self.shm.buf[self.buffer_size + self.last_read_flag_buffer_index]
 
     @last_frame_read_index.setter
     def last_frame_read_index(self, value: np.uint8):
         with self.lock:
             if not 0 <= value < 256:
                 raise ValueError(f"Index {value} out of range for {self.camera_id}")
-            self.shm.buf[self.buffer_size - 3] = value
+            self.shm.buf[self.buffer_size + self.last_read_flag_buffer_index] = value
 
     @property
     def image_size(self) -> int:
@@ -131,7 +134,7 @@ class CameraSharedMemoryModel(BaseModel):
         unhydrated_payload_number_of_bytes = len(dummy_frame.to_unhydrated_bytes())
         total_payload_size = image_size_number_of_bytes + unhydrated_payload_number_of_bytes
         total_buffer_size = total_payload_size * 2 ** 8  # buffer size is 256 times the payload size, so we can index with a uint8 lol
-        total_buffer_size += 3  # [-1]: new data available, [-2]: last read index, [-3]: last write index
+        total_buffer_size += 2
         return total_buffer_size, image_size_number_of_bytes, unhydrated_payload_number_of_bytes
 
 
@@ -154,16 +157,24 @@ class CameraSharedMemory(CameraSharedMemoryModel):
             self.next_index = 0
             offset = self.offsets[self.next_index]
 
+        self._check_for_overwrite()
+
         self.shm.buf[offset:offset + self.payload_size] = full_payload
         self.last_frame_written_index = self.next_index
 
-        if not self.last_frame_written_index == 0:
-            if self.last_frame_written_index == self.last_frame_read_index:
-                logger.warning(f"Overwriting unread frame for {self.camera_id}! Shared memory buffer is full!")
-
-        self.new_frame_available = True
-        logger.loop(f"Camera {self.camera_id} wrote frame #{frame.frame_number}) to shared memory at index#{self.next_index} offset {offset}\n{frame}")
+        logger.loop(
+            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory at index#{self.next_index} (offset: {offset} bytes)\n{frame}")
         self.next_index += 1
+
+    def _check_for_overwrite(self, fail_on_overwrite: bool = False):
+        if not self.last_frame_written_index == -1:
+            if self.last_frame_written_index == self.last_frame_read_index:
+                if fail_on_overwrite:
+                    raise ValueError(
+                        f"Overwriting unread frame for {self.camera_id} and fail_on_overwrite is True - so... X_X")
+                else:
+                    logger.warning(
+                        f"Overwriting unread frame for {self.camera_id}! The shared memory `writer` is lapping the `reader` - use fewer cameras or decrease the resolution!")
 
     def retrieve_frame(self, index: int) -> FramePayload:
         if index >= len(self.offsets) or index < 0:
@@ -173,9 +184,8 @@ class CameraSharedMemory(CameraSharedMemoryModel):
         frame = FramePayload.from_buffer(buffer=payload_buffer,
                                          image_shape=self.image_shape)
         self.last_frame_read_index = index
-        if self.last_frame_read_index == self.last_frame_written_index:
-            self.new_frame_available = False
-        logger.loop(f"Camera {self.camera_id} read frame ({frame}) from shared memory at offset {offset}")
+        logger.loop(
+            f"Camera {self.camera_id} read frame #{frame.frame_number} from shared memory at index#{index} (offset: {offset} bytes)")
         return frame
 
     def get_next_frame(self) -> FramePayload:

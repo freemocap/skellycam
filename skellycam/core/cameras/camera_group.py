@@ -58,6 +58,7 @@ class CameraGroup:
 
     async def start_cameras(self, number_of_frames: Optional[int] = None):
         self._multi_camera_process.start(number_of_frames=number_of_frames)
+        self._frame_wrangler.start_frame_listener()
 
     async def update_configs(self, camera_configs: CameraConfigs):
         logger.info(f"Updating camera configs to {camera_configs}")

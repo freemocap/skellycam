@@ -78,7 +78,7 @@ class CameraConfig(BaseModel):
         out_str += f"\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
         out_str += f"\torientation: {self.orientation}\n"
         out_str += f"\timage_shape: {self.image_shape}\n"
-        out_str += f"\timage_size: {self.image_size_kb:.3f}kB\n"
+        out_str += f"\timage_size: {self.image_size_kb:.3f}KB"
         return out_str
 
 
