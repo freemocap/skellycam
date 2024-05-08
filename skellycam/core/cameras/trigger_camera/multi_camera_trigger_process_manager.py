@@ -4,7 +4,7 @@ from multiprocessing import Process
 from typing import Optional, Dict
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.cameras.trigger_camera.camera_trigger_loop import camera_trigger_loop
+from skellycam.core.cameras.trigger_camera.multi_camera_trigger_loop import multi_camera_trigger_loop
 from skellycam.core import CameraId
 
 logger = logging.getLogger(__name__)
@@ -65,10 +65,10 @@ class MultiCameraTriggerProcess:
                      ):
         logger.debug(f"CameraTriggerProcess started")
 
-        camera_trigger_loop(camera_configs=camera_configs,
-                            shared_memory_names=shared_memory_names,
-                            lock=lock,
-                            number_of_frames=number_of_frames,
-                            exit_event=exit_event)
+        multi_camera_trigger_loop(camera_configs=camera_configs,
+                                  shared_memory_names=shared_memory_names,
+                                  lock=lock,
+                                  number_of_frames=number_of_frames,
+                                  exit_event=exit_event)
 
         logger.debug(f"CameraTriggerProcess completed")

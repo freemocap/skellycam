@@ -123,8 +123,10 @@ class FramePayload(BaseModel):
     def resolution(self) -> tuple:
         return self.width, self.height
 
+
+
     @property
-    def size_in_kilobytes(self) -> float:
+    def payload_size_in_kilobytes(self) -> float:
         return len(pickle.dumps(self.dict)) / 1024
 
     @property
@@ -149,7 +151,7 @@ class FramePayload(BaseModel):
     def __str__(self):
         print_str = (f"Camera{self.camera_id}:"
                      f"\n\tFrame#{self.frame_number} - [height: {self.height}, width: {self.width}, color channels: {self.image_shape[2]}]"
-                     f"\n\tPayload Size: {self.size_in_kilobytes:.2f} KB (Hydrated: {self.image_data is not None}),"
+                     f"\n\tPayload Size: {self.payload_size_in_kilobytes:.3f} KB (Hydrated: {self.image_data is not None}),"
                      f"\n\tSince Previous: {self.time_since_last_frame_ns / 1e6:.3f}ms")
         return print_str
 

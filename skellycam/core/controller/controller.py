@@ -28,13 +28,14 @@ class Controller:
         self._available_devices = await detect_available_devices()
         self._camera_configs = CameraConfigs()
 
-        if len(self._available_devices):
+        if len(self._available_devices) == 0:
             logger.warning(f"No cameras detected!")
             return self._available_devices
 
         for camera_id in self._available_devices.keys():
             self._camera_configs[CameraId(camera_id)] = CameraConfig(camera_id=CameraId(camera_id))
         self._camera_group.set_camera_configs(self._camera_configs)
+        return self._available_devices
 
 
     async def connect(self,
@@ -44,6 +45,7 @@ class Controller:
 
         if camera_configs:
             await self.update_camera_configs(camera_configs)
+
         if not self._camera_configs:
             logger.info(f"Available cameras not set - Executing `detect` method...")
             if not await self.detect():

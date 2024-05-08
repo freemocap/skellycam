@@ -45,19 +45,19 @@ class CameraSharedMemoryModel(BaseModel):
                                                buffer_size=total_buffer_size,
                                                shared_memory_name=shared_memory_name)
 
-        instance = cls(camera_config=camera_config,
-                       buffer_size=total_buffer_size,
-                       image_shape=camera_config.image_shape,
-                       unhydrated_payload_size=unhydrated_payload_size,
-                       shm=shm,
-                       lock=lock,
-                       **kwargs)
+        return cls(camera_config=camera_config,
+                   buffer_size=total_buffer_size,
+                   image_shape=camera_config.image_shape,
+                   unhydrated_payload_size=unhydrated_payload_size,
+                   shm=shm,
+                   lock=lock,
+                   **kwargs)
 
     @property
     def new_frame_available(self) -> bool:
-        with self.lock:
-            return (self.last_frame_written_index != self.last_frame_read_index) and (
-                    self.next_index != -1)
+        return (self.last_frame_written_index != self.last_frame_read_index) and (
+                self.next_index != -1)
+
 
     @property
     def last_frame_written_index(self) -> int:
