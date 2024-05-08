@@ -18,9 +18,10 @@ class FrameWrangler:
         self._shared_memory_manager: Optional[CameraSharedMemoryManager] = None
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._multi_frame_payload: Optional[MultiFramePayload] = None
-        self._listener_task: Optional[asyncio.Task] = None
-
         self._setup_recorder()
+
+        self._listener_task: Optional[asyncio.Task] = None
+        self._should_continue_listening = True
 
     def _setup_recorder(self):
         self._is_recording = False
@@ -73,12 +74,14 @@ class FrameWrangler:
         self._listener_task = asyncio.create_task(self.listen_for_frames())
 
     async def listen_for_frames(self):
-        while True:
-            logger.loop(f"Frame Wrangler - Waiting for multi-frame payload...")
+        while self._should_continue_listening:
+            logger.loop(f"Awaiting for multi-frame payload...")
             self._multi_frame_payload = await self._shared_memory_manager.get_multi_frame_payload(
                 payload=self._multi_frame_payload)
-            logger.loop(f"Frame Wrangler - Received multi-frame payload: {self._multi_frame_payload}")
+            logger.loop(f"Received multi-frame payload!\n {self._multi_frame_payload}")
             await self._handle_payload()
+        logger.trace(f"Stopped listening for multi-frames")
+
 
     async def _handle_payload(self):
         if self._is_recording:
@@ -100,9 +103,10 @@ class FrameWrangler:
         logger.loop(f"FrameWrangler - Sending frontend payload: {frontend_payload}")
         await self._ws_send_bytes(frontend_payload.to_msgpack())
 
-    def close(self):
+    async def close(self):
         logger.debug(f"Closing frame wrangler...")
         if self.is_recording:
             self.stop_recording()
         if self._listener_task is not None:
-            self._listener_task.cancel()
+            self._should_continue_listening = False
+            await self._listener_task

@@ -1,5 +1,5 @@
 import logging
-from typing import Coroutine, Callable, Optional
+from typing import Coroutine, Callable, Optional, List, Union
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera_group import (
@@ -27,21 +27,27 @@ class Controller:
         logger.info(f"Detecting cameras...")
         self._available_devices = await detect_available_devices()
         self._camera_configs = CameraConfigs()
+
+        if len(self._available_devices):
+            logger.warning(f"No cameras detected!")
+            return self._available_devices
+
         for camera_id in self._available_devices.keys():
             self._camera_configs[CameraId(camera_id)] = CameraConfig(camera_id=CameraId(camera_id))
         self._camera_group.set_camera_configs(self._camera_configs)
-        return self._available_devices
+
 
     async def connect(self,
                       camera_configs: Optional[CameraConfigs] = None,
-                      number_of_frames: Optional[int] = None):
+                      number_of_frames: Optional[int] = None) -> Union[bool, List[CameraId]]:
         logger.info(f"Connecting to available cameras...")
 
         if camera_configs:
             await self.update_camera_configs(camera_configs)
         if not self._camera_configs:
             logger.info(f"Available cameras not set - Executing `detect` method...")
-            await self.detect()
+            if not await self.detect():
+                raise ValueError("No cameras detected!")
 
         await self._start_camera_group(number_of_frames=number_of_frames)
         return self._camera_group.camera_ids

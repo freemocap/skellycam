@@ -20,7 +20,7 @@ class CameraSharedMemoryModel(BaseModel):
     image_shape: Tuple[int, int, int]
     bytes_per_pixel: int = BYTES_PER_PIXEL
     unhydrated_payload_size: int
-    next_index: int = 0
+    next_index: int = -1
     shm: shared_memory.SharedMemory
     lock: SkipValidation[multiprocessing.Lock]
 
@@ -52,14 +52,12 @@ class CameraSharedMemoryModel(BaseModel):
                        shm=shm,
                        lock=lock,
                        **kwargs)
-        instance.last_frame_written_index = -1
-        instance.last_frame_read_index = -1
 
     @property
     def new_frame_available(self) -> bool:
         with self.lock:
             return (self.last_frame_written_index != self.last_frame_read_index) and (
-                    self.last_frame_written_index != -1)
+                    self.next_index != -1)
 
     @property
     def last_frame_written_index(self) -> int:
@@ -133,8 +131,10 @@ class CameraSharedMemoryModel(BaseModel):
         image_size_number_of_bytes = np.prod(dummy_image.shape) * BYTES_PER_PIXEL
         unhydrated_payload_number_of_bytes = len(dummy_frame.to_unhydrated_bytes())
         total_payload_size = image_size_number_of_bytes + unhydrated_payload_number_of_bytes
-        total_buffer_size = total_payload_size * 2 ** 8  # buffer size is 256 times the payload size, so we can index with a uint8 lol
-        total_buffer_size += 2
+
+        # buffer size is 256 times the payload size so we can index with a uint8
+        total_buffer_size = total_payload_size * (2 ** 8)
+        total_buffer_size += 2  # add two more slots to store the last written and last read indices
         return total_buffer_size, image_size_number_of_bytes, unhydrated_payload_number_of_bytes
 
 
@@ -143,31 +143,42 @@ class CameraSharedMemory(CameraSharedMemoryModel):
                   frame: FramePayload,
                   image: np.ndarray):
 
-        if frame.hydrated:
-            raise ValueError(f"Frame payload for {self.camera_id} should not be hydrated(i.e. have image data)")
+        full_payload = self._frame_to_buffer_payload(frame, image)
 
-        imageless_payload_bytes = frame.to_unhydrated_bytes()
-        full_payload = imageless_payload_bytes + image.tobytes()
-        if not len(full_payload) == self.payload_size:
-            raise ValueError(f"Payload size mismatch for {self.camera_id} - "
-                             f"Expected: {self.payload_size}, "
-                             f"Actual: {len(full_payload)}")
+        initial_frame = False
+        if self.next_index == -1:
+            initial_frame = True
+
+        self.next_index += 1
         offset = self.offsets[self.next_index]
         if offset + self.payload_size > self.buffer_size:
             self.next_index = 0
             offset = self.offsets[self.next_index]
 
-        self._check_for_overwrite()
+        if not initial_frame:
+            self._check_for_overwrite()
 
         self.shm.buf[offset:offset + self.payload_size] = full_payload
         self.last_frame_written_index = self.next_index
 
         logger.loop(
             f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory at index#{self.next_index} (offset: {offset} bytes)\n{frame}")
-        self.next_index += 1
+
+    def _frame_to_buffer_payload(self,
+                                 frame: FramePayload,
+                                 image: np.ndarray) -> bytes:
+        if frame.hydrated:
+            raise ValueError(f"Frame payload for {self.camera_id} should not be hydrated(i.e. have image data)")
+        imageless_payload_bytes = frame.to_unhydrated_bytes()
+        full_payload = imageless_payload_bytes + image.tobytes()
+        if not len(full_payload) == self.payload_size:
+            raise ValueError(f"Payload size mismatch for {self.camera_id} - "
+                             f"Expected: {self.payload_size}, "
+                             f"Actual: {len(full_payload)}")
+        return full_payload
 
     def _check_for_overwrite(self, fail_on_overwrite: bool = False):
-        if not self.last_frame_written_index == -1:
+        if not self.last_frame_written_index == 0:
             if self.last_frame_written_index == self.last_frame_read_index:
                 if fail_on_overwrite:
                     raise ValueError(
