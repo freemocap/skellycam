@@ -53,7 +53,9 @@ skellycam = "skellycam.__main__:main"
 [tool.setuptools]
 py-modules = ["skellycam"]
 
-
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
 
 
 classifiers = [

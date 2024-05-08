@@ -83,21 +83,23 @@ class FramePayload(BaseModel):
                 f"Expected image shape to be a tuple of 3 integers (height, width, colors), got {image_shape}")
         # TODO - don't use global for BYTES_PER_PIXEL here should be able to use the `cls`, right?
         image_size = np.prod(image_shape) * BYTES_PER_PIXEL
-        image_memoryview = buffer[:image_size]
+        # bufffer should be [`unhydrated_bytes` + `image_bytes`]
+        unhydrated_data = buffer[:-image_size]
+        image_memoryview = buffer[-image_size:]
 
-        unhydrated_data = buffer[image_size:]
+
         logger.trace(
             f"Unpickling frame payload from {len(unhydrated_data)} bytes - checksum: {cls.calculate_pickle_checksum(unhydrated_data)}")
         unhydrated_frame = pickle.loads(unhydrated_data)
         instance = cls(
             **unhydrated_frame
         )
-        instance.timestamps.post_create_frame_from_buffer = time.perf_counter_ns()
+        # instance.timestamps.post_create_frame_from_buffer = time.perf_counter_ns()
         image = np.ndarray(image_shape, dtype=np.uint8, buffer=image_memoryview)
-        instance.timestamps.post_copy_image_from_buffer = time.perf_counter_ns()
+        # instance.timestamps.post_copy_image_from_buffer = time.perf_counter_ns()
         instance.image = image
         instance._validate_image(image=instance.image)
-        instance.timestamps.done_create_from_buffer = time.perf_counter_ns()
+        # instance.timestamps.done_create_from_buffer = time.perf_counter_ns()
         return instance
 
     @property
