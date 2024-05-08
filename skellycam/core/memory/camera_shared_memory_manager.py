@@ -1,11 +1,11 @@
 import logging
+import multiprocessing
 from typing import Dict
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
+from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
-
-BUFFER_SIZE = 1024 * 1024 * 1024  # 1 GB buffer size for all cameras
 
 logger = logging.getLogger(__name__)
 
@@ -13,11 +13,9 @@ logger = logging.getLogger(__name__)
 class CameraSharedMemoryManager:
     def __init__(self,
                  camera_configs: CameraConfigs,
-                 total_buffer_size: int = BUFFER_SIZE,
+                 lock: multiprocessing.Lock,
                  existing_shared_memory_names: Dict[CameraId, str] = None):
         self._camera_configs = camera_configs
-        self._total_buffer_size = total_buffer_size
-        self._buffer_size_per_camera = total_buffer_size // len(camera_configs)
 
         if existing_shared_memory_names is not None:
             if len(existing_shared_memory_names) != len(camera_configs):
@@ -26,20 +24,41 @@ class CameraSharedMemoryManager:
             existing_shared_memory_names = {camera_id: None for camera_id in camera_configs.keys()}
 
         self._buffer_by_camera = {camera_id: CameraSharedMemory.from_config(camera_config=config,
-                                                                            buffer_size=self._buffer_size_per_camera,
-                                                                            shared_memory_name=existing_shared_memory_names[camera_id])
+                                                                            lock=lock,
+                                                                            shared_memory_name=
+                                                                            existing_shared_memory_names[camera_id])
                                   for camera_id, config in self._camera_configs.items()}
 
+    @property
+    def shared_memory_names(self) -> Dict[CameraId, str]:
+        return {camera_id: camera_shared_memory.shared_memory_name for camera_id, camera_shared_memory in
+                self._buffer_by_camera.items()}
 
-def get_camera_shared_memory(self, camera_id: CameraId) -> CameraSharedMemory:
-    return self._buffer_by_camera[camera_id]
+    def new_multi_frame_payload_available(self) -> bool:
+        return all([camera_shared_memory.new_frame_available for camera_shared_memory in
+                    self._buffer_by_camera.values()])
 
+    async def get_next_frame(self, camera_id: CameraId) -> FramePayload:
+        """
+        Return the next frame after the last one that was read - good for recording every frame
+        """
+        if not self._buffer_by_camera[camera_id].new_frame_available:
+            raise ValueError(f"No new frame available for camera {camera_id}, but a frame was requested. This should "
+                             f"not happen.")
+        return self._buffer_by_camera[camera_id].get_next_frame()
 
-def close(self):
-    for camera_shared_memory in self._buffer_by_camera.values():
-        camera_shared_memory.close()
+    def get_latest_frame(self, camera_id: CameraId) -> FramePayload:
+        """
+        Return the last frame that was written, good for frontend and real-time applications
+        """
+        return self._buffer_by_camera[camera_id].get_latest_frame()
+    def get_camera_shared_memory(self, camera_id: CameraId) -> CameraSharedMemory:
+        return self._buffer_by_camera[camera_id]
 
+    def close(self):
+        for camera_shared_memory in self._buffer_by_camera.values():
+            camera_shared_memory.close()
 
-def unlink(self):
-    for camera_shared_memory in self._buffer_by_camera.values():
-        camera_shared_memory.unlink()
+    def unlink(self):
+        for camera_shared_memory in self._buffer_by_camera.values():
+            camera_shared_memory.unlink()

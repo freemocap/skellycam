@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import multiprocessing
 import time
 from typing import Coroutine, Callable, Optional
 
@@ -8,7 +7,6 @@ from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
-from skellycam.core.recorder.video_recorder_manager import VideoRecorderProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -16,23 +14,20 @@ logger = logging.getLogger(__name__)
 class FrameWrangler:
     def __init__(self ):
         super().__init__()
-        self._camera_configs: CameraConfigs = {}
+        self._camera_configs: Optional[CameraConfigs] = None
         self._shared_memory_manager: Optional[CameraSharedMemoryManager] = None
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._multi_frame_payload: Optional[MultiFramePayload] = None
 
-        self._frame_receiver_pipe, self._frame_sender_pipe = multiprocessing.Pipe()
         self._setup_recorder()
 
     def _setup_recorder(self):
         self._is_recording = False
-        self._recorder_queue = multiprocessing.Queue()
-        self._video_recorder_manager = VideoRecorderProcessManager(
-            multi_frame_queue=self._recorder_queue,
-        )
+        # self._video_recorder_manager = VideoRecorderProcessManager()
 
-    def get_frame_sender_pipe(self):
-        return self._frame_sender_pipe
+    def set_shared_memory_manager(self, shared_memory_manager: CameraSharedMemoryManager):
+        self._shared_memory_manager = shared_memory_manager
+        # self._video_recorder_manager.set_shared_memory_manager(shared_memory_manager)
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
@@ -77,15 +72,15 @@ class FrameWrangler:
 
     async def listen_for_frames(self):
         while True:
-            if self._frame_receiver_pipe.poll():
-                payload = self._frame_receiver_pipe.recv()
+            if self._shared_memory_manager.new_multi_frame_payload_available():
+                payload = self._shared_memory_manager.get_next_multi_frame_payload()
                 logger.loop(f"Frame Wrangler - Received multi-frame payload: {payload}")
                 await self._handle_payload(payload)
             await asyncio.sleep(0.001)
 
     async def _handle_payload(self, payload: MultiFramePayload):
         logger.loop(f"FrameWrangler - Hydrating shared memory images")
-        payload.hydrate_shared_memory_images(self._shared_memory_manager)
+        payload.hydrate_from_shared_memory(self._shared_memory_manager)
         if self._is_recording:
             logger.loop(f"Sending payload to recorder with {len(payload.frames)} frames")
             self._recorder_queue.put(payload)

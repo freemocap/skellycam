@@ -1,11 +1,11 @@
 import logging
 import multiprocessing
 from multiprocessing import Process
-from typing import Optional
+from typing import Optional, Dict
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_trigger_loop import camera_trigger_loop
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 
 logger = logging.getLogger(__name__)
 
@@ -14,16 +14,14 @@ class MultiCameraTriggerProcess:
     def __init__(
             self,
             camera_configs: CameraConfigs,
-            frame_pipe,  # send-only pipe connection
-            shared_memory_name: str
+            shared_memory_names: Dict[CameraId, str],
+            lock: multiprocessing.Lock,
     ):
         self._camera_configs = camera_configs
-        self._frame_pipe = frame_pipe
-        self._update_pipe_receiver, self._update_pipe_sender = multiprocessing.Pipe(duplex=False)
-        self._shared_memory_name = shared_memory_name
+        self._shared_memory_names = shared_memory_names
         self._number_of_frames: Optional[int] = None
         self._process: Optional[Process] = None
-
+        self._lock = lock
         self._exit_event = multiprocessing.Event()
 
     def _create_process(self):
@@ -31,9 +29,8 @@ class MultiCameraTriggerProcess:
             name="MultiCameraTriggerProcess",
             target=MultiCameraTriggerProcess._run_process,
             args=(self._camera_configs,
-                  self._frame_pipe,
-                  self._update_pipe_receiver,
-                  self._shared_memory_name,
+                  self._shared_memory_names,
+                  self._lock,
                   self._exit_event,
                   self._number_of_frames,
                   )
@@ -61,18 +58,16 @@ class MultiCameraTriggerProcess:
 
     @staticmethod
     def _run_process(camera_configs: CameraConfigs,
-                     frame_pipe,  # send-only pipe connection
-                     update_pipe,  # receive-only pipe connection
-                     shared_memory_name: str,
+                     shared_memory_names: Dict[CameraId, str],
+                        lock: multiprocessing.Lock,
                      exit_event: multiprocessing.Event,
                      number_of_frames: Optional[int] = None
                      ):
         logger.debug(f"CameraTriggerProcess started")
 
         camera_trigger_loop(camera_configs=camera_configs,
-                            multi_frame_pipe=frame_pipe,
-                            config_update_pipe=update_pipe,
-                            shared_memory_name=shared_memory_name,
+                            shared_memory_names=shared_memory_names,
+                            lock=lock,
                             number_of_frames=number_of_frames,
                             exit_event=exit_event)
 

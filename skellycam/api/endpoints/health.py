@@ -1,6 +1,7 @@
+import logging
+
 from fastapi import APIRouter
 
-import logging
 logger = logging.getLogger(__name__)
 healthcheck_router = APIRouter()
 

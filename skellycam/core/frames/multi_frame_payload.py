@@ -3,7 +3,7 @@ from typing import Dict, Optional, List
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
@@ -38,6 +38,14 @@ class MultiFramePayload(BaseModel):
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
                    logs=[f"created_from_previous:{time.perf_counter_ns()}"]
                    )
+    @classmethod
+    async def from_shared_memory(cls, shared_memory_manager: CameraSharedMemoryManager, previous: 'MultiFramePayload'):
+        instance = cls.from_previous(previous)
+
+        while not instance.full:
+            await instance.hydrate_from_shared_memory(shared_memory_manager)
+
+        return multi_frame_payload
 
     def add_frame(self, frame: FramePayload):
         if self.multi_frame_number > 0:
@@ -45,14 +53,14 @@ class MultiFramePayload(BaseModel):
                 raise ValueError(f"Camera ID {frame.camera_id} not in MultiFramePayload")
         self.frames[frame.camera_id] = frame
 
-    def hydrate_shared_memory_images(self, shared_memory_manager: CameraSharedMemoryManager):
+    async def hydrate_from_shared_memory(self,
+                                         shared_memory_manager: CameraSharedMemoryManager):
         tik = time.perf_counter_ns()
         for camera_id, frame in self.frames.items():
-            if frame is not None:
-                tik_frame = time.perf_counter_ns()
-                frame.hydrate_shared_memory_image(shared_memory_manager)
-                elapsed_frame = time.perf_counter_ns() - tik_frame
-                self.add_log(f"hydrating_shared_memory_image_for_camera_{camera_id}_took_{elapsed_frame}ns")
+            tik_frame = time.perf_counter_ns()
+            frame = shared_memory_manager.get_next_frame(camera_id=camera_id)
+            elapsed_frame = time.perf_counter_ns() - tik_frame
+            self.add_log(f"hydrating_shared_memory_image_for_camera_{camera_id}_took_{elapsed_frame}ns")
         total_elapsed = time.perf_counter_ns() - tik
         self.add_log(f"hydrating_shared_memory_images_took_{total_elapsed}ns")
 

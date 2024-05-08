@@ -7,7 +7,7 @@ from typing import Tuple
 
 import polars as pl
 
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 

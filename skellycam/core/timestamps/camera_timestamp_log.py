@@ -3,7 +3,7 @@ from typing import Tuple
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 
 

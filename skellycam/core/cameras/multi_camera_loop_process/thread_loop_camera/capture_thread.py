@@ -11,7 +11,7 @@ from skellycam.core.cameras.config.apply_config import (
 )
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.determine_backend import determine_backend
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)

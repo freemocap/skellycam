@@ -6,13 +6,13 @@ import cv2
 from PySide6.QtMultimedia import QMediaDevices
 
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 
 logger = logging.getLogger(__name__)
 
-DetectedCameras = Dict[CameraId, CameraDeviceInfo]
+AvailableDevices = Dict[CameraId, CameraDeviceInfo]
 
-async def detect_available_cameras(check_if_available: bool = False) -> DetectedCameras:
+async def detect_available_devices(check_if_available: bool = False) -> AvailableDevices:
     logger.info("Detecting available cameras...")
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
@@ -44,5 +44,5 @@ async def _check_camera_available(port: int) -> bool:
 
 
 if __name__ == "__main__":
-    cameras_out = detect_available_cameras()
+    cameras_out = detect_available_devices()
     pprint(cameras_out, indent=4)

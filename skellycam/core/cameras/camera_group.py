@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 from typing import Coroutine, Callable, Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
@@ -13,9 +14,10 @@ class CameraGroup:
     def __init__(
             self,
     ):
+        self._lock = multiprocessing.Lock()
         self._multi_camera_process: Optional[MultiCameraTriggerProcess] = None
         self._frame_wrangler = FrameWrangler()
-        self._shared_memory_manager = CameraSharedMemoryManager()
+        self._shared_memory_manager: Optional[CameraSharedMemoryManager] = None
 
     @property
     def camera_ids(self):
@@ -26,24 +28,28 @@ class CameraGroup:
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._frame_wrangler.set_websocket_bytes_sender(ws_send_bytes)
 
-    def set_camera_configs(self, camera_configs: CameraConfigs):
+    def set_camera_configs(self, configs: CameraConfigs):
 
-        configs_str = "\n".join([f"\t\t{camera_id}: {config}\n" for camera_id, config in camera_configs.items()])
-        logger.debug(f"Setting camera configs to {configs_str}")
+        logger.debug(f"Setting camera configs to {configs}")
 
-        resolutions = [config.resolution for config in camera_configs.values()]
+        resolutions = [config.resolution for config in configs.values()]
         if not all(res == resolutions[0] for res in resolutions):
             # TODO: Support different resolutions
             raise ValueError("All cameras must have the same resolution for the shared memory thing to work (for now)")
 
-        self._shared_memory_manager = CameraSharedMemoryManager(camera_ids=list(camera_configs.keys()),
-                                                                image_resolution=resolutions[0])
+        if self._shared_memory_manager is not None:
+            self._shared_memory_manager.close()
 
-        self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=camera_configs,
-                                                               frame_pipe=self._frame_wrangler.get_frame_sender_pipe(),
-                                                               shared_memory_name=self._shared_memory_manager.shared_memory_name)
+        self._shared_memory_manager = CameraSharedMemoryManager(camera_configs=configs,
+                                                                lock=self._lock)
 
-        self._frame_wrangler.set_camera_configs(camera_configs,
+        self._frame_wrangler.set_shared_memory_manager(self._shared_memory_manager)
+
+        self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=configs,
+                                                               shared_memory_names=self._shared_memory_manager.shared_memory_names,
+                                                               lock=self._lock)
+
+        self._frame_wrangler.set_camera_configs(configs,
                                                 shared_memory_manager=self._shared_memory_manager)
 
     @property

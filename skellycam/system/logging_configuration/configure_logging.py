@@ -1,6 +1,5 @@
 import logging
 import os
-import psutil
 
 from skellycam.system.logging_configuration.log_level_enum import (
     LogLevels,

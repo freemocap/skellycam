@@ -5,7 +5,7 @@ from fastapi import APIRouter
 
 from skellycam.api.models.base_models import BaseResponse
 from skellycam.core.controller.singleton import get_or_create_controller
-from skellycam.core.detection.detect_available_cameras import DetectedCameras
+from skellycam.core.detection.detect_available_devices import AvailableDevices
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ detect_cameras_router = APIRouter()
 
 
 class CamerasDetectedResponse(BaseResponse):
-    detected_cameras: Optional[DetectedCameras]
+    detected_cameras: Optional[AvailableDevices]
 
 
 @detect_cameras_router.get(

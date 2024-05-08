@@ -2,7 +2,6 @@ import multiprocessing
 from multiprocessing import Process
 
 from pytest_mock import MockerFixture
-
 from skellycam.frontend import run_frontend
 
 

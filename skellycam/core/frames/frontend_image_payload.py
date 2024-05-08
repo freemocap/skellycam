@@ -7,7 +7,7 @@ import msgpack
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 
 

@@ -1,13 +1,14 @@
 from typing import Dict
 
-from pydantic import model_validator, RootModel
+from pydantic import RootModel
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 
 
 class CameraConfigs(RootModel):
     root: Dict[CameraId, CameraConfig] = {CameraId(0): CameraConfig(camera_id=CameraId(0))}
+
 
     def __str__(self):
         """
@@ -15,18 +16,14 @@ class CameraConfigs(RootModel):
         """
         out_str = f""
         for camera_id, config in self.root.items():
-            out_str += f"Camera {camera_id}:\n"
-            out_str += "\t" + str(config).replace("\n", "\n\t")
-            out_str += "\n"
-        # remove the last newline
-        out_str = out_str[:-3]
+            out_str += f"Camera {camera_id}:\n{config}\n"
         return out_str
 
     def __getitem__(self, item):
         return self.root[item]
 
     def __setitem__(self, key, value):
-        self.root[key] = value
+        self.root[CameraId(key)] = value
 
     def __delitem__(self, key):
         del self.root[key]
@@ -49,8 +46,12 @@ class CameraConfigs(RootModel):
     def values(self):
         return self.root.values()
 
+    def items(self):
+        return self.root.items()
+
 
 if __name__ == "__main__":
     configs = CameraConfigs()
     configs[1] = CameraConfig(camera_id=CameraId(1))
+    configs[2] = CameraConfig(camera_id=CameraId(2))
     print(configs)

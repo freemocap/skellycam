@@ -4,7 +4,7 @@ from typing import Dict
 import cv2
 from pydantic import BaseModel
 
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.utilities.simple_ws_client.simple_viewer_window import SimpleViewerWindow
 

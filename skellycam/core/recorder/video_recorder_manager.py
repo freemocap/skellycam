@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 from typing import Tuple, Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
@@ -13,10 +12,8 @@ logger = logging.getLogger(__name__)
 class VideoRecorderProcessManager:
     def __init__(
         self,
-        multi_frame_queue: multiprocessing.Queue,
     ):
         self._camera_configs: CameraConfigs = {}
-        self._multi_frame_queue = multi_frame_queue
 
         self._process: Optional[VideoRecorderProcess] = None
 
@@ -31,7 +28,6 @@ class VideoRecorderProcessManager:
             camera_configs=camera_configs,
             start_time_perf_counter_ns_to_unix_mapping=start_time_perf_counter_ns_to_unix_mapping,
             recording_folder_path=recording_folder_path,
-            multi_frame_queue=self._multi_frame_queue,
         )
         self._process.start()
 

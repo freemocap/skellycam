@@ -1,17 +1,17 @@
 import logging
 import multiprocessing
 import time
-from multiprocessing import shared_memory
-from typing import Optional, List
+from typing import Optional
 
 import cv2
+import numpy as np
 
+from skellycam.core import CameraId
 from skellycam.core.cameras.config.apply_config import apply_camera_configuration
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.create_cv2_video_capture import create_cv2_capture
-from skellycam.core.detection.camera_id import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
+from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 class TriggerCameraProcess:
     def __init__(self,
                  config: CameraConfig,
-                 frame_queue: multiprocessing.Queue,  # send-only multiprocessing.Queue
-                 config_update_queue: multiprocessing.Queue,  # send-only multiprocessing.Queue
-                 all_camera_ids: List[CameraId],
                  shared_memory_name: str,
-                 get_frame_trigger: multiprocessing.Event,
+                 lock: multiprocessing.Lock,
+                 grab_frame_trigger: multiprocessing.Event,
+                 frame_grabbed_trigger: multiprocessing.Event,
+                 retrieve_frame_trigger: multiprocessing.Event,
                  ready_event: multiprocessing.Event,
                  exit_event: multiprocessing.Event,
                  ):
@@ -33,10 +33,10 @@ class TriggerCameraProcess:
                                                 name=f"Camera{self._config.camera_id}",
                                                 args=(self._config,
                                                       shared_memory_name,
-                                                      all_camera_ids,
-                                                      frame_queue,
-                                                      config_update_queue,
-                                                      get_frame_trigger,
+                                                      lock,
+                                                      grab_frame_trigger,
+                                                      frame_grabbed_trigger,
+                                                      retrieve_frame_trigger,
                                                       ready_event,
                                                       exit_event
                                                       )
@@ -45,25 +45,24 @@ class TriggerCameraProcess:
     @staticmethod
     def _run_process(config: CameraConfig,
                      shared_memory_name: str,
-                     all_camera_ids: List[CameraId],
-                     frame_queue: multiprocessing.Queue,
-                     config_update_queue: multiprocessing.Queue,
-                     get_frame_trigger: multiprocessing.Event,
+                     lock: multiprocessing.Lock,
+                     grab_frame_trigger: multiprocessing.Event,
+                     frame_grabbed_trigger: multiprocessing.Event,
+                     retrieve_frame_trigger: multiprocessing.Event,
                      ready_event: multiprocessing.Event,
                      exit_event: multiprocessing.Event):
         logger.debug(f"Camera {config.camera_id} process started")
-        existing_shared_memory = shared_memory.SharedMemory(name=shared_memory_name)
-        shared_memory_manager = CameraSharedMemoryManager(camera_ids=all_camera_ids,
-                                                          image_resolution=config.resolution,
-                                                          existing_shared_memory=existing_shared_memory)
+        camera_shared_memory = CameraSharedMemory.from_config(camera_config=config,
+                                                              lock=lock,
+                                                              shared_memory_name=shared_memory_name)
         cv2_video_capture = create_cv2_capture(config)
         apply_camera_configuration(cv2_video_capture, config)
         run_trigger_listening_loop(config=config,
                                    cv2_video_capture=cv2_video_capture,
-                                   shared_memory_manager=shared_memory_manager,
-                                   frame_queue=frame_queue,
-                                   config_update_queue=config_update_queue,
-                                   get_frame_trigger=get_frame_trigger,
+                                   camera_shared_memory=camera_shared_memory,
+                                   grab_frame_trigger=grab_frame_trigger,
+                                   frame_grabbed_trigger=frame_grabbed_trigger,
+                                   retrieve_frame_trigger=retrieve_frame_trigger,
                                    ready_event=ready_event,
                                    exit_event=exit_event)
         cv2_video_capture.release()
@@ -75,61 +74,55 @@ class TriggerCameraProcess:
 
 def run_trigger_listening_loop(config: CameraConfig,
                                cv2_video_capture: cv2.VideoCapture,
-                               shared_memory_manager: CameraSharedMemoryManager,
-                               frame_queue: multiprocessing.Queue,
-                               config_update_queue: multiprocessing.Queue,
-                               get_frame_trigger: multiprocessing.Event,
+                               camera_shared_memory: CameraSharedMemory,
+                               grab_frame_trigger: multiprocessing.Event,
+                               frame_grabbed_trigger: multiprocessing.Event,
+                               retrieve_frame_trigger: multiprocessing.Event,
                                ready_event: multiprocessing.Event,
                                exit_event: multiprocessing.Event):
     frame_number = 0
     frame: Optional[FramePayload] = None
-    ready_event.set()
-    await_initial_trigger(config, get_frame_trigger)
 
+    ready_event.set()
+    await_initial_trigger(config, grab_frame_trigger)
+    frame = FramePayload.create_empty(camera_id=config.camera_id, frame_number=frame_number)
     while not exit_event.is_set():
         time.sleep(0.001)
 
-        if get_frame_trigger.is_set():
-            frame = get_frame(cv2_video_capture=cv2_video_capture,
-                              camera_id=config.camera_id,
+        if grab_frame_trigger.is_set():
+            frame = get_frame(camera_id=config.camera_id,
+                              cv2_video_capture=cv2_video_capture,
+                              camera_shared_memory=camera_shared_memory,
+                              frame=frame,
                               frame_number=frame_number,
-                              shared_memory_manager=shared_memory_manager,
-                              previous_frame_timestamp_ns=frame.timestamp_ns if frame else -1
+                              previous_frame_timestamp_ns=frame.timestamp_ns,
+                              frame_grabbed_trigger=frame_grabbed_trigger,
+                              retrieve_frame_trigger=retrieve_frame_trigger,
                               )
-            frame_queue.put(frame)
             frame_number += 1
-            get_frame_trigger.clear()
-
-        elif not config_update_queue.empty():
-            logger.trace(f"Config update received for camera {config.camera_id}")
-            ready_event.clear()
-            new_config = config_update_queue.get()
-            config = new_config
-            if not config.use_this_camera:
-                logger.debug(f"Camera {config.camera_id} `use_this_camera` set to False - stopping camera process")
-                break
-            apply_camera_configuration(cv2_video_capture, config)
-            ready_event.set()
+            grab_frame_trigger.clear()
 
     logger.trace(f"Trigger listening loop for camera {config.camera_id} completed")
 
 
-def await_initial_trigger(config, get_frame_trigger: multiprocessing.Event):
-    while not get_frame_trigger.is_set():
+def await_initial_trigger(config, grab_frame_trigger: multiprocessing.Event):
+    while not grab_frame_trigger.is_set():
         time.sleep(0.001)
     time.sleep(0.1)
-    get_frame_trigger.clear()
+    grab_frame_trigger.clear()
     logger.trace(f"Initial frame trigger received for camera {config.camera_id}!"
                  f" - Resetting trigger and prepared to read frames...")
 
 
-def get_frame(
-        camera_id: CameraId,
-        frame_number: int,
-        previous_frame_timestamp_ns: int,
-        shared_memory_manager: CameraSharedMemoryManager,
-        cv2_video_capture: cv2.VideoCapture,
-) -> FramePayload:
+def get_frame(camera_id: CameraId,
+              camera_shared_memory: CameraSharedMemory,
+              cv2_video_capture: cv2.VideoCapture,
+              frame: FramePayload,
+              frame_number: int,
+              previous_frame_timestamp_ns: int,
+              frame_grabbed_trigger: multiprocessing.Event,
+              retrieve_frame_trigger: multiprocessing.Event,
+              ) -> FramePayload:
     """
     THIS IS WHERE THE MAGIC HAPPENS
 
@@ -143,25 +136,49 @@ def get_frame(
     This sweet baby must be protected at all costs. Nothing is allowed to block this call (which could result in
     a frame drop)
     """
-    pre_read_timestamp = time.perf_counter_ns()
-    success, image = cv2_video_capture.read()  # THIS, specifically,  IS WHERE THE MAGIC HAPPENS <3
-    post_read_timestamp = time.perf_counter_ns()
+    next_frame = None
 
-    if not success or image is None:
-        raise ValueError(f"Failed to read frame from camera {camera_id}")
+    # frame.timestamps.pre_grab_timestamp = time.perf_counter_ns()
+    # decouple `grab` and `retrieve` for better sync - https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
+    grab_success = cv2_video_capture.grab()  # grab the frame from the camera, but don't decode it yet
+    # frame.timestamps.post_grab_timestamp = time.perf_counter_ns()
 
-    if previous_frame_timestamp_ns == -1:
+    if grab_success:
+        frame_grabbed_trigger.set()
+    else:
+        raise ValueError(f"Failed to grab frame from camera {camera_id}")
+
+    # frame.timestamps.wait_for_retrieve_trigger_timestamp = time.perf_counter_ns()
+
+    while not retrieve_frame_trigger.is_set():
+        if next_frame is None:
+            next_frame = FramePayload.create_empty(camera_id=camera_id,
+                                                   frame_number=frame_number + 1)  # create next frame in presumed downtime
+        time.sleep(0.0001)  # 0.1ms
+
+    # frame.timestamps.pre_retrieve_timestamp = time.perf_counter_ns()
+    retrieve_success, image = cv2_video_capture.retrieve()  # decode the frame into an image
+    # frame.timestamps.post_retrieve_return = time.perf_counter_ns()
+    frame.timestamp_ns = time.perf_counter_ns()
+
+    if not retrieve_success:
+        raise ValueError(f"Failed to retrieve frame from camera {camera_id}")
+
+    frame_grabbed_trigger.clear()
+    retrieve_frame_trigger.clear()
+
+    if previous_frame_timestamp_ns is None:
         time_since_last_frame_ns = 0
     else:
-        time_since_last_frame_ns = post_read_timestamp - previous_frame_timestamp_ns
+        time_since_last_frame_ns = frame.timestamp_ns - previous_frame_timestamp_ns
 
-    return FramePayload.as_shared_memory(
-        shared_memory_manager=shared_memory_manager,
-        success=success,
+    frame.success = grab_success and retrieve_success
+    frame.image_checksum = frame.calculate_checksum(image)
+    frame.image_shape = image.shape
+    frame.time_since_last_frame_ns = time_since_last_frame_ns
+    camera_shared_memory.put_frame(
+        frame=frame,
         image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
-        timestamp_ns=post_read_timestamp,
-        frame_number=frame_number,
-        camera_id=camera_id,
-        read_duration_ns=post_read_timestamp - pre_read_timestamp,
-        time_since_last_frame_ns=time_since_last_frame_ns,
     )
+
+    return next_frame

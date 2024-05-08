@@ -2,9 +2,10 @@ from typing import Tuple
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.detection.camera_id import CameraId
-from skellycam.core.detection.image_rotation_types import RotationTypes
+from skellycam.core import CameraId
 from skellycam.core.detection.image_resolution import ImageResolution
+from skellycam.core.detection.image_rotation_types import RotationTypes
+from skellycam.core import BYTES_PER_PIXEL
 
 
 class CameraConfig(BaseModel):
@@ -62,6 +63,10 @@ class CameraConfig(BaseModel):
     def image_shape(self) -> Tuple[int, int, int]:
         return self.resolution.height, self.resolution.width, self.color_channels
 
+    @property
+    def image_size_kb(self) -> int:
+        return (self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_PIXEL) / 1024
+
     def __eq__(self, other):
         return self.dict() == other.dict()
 
@@ -70,8 +75,10 @@ class CameraConfig(BaseModel):
         for key, value in self.dict().items():
             out_str += f"\t{key} ({type(value).__name__}): {value} \n"
         out_str += "COMPUTED:\n"
-        out_str += f"\taspect_ratio {self.aspect_ratio:.3f}\n"
+        out_str += f"\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
         out_str += f"\torientation: {self.orientation}\n"
+        out_str += f"\timage_shape: {self.image_shape}\n"
+        out_str += f"\timage_size: {self.image_size_kb:.3f}kB\n"
         return out_str
 
 

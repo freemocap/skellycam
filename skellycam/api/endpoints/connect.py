@@ -4,10 +4,9 @@ from typing import Optional, List
 from fastapi import APIRouter, Body
 
 from skellycam.api.models.base_models import BaseResponse, BaseRequest
-from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.config.camera_configs import CameraConfigs, DEFAULT_CAMERA_CONFIGS
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.controller.singleton import get_or_create_controller
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ class CamerasConnectedResponse(BaseResponse):
 
 
 class ConnectCamerasRequest(BaseRequest):
-    camera_configs: Optional[CameraConfigs] = DEFAULT_CAMERA_CONFIGS
+    camera_configs: Optional[CameraConfigs] = CameraConfigs()
 
 @camera_connection_router.post(
     "/connect",

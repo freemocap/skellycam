@@ -1,6 +1,6 @@
 import numpy as np
 
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.recorder import (
     CameraTimestampLogger,

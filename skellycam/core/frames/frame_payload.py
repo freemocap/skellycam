@@ -1,70 +1,88 @@
 import pickle
+import time
 from typing import Optional, Tuple
 
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core.detection.camera_id import CameraId
-
-BYTES_PER_PIXEL = 1
+from skellycam.core import BYTES_PER_PIXEL
+from skellycam.core import CameraId
 
 
 class FramePayload(BaseModel):
     camera_id: CameraId = Field(
         description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`")
-    success: bool = Field(description="The `success` part of `success, image = cv2.VideoCapture.read()`")
+
+    frame_number: int = Field(description="The number of frames read from the camera since the camera was started")
+    bytes_per_pixel: int = Field(default=BYTES_PER_PIXEL, description="The number of bytes per pixel in the image")
+
+    success: Optional[bool] = Field(default=None,
+                                    description="The `success` part of `success, image = cv2.VideoCapture.read()`")
     image_data: Optional[bytes] = Field(default=None,
                                         description="The raw image from `cv2.VideoCapture.read() as bytes")
-    image_checksum: int = Field(description="The sum of the pixel values of the image, to verify integrity")
-    image_shape: tuple = Field("The shape of the image as a tuple of `(height, width, channels)`")
-    bytes_per_pixel: int = Field(default=BYTES_PER_PIXEL, description="The number of bytes per pixel in the image")
-    timestamp_ns: int = Field(description="The timestamp of the frame in nanoseconds from `time.perf_counter_ns()`")
-    read_duration_ns: int = Field(description="The time taken to read the frame in nanoseconds")
-    frame_number: int = Field(description="The number of frames read from the camera since the camera was started")
-    time_since_last_frame_ns: int = Field(description="The time since the previous frame in nanoseconds")
+    image_checksum: Optional[int] = Field(default=None,
+                                          description="The sum of the pixel values of the image, to verify integrity")
+    image_shape: Optional[tuple] = Field(default=None,
+                                         description="The shape of the image as a tuple of `(height, width, channels)`")
+    time_since_last_frame_ns: Optional[int] = Field(default=None,
+                                                    description="The time since the previous frame in nanoseconds")
+    timestamp_ns: Optional[int] = Field(default=None,
+                                        description="The time the frame was read from the camera in nanoseconds")
 
     @classmethod
-    def create_dummy(cls, image: np.ndarray) -> 'FramePayload':
+    def create_empty(cls,
+                     camera_id: CameraId,
+                     frame_number: int) -> 'FramePayload':
+        return cls(
+            camera_id=camera_id,
+            frame_number=frame_number,
+        )
 
+    @classmethod
+    def create_dummy(cls,
+                     image: np.ndarray) -> 'FramePayload':
         return cls(
             camera_id=CameraId(0),
             success=True,
             image_data=image.tobytes() if image is not None else None,
+            timestamp_ns=time.perf_counter_ns(),
             shared_memory_index=int(0),
-            image_checksum=np.sum(image),
+            image_checksum=cls.calculate_checksum(image) if image is not None else None,
             image_shape=image.shape,
-            timestamp_ns=0,
             frame_number=0,
             time_since_last_frame_ns=0,
-            read_duration_ns=0,
         )
 
     def to_unhydrated_bytes(self) -> bytes:
         without_image_data = self.dict(exclude={"image_data"})
-        return pickle.dumps(without_image_data)
-
-    def to_buffer(self) -> bytes:
-        image_buffer = self.image_data
-        return image_buffer + self.to_unhydrated_bytes()
+        # self.timestamps.pre_pickle = time.perf_counter_ns()
+        bytes_payload = pickle.dumps(without_image_data)
+        #self.timestamps.post_pickle = time.perf_counter_ns()
+        return bytes_payload
 
     @classmethod
     def from_buffer(cls,
-                    buffer: bytes,
+                    buffer: memoryview,
                     image_shape: Tuple[int, int, int],
                     ) -> 'FramePayload':
         if not len(image_shape) == 3:
             raise ValueError(
                 f"Expected image shape to be a tuple of 3 integers (height, width, colors), got {image_shape}")
-        image_size = np.prod(
-            image_shape) * BYTES_PER_PIXEL  # TODO - don't use global here should be able to use the `cls`
-        image_data = buffer[:image_size]
+        # TODO - don't use global for BYTES_PER_PIXEL here should be able to use the `cls`
+        image_size = np.prod(image_shape) * BYTES_PER_PIXEL
+        image_memoryview = buffer[:image_size]
+
         unhydrated_data = buffer[image_size:]
         unhydrated_frame = pickle.loads(unhydrated_data)
         instance = cls(
             **unhydrated_frame,
-            image_data=image_data,
         )
+        instance.timestamps.post_create_frame_from_buffer = time.perf_counter_ns()
+        image = np.ndarray(image_shape, dtype=np.uint8, buffer=image_memoryview)
+        instance.timestamps.post_copy_image_from_buffer = time.perf_counter_ns()
+        instance.image = image
         instance._validate_image(image=instance.image)
+        instance.timestamps.done_create_from_buffer = time.perf_counter_ns()
         return instance
 
     @property
@@ -77,8 +95,11 @@ class FramePayload(BaseModel):
 
     @image.setter
     def image(self, image: np.ndarray):
+        #self.timestamps.pre_set_image_in_frame = time.perf_counter_ns()
         self.image_data = image.tobytes()
         self.image_shape = image.shape
+
+    #self.timestamps.post_set_image_in_frame = time.perf_counter_ns()
 
     @property
     def height(self) -> int:
@@ -111,6 +132,12 @@ class FramePayload(BaseModel):
                              f"Expected: {self.image_checksum}, "
                              f"Actual: {check_sum}")
 
+    @staticmethod
+    def calculate_checksum(image: np.ndarray) -> int:
+        return int(np.sum(image))
+
+
+
     def __str__(self):
         print_str = (f"Camera{self.camera_id}:"
                      f"\n\tFrame#{self.frame_number} - [height: {self.height}, width: {self.width}, color channels: {self.image_shape[2]}]"
@@ -121,17 +148,16 @@ class FramePayload(BaseModel):
 
 
 if __name__ == "__main__":
-    import time
 
     camera_id = CameraId(0)
-    image_shape = (1080, 1920, 3)
+    image_shape_outer = (1080, 1920, 3)
     image_dtype = np.uint8
-    frame_number = 0
+    frame_number_outer = 0
     previous_frame_timestamp_ns = time.perf_counter_ns()
     timestamp_ns = time.perf_counter_ns()
 
     tik = time.perf_counter_ns()
-    test_image = np.random.randint(0, 255, size=image_shape, dtype=image_dtype)
+    test_image = np.random.randint(0, 255, size=image_shape_outer, dtype=image_dtype)
     read_duration_ns = time.perf_counter_ns() - tik  # secretly timing the time it takes to generate a random image
 
     frame = FramePayload(
@@ -141,7 +167,7 @@ if __name__ == "__main__":
         image_checksum=np.sum(test_image),
         image_shape=test_image.shape,
         timestamp_ns=timestamp_ns,
-        frame_number=frame_number,
+        frame_number=frame_number_outer,
         time_since_last_frame_ns=timestamp_ns - previous_frame_timestamp_ns,
         read_duration_ns=read_duration_ns,
     )
@@ -156,22 +182,21 @@ if __name__ == "__main__":
     unhydrated_frame = FramePayload(
         **unhydrated_frame,
     )
-    unhydrated_frame.read_duration_ns = read_duration_ns
 
     print(f"UNHYDRATED FRAME PAYLOAD:\n{unhydrated_frame}\n--\n")
 
-    buffer = frame.to_buffer()
+    buffer = memoryview(frame.to_unhydrated_bytes() + test_image.tobytes())
     print(f"BUFFER SIZE: {len(buffer) / 1024:.2f} KB")
     frame_from_buffer = FramePayload.from_buffer(buffer=buffer,
-                                                 image_shape=image_shape)
+                                                 image_shape=image_shape_outer)
     print(f"FRAME FROM BUFFER:\n{frame_from_buffer}\n--\n")
 
     bad_buffer = bytearray(buffer)  # Lookit this utter embarrassment of a buffer
     bad_buffer[0] = bad_buffer[0] + 1  # Terrible
-    bad_buffer = bytes(bad_buffer)  # Utter disgrace
+    bad_buffer = memoryview(bad_buffer)  # Utter disgrace
     try:
         frame_from_bad_buffer = FramePayload.from_buffer(buffer=bad_buffer,
-                                                         image_shape=image_shape)
+                                                         image_shape=image_shape_outer)
     except ValueError as e:
         print(f"ERROR: {type(e).__name__} - {e}")
         print(f"FRAME FROM BAD BUFFER FAILED SUCCESSFULLY")

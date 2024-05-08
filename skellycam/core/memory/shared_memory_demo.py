@@ -2,12 +2,11 @@ import logging
 import time
 
 import numpy as np
-import polars as ps
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
-from pprint import pprint
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

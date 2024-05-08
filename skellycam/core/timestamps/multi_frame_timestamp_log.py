@@ -4,7 +4,7 @@ from typing import Tuple, Dict, List
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core.detection.camera_id import CameraId
+from skellycam.core import CameraId
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 
 
