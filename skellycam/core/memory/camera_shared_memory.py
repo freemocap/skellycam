@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import time
 from multiprocessing import shared_memory
 from typing import List, Tuple
 
@@ -57,7 +58,6 @@ class CameraSharedMemoryModel(BaseModel):
     def new_frame_available(self) -> bool:
         return (self.last_frame_written_index != self.last_frame_read_index) and (
                 self.next_index != -1)
-
 
     @property
     def last_frame_written_index(self) -> int:
@@ -142,7 +142,7 @@ class CameraSharedMemory(CameraSharedMemoryModel):
     def put_frame(self,
                   frame: FramePayload,
                   image: np.ndarray):
-
+        tik = time.perf_counter_ns()
         full_payload = self._frame_to_buffer_payload(frame, image)
 
         initial_frame = False
@@ -160,9 +160,11 @@ class CameraSharedMemory(CameraSharedMemoryModel):
 
         self.shm.buf[offset:offset + self.payload_size] = full_payload
         self.last_frame_written_index = self.next_index
-
+        elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
         logger.loop(
-            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory at index#{self.next_index} (offset: {offset} bytes)\n{frame}")
+            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory at "
+            f"index#{self.next_index} (offset: {offset} bytes, took {elapsed_time_ms}ms)\n"
+            f"{frame}")
 
     def _frame_to_buffer_payload(self,
                                  frame: FramePayload,
@@ -188,15 +190,22 @@ class CameraSharedMemory(CameraSharedMemoryModel):
                         f"Overwriting unread frame for {self.camera_id}! The shared memory `writer` is lapping the `reader` - use fewer cameras or decrease the resolution!")
 
     def retrieve_frame(self, index: int) -> FramePayload:
+        tik = time.perf_counter_ns()
         if index >= len(self.offsets) or index < 0:
             raise ValueError(f"Index {index} out of range for {self.camera_id}")
         offset = self.offsets[index]
         payload_buffer = self.shm.buf[offset:offset + self.payload_size]
+        elapsed_get_from_shm = (time.perf_counter_ns() - tik) / 1e6
         frame = FramePayload.from_buffer(buffer=payload_buffer,
                                          image_shape=self.image_shape)
         self.last_frame_read_index = index
-        logger.loop(
-            f"Camera {self.camera_id} read frame #{frame.frame_number} from shared memory at index#{index} (offset: {offset} bytes)")
+        elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
+        elapsed_during_copy = elapsed_time_ms - elapsed_get_from_shm
+        logger.loop(f"Camera {self.camera_id} read frame #{frame.frame_number} "
+                    f"from shared memory at index#{index} "
+                    f"(offset: {offset} bytes, took {elapsed_get_from_shm}ms "
+                    f"to get from shm buffery and {elapsed_during_copy}ms to "
+                    f"copy, ({elapsed_time_ms}ms total))\n")
         return frame
 
     def get_next_frame(self) -> FramePayload:

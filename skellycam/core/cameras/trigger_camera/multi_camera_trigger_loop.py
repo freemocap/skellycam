@@ -130,7 +130,7 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
 def log_elapsed_time(elapsed_in_trigger_ms, elapsed_per_loop_ms):
     logger.info(f"Average multi-camera trigger loop time:\n"
                 
-                f"\n\tTime elapsed in trigger method - "
+                f"\n\tTime elapsed in during multi-camera `grab` trigger - "
                 f"\n\t\tmean: {np.mean(elapsed_in_trigger_ms):.2f}ms, "
                 f"\n\t\tmedian: {np.median(elapsed_in_trigger_ms):.2f}ms, "
                 f"\n\t\tstd-dev: {np.std(elapsed_in_trigger_ms):.2f}ms\n"
