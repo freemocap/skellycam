@@ -26,7 +26,7 @@ class CameraConfigs(RootModel):
         self.root[CameraId(key)] = value
 
     def __delitem__(self, key):
-        del self.root[key]
+        del self.root[CameraId(key)]
 
     def __iter__(self):
         return iter(self.root)
@@ -49,9 +49,3 @@ class CameraConfigs(RootModel):
     def items(self):
         return self.root.items()
 
-
-if __name__ == "__main__":
-    configs = CameraConfigs()
-    configs[1] = CameraConfig(camera_id=CameraId(1))
-    configs[2] = CameraConfig(camera_id=CameraId(2))
-    print(configs)

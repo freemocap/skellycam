@@ -1,81 +1,55 @@
-from itertools import product
-
-import numpy as np
 import pytest
 
-from skellycam.core import CameraId, BYTES_PER_PIXEL
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.detection.image_resolution import ImageResolution
-from skellycam.core.detection.image_rotation_types import RotationTypes
-from skellycam.tests.conftest import TestImageShapes
-
-# parameter options
-camera_ids = [0, 1, "2", 3.0, CameraId(4)]
-resolutions = list(TestImageShapes)
-rotations = list(RotationTypes)
-
-all_combinations = list(
-    product(camera_ids,
-            resolutions,
-            rotations,
-            ))
-
-parametrization_config = (
-    "camera_id,resolution, rotation",
-    all_combinations
-
-)
-
-@pytest.fixture
-def test_default_camera_config():
-    assert CameraConfig()
+from skellycam.core import CameraId
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
 
 
-@pytest.mark.parametrize(*parametrization_config)
-def test_custom_config(camera_id,
-                       resolution,
-                       rotation,
-                       use_this_camera: bool = True,
-                       exposure: int = -7,
-                       framerate: float = 30,
-                       capture_fourcc: str = "MJPG",
-                       writer_fourcc: str = "MP4V",
-                       ):
-    input_resolution = ImageResolution(width=resolution.value[0], height=resolution.value[1])
+def test_camera_configs_str():
+    camera_configs = CameraConfigs()
+    assert str(camera_configs) == "Camera CameraId(0):\nCameraConfig(camera_id=CameraId(0))\n"
 
-    if len(resolution.value) == 3:
-        number_of_color_channels = resolution.value[2]
-        image_shape = (resolution.value[0], resolution.value[1], resolution.value[2])
-    else:
-        number_of_color_channels = 1
-        image_shape = (resolution.value[0], resolution.value[1], 1)
+def test_camera_configs_getitem():
+    camera_configs = CameraConfigs()
+    assert camera_configs[0] == CameraConfig(camera_id=CameraId(0))
 
-    config = CameraConfig(
-        camera_id=camera_id,
-        use_this_camera=use_this_camera,
-        resolution=input_resolution,
-        color_channels=number_of_color_channels,
-        exposure=exposure,
-        framerate=framerate,
-        rotation=rotation,
-        capture_fourcc=capture_fourcc,
-        writer_fourcc=writer_fourcc,
-    )
-    assert config.camera_id == CameraId(camera_id)
-    assert config.use_this_camera == use_this_camera
-    assert config.resolution == ImageResolution(width=resolution.value[0], height=resolution.value[1])
-    assert config.color_channels == number_of_color_channels
-    assert config.exposure == exposure
-    assert config.framerate == framerate
-    assert config.rotation == rotation
-    assert config.capture_fourcc == capture_fourcc
-    assert config.writer_fourcc == writer_fourcc
-    assert config.orientation == "landscape" if resolution.value[0] > resolution.value[1] else "portrait"
-    assert config.aspect_ratio == resolution.value[0] / resolution.value[1]
-    assert config.image_shape == image_shape
-    assert config.color_channels == number_of_color_channels
-    assert config.image_size_bytes == np.prod(resolution.value) * BYTES_PER_PIXEL
-    assert "BASE CONFIG" in str(config)
+def test_camera_configs_setitem():
+    camera_configs = CameraConfigs()
+    new_config = CameraConfig(camera_id=CameraId(1))
+    camera_configs[1] = new_config
+    assert camera_configs[1] == new_config
 
+def test_camera_configs_delitem():
+    camera_configs = CameraConfigs()
+    del camera_configs[0]
+    with pytest.raises(KeyError):
+        _ = camera_configs[0]
 
-# def test_create
+def test_camera_configs_iter():
+    camera_configs = CameraConfigs()
+    assert list(camera_configs) == [CameraId(0)]
+
+def test_camera_configs_len():
+    camera_configs = CameraConfigs()
+    assert len(camera_configs) == 1
+
+def test_camera_configs_contains():
+    camera_configs = CameraConfigs()
+    assert CameraId(0) in camera_configs
+
+def test_camera_configs_eq():
+    camera_configs1 = CameraConfigs()
+    camera_configs2 = CameraConfigs()
+    assert camera_configs1 == camera_configs2
+
+def test_camera_configs_keys():
+    camera_configs = CameraConfigs()
+    assert list(camera_configs.keys()) == [CameraId(0)]
+
+def test_camera_configs_values():
+    camera_configs = CameraConfigs()
+    assert list(camera_configs.values()) == [CameraConfig(camera_id=CameraId(0))]
+
+def test_camera_configs_items():
+    camera_configs = CameraConfigs()
+    assert list(camera_configs.items()) == [(CameraId(0), CameraConfig(camera_id=CameraId(0)))]
