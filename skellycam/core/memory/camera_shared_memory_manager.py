@@ -36,6 +36,10 @@ class CameraSharedMemoryManager:
         return {camera_id: camera_shared_memory.shared_memory_name for camera_id, camera_shared_memory in
                 self._buffer_by_camera.items()}
 
+    @property
+    def total_buffer_size(self) -> int:
+        return sum([camera_shared_memory.buffer_size for camera_shared_memory in self._buffer_by_camera.values()])
+
     def new_multi_frame_payload_available(self) -> bool:
         return all([camera_shared_memory.new_frame_available for camera_shared_memory in
                     self._buffer_by_camera.values()])

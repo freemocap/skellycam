@@ -1,3 +1,4 @@
+import numpy as np
 from pydantic import BaseModel
 
 
@@ -12,6 +13,13 @@ class ImageResolution(BaseModel):
         """
         width, height = tuple_str.replace("(", "").replace(")", "").split(split_on)
         return cls(width=int(width), height=int(height))
+
+    @classmethod
+    def from_image(cls, image: np.ndarray) -> "ImageResolution":
+        """
+        Create a `VideoResolution` from an image
+        """
+        return cls(width=image.shape[0], height=image.shape[1])
 
     @property
     def orientation(self) -> str:

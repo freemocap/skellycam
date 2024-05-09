@@ -55,8 +55,24 @@ class FramePayload(BaseModel):
     def create_hydrated_dummy(cls,
                               image: np.ndarray,
                               ) -> 'FramePayload':
-        instance = cls.create_empty(CameraId(0), frame_number=0)
+        instance = cls.create_empty(CameraId(0),
+                                    image_shape=image.shape,
+                                    frame_number=0)
         instance.image = image
+        instance.previous_frame_timestamp_ns = time.perf_counter_ns()
+        instance.timestamp_ns = time.perf_counter_ns()
+        return instance
+
+    @classmethod
+    def create_unhydrated_dummy(cls,
+                                camera_id: CameraId,
+                                image: np.ndarray,
+                                ) -> 'FramePayload':
+        instance = cls.create_empty(camera_id=camera_id,
+                                    image_shape=image.shape,
+                                    frame_number=0)
+        instance.image_shape = image.shape
+        instance.image_checksum = cls.calculate_image_checksum(image)
         instance.previous_frame_timestamp_ns = time.perf_counter_ns()
         instance.timestamp_ns = time.perf_counter_ns()
         return instance
@@ -84,9 +100,10 @@ class FramePayload(BaseModel):
                     buffer: memoryview,
                     image_shape: Tuple[int, ...],
                     ) -> 'FramePayload':
+
         if len(image_shape) == 2:
-            raise ValueError(
-                f"Expected image shape to be a tuple of 3 integers (height, width, colors), got {image_shape}")  # TODO - handle monochrome images
+            image_shape = (*image_shape, 1)
+
         image_size = np.prod(image_shape) * BYTES_PER_PIXEL
 
         # buffer should be [`image_bytes` + `unhydrated_bytes`]
@@ -107,7 +124,6 @@ class FramePayload(BaseModel):
     @property
     def hydrated(self) -> bool:
         return self.image_data is not None
-
 
     @property
     def image(self) -> np.ndarray:
@@ -170,4 +186,3 @@ class FramePayload(BaseModel):
                      f"\n\tPayload Size: {self.payload_size_in_kilobytes:.3f} KB (Hydrated: {self.image_data is not None}),"
                      f"\n\tSince Previous: {self.time_since_last_frame_ns / 1e6:.3f}ms")
         return print_str
-

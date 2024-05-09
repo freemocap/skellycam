@@ -131,7 +131,7 @@ class CameraSharedMemoryModel(BaseModel):
                                         255,
                                         size=(image_resolution.height, image_resolution.width, color_channels),
                                         dtype=np.uint8)
-        dummy_frame = payload_model.create_dummy()
+        dummy_frame = payload_model.create_hydrated_dummy(dummy_image)
         image_size_number_of_bytes = np.prod(dummy_image.shape) * BYTES_PER_PIXEL
         unhydrated_payload_number_of_bytes = len(dummy_frame.to_unhydrated_bytes())
         total_payload_size = image_size_number_of_bytes + unhydrated_payload_number_of_bytes
