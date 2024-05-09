@@ -78,9 +78,8 @@ class FramePayload(BaseModel):
         return instance
 
     def to_buffer(self, image: np.ndarray) -> memoryview:
-
-        bytes_payload = self.to_unhydrated_bytes()
         image_bytes = image.tobytes()
+        bytes_payload = self.to_unhydrated_bytes()
         # bufffer should be [`image_bytes` + `unhydrated_bytes`]
         return memoryview(image_bytes + bytes_payload)
 
