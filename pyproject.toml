@@ -53,10 +53,6 @@ skellycam = "skellycam.__main__:main"
 [tool.setuptools]
 py-modules = ["skellycam"]
 
-[tool.pytest.ini_options]
-log_cli = true
-log_cli_level = "DEBUG"
-
 
 classifiers = [
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",

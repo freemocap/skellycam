@@ -18,6 +18,7 @@ class FramePayload(BaseModel):
         description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`")
 
     frame_number: int = Field(description="The number of frames read from the camera since the camera was started")
+
     bytes_per_pixel: int = Field(default=BYTES_PER_PIXEL, description="The number of bytes per pixel in the image")
 
     success: Optional[bool] = Field(default=None,
@@ -42,25 +43,30 @@ class FramePayload(BaseModel):
     @classmethod
     def create_empty(cls,
                      camera_id: CameraId,
+                     image_shape: Tuple[int, ...],
                      frame_number: int) -> 'FramePayload':
         return cls(
             camera_id=camera_id,
+            image_shape=image_shape,
             frame_number=frame_number,
         )
 
     @classmethod
-    def create_dummy(cls) -> 'FramePayload':
-        return cls(
-            camera_id=CameraId(0),
-            success=True,
-            image_data= None,
-            timestamp_ns=time.perf_counter_ns(),
-            shared_memory_index=int(0),
-            image_checksum=int(0),
-            image_shape=[1920, 1080, 3],
-            frame_number=0,
-            dummy=True,
-        )
+    def create_hydrated_dummy(cls,
+                              image: np.ndarray,
+                              ) -> 'FramePayload':
+        instance = cls.create_empty(CameraId(0), frame_number=0)
+        instance.image = image
+        instance.previous_frame_timestamp_ns = time.perf_counter_ns()
+        instance.timestamp_ns = time.perf_counter_ns()
+        return instance
+
+    def to_buffer(self, image: np.ndarray) -> memoryview:
+
+        bytes_payload = self.to_unhydrated_bytes()
+        image_bytes = image.tobytes()
+        # bufffer should be [`image_bytes` + `unhydrated_bytes`]
+        return memoryview(image_bytes + bytes_payload)
 
     def to_unhydrated_bytes(self) -> bytes:
         without_image_data = self.dict(exclude={"image_data"})
@@ -76,28 +82,24 @@ class FramePayload(BaseModel):
     @classmethod
     def from_buffer(cls,
                     buffer: memoryview,
-                    image_shape: Tuple[int, int, int],
+                    image_shape: Tuple[int, ...],
                     ) -> 'FramePayload':
-        if not len(image_shape) == 3:
+        if len(image_shape) == 2:
             raise ValueError(
-                f"Expected image shape to be a tuple of 3 integers (height, width, colors), got {image_shape}")
-        # TODO - don't use global for BYTES_PER_PIXEL here should be able to use the `cls`, right?
+                f"Expected image shape to be a tuple of 3 integers (height, width, colors), got {image_shape}")  # TODO - handle monochrome images
         image_size = np.prod(image_shape) * BYTES_PER_PIXEL
-        # bufffer should be [`unhydrated_bytes` + `image_bytes`]
-        unhydrated_data = buffer[:-image_size]
-        image_memoryview = buffer[-image_size:]
 
-
-        logger.trace(
-            f"Unpickling frame payload from {len(unhydrated_data)} bytes - checksum: {cls.calculate_pickle_checksum(unhydrated_data)}")
-        unhydrated_frame = pickle.loads(unhydrated_data)
+        # buffer should be [`image_bytes` + `unhydrated_bytes`]
+        image_buffer = buffer[:image_size]
+        unhydrated_buffer = buffer[image_size:]
+        unhydrated_frame = pickle.loads(unhydrated_buffer)
         instance = cls(
             **unhydrated_frame
         )
-        # instance.timestamps.post_create_frame_from_buffer = time.perf_counter_ns()
-        image = np.ndarray(image_shape, dtype=np.uint8, buffer=image_memoryview)
+        # instance.timestamps.pre_copy_image_from_buffer = time.perf_counter_ns()
+        instance.image = np.ndarray(image_shape, dtype=np.uint8, buffer=image_buffer)
         # instance.timestamps.post_copy_image_from_buffer = time.perf_counter_ns()
-        instance.image = image
+
         instance._validate_image(image=instance.image)
         # instance.timestamps.done_create_from_buffer = time.perf_counter_ns()
         return instance
@@ -105,6 +107,7 @@ class FramePayload(BaseModel):
     @property
     def hydrated(self) -> bool:
         return self.image_data is not None
+
 
     @property
     def image(self) -> np.ndarray:
@@ -115,6 +118,7 @@ class FramePayload(BaseModel):
         # self.timestamps.pre_set_image_in_frame = time.perf_counter_ns()
         self.image_data = image.tobytes()
         self.image_shape = image.shape
+        self.image_checksum = self.calculate_image_checksum(image)
         # self.timestamps.post_set_image_in_frame = time.perf_counter_ns()
 
     @property
@@ -167,57 +171,3 @@ class FramePayload(BaseModel):
                      f"\n\tSince Previous: {self.time_since_last_frame_ns / 1e6:.3f}ms")
         return print_str
 
-
-if __name__ == "__main__":
-
-    camera_id = CameraId(0)
-    image_shape_outer = (1080, 1920, 3)
-    image_dtype = np.uint8
-    frame_number_outer = 0
-    previous_frame_timestamp_ns = time.perf_counter_ns()
-    timestamp_ns = time.perf_counter_ns()
-
-    tik = time.perf_counter_ns()
-    test_image = np.random.randint(0, 255, size=image_shape_outer, dtype=image_dtype)
-    read_duration_ns = time.perf_counter_ns() - tik  # secretly timing the time it takes to generate a random image
-
-    frame = FramePayload(
-        camera_id=camera_id,
-        success=True,
-        image_data=test_image.tobytes(),
-        image_checksum=np.sum(test_image),
-        image_shape=test_image.shape,
-        timestamp_ns=timestamp_ns,
-        frame_number=frame_number_outer,
-        time_since_last_frame_ns=timestamp_ns - previous_frame_timestamp_ns,
-        read_duration_ns=read_duration_ns,
-    )
-
-    print(f"HYDRATED FRAME PAYLOAD:\n{frame}\n--\n")
-
-    tik = time.perf_counter_ns()
-    unhydrated_bytes = frame.to_unhydrated_bytes()
-    unhydrated_frame = pickle.loads(unhydrated_bytes)
-    read_duration_ns = time.perf_counter_ns() - tik  # secretly timing the image-dehydration duration
-
-    unhydrated_frame = FramePayload(
-        **unhydrated_frame,
-    )
-
-    print(f"UNHYDRATED FRAME PAYLOAD:\n{unhydrated_frame}\n--\n")
-
-    buffer = memoryview(frame.to_unhydrated_bytes() + test_image.tobytes())
-    print(f"BUFFER SIZE: {len(buffer) / 1024:.2f} KB")
-    frame_from_buffer = FramePayload.from_buffer(buffer=buffer,
-                                                 image_shape=image_shape_outer)
-    print(f"FRAME FROM BUFFER:\n{frame_from_buffer}\n--\n")
-
-    bad_buffer = bytearray(buffer)  # Lookit this utter embarrassment of a buffer
-    bad_buffer[0] = bad_buffer[0] + 1  # Terrible
-    bad_buffer = memoryview(bad_buffer)  # Utter disgrace
-    try:
-        frame_from_bad_buffer = FramePayload.from_buffer(buffer=bad_buffer,
-                                                         image_shape=image_shape_outer)
-    except ValueError as e:
-        print(f"ERROR: {type(e).__name__} - {e}")
-        print(f"FRAME FROM BAD BUFFER FAILED SUCCESSFULLY")

@@ -1,80 +1,74 @@
+import logging
+import time
+
 import numpy as np
 import pytest
 
 from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 
-import logging
 logger = logging.getLogger(__name__)
 
-def create_test_image(height: int, width: int, color_channels: int) -> np.ndarray:
-    return np.random.randint(0, 256, size=(height, width, color_channels), dtype=np.uint8)
 
-
-def test_frame_payload_create_empty():
-    # Test FramePayload creation with `create_empty` method
-    camera_id = CameraId(0)
-    frame_number = 0
-    frame = FramePayload.create_empty(camera_id=camera_id, frame_number=frame_number)
-    assert frame.camera_id == camera_id
-    assert frame.frame_number == frame_number
-
-
-def test_frame_payload_create_dummy():
-    # Test FramePayload creation with `create_dummy` method
-    frame = FramePayload.create_dummy()
-    assert frame.dummy == True
-
-
-def test_frame_payload_to_and_from_buffer():
-    # Test FramePayload creation from buffer
+def test_create_frame(image_fixture: np.ndarray) -> FramePayload:
     # Arrange
-    image_shape = (1080, 1920, 3)
-    dummy_image = create_test_image(*image_shape)
-
-    dummy_frame = FramePayload.create_dummy()
-    dummy_frame.image_checksum = dummy_image.sum()
-
-    unhydrated_bytes = dummy_frame.to_unhydrated_bytes()
-    logger.debug(f"Unhydrated bytes: {unhydrated_bytes[:10]}...{unhydrated_bytes[-10:]}...")
-    image_bytes = dummy_image.tobytes()
-    buffer = memoryview(unhydrated_bytes + image_bytes)
-
-    # Act
-    frame = FramePayload.from_buffer(buffer=buffer,
-                                     image_shape=image_shape)
+    frame = FramePayload.create_empty(camera_id=CameraId(0),
+                                      image_shape=image_fixture.shape,
+                                      frame_number=0)
+    frame.image = image_fixture
+    frame.previous_frame_timestamp_ns = time.perf_counter_ns()
+    frame.timestamp_ns = time.perf_counter_ns()
+    frame.success = True
 
     # Assert
-    assert dummy_frame.hydrated == False
-    assert frame.image_data == image_bytes
-    assert frame.image_shape == image_shape
+    for key, value in frame.dict().items():
+        assert value is not None, f"Key {key} is None"
+    assert frame.hydrated
+    assert frame.image_shape == image_fixture.shape
+    assert np.sum(frame.image - image_fixture) == 0
+    return frame
 
 
-def test_frame_payload_bad_buffer_reject():
-    dummy_frame = FramePayload.create_dummy()
-    image_shape = (48, 64, 3)
-    test_image = create_test_image(*image_shape)
-    image_bytes = test_image.tobytes()
-    unhydrated_buffer = dummy_frame.to_unhydrated_bytes()
-    buffer = memoryview(unhydrated_buffer + image_bytes)
+def test_frame_payload_to_and_from_buffer(image_fixture: np.ndarray):
+    # Arrange
+    frame = test_create_frame(image_fixture)
+    buffer = frame.to_buffer(image=image_fixture)
+
+    # Act
+    recreated_frame = FramePayload.from_buffer(buffer=buffer,
+                                               image_shape=image_fixture.shape)
+
+    # Assert
+    assert recreated_frame.hydrated
+    assert np.sum(frame.image - image_fixture) == 0
+    assert frame.dict() == recreated_frame.dict()
+
+
+def test_frame_payload_bad_buffer_reject(image_fixture: np.ndarray):
+    frame = test_create_frame(image_fixture)
+    buffer = frame.to_buffer(image=image_fixture)
 
     recreated_frame = FramePayload.from_buffer(buffer=buffer,
-                                               image_shape=image_shape)
+                                               image_shape=image_fixture.shape)
     assert isinstance(recreated_frame, FramePayload)
 
-
-    bad_image_bytes = bytes([image_bytes[0] + 1]) + image_bytes[1:]
-    #TODO - come up with a way to make it fail if the `unhydrated_buffer` is modified
-    bad_unhydrated_buffer = bytes([unhydrated_buffer[0] + 1]) + unhydrated_buffer[1:]
-    assert not bad_unhydrated_buffer == unhydrated_buffer
-    assert not bad_image_bytes == image_bytes
-
-    bad_buffer = memoryview(bytes([unhydrated_buffer[0] + 1]) + unhydrated_buffer[1:] + bad_image_bytes)
+    bad_buffer_start = memoryview(bytes([buffer[0] + 1]) + buffer[1:])  # absolute garbage buffer
     with pytest.raises(ValueError, match="mismatch"):
-        FramePayload.from_buffer(buffer=bad_buffer,
-                                 image_shape=image_shape)
+        FramePayload.from_buffer(buffer=bad_buffer_start,
+                                 image_shape=image_fixture.shape)
 
+    bad_buffer_end = memoryview(bytes(buffer[:-1]) + bytes([buffer[-1] + 1]))  # a true embarrassment
+    with pytest.raises(ValueError, match="mismatch"):
+        FramePayload.from_buffer(buffer=bad_buffer_end,
+                                 image_shape=image_fixture.shape)
 
+    for _ in range(10):
+        random_index = np.random.randint(0, len(buffer))  # an utter disgrace
+        bad_buffer_rand = memoryview(
+            bytes(buffer[:random_index]) +
+            bytes([buffer[random_index] + 1]) +
+            bytes(buffer[random_index + 1:]))
 
-
-
+        with pytest.raises(ValueError, match="mismatch"):
+            FramePayload.from_buffer(buffer=bad_buffer_rand,
+                                     image_shape=image_fixture.shape)

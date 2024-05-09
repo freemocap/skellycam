@@ -29,7 +29,7 @@ def shared_memory_demo():
 
     test_image = np.random.randint(0, 255, size=camera_config.image_shape, dtype=np.uint8)
     test_image_kb = test_image.nbytes / 1024
-    test_frame = FramePayload.create_dummy()
+    test_frame = FramePayload.create_hydrated_dummy()
     for _ in range(4):
         for camera_id in camera_ids:
             print(f"Camera{camera_id} - Test image shape: {test_image.shape}")
