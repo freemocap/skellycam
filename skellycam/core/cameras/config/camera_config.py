@@ -1,11 +1,11 @@
-from typing import Tuple
+from typing import Tuple, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, field_validator
 
+from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.detection.image_rotation_types import RotationTypes
-from skellycam.core import BYTES_PER_PIXEL
 
 
 class CameraConfig(BaseModel):
@@ -51,6 +51,12 @@ class CameraConfig(BaseModel):
         description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object",
     )
 
+    @field_validator('camera_id', mode="before")
+    @classmethod
+    def convert_camera_id(cls, v):
+        return CameraId(v)
+
+
     @property
     def orientation(self) -> str:
         return self.resolution.orientation
@@ -61,11 +67,11 @@ class CameraConfig(BaseModel):
 
     @property
     def image_shape(self) -> Tuple[int, int, int]:
-        return self.resolution.height, self.resolution.width, self.color_channels
+        return self.resolution.width, self.resolution.height, self.color_channels
 
     @property
-    def image_size_kb(self) -> int:
-        return (self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_PIXEL) / 1024
+    def image_size_bytes(self) -> int:
+        return self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_PIXEL
 
     def __eq__(self, other):
         return self.dict() == other.dict()
@@ -78,9 +84,9 @@ class CameraConfig(BaseModel):
         out_str += f"\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
         out_str += f"\torientation: {self.orientation}\n"
         out_str += f"\timage_shape: {self.image_shape}\n"
-        out_str += f"\timage_size: {self.image_size_kb:.3f}KB"
+        out_str += f"\timage_size: {self.image_size_bytes / 1024:.3f}KB"
         return out_str
 
 
 if __name__ == "__main__":
-    print(CameraConfig())
+    print(CameraConfig(camera_id=0))

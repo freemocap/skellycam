@@ -10,20 +10,6 @@ from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 
-@pytest.fixture
-def camera_configs_fixture() -> CameraConfigs:
-    configs = CameraConfigs()
-    return configs
-
-
-@pytest.fixture
-def lock_fixture() -> Lock:
-    return Lock()
-
-
-@pytest.fixture
-def frame_payload_fixture() -> FramePayload:
-    return FramePayload.create_hydrated_dummy(make_image=False)
 
 
 @pytest.fixture
