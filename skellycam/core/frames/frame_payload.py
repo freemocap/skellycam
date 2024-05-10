@@ -115,10 +115,6 @@ class FramePayload(BaseModel):
         # self.timestamps.pre_pickle = time.perf_counter_ns()
         bytes_payload = pickle.dumps(without_image_data)
         # self.timestamps.post_pickle = time.perf_counter_ns()
-        if not self.dummy:
-            logger.trace(
-                f"Pickled frame payload to {len(bytes_payload)} bytes -"
-                f"(checksum: {self.calculate_pickle_checksum(bytes_payload)})")
         return bytes_payload
 
     @classmethod

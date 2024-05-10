@@ -33,7 +33,7 @@ class FrameWrangler:
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
-        logger.trace(f"Websocket bytes sender function set")
+        logger.trace(f"Set websocket bytes sender function")
 
     def set_camera_configs(self, camera_configs: CameraConfigs, shared_memory_manager: CameraSharedMemoryManager):
         self._shared_memory_manager = shared_memory_manager

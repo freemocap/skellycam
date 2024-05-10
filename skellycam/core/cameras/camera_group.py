@@ -67,6 +67,6 @@ class CameraGroup:
 
     async def close(self):
         logger.debug("Closing camera group")
-        await self._frame_wrangler.close()
-        await self._multi_camera_process.close()
+        await self._frame_wrangler.close() if self._frame_wrangler else None
+        await self._multi_camera_process.close() if self._multi_camera_process else None
         logger.info("Camera group closed.")

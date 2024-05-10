@@ -4,7 +4,7 @@ const detect_route = 'http://localhost:8003/detect';
 const connect_route = 'http://localhost:8003/connect';
 const close_route = 'http://localhost:8003/close';
 const hello_route = 'http://localhost:8003/hello';
-const test_cameras_route = 'http://localhost:8003/conenct/test';
+const test_cameras_route = 'http://localhost:8003/connect/test';
 
 
 // Websocket
@@ -140,6 +140,7 @@ document.getElementById('hello-button').onclick = async function () {
 }
 
 document.getElementById('test-cameras-button').onclick = async function () {
+    addLog(`Sending '/connect/test' GET request`);
     const response = await fetch(test_cameras_route, {
         method: 'GET',
     });
