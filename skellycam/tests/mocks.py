@@ -1,0 +1,2 @@
+class MockCv2VideoCapture:
+    
