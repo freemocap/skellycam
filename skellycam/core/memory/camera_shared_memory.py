@@ -105,7 +105,7 @@ class CameraSharedMemory(BaseModel):
 
     @property
     def payload_size(self) -> int:
-        return self.unhydrated_payload_size + self.image_size
+        return self.image_size + self.unhydrated_payload_size
 
     @property
     def offsets(self) -> List[int]:
@@ -139,10 +139,15 @@ class CameraSharedMemory(BaseModel):
                                 payload_model: BaseModel = FramePayload) -> Tuple[int, int, int]:
         image_resolution = camera_config.resolution
         color_channels = camera_config.color_channels
+        if color_channels == 3:
+            image_size = (image_resolution.height, image_resolution.width, color_channels)
+        elif color_channels == 1:
+            image_size = (image_resolution.height, image_resolution.width)
         dummy_image = np.random.randint(0,
                                         255,
-                                        size=(image_resolution.height, image_resolution.width, color_channels),
+                                        size=image_size,
                                         dtype=np.uint8)
+
         dummy_frame = payload_model.create_hydrated_dummy(dummy_image)
         image_size_number_of_bytes = np.prod(dummy_image.shape) * BYTES_PER_PIXEL
         unhydrated_payload_number_of_bytes = len(dummy_frame.to_unhydrated_bytes())

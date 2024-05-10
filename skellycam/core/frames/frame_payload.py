@@ -28,8 +28,9 @@ class FramePayload(BaseModel):
     image_checksum: Optional[int] = Field(default=None,
                                           description="The sum of the pixel values of the image, to verify integrity")
     image_shape: Optional[tuple] = Field(default=None,
-                                         description="The shape of the image as a tuple of `(height, width, channels)`")
-
+                                         description="The shape of the image as a tuple of `(height, width)`")
+    color_channels: Optional[int] = Field(default=None,
+                                          description="Number of color channels, 3 for RGB, 1 for monochrome")
     timestamp_ns: Optional[int] = Field(default=None,
                                         description="The time the frame was read from the camera in nanoseconds")
     previous_frame_timestamp_ns: int = Field(default_factory=lambda: time.perf_counter_ns(),
@@ -45,11 +46,28 @@ class FramePayload(BaseModel):
                      camera_id: CameraId,
                      image_shape: Tuple[int, ...],
                      frame_number: int) -> 'FramePayload':
+        image_shape, color_channels = cls._get_color_channels(image_shape)
+
         return cls(
             camera_id=camera_id,
             image_shape=image_shape,
             frame_number=frame_number,
+            color_channels=color_channels
         )
+
+    @classmethod
+    def _get_color_channels(cls,
+                            image_shape:Tuple[int,...]) -> Tuple[Tuple[int,...], int]:
+        if len(image_shape) == 2:
+            color_channels = 1
+        elif image_shape[-1] == 1:
+            color_channels = 1
+            del image_shape[-1]
+        elif len(image_shape) == 3:
+            color_channels = image_shape[-1]
+        else:
+            raise ValueError(f"Image is the wrong shape - {image_shape}")
+        return image_shape, color_channels
 
     @classmethod
     def create_hydrated_dummy(cls,
@@ -68,10 +86,11 @@ class FramePayload(BaseModel):
                                 camera_id: CameraId,
                                 image: np.ndarray,
                                 ) -> 'FramePayload':
+        image_shape, color_channels = cls._get_color_channels(image_shape=image.shape)
         instance = cls.create_empty(camera_id=camera_id,
-                                    image_shape=image.shape,
+                                    image_shape=image_shape,
                                     frame_number=0)
-        instance.image_shape = image.shape
+
         instance.image_checksum = cls.calculate_image_checksum(image)
         instance.previous_frame_timestamp_ns = time.perf_counter_ns()
         instance.timestamp_ns = time.perf_counter_ns()
@@ -145,10 +164,6 @@ class FramePayload(BaseModel):
         return self.image_shape[1]
 
     @property
-    def color_channels(self) -> int:
-        return self.image_shape[2]
-
-    @property
     def resolution(self) -> tuple:
         return self.width, self.height
 
@@ -181,7 +196,7 @@ class FramePayload(BaseModel):
 
     def __str__(self):
         print_str = (f"Camera{self.camera_id}:"
-                     f"\n\tFrame#{self.frame_number} - [height: {self.height}, width: {self.width}, color channels: {self.image_shape[2]}]"
+                     f"\n\tFrame#{self.frame_number} - [height: {self.height}, width: {self.width}, color channels: {self.color_channels}]"
                      f"\n\tPayload Size: {self.payload_size_in_kilobytes:.3f} KB (Hydrated: {self.image_data is not None}),"
                      f"\n\tSince Previous: {self.time_since_last_frame_ns / 1e6:.3f}ms")
         return print_str
