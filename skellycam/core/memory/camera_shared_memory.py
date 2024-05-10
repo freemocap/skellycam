@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 import time
 from multiprocessing import shared_memory
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 from pydantic import BaseModel, SkipValidation, Field
@@ -16,7 +16,6 @@ from skellycam.core.frames.frame_payload import FramePayload
 logger = logging.getLogger(__name__)
 
 
-
 class BufferFlagIndicies(enum.Enum):
     CAPTURE_STARTED: int = -1  # buffer index flipped from 0 to 255 on first write
     LAST_WRITTEN: int = -2  # index of the last written frame
@@ -26,7 +25,7 @@ class BufferFlagIndicies(enum.Enum):
 class CameraSharedMemory(BaseModel):
     camera_config: CameraConfig
     buffer_size: int
-    image_shape: Tuple[int, int, int]
+    image_shape: Union[Tuple[int, int, int], Tuple[int, int]]
     bytes_per_pixel: int = BYTES_PER_PIXEL
     unhydrated_payload_size: int
     next_index: int = -1
@@ -61,7 +60,7 @@ class CameraSharedMemory(BaseModel):
     def new_frame_available(self) -> bool:
         if not self.capture_started:
             return False
-        return self.last_frame_written_index+1 != self.read_next
+        return self.last_frame_written_index + 1 != self.read_next
 
     @property
     def capture_started(self) -> bool:
@@ -84,7 +83,7 @@ class CameraSharedMemory(BaseModel):
         with self.lock:
             if not 0 <= value < 256:
                 raise ValueError(f"Index {value} out of range for {self.camera_id}")
-            self.shm.buf[self.buffer_size +self.buffer_flag_indicies.LAST_WRITTEN.value] = value
+            self.shm.buf[self.buffer_size + self.buffer_flag_indicies.LAST_WRITTEN.value] = value
 
     @property
     def read_next(self) -> int:

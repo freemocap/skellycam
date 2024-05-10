@@ -66,8 +66,11 @@ class CameraConfig(BaseModel):
         return self.resolution.aspect_ratio
 
     @property
-    def image_shape(self) -> Tuple[int, int, int]:
-        return self.resolution.width, self.resolution.height, self.color_channels
+    def image_shape(self) -> Tuple[int, ...]:
+        if self.color_channels == 1:
+            return self.resolution.width, self.resolution.height
+        else:
+            return self.resolution.width, self.resolution.height, self.color_channels
 
     @property
     def image_size_bytes(self) -> int:

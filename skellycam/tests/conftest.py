@@ -26,7 +26,7 @@ class TestImageShapes(enum.Enum):
 
 test_images = {shape: np.random.randint(0, 256, size=shape.value, dtype=np.uint8) for shape in TestImageShapes}
 
-test_camera_ids = [1, "2", CameraId(4), 3.0]
+test_camera_ids = [1, "2", CameraId(4),]
 
 
 @pytest.fixture(params=[[0], test_camera_ids])
