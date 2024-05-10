@@ -63,8 +63,19 @@ def test_frame_payload_create_unhydrated_dummy(image_fixture: np.ndarray):
     assert frame == re_frame
 
 
-def test_frame_payload_to_and_from_buffer(frame_fixture):
+def test_frame_from_previous(frame_fixture):
+    # Act
+    frame = FramePayload.from_previous(previous=frame_fixture)
 
+    # Assert
+    assert frame.camera_id == frame_fixture.camera_id
+    assert frame.image_shape == frame_fixture.image_shape
+    assert frame.frame_number == frame_fixture.frame_number + 1
+    assert frame.color_channels == frame_fixture.color_channels
+    assert frame.hydrated == False
+
+
+def test_frame_payload_to_and_from_buffer(frame_fixture):
     # separate image from rest of frame payload, because that's how we put it into shm
     frame_wo_image = FramePayload(**frame_fixture.dict(exclude={"image_data"}))
     assert not frame_wo_image.hydrated

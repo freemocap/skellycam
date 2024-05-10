@@ -42,6 +42,12 @@ class FramePayload(BaseModel):
     #     description="Record `time.perf_counter_ns()` at various points in the frame lifecycle")
 
     @classmethod
+    def from_previous(cls, previous: 'FramePayload') -> 'FramePayload':
+        return cls.create_empty(camera_id=previous.camera_id,
+                                image_shape=previous.image_shape,
+                                frame_number=previous.frame_number + 1)
+
+    @classmethod
     def create_empty(cls,
                      camera_id: CameraId,
                      image_shape: Tuple[int, ...],

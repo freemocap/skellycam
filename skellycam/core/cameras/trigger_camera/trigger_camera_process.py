@@ -83,11 +83,13 @@ def run_trigger_listening_loop(config: CameraConfig,
                                retrieve_frame_trigger: multiprocessing.Event,
                                exit_event: multiprocessing.Event):
     await_initial_trigger(config, initial_trigger=initial_trigger)
-    frame = FramePayload.create_empty(camera_id=config.camera_id, frame_number=0)
+    frame = FramePayload.create_empty(camera_id=config.camera_id,
+                                      image_shape=config.image_shape,
+                                      frame_number=0)
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
     while not exit_event.is_set():
         time.sleep(0.001)
-        logger.loop (f"Camera {config.camera_id} ready to get next frame")
+        logger.loop(f"Camera {config.camera_id} ready to get next frame")
         frame = get_frame(camera_id=config.camera_id,
                           cv2_video_capture=cv2_video_capture,
                           camera_shared_memory=camera_shared_memory,
@@ -152,9 +154,9 @@ def get_frame(camera_id: CameraId,
 
     while not retrieve_frame_trigger.is_set():
         if next_frame is None:
-            next_frame = FramePayload.create_empty(camera_id=camera_id,
-                                                   frame_number=frame.frame_number + 1)  # create next frame in presumed downtime
+            next_frame = FramePayload.from_previous(frame)  # create next frame in presumed downtime
         time.sleep(0.0001)  # gotta go fast
+
     logger.loop(f"Camera {camera_id} received `retrieve` trigger - calling `cv2.VideoCapture.retrieve()`")
 
     # frame.timestamps.pre_retrieve_timestamp = time.perf_counter_ns()
