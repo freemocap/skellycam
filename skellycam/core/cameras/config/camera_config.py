@@ -26,6 +26,7 @@ class CameraConfig(BaseModel):
     color_channels: int = Field(
         default=3,
         description="The number of color channels in the image (3 for RGB, 1 for monochrome)", )
+
     exposure: int = Field(
         default=-7,
         description="The exposure of the camera using the opencv convention - "

@@ -11,6 +11,7 @@ from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
 
+
 def run_trigger_listening_loop(config: CameraConfig,
                                cv2_video_capture: cv2.VideoCapture,
                                camera_shared_memory: CameraSharedMemory,

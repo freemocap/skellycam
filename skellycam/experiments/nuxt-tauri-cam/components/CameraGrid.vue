@@ -1,9 +1,9 @@
 <template>
   <div class="webcam-grid">
     <SingleCameraView
-      v-for="camera in cameras"
-      :key="camera.deviceId"
-      :camera="camera"
+        v-for="camera in cameras"
+        :key="camera.deviceId"
+        :camera="camera"
     />
   </div>
 </template>
@@ -20,8 +20,8 @@ const getCameras = async () => {
     console.log("All available devices", devices);
 
     const videoDevices = devices
-      .filter((device) => device.kind === "videoinput")
-      .filter((device) => !device.label.toLowerCase().includes("virtual"));
+        .filter((device) => device.kind === "videoinput")
+        .filter((device) => !device.label.toLowerCase().includes("virtual"));
 
     console.log("Filtered video devices", videoDevices);
 

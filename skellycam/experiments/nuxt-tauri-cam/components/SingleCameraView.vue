@@ -17,7 +17,7 @@ const startWebcam = async () => {
   try {
     const constraints = {
       video: {
-        deviceId: props.camera ? { exact: props.camera.deviceId } : undefined,
+        deviceId: props.camera ? {exact: props.camera.deviceId} : undefined,
       },
     };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -30,13 +30,13 @@ const startWebcam = async () => {
 };
 
 watch(
-  () => props.camera,
-  (newVal, oldVal) => {
-    if (newVal !== oldVal) {
-      startWebcam();
-    }
-  },
-  { immediate: true }
+    () => props.camera,
+    (newVal, oldVal) => {
+      if (newVal !== oldVal) {
+        startWebcam();
+      }
+    },
+    {immediate: true}
 );
 
 onMounted(() => {

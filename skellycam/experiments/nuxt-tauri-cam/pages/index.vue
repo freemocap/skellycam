@@ -1,5 +1,5 @@
 <template>
   <div>
-    <CameraGrid />
+    <CameraGrid/>
   </div>
 </template>

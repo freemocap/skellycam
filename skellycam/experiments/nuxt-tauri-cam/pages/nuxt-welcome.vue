@@ -1,9 +1,9 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 const route = useRoute()
 </script>
 
 <template>
   <div>
-    <NuxtWelcome />
+    <NuxtWelcome/>
   </div>
 </template>
