@@ -1,6 +1,6 @@
 import enum
 import time
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import pytest
@@ -8,11 +8,10 @@ import pytest
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_payload import FramePayload
 
 
-class TestImageShapes(enum.Enum):
+class TestFullSizeImageShapes(enum.Enum):
     RGB_LANDSCAPE = (480, 640, 3)
     RGB_PORTRAIT = (640, 480, 3)
     SQUARE_RGB = (640, 640, 3)
@@ -25,14 +24,26 @@ class TestImageShapes(enum.Enum):
     # SQUARE_MONO = (640, 640)
 
 
+class TestImageShapes(enum.Enum):
+    LANDSCAPE = (48, 64, 3)
+    PORTRAIT = (64, 48, 3)
+    SQUARE = (64, 64, 3)
+
+
 test_images = {shape: np.random.randint(0, 256, size=shape.value, dtype=np.uint8) for shape in TestImageShapes}
 
-test_camera_ids = [1, "2", CameraId(4),]
+test_camera_ids = [1, "2", CameraId(4), ]
 
 
 @pytest.fixture(params=[[0], test_camera_ids])
 def camera_ids_fixture(request) -> List[CameraId]:
     return [CameraId(cam_id) for cam_id in request.param]
+
+
+
+@pytest.fixture(params=TestFullSizeImageShapes)
+def full_size_image_fixture(request) -> np.ndarray:
+    return test_images[request.param]
 
 
 @pytest.fixture(params=TestImageShapes)
@@ -49,3 +60,21 @@ def camera_configs_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfigs:
 
     return configs
 
+
+@pytest.fixture
+def frame_fixture(image_fixture: np.ndarray):
+    # Arrange
+    frame = FramePayload.create_empty(camera_id=CameraId(0),
+                                      image_shape=image_fixture.shape,
+                                      frame_number=0)
+    frame.image = image_fixture
+    frame.previous_frame_timestamp_ns = time.perf_counter_ns()
+    frame.timestamp_ns = time.perf_counter_ns()
+    frame.success = True
+    # Assert
+    for key, value in frame.dict().items():
+        assert value is not None, f"Key {key} is None"
+    assert frame.hydrated
+    assert frame.image_shape == image_fixture.shape
+    assert np.sum(frame.image - image_fixture) == 0
+    return frame

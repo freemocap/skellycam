@@ -1,3 +1,5 @@
+import numpy as np
+
 from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.timestamps.timestamp_logger import CameraTimestampLogger
@@ -18,14 +20,16 @@ def test_camera_timestamp_logger_initialization():
     assert timestamp_logger._save_directory == test_directory
 
 
-def test_logging_timestamps():
+def test_logging_timestamps(image_fixture: np.ndarray):
     # Arrange
     test_directory = "test_directory"
     test_camera_id = CameraId(1)
     timestamp_logger = CameraTimestampLogger(
         main_timestamps_directory=test_directory, camera_id=test_camera_id
     )
-    test_frame_payload = dummy_payload = FramePayload.create_hydrated_dummy()
+    test_frame_payload = FramePayload.create_hydrated_dummy(
+        image=image_fixture
+    )
 
     timestamp_logger.set_time_mapping(perf_counter_to_unix_mapping=(0, 0))
 

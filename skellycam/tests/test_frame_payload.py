@@ -6,7 +6,7 @@ from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
 
 
-def test_create_frame(image_fixture: np.ndarray) -> FramePayload:
+def test_create_frame(image_fixture: np.ndarray):
     # Arrange
     frame = FramePayload.create_empty(camera_id=CameraId(0),
                                       image_shape=image_fixture.shape,
@@ -15,25 +15,65 @@ def test_create_frame(image_fixture: np.ndarray) -> FramePayload:
     frame.previous_frame_timestamp_ns = time.perf_counter_ns()
     frame.timestamp_ns = time.perf_counter_ns()
     frame.success = True
+    assert frame.hydrated == True
+
+
+def test_frame_payload_create_empty(image_fixture: np.ndarray):
+    # Arrange
+    frame = FramePayload.create_empty(camera_id=CameraId(0),
+                                      image_shape=image_fixture.shape,
+                                      frame_number=0)
 
     # Assert
-    for key, value in frame.dict().items():
-        assert value is not None, f"Key {key} is None"
-    assert frame.hydrated
+    assert frame.camera_id == CameraId(0)
     assert frame.image_shape == image_fixture.shape
-    assert np.sum(frame.image - image_fixture) == 0
-    return frame
+    assert frame.frame_number == 0
+    assert frame.color_channels == 3
+    assert frame.hydrated == False
 
 
-def test_frame_payload_to_and_from_buffer(image_fixture: np.ndarray):
+def test_frame_payload_create_hydrated_dummy(image_fixture: np.ndarray):
     # Arrange
-    frame = test_create_frame(image_fixture)
-    buffer = frame.to_buffer(image=image_fixture)
+    frame = FramePayload.create_hydrated_dummy(image=image_fixture)
+
+    # Assert
+    assert frame.camera_id == CameraId(0)
+    assert frame.image_shape == image_fixture.shape
+    assert frame.frame_number == 0
+    assert frame.color_channels == 3
+    assert frame.hydrated == True
+
+
+def test_frame_payload_create_unhydrated_dummy(image_fixture: np.ndarray):
+    # Arrange
+    frame = FramePayload.create_unhydrated_dummy(camera_id=CameraId(0),
+                                                 image=image_fixture)
+
+    # Assert
+    assert frame.camera_id == CameraId(0)
+    assert frame.image_shape == image_fixture.shape
+    assert frame.frame_number == 0
+    assert frame.color_channels == 3
+    assert frame.hydrated == False
+
+    frame_buffer = frame.to_buffer(image=image_fixture)
+    re_frame = frame.from_buffer(buffer=frame_buffer,
+                                 image_shape=image_fixture.shape)
+
+    assert frame == re_frame
+
+
+def test_frame_payload_to_and_from_buffer(frame_fixture):
+
+    # separate image from rest of frame payload, because that's how we put it into shm
+    frame_wo_image = FramePayload(**frame_fixture.dict(exclude={"image_data"}))
+    assert not frame_wo_image.hydrated
+    buffer = frame_wo_image.to_buffer(image=frame_fixture.image)
 
     # Act
     recreated_frame = FramePayload.from_buffer(buffer=buffer,
-                                               image_shape=image_fixture.shape)
+                                               image_shape=frame_fixture.image.shape)
 
     # Assert
-    assert recreated_frame.hydrated
-    assert np.sum(frame.image - image_fixture) == 0
+    assert recreated_frame == frame_fixture
+    assert np.sum(recreated_frame.image - frame_fixture.image) == 0

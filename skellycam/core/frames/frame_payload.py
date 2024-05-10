@@ -97,6 +97,8 @@ class FramePayload(BaseModel):
         return instance
 
     def to_buffer(self, image: np.ndarray) -> memoryview:
+        if self.hydrated:
+            raise ValueError("This method takes in the image separately here so we can avoid an unnecessary `copy` operation")
         image_bytes = image.tobytes()
         bytes_payload = self.to_unhydrated_bytes()
         # bufffer should be [`image_bytes` + `unhydrated_bytes`]
@@ -193,6 +195,9 @@ class FramePayload(BaseModel):
     @staticmethod
     def calculate_pickle_checksum(pickle_bytes: bytes) -> int:
         return np.sum(np.frombuffer(pickle_bytes, dtype=np.uint8))
+
+    def __eq__(self, other: 'FramePayload') -> bool:
+        return self.dict() == other.dict()
 
     def __str__(self):
         print_str = (f"Camera{self.camera_id}:"
