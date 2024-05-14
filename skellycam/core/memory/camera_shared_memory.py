@@ -108,11 +108,10 @@ class CameraSharedMemory(BaseModel):
     def payload_size(self) -> int:
         return self.image_size + self.unhydrated_payload_size
 
-
-
     @property
     def offsets(self) -> List[int]:
-        return list(np.arange(0, self.buffer_size, self.payload_size))
+        offsets_w_extra = list(np.arange(0, self.buffer_size, self.payload_size))
+        return offsets_w_extra[:-1]  # remove the last one, which may not be big enough for a full payload
 
     @property
     def camera_id(self):
@@ -136,7 +135,6 @@ class CameraSharedMemory(BaseModel):
                 f"CREATING shared memory buffer for Camera {camera_id} - "
                 f"(Name: {shm.name}, Size: {buffer_size:,d} bytes)")
             return shm
-
 
     @staticmethod
     def _calculate_buffer_sizes(camera_config: CameraConfig,
@@ -162,7 +160,8 @@ class CameraSharedMemory(BaseModel):
         # buffer size is 256 times the payload size so we can index with a uint8
         total_buffer_size = total_payload_size * (2 ** 8)
 
-        total_buffer_size += len(BufferFlagIndicies)  # add an additional slots to store: last-written and read-next indices
+        total_buffer_size += len(
+            BufferFlagIndicies)  # add an additional slots to store: last-written and read-next indices
 
         logger.debug(f"Calculated buffer size(s) for Camera {camera_config.camera_id} - \n"
                      f"\t\tImage Size[i]: {image_size_number_of_bytes:,d} bytes\n"
