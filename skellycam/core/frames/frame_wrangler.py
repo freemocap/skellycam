@@ -23,19 +23,23 @@ class FrameWrangler:
         self._listener_task: Optional[asyncio.Task] = None
         self._should_continue_listening = True
 
+    @property
+    def multi_frames_received(self):
+        if not self._multi_frame_payload:
+            return 0
+        return self._multi_frame_payload.multi_frame_number + 1
+
     def _setup_recorder(self):
         self._is_recording = False
         # self._video_recorder_manager = VideoRecorderProcessManager()
 
-    def set_shared_memory_manager(self, shared_memory_manager: CameraSharedMemoryManager):
-        self._shared_memory_manager = shared_memory_manager
-        # self._video_recorder_manager.set_shared_memory_manager(shared_memory_manager)
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
         logger.trace(f"Set websocket bytes sender function")
 
-    def set_camera_configs(self, camera_configs: CameraConfigs, shared_memory_manager: CameraSharedMemoryManager):
+    def set_camera_configs(self, camera_configs: CameraConfigs,
+                           shared_memory_manager: CameraSharedMemoryManager):
         self._shared_memory_manager = shared_memory_manager
         self._camera_configs = camera_configs
         self._multi_frame_payload = MultiFramePayload.create(
