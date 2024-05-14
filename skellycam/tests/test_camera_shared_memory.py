@@ -14,7 +14,6 @@ def test_camera_memories(image_fixture, camera_configs_fixture):
         config.color_channels = image_fixture.shape[2] if len(image_fixture.shape) == 3 else 1
         assert config.image_shape == image_fixture.shape
 
-    # Assert
     lock = multiprocessing.Lock()
     manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
     assert manager

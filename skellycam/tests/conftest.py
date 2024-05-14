@@ -1,6 +1,7 @@
 import enum
+import multiprocessing
 import time
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import pytest
@@ -9,6 +10,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 
 class TestFullSizeImageShapes(enum.Enum):
@@ -38,7 +40,6 @@ test_camera_ids = [1, "2", CameraId(4), ]
 @pytest.fixture(params=[[0], test_camera_ids])
 def camera_ids_fixture(request) -> List[CameraId]:
     return [CameraId(cam_id) for cam_id in request.param]
-
 
 
 @pytest.fixture(params=TestFullSizeImageShapes)
@@ -78,3 +79,17 @@ def frame_fixture(image_fixture: np.ndarray):
     assert frame.image_shape == image_fixture.shape
     assert np.sum(frame.image - image_fixture) == 0
     return frame
+
+
+@pytest.fixture
+def shared_memory_fixture(camera_configs_fixture: CameraConfigs,
+                          ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
+
+    lock = multiprocessing.Lock()
+    manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
+    assert manager
+    recreated_manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture,
+                                                  lock=lock,
+                                                  existing_shared_memory_names=manager.shared_memory_names
+                                                  )
+    return manager, recreated_manager
