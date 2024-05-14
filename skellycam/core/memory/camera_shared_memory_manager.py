@@ -32,6 +32,10 @@ class CameraSharedMemoryManager:
                                   for camera_id, config in self._camera_configs.items()}
 
     @property
+    def camera_configs(self) -> CameraConfigs:
+        return self._camera_configs
+
+    @property
     def shared_memory_names(self) -> Dict[CameraId, str]:
         return {camera_id: camera_shared_memory.shared_memory_name for camera_id, camera_shared_memory in
                 self._buffer_by_camera.items()}

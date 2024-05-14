@@ -63,7 +63,7 @@ def camera_configs_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfigs:
 
 
 @pytest.fixture
-def frame_fixture(image_fixture: np.ndarray):
+def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
     # Arrange
     frame = FramePayload.create_empty(camera_id=CameraId(0),
                                       image_shape=image_fixture.shape,

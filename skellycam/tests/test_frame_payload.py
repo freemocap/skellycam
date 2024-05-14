@@ -63,28 +63,28 @@ def test_frame_payload_create_unhydrated_dummy(image_fixture: np.ndarray):
     assert frame == re_frame
 
 
-def test_frame_from_previous(frame_fixture):
+def test_frame_from_previous(frame_payload_fixture):
     # Act
-    frame = FramePayload.from_previous(previous=frame_fixture)
+    frame = FramePayload.from_previous(previous=frame_payload_fixture)
 
     # Assert
-    assert frame.camera_id == frame_fixture.camera_id
-    assert frame.image_shape == frame_fixture.image_shape
-    assert frame.frame_number == frame_fixture.frame_number + 1
-    assert frame.color_channels == frame_fixture.color_channels
+    assert frame.camera_id == frame_payload_fixture.camera_id
+    assert frame.image_shape == frame_payload_fixture.image_shape
+    assert frame.frame_number == frame_payload_fixture.frame_number + 1
+    assert frame.color_channels == frame_payload_fixture.color_channels
     assert frame.hydrated == False
 
 
-def test_frame_payload_to_and_from_buffer(frame_fixture):
+def test_frame_payload_to_and_from_buffer(frame_payload_fixture):
     # separate image from rest of frame payload, because that's how we put it into shm
-    frame_wo_image = FramePayload(**frame_fixture.dict(exclude={"image_data"}))
+    frame_wo_image = FramePayload(**frame_payload_fixture.dict(exclude={"image_data"}))
     assert not frame_wo_image.hydrated
-    buffer = frame_wo_image.to_buffer(image=frame_fixture.image)
+    buffer = frame_wo_image.to_buffer(image=frame_payload_fixture.image)
 
     # Act
     recreated_frame = FramePayload.from_buffer(buffer=buffer,
-                                               image_shape=frame_fixture.image.shape)
+                                               image_shape=frame_payload_fixture.image.shape)
 
     # Assert
-    assert recreated_frame == frame_fixture
-    assert np.sum(recreated_frame.image - frame_fixture.image) == 0
+    assert recreated_frame == frame_payload_fixture
+    assert np.sum(recreated_frame.image - frame_payload_fixture.image) == 0

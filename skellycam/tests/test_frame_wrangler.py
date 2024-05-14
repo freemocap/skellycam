@@ -11,7 +11,7 @@ from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemor
 async def test_frame_wrangler(shared_memory_fixture: Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager],
                         camera_configs_fixture:CameraConfigs,):
     og_shm_manager = shared_memory_fixture[0]
-    recreated_shm_manager = shared_memory_fixture[1]
+    child_shm_manager = shared_memory_fixture[1]
 
     frame_wrangler = FrameWrangler()
 
