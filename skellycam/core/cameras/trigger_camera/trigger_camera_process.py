@@ -1,16 +1,10 @@
 import logging
 import multiprocessing
-import time
 
-import cv2
-
-from skellycam.core import CameraId
 from skellycam.core.cameras.config.apply_config import apply_camera_configuration
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.create_cv2_video_capture import create_cv2_capture
-from skellycam.core.cameras.get_frame import get_frame
 from skellycam.core.cameras.trigger_camera.trigger_listening_loop import run_trigger_listening_loop
-from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)

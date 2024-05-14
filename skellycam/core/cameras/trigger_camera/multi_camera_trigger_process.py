@@ -24,22 +24,6 @@ class MultiCameraTriggerProcess:
         self._lock = lock
         self._exit_event = multiprocessing.Event()
 
-    def _create_process(self):
-        self._process = Process(
-            name="MultiCameraTriggerProcess",
-            target=MultiCameraTriggerProcess._run_process,
-            args=(self._camera_configs,
-                  self._shared_memory_names,
-                  self._lock,
-                  self._exit_event,
-                  self._number_of_frames,
-                  )
-        )
-
-    @property
-    def camera_ids(self) -> [CameraId]:
-        return [CameraId(camera_id) for camera_id in self._camera_configs.keys()]
-
     def start(self, number_of_frames: Optional[int] = None):
         logger.debug("Stating CameraTriggerProcess...")
         self._number_of_frames = number_of_frames
@@ -55,6 +39,22 @@ class MultiCameraTriggerProcess:
         self._exit_event.set()
         self._process.join()
         logger.debug("CameraTriggerProcess closed")
+
+    def _create_process(self):
+        self._process = Process(
+            name="MultiCameraTriggerProcess",
+            target=MultiCameraTriggerProcess._run_process,
+            args=(self._camera_configs,
+                  self._shared_memory_names,
+                  self._lock,
+                  self._exit_event,
+                  self._number_of_frames,
+                  )
+        )
+
+    @property
+    def camera_ids(self) -> [CameraId]:
+        return [CameraId(camera_id) for camera_id in self._camera_configs.keys()]
 
     @staticmethod
     def _run_process(camera_configs: CameraConfigs,

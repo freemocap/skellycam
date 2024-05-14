@@ -29,7 +29,7 @@ def run_trigger_listening_loop(config: CameraConfig,
         time.sleep(0.001)
         logger.loop(f"Camera {config.camera_id} ready to get next frame")
         frame = get_frame(camera_id=config.camera_id,
-                          cv2_video_capture=cv2_video_capture,
+                          cap=cv2_video_capture,
                           camera_shared_memory=camera_shared_memory,
                           frame=frame,
                           grab_frame_trigger=grab_frame_trigger,

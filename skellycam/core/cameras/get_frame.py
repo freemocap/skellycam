@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def get_frame(camera_id: CameraId,
               camera_shared_memory: CameraSharedMemory,
-              cv2_video_capture: cv2.VideoCapture,
+              cap: cv2.VideoCapture,
               frame: FramePayload,
               grab_frame_trigger: multiprocessing.Event,
               frame_grabbed_trigger: multiprocessing.Event,
@@ -41,7 +41,7 @@ def get_frame(camera_id: CameraId,
     # decouple `grab` and `retrieve` for better sync -
     # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
 
-    grab_success = cv2_video_capture.grab()  # grab the frame from the camera, but don't decode it yet
+    grab_success = cap.grab()  # grab the frame from the camera, but don't decode it yet
     # frame.timestamps.post_grab_timestamp = time.perf_counter_ns()
 
     if grab_success:
@@ -59,7 +59,7 @@ def get_frame(camera_id: CameraId,
     logger.loop(f"Camera {camera_id} received `retrieve` trigger - calling `cv2.VideoCapture.retrieve()`")
 
     # frame.timestamps.pre_retrieve_timestamp = time.perf_counter_ns()
-    retrieve_success, image = cv2_video_capture.retrieve()  # decode the frame into an image
+    retrieve_success, image = cap.retrieve()  # decode the frame into an image
     # frame.timestamps.post_retrieve_return = time.perf_counter_ns()
     frame.timestamp_ns = time.perf_counter_ns()
 

@@ -52,6 +52,7 @@ def trigger_camera_factory(config: CameraConfig,
                            camera_ready_event: multiprocessing.Event,
                            exit_event: multiprocessing.Event
                            ) -> TriggerCameraProcess:
+
     return TriggerCameraProcess(config=config,
                                 shared_memory_name=shared_memory_name,
                                 lock=lock,

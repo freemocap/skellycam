@@ -3,7 +3,7 @@ import multiprocessing
 from typing import Coroutine, Callable, Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.cameras.trigger_camera.camera_process_manager import MultiCameraTriggerProcess
+from skellycam.core.cameras.trigger_camera.multi_camera_trigger_process import MultiCameraTriggerProcess
 from skellycam.core.frames.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
