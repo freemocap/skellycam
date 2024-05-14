@@ -43,8 +43,6 @@ class CameraGroup:
         self._shared_memory_manager = CameraSharedMemoryManager(camera_configs=configs,
                                                                 lock=self._lock)
 
-        self._frame_wrangler.set_shared_memory_manager(self._shared_memory_manager)
-
         self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=configs,
                                                                shared_memory_names=self._shared_memory_manager.shared_memory_names,
                                                                lock=self._lock)

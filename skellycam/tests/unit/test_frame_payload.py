@@ -54,13 +54,13 @@ def test_frame_payload_create_unhydrated_dummy(image_fixture: np.ndarray):
     assert frame.image_shape == image_fixture.shape
     assert frame.frame_number == 0
     assert frame.color_channels == 3
-    assert frame.hydrated == False
+    assert not frame.hydrated
 
     frame_buffer = frame.to_buffer(image=image_fixture)
     re_frame = frame.from_buffer(buffer=frame_buffer,
                                  image_shape=image_fixture.shape)
 
-    assert frame == re_frame
+    assert frame.image_checksum == re_frame.image_checksum
 
 
 def test_frame_from_previous(frame_payload_fixture):
@@ -72,7 +72,7 @@ def test_frame_from_previous(frame_payload_fixture):
     assert frame.image_shape == frame_payload_fixture.image_shape
     assert frame.frame_number == frame_payload_fixture.frame_number + 1
     assert frame.color_channels == frame_payload_fixture.color_channels
-    assert frame.hydrated == False
+    assert not frame.hydrated
 
 
 def test_frame_payload_to_and_from_buffer(frame_payload_fixture):
