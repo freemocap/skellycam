@@ -55,4 +55,21 @@ def test_camera_memories(image_fixture, camera_configs_fixture):
         assert not recreated_camera_memory.new_frame_available
         assert not original_camera_memory.new_frame_available
 
+        if np.max(image_fixture.shape) < 1000:
+            # test loop around (on smaller images for speed's sake)
+            for loop in range(256 * 2):
+                unhydrated_frame = FramePayload.create_unhydrated_dummy(camera_id=CameraId(0),
+                                                                        image=image_fixture)
+                original_camera_memory.put_frame(unhydrated_frame, image_fixture)
+                assert original_camera_memory.new_frame_available
+                assert recreated_camera_memory.new_frame_available
+                recreated_frame = recreated_camera_memory.get_next_frame()
+                assert recreated_frame.dict(exclude={"image_data"}) == unhydrated_frame.dict(exclude={"image_data"})
+
+
+
+
+
+
+
 
