@@ -21,4 +21,7 @@ async def test_frame_wrangler(shared_memory_fixture: Tuple[CameraSharedMemoryMan
 
     frame_wrangler.start_frame_listener()
 
+    #TODO - test the actual listener by stuffing some frames into the shared memory and checking that they are read out correctly
+
+
     await frame_wrangler.close()
