@@ -254,3 +254,8 @@ class CameraSharedMemory(BaseModel):
                         f"Overwriting unread frame for {self.camera_id}! "
                         f"The shared memory `writer` is lapping the `reader` -  "
                         f"use fewer cameras or decrease the resolution!")
+
+    def close(self):
+        self.shm.close()
+        self.shm.unlink()
+        logger.debug(f"Closed and unlinked shared memory for Camera {self.camera_id}")

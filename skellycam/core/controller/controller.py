@@ -17,7 +17,6 @@ class Controller:
                  ) -> None:
         super().__init__()
         self._camera_configs: Optional[CameraConfigs] = None
-        self._available_devices: Optional[AvailableDevices] = None
         self._camera_group = CameraGroup()
 
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
@@ -25,17 +24,17 @@ class Controller:
 
     async def detect(self) -> AvailableDevices:
         logger.info(f"Detecting cameras...")
-        self._available_devices = await detect_available_devices()
+        available_devices = await detect_available_devices()
         self._camera_configs = CameraConfigs()
 
-        if len(self._available_devices) == 0:
+        if len(available_devices) == 0:
             logger.warning(f"No cameras detected!")
-            return self._available_devices
+            return available_devices
 
-        for camera_id in self._available_devices.keys():
+        for camera_id in available_devices.keys():
             self._camera_configs[CameraId(camera_id)] = CameraConfig(camera_id=CameraId(camera_id))
         self._camera_group.set_camera_configs(self._camera_configs)
-        return self._available_devices
+        return available_devices
 
 
     async def connect(self,
@@ -64,7 +63,7 @@ class Controller:
 
     async def _start_camera_group(self, number_of_frames: Optional[int] = None):
         logger.debug(f"Starting camera group with cameras: {self._camera_group.camera_ids}")
-        if len(self._available_devices) == 0:
+        if self._camera_configs is None or len(self._camera_configs) == 0:
             raise ValueError("No cameras available to start camera group!")
         await self._camera_group.start_cameras(number_of_frames=number_of_frames)
 

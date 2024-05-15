@@ -9,6 +9,8 @@ import pytest
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.controller.controller import Controller
+from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
@@ -84,7 +86,6 @@ def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
 @pytest.fixture
 def shared_memory_fixture(camera_configs_fixture: CameraConfigs,
                           ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
-
     lock = multiprocessing.Lock()
     manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
     assert manager
@@ -93,3 +94,8 @@ def shared_memory_fixture(camera_configs_fixture: CameraConfigs,
                                                   existing_shared_memory_names=manager.shared_memory_names
                                                   )
     return manager, recreated_manager
+
+
+@pytest.fixture
+def controller_fixture() -> Controller:
+    return get_or_create_controller()
