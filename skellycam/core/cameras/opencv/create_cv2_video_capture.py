@@ -1,7 +1,7 @@
 import cv2
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.config.determine_backend import determine_backend
+from skellycam.core.cameras.opencv.determine_backend import determine_backend
 
 
 class FailedToReadFrameFromCameraException(Exception):
