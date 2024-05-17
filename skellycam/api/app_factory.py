@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.routing import APIWebSocketRoute, APIRoute
 
 import skellycam
-from skellycam.api.endpoints import enabled_routers
+from skellycam.api.routes.http import enabled_routers
 from skellycam.api.middleware.cors import cors
 
 logger = logging.getLogger(__name__)
