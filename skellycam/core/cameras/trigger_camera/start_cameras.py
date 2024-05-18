@@ -1,11 +1,11 @@
 import logging
 import multiprocessing
-import time
 from typing import Dict
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
 from skellycam.core.cameras.trigger_camera.trigger_camera_process import TriggerCameraProcess
 
@@ -38,24 +38,12 @@ def start_cameras(camera_configs: CameraConfigs,
 def trigger_camera_factory(config: CameraConfig,
                            shared_memory_name: str,
                            lock: multiprocessing.Lock,
-                           initial_trigger: multiprocessing.Event,
-                           grab_frame_trigger: multiprocessing.Event,
-                           frame_grabbed_trigger: multiprocessing.Event,
-                           retrieve_frame_trigger: multiprocessing.Event,
-                           camera_ready_event: multiprocessing.Event,
+                           camera_triggers: SingleCameraTriggers,
                            exit_event: multiprocessing.Event
                            ) -> TriggerCameraProcess:
-
     return TriggerCameraProcess(config=config,
                                 shared_memory_name=shared_memory_name,
                                 lock=lock,
-                                initial_trigger=initial_trigger,
-                                grab_frame_trigger=grab_frame_trigger,
-                                frame_grabbed_trigger=frame_grabbed_trigger,
-                                retrieve_frame_trigger=retrieve_frame_trigger,
-                                camera_ready_event=camera_ready_event,
+                                triggers=camera_triggers,
                                 exit_event=exit_event
                                 )
-
-
-

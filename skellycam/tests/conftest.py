@@ -9,6 +9,7 @@ import pytest
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.controller.controller import Controller
 from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.frames.frame_payload import FramePayload
@@ -62,6 +63,15 @@ def camera_configs_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfigs:
             configs[camera_id] = CameraConfig(camera_id=camera_id)
 
     return configs
+
+
+@pytest.fixture
+def camera_config_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfig:
+    return CameraConfig(camera_id=camera_ids_fixture[0])
+
+@pytest.fixture
+def single_camera_triggers_fixture(camera_config_fixture):
+    return SingleCameraTriggers.from_camera_config(camera_config_fixture)
 
 
 @pytest.fixture

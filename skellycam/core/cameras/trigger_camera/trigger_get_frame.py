@@ -5,6 +5,7 @@ import time
 import cv2
 
 from skellycam.core import CameraId
+from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
@@ -15,9 +16,7 @@ def get_frame(camera_id: CameraId,
               camera_shared_memory: CameraSharedMemory,
               cap: cv2.VideoCapture,
               frame: FramePayload,
-              grab_frame_trigger: multiprocessing.Event,
-              frame_grabbed_trigger: multiprocessing.Event,
-              retrieve_frame_trigger: multiprocessing.Event,
+              triggers: SingleCameraTriggers,
               ) -> FramePayload:
     """
     THIS IS WHERE THE MAGIC HAPPENS
@@ -33,8 +32,7 @@ def get_frame(camera_id: CameraId,
     a frame drop)
     """
     next_frame = None
-    while not grab_frame_trigger.is_set():
-        time.sleep(0.0001)
+    triggers.await_grab_trigger()
     logger.loop(f"Camera {camera_id} received `grab` trigger - calling `cv2.VideoCapture.grab()`")
 
     # frame.timestamps.pre_grab_timestamp = time.perf_counter_ns()
@@ -45,18 +43,15 @@ def get_frame(camera_id: CameraId,
     # frame.timestamps.post_grab_timestamp = time.perf_counter_ns()
 
     if grab_success:
-        frame_grabbed_trigger.set()
+        triggers.set_frame_grabbed()
     else:
         raise ValueError(f"Failed to grab frame from camera {camera_id}")
 
     # frame.timestamps.wait_for_retrieve_trigger_timestamp = time.perf_counter_ns()
 
-    while not retrieve_frame_trigger.is_set():
-        if next_frame is None:
-            next_frame = FramePayload.from_previous(frame)  # create next frame in presumed downtime
-        time.sleep(0.0001)  # gotta go fast
+    next_frame = FramePayload.from_previous(frame)  # create next frame in presumed downtime
 
-    logger.loop(f"Camera {camera_id} received `retrieve` trigger - calling `cv2.VideoCapture.retrieve()`")
+    triggers.await_retrieve_trigger()
 
     # frame.timestamps.pre_retrieve_timestamp = time.perf_counter_ns()
     retrieve_success, image = cap.retrieve()  # decode the frame into an image

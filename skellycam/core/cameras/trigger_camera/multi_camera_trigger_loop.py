@@ -38,15 +38,13 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
     while not exit_event.is_set():
         tik = time.perf_counter_ns()
 
-        multicam_triggers.trigger_multi_frame_read(grab_frame_triggers=grab_frame_triggers,
-                                 frame_grabbed_triggers=frame_grabbed_triggers,
-                                 retrieve_frame_triggers=retrieve_frame_triggers)
+        multicam_triggers.trigger_multi_frame_read()
 
         check_loop_count(number_of_frames, loop_count, exit_event)
         elapsed_in_trigger_ns.append((time.perf_counter_ns() - tik))
         loop_count += 1
 
-        wait_for_grab_triggers_reset(grab_frame_triggers)
+        multicam_triggers.wait_for_grab_triggers_reset()
         elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
 
     log_time_stats(camera_configs=camera_configs,
@@ -82,12 +80,6 @@ def log_time_stats(camera_configs: CameraConfigs,
         f"\n\t\t\tmedian : {(1e9 / np.median(elapsed_per_loop_ns)):.2f} fps \n"
 
     )
-
-
-
-
-
-
 
 
 def check_loop_count(number_of_frames: int,
