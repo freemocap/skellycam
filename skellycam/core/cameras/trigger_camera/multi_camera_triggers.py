@@ -44,7 +44,8 @@ class MultiCameraTriggers(BaseModel):
 
     @property
     def cameras_ready(self):
-        return all([camera_ready_event.is_set() for camera_ready_event in self.camera_ready_events.values()])
+        return all([triggers.camera_ready_event.is_set()
+                    for triggers in self.single_camera_triggers.values()])
 
     def _ensure_cameras_ready(self):
         if not self.cameras_ready:
