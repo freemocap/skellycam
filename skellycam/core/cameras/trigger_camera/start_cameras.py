@@ -25,7 +25,7 @@ def start_cameras(camera_configs: CameraConfigs,
         cameras[camera_id] = trigger_camera_factory(config=config,
                                                     shared_memory_name=shared_memory_names[camera_id],
                                                     lock=lock,
-                                                    camera_triggers=multicam_triggers.to_single_camera(camera_id),
+                                                    camera_triggers=multicam_triggers.single_camera_triggers[camera_id],
                                                     exit_event=exit_event
                                                     )
 

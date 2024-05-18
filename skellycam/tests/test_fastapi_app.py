@@ -1,14 +1,20 @@
-import pytest
-from httpx import AsyncClient
+from starlette.testclient import TestClient
 
 from skellycam.api.app_factory import create_app
 
 
-@pytest.mark.asyncio
-async def test_app() -> None:
+def test_app() -> None:
     app = create_app()
+    client = TestClient(app)
+    assert client.get("/").status_code == 200
+    assert client.get("/docs").status_code == 200
+    assert client.get("/redoc").status_code == 200
 
-    # note: you _must_ set `base_url` for relative urls like "/" to work
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
-        r = await client.get("/")
-        assert r.status_code == 307 #redirect
+def test_websocket() -> None:
+    app = create_app()
+    client = TestClient(app)
+    with client.websocket_connect("/ws/connect") as websocket:
+        data = websocket.receive_text()
+        assert data == "👋Hello, client!"
+        websocket.send_text("test")
+
