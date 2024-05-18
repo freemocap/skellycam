@@ -14,10 +14,10 @@ from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemor
 
 
 @pytest.mark.asyncio
-async def test_shared_memory_manager(shared_memory_fixture: Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]):
+async def test_shared_memory_manager(camera_shared_memory_fixture):
 
-    og_shm_manager = shared_memory_fixture[0]
-    child_shm_manager = shared_memory_fixture[1]
+    og_shm_manager = camera_shared_memory_fixture[0]
+    child_shm_manager = camera_shared_memory_fixture[1]
     camera_configs = og_shm_manager.camera_configs
     number_of_frames_to_test = 10
     number_of_cameras = len(camera_configs)

@@ -6,11 +6,6 @@ from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
 
 
-@pytest.fixture
-def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs):
-    return MultiCameraTriggers.from_camera_configs(camera_configs_fixture)
-
-
 def test_multi_camera_triggers_from_camera_configs(camera_configs_fixture: CameraConfigs):
     multi_camera_triggers = MultiCameraTriggers.from_camera_configs(camera_configs_fixture)
     assert len(multi_camera_triggers.single_camera_triggers) == len(camera_configs_fixture)

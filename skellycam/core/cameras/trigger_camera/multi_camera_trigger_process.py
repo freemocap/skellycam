@@ -37,7 +37,8 @@ class MultiCameraTriggerProcess:
     async def close(self):
         logger.debug("Closing CameraTriggerProcess...")
         self._exit_event.set()
-        self._process.join()
+        if self._process is not None:
+            self._process.join()
         logger.debug("CameraTriggerProcess closed")
 
     def _create_process(self):

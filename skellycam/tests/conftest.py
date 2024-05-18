@@ -10,6 +10,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
 from skellycam.core.controller.controller import Controller
 from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.frames.frame_payload import FramePayload
@@ -73,6 +74,10 @@ def camera_config_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfig:
 def single_camera_triggers_fixture(camera_config_fixture):
     return SingleCameraTriggers.from_camera_config(camera_config_fixture)
 
+@pytest.fixture
+def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs):
+    return MultiCameraTriggers.from_camera_configs(camera_configs_fixture)
+
 
 @pytest.fixture
 def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
@@ -94,8 +99,8 @@ def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
 
 
 @pytest.fixture
-def shared_memory_fixture(camera_configs_fixture: CameraConfigs,
-                          ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
+def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
+                                 ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
     lock = multiprocessing.Lock()
     manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
     assert manager

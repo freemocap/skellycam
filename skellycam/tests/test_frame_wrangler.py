@@ -11,10 +11,10 @@ from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemor
 
 
 @pytest.mark.asyncio
-async def test_frame_wrangler(shared_memory_fixture: Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager],
+async def test_frame_wrangler(camera_shared_memory_fixture,
                               camera_configs_fixture: CameraConfigs, ):
-    og_shm_manager = shared_memory_fixture[0]
-    child_shm_manager = shared_memory_fixture[1]
+    og_shm_manager = camera_shared_memory_fixture[0]
+    child_shm_manager = camera_shared_memory_fixture[1]
 
     # create
     frame_wrangler = FrameWrangler()

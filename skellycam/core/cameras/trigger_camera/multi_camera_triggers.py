@@ -13,25 +13,17 @@ class MultiCameraTriggers(BaseModel):
 
     ######################
     ######################
-    def trigger_multi_frame_read(self, loop_wait_time: float = 0.0001):
+    def trigger_multi_frame_read(self):
         self._ensure_cameras_ready()
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
-        logger.loop("Triggering all cameras to `grab` a frame...")
-        for camera_id, grab_frame_trigger in self.grab_frame_triggers.items():
-            if grab_frame_trigger.is_set():
-                raise ValueError(f"Triggering `grab` from camera_id: {camera_id}, but trigger is already set - this should not happen!")
-            grab_frame_trigger.set()
+        self._fire_grab_trigger()
 
         # 2 - wait for all cameras to grab a frame
-        while not all([frame_grabbed_trigger.is_set() for frame_grabbed_trigger in self.frame_grabbed_triggers.values()]):
-            time.sleep(loop_wait_time)
+        self._await_frame_grabbed_trigger()
 
         # 3- Trigger each camera should retrieve the frame using `cv2.VideoCapture.retrieve()`, which decodes the frame into an image/numpy array
-        logger.loop("Triggering all cameras to `retrieve` that frame...")
-        for camera_id, retrieve_frame_triggers in self.retrieve_frame_triggers.items():
-            if retrieve_frame_triggers.is_set():
-                raise ValueError(f"Triggering `retrieve` from camera_id: {camera_id}, but trigger is already set - this should not happen!")
-            retrieve_frame_triggers.set()
+        self._fire_retrieve_trigger()
+
     ######################
     ######################
 
@@ -52,22 +44,20 @@ class MultiCameraTriggers(BaseModel):
             raise AssertionError("Not all cameras are ready!")
 
     def wait_for_cameras_ready(self, loop_wait_time: float = 1.0):
-        while not all([camera_ready_event.is_set() for camera_ready_event in self.camera_ready_events.values()]):
+        while not all([triggers.camera_ready_event.is_set() for triggers in self.single_camera_triggers.values()]):
             logger.trace("Waiting for all cameras to be ready...")
             time.sleep(loop_wait_time)
-            for camera_id, camera_ready_event in self.camera_ready_events.items():
-                if camera_ready_event.is_set():
-                    logger.debug(f"Camera {camera_id} is ready!")
-
         logger.debug("All cameras are ready!")
-    def send_initial_triggers(self, wait_loop_time: float = 0.01):
+
+    def fire_initial_triggers(self, wait_loop_time: float = 0.01):
 
         self._ensure_cameras_ready()
 
         logger.debug(f"sending initial trigger event to cameras")
-        for initial_trigger in self.initial_triggers.values():
-            initial_trigger.set()
-        while any([initial_trigger.is_set() for initial_trigger in self.initial_triggers.values()]):
+        for triggers in self.single_camera_triggers.values():
+            triggers.initial_trigger.set()
+
+        while any([triggers.initial_trigger.is_set() for triggers in self.single_camera_triggers.values()]):
             time.sleep(wait_loop_time)
         logger.trace("Initial triggers sent and reset - starting multi-camera read loop...")
 
@@ -75,3 +65,24 @@ class MultiCameraTriggers(BaseModel):
         logger.loop("Waiting for all `grab` triggers to reset...")
         while not all([not trigger.is_set() for trigger in self.grab_frame_triggers.values()]):
             time.sleep(wait_loop_time)
+
+    def _await_frame_grabbed_trigger(self, loop_wait_time: float = 0.0001):
+        while not all([triggers.frame_grabbed_trigger.is_set()
+                       for triggers in self.single_camera_triggers.values()]):
+            time.sleep(loop_wait_time)
+
+    def _fire_retrieve_trigger(self):
+        logger.loop("Triggering all cameras to `retrieve` that frame...")
+        for camera_id, triggers in self.single_camera_triggers.items():
+            if triggers.retrieve_frame_trigger.is_set():
+                raise ValueError(
+                    f"Triggering `retrieve` from camera_id: {camera_id}, but trigger is already set - this should not happen!")
+            triggers.retrieve_frame_trigger.set()
+
+    def _fire_grab_trigger(self):
+        logger.loop("Triggering all cameras to `grab` a frame...")
+        for camera_id, triggers in self.single_camera_triggers.items():
+            if triggers.grab_frame_trigger.is_set():
+                raise ValueError(
+                    f"Triggering `grab` from camera_id: {camera_id}, but trigger is already set - this should not happen!")
+            triggers.grab_frame_trigger.set()

@@ -30,7 +30,7 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
 
     logger.info(f"Camera trigger loop started for cameras: {list(camera_configs.keys())}")
 
-    multicam_triggers.send_initial_triggers()
+    multicam_triggers.fire_initial_triggers()
 
     loop_count = 0
     elapsed_in_trigger_ns = []
