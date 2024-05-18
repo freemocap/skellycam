@@ -111,6 +111,3 @@ def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
     return manager, recreated_manager
 
 
-@pytest.fixture
-def controller_fixture() -> Controller:
-    return get_or_create_controller()

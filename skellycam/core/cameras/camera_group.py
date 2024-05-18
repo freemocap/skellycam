@@ -32,11 +32,6 @@ class CameraGroup:
 
         logger.debug(f"Setting camera configs to {configs}")
 
-        resolutions = [config.resolution for config in configs.values()]
-        if not all(res == resolutions[0] for res in resolutions):
-            # TODO: Support different resolutions
-            raise ValueError("All cameras must have the same resolution for the shared memory thing to work (for now)")
-
         if self._shared_memory_manager is not None:
             self._shared_memory_manager.close()
 

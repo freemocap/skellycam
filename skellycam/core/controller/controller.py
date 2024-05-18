@@ -25,7 +25,7 @@ class Controller:
     async def detect(self) -> AvailableDevices:
         logger.info(f"Detecting cameras...")
         available_devices = await detect_available_devices()
-        self._camera_configs = CameraConfigs()
+        self._camera_configs = CameraConfigs.create_empty()
 
         if len(available_devices) == 0:
             logger.warning(f"No cameras detected!")
@@ -43,7 +43,8 @@ class Controller:
         logger.info(f"Connecting to available cameras...")
 
         if camera_configs:
-            await self.update_camera_configs(camera_configs)
+            self._camera_configs = camera_configs
+            self._camera_group.set_camera_configs(camera_configs)
 
         if not self._camera_configs:
             logger.info(f"Available cameras not set - Executing `detect` method...")
@@ -73,7 +74,8 @@ class Controller:
 
     async def update_camera_configs(self,
                                     camera_configs: CameraConfigs):
-        logger.info(f"Updating camera configs to {camera_configs}")
-        self._camera_configs = camera_configs
-        if self._camera_group:
-            await self._camera_group.update_configs(camera_configs=camera_configs)
+        logger.warning(f"Camera configs update not implemented yet!")
+        # logger.info(f"Updating camera configs to {camera_configs}")
+        # self._camera_configs = camera_configs
+        # if self._camera_group:
+        #     await self._camera_group.update_configs(camera_configs=camera_configs)

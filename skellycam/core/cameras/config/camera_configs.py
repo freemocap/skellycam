@@ -9,6 +9,9 @@ from skellycam.core import CameraId
 class CameraConfigs(RootModel):
     root: Dict[CameraId, CameraConfig] = {CameraId(0): CameraConfig(camera_id=CameraId(0))}
 
+    @classmethod
+    def create_empty(cls):
+        return cls(root={})
 
     def __str__(self):
         """
