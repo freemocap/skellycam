@@ -5,7 +5,7 @@ import time
 import cv2
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.trigger_camera.get_frame import get_frame
+from skellycam.core.cameras.trigger_camera.trigger_get_frame import get_frame
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 

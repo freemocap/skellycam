@@ -7,6 +7,7 @@ import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
 from skellycam.core.cameras.trigger_camera.start_cameras import start_cameras
 
 logger = logging.getLogger(__name__)
@@ -19,27 +20,17 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
                               exit_event: multiprocessing.Event,
                               ):
     logger.debug(f"Starting camera trigger loop for cameras: {list(camera_configs.keys())}")
-
-    camera_ready_events = {CameraId(camera_id): multiprocessing.Event() for camera_id in camera_configs.keys()}
-    initial_triggers = {CameraId(camera_id): multiprocessing.Event() for camera_id in camera_configs.keys()}
-    grab_frame_triggers = {CameraId(camera_id): multiprocessing.Event() for camera_id in camera_configs.keys()}
-    frame_grabbed_triggers = {CameraId(camera_id): multiprocessing.Event() for camera_id in camera_configs.keys()}
-    retrieve_frame_triggers = {CameraId(camera_id): multiprocessing.Event() for camera_id in camera_configs.keys()}
-
+    multicam_triggers = MultiCameraTriggers.from_camera_configs(camera_configs)
     cameras = start_cameras(camera_configs=camera_configs,
                             lock=lock,
                             shared_memory_names=shared_memory_names,
-                            initial_triggers=initial_triggers,
-                            grab_frame_triggers=grab_frame_triggers,
-                            frame_grabbed_triggers=frame_grabbed_triggers,
-                            retrieve_frame_triggers=retrieve_frame_triggers,
-                            camera_ready_events=camera_ready_events,
+                            multicam_triggers=multicam_triggers,
                             exit_event=exit_event
                             )
 
     logger.info(f"Camera trigger loop started for cameras: {list(camera_configs.keys())}")
 
-    send_initial_triggers(camera_ready_events, initial_triggers)
+    multicam_triggers.send_initial_triggers()
 
     loop_count = 0
     elapsed_in_trigger_ns = []
@@ -47,7 +38,7 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
     while not exit_event.is_set():
         tik = time.perf_counter_ns()
 
-        trigger_multi_frame_read(grab_frame_triggers=grab_frame_triggers,
+        multicam_triggers.trigger_multi_frame_read(grab_frame_triggers=grab_frame_triggers,
                                  frame_grabbed_triggers=frame_grabbed_triggers,
                                  retrieve_frame_triggers=retrieve_frame_triggers)
 
@@ -75,16 +66,16 @@ def log_time_stats(camera_configs: CameraConfigs,
 
     logger.info(
         f"Statistics: \n{number_of_cameras} camera(s) [{number_of_frames} x {resolution} images read from each camera]\n"
-         
-        f"\n\t\tTime elapsed per multi-frame loop  (ideal: {(ideal_framerate**-1)/1e6:.2f} ms) -  "
-        f"\n\t\t\tmean   : {np.mean(elapsed_per_loop_ns)/1e6:.2f} ms"
-        f"\n\t\t\tmedian : {np.median(elapsed_per_loop_ns)/1e6:.2f} ms"
-        f"\n\t\t\tstd-dev: {np.std(elapsed_per_loop_ns)/1e6:.2f} ms\n"
+
+        f"\n\t\tTime elapsed per multi-frame loop  (ideal: {(ideal_framerate ** -1) / 1e6:.2f} ms) -  "
+        f"\n\t\t\tmean   : {np.mean(elapsed_per_loop_ns) / 1e6:.2f} ms"
+        f"\n\t\t\tmedian : {np.median(elapsed_per_loop_ns) / 1e6:.2f} ms"
+        f"\n\t\t\tstd-dev: {np.std(elapsed_per_loop_ns) / 1e6:.2f} ms\n"
 
         f"\n\t\tTime elapsed in during multi-camera `grab` trigger (ideal: 0 ms) - "
-        f"\n\t\t\tmean   : {np.mean(elapsed_in_trigger_ns)/1e6:.2f} ms"
-        f"\n\t\t\tmedian : {np.median(elapsed_in_trigger_ns)/1e6:.2f} ms"
-        f"\n\t\t\tstd-dev: {np.std(elapsed_in_trigger_ns)/1e6:.2f} ms\n"
+        f"\n\t\t\tmean   : {np.mean(elapsed_in_trigger_ns) / 1e6:.2f} ms"
+        f"\n\t\t\tmedian : {np.median(elapsed_in_trigger_ns) / 1e6:.2f} ms"
+        f"\n\t\t\tstd-dev: {np.std(elapsed_in_trigger_ns) / 1e6:.2f} ms\n"
 
         f"\n\t\tMEASURED FRAMERATE (ideal: {ideal_framerate} fps): "
         f"\n\t\t\tmean   : {(1e9 / np.mean(elapsed_per_loop_ns)):.2f} fps "
@@ -93,50 +84,10 @@ def log_time_stats(camera_configs: CameraConfigs,
     )
 
 
-def wait_for_grab_triggers_reset(grab_frame_triggers):
-    logger.loop("Waiting for all `grab` triggers to reset...")
-    while not all([not trigger.is_set() for trigger in grab_frame_triggers.values()]):
-        time.sleep(0.001)
 
 
-def send_initial_triggers(camera_ready_events: Dict[CameraId, multiprocessing.Event],
-                          initial_triggers: Dict[CameraId, multiprocessing.Event]):
-    if all([camera_ready_event.is_set() for camera_ready_event in camera_ready_events.values()]):
-        logger.debug(
-            f"All cameras are ready - sending initial `trigger` event to cameras: {list(initial_triggers.keys())}")
-        for initial_trigger in initial_triggers.values():
-            initial_trigger.set()
-        while any([initial_trigger.is_set() for initial_trigger in initial_triggers.values()]):
-            time.sleep(0.01)
-        logger.trace("Initial triggers sent and reset - starting multi-camera read loop...")
 
 
-    else:
-        raise ValueError(
-            "Not all cameras are ready, but we are trying to send the intial trigger - this should not happen!")
-
-
-def trigger_multi_frame_read(grab_frame_triggers: Dict[CameraId, multiprocessing.Event],
-                             frame_grabbed_triggers: Dict[CameraId, multiprocessing.Event],
-                             retrieve_frame_triggers: Dict[CameraId, multiprocessing.Event]
-                             ):
-    # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
-    logger.loop("Triggering all cameras to `grab` a frame...")
-    for camera_id, grab_frame_trigger in grab_frame_triggers.items():
-        if grab_frame_trigger.is_set():
-            raise ValueError(f"Trigger is set for camera_id: {camera_id} - this should not happen!")
-        grab_frame_trigger.set()
-
-    # 2 - wait for all cameras to grab a frame
-    while not all([frame_grabbed_trigger.is_set() for frame_grabbed_trigger in frame_grabbed_triggers.values()]):
-        time.sleep(0.0001)
-
-    # 3- Trigger each camera should retrieve the frame using `cv2.VideoCapture.retrieve()`, which decodes the frame into an image/numpy array
-    logger.loop("Triggering all cameras to `retrieve` that frame...")
-    for camera_id, retrieve_frame_triggers in retrieve_frame_triggers.items():
-        if retrieve_frame_triggers.is_set():
-            raise ValueError(f"Retrieve frame trigger for camera_id: {camera_id} is set - this should not happen!")
-        retrieve_frame_triggers.set()
 
 
 def check_loop_count(number_of_frames: int,
