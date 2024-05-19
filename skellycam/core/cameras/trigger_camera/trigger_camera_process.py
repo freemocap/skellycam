@@ -43,12 +43,8 @@ class TriggerCameraProcess:
         camera_shared_memory = CameraSharedMemory.from_config(camera_config=config,
                                                               lock=lock,
                                                               shared_memory_name=shared_memory_name)
-        if os.getenv("TEST_ENV") == "true":
-            # TODO - find a way to get this 'test' stuff out of the working code (but for the moment i think its worth the slop)
-            logger.debug(f"Running in test environment, using mock camera")
-            cv2_video_capture = create_cv2_video_capture_mock(config)
-        else:
-            cv2_video_capture = create_cv2_capture(config)
+
+        cv2_video_capture = create_cv2_capture(config)
 
         apply_camera_configuration(cv2_video_capture, config)
         triggers.set_ready()
