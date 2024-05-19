@@ -1,9 +1,9 @@
 {
   "build": {
-    "beforeBuildCommand": "npm run generate",
-    "beforeDevCommand": "",
-    "devPath": "http://localhost:8003",
-    "distDir": "../dist"
+    "beforeBuildCommand": "npm run generate --prefix src-ui",
+    "beforeDevCommand": "npm run dev --prefix src-ui",
+    "devPath": "http://localhost:3000",
+    "distDir": "../src-ui/dist"
   },
   "package": {
     "productName": "skellycam-app",

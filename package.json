@@ -1,35 +1,18 @@
 {
-  "name": "skellycam",
-  "version": "1.0.0",
-  "description": "Camameras",
-  "main": "index.js",
-  "dependencies": {
-    "@types/node": "^20.12.12",
-    "@types/web": "^0.0.146",
-    "csstype": "^3.1.3",
-    "entities": "^4.5.0",
-    "estree-walker": "^2.0.2",
-    "l": "^0.6.0",
-    "magic-string": "^0.30.10",
-    "msgpack": "^1.0.3",
-    "msgpack5": "^6.0.2",
-    "nan": "^2.19.0",
-    "nanoid": "^3.3.7",
-    "picocolors": "^1.0.0",
-    "postcss": "^8.4.38",
-    "source-map-js": "^1.2.0",
-    "tauri": "^0.15.0",
-    "typescript": "^5.4.5",
-    "vue": "^3.4.26",
-    "vue-router": "^4.3.2"
-  },
+  "name": "skellycam-tauri-nuxt-app",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "tauri dev",
-    "ui-dev": "cd src-ui && npm run dev",
-    "postinstall": "cd src-ui && npm install",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "tauri": "tauri",
+    "dev": "npm run tauri dev",
+    "tauri-build": "tauri build",
+    "nuxt-dev": "cd src-ui && npm run dev",
+    "postinstall": "cd src-ui && npm install"
   },
-  "keywords": [],
-  "author": "",
-  "license": "AGPLv3-or-later"
+  "dependencies": {
+    "@tauri-apps/api": "^1.5.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.5.11"
+  }
 }
