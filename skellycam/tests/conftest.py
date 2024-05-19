@@ -16,6 +16,7 @@ from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCam
 from skellycam.core.controller.controller import Controller
 from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
@@ -89,6 +90,20 @@ def single_camera_triggers_fixture(camera_config_fixture):
 def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs):
     return MultiCameraTriggers.from_camera_configs(camera_configs_fixture)
 
+@pytest.fixture
+def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
+                                 ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
+    lock = multiprocessing.Lock()
+    manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
+    assert manager
+    recreated_manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture,
+                                                  lock=lock,
+                                                  existing_shared_memory_names=manager.shared_memory_names
+                                                  )
+    return manager, recreated_manager
+
+
+
 
 @pytest.fixture
 def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
@@ -122,16 +137,13 @@ def multi_frame_payload_fixture(camera_ids_fixture: List[CameraId],
         payload.add_frame(cam_frame)
     assert payload.full
     return payload
+
 @pytest.fixture
-def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
-                                 ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
-    lock = multiprocessing.Lock()
-    manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
-    assert manager
-    recreated_manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture,
-                                                  lock=lock,
-                                                  existing_shared_memory_names=manager.shared_memory_names
-                                                  )
-    return manager, recreated_manager
-
-
+def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload) -> FrontendImagePayload:
+    fe_payload =  FrontendImagePayload.from_multi_frame_payload(multi_frame_payload_fixture)
+    assert fe_payload.full
+    assert fe_payload.multi_frame_number == multi_frame_payload_fixture.multi_frame_number
+    assert fe_payload.utc_ns_to_perf_ns == multi_frame_payload_fixture.utc_ns_to_perf_ns
+    assert fe_payload.camera_ids == multi_frame_payload_fixture.camera_ids
+    assert str(fe_payload)
+    return fe_payload

@@ -1,6 +1,5 @@
 import io
-import time
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 import PIL.Image as Image
 import msgpack
@@ -24,21 +23,21 @@ class FrontendImagePayload(BaseModel):
         return list(self.jpeg_images.keys())
 
     @classmethod
-    def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload, jpeg_quality: int = 90):
+    def from_multi_frame_payload(cls,
+                                 multi_frame_payload: MultiFramePayload,
+                                 jpeg_quality: int = 90):
         if not multi_frame_payload.full:
             raise ValueError("MultiFramePayload must be full to convert to FrontendImagePayload")
-        instance = cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
-                       prior_logs=multi_frame_payload.logs,
-                       multi_frame_number=multi_frame_payload.multi_frame_number,
-                       logs=cls.init_logs(),
-                       jpeg_images={})
 
+        jpeg_images = {}
         for camera_id, frame in multi_frame_payload.frames.items():
             if frame is None:
                 continue
-            instance[camera_id] = cls._image_to_jpeg(frame.image, jpeg_quality)
+            jpeg_images[camera_id] = cls._image_to_jpeg(frame.image, jpeg_quality)
 
-        return instance
+        return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
+                   multi_frame_number=multi_frame_payload.multi_frame_number,
+                   jpeg_images=jpeg_images)
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.dict(), use_bin_type=True)
@@ -58,13 +57,6 @@ class FrontendImagePayload(BaseModel):
         with io.BytesIO() as output:
             image.save(output, format="JPEG", quality=quality)
             return output.getvalue()
-
-
-    def __getitem__(self, key: CameraId):
-        return self.jpeg_images[key]
-
-    def __setitem__(self, key: CameraId, value: Optional[bytes]):
-        self.jpeg_images[key] = value
 
     def __str__(self):
         frame_strs = []

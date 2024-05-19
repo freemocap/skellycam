@@ -17,6 +17,10 @@ class MultiFramePayload(BaseModel):
     multi_frame_number: int = 0
 
     @property
+    def camera_ids(self):
+        return list(self.frames.keys())
+
+    @property
     def full(self):
         all_not_none = all([frame is not None for frame in self.frames.values()])
         all_hydrated = all([frame.hydrated for frame in self.frames.values() if frame is not None])
