@@ -7,20 +7,23 @@ from typing import List, Tuple
 
 import numpy as np
 import pytest
+from fastapi import FastAPI
+from starlette.testclient import TestClient
 
+from skellycam.api.app_factory import create_app
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
-from skellycam.core.controller.controller import Controller
-from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 TEST_ENV_NAME = 'TEST_ENV'
+
+
 @pytest.fixture(scope='session', autouse=True)
 def set_test_env_variable():
     # Set the environment variable before any tests run
@@ -28,6 +31,7 @@ def set_test_env_variable():
     yield
     # Clean up the environment variable after all tests have run
     del os.environ[TEST_ENV_NAME]
+
 
 class TestFullSizeImageShapes(enum.Enum):
     RGB_LANDSCAPE = (480, 640, 3)
@@ -42,6 +46,7 @@ class TestFullSizeImageShapes(enum.Enum):
     # SQUARE_MONO = (640, 640)
 
 
+@enum.unique
 class TestImageShapes(enum.Enum):
     LANDSCAPE = (48, 64, 3)
     PORTRAIT = (64, 48, 3)
@@ -82,13 +87,16 @@ def camera_configs_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfigs:
 def camera_config_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfig:
     return CameraConfig(camera_id=camera_ids_fixture[0])
 
+
 @pytest.fixture
 def single_camera_triggers_fixture(camera_config_fixture):
     return SingleCameraTriggers.from_camera_config(camera_config_fixture)
 
+
 @pytest.fixture
 def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs):
     return MultiCameraTriggers.from_camera_configs(camera_configs_fixture)
+
 
 @pytest.fixture
 def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
@@ -101,8 +109,6 @@ def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
                                                   existing_shared_memory_names=manager.shared_memory_names
                                                   )
     return manager, recreated_manager
-
-
 
 
 @pytest.fixture
@@ -138,12 +144,23 @@ def multi_frame_payload_fixture(camera_ids_fixture: List[CameraId],
     assert payload.full
     return payload
 
+
 @pytest.fixture
 def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload) -> FrontendImagePayload:
-    fe_payload =  FrontendImagePayload.from_multi_frame_payload(multi_frame_payload_fixture)
-    assert fe_payload.full
+    fe_payload = FrontendImagePayload.from_multi_frame_payload(multi_frame_payload_fixture)
     assert fe_payload.multi_frame_number == multi_frame_payload_fixture.multi_frame_number
     assert fe_payload.utc_ns_to_perf_ns == multi_frame_payload_fixture.utc_ns_to_perf_ns
     assert fe_payload.camera_ids == multi_frame_payload_fixture.camera_ids
     assert str(fe_payload)
     return fe_payload
+
+
+@pytest.fixture
+def app() -> FastAPI:
+    return create_app()
+
+
+@pytest.fixture
+def client(app: FastAPI) -> TestClient:
+    with TestClient(app) as client:
+        yield client

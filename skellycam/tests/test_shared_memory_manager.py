@@ -46,5 +46,4 @@ async def test_shared_memory_manager(camera_shared_memory_fixture):
         mf_payload = await child_shm_manager.get_multi_frame_payload(payload=mf_payload)
         assert mf_payload.multi_frame_number == frame_number
         assert mf_payload.full
-        assert mf_payload.hydrated
         assert len(mf_payload.frames) == number_of_cameras

@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 websocket_router = APIRouter()
 
+HELLO_CLIENT_MESSAGE = "👋Hello, client!"
 
 async def listen_for_client_messages(websocket: WebSocket):
     logger.info("Starting listener for client messages...")
@@ -46,7 +47,7 @@ async def websocket_server_connect(websocket: WebSocket):
     logger.success(f"Websocket connection established!")
 
     await websocket.accept()
-    await websocket.send_text("👋Hello, client!")
+    await websocket.send_text(HELLO_CLIENT_MESSAGE)
 
     async def websocket_send_bytes(data: bytes):
         logger.trace(f"Sending bytes to client: {data[:10]}...")

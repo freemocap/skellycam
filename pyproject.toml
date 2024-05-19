@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "skellycam"
 version = "2023.09.1086"
-description = "\"A simple python API for efficiently connecting to and recording synchronized videos from one or multiple cameras 💀📸\""
+description = "A simple python API for efficiently connecting to and recording synchronized videos from one or multiple cameras 💀📸"
 authors = ["Skelly FreeMoCap <info@freemocap.org>"]
 license = "AGPLv3"
 readme = "README.md"
@@ -51,12 +51,6 @@ push = true
 
 [tool.bumpver.file_patterns]
 "skellycam/__init__.py" = ["{version}"]
-
-[project.scripts]
-skellycam = "skellycam.__main__:main"
-
-[tool.setuptools]
-py-modules = ["skellycam"]
 
 
 classifiers = [
