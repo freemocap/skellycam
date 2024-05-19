@@ -61,7 +61,6 @@ class CameraSharedMemory(BaseModel):
     def new_frame_available(self) -> bool:
         if not self.capture_started:
             return False
-        # if sum of buffer is 0, then no new frame is available
         return self.last_frame_written_index + 1 != self.read_next
 
     @property

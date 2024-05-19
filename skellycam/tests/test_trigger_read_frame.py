@@ -15,14 +15,14 @@ def test_trigger_read_frame(camera_shared_memory_fixture: CameraSharedMemoryMana
     caps = {camera_id: create_cv2_video_capture_mock(camera_config)
             for camera_id, camera_config in camera_configs.items()}
 
-    assert not multi_camera_triggers.cameras_ready
+    assert not multi_camera_triggers.cameras_ready_triggers_set
     assert all([caps.isOpened() for caps in caps.values()])
     wait_camera_ready_thread = threading.Thread(target=multi_camera_triggers.wait_for_cameras_ready)
     wait_camera_ready_thread.start()
     for single_camera_triggers in multi_camera_triggers.single_camera_triggers.values():
         single_camera_triggers.camera_ready_event.set()
     wait_camera_ready_thread.join()
-    assert multi_camera_triggers.cameras_ready
+    assert multi_camera_triggers.cameras_ready_triggers_set
 
     frame_read_threads = []
     for camera_id, cap in caps.items():
@@ -53,7 +53,7 @@ def test_trigger_read_frame(camera_shared_memory_fixture: CameraSharedMemoryMana
         assert cap.grab.called
         assert not cap.retrieve.called
 
-    multi_camera_triggers._await_frame_grabbed_trigger()
+    multi_camera_triggers._await_frame_grabbed_trigger_set()
 
     multi_camera_triggers._fire_retrieve_trigger()
     time.sleep(0.1)

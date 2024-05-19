@@ -31,7 +31,6 @@ def get_frame(camera_id: CameraId,
     This sweet baby must be protected at all costs. Nothing is allowed to block this call (which could result in
     a frame drop)
     """
-    next_frame = None
     triggers.await_grab_trigger()
     logger.loop(f"Camera {camera_id} received `grab` trigger - calling `cv2.VideoCapture.grab()`")
 

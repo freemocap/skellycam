@@ -35,6 +35,7 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
     loop_count = 0
     elapsed_in_trigger_ns = []
     elapsed_per_loop_ns = []
+    logger.trace(f"Starting camera trigger loop for cameras: {list(cameras.keys())}")
     while not exit_event.is_set():
         tik = time.perf_counter_ns()
 
@@ -46,14 +47,13 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
         elapsed_in_trigger_ns.append((time.perf_counter_ns() - tik))
         loop_count += 1
 
-        multicam_triggers.wait_for_grab_triggers_reset()
         elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
 
-    log_time_stats(camera_configs=camera_configs,
-                   elapsed_in_trigger_ns=elapsed_in_trigger_ns,
-                   elapsed_per_loop_ns=elapsed_per_loop_ns)
+        log_time_stats(camera_configs=camera_configs,
+                       elapsed_in_trigger_ns=elapsed_in_trigger_ns,
+                       elapsed_per_loop_ns=elapsed_per_loop_ns)
 
-    logger.debug(f"Closing camera trigger loop for cameras: {list(cameras.keys())}")
+        logger.debug(f"Closing camera trigger loop for cameras: {list(cameras.keys())}")
 
 
 def log_time_stats(camera_configs: CameraConfigs,

@@ -33,7 +33,6 @@ class FrameWrangler:
         self._is_recording = False
         # self._video_recorder_manager = VideoRecorderProcessManager()
 
-
     def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
         self._ws_send_bytes = ws_send_bytes
         logger.trace(f"Set websocket bytes sender function")
@@ -44,9 +43,8 @@ class FrameWrangler:
         self._camera_configs = camera_configs
         self._multi_frame_payload = MultiFramePayload.create(
             camera_ids=list(self._camera_configs.keys()),
-            multi_frame_number = -1
+            multi_frame_number=-1
         )
-
 
     @property
     def is_recording(self):
@@ -81,14 +79,17 @@ class FrameWrangler:
         try:
             while self._should_continue_listening or self._shared_memory_manager.new_multi_frame_payload_available():
                 logger.loop(f"Awaiting multi-frame payload...")
-                self._multi_frame_payload = await self._shared_memory_manager.get_multi_frame_payload(payload=self._multi_frame_payload)
+
+                self._multi_frame_payload = await self._shared_memory_manager.get_multi_frame_payload(
+                    payload=self._multi_frame_payload
+                )
+
                 logger.loop(f"Received multi-frame payload!\n {self._multi_frame_payload}")
                 await self._handle_payload()
         except Exception as e:
             logger.error(f"Error in listen_for_frames: {type(e).__name__} - {e}")
             logger.exception(e)
         logger.trace(f"Stopped listening for multi-frames")
-
 
     async def _handle_payload(self):
         if self._is_recording:

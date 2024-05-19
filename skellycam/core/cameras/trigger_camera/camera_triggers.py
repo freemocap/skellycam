@@ -53,6 +53,7 @@ class SingleCameraTriggers(BaseModel):
     def await_grab_trigger(self, wait_loop_time: float = 0.0001):
         while not self.grab_frame_trigger.is_set():
             time.sleep(0.0001)
+
     def clear_frame_triggers(self):
         self.frame_grabbed_trigger.clear()
         self.retrieve_frame_trigger.clear()
