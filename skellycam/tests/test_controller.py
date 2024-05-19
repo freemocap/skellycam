@@ -7,7 +7,7 @@ from skellycam.core.controller.singleton import get_or_create_controller
 
 @pytest.fixture
 def controller_fixture() -> Controller:
-    return get_or_create_controller()
+    return Controller()
 
 @pytest.mark.asyncio
 async def test_camera_connect(controller_fixture:Controller,
@@ -15,4 +15,5 @@ async def test_camera_connect(controller_fixture:Controller,
                          number_of_frames:int= 3):
     await controller_fixture.connect(camera_configs=camera_configs_fixture,
                                      number_of_frames=number_of_frames)
+    await controller_fixture.close()
 

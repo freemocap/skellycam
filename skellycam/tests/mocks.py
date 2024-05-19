@@ -29,9 +29,9 @@ def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:
         scale = mean_delay / shape  # θ
         return gamma.rvs(a=shape, scale=scale)
 
-    def read_frame_with_gamma_delay() -> None:
+    def simulate_frame_grab_delay() -> None:
         """
-        Simulate a camera.read() with a Gamma-distributed delay.
+        Simulate a delay for a 30fps camera with a Gamma-distributed delay where the standard deviation is half the mean.
 
         This function simulates the delay for a 30fps camera.
 
@@ -63,6 +63,7 @@ def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:
         time.sleep(delay)  # Simulate the delay
 
     def create_fake_image() -> np.ndarray:
+        simulate_frame_grab_delay()
         return np.random.randint(0, 255, camera_config.image_shape, dtype=np.uint8)
 
     def read() -> tuple[bool, Optional[np.ndarray]]:
@@ -103,7 +104,6 @@ def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:
     video_capture_mock.grab.side_effect = grab
     video_capture_mock.retrieve.side_effect = retrieve
     video_capture_mock.read.side_effect = read
-    video_capture_mock.read_frame_with_gamma_delay = read_frame_with_gamma_delay
     video_capture_mock.release.side_effect = release
     video_capture_mock.get.side_effect = get
     video_capture_mock.set.side_effect = set
@@ -148,8 +148,8 @@ def test_cv2_video_capture_mock_fps() -> None:
     mock.set(cv2.CAP_PROP_FPS, 30)
     assert mock.get(cv2.CAP_PROP_FPS) == 30
     timestamps = []
-    for _ in range(30):
-        mock.read_frame_with_gamma_delay()
+    for _ in range(100):
+        mock.read()
         timestamps.append(time.perf_counter())
     frame_durations = np.diff(timestamps)
     mean_frame_duration_s = np.mean(frame_durations)

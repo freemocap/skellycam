@@ -1,5 +1,6 @@
 import enum
 import multiprocessing
+import os
 import time
 from typing import List, Tuple
 
@@ -16,6 +17,14 @@ from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
+TEST_ENV_NAME = 'TEST_ENV'
+@pytest.fixture(scope='session', autouse=True)
+def set_test_env_variable():
+    # Set the environment variable before any tests run
+    os.environ[TEST_ENV_NAME] = 'true'
+    yield
+    # Clean up the environment variable after all tests have run
+    del os.environ[TEST_ENV_NAME]
 
 class TestFullSizeImageShapes(enum.Enum):
     RGB_LANDSCAPE = (480, 640, 3)

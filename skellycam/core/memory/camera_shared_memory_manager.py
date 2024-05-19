@@ -18,6 +18,7 @@ class CameraSharedMemoryManager:
                  lock: multiprocessing.Lock,
                  existing_shared_memory_names: Dict[CameraId, str] = None):
         self._camera_configs = camera_configs
+        self._lock = lock
 
         if existing_shared_memory_names is not None:
             if len(existing_shared_memory_names) != len(camera_configs):
@@ -26,7 +27,7 @@ class CameraSharedMemoryManager:
             existing_shared_memory_names = {camera_id: None for camera_id in camera_configs.keys()}
 
         self._buffer_by_camera = {camera_id: CameraSharedMemory.from_config(camera_config=config,
-                                                                            lock=lock,
+                                                                            lock=self._lock,
                                                                             shared_memory_name=
                                                                             existing_shared_memory_names[camera_id])
                                   for camera_id, config in self._camera_configs.items()}
@@ -39,6 +40,11 @@ class CameraSharedMemoryManager:
     def shared_memory_names(self) -> Dict[CameraId, str]:
         return {camera_id: camera_shared_memory.shared_memory_name for camera_id, camera_shared_memory in
                 self._buffer_by_camera.items()}
+
+
+    @property
+    def lock(self) -> multiprocessing.Lock:
+        return self._lock
 
     @property
     def total_buffer_size(self) -> int:

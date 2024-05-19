@@ -9,6 +9,8 @@ def test_app() -> None:
     assert client.get("/").status_code == 200
     assert client.get("/docs").status_code == 200
     assert client.get("/redoc").status_code == 200
+    client.close()
+    del app
 
 def test_websocket() -> None:
     app = create_app()
@@ -17,4 +19,5 @@ def test_websocket() -> None:
         data = websocket.receive_text()
         assert data == "👋Hello, client!"
         websocket.send_text("test")
-
+    client.close()
+    del app

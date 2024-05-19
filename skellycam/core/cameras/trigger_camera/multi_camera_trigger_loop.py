@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 def multi_camera_trigger_loop(camera_configs: CameraConfigs,
                               shared_memory_names: Dict[CameraId, str],
                               lock: multiprocessing.Lock,
-                              number_of_frames: Optional[int],
                               exit_event: multiprocessing.Event,
+                              number_of_frames: Optional[int] = None,
                               ):
     logger.debug(f"Starting camera trigger loop for cameras: {list(camera_configs.keys())}")
     multicam_triggers = MultiCameraTriggers.from_camera_configs(camera_configs)
@@ -40,7 +40,9 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
 
         multicam_triggers.trigger_multi_frame_read()
 
-        check_loop_count(number_of_frames, loop_count, exit_event)
+        if number_of_frames is not None:
+            check_loop_count(number_of_frames, loop_count, exit_event)
+
         elapsed_in_trigger_ns.append((time.perf_counter_ns() - tik))
         loop_count += 1
 

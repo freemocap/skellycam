@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import os
 
 from skellycam.core.cameras.config.apply_config import apply_camera_configuration
 from skellycam.core.cameras.config.camera_config import CameraConfig
@@ -7,6 +8,7 @@ from skellycam.core.cameras.opencv.create_cv2_video_capture import create_cv2_ca
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.cameras.trigger_camera.trigger_listening_loop import run_trigger_listening_loop
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
+from skellycam.tests.mocks import create_cv2_video_capture_mock
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,13 @@ class TriggerCameraProcess:
         camera_shared_memory = CameraSharedMemory.from_config(camera_config=config,
                                                               lock=lock,
                                                               shared_memory_name=shared_memory_name)
-        cv2_video_capture = create_cv2_capture(config)
+        if os.getenv("TEST_ENV") == "true":
+            # TODO - find a way to get this 'test' stuff out of the working code (but for the moment i think its worth the slop)
+            logger.debug(f"Running in test environment, using mock camera")
+            cv2_video_capture = create_cv2_video_capture_mock(config)
+        else:
+            cv2_video_capture = create_cv2_capture(config)
+
         apply_camera_configuration(cv2_video_capture, config)
         triggers.set_ready()
         run_trigger_listening_loop(config=config,

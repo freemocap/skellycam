@@ -54,6 +54,6 @@ class SingleCameraTriggers(BaseModel):
         while not self.grab_frame_trigger.is_set():
             time.sleep(0.0001)
     def clear_frame_triggers(self):
-        self.grab_frame_trigger.clear()
         self.frame_grabbed_trigger.clear()
         self.retrieve_frame_trigger.clear()
+        self.grab_frame_trigger.clear()

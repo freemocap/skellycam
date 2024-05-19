@@ -63,7 +63,8 @@ class MultiCameraTriggers(BaseModel):
 
     def wait_for_grab_triggers_reset(self, wait_loop_time: float = 0.001):
         logger.loop("Waiting for all `grab` triggers to reset...")
-        while not all([not trigger.is_set() for trigger in self.grab_frame_triggers.values()]):
+        while not all([triggers.grab_frame_trigger.is_set()
+                       for triggers in self.single_camera_triggers.values()]):
             time.sleep(wait_loop_time)
 
     def _await_frame_grabbed_trigger(self, loop_wait_time: float = 0.0001):
