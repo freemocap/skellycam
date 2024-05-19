@@ -1,13 +1,12 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeBuildCommand": "",
+    "beforeBuildCommand": "npm run generate",
     "beforeDevCommand": "",
-    "devPath": "../",
-    "distDir": "../"
+    "devPath": "http://localhost:8003",
+    "distDir": "../dist"
   },
   "package": {
-    "productName": "skellycam",
+    "productName": "skellycam-app",
     "version": "0.1.0"
   },
   "tauri": {
@@ -56,10 +55,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 1000,
+        "height": 600,
         "resizable": true,
         "title": "SkellyCam 💀📸✨",
-        "width": 1000
+        "width": 800
       }
     ]
   }
