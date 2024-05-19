@@ -35,7 +35,7 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
     loop_count = 0
     elapsed_in_trigger_ns = []
     elapsed_per_loop_ns = []
-    logger.trace(f"Starting camera trigger loop for cameras: {list(cameras.keys())}")
+    logger.debug(f"Starting multi-camera trigger loop for cameras: {list(cameras.keys())}")
     while not exit_event.is_set():
         tik = time.perf_counter_ns()
 
@@ -49,11 +49,11 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
 
         elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
 
-        log_time_stats(camera_configs=camera_configs,
-                       elapsed_in_trigger_ns=elapsed_in_trigger_ns,
-                       elapsed_per_loop_ns=elapsed_per_loop_ns)
-
-        logger.debug(f"Closing camera trigger loop for cameras: {list(cameras.keys())}")
+    logger.debug(f"Multi-camera trigger loop for cameras: {list(cameras.keys())}  ended")
+    time.sleep(.25)
+    log_time_stats(camera_configs=camera_configs,
+                   elapsed_in_trigger_ns=elapsed_in_trigger_ns,
+                   elapsed_per_loop_ns=elapsed_per_loop_ns)
 
 
 def log_time_stats(camera_configs: CameraConfigs,
@@ -65,21 +65,21 @@ def log_time_stats(camera_configs: CameraConfigs,
     ideal_framerate = min([camera_config.framerate for camera_config in camera_configs.values()])
 
     logger.info(
-        f"Statistics: \n{number_of_cameras} camera(s) [{number_of_frames} x {resolution} images read from each camera]\n"
+        f"Read {number_of_frames} x {resolution} images read from {number_of_cameras} camera(s):"
 
-        f"\n\t\tTime elapsed per multi-frame loop  (ideal: {(ideal_framerate ** -1) / 1e6:.2f} ms) -  "
-        f"\n\t\t\tmean   : {np.mean(elapsed_per_loop_ns) / 1e6:.2f} ms"
-        f"\n\t\t\tmedian : {np.median(elapsed_per_loop_ns) / 1e6:.2f} ms"
-        f"\n\t\t\tstd-dev: {np.std(elapsed_per_loop_ns) / 1e6:.2f} ms\n"
+        f"\n\tTime elapsed per multi-frame loop  (ideal: {(ideal_framerate ** -1) / 1e6:.2f} ms) -  "
+        f"\n\t\tmean   : {np.mean(elapsed_per_loop_ns) / 1e6:.2f} ms"
+        f"\n\t\tmedian : {np.median(elapsed_per_loop_ns) / 1e6:.2f} ms"
+        f"\n\t\tstd-dev: {np.std(elapsed_per_loop_ns) / 1e6:.2f} ms\n"
 
-        f"\n\t\tTime elapsed in during multi-camera `grab` trigger (ideal: 0 ms) - "
-        f"\n\t\t\tmean   : {np.mean(elapsed_in_trigger_ns) / 1e6:.2f} ms"
-        f"\n\t\t\tmedian : {np.median(elapsed_in_trigger_ns) / 1e6:.2f} ms"
-        f"\n\t\t\tstd-dev: {np.std(elapsed_in_trigger_ns) / 1e6:.2f} ms\n"
+        f"\n\tTime elapsed in during multi-camera `grab` trigger (ideal: 0 ms) - "
+        f"\n\t\tmean   : {np.mean(elapsed_in_trigger_ns) / 1e6:.2f} ms"
+        f"\n\t\tmedian : {np.median(elapsed_in_trigger_ns) / 1e6:.2f} ms"
+        f"\n\t\tstd-dev: {np.std(elapsed_in_trigger_ns) / 1e6:.2f} ms\n"
 
-        f"\n\t\tMEASURED FRAMERATE (ideal: {ideal_framerate} fps): "
-        f"\n\t\t\tmean   : {(1e9 / np.mean(elapsed_per_loop_ns)):.2f} fps "
-        f"\n\t\t\tmedian : {(1e9 / np.median(elapsed_per_loop_ns)):.2f} fps \n"
+        f"\n\tMEASURED FRAMERATE (ideal: {ideal_framerate} fps): "
+        f"\n\t\tmean   : {(1e9 / np.mean(elapsed_per_loop_ns)):.2f} fps "
+        f"\n\t\tmedian : {(1e9 / np.median(elapsed_per_loop_ns)):.2f} fps \n"
 
     )
 
