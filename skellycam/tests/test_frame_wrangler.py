@@ -1,5 +1,4 @@
 import asyncio
-from typing import Tuple
 
 import numpy as np
 import pytest
@@ -7,7 +6,6 @@ import pytest
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frame_wrangler import FrameWrangler
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 
 @pytest.mark.asyncio
@@ -28,7 +26,6 @@ async def test_frame_wrangler(camera_shared_memory_fixture,
         assert not child_shm_manager.new_multi_frame_payload_available()
         assert not og_shm_manager.new_multi_frame_payload_available()
         for camera_id, config in camera_configs_fixture.items():
-
             test_image = np.random.randint(0, 256, size=config.image_shape, dtype=np.uint8)
             frame = FramePayload.create_unhydrated_dummy(camera_id=camera_id,
                                                          image=test_image)

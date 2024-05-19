@@ -2,6 +2,7 @@ import enum
 import multiprocessing
 import os
 import time
+from copy import deepcopy
 from typing import List, Tuple
 
 import numpy as np
@@ -15,6 +16,7 @@ from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCam
 from skellycam.core.controller.controller import Controller
 from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 TEST_ENV_NAME = 'TEST_ENV'
@@ -107,6 +109,19 @@ def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
     return frame
 
 
+@pytest.fixture
+def multi_frame_payload_fixture(camera_ids_fixture: List[CameraId],
+                                frame_payload_fixture: FramePayload
+                                ) -> MultiFramePayload:
+    payload = MultiFramePayload.create(camera_ids=camera_ids_fixture,
+                                       multi_frame_number=0)
+
+    for camera_id in camera_ids_fixture:
+        cam_frame = deepcopy(frame_payload_fixture)
+        cam_frame.camera_id = camera_id
+        payload.add_frame(cam_frame)
+    assert payload.full
+    return payload
 @pytest.fixture
 def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
                                  ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
