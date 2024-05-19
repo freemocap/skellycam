@@ -5,11 +5,13 @@ from starlette.websockets import WebSocketDisconnect
 
 from skellycam.core.controller.singleton import get_or_create_controller
 
+
 logger = logging.getLogger(__name__)
 
 websocket_router = APIRouter()
 
-HELLO_CLIENT_MESSAGE = "👋Hello, client!"
+HELLO_CLIENT_TEXT_MESSAGE = "👋Hello, client!"
+HELLO_CLIENT_BYTES_MESSAGE = b"Beep boop - these are bytes from the websocket server wow"
 
 async def listen_for_client_messages(websocket: WebSocket):
     logger.info("Starting listener for client messages...")
@@ -47,12 +49,13 @@ async def websocket_server_connect(websocket: WebSocket):
     logger.success(f"Websocket connection established!")
 
     await websocket.accept()
-    await websocket.send_text(HELLO_CLIENT_MESSAGE)
+    await websocket.send_text(HELLO_CLIENT_TEXT_MESSAGE)
 
     async def websocket_send_bytes(data: bytes):
         logger.trace(f"Sending bytes to client: {data[:10]}...")
         await websocket.send_bytes(data)
 
+    await websocket_send_bytes(HELLO_CLIENT_BYTES_MESSAGE)
     controller = get_or_create_controller()
     controller.set_websocket_bytes_sender(websocket_send_bytes)
 

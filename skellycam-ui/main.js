@@ -30,6 +30,11 @@ let connectWebSocket = async () => {
         if (typeof event.data === 'string') {
             addLog(`Received string message:${JSON.stringify(event.data, null, 2)}`);
         } else if (event.data instanceof Blob) {
+            addLog(`Received blob message: ${event.data.size} bytes`);
+            if (event.data.size === 100) {
+                addLog(`Received a wee bytes message: ${event.data.size} bytes - ${event.data}`);
+                return;
+            }
             const reader = new FileReader();
             reader.onload = function () {
                 const arrayBuffer = this.result;
