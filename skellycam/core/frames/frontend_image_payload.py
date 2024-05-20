@@ -2,6 +2,7 @@ import io
 from typing import Dict, Optional
 
 import PIL.Image as Image
+import cv2
 import msgpack
 import numpy as np
 from pydantic import BaseModel, Field
@@ -51,12 +52,16 @@ class FrontendImagePayload(BaseModel):
     @staticmethod
     def _image_to_jpeg(image: np.ndarray, quality: int = 95) -> bytes:
         """
-        Convert a numpy array image to a JPEG image using PIL.
+        Convert a numpy array image to a JPEG image using OpenCV.
         """
-        image = Image.fromarray(image)
-        with io.BytesIO() as output:
-            image.save(output, format="JPEG", quality=quality)
-            return output.getvalue()
+        # Encode the image as JPEG
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+        result, jpeg_image = cv2.imencode('.jpg', image, encode_param)
+
+        if not result:
+            raise ValueError("Could not encode image to JPEG")
+
+        return jpeg_image.tobytes()
 
     def __str__(self):
         frame_strs = []
