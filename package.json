@@ -10,7 +10,9 @@
     "postinstall": "cd src-ui && npm install"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.5.3"
+    "@pinia/nuxt": "^0.5.1",
+    "@tauri-apps/api": "^1.5.3",
+    "pinia": "^2.1.7"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.5.11"

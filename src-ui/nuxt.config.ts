@@ -2,6 +2,10 @@ export default defineNuxtConfig({
   // (optional) Enable the Nuxt devtools
   devtools: { enabled: true },
   ssr: false,
+  modules: ['@pinia/nuxt'],
+  pinia: {
+    storesDirs: ['./stores/**'],
+  },
   vite: {
     // Better support for Tauri CLI output
     clearScreen: false,

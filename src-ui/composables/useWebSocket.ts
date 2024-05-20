@@ -23,7 +23,7 @@ export default (url: string) =>
                 const reader = new FileReader();
                 reader.onload = () => {
                     if (reader.result) {
-                        messages.value.push(reader.result as string);
+                        messages.value.push(`Received Blob with size ${reader.result.toString().length}`);
                     }
                 };
                 reader.readAsText(event.data);
@@ -40,7 +40,7 @@ export default (url: string) =>
         };
     };
 
-    const sendMessage = (message: string) => {
+    const sendMessage = (message: string = "hi") => {
         if (ws.value && isConnected.value) {
             ws.value.send(message);
         }
