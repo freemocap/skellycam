@@ -1,7 +1,6 @@
 export default defineNuxtConfig({
   // (optional) Enable the Nuxt devtools
   devtools: { enabled: true },
-  // Enable SSG
   ssr: false,
   vite: {
     // Better support for Tauri CLI output

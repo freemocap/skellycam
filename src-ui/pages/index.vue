@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>WebSocket Demo</h1>
+    <h1>Wowee its skellycam :O</h1>
     <div>
       <button @click="connectWebSocket">Connect</button>
       <button @click="sendMessage" :disabled="!isConnected">Send Message</button>
