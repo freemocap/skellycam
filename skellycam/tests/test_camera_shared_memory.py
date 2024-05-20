@@ -2,7 +2,6 @@ import multiprocessing
 
 import numpy as np
 
-from skellycam.core import CameraId
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager

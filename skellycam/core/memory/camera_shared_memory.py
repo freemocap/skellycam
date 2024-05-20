@@ -175,13 +175,13 @@ class CameraSharedMemory(BaseModel):
         tik = time.perf_counter_ns()
         full_payload = self._frame_to_buffer_payload(frame, image)
 
-        first_frame = self.current_index == -1
+        first_frame_bool = self.current_index == -1
         self.current_index += 1
         if self.current_index >= len(self.offsets):
             self.current_index = 0
         offset = self.offsets[self.current_index]
 
-        if not first_frame:
+        if not first_frame_bool:
             self._check_for_overwrite()
 
         self.shm.buf[offset:offset + self.payload_size] = full_payload  # this is where the magic happens
@@ -237,7 +237,7 @@ class CameraSharedMemory(BaseModel):
         imageless_payload_bytes = frame.to_unhydrated_bytes()
         full_payload = image.tobytes() + imageless_payload_bytes
         if not len(full_payload) == self.payload_size:
-            raise ValueError(f"Payload size mismatch for {self.camera_id} - "
+            raise ValueError(f"Error converting frame to buffer payload! Size mismatch for {self.camera_id} on frame: {frame.frame_number} - "
                              f"Expected: {self.payload_size}, "
                              f"Actual: {len(full_payload)}")
         return full_payload

@@ -41,7 +41,8 @@ def test_frame_payload_create_hydrated_dummy(image_fixture: np.ndarray):
     assert frame.image_shape == image_fixture.shape
     assert frame.frame_number == 0
     assert frame.color_channels == 3
-    assert frame.hydrated == True
+    assert frame.hydrated
+    assert np.sum(frame.image - image_fixture) == 0
 
 
 def test_frame_payload_create_unhydrated_dummy(image_fixture: np.ndarray):
