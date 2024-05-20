@@ -4,7 +4,7 @@ import time
 from typing import Optional, Tuple
 
 import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
@@ -12,11 +12,20 @@ from skellycam.core import CameraId
 logger = logging.getLogger(__name__)
 
 
+def int_to_fixed_bytes(value: int, length: int = 4) -> bytes:
+    return value.to_bytes(length, byteorder='big')
+
+
+def fixed_bytes_to_int(b: bytes) -> int:
+    return int.from_bytes(b, byteorder='big')
+
+
 class FramePayload(BaseModel):
     camera_id: CameraId = Field(
         description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`")
 
-    frame_number: int = Field(description="The number of frames read from the camera since the camera was started")
+    frame_number_bytes: bytes = Field(
+        description="The number of frames read from the camera since the camera was started, as a fixed-size byte array")
 
     bytes_per_pixel: int = Field(default=BYTES_PER_PIXEL, description="The number of bytes per pixel in the image")
 
@@ -36,6 +45,19 @@ class FramePayload(BaseModel):
                                              description="Timestamp of the previous frame in nanoseconds (dummy value on frame 0)")
     dummy: bool = Field(default=False, description="This is a dummy frame to be used to calculate the buffer size")
 
+    @property
+    def frame_number(self) -> int:
+        return fixed_bytes_to_int(self.frame_number_bytes)
+
+    @field_validator("frame_number_bytes", mode="before")
+    @classmethod
+    def frame_number_int_to_bytes(cls, v: int) -> bytes:
+        if isinstance(v, int):
+            return int_to_fixed_bytes(v)
+        elif isinstance(v, bytes):
+            return v
+        else:
+            raise ValueError(f"Frame number must be an int or bytes, not {type(v)}")
 
     @classmethod
     def from_previous(cls, previous: 'FramePayload') -> 'FramePayload':
@@ -53,18 +75,18 @@ class FramePayload(BaseModel):
         return cls(
             camera_id=camera_id,
             image_shape=image_shape,
-            frame_number=frame_number,
+            frame_number_bytes=int_to_fixed_bytes(frame_number) if isinstance(frame_number, int) else frame_number,
             color_channels=color_channels
         )
 
     @classmethod
     def _get_color_channels(cls,
-                            image_shape:Tuple[int,...]) -> Tuple[Tuple[int,...], int]:
+                            image_shape: Tuple[int, ...]) -> Tuple[Tuple[int, ...], int]:
         if len(image_shape) == 2:
             color_channels = 1
         elif image_shape[-1] == 1:
             color_channels = 1
-            del image_shape[-1]
+            image_shape = image_shape[:-1]
         elif len(image_shape) == 3:
             color_channels = image_shape[-1]
         else:
@@ -100,7 +122,8 @@ class FramePayload(BaseModel):
 
     def to_buffer(self, image: np.ndarray) -> memoryview:
         if self.hydrated:
-            raise ValueError("This method takes in the image separately here so we can avoid an unnecessary `copy` operation")
+            raise ValueError(
+                "This method takes in the image separately here so we can avoid an unnecessary `copy` operation")
         image_bytes = image.tobytes()
         bytes_payload = self.to_unhydrated_bytes()
         # bufffer should be [`image_bytes` + `unhydrated_bytes`]

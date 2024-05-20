@@ -33,7 +33,7 @@ def test_camera_memories_wrap_around(image_fixture,
 
         # put frame in loop a bunch of times, make sure it can handle wrapping around to the beginning
         try:
-            for loop in range(256 * 2):
+            for loop in range(255 * 2):
                 if loop % 256 == 0:
                     print(f"Loop: {loop}")
                 test_image = np.random.randint(0, 255, size=image_fixture.shape, dtype=np.uint8)

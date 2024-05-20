@@ -15,7 +15,7 @@ def test_create_frame(image_fixture: np.ndarray):
     frame.previous_frame_timestamp_ns = time.perf_counter_ns()
     frame.timestamp_ns = time.perf_counter_ns()
     frame.success = True
-    assert frame.hydrated == True
+    assert frame.hydrated
 
 
 def test_frame_payload_create_empty(image_fixture: np.ndarray):
@@ -29,7 +29,7 @@ def test_frame_payload_create_empty(image_fixture: np.ndarray):
     assert frame.image_shape == image_fixture.shape
     assert frame.frame_number == 0
     assert frame.color_channels == 3
-    assert frame.hydrated == False
+    assert not frame.hydrated
 
 
 def test_frame_payload_create_hydrated_dummy(image_fixture: np.ndarray):
@@ -89,3 +89,19 @@ def test_frame_payload_to_and_from_buffer(frame_payload_fixture):
     # Assert
     assert recreated_frame == frame_payload_fixture
     assert np.sum(recreated_frame.image - frame_payload_fixture.image) == 0
+
+
+def test_frame_number_fixed_size(image_fixture: np.ndarray):
+    # Arrange
+    og_frame = FramePayload.create_empty(camera_id=CameraId(0),
+                                      image_shape=image_fixture.shape,
+                                      frame_number=0)
+
+    og_frame_size = og_frame.to_buffer(image=image_fixture).nbytes
+
+    for fr in range(int(1e5)):
+        frame = FramePayload.create_empty(camera_id=CameraId(0),
+                                          image_shape=image_fixture.shape,
+                                          frame_number=fr)
+        frame_size = frame.to_buffer(image=image_fixture).nbytes
+        assert frame_size == og_frame_size
