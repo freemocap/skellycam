@@ -1,0 +1,95 @@
+[tool.poetry]
+name = "skellycam"
+version = "2023.09.1086"
+description = "A simple python API for efficiently connecting to and recording synchronized videos from one or multiple cameras 💀📸"
+authors = ["Skelly FreeMoCap <info@freemocap.org>"]
+license = "AGPLv3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">3.9, <3.13"
+opencv-contrib-python = "^4.9.0.80"
+numpy = "^1.26.4"
+fastapi = "^0.111.0"
+websockets = "^12.0"
+uvicorn = "^0.29.0"
+msgpack = "^1.0.8"
+tzlocal = "^5.2"
+psutil = "^5.9.8"
+pillow = "^10.3.0"
+setproctitle = "^1.3.3"
+polars = "^0.20.23"
+pyside6 = "^6.7.0"
+pytest-asyncio = "^0.23.6"
+scipy = "^1.13.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+pre-commit = "^3.4.0"
+pyinstaller = "^6.0.0"
+pytest-mock = "^3.12.0"
+pywsitest = "^0.3.8"
+pytest-cov = "^5.0.0"
+httpx = "^0.27.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[project.urls]
+Homepage = "https://github.com/freemocap/skellycam"
+
+[tool.bumpver]
+current_version = "v2023.09.1086"
+
+version_pattern = "vYYYY.0M.BUILD[-TAG]"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"skellycam/__init__.py" = ["{version}"]
+
+
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Other Audience",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Video :: Capture",
+    "Topic :: Multimedia :: Video :: Display",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: System :: Hardware",
+    "Topic :: System :: Hardware :: Universal Serial Bus (USB)",
+    "Topic :: System :: Hardware :: Universal Serial Bus (USB) :: Video (UVC)",
+]
+keywords = [
+    "camera",
+    "stream",
+    "video",
+    "image",
+    "opencv",
+    "skelly",
+    "freemocap",
+    "motion capture",
+    "synchronization",
+    "computer vision"
+]
