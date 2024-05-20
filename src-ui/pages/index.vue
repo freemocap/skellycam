@@ -11,7 +11,7 @@
 
       <div v-for="(imgSrc, cameraId) in latestImages" :key="cameraId">
         <h3>{{ cameraId }}</h3>
-        <img v-if="imgSrc" :src="imgSrc" />
+        <img v-if="imgSrc" :src="imgSrc" class="full-width" />
         <p v-else>No image available</p>
       </div>
 
