@@ -6,7 +6,8 @@
       <button @click="sendMessage('Hello from the client')">Send WS Message</button>
       <p> Websocket status: {{ isConnected ? 'Connected' : 'Disconnected' }}</p>
       <button @click="fetchHello">Fetch HTTP Hello</button>
-      <button @click="connectToCameras">Test Connect to Cameras</button>
+      <button @click="testConnectToCameras">Test Connect to Cameras</button>
+      <button @click="connectToCameras">Connect to Cameras</button>
 
       <div v-for="(imgSrc, cameraId) in latestImages" :key="cameraId">
         <h3>{{ cameraId }}</h3>
@@ -41,8 +42,14 @@ const fetchHello = async () => {
   console.log(data);
 }
 
-const connectToCameras = async () => {
+const testConnectToCameras = async () => {
   const response = await fetch('http://localhost:8003/connect/test');
+  const data = await response.json();
+  messages.value.push(`Fetched: ${JSON.stringify(data)}`);
+  console.log(data);
+}
+const connectToCameras = async () => {
+  const response = await fetch('http://localhost:8003/connect');
   const data = await response.json();
   messages.value.push(`Fetched: ${JSON.stringify(data)}`);
   console.log(data);

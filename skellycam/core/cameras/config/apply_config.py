@@ -15,15 +15,15 @@ class FailedToApplyCameraConfigurationError(Exception):
 
 def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> CameraConfig:
     # set camera stream parameters
+
     logger.info(
         f"Applying configuration to Camera {config.camera_id}:\n"
         f"\tExposure: {config.exposure},\n"
-        f"\tResolution width: {config.resolution.width},\n"
         f"\tResolution height: {config.resolution.height},\n"
+        f"\tResolution width: {config.resolution.width},\n"
         f"\tFramerate: {config.framerate},\n"
         f"\tFourcc: {config.capture_fourcc}"
     )
-
     try:
         if not cv2_vid_capture.isOpened():
             raise FailedToApplyCameraConfigurationError(

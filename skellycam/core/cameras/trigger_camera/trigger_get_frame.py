@@ -65,7 +65,7 @@ def get_frame(camera_id: CameraId,
     frame.image_shape = image.shape
     camera_shared_memory.put_frame(
         frame=frame,
-        image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+        image=image,
     )
     next_frame.previous_frame_timestamp_ns = frame.timestamp_ns
 

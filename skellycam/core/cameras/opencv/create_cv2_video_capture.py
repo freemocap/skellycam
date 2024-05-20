@@ -27,7 +27,6 @@ def create_cv2_capture(config: CameraConfig):
         logger.debug(f"Running in test environment, using mock camera")
         return create_cv2_video_capture_mock(config)
 
-
     cap_backend = determine_backend()
     capture = cv2.VideoCapture(int(config.camera_id), cap_backend.value)
     if not capture.isOpened():
