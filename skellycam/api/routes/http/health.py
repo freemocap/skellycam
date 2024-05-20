@@ -2,6 +2,8 @@ import logging
 
 from fastapi import APIRouter
 
+HELLO_FROM_SKELLYCAM_BACKEND_MESSAGE = {"message": "Hello from the SkellyCam Backend 💀📸✨"}
+
 logger = logging.getLogger(__name__)
 healthcheck_router = APIRouter()
 
@@ -13,4 +15,4 @@ async def hello():
     This can be used as a sanity check to ensure the API is responding.
     """
     logger.api("Hello requested! Deploying Hello!")
-    return {"message": "Hello from the SkellyCam Backend 💀📸✨"}
+    return HELLO_FROM_SKELLYCAM_BACKEND_MESSAGE

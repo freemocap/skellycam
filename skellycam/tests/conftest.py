@@ -156,11 +156,11 @@ def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload
 
 
 @pytest.fixture
-def app() -> FastAPI:
+def app_fixture() -> FastAPI:
     return create_app()
 
 
 @pytest.fixture
-def client(app: FastAPI) -> TestClient:
-    with TestClient(app) as client:
+def client_fixture(app_fixture: FastAPI) -> TestClient:
+    with TestClient(app_fixture) as client:
         yield client
