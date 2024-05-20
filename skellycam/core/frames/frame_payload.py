@@ -49,6 +49,10 @@ class FramePayload(BaseModel):
     def frame_number(self) -> int:
         return fixed_bytes_to_int(self.frame_number_bytes)
 
+    @frame_number.setter
+    def frame_number(self, value: int):
+        self.frame_number_bytes = int_to_fixed_bytes(value)
+
     @field_validator("frame_number_bytes", mode="before")
     @classmethod
     def frame_number_int_to_bytes(cls, v: int) -> bytes:
