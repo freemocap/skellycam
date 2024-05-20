@@ -26,6 +26,7 @@ parametrization_config = (
 
 )
 
+
 @pytest.fixture
 def test_default_camera_config():
     assert CameraConfig()
@@ -41,7 +42,7 @@ def test_custom_config(camera_id,
                        capture_fourcc: str = "MJPG",
                        writer_fourcc: str = "MP4V",
                        ):
-    input_resolution = ImageResolution(width=resolution.value[0], height=resolution.value[1])
+    input_resolution = ImageResolution(height=resolution.value[0], width=resolution.value[1])
 
     if len(resolution.value) == 3:
         number_of_color_channels = resolution.value[2]
@@ -63,18 +64,16 @@ def test_custom_config(camera_id,
     )
     assert config.camera_id == CameraId(camera_id)
     assert config.use_this_camera == use_this_camera
-    assert config.resolution == ImageResolution(width=resolution.value[0], height=resolution.value[1])
+    assert config.resolution == ImageResolution(height=resolution.value[0], width=resolution.value[1])
     assert config.color_channels == number_of_color_channels
     assert config.exposure == exposure
     assert config.framerate == framerate
     assert config.rotation == rotation
     assert config.capture_fourcc == capture_fourcc
     assert config.writer_fourcc == writer_fourcc
-    assert config.orientation == "landscape" if resolution.value[0] > resolution.value[1] else "portrait"
-    assert config.aspect_ratio == resolution.value[0] / resolution.value[1]
+    assert config.orientation == "landscape" if resolution.value[1] > resolution.value[0] else "portrait"
+    assert config.aspect_ratio == resolution.value[1] / resolution.value[0]
     assert config.image_shape == image_shape
     assert config.color_channels == number_of_color_channels
     assert config.image_size_bytes == np.prod(resolution.value) * BYTES_PER_PIXEL
     assert "BASE CONFIG" in str(config)
-
-

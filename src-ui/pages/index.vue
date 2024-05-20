@@ -8,6 +8,12 @@
       <button @click="fetchHello">Fetch HTTP Hello</button>
       <button @click="connectToCameras">Test Connect to Cameras</button>
 
+      <div v-for="(imgSrc, cameraId) in latestImages" :key="cameraId">
+        <h3>{{ cameraId }}</h3>
+        <img v-if="imgSrc" :src="imgSrc" />
+        <p v-else>No image available</p>
+      </div>
+
       <h2>Messages</h2>
       <ul>
         <li v-for="(msg, index) in messages" :key="index">{{ msg }}</li>
@@ -22,8 +28,9 @@ const wsUrl = 'ws://localhost:8003/ws/connect'; // Update this with your actual 
 const {
   connectWebSocket,
   sendMessage,
+  isConnected,
   messages,
-  isConnected
+  latestImages
 } = useWebSocket(wsUrl);
 
 

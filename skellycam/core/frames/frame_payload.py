@@ -1,4 +1,3 @@
-# from skellycam.core.frames.frame_lifecycle_timestamps import FrameLifeCycleTimestamps
 import logging
 import pickle
 import time
@@ -37,9 +36,6 @@ class FramePayload(BaseModel):
                                              description="Timestamp of the previous frame in nanoseconds (dummy value on frame 0)")
     dummy: bool = Field(default=False, description="This is a dummy frame to be used to calculate the buffer size")
 
-    # timestamps: FrameLifeCycleTimestamps = Field(
-    #     default_factory=FrameLifeCycleTimestamps,
-    #     description="Record `time.perf_counter_ns()` at various points in the frame lifecycle")
 
     @classmethod
     def from_previous(cls, previous: 'FramePayload') -> 'FramePayload':
@@ -112,9 +108,7 @@ class FramePayload(BaseModel):
 
     def to_unhydrated_bytes(self) -> bytes:
         without_image_data = self.dict(exclude={"image_data"})
-        # self.timestamps.pre_pickle = time.perf_counter_ns()
         bytes_payload = pickle.dumps(without_image_data)
-        # self.timestamps.post_pickle = time.perf_counter_ns()
         return bytes_payload
 
     @classmethod
@@ -135,12 +129,9 @@ class FramePayload(BaseModel):
         instance = cls(
             **unhydrated_frame
         )
-        # instance.timestamps.pre_copy_image_from_buffer = time.perf_counter_ns()
         instance.image = np.ndarray(image_shape, dtype=np.uint8, buffer=image_buffer)
-        # instance.timestamps.post_copy_image_from_buffer = time.perf_counter_ns()
 
         instance._validate_image(image=instance.image)
-        # instance.timestamps.done_create_from_buffer = time.perf_counter_ns()
         return instance
 
     @property
@@ -153,11 +144,9 @@ class FramePayload(BaseModel):
 
     @image.setter
     def image(self, image: np.ndarray):
-        # self.timestamps.pre_set_image_in_frame = time.perf_counter_ns()
         self.image_data = image.tobytes()
         self.image_shape = image.shape
         self.image_checksum = self.calculate_image_checksum(image)
-        # self.timestamps.post_set_image_in_frame = time.perf_counter_ns()
 
     @property
     def height(self) -> int:
@@ -169,7 +158,7 @@ class FramePayload(BaseModel):
 
     @property
     def resolution(self) -> tuple:
-        return self.width, self.height
+        return self.height, self.width
 
     @property
     def payload_size_in_kilobytes(self) -> float:

@@ -5,7 +5,7 @@ export default (url: string) => {
     const ws = ref<WebSocket | null>(null);
     const messages = ref<string[]>([]);
     const isConnected = ref(false);
-    const latestImagePayload = ref<FrontendImagePayload | null>(null);
+    const latestImages = ref<Record<string, string | null>>({}); // To hold image URLs
 
     const connectWebSocket = () => {
         if (ws.value) {
@@ -29,13 +29,14 @@ export default (url: string) => {
                     if (arrayBuffer.byteLength < 1000) {
                         console.log('Received small Blob:', arrayBuffer.byteLength);
                         messages.value.push(`Received small Blob: ${arrayBuffer.byteLength} bytes - ${new TextDecoder().decode(arrayBuffer)}`);
+                    } else {
+                        console.log('Received Blob with size:', arrayBuffer.byteLength);
+                        const payload = decode(new Uint8Array(arrayBuffer)) as FrontendImagePayload;
+                        updateLatestImages(payload);
+                        const logMessage = `Updated latestImages with ${Object.keys(payload.jpeg_images).length} cameras`;
+                        console.log(logMessage);
+                        messages.value.push(logMessage);
                     }
-                    console.log('Received Blob with size:', arrayBuffer.byteLength);
-                    latestImagePayload.value = decode(new Uint8Array(arrayBuffer)) as FrontendImagePayload;
-                    const logMessage = `Updated latestImagePayload with ${latestImagePayload.value?.jpeg_images ? Object.keys(latestImagePayload.value?.jpeg_images).length : 0} cameras`;
-                    console.log(logMessage);
-                    messages.value.push(logMessage);
-
                 } catch (error) {
                     console.error('Error decoding MessagePack:', error);
                 }
@@ -63,25 +64,44 @@ export default (url: string) => {
             ws.value.send(message);
         }
     };
-    const handleBlob = async (blob: Blob) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            if (reader.result) {
+
+    const updateLatestImages = (payload: FrontendImagePayload) => {
+        const images = payload.jpeg_images || {};
+        const processedImages: Record<string, string | null> = {};
+
+        for (const [cameraId, imageBytes] of Object.entries(images)) {
+            if (imageBytes) {
                 try {
-                    console.log(`Handling Blob with size ${reader.result.toString().length}`)
+                    console.log(`Processing image for camera ${cameraId}`);
+                    const uint8Array = new Uint8Array(imageBytes);
+                    console.log(`Image byte length for camera ${cameraId}:`, uint8Array.byteLength);
+                    const blob = new Blob([uint8Array], { type: 'image/jpeg' });
+                    const url = URL.createObjectURL(blob);
+                    processedImages[cameraId] = url;
+
+                    // Load the image and get its dimensions
+                    const img = new Image();
+                    img.onload = () => {
+                        console.log(`Image dimensions for camera ${cameraId}: width=${img.width}, height=${img.height}`);
+                    };
+                    img.src = url;
                 } catch (error) {
-                    console.error('Error parsing JSON from Blob:', error);
+                    console.error(`Error processing image for camera ${cameraId}:`, error);
+                    processedImages[cameraId] = null;
                 }
+            } else {
+                processedImages[cameraId] = null;
             }
-        };
-        reader.readAsText(blob);  // Read the Blob as text
+        }
+        latestImages.value = processedImages;
     };
 
 
     return {
         connectWebSocket,
         sendMessage,
-        messages,
         isConnected,
+        messages,
+        latestImages,
     };
 }

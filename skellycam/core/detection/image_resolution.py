@@ -3,15 +3,15 @@ from pydantic import BaseModel
 
 
 class ImageResolution(BaseModel):
-    width: int
     height: int
+    width: int
 
     @classmethod
     def from_string(cls, tuple_str: str, split_on: str = "x") -> "ImageResolution":
         """
-        Create a `VideoResolution` from a string like "(1280, 720)"
+        Create a `VideoResolution` from a string like "(720, 1280)"
         """
-        width, height = tuple_str.replace("(", "").replace(")", "").split(split_on)
+        height, width = tuple_str.replace("(", "").replace(")", "").split(split_on)
         return cls(width=int(width), height=int(height))
 
     @classmethod
@@ -19,7 +19,7 @@ class ImageResolution(BaseModel):
         """
         Create a `VideoResolution` from an image
         """
-        return cls(width=image.shape[0], height=image.shape[1])
+        return cls(height=image.shape[0], width=image.shape[1])
 
     @property
     def orientation(self) -> str:
@@ -45,4 +45,4 @@ class ImageResolution(BaseModel):
         return self.width == other.width and self.height == other.height
 
     def __str__(self) -> str:
-        return f"({self.width}x{self.height})"
+        return f"({self.height}x{self.width})"

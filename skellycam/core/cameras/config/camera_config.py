@@ -1,6 +1,6 @@
-from typing import Tuple, Self
+from typing import Tuple
 
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
@@ -20,7 +20,7 @@ class CameraConfig(BaseModel):
         description="Whether or not to use this camera for streaming/recording",
     )
     resolution: ImageResolution = Field(
-        default=ImageResolution(width=1920, height=1080),
+        default=ImageResolution(height=1080, width=1920),
         description="The current resolution of the camera, in pixels.",
     )
     color_channels: int = Field(
@@ -57,7 +57,6 @@ class CameraConfig(BaseModel):
     def convert_camera_id(cls, v):
         return CameraId(v)
 
-
     @property
     def orientation(self) -> str:
         return self.resolution.orientation
@@ -69,9 +68,9 @@ class CameraConfig(BaseModel):
     @property
     def image_shape(self) -> Tuple[int, ...]:
         if self.color_channels == 1:
-            return self.resolution.width, self.resolution.height
+            return self.resolution.height, self.resolution.width
         else:
-            return self.resolution.width, self.resolution.height, self.color_channels
+            return self.resolution.height, self.resolution.width, self.color_channels
 
     @property
     def image_size_bytes(self) -> int:
