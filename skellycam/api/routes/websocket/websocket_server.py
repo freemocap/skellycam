@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, WebSocket
-from starlette.websockets import WebSocketDisconnect
+from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from skellycam.core.controller.singleton import get_or_create_controller
 
@@ -63,13 +63,13 @@ async def websocket_server_connect(websocket: WebSocket):
         try:
             logger.api("Creating listener task...")
             await listen_for_client_messages(websocket)
-
+        except WebSocketDisconnect:
+            logger.info("Client disconnected")
         except Exception as e:
             logger.exception(e)
             logger.error(f"Error while running camera loop: {type(e).__name__}- {e}")
         finally:
-            logger.info("Closing websocket...")
-            await controller.close()
-            await websocket.send_text("Goodbye, client👋")
-            await websocket.close()
-            logger.api("Websocket closed")
+            if not websocket.client_state == WebSocketState.DISCONNECTED:
+                await websocket.send_text("Goodbye, client👋")
+                await websocket.close()
+            logger.info("Websocket closed")
