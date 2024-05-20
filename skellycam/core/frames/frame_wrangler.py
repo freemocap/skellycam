@@ -97,7 +97,7 @@ class FrameWrangler:
             self._recorder_queue.put(self._multi_frame_payload)
 
         if self._ws_send_bytes is not None:
-            logger.info(f"Sending `self._multi_frame_payload` to frontend")
+            logger.loop(f"Sending `self._multi_frame_payload` to frontend")
             await self._send_frontend_payload()
 
     async def _send_frontend_payload(self):

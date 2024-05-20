@@ -1,24 +1,18 @@
 <template>
   <div>
-    <h1>Wowee its skellycam :O</h1>
+    <p> Websocket status: {{ isConnected ? 'Connected' : 'Disconnected' }}</p>
     <div>
       <button @click="connectWebSocket">Connect Websocket</button>
       <button @click="sendMessage('Hello from the client')">Send WS Message</button>
-      <p> Websocket status: {{ isConnected ? 'Connected' : 'Disconnected' }}</p>
       <button @click="fetchHello">Fetch HTTP Hello</button>
       <button @click="testConnectToCameras">Test Connect to Cameras</button>
       <button @click="connectToCameras">Connect to Cameras</button>
 
       <div v-for="(imgSrc, cameraId) in latestImages" :key="cameraId">
         <h3>{{ cameraId }}</h3>
-        <img v-if="imgSrc" :src="imgSrc" class="full-width" />
+        <img v-if="imgSrc" :src="imgSrc"  class="smol-image" />
         <p v-else>No image available</p>
       </div>
-
-      <h2>Messages</h2>
-      <ul>
-        <li v-for="(msg, index) in messages" :key="index">{{ msg }}</li>
-      </ul>
     </div>
   </div>
 </template>
@@ -30,7 +24,6 @@ const {
   connectWebSocket,
   sendMessage,
   isConnected,
-  messages,
   latestImages
 } = useWebSocket(wsUrl);
 
@@ -38,25 +31,30 @@ const {
 const fetchHello = async () => {
   const response = await fetch('http://localhost:8003/hello');
   const data = await response.json();
-  messages.value.push(`Fetched: ${JSON.stringify(data)}`);
   console.log(data);
 }
 
 const testConnectToCameras = async () => {
   const response = await fetch('http://localhost:8003/connect/test');
   const data = await response.json();
-  messages.value.push(`Fetched: ${JSON.stringify(data)}`);
   console.log(data);
 }
 const connectToCameras = async () => {
   const response = await fetch('http://localhost:8003/connect');
   const data = await response.json();
-  messages.value.push(`Fetched: ${JSON.stringify(data)}`);
   console.log(data);
 }
 </script>
 
 <style scoped>
+.smol-image {
+  width: 640px;
+  height: auto;
+}
+
+div {
+ background-color: #654a7b;
+}
 h1 {
   font-size: 24px;
 }
@@ -64,17 +62,7 @@ h1 {
 button {
   margin-right: 10px;
   padding: 10px;
+  font-size: small;
 }
 
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  background: #654a7b;
-  margin-bottom: 5px;
-  padding: 10px;
-  border: 1px solid #ddd;
-}
 </style>

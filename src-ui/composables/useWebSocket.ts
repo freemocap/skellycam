@@ -3,11 +3,10 @@ import {decode} from "@msgpack/msgpack";
 
 export default (url: string) => {
     const ws = ref<WebSocket | null>(null);
-    const messages = ref<string[]>([]);
     const isConnected = ref(false);
     const latestImages = ref<Record<string, string | null>>({}); // To hold image URLs
 
-    const connectWebSocket = () => {
+    const connectWebSocket = async () => {
         if (ws.value) {
             ws.value.close();
         }
@@ -21,21 +20,19 @@ export default (url: string) => {
 
         ws.value.onmessage = async (event) => {
             if (typeof event.data === 'string') {
-                messages.value.push(event.data);
+                console.log('Received message:', event.data);
             } else if (event.data instanceof Blob) {
 
                 try {
                     const arrayBuffer = await event.data.arrayBuffer();
                     if (arrayBuffer.byteLength < 1000) {
                         console.log('Received small Blob:', arrayBuffer.byteLength);
-                        messages.value.push(`Received small Blob: ${arrayBuffer.byteLength} bytes - ${new TextDecoder().decode(arrayBuffer)}`);
                     } else {
                         console.log('Received Blob with size:', arrayBuffer.byteLength);
                         const payload = decode(new Uint8Array(arrayBuffer)) as FrontendImagePayload;
-                        updateLatestImages(payload);
+                        await updateLatestImages(payload);
                         const logMessage = `Updated latestImages with ${Object.keys(payload.jpeg_images).length} cameras`;
                         console.log(logMessage);
-                        messages.value.push(logMessage);
                     }
                 } catch (error) {
                     console.error('Error decoding MessagePack:', error);
@@ -65,7 +62,7 @@ export default (url: string) => {
         }
     };
 
-    const updateLatestImages = (payload: FrontendImagePayload) => {
+    const updateLatestImages = async (payload: FrontendImagePayload) => {
         const images = payload.jpeg_images || {};
         const processedImages: Record<string, string | null> = {};
 
@@ -101,7 +98,6 @@ export default (url: string) => {
         connectWebSocket,
         sendMessage,
         isConnected,
-        messages,
         latestImages,
     };
 }
