@@ -1,15 +1,12 @@
 import logging
-
-from skellycam.system import (
-    get_default_skellycam_base_folder_path,
-)
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def remove_empty_directories():
+def remove_empty_directories(base_path: str):
     logger.debug(f"Cleaning up empty directories...")
-    base_path = get_default_skellycam_base_folder_path()
+    base_path = Path(base_path)
     for directory in reversed(list(base_path.glob("**"))):
         if directory.is_dir():
             try:

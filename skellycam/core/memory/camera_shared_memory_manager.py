@@ -2,6 +2,7 @@ import asyncio
 import logging
 import multiprocessing
 import time
+from multiprocessing import connection
 from typing import Dict, Literal
 
 from skellycam.core import CameraId
@@ -76,14 +77,14 @@ class CameraSharedMemoryManager:
             raise ValueError("Did not read full multi-frame payload!")
         return payload
 
-    def await_and_send_frame_bytes(self, pipe_connection: multiprocessing.connection.Connection, get_type: GET_TYPES = "next"):
+    def await_and_send_frame_bytes(self, pipe_connection: connection.Connection, get_type: GET_TYPES = "next"):
         self.sync_await_new_multi_frame_payload()
         self.send_frame_bytes(pipe_connection, get_type)
 
     def sync_await_new_multi_frame_payload(self):
         while not self.new_multi_frame_payload_available():
             time.sleep(0.001)
-    def send_frame_bytes(self, pipe_connection: multiprocessing.connection.Connection, get_type: GET_TYPES = "next"):
+    def send_frame_bytes(self, pipe_connection: connection.Connection, get_type: GET_TYPES = "next"):
 
         for camera_shared_memory in self._buffer_by_camera.values():
             if get_type == "next":

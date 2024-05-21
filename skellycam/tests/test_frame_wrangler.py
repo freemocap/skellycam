@@ -16,8 +16,7 @@ async def test_frame_wrangler(camera_shared_memory_fixture,
 
     # create
     frame_wrangler = FrameWrangler()
-    frame_wrangler.set_camera_configs(camera_configs=camera_configs_fixture,
-                                      shared_memory_manager=og_shm_manager)
+    frame_wrangler.set_camera_configs(configs=camera_configs_fixture)
     frame_wrangler.start_frame_listener()
 
     number_of_frames_to_test = 10
