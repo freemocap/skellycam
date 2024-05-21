@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import multiprocessing
 import time
 from typing import Coroutine, Callable, Optional
 
@@ -15,7 +16,7 @@ class FrameWrangler:
     def __init__(self):
         super().__init__()
         self._camera_configs: Optional[CameraConfigs] = None
-        self._shared_memory_manager: Optional[CameraSharedMemoryManager] = None
+        self._pipe_parent, self._pipe_child = multiprocessing.Pipe()
         self._ws_send_bytes: Optional[Callable[[bytes], Coroutine]] = None
         self._multi_frame_payload: Optional[MultiFramePayload] = None
         self._setup_recorder()
@@ -29,6 +30,10 @@ class FrameWrangler:
             return 0
         return self._multi_frame_payload.multi_frame_number + 1
 
+    @property
+    def pipe_connection(self) -> multiprocessing.connection.Connection:
+        return self._pipe_child
+
     def _setup_recorder(self):
         self._is_recording = False
         # self._video_recorder_manager = VideoRecorderProcessManager()
@@ -37,14 +42,9 @@ class FrameWrangler:
         self._ws_send_bytes = ws_send_bytes
         logger.trace(f"Set websocket bytes sender function")
 
-    def set_camera_configs(self, camera_configs: CameraConfigs,
-                           shared_memory_manager: CameraSharedMemoryManager):
-        self._shared_memory_manager = shared_memory_manager
-        self._camera_configs = camera_configs
-        self._multi_frame_payload = MultiFramePayload.create(
-            camera_ids=list(self._camera_configs.keys()),
-            multi_frame_number=-1
-        )
+    def set_camera_configs(self, configs: CameraConfigs):
+        self._camera_configs = configs
+
 
     @property
     def is_recording(self):
@@ -77,36 +77,34 @@ class FrameWrangler:
 
     async def listen_for_frames(self):
         try:
-            while self._should_continue_listening or self._shared_memory_manager.new_multi_frame_payload_available():
+            while self._should_continue_listening or not self._pipe_parent.poll(timeout=0.1):
                 logger.loop(f"Awaiting multi-frame payload...")
 
-                self._multi_frame_payload = await self._shared_memory_manager.get_multi_frame_payload(
-                    payload=self._multi_frame_payload
-                )
-
-                logger.loop(f"Received multi-frame payload!\n {self._multi_frame_payload}")
-                await self._handle_payload()
+                payload_bytes = self._pipe_parent.recv_bytes()
+                payload = MultiFramePayload.from_msgpack(payload_bytes)
+                logger.loop(f"Received multi-frame payload!\n {payload}")
+                await self._handle_payload(payload)
         except Exception as e:
             logger.error(f"Error in listen_for_frames: {type(e).__name__} - {e}")
             logger.exception(e)
         logger.trace(f"Stopped listening for multi-frames")
 
-    async def _handle_payload(self):
+    async def _handle_payload(self, payload: MultiFramePayload):
         if self._is_recording:
-            logger.loop(f"Sending payload to recorder with {len(self._multi_frame_payload.frames)} frames")
-            self._recorder_queue.put(self._multi_frame_payload)
+            logger.loop(f"Sending payload to recorder with {len(payload.frames)} frames")
+            self._recorder_queue.put(payload)
 
         if self._ws_send_bytes is not None:
             logger.loop(f"Sending `self._multi_frame_payload` to frontend")
-            await self._send_frontend_payload()
+            await self._send_frontend_payload(payload)
 
-    async def _send_frontend_payload(self):
+    async def _send_frontend_payload(self, payload: MultiFramePayload):
         if self._ws_send_bytes is None:
             raise ValueError("Websocket `send bytes` function not set!")
 
         logger.loop(f"FrameWrangler - Convert multi-frame payload to frontend payload")
         frontend_payload = FrontendImagePayload.from_multi_frame_payload(
-            multi_frame_payload=self._multi_frame_payload,
+            multi_frame_payload=payload,
         )
         logger.loop(f"FrameWrangler - Sending frontend payload: {frontend_payload}")
         await self._ws_send_bytes(frontend_payload.to_msgpack())

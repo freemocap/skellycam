@@ -1,7 +1,7 @@
 # __main__.py
 import logging
+import multiprocessing
 import sys
-from multiprocessing import freeze_support
 
 from skellycam.api.run_server import run_uvicorn_server
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
@@ -13,7 +13,9 @@ PORT = 8003
 APP_URL = f"http://{HOSTNAME}:{PORT}"
 
 if __name__ == "__main__":
-    freeze_support()
+
+    multiprocessing.freeze_support()
+    multiprocessing.set_start_method("fork")
 
     print(f"Running from __main__: {__name__} - {__file__} [print via `print(...)`]")
     logger.info(f"Running from __main__: {__name__} - {__file__} [log via `logger.info(...)`]")

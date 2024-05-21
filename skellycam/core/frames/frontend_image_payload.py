@@ -33,8 +33,9 @@ class FrontendImagePayload(BaseModel):
         for camera_id, frame in multi_frame_payload.frames.items():
             if frame is None:
                 continue
-            annotated_image = cls._annotate_image(frame)
-            jpeg_images[camera_id] = cls._image_to_jpeg(annotated_image, quality=jpeg_quality)
+            frontend_image = frame.image.copy()
+            # frontend_image = cv2.resize(frontend_image, (0, 0), fx=0.5, fy=0.5)
+            jpeg_images[camera_id] = cls._image_to_jpeg(frontend_image, quality=jpeg_quality)
 
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
@@ -64,7 +65,8 @@ class FrontendImagePayload(BaseModel):
         return jpeg_image.tobytes()
 
     @staticmethod
-    def _annotate_image(frame: FramePayload) -> np.ndarray:
+    def _annotate_image(frame: FramePayload,
+                        image=np.ndarray) -> np.ndarray:
         annotation_text = [
             f"Camera ID: {frame.camera_id}",
             f"Frame Number: {frame.frame_number}",
@@ -79,29 +81,28 @@ class FrontendImagePayload(BaseModel):
         font_line_type = cv2.LINE_AA
         line_gap = 20  # Gap between lines
 
-        annotated_image = frame.image.copy()
         for i, line in enumerate(annotation_text):
             y_pos = font_position[1] + i * line_gap
             # draw text outline
-            annotated_image = cv2.putText(annotated_image,
-                                          line,
-                                          (font_position[0], y_pos),
-                                          font,
-                                          font_scale,
-                                          font_outline_color,
-                                          font_outline_thickness,
-                                          font_line_type)
+            image = cv2.putText(image,
+                                line,
+                                (font_position[0], y_pos),
+                                font,
+                                font_scale,
+                                font_outline_color,
+                                font_outline_thickness,
+                                font_line_type)
             # draw text
-            annotated_image = cv2.putText(annotated_image,
-                                          line,
-                                          (font_position[0], y_pos),
-                                          font,
-                                          font_scale,
-                                          font_color,
-                                          font_thickness,
-                                          font_line_type)
+            image = cv2.putText(image,
+                                line,
+                                (font_position[0], y_pos),
+                                font,
+                                font_scale,
+                                font_color,
+                                font_thickness,
+                                font_line_type)
 
-        return annotated_image
+        return image
 
     def __str__(self):
         frame_strs = []

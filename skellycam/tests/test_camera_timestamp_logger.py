@@ -20,6 +20,7 @@ def test_camera_timestamp_logger_initialization():
     assert timestamp_logger._save_directory == test_directory
 
 
+
 def test_logging_timestamps(image_fixture: np.ndarray):
     # Arrange
     test_directory = "test_directory"

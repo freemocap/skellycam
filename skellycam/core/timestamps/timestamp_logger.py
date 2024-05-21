@@ -100,7 +100,6 @@ class CameraTimestampLogger:
 
     def _create_save_paths(self):
         camera_timestamps_path = Path(self._save_directory) / "camera_timestamps"
-        camera_timestamps_path.mkdir(parents=True, exist_ok=True)
         self._timestamp_csv_path = (
             camera_timestamps_path / f"{self.file_name_prefix}_timestamps.csv"
         )
@@ -114,6 +113,7 @@ class CameraTimestampLogger:
         )
 
     def _save_documentation(self):
+        self._documentation_path.parent.mkdir(parents=True, exist_ok=True)
         if not self._documentation_path.exists():
             with open(self._documentation_path, "w", encoding="utf-8") as f:
                 f.write(CameraTimestampLog.to_document())
@@ -123,12 +123,14 @@ class CameraTimestampLogger:
         )
 
     def _save_logs_as_csv(self):
+        self._timestamp_csv_path.parent.mkdir(parents=True, exist_ok=True)
         logger.debug(
             f"Saving timestamp logs for camera {self._camera_id} to {self._timestamp_csv_path} with {len(self._timestamp_logs)} frames (rows) of timestamp data..."
         )
         self.to_dataframe().to_csv(self._timestamp_csv_path, index=False)
 
     def _save_timestamp_stats(self):
+        self._timestamp_csv_path.parent.mkdir(parents=True, exist_ok=True)
         stats = self.stats  # snag the stats to avoid recalculating
         with open(self._stats_json_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(stats, indent=4))

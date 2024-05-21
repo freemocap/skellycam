@@ -224,6 +224,34 @@ class CameraSharedMemory(BaseModel):
         frame = self.retrieve_frame(self.last_frame_written_index)
         return frame
 
+
+
+
+
+    def retrieve_frame_bytes(self, index: int) -> bytes:
+        tik = time.perf_counter_ns()
+        if index >= len(self.offsets) or index < 0:
+            raise ValueError(f"Index {index} out of range for {self.camera_id}")
+        offset = self.offsets[index]
+
+        payload_buffer = self.shm.buf[offset:offset + self.payload_size]  # this is where the magic happens (in reverse)
+
+        elapsed_get_from_shm = (time.perf_counter_ns() - tik) / 1e6
+        return bytes(payload_buffer)
+
+    def get_next_frame_bytes(self) -> bytes:
+        frame_bytes = self.retrieve_frame_bytes(self.read_next)
+        self.read_next += 1
+        return frame_bytes
+
+    def get_latest_frame_bytes(self) -> bytes:
+        frame_bytes = self.retrieve_frame_bytes(self.last_frame_written_index)
+        return frame_bytes
+
+
+
+
+
     def _increment_index(self):
         self.current_index += 1
         if self.current_index >= len(self.offsets):

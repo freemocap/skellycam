@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import multiprocessing
+import time
 from typing import Dict, Literal
 
 from skellycam.core import CameraId
@@ -11,6 +12,7 @@ from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
 
+GET_TYPES = Literal["next", "latest"]
 
 class CameraSharedMemoryManager:
     def __init__(self,
@@ -54,9 +56,11 @@ class CameraSharedMemoryManager:
         return all([camera_shared_memory.new_frame_available for camera_shared_memory in
                     self._buffer_by_camera.values()])
 
+
+
     async def get_multi_frame_payload(self,
                                       payload: MultiFramePayload,
-                                      get_type: Literal["next", "latest"] = "next") -> MultiFramePayload:
+                                      get_type: GET_TYPES = "next") -> MultiFramePayload:
         payload = MultiFramePayload.from_previous(payload)
         while not self.new_multi_frame_payload_available():
             await asyncio.sleep(0.001)
@@ -71,6 +75,25 @@ class CameraSharedMemoryManager:
         if not payload.full:
             raise ValueError("Did not read full multi-frame payload!")
         return payload
+
+    def await_and_send_frame_bytes(self, pipe_connection: multiprocessing.connection.Connection, get_type: GET_TYPES = "next"):
+        self.sync_await_new_multi_frame_payload()
+        self.send_frame_bytes(pipe_connection, get_type)
+
+    def sync_await_new_multi_frame_payload(self):
+        while not self.new_multi_frame_payload_available():
+            time.sleep(0.001)
+    def send_frame_bytes(self, pipe_connection: multiprocessing.connection.Connection, get_type: GET_TYPES = "next"):
+
+        for camera_shared_memory in self._buffer_by_camera.values():
+            if get_type == "next":
+                frame_payload_bytes = camera_shared_memory.get_next_frame()
+            elif get_type == "latest":
+                frame_payload_bytes = camera_shared_memory.get_latest_frame()
+            else:
+                raise ValueError(f"Invalid get_type: {get_type}")
+
+            pipe_connection.send_bytes(frame_payload_bytes)
 
     def get_next_frame_by_camera(self, camera_id: CameraId) -> FramePayload:
         """
