@@ -1,16 +1,14 @@
+import pickle
 import time
-
 import numpy as np
-
 from skellycam.core import CameraId
-from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.frames.frame_payload import FramePayload, int_to_fixed_bytes
 
 
-def test_create_frame(image_fixture: np.ndarray):
+def test_create_initial_frame(image_fixture: np.ndarray):
     # Arrange
-    frame = FramePayload.create_empty(camera_id=CameraId(0),
-                                      image_shape=image_fixture.shape,
-                                      frame_number=0)
+    frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
+                                              image_shape=image_fixture.shape)
     frame.image = image_fixture
     frame.previous_frame_timestamp_ns = time.perf_counter_ns()
     frame.timestamp_ns = time.perf_counter_ns()
@@ -18,11 +16,10 @@ def test_create_frame(image_fixture: np.ndarray):
     assert frame.hydrated
 
 
-def test_frame_payload_create_empty(image_fixture: np.ndarray):
+def test_create_frame_from_previous(image_fixture: np.ndarray):
     # Arrange
-    frame = FramePayload.create_empty(camera_id=CameraId(0),
-                                      image_shape=image_fixture.shape,
-                                      frame_number=0)
+    frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
+                                              image_shape=image_fixture.shape)
 
     # Assert
     assert frame.camera_id == CameraId(0)
@@ -30,19 +27,6 @@ def test_frame_payload_create_empty(image_fixture: np.ndarray):
     assert frame.frame_number == 0
     assert frame.color_channels == 3
     assert not frame.hydrated
-
-
-def test_frame_payload_create_hydrated_dummy(image_fixture: np.ndarray):
-    # Arrange
-    frame = FramePayload.create_hydrated_dummy(image=image_fixture)
-
-    # Assert
-    assert frame.camera_id == CameraId(0)
-    assert frame.image_shape == image_fixture.shape
-    assert frame.frame_number == 0
-    assert frame.color_channels == 3
-    assert frame.hydrated
-    assert np.sum(frame.image - image_fixture) == 0
 
 
 def test_frame_payload_create_unhydrated_dummy(image_fixture: np.ndarray):
@@ -93,15 +77,41 @@ def test_frame_payload_to_and_from_buffer(frame_payload_fixture):
 
 def test_frame_number_fixed_size(image_fixture: np.ndarray):
     # Arrange
-    og_frame = FramePayload.create_empty(camera_id=CameraId(0),
-                                      image_shape=image_fixture.shape,
-                                      frame_number=0)
-
+    og_frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
+                                                 image_shape=image_fixture.shape)
+    og_frame.frame_number = 0
     og_frame_size = og_frame.to_buffer(image=image_fixture).nbytes
 
     for fr in range(int(1e5)):
-        frame = FramePayload.create_empty(camera_id=CameraId(0),
-                                          image_shape=image_fixture.shape,
-                                          frame_number=fr)
+        frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
+                                                  image_shape=image_fixture.shape)
+        frame.frame_number = fr
         frame_size = frame.to_buffer(image=image_fixture).nbytes
         assert frame_size == og_frame_size
+
+
+# New tests for field validator
+def test_frame_number_int_to_bytes():
+    frame = FramePayload(camera_id=CameraId(0),
+                         frame_number_bytes=int_to_fixed_bytes(0),
+                         previous_frame_timestamp_ns=0)
+    assert frame.frame_number_bytes == b'\x00\x00\x00\x00'
+
+    frame.frame_number = 1
+    assert frame.frame_number_bytes == b'\x00\x00\x00\x01'
+
+    frame.frame_number_bytes = int_to_fixed_bytes(2)
+    assert frame.frame_number == 2
+
+
+# Additional tests for new methods
+def test_to_and_from_unhydrated_bytes(image_fixture: np.ndarray):
+    frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
+                                              image_shape=image_fixture.shape)
+    frame.image = image_fixture
+
+    unhydrated_bytes = frame.to_unhydrated_bytes()
+    recreated_frame = FramePayload(**pickle.loads(unhydrated_bytes))
+
+    assert frame == recreated_frame
+    assert np.sum(frame.image - recreated_frame.image) == 0

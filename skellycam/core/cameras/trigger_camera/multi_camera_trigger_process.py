@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from multiprocessing import Process
+from multiprocessing import Process, connection
 from typing import Optional
 
 from skellycam.core import CameraId
@@ -14,7 +14,7 @@ class MultiCameraTriggerProcess:
     def __init__(
             self,
             camera_configs: CameraConfigs,
-            pipe_connection: multiprocessing.connection.Connection,
+            pipe_connection: connection.Connection,
     ):
         self._camera_configs = camera_configs
         self._pipe_connection = pipe_connection

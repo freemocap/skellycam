@@ -26,9 +26,9 @@ def test_trigger_read_frame(camera_shared_memory_fixture: CameraSharedMemoryMana
 
     frame_read_threads = []
     for camera_id, cap in caps.items():
-        frame = FramePayload.create_empty(camera_id=camera_id,
-                                          image_shape=camera_configs[camera_id].image_shape,
-                                          frame_number=0)
+        frame = FramePayload.create_initial_frame(camera_id=camera_id,
+                                                  image_shape=camera_configs[camera_id].image_shape,
+                                                  frame_number=0)
         cam_shm = shm_child.get_camera_shared_memory(camera_id)
         cam_triggers = multi_camera_triggers.single_camera_triggers[camera_id]
         frame_read_threads.append(threading.Thread(target=get_frame, args=(camera_id,

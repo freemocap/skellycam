@@ -48,8 +48,6 @@ def get_frame(camera_id: CameraId,
 
     # frame.timestamps.wait_for_retrieve_trigger_timestamp = time.perf_counter_ns()
 
-    next_frame = FramePayload.from_previous(frame)  # create next frame in presumed downtime
-
     triggers.await_retrieve_trigger()
 
     # frame.timestamps.pre_retrieve_timestamp = time.perf_counter_ns()
@@ -67,6 +65,5 @@ def get_frame(camera_id: CameraId,
         frame=frame,
         image=image,
     )
-    next_frame.previous_frame_timestamp_ns = frame.timestamp_ns
+    return FramePayload.from_previous(frame)
 
-    return next_frame

@@ -16,6 +16,7 @@ from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
+from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
@@ -99,8 +100,13 @@ def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs):
 
 
 @pytest.fixture
-def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
+def camera_shared_memory_fixture(image_fixture: np.ndarray,
+                                 camera_configs_fixture: CameraConfigs,
                                  ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
+    for config in camera_configs_fixture.values():
+        config.resolution = ImageResolution.from_image(image_fixture)
+        config.color_channels = image_fixture.shape[2] if len(image_fixture.shape) == 3 else 1
+        assert config.image_shape == image_fixture.shape
     lock = multiprocessing.Lock()
     manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
     assert manager
@@ -114,9 +120,9 @@ def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
 @pytest.fixture
 def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
     # Arrange
-    frame = FramePayload.create_empty(camera_id=CameraId(0),
-                                      image_shape=image_fixture.shape,
-                                      frame_number=0)
+    frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
+                                              image_shape=image_fixture.shape,
+                                              frame_number=0)
     frame.image = image_fixture
     frame.previous_frame_timestamp_ns = time.perf_counter_ns()
     frame.timestamp_ns = time.perf_counter_ns()

@@ -19,9 +19,9 @@ def run_trigger_listening_loop(config: CameraConfig,
                                triggers: SingleCameraTriggers,
                                exit_event: multiprocessing.Event):
     triggers.await_initial_trigger()
-    frame = FramePayload.create_empty(camera_id=config.camera_id,
-                                      image_shape=config.image_shape,
-                                      frame_number=0)
+    frame = FramePayload.create_initial_frame(camera_id=config.camera_id,
+                                              image_shape=config.image_shape,
+                                              frame_number=0)
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
 
     while not exit_event.is_set():

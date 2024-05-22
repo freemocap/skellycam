@@ -2,6 +2,7 @@ import asyncio
 import logging
 import multiprocessing
 import time
+from multiprocessing import connection
 from typing import Coroutine, Callable, Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
@@ -31,7 +32,7 @@ class FrameWrangler:
         return self._multi_frame_payload.multi_frame_number + 1
 
     @property
-    def pipe_connection(self) -> multiprocessing.connection.Connection:
+    def pipe_connection(self) -> connection.Connection:
         return self._pipe_child
 
     def _setup_recorder(self):

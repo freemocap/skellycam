@@ -30,8 +30,8 @@ class CameraGroup:
         logger.debug(f"Setting camera configs to {configs}")
 
         self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=configs,
-                                                               pipe_connection=self._frame_wrangler.pipe_connection,
-                                                               frame_wrangler_queue=self._frame_wrangler.queue)
+                                                               pipe_connection=self._frame_wrangler.pipe_connection)
+
 
         self._frame_wrangler.set_camera_configs(configs)
 

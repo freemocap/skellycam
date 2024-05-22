@@ -25,7 +25,8 @@ class FramePayload(BaseModel):
         description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`")
 
     frame_number_bytes: bytes = Field(
-        description="The number of frames read from the camera since the camera was started, as a fixed-size byte array")
+        description="The number of frames read from the camera since the camera was started, "
+                    "as a fixed-size byte array so the size in memory is always the same")
 
     bytes_per_pixel: int = Field(default=BYTES_PER_PIXEL, description="The number of bytes per pixel in the image")
 
@@ -33,17 +34,14 @@ class FramePayload(BaseModel):
                                     description="The `success` part of `success, image = cv2.VideoCapture.read()`")
     image_data: Optional[bytes] = Field(default=None,
                                         description="The raw image from `cv2.VideoCapture.read() as bytes")
-    image_checksum: Optional[int] = Field(default=None,
-                                          description="The sum of the pixel values of the image, to verify integrity")
     image_shape: Optional[tuple] = Field(default=None,
                                          description="The shape of the image as a tuple of `(height, width)`")
     color_channels: Optional[int] = Field(default=None,
                                           description="Number of color channels, 3 for RGB, 1 for monochrome")
     timestamp_ns: Optional[int] = Field(default=None,
                                         description="The time the frame was read from the camera in nanoseconds")
-    previous_frame_timestamp_ns: int = Field(default_factory=lambda: time.perf_counter_ns(),
-                                             description="Timestamp of the previous frame in nanoseconds (dummy value on frame 0)")
-    dummy: bool = Field(default=False, description="This is a dummy frame to be used to calculate the buffer size")
+    previous_frame_timestamp_ns: int = Field(default=None,
+                                             description="Timestamp of the previous frame in nanoseconds (denotes object creation time for the first frame)")
 
     @property
     def frame_number(self) -> int:
@@ -65,22 +63,24 @@ class FramePayload(BaseModel):
 
     @classmethod
     def from_previous(cls, previous: 'FramePayload') -> 'FramePayload':
-        return cls.create_empty(camera_id=previous.camera_id,
-                                image_shape=previous.image_shape,
-                                frame_number=previous.frame_number + 1)
+        return cls(camera_id=previous.camera_id,
+                   image_shape=previous.image_shape,
+                   frame_number=previous.frame_number + 1,
+                   previous_frame_timestamp_ns=previous.timestamp_ns)
 
     @classmethod
-    def create_empty(cls,
-                     camera_id: CameraId,
-                     image_shape: Tuple[int, ...],
-                     frame_number: int) -> 'FramePayload':
+    def create_initial_frame(cls,
+                             camera_id: CameraId,
+                             image_shape: Tuple[int, ...],
+                             ) -> 'FramePayload':
         image_shape, color_channels = cls._get_color_channels(image_shape)
 
         return cls(
             camera_id=camera_id,
             image_shape=image_shape,
-            frame_number_bytes=int_to_fixed_bytes(frame_number) if isinstance(frame_number, int) else frame_number,
-            color_channels=color_channels
+            frame_number_bytes=int_to_fixed_bytes(0),
+            color_channels=color_channels,
+            previous_frame_timestamp_ns=time.perf_counter_ns(),
         )
 
     @classmethod
@@ -98,28 +98,14 @@ class FramePayload(BaseModel):
         return image_shape, color_channels
 
     @classmethod
-    def create_hydrated_dummy(cls,
-                              image: np.ndarray,
-                              ) -> 'FramePayload':
-        instance = cls.create_empty(CameraId(0),
-                                    image_shape=image.shape,
-                                    frame_number=0)
-        instance.image = image
-        instance.previous_frame_timestamp_ns = time.perf_counter_ns()
-        instance.timestamp_ns = time.perf_counter_ns()
-        return instance
-
-    @classmethod
     def create_unhydrated_dummy(cls,
                                 camera_id: CameraId,
                                 image: np.ndarray,
                                 ) -> 'FramePayload':
         image_shape, color_channels = cls._get_color_channels(image_shape=image.shape)
-        instance = cls.create_empty(camera_id=camera_id,
-                                    image_shape=image_shape,
-                                    frame_number=0)
+        instance = cls.create_initial_frame(camera_id=camera_id,
+                                            image_shape=image_shape)
 
-        instance.image_checksum = cls.calculate_image_checksum(image)
         instance.previous_frame_timestamp_ns = time.perf_counter_ns()
         instance.timestamp_ns = time.perf_counter_ns()
         return instance
@@ -173,7 +159,6 @@ class FramePayload(BaseModel):
     def image(self, image: np.ndarray):
         self.image_data = image.tobytes()
         self.image_shape = image.shape
-        self.image_checksum = self.calculate_image_checksum(image)
 
     @property
     def height(self) -> int:
@@ -200,11 +185,6 @@ class FramePayload(BaseModel):
             raise ValueError(f"Image shape mismatch - "
                              f"Expected: {self.image_shape}, "
                              f"Actual: {image.shape}")
-        check_sum = np.sum(image)
-        if self.image_checksum != check_sum:
-            raise ValueError(f"Image checksum mismatch - "
-                             f"Expected: {self.image_checksum}, "
-                             f"Actual: {check_sum}")
 
     @staticmethod
     def calculate_image_checksum(image: np.ndarray) -> int:

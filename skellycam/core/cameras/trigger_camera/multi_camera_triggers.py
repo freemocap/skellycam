@@ -12,9 +12,8 @@ class MultiCameraTriggers(BaseModel):
     single_camera_triggers: Dict[CameraId, SingleCameraTriggers]
 
     ##############################################################################################################
-    def trigger_multi_frame_read(self):
+    def trigger_multi_frame_read(self, await_cameras_finished: bool = True):
         self._ensure_cameras_ready()
-        self._await_triggers_reset()
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
         self._fire_grab_trigger()
 
@@ -23,6 +22,10 @@ class MultiCameraTriggers(BaseModel):
 
         # 3- Trigger each camera should retrieve the frame using `cv2.VideoCapture.retrieve()`, which decodes the frame into an image/numpy array
         self._fire_retrieve_trigger()
+
+        if await_cameras_finished:
+            # 4 - wait for all cameras to reset their triggers, signaling that the frame has been retrieved
+            self._await_triggers_reset()
 
     ##############################################################################################################
 
