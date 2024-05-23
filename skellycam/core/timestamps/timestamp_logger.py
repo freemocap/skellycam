@@ -51,7 +51,7 @@ class CameraTimestampLogger:
 
     def to_dataframe(self) -> pl.DataFrame:
         df = pl.DataFrame(
-            [timestamp_log.dict() for timestamp_log in self._timestamp_logs]
+            [timestamp_log.model_dump() for timestamp_log in self._timestamp_logs]
         )
         return df
 

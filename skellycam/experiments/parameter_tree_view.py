@@ -20,7 +20,7 @@ class ParameterTreeView(QTreeView):
         self.build_tree()
 
     def build_tree(self):
-        for field_name, field_value in self.model.dict().items():
+        for field_name, field_value in self.model.model_dump().items():
             if isinstance(field_value, BaseModel):
                 child = self.__class__(field_value)
                 parent = QStandardItem(field_name)

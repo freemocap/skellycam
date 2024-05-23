@@ -77,7 +77,7 @@ class CameraTimestampLog(BaseModel):
         return ",".join(cls.__fields__.keys()) + "\n"
 
     def to_csv_row(self):
-        return ",".join([str(x) for x in self.dict().values()]) + "\n"
+        return ",".join([str(x) for x in self.model_dump().values()]) + "\n"
 
     @classmethod
     def to_document(cls) -> str:

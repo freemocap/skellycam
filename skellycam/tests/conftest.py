@@ -136,7 +136,7 @@ def frame_payload_fixture(camera_id_fixture: "CameraId",
     frame.timestamp_ns = time.perf_counter_ns()
     frame.success = True
     # Assert
-    for key, value in frame.dict().items():
+    for key, value in frame.model_dump().items():
         assert value is not None, f"Key {key} is None"
     assert frame.hydrated
     assert frame.image_shape == image_fixture.shape

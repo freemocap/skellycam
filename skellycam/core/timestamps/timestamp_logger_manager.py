@@ -54,7 +54,7 @@ class TimestampLoggerManager:
 
     def to_dataframe(self) -> pl.DataFrame:
         df = pl.DataFrame(
-            [timestamp_log.dict() for timestamp_log in self._multi_frame_timestamp_logs]
+            [timestamp_log.model_dump() for timestamp_log in self._multi_frame_timestamp_logs]
         )
         return df
 

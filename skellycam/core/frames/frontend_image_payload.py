@@ -42,7 +42,7 @@ class FrontendImagePayload(BaseModel):
                    jpeg_images=jpeg_images)
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(self.dict(), use_bin_type=True)
+        return msgpack.packb(self.model_dump(), use_bin_type=True)
 
     @classmethod
     def from_msgpack(cls, msgpack_bytes: bytes):

@@ -77,11 +77,11 @@ class CameraConfig(BaseModel):
         return self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_PIXEL
 
     def __eq__(self, other):
-        return self.dict() == other.dict()
+        return self.model_dump() == other.model_dump()
 
     def __str__(self):
         out_str = f"BASE CONFIG:\n"
-        for key, value in self.dict().items():
+        for key, value in self.model_dump().items():
             out_str += f"\t{key} ({type(value).__name__}): {value} \n"
         out_str += "COMPUTED:\n"
         out_str += f"\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"

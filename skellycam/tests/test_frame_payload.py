@@ -43,7 +43,7 @@ def test_frame_payload_create_unhydrated_dummy(camera_id_fixture,
 def test_frame_payload_to_and_from_buffer(frame_payload_fixture):
     # separate image from rest of frame payload, because that's how we put it into shm
     from skellycam.core.frames.frame_payload import FramePayload
-    frame_wo_image = FramePayload(**frame_payload_fixture.dict(exclude={"image_data"}))
+    frame_wo_image = FramePayload(**frame_payload_fixture..model_dump(exclude={"image_data"}))
     assert not frame_wo_image.hydrated
     buffer = frame_wo_image.to_buffer(image=frame_payload_fixture.image)
 

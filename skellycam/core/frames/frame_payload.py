@@ -108,7 +108,7 @@ class FramePayload(BaseModel):
         return memoryview(image_bytes + bytes_payload)
 
     def to_unhydrated_bytes(self) -> bytes:
-        without_image_data = self.dict(exclude={"image_data"})
+        without_image_data = self..model_dump(exclude={"image_data"})
         bytes_payload = pickle.dumps(without_image_data)
         return bytes_payload
 
@@ -191,7 +191,7 @@ class FramePayload(BaseModel):
         return image_shape, color_channels
 
     def __eq__(self, other: 'FramePayload') -> bool:
-        return self.dict() == other.dict()
+        return self.model_dump() == other.model_dump()
 
     def __str__(self):
         print_str = (f"Camera{self.camera_id}:"

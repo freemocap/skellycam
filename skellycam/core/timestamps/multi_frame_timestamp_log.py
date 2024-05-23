@@ -107,9 +107,9 @@ class MultiFrameTimestampLog(BaseModel):
         return ",".join(column_names) + "\n"
 
     def to_csv_row(self) -> str:
-        row_dict = self.dict(exclude={"camera_logs"})
+        row_dict = self..model_dump(exclude={"camera_logs"})
         row_dict["camera_logs"] = ",".join(
-            [str(camera_log.dict()) for camera_log in self.camera_logs.values()]
+            [str(camera_log.model_dump()) for camera_log in self.camera_logs.values()]
         )
         return ",".join([str(value) for value in row_dict.values()]) + "\n"
 

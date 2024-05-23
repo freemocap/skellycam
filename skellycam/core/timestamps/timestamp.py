@@ -106,7 +106,7 @@ class Timestamp(BaseModel):
         Prints as a JSON and includes a description of all fields of this object
         """
         descriptive_dict = {}
-        descriptive_dict.update(self.dict())
+        descriptive_dict.update(self.model_dump())
         descriptive_dict["_field_descriptions"] = self.field_description_dict()
         return descriptive_dict
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     from pprint import pprint as print
 
     print("Printing `Timestamp.now()` object:")
-    print(Timestamp.now().dict(), indent=4)
+    print(Timestamp.now().model_dump(), indent=4)
 
     print(
         "Printing `Timestamp.from_mapping(perf_counter_to_unix_mapping=(time.perf_counter_ns(), time.time_ns()))`:"
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     print(
         Timestamp.from_mapping(
             perf_counter_to_unix_mapping=(time.perf_counter_ns(), time.time_ns())
-        ).dict(),
+        ).model_dump(),
         indent=4,
     )
 
