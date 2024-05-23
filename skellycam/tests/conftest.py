@@ -103,20 +103,25 @@ def multi_camera_triggers_fixture(camera_configs_fixture: "CameraConfigs"):
 def camera_shared_memory_fixture(image_fixture: np.ndarray,
                                  camera_configs_fixture: "CameraConfigs",
                                  ) -> Tuple["CameraSharedMemoryManager", "CameraSharedMemoryManager"]:
+    from skellycam.core.detection.image_resolution import ImageResolution
+    from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
+
     for config in camera_configs_fixture.values():
-        from skellycam.core.detection.image_resolution import ImageResolution
         config.resolution = ImageResolution.from_image(image_fixture)
         config.color_channels = image_fixture.shape[2] if len(image_fixture.shape) == 3 else 1
         assert config.image_shape == image_fixture.shape
     lock = multiprocessing.Lock()
-    from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
     manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
     assert manager
     recreated_manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture,
                                                   lock=lock,
                                                   existing_shared_memory_names=manager.shared_memory_names
                                                   )
-    return manager, recreated_manager
+    assert recreated_manager.shared_memory_sizes == manager.shared_memory_sizes
+    yield manager, recreated_manager
+
+    manager.close_and_unlink()
+    recreated_manager.close_and_unlink()
 
 
 @pytest.fixture

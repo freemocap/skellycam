@@ -1,13 +1,10 @@
-import asyncio
 import logging
 import multiprocessing
-import time
 from multiprocessing import connection
-from typing import Dict, Literal
+from typing import Dict
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
@@ -43,7 +40,10 @@ class CameraSharedMemoryManager:
         return {camera_id: camera_shared_memory.shared_memory_name for camera_id, camera_shared_memory in
                 self._buffer_by_camera.items()}
 
-
+    @property
+    def shared_memory_sizes(self) -> Dict[CameraId, int]:
+        return {camera_id: camera_shared_memory.shared_memory_size for camera_id, camera_shared_memory in
+                self._buffer_by_camera.items()}
     @property
     def lock(self) -> multiprocessing.Lock:
         return self._lock
@@ -52,19 +52,16 @@ class CameraSharedMemoryManager:
     def total_buffer_size(self) -> int:
         return sum([camera_shared_memory.buffer_size for camera_shared_memory in self._buffer_by_camera.values()])
 
-
     async def get_multi_frame_payload(self,
                                       previous_payload: MultiFramePayload) -> MultiFramePayload:
         payload = MultiFramePayload.from_previous(previous_payload)
 
         for camera_id, camera_shared_memory in self._buffer_by_camera.items():
-
             payload.add_frame(camera_shared_memory.retrieve_frame())
 
         if not payload.full:
             raise ValueError("Did not read full multi-frame payload!")
         return payload
-
 
     def send_frame_bytes(self, pipe_connection: connection.Connection):
 
@@ -83,3 +80,7 @@ class CameraSharedMemoryManager:
     def unlink(self):
         for camera_shared_memory in self._buffer_by_camera.values():
             camera_shared_memory.unlink()
+
+    def close_and_unlink(self):
+        self.close()
+        self.unlink()
