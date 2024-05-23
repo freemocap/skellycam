@@ -1,5 +1,4 @@
 import logging
-import logging
 import multiprocessing
 import time
 from multiprocessing import shared_memory
@@ -115,10 +114,12 @@ class CameraSharedMemory(BaseModel):
         return frame_buffer_size, image_size_in_bytes, unhydrated_payload_number_of_bytes
 
     def put_frame(self,
+                  image: np.ndarray,
                   frame: FramePayload,
-                  image: np.ndarray):
+                  ):
         tik = time.perf_counter_ns()
-        full_payload = self._frame_to_buffer_payload(frame, image)
+        full_payload = self._frame_to_buffer_payload(image=image,
+                                                     frame=frame)
 
         self.shm.buf[:] = full_payload  # this is where the magic happens
 
@@ -126,21 +127,22 @@ class CameraSharedMemory(BaseModel):
         logger.loop(
             f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory (took {elapsed_time_ms:.6}ms)")
 
-    def retrieve_frame(self) -> FramePayload:
+    def retrieve_frame(self) -> Tuple[bytes, bytes]:
         tik = time.perf_counter_ns()
 
         payload_buffer = self.shm.buf[:]  # this is where the magic happens (in reverse)
 
         elapsed_get_from_shm = (time.perf_counter_ns() - tik) / 1e6
-        frame = FramePayload.from_buffer(buffer=payload_buffer,
-                                         image_shape=self.image_shape)
+        image_bytes, unhydrated_frame_bytes = FramePayload.tuple_from_buffer(buffer=payload_buffer,
+                                                                             image_shape=self.image_shape)
+
         elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
         elapsed_during_copy = elapsed_time_ms - elapsed_get_from_shm
-        logger.loop(f"Camera {self.camera_id} read frame #{frame.frame_number} "
-                    f"from shared memory (took {elapsed_get_from_shm:.6}ms "
-                    f"to get from shm buffer and {elapsed_during_copy:.6}ms to "
-                    f"copy, {elapsed_time_ms:.6}ms total")
-        return frame
+        # logger.loop(f"Camera {self.camera_id} read frame #{frame.frame_number} "
+        #             f"from shared memory (took {elapsed_get_from_shm:.6}ms "
+        #             f"to get from shm buffer and {elapsed_during_copy:.6}ms to "
+        #             f"copy, {elapsed_time_ms:.6}ms total")
+        return image_bytes, unhydrated_frame_bytes
 
     def _frame_to_buffer_payload(self,
                                  frame: FramePayload,

@@ -1,14 +1,15 @@
 import asyncio
 import logging
 import multiprocessing
+import pickle
 import time
 from multiprocessing import connection
 from typing import Coroutine, Callable, Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,6 @@ class FrameWrangler:
     def set_camera_configs(self, configs: CameraConfigs):
         self._camera_configs = configs
 
-
     @property
     def is_recording(self):
         return self._is_recording
@@ -77,14 +77,21 @@ class FrameWrangler:
         self._listener_task = asyncio.create_task(self.listen_for_frames())
 
     async def listen_for_frames(self):
+        multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
         try:
             while self._should_continue_listening or not self._pipe_parent.poll(timeout=0.1):
                 logger.loop(f"Awaiting multi-frame payload...")
-
+                image_bytes = self._pipe_parent.recv_bytes()
                 payload_bytes = self._pipe_parent.recv_bytes()
-                payload = MultiFramePayload.from_msgpack(payload_bytes)
-                logger.loop(f"Received multi-frame payload!\n {payload}")
-                await self._handle_payload(payload)
+                frame = FramePayload(**pickle.loads(payload_bytes))
+                frame.image = frame.image_from_bytes(image_bytes)
+                multi_frame_payload.add_frame(frame)
+                if multi_frame_payload.full:
+                    logger.loop(f"Received full multi-frame payload")
+                    await self._handle_payload(multi_frame_payload)
+                    multi_frame_payload = MultiFramePayload.from_previous(multi_frame_payload)
+
+            await self._handle_payload(multi_frame_payload)
         except Exception as e:
             logger.error(f"Error in listen_for_frames: {type(e).__name__} - {e}")
             logger.exception(e)
@@ -92,7 +99,7 @@ class FrameWrangler:
 
     async def _handle_payload(self, payload: MultiFramePayload):
         if self._is_recording:
-            logger.loop(f"Sending payload to recorder with {len(payload.frames)} frames")
+            logger.loop(f"Sending payload to recorder")
             self._recorder_queue.put(payload)
 
         if self._ws_send_bytes is not None:
@@ -110,10 +117,11 @@ class FrameWrangler:
         logger.loop(f"FrameWrangler - Sending frontend payload: {frontend_payload}")
         await self._ws_send_bytes(frontend_payload.to_msgpack())
 
-    async def close(self):
+    def close(self):
         logger.debug(f"Closing frame wrangler...")
         if self.is_recording:
             self.stop_recording()
         if self._listener_task is not None:
             self._should_continue_listening = False
-            await self._listener_task
+            while not self._listener_task.done():
+                time.sleep(0.1)

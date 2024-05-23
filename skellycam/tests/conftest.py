@@ -3,26 +3,15 @@ import multiprocessing
 import os
 import time
 from copy import deepcopy
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
 import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from skellycam.api.app_factory import create_app
-from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
-from skellycam.core.detection.image_resolution import ImageResolution
-from skellycam.core.frames.frame_payload import FramePayload
-from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
-from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
-
 TEST_ENV_NAME = 'TEST_ENV'
+
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -47,7 +36,6 @@ class TestFullSizeImageShapes(enum.Enum):
     # SQUARE_MONO = (640, 640)
 
 
-@enum.unique
 class TestImageShapes(enum.Enum):
     LANDSCAPE = (48, 64, 3)
     PORTRAIT = (64, 48, 3)
@@ -56,11 +44,18 @@ class TestImageShapes(enum.Enum):
 
 test_images = {shape: np.random.randint(0, 256, size=shape.value, dtype=np.uint8) for shape in TestImageShapes}
 
-test_camera_ids = [1, "2", CameraId(4), ]
+test_camera_ids = [1, "2", 4, ]
+
+
+@pytest.fixture(params=test_camera_ids)
+def camera_id_fixture(request) -> "CameraId":
+    from skellycam.core import CameraId
+    return CameraId(request.param)
 
 
 @pytest.fixture(params=[[0], test_camera_ids])
-def camera_ids_fixture(request) -> List[CameraId]:
+def camera_ids_fixture(request) -> List["CameraId"]:
+    from skellycam.core import CameraId
     return [CameraId(cam_id) for cam_id in request.param]
 
 
@@ -75,39 +70,46 @@ def image_fixture(request) -> np.ndarray:
 
 
 @pytest.fixture
-def camera_configs_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfigs:
+def camera_configs_fixture(camera_ids_fixture: List["CameraId"]) -> "CameraConfigs":
+    from skellycam.core.cameras.config.camera_configs import CameraConfigs
     configs = CameraConfigs()
     if len(camera_ids_fixture) > 1:
         for camera_id in camera_ids_fixture[1:]:
+            from skellycam.core.cameras.config.camera_config import CameraConfig
             configs[camera_id] = CameraConfig(camera_id=camera_id)
 
     return configs
 
 
 @pytest.fixture
-def camera_config_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfig:
+def camera_config_fixture(camera_ids_fixture: List["CameraId"]) -> "CameraConfig":
+    from skellycam.core.cameras.config.camera_config import CameraConfig
     return CameraConfig(camera_id=camera_ids_fixture[0])
 
 
 @pytest.fixture
 def single_camera_triggers_fixture(camera_config_fixture):
+    from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
     return SingleCameraTriggers.from_camera_config(camera_config_fixture)
 
 
 @pytest.fixture
-def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs):
+def multi_camera_triggers_fixture(camera_configs_fixture: "CameraConfigs"):
+    from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
     return MultiCameraTriggers.from_camera_configs(camera_configs_fixture)
 
 
 @pytest.fixture
 def camera_shared_memory_fixture(image_fixture: np.ndarray,
-                                 camera_configs_fixture: CameraConfigs,
-                                 ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
+                                 camera_configs_fixture: "CameraConfigs",
+                                 ) -> Tuple["CameraSharedMemoryManager", "CameraSharedMemoryManager"]:
     for config in camera_configs_fixture.values():
+        from skellycam.core.detection.image_resolution import ImageResolution
         config.resolution = ImageResolution.from_image(image_fixture)
         config.color_channels = image_fixture.shape[2] if len(image_fixture.shape) == 3 else 1
         assert config.image_shape == image_fixture.shape
     lock = multiprocessing.Lock()
+    from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
     manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture, lock=lock)
     assert manager
     recreated_manager = CameraSharedMemoryManager(camera_configs=camera_configs_fixture,
@@ -118,11 +120,12 @@ def camera_shared_memory_fixture(image_fixture: np.ndarray,
 
 
 @pytest.fixture
-def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
+def frame_payload_fixture(camera_id_fixture: "CameraId",
+                          image_fixture: np.ndarray) -> "FramePayload":
     # Arrange
-    frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
-                                              image_shape=image_fixture.shape,
-                                              frame_number=0)
+    from skellycam.core.frames.frame_payload import FramePayload
+    frame = FramePayload.create_initial_frame(camera_id=camera_id_fixture,
+                                              image_shape=image_fixture.shape)
     frame.image = image_fixture
     frame.previous_frame_timestamp_ns = time.perf_counter_ns()
     frame.timestamp_ns = time.perf_counter_ns()
@@ -137,9 +140,10 @@ def frame_payload_fixture(image_fixture: np.ndarray) -> FramePayload:
 
 
 @pytest.fixture
-def multi_frame_payload_fixture(camera_ids_fixture: List[CameraId],
-                                frame_payload_fixture: FramePayload
-                                ) -> MultiFramePayload:
+def multi_frame_payload_fixture(camera_ids_fixture: List["CameraId"],
+                                frame_payload_fixture: "FramePayload"
+                                ) -> "MultiFramePayload":
+    from skellycam.core.frames.multi_frame_payload import MultiFramePayload
     payload = MultiFramePayload.create(camera_ids=camera_ids_fixture,
                                        multi_frame_number=0)
 
@@ -152,7 +156,8 @@ def multi_frame_payload_fixture(camera_ids_fixture: List[CameraId],
 
 
 @pytest.fixture
-def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload) -> FrontendImagePayload:
+def fronted_image_payload_fixture(multi_frame_payload_fixture: "MultiFramePayload") -> "FrontendImagePayload":
+    from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
     fe_payload = FrontendImagePayload.from_multi_frame_payload(multi_frame_payload_fixture)
     assert fe_payload.multi_frame_number == multi_frame_payload_fixture.multi_frame_number
     assert fe_payload.utc_ns_to_perf_ns == multi_frame_payload_fixture.utc_ns_to_perf_ns
@@ -163,6 +168,7 @@ def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload
 
 @pytest.fixture
 def app_fixture() -> FastAPI:
+    from skellycam.api.app_factory import create_app
     return create_app()
 
 

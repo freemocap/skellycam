@@ -32,7 +32,6 @@ class CameraGroup:
         self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=configs,
                                                                pipe_connection=self._frame_wrangler.pipe_connection)
 
-
         self._frame_wrangler.set_camera_configs(configs)
 
     @property

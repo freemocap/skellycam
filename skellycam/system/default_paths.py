@@ -2,8 +2,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import skellycam
-from skellycam.system.home_dir import os_independent_home_dir
 
 DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skellycam_data"
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
@@ -22,14 +20,8 @@ CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING = "\U0001F503"
 
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
-PATH_TO_SKELLY_CAM_LOGO_PNG = str(
-    Path(skellycam.__file__).parent / "assets" / "logo" / "skelly-cam-logo.png"
-)
-
-PATH_TO_SKELLY_CAM_LOGO_SVG = str(
-    Path(skellycam.__file__).parent / "assets" / "logo" / "skelly-cam-logo.svg"
-)
-
+def os_independent_home_dir():
+    return str(Path.home())
 
 def get_default_skellycam_base_folder_path():
     return Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME

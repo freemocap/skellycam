@@ -69,8 +69,8 @@ class CameraSharedMemoryManager:
     def send_frame_bytes(self, pipe_connection: connection.Connection):
 
         for camera_shared_memory in self._buffer_by_camera.values():
-            frame_payload_bytes = camera_shared_memory.retrieve_frame()
-
+            images_bytes, frame_payload_bytes = camera_shared_memory.retrieve_frame()
+            pipe_connection.send_bytes(images_bytes)
             pipe_connection.send_bytes(frame_payload_bytes)
 
     def get_camera_shared_memory(self, camera_id: CameraId) -> CameraSharedMemory:

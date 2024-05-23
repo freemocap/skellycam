@@ -26,7 +26,8 @@ def test_camera_memories(camera_shared_memory_fixture: Tuple[CameraSharedMemoryM
         print(f"Recreated buffer size: {recreated_camera_memory.buffer_size}")
 
         # Put frame into original shared memory
-        original_camera_memory.put_frame(frame, image_fixture)
+        original_camera_memory.put_frame(image=image_fixture,
+                                         frame=frame)
 
         print(f"After putting frame, shm.buf size: {len(original_camera_memory.shm.buf)}")
         print(f"Payload size: {original_camera_memory.payload_size}")
@@ -35,7 +36,7 @@ def test_camera_memories(camera_shared_memory_fixture: Tuple[CameraSharedMemoryM
         retrieved_frame = recreated_camera_memory.retrieve_frame()
 
         # Assertions to check frame integrity
-        assert retrieved_frame.dict(exclude={"image_data"}) == frame.dict(exclude={"image_data"})
+        assert retrieved_frame.model_dump(exclude={"image_data"}) == frame.model_dump(exclude={"image_data"})
         assert np.array_equal(retrieved_frame.image, image_fixture), "Image data mismatch"
 
         # Additional debug information if assertions fail

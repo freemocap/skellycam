@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 import time
+from multiprocessing import connection
 from typing import Optional, List
 
 import numpy as np
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def multi_camera_trigger_loop(camera_configs: CameraConfigs,
-                              pipe_connection: multiprocessing.connection.Connection,
+                              pipe_connection: connection.Connection,
                               exit_event: multiprocessing.Event,
                               number_of_frames: Optional[int] = None,
                               ):

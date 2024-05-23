@@ -2,17 +2,17 @@ import logging
 import sys
 from logging.config import dictConfig
 
-from skellycam.system.default_paths import get_log_file_path
-from skellycam.system.logging_configuration.custom_formatter import (
+from ..default_paths import get_log_file_path
+from .custom_formatter import (
     CustomFormatter,
 )
-from skellycam.system.logging_configuration.delta_time_filter import (
+from .delta_time_filter import (
     DeltaTimeFilter,
 )
-from skellycam.system.logging_configuration.log_level_enum import (
+from .log_level_enum import (
     LogLevels,
 )
-from skellycam.system.logging_configuration.logging_color_helpers import (
+from .logging_color_helpers import (
     get_hashed_color,
 )
 

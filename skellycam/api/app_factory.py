@@ -1,4 +1,6 @@
 import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, APIRouter
 from fastapi.openapi.utils import get_openapi
@@ -6,8 +8,10 @@ from fastapi.responses import RedirectResponse
 from fastapi.routing import APIWebSocketRoute, APIRoute
 
 import skellycam
+from skellycam.__main__ import APP_URL
 from skellycam.api.routes.http import enabled_routers
 from skellycam.api.middleware.cors import cors
+from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +66,20 @@ def customize_swagger_ui(app: FastAPI):
     app.openapi = custom_openapi
 
 
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    logger.api("Skellycam API starting...")
+    logger.info(f"Skellycam API base folder path: {get_default_skellycam_base_folder_path()}")
+    Path(get_default_skellycam_base_folder_path()).mkdir(parents=True, exist_ok=True)
+    logger.success(f"Skellycam API started successfully 💀📸✨")
+    logger.api(f"Skellycam API  running on: {APP_URL} 👈[click to open backend UI in your browser]\n")
+    yield
+    logger.api("Skellycam API ending...")
+
+
 def create_app(*args, **kwargs) -> FastAPI:
     logger.api("Creating FastAPI app")
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
     cors(app)
     register_routes(app)
     customize_swagger_ui(app)

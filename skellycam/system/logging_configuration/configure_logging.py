@@ -1,15 +1,9 @@
 import logging
 import os
 
-from skellycam.system.logging_configuration.log_level_enum import (
-    LogLevels,
-)
-from skellycam.system.logging_configuration.log_test_messages import (
-    log_test_messages,
-)
-from skellycam.system.logging_configuration.logger_builder import (
-    LoggerBuilder,
-)
+from .log_level_enum import LogLevels
+from .log_test_messages import log_test_messages
+from .logger_builder import LoggerBuilder
 
 # Suppress some external loggers that are too verbose for our context/taste
 logging.getLogger("tzlocal").setLevel(logging.WARNING)

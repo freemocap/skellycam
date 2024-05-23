@@ -11,8 +11,10 @@ from skellycam.core import CameraId
 
 logger = logging.getLogger(__name__)
 
+FRAME_NUMBER_BYTES_LENGTH = 4
 
-def int_to_fixed_bytes(value: int, length: int = 4) -> bytes:
+
+def int_to_fixed_bytes(value: int, length: int = FRAME_NUMBER_BYTES_LENGTH) -> bytes:
     return value.to_bytes(length, byteorder='big')
 
 
@@ -65,7 +67,7 @@ class FramePayload(BaseModel):
     def from_previous(cls, previous: 'FramePayload') -> 'FramePayload':
         return cls(camera_id=previous.camera_id,
                    image_shape=previous.image_shape,
-                   frame_number=previous.frame_number + 1,
+                   frame_number_bytes=int_to_fixed_bytes(previous.frame_number + 1),
                    previous_frame_timestamp_ns=previous.timestamp_ns)
 
     @classmethod
@@ -82,20 +84,6 @@ class FramePayload(BaseModel):
             color_channels=color_channels,
             previous_frame_timestamp_ns=time.perf_counter_ns(),
         )
-
-    @classmethod
-    def _get_color_channels(cls,
-                            image_shape: Tuple[int, ...]) -> Tuple[Tuple[int, ...], int]:
-        if len(image_shape) == 2:
-            color_channels = 1
-        elif image_shape[-1] == 1:
-            color_channels = 1
-            image_shape = image_shape[:-1]
-        elif len(image_shape) == 3:
-            color_channels = image_shape[-1]
-        else:
-            raise ValueError(f"Image is the wrong shape - {image_shape}")
-        return image_shape, color_channels
 
     @classmethod
     def create_unhydrated_dummy(cls,
@@ -124,28 +112,22 @@ class FramePayload(BaseModel):
         bytes_payload = pickle.dumps(without_image_data)
         return bytes_payload
 
-    @classmethod
-    def from_buffer(cls,
-                    buffer: memoryview,
-                    image_shape: Tuple[int, ...],
-                    ) -> 'FramePayload':
-
-        if len(image_shape) == 2:
-            image_shape = (*image_shape, 1)
+    @staticmethod
+    def tuple_from_buffer(buffer: memoryview,
+                          image_shape: Tuple[int, ...],
+                          ) -> Tuple[bytes, bytes]:
 
         image_size = np.prod(image_shape) * BYTES_PER_PIXEL
 
         # buffer should be [`image_bytes` + `unhydrated_bytes`]
         image_buffer = buffer[:image_size]
         unhydrated_buffer = buffer[image_size:]
-        unhydrated_frame = pickle.loads(unhydrated_buffer)
-        instance = cls(
-            **unhydrated_frame
-        )
-        instance.image = np.ndarray(image_shape, dtype=np.uint8, buffer=image_buffer)
+        return bytes(image_buffer), bytes(unhydrated_buffer)
 
-        instance._validate_image(image=instance.image)
-        return instance
+    def image_from_bytes(self, image_bytes: bytes):
+        image = np.frombuffer(image_bytes, dtype=np.uint8).reshape(self.image_shape)
+        self._validate_image(image)
+        return image
 
     @property
     def hydrated(self) -> bool:
@@ -193,6 +175,20 @@ class FramePayload(BaseModel):
     @staticmethod
     def calculate_pickle_checksum(pickle_bytes: bytes) -> int:
         return np.sum(np.frombuffer(pickle_bytes, dtype=np.uint8))
+
+    @classmethod
+    def _get_color_channels(cls,
+                            image_shape: Tuple[int, ...]) -> Tuple[Tuple[int, ...], int]:
+        if len(image_shape) == 2:
+            color_channels = 1
+        elif image_shape[-1] == 1:
+            color_channels = 1
+            image_shape = image_shape[:-1]
+        elif len(image_shape) == 3:
+            color_channels = image_shape[-1]
+        else:
+            raise ValueError(f"Image is the wrong shape - {image_shape}")
+        return image_shape, color_channels
 
     def __eq__(self, other: 'FramePayload') -> bool:
         return self.dict() == other.dict()
