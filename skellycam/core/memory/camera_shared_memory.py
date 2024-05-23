@@ -132,8 +132,7 @@ class CameraSharedMemory(BaseModel):
                   frame: FramePayload,
                   ):
         tik = time.perf_counter_ns()
-        full_payload = self._frame_to_buffer_payload(image=image,
-                                                     frame=frame)
+        full_payload = frame.to_buffer(image=image)
         self.shm.buf[:self.total_frame_buffer_size] = full_payload
 
         elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
@@ -157,19 +156,7 @@ class CameraSharedMemory(BaseModel):
         #             f"copy, {elapsed_time_ms:.6}ms total")
         return image_bytes, unhydrated_frame_bytes
 
-    def _frame_to_buffer_payload(self,
-                                 frame: FramePayload,
-                                 image: np.ndarray) -> bytes:
-        if frame.hydrated:
-            raise ValueError(f"Frame payload for {self.camera_id} should not be hydrated(i.e. have image data)")
-        imageless_payload_bytes = frame.to_unhydrated_bytes()
-        full_payload = image.tobytes() + imageless_payload_bytes
-        if not len(full_payload) == self.total_frame_buffer_size:
-            raise ValueError(
-                f"Error converting frame to buffer payload! Size mismatch for {self.camera_id} on frame: {frame.frame_number} - "
-                f"Expected: {self.payload_size}, "
-                f"Actual: {len(full_payload)}")
-        return full_payload
+
 
     def close(self):
         self.shm.close()

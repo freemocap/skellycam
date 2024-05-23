@@ -1,3 +1,4 @@
+import pickle
 from typing import Tuple
 
 import numpy as np
@@ -13,45 +14,45 @@ def test_camera_memories(camera_shared_memory_fixture: Tuple[CameraSharedMemoryM
     og_manager, recreated_manager = camera_shared_memory_fixture
 
     for camera_id in camera_configs_fixture.keys():
-        frame = FramePayload.create_unhydrated_dummy(camera_id=camera_id,
+        og_unhydrated_frame = FramePayload.create_unhydrated_dummy(camera_id=camera_id,
                                                      image=image_fixture)
         original_camera_memory = og_manager.get_camera_shared_memory(camera_id)
         recreated_camera_memory = recreated_manager.get_camera_shared_memory(camera_id)
 
         # Check buffer sizes
-        assert original_camera_memory.buffer_size == recreated_camera_memory.buffer_size
+        assert original_camera_memory.total_frame_buffer_size == recreated_camera_memory.total_frame_buffer_size, (
+            f"Buffer size mismatch: Original ({original_camera_memory.total_frame_buffer_size}), "
+            f"Recreated ({recreated_camera_memory.total_frame_buffer_size})"
+        )
 
-        # Debug statements to check the initial state of shared memory buffer
-        print(f"Original buffer size: {original_camera_memory.buffer_size}")
-        print(f"Recreated buffer size: {recreated_camera_memory.buffer_size}")
+        # check shared memory names
+        assert original_camera_memory.shared_memory_name == recreated_camera_memory.shared_memory_name, (
+            f"Shared memory name mismatch: Original ({original_camera_memory.shared_memory_name}), "
+            f"Recreated ({recreated_camera_memory.shared_memory_name})"
+        )
+
+        # check shared memory sizes
+        assert original_camera_memory.shared_memory_size == recreated_camera_memory.shared_memory_size, (
+            f"Shared memory size mismatch: Original ({original_camera_memory.shared_memory_size}), "
+            f"Recreated ({recreated_camera_memory.shared_memory_size})"
+        )
 
         # Put frame into original shared memory
         original_camera_memory.put_frame(image=image_fixture,
-                                         frame=frame)
+                                         frame=og_unhydrated_frame)
 
-        print(f"After putting frame, shm.buf size: {len(original_camera_memory.shm.buf)}")
-        print(f"Payload size: {original_camera_memory.payload_size}")
 
-        # Retrieve frame from recreated shared memory
-        retrieved_frame = recreated_camera_memory.retrieve_frame()
-
+        # Retrieve image and frame bytes from original shared memory
+        image_bytes, unhydrated_frame_bytes = recreated_camera_memory.retrieve_frame()
+        retrieved_frame = FramePayload(**pickle.loads(unhydrated_frame_bytes))
+        retrieved_image = retrieved_frame.image_from_bytes(image_bytes)
         # Assertions to check frame integrity
-        assert retrieved_frame.model_dump(exclude={"image_data"}) == frame.model_dump(exclude={"image_data"})
-        assert np.array_equal(retrieved_frame.image, image_fixture), "Image data mismatch"
+        assert not retrieved_frame.hydrated, "Frame should not be hydrated"
+        assert np.array_equal(retrieved_image, image_fixture), "Image data mismatch"
+        assert retrieved_frame == og_unhydrated_frame, "Frame data mismatch"
 
-        # Additional debug information if assertions fail
-        if not np.array_equal(retrieved_frame.image, image_fixture):
-            print(f"Expected image sum: {np.sum(image_fixture)}")
-            print(f"Retrieved image sum: {np.sum(retrieved_frame.image)}")
-
-        # Additional checks for buffer payload sizes
-        original_full_payload_size = original_camera_memory.payload_size
-        recreated_full_payload_size = recreated_camera_memory.payload_size
-        assert original_full_payload_size == recreated_full_payload_size, (
-            f"Payload size mismatch: Original ({original_full_payload_size}), "
-            f"Recreated ({recreated_full_payload_size})"
+        assert original_camera_memory.total_frame_buffer_size == recreated_camera_memory.total_frame_buffer_size, (
+            f"Payload size mismatch: Original ({original_camera_memory.total_frame_buffer_size}), " 
+            f"Recreated ({recreated_camera_memory.total_frame_buffer_size})"
         )
 
-        # Clean up
-        original_camera_memory.close()
-        recreated_camera_memory.close()

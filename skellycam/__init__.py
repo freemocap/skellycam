@@ -13,5 +13,5 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 from .system.logging_configuration.configure_logging import configure_logging
 from .system.logging_configuration.log_level_enum import LogLevels
 
-configure_logging(level=LogLevels.DEBUG)
+configure_logging(level=LogLevels.ALL)
 

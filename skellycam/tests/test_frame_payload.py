@@ -43,7 +43,7 @@ def test_frame_payload_create_unhydrated_dummy(camera_id_fixture,
 def test_frame_payload_to_and_from_buffer(frame_payload_fixture):
     # separate image from rest of frame payload, because that's how we put it into shm
     from skellycam.core.frames.frame_payload import FramePayload
-    frame_wo_image = FramePayload(**frame_payload_fixture..model_dump(exclude={"image_data"}))
+    frame_wo_image = FramePayload(**frame_payload_fixture.model_dump(exclude={"image_data"}))
     assert not frame_wo_image.hydrated
     buffer = frame_wo_image.to_buffer(image=frame_payload_fixture.image)
 
@@ -65,13 +65,13 @@ def test_frame_number_fixed_size(image_fixture: np.ndarray):
     og_frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
                                                  image_shape=image_fixture.shape)
     og_frame.frame_number = 0
-    og_frame_size = og_frame.to_buffer(image=image_fixture).nbytes
+    og_frame_size = len(og_frame.to_buffer(image=image_fixture))
 
     for fr in range(int(1e5)):
         frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
                                                   image_shape=image_fixture.shape)
         frame.frame_number = fr
-        frame_size = frame.to_buffer(image=image_fixture).nbytes
+        frame_size = len(frame.to_buffer(image=image_fixture))
         assert frame_size == og_frame_size
 
 

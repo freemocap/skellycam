@@ -98,17 +98,17 @@ class FramePayload(BaseModel):
         instance.timestamp_ns = time.perf_counter_ns()
         return instance
 
-    def to_buffer(self, image: np.ndarray) -> memoryview:
+    def to_buffer(self, image: np.ndarray) -> bytes:
         if self.hydrated:
             raise ValueError(
                 "This method takes in the image separately here so we can avoid an unnecessary `copy` operation")
         image_bytes = image.tobytes()
         bytes_payload = self.to_unhydrated_bytes()
         # bufffer should be [`image_bytes` + `unhydrated_bytes`]
-        return memoryview(image_bytes + bytes_payload)
+        return image_bytes + bytes_payload
 
     def to_unhydrated_bytes(self) -> bytes:
-        without_image_data = self..model_dump(exclude={"image_data"})
+        without_image_data = self.model_dump(exclude={"image_data"})
         bytes_payload = pickle.dumps(without_image_data)
         return bytes_payload
 

@@ -2,6 +2,7 @@ import asyncio
 import logging
 import multiprocessing
 import pickle
+import threading
 import time
 from multiprocessing import connection
 from typing import Coroutine, Callable, Optional
@@ -23,7 +24,7 @@ class FrameWrangler:
         self._multi_frame_payload: Optional[MultiFramePayload] = None
         self._setup_recorder()
 
-        self._listener_task: Optional[asyncio.Task] = None
+        self._listener_thread: Optional[threading.Thread] = None
         self._should_continue_listening = True
 
     @property
@@ -74,7 +75,8 @@ class FrameWrangler:
 
     def start_frame_listener(self):
         logger.debug(f"Starting frame listener...")
-        self._listener_task = asyncio.create_task(self.listen_for_frames())
+        self._listener_thread = threading.Thread(target=self.listen_for_frames)
+        self._listener_thread.start()
 
     async def listen_for_frames(self):
         multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
@@ -121,7 +123,7 @@ class FrameWrangler:
         logger.debug(f"Closing frame wrangler...")
         if self.is_recording:
             self.stop_recording()
-        if self._listener_task is not None:
+        if self._listener_thread is not None:
             self._should_continue_listening = False
-            while not self._listener_task.done():
+            while self._listener_thread.is_alive():
                 time.sleep(0.1)

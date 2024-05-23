@@ -1,4 +1,5 @@
 import asyncio
+import pickle
 import time
 
 import numpy as np
@@ -20,8 +21,11 @@ def test_frame_wrangler(camera_shared_memory_fixture,
 
     number_of_frames_to_test = 10
     for frame_number in range(number_of_frames_to_test):
-        for frame in multi_frame_payload_fixture.frames:
-            frame_wrangler.pipe_connection.send_bytes(frame.to_buffer(image=frame.image))
+        for frame in multi_frame_payload_fixture.frames.values():
+            unhydrated_bytes = frame.to_unhydrated_bytes()
+            unhydrated_frame = FramePayload(**pickle.loads(unhydrated_bytes))
+            frame_buffer = unhydrated_frame.to_buffer(image=frame.image)
+            frame_wrangler.pipe_connection.send_bytes(frame_buffer)
         time.sleep(0.1)
 
 
