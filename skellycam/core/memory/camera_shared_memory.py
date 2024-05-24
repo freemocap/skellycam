@@ -127,10 +127,22 @@ class CameraSharedMemory(BaseModel):
 
         return total_frame_buffer_size, image_size_in_bytes, unhydrated_payload_number_of_bytes
 
-    def put_frame(self,
-                  image: np.ndarray,
-                  frame: FramePayload,
-                  ):
+    def put_new_frame(self,
+                      image: np.ndarray,
+                      frame: FramePayload,
+                      ):
+        tik = time.perf_counter_ns()
+        full_payload = frame.to_buffer(image=image)
+        self.shm.buf[:self.total_frame_buffer_size] = full_payload
+
+        elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
+        logger.loop(
+            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory (took {elapsed_time_ms:.6}ms)")
+
+    def move_latest_frame_to_read_buffer(self,
+                      image: np.ndarray,
+                      frame: FramePayload,
+                      ):
         tik = time.perf_counter_ns()
         full_payload = frame.to_buffer(image=image)
         self.shm.buf[:self.total_frame_buffer_size] = full_payload

@@ -34,8 +34,8 @@ def shared_memory_demo():
         for camera_id in camera_ids:
             print(f"Camera{camera_id} - Test image shape: {test_image.shape}")
             print(f"Camera{camera_id} - Test image dtype: {test_image.dtype}")
-            memory.put_frame(frame=test_frame,
-                             image=test_image)
+            memory.put_new_frame(frame=test_frame,
+                                 image=test_image)
             print(f"Camera{camera_id} - Test frame written to shared memory at index {memory.last_frame_written_index}")
             retrieved_frame = other_memory.get_next_frame()
             print(
@@ -56,7 +56,7 @@ def shared_memory_demo():
         tik_loop = time.perf_counter_ns()
         for camera_id in camera_ids:
             tik_before_put = time.perf_counter_ns()
-            index = memory.put_frame(frame=test_frame, image=test_image)
+            index = memory.put_new_frame(frame=test_frame, image=test_image)
             elapsed_put_times_ms.append((time.perf_counter_ns() - tik_before_put) / 1e6)
             tik_before_get = time.perf_counter_ns()
             test_frame = other_memory.get_next_frame()

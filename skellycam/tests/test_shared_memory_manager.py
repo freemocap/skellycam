@@ -22,7 +22,7 @@ def test_shared_memory_manager(
                                                          image=test_image)
 
             cam_shm = child_shm_manager.get_camera_shared_memory(camera_id)
-            cam_shm.put_frame(image=test_image, frame=unhydrated_frame)
+            cam_shm.put_new_frame(image=test_image, frame=unhydrated_frame)
             image_bytes, frame_bytes = cam_shm.retrieve_frame()
             unhydrated_frame_dict = pickle.loads(frame_bytes)
             unhydrated_frame = FramePayload(**unhydrated_frame_dict)

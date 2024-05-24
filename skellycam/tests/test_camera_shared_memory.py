@@ -38,8 +38,8 @@ def test_camera_memories(camera_shared_memory_fixture: Tuple[CameraSharedMemoryM
         )
 
         # Put frame into original shared memory
-        original_camera_memory.put_frame(image=image_fixture,
-                                         frame=og_unhydrated_frame)
+        original_camera_memory.put_new_frame(image=image_fixture,
+                                             frame=og_unhydrated_frame)
 
 
         # Retrieve image and frame bytes from original shared memory

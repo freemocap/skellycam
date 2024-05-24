@@ -61,7 +61,7 @@ def get_frame(camera_id: CameraId,
     frame.success = grab_success and retrieve_success
     frame.image_checksum = frame.calculate_image_checksum(image)
     frame.image_shape = image.shape
-    camera_shared_memory.put_frame(
+    camera_shared_memory.put_new_frame(
         frame=frame,
         image=image,
     )
