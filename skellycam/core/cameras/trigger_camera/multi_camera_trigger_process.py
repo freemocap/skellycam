@@ -70,7 +70,7 @@ class MultiCameraTriggerProcess:
         # self._camera_configs = camera_configs
         # self._update_pipe_sender.put(camera_configs)
 
-    async def close(self):
+    def close(self):
         logger.debug("Closing CameraTriggerProcess...")
         self._exit_event.set()
         if self._process is not None:

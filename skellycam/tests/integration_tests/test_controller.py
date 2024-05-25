@@ -10,7 +10,6 @@ def controller_fixture() -> Controller:
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip
 async def test_camera_connect(controller_fixture: Controller,
                               camera_configs_fixture: CameraConfigs,
                               number_of_frames: int = 3):

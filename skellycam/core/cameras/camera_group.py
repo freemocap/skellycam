@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from typing import Coroutine, Callable, Optional
+from typing import Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_process import MultiCameraTriggerProcess
@@ -19,6 +19,7 @@ class CameraGroup:
         self._shm_lock = multiprocessing.Lock()
 
         self._multicam_triggers: Optional[MultiCameraTriggerOrchestrator] = None
+        self._camera_shm_manager: Optional[CameraSharedMemoryManager] = None
         self._multi_camera_process: Optional[MultiCameraTriggerProcess] = None
         self._frame_wrangler = FrameWrangler(exit_event=self._exit_event)
 
@@ -32,33 +33,30 @@ class CameraGroup:
         logger.debug(f"Setting camera configs to {configs}")
         self._multicam_triggers = MultiCameraTriggerOrchestrator.from_camera_configs(configs)
 
-        camera_shm = CameraSharedMemoryManager(camera_configs=configs,
-                                               lock=self._shm_lock)
+        self._camera_shm_manager = CameraSharedMemoryManager(camera_configs=configs,
+                                                             lock=self._shm_lock)
 
         self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=configs,
                                                                shm_lock=self._shm_lock,
-                                                               shared_memory_names=camera_shm.shared_memory_names,
-                                                               multicam_triggers=self._multicam_triggers)
+                                                               shared_memory_names=self._camera_shm_manager.shared_memory_names,
+                                                               multicam_triggers=self._multicam_triggers,
+                                                               exit_event=self._exit_event, )
 
         self._frame_wrangler.set_camera_info(camera_configs=configs,
                                              shm_lock=self._shm_lock,
-                                             shared_memory_names=camera_shm.shared_memory_names,
+                                             shared_memory_names=self._camera_shm_manager.shared_memory_names,
                                              multicam_triggers=self._multicam_triggers)
-
-        camera_shm.close() #close the main thread's connection to the shared memory, but don't unlink (delete) it
-
 
     async def start_cameras(self, number_of_frames: Optional[int] = None):
         self._multi_camera_process.start(number_of_frames=number_of_frames)
         self._frame_wrangler.start_frame_listener()
 
-    async def update_configs(self, camera_configs: CameraConfigs):
-        logger.info(f"Updating camera configs to {camera_configs}")
-        await self._multi_camera_process.update_configs(camera_configs=camera_configs)
-        self._frame_wrangler.set_camera_info(camera_configs)
-
     async def close(self):
         logger.debug("Closing camera group")
-        await self._frame_wrangler.close() if self._frame_wrangler else None
-        await self._multi_camera_process.close() if self._multi_camera_process else None
+        if self._frame_wrangler:
+            self._frame_wrangler.close()
+        if self._multi_camera_process:
+            self._multi_camera_process.close()
+        if self._camera_shm_manager:
+            self._camera_shm_manager.close_and_unlink()
         logger.info("Camera group closed.")

@@ -60,5 +60,6 @@ class Controller:
 
     async def close(self):
         logger.debug(f"Closing camera group...")
-        await self._camera_group.close()
+        if self._camera_group is not None:
+            await self._camera_group.close()
 

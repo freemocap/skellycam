@@ -28,7 +28,7 @@ class FrameListenerProcess(multiprocessing.Process):
         self._shared_memory_names = shared_memory_names
         self._exit_event = exit_event
 
-        self._payloads_received:  multiprocessing.Value = multiprocessing.Value('i', 0)
+        self._payloads_received: multiprocessing.Value = multiprocessing.Value('i', 0)
 
     @property
     def payloads_received(self) -> int:
@@ -37,8 +37,8 @@ class FrameListenerProcess(multiprocessing.Process):
     def run(self):
         multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
         cameras_shm = CameraSharedMemoryManager(camera_configs=self._camera_configs,
-                                               lock=self._shm_lock,
-                                               existing_shared_memory_names=self._shared_memory_names)
+                                                lock=self._shm_lock,
+                                                existing_shared_memory_names=self._shared_memory_names)
         try:
             while not self._exit_event.is_set():
                 logger.loop(f"Awaiting multi-frame payload...")
