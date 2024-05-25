@@ -36,22 +36,25 @@ class FrameListenerProcess(multiprocessing.Process):
 
     def run(self):
         multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
-        cameras_shm = CameraSharedMemoryManager(camera_configs=self._camera_configs,
+        camera_shm_manager = CameraSharedMemoryManager(camera_configs=self._camera_configs,
                                                 lock=self._shm_lock,
                                                 existing_shared_memory_names=self._shared_memory_names)
         try:
             while not self._exit_event.is_set():
                 logger.loop(f"Awaiting multi-frame payload...")
-                self._await_new_multi_frame(cameras_shm, multi_frame_payload)
+                self._await_new_multi_frame(camera_shm_manager = camera_shm_manager,
+                                            multi_frame_payload=multi_frame_payload)
 
         except Exception as e:
             logger.error(f"Error in listen_for_frames: {type(e).__name__} - {e}")
             logger.exception(e)
         logger.trace(f"Stopped listening for multi-frames")
 
-    def _await_new_multi_frame(self, camera_shm, multi_frame_payload):
-        self._multi_camera_triggers.await_copy_trigger()
-        payload = camera_shm.get_multi_frame_payload(multi_frame_payload)
+    def _await_new_multi_frame(self,
+                               camera_shm_manager: CameraSharedMemoryManager,
+                               multi_frame_payload: MultiFramePayload):
+        self._multi_camera_triggers.await_new_frames_available()
+        payload = camera_shm_manager.get_multi_frame_payload(multi_frame_payload)
         self._multi_camera_triggers.set_frames_copied()
         self._handle_payload(payload)
 

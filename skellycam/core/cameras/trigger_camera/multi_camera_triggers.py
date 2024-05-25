@@ -26,7 +26,7 @@ class MultiCameraTriggerOrchestrator(BaseModel):
         self._fire_retrieve_trigger()
 
         # 4 - wait for all cameras to retrieve the frame,
-        self._await_new_frames_available()
+        self.await_new_frames_available()
 
         # 5 - wait for the frame to be copied from the `write` buffer to the `read` buffer
         self._await_frames_copied()
@@ -48,44 +48,20 @@ class MultiCameraTriggerOrchestrator(BaseModel):
         return all([triggers.camera_ready_event.is_set()
                     for triggers in self.single_camera_triggers.values()])
 
-    def wait_for_cameras_ready(self):
-        while not all([triggers.camera_ready_event.is_set() for triggers in self.single_camera_triggers.values()]):
-            logger.trace("Waiting for all cameras to be ready...")
-            wait_1s()
-        logger.debug("All cameras are ready!")
+    @property
+    def new_frames_available(self):
+        return all([triggers.new_frame_available_trigger.is_set()
+                    for triggers in self.single_camera_triggers.values()])
 
     @property
     def frames_grabbed(self):
         return not any([triggers.grab_frame_trigger.is_set()
                         for triggers in self.single_camera_triggers.values()])
 
-    def _await_frames_grabbed(self):
-        while not self.frames_grabbed:
-            wait_1us()
-
     @property
     def frames_retrieved(self):
         return not any([triggers.retrieve_frame_trigger.is_set()
                         for triggers in self.single_camera_triggers.values()])
-
-    def _await_new_frames_available(self):
-        while not self.frames_retrieved or not self.new_frames_available:
-            wait_1us()
-        self._clear_retrieve_frames_triggers()
-
-    def _clear_retrieve_frames_triggers(self):
-        for triggers in self.single_camera_triggers.values():
-            triggers.retrieve_frame_trigger.clear()
-
-    @property
-    def new_frames_available(self):
-        return all([triggers.new_frame_available_trigger.is_set()
-                    for triggers in self.single_camera_triggers.values()])
-
-    def _await_frames_copied(self):
-        while self.new_frames_available:
-            wait_1us()
-        self._clear_retrieve_frames_triggers()
 
     def fire_initial_triggers(self):
 
@@ -100,6 +76,34 @@ class MultiCameraTriggerOrchestrator(BaseModel):
                    for triggers in self.single_camera_triggers.values()]):
             wait_10ms()
         logger.trace("Initial triggers reset!")
+
+    def wait_for_cameras_ready(self):
+        while not all([triggers.camera_ready_event.is_set() for triggers in self.single_camera_triggers.values()]):
+            logger.trace("Waiting for all cameras to be ready...")
+            wait_1s()
+        logger.debug("All cameras are ready!")
+
+    def await_new_frames_available(self):
+        while not self.frames_retrieved or not self.new_frames_available:
+            wait_1us()
+        self._clear_retrieve_frames_triggers()
+
+    def set_frames_copied(self):
+        for triggers in self.single_camera_triggers.values():
+            triggers.set_frame_copied()
+
+    def _await_frames_grabbed(self):
+        while not self.frames_grabbed:
+            wait_1us()
+
+    def _clear_retrieve_frames_triggers(self):
+        for triggers in self.single_camera_triggers.values():
+            triggers.retrieve_frame_trigger.clear()
+
+    def _await_frames_copied(self):
+        while self.new_frames_available:
+            wait_1us()
+        self._clear_retrieve_frames_triggers()
 
     def _fire_grab_trigger(self):
         logger.loop("Triggering all cameras to `grab` a frame...")

@@ -79,7 +79,7 @@ def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: "CameraSh
             assert cap.retrieve.called
 
         # 4
-        multi_camera_triggers._await_new_frames_available()
+        multi_camera_triggers.await_new_frames_available()
         assert multi_camera_triggers.frames_retrieved
         wait_10ms()
         assert multi_camera_triggers.new_frames_available

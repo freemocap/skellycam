@@ -164,6 +164,7 @@ class CameraSharedMemory(BaseModel):
         #             f"from shared memory (took {elapsed_get_from_shm:.6}ms "
         #             f"to get from shm buffer and {elapsed_during_copy:.6}ms to "
         #             f"copy, {elapsed_time_ms:.6}ms total")
+
         return payload_buffer_mv
 
 
