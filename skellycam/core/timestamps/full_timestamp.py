@@ -7,7 +7,25 @@ from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
 
-class Timestamp(BaseModel):
+    def to_descriptive_dict(self) -> dict:
+        """
+        Prints as a JSON and includes a description of all fields of this object
+        """
+        descriptive_dict = {}
+        descriptive_dict.update(self.model_dump())
+        descriptive_dict["_field_descriptions"] = self.field_description_dict()
+        return descriptive_dict
+
+    def field_description_dict(self) -> dict:
+        """
+        Prints the description of all fields of this object in a dictionary {field_name: field_description}
+        """
+        output = {"class_name": f"{self.__class__.__name__})"}
+        for field_name, field in self.__fields__.items():
+            output[field_name] = field.field_info.description
+        return output
+
+class FullTimestamp(BaseModel):
     """
     The world's most extravagant timestamp object
 
@@ -75,7 +93,7 @@ class Timestamp(BaseModel):
         return cls.from_datetime(datetime.now(), perf_counter_ns=time.perf_counter_ns())
 
     @classmethod
-    def from_mapping(cls, perf_counter_to_unix_mapping: Tuple[int, int]):
+    def from_perf_to_unix_mapping(cls, perf_counter_to_unix_mapping: Tuple[int, int]):
         perf_counter_ns, unix_timestamp = perf_counter_to_unix_mapping
         return cls.from_datetime(
             datetime.fromtimestamp(unix_timestamp / 1e9),
@@ -115,17 +133,17 @@ if __name__ == "__main__":
     from pprint import pprint as print
 
     print("Printing `Timestamp.now()` object:")
-    print(Timestamp.now().model_dump(), indent=4)
+    print(FullTimestamp.now().model_dump(), indent=4)
 
     print(
         "Printing `Timestamp.from_mapping(perf_counter_to_unix_mapping=(time.perf_counter_ns(), time.time_ns()))`:"
     )
     print(
-        Timestamp.from_mapping(
+        FullTimestamp.from_perf_to_unix_mapping(
             perf_counter_to_unix_mapping=(time.perf_counter_ns(), time.time_ns())
         ).model_dump(),
         indent=4,
     )
 
     print("Printing `Timestamp.now().to_descriptive_dict()`:")
-    print(Timestamp.now().to_descriptive_dict(), indent=4)
+    print(FullTimestamp.now().to_descriptive_dict(), indent=4)

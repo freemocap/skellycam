@@ -13,7 +13,7 @@ from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.core.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
-from skellycam.core.timestamps.timestamp import Timestamp
+from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.timestamp_logger import (
     CameraTimestampLogger,
 )
@@ -119,7 +119,7 @@ class TimestampLoggerManager:
         logger.success("Timestamp logs saved successfully!")
 
     def _save_starting_timestamp(self, perf_counter_to_unix_mapping: Tuple[int, int]):
-        self._starting_timestamp = Timestamp.from_mapping(perf_counter_to_unix_mapping)
+        self._starting_timestamp = FullTimestamp.from_perf_to_unix_mapping(perf_counter_to_unix_mapping)
         # save starting timestamp to JSON file
         with open(
             self._starting_timestamp_json_path,
