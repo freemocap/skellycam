@@ -6,7 +6,7 @@ from typing import Optional, Dict
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_loop import multi_camera_trigger_loop
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class MultiCameraTriggerProcess:
     def __init__(
             self,
             camera_configs: CameraConfigs,
-            multicam_triggers: MultiCameraTriggers,
+            multicam_triggers: MultiCameraTriggerOrchestrator,
             shm_lock: multiprocessing.Lock,
             shared_memory_names: Dict[CameraId, str],
             exit_event: multiprocessing.Event,
@@ -43,7 +43,7 @@ class MultiCameraTriggerProcess:
 
     @staticmethod
     def _run_process(camera_configs: CameraConfigs,
-                     multicam_triggers: MultiCameraTriggers,
+                     multicam_triggers: MultiCameraTriggerOrchestrator,
                      shared_memory_names: Dict[CameraId, str],
                      shm_lock: multiprocessing.Lock,
                      exit_event: multiprocessing.Event,

@@ -1,7 +1,7 @@
 import logging
 import pickle
 import time
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
@@ -114,9 +114,9 @@ class FramePayload(BaseModel):
 
     @classmethod
     def from_buffer(cls,
-                    buffer: memoryview,
+                    buffer: Union[memoryview, bytes],
                     image_shape: Tuple[int, ...],
-                    ) -> Tuple[bytes, bytes]:
+                    ) -> 'FramePayload':
 
         image_size = np.prod(image_shape) * BYTES_PER_PIXEL
 
@@ -124,13 +124,13 @@ class FramePayload(BaseModel):
         image_buffer = buffer[:image_size]
         unhydrated_buffer = buffer[image_size:]
 
-        instance = pickle.loads(unhydrated_buffer)
-        image  = instance.image_from_bytes(image_buffer)
+        instance = cls(**pickle.loads(unhydrated_buffer))
+        image  = instance.image_from_memoryview(image_buffer)
         instance.image = image
         return instance
 
-    def image_from_bytes(self, image_bytes: bytes):
-        image = np.frombuffer(image_bytes, dtype=np.uint8).reshape(self.image_shape)
+    def image_from_memoryview(self, image_mv: memoryview) -> np.ndarray:
+        image = np.frombuffer(image_mv, dtype=np.uint8).reshape(self.image_shape)
         self._validate_image(image)
         return image
 
@@ -140,7 +140,8 @@ class FramePayload(BaseModel):
 
     @property
     def image(self) -> np.ndarray:
-        return np.frombuffer(self.image_data, dtype=np.uint8).reshape(self.image_shape)
+        return np.frombuffer(self.image_data,
+                             dtype=np.uint8).reshape(self.image_shape)
 
     @image.setter
     def image(self, image: np.ndarray):

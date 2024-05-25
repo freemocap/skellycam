@@ -5,7 +5,7 @@ from multiprocessing import shared_memory
 from typing import Tuple, Union, Optional
 
 import numpy as np
-from pydantic import BaseModel, SkipValidation
+from pydantic import BaseModel, SkipValidation, ConfigDict
 
 from skellycam.core import BYTES_PER_PIXEL
 from skellycam.core import CameraId
@@ -24,10 +24,8 @@ class CameraSharedMemory(BaseModel):
     total_frame_buffer_size: int
     shm: shared_memory.SharedMemory
     lock: SkipValidation[multiprocessing.Lock]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    class Config:
-        # TODO - do we need this? I think its giving deprecation warnings
-        arbitrary_types_allowed = True
 
     @classmethod
     def from_config(cls,

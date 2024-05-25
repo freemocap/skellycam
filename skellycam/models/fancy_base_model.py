@@ -4,6 +4,8 @@ from typing import Any, Optional, OrderedDict, List, Tuple
 
 from pydantic import BaseModel, Field
 
+from skellycam.system.utilities.wait_functions import wait_10ms
+
 
 class Timestamp(BaseModel):
     name: str
@@ -165,7 +167,7 @@ if __name__ == "__main__":
         attribute: int = Field(description="An example attribute")
 
         def example_method(self):
-            time.sleep(0.1)
+            wait_10ms()
             print("Method called!")
 
 

@@ -6,7 +6,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.cameras.trigger_camera.trigger_camera_process import TriggerCameraProcess
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def start_cameras(camera_configs: CameraConfigs,
                   shared_memory_names: Dict[CameraId, str],
                   lock: multiprocessing.Lock,
-                  multicam_triggers: MultiCameraTriggers,
+                  multicam_triggers: MultiCameraTriggerOrchestrator,
                   exit_event: multiprocessing.Event
                   ) -> Dict[CameraId, TriggerCameraProcess]:
     logger.info(f"Starting cameras: {list(camera_configs.keys())}")

@@ -7,14 +7,15 @@ import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.cameras.trigger_camera.start_cameras import start_cameras
+from skellycam.system.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
 
 def multi_camera_trigger_loop(camera_configs: CameraConfigs,
-                              multicam_triggers: MultiCameraTriggers,
+                              multicam_triggers: MultiCameraTriggerOrchestrator,
                               shared_memory_names: Dict[CameraId, str],
                               shm_lock: multiprocessing.Lock,
                               exit_event: multiprocessing.Event,
@@ -41,7 +42,6 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
         tik = time.perf_counter_ns()
 
         multicam_triggers.trigger_multi_frame_read(await_cameras_finished=True)
-        shared_memory_manager.send_frame_bytes(pipe_connection=pipe_connection)
 
         if number_of_frames is not None:
             check_loop_count(number_of_frames, loop_count, exit_event)
@@ -52,7 +52,7 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
         elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
 
     logger.debug(f"Multi-camera trigger loop for cameras: {list(cameras.keys())}  ended")
-    time.sleep(.25)
+    wait_10ms()
     log_time_stats(camera_configs=camera_configs,
                    elapsed_in_trigger_ns=elapsed_in_trigger_ns,
                    elapsed_per_loop_ns=elapsed_per_loop_ns)

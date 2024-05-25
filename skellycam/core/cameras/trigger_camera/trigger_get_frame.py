@@ -57,9 +57,9 @@ def get_frame(camera_id: CameraId,
 
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {camera_id}")
+    triggers.set_frame_retrieved()
 
     frame.success = grab_success and retrieve_success
-    frame.image_checksum = frame.calculate_image_checksum(image)
     frame.image_shape = image.shape
     camera_shared_memory.put_new_frame(
         frame=frame,

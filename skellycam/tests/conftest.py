@@ -3,7 +3,7 @@ import multiprocessing
 import os
 import time
 from copy import deepcopy
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Tuple
 
 import numpy as np
 import pytest
@@ -11,6 +11,20 @@ from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 TEST_ENV_NAME = 'TEST_ENV'
+
+
+def pytest_terminal_summary(terminalreporter):
+    """
+    This hook is called after the whole test run finishes,
+    you can use it to add a summary to the terminal output.
+    """
+    for report in terminalreporter.getreports("failed"):
+        if report.location:
+            file_path, line_num, _ = report.location
+            terminalreporter.write_line(f"FAILED {file_path}:{line_num} - {report.longrepr}")
+        else:
+            terminalreporter.write_line(f"FAILED {report.longrepr}")
+
 
 
 
@@ -43,9 +57,12 @@ class WeeImageShapes(enum.Enum):
 
 
 test_images = {shape: np.random.randint(0, 256, size=shape.value, dtype=np.uint8) for shape in WeeImageShapes}
+
+
 @pytest.fixture(params=WeeImageShapes)
 def image_fixture(request) -> np.ndarray:
     return test_images[request.param]
+
 
 test_camera_ids = [1, "2", 4, ]
 
@@ -65,8 +82,6 @@ def camera_ids_fixture(request) -> List["CameraId"]:
 @pytest.fixture(params=TestFullSizeImageShapes)
 def full_size_image_fixture(request) -> np.ndarray:
     return test_images[request.param]
-
-
 
 
 @pytest.fixture
@@ -95,8 +110,8 @@ def single_camera_triggers_fixture(camera_id_fixture: "CameraId") -> "SingleCame
 
 @pytest.fixture
 def multi_camera_triggers_fixture(camera_configs_fixture: "CameraConfigs"):
-    from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
-    return MultiCameraTriggers.from_camera_configs(camera_configs_fixture)
+    from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
+    return MultiCameraTriggerOrchestrator.from_camera_configs(camera_configs_fixture)
 
 
 @pytest.fixture

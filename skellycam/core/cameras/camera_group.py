@@ -4,7 +4,7 @@ from typing import Coroutine, Callable, Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_process import MultiCameraTriggerProcess
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.frames.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
@@ -18,7 +18,7 @@ class CameraGroup:
         self._exit_event = multiprocessing.Event()
         self._shm_lock = multiprocessing.Lock()
 
-        self._multicam_triggers: Optional[MultiCameraTriggers] = None
+        self._multicam_triggers: Optional[MultiCameraTriggerOrchestrator] = None
         self._multi_camera_process: Optional[MultiCameraTriggerProcess] = None
         self._frame_wrangler = FrameWrangler(exit_event=self._exit_event)
 
@@ -30,7 +30,7 @@ class CameraGroup:
 
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
-        self._multicam_triggers = MultiCameraTriggers.from_camera_configs(configs)
+        self._multicam_triggers = MultiCameraTriggerOrchestrator.from_camera_configs(configs)
 
         camera_shm = CameraSharedMemoryManager(camera_configs=configs,
                                                lock=self._shm_lock)

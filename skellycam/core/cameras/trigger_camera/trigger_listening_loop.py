@@ -9,6 +9,7 @@ from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTr
 from skellycam.core.cameras.trigger_camera.trigger_get_frame import get_frame
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
+from skellycam.system.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ def run_trigger_listening_loop(config: CameraConfig,
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
 
     while not exit_event.is_set():
-        time.sleep(0.001)
+        wait_1ms()
         logger.loop(f"Camera {config.camera_id} ready to get next frame")
         frame = get_frame(camera_id=config.camera_id,
                           cap=cv2_video_capture,

@@ -1,5 +1,3 @@
-import pickle
-
 import numpy as np
 
 
@@ -43,19 +41,17 @@ def test_frame_payload_create_unhydrated_dummy(camera_id_fixture,
 def test_frame_payload_to_and_from_buffer(frame_payload_fixture):
     # separate image from rest of frame payload, because that's how we put it into shm
     from skellycam.core.frames.frame_payload import FramePayload
+
     frame_wo_image = FramePayload(**frame_payload_fixture.model_dump(exclude={"image_data"}))
     assert not frame_wo_image.hydrated
     buffer = frame_wo_image.to_buffer(image=frame_payload_fixture.image)
 
     # Act
-    image_bytes, unhydrated_frame_bytes = FramePayload.tuple_from_buffer(buffer=buffer,
-                                                                   image_shape=frame_payload_fixture.image.shape)
-    frame_dict = pickle.loads(unhydrated_frame_bytes)
-    recreated_frame = FramePayload(**frame_dict)
-    recreated_image = recreated_frame.image_from_bytes(image_bytes)
+    recreated_frame = FramePayload.from_buffer(buffer=buffer,
+                                               image_shape=frame_payload_fixture.image.shape)
     # Assert
-    assert recreated_image.shape == frame_payload_fixture.image.shape
-    assert np.sum(recreated_image - frame_payload_fixture.image) == 0
+    assert recreated_frame.image.shape == frame_payload_fixture.image.shape
+    assert np.sum(recreated_frame.image - frame_payload_fixture.image) == 0
 
 
 def test_frame_number_fixed_size(image_fixture: np.ndarray):
@@ -64,7 +60,8 @@ def test_frame_number_fixed_size(image_fixture: np.ndarray):
     from skellycam.core import CameraId
     og_frame = FramePayload.create_initial_frame(camera_id=CameraId(0),
                                                  image_shape=image_fixture.shape)
-    og_frame.frame_number = 0
+    assert not og_frame.hydrated
+    assert og_frame.frame_number == 0
     og_frame_size = len(og_frame.to_buffer(image=image_fixture))
 
     for fr in range(int(1e5)):

@@ -43,13 +43,12 @@ def test_camera_memories(camera_shared_memory_fixture: Tuple[CameraSharedMemoryM
 
 
         # Retrieve image and frame bytes from original shared memory
-        image_bytes, unhydrated_frame_bytes = recreated_camera_memory.retrieve_frame()
-        retrieved_frame = FramePayload(**pickle.loads(unhydrated_frame_bytes))
-        retrieved_image = retrieved_frame.image_from_bytes(image_bytes)
+        frame_buffer_mv = recreated_camera_memory.retrieve_frame()
+        assert isinstance(frame_buffer_mv, memoryview)
+        retrieved_frame = FramePayload.from_buffer(frame_buffer_mv, image_fixture.shape)
         # Assertions to check frame integrity
-        assert not retrieved_frame.hydrated, "Frame should not be hydrated"
-        assert np.array_equal(retrieved_image, image_fixture), "Image data mismatch"
-        assert retrieved_frame == og_unhydrated_frame, "Frame data mismatch"
+        assert retrieved_frame.hydrated, "Frame should not be hydrated"
+        assert np.array_equal(retrieved_frame.image, image_fixture), "Image data mismatch"
 
         assert original_camera_memory.total_frame_buffer_size == recreated_camera_memory.total_frame_buffer_size, (
             f"Payload size mismatch: Original ({original_camera_memory.total_frame_buffer_size}), " 

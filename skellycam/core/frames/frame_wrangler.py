@@ -4,7 +4,7 @@ from typing import Optional, Dict
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
@@ -16,7 +16,7 @@ class FrameListenerProcess(multiprocessing.Process):
                  camera_configs: CameraConfigs,
                  shm_lock: multiprocessing.Lock,
                  shared_memory_names: Dict[CameraId, str],
-                 multicam_triggers: MultiCameraTriggers,
+                 multicam_triggers: MultiCameraTriggerOrchestrator,
                  exit_event: multiprocessing.Event
                  ):
         super().__init__(name="FrameListenerProcess")
@@ -27,6 +27,12 @@ class FrameListenerProcess(multiprocessing.Process):
         self._multi_camera_triggers = multicam_triggers
         self._shared_memory_names = shared_memory_names
         self._exit_event = exit_event
+
+        self._payloads_received:  multiprocessing.Value = multiprocessing.Value('i', 0)
+
+    @property
+    def payloads_received(self) -> int:
+        return self._payloads_received.value
 
     def run(self):
         multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
@@ -50,7 +56,9 @@ class FrameListenerProcess(multiprocessing.Process):
         self._handle_payload(payload)
 
     def _handle_payload(self, payload: MultiFramePayload):
-        logger.loop(f"Received full multi-frame payload:\n {payload}")
+        self._payloads_received.value += 1
+        logger.loop(f"Received full multi-frame payload #{self.payloads_received}:\n {payload}")
+
     #     if self._is_recording:
     #         logger.loop(f"Sending payload to recorder")
     #         self._recorder_queue.put(payload)
@@ -78,16 +86,22 @@ class FrameWrangler:
 
         self._camera_configs: Optional[CameraConfigs] = None
         self._shm_lock: Optional[multiprocessing.Lock] = None
-        self._multicam_triggers: Optional[MultiCameraTriggers] = None
+        self._multicam_triggers: Optional[MultiCameraTriggerOrchestrator] = None
         self._shared_memory_names: Optional[Dict[CameraId, str]] = None
 
         self._listener_process: Optional[FrameListenerProcess] = None
+
+    @property
+    def payloads_received(self) -> Optional[int]:
+        if self._listener_process is None:
+            return None
+        return self._listener_process.payloads_received
 
     def set_camera_info(self,
                         camera_configs: CameraConfigs,
                         shm_lock: multiprocessing.Lock,
                         shared_memory_names: Dict[CameraId, str],
-                        multicam_triggers: MultiCameraTriggers,
+                        multicam_triggers: MultiCameraTriggerOrchestrator,
                         ):
         logger.debug(f"Setting camera configs to {camera_configs}")
 
