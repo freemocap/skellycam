@@ -1,7 +1,6 @@
 import logging
 import multiprocessing
 import time
-from multiprocessing import connection
 from typing import Optional, List, Dict
 
 import numpy as np
@@ -10,21 +9,18 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
 from skellycam.core.cameras.trigger_camera.start_cameras import start_cameras
-from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 logger = logging.getLogger(__name__)
 
 
 def multi_camera_trigger_loop(camera_configs: CameraConfigs,
+                              multicam_triggers: MultiCameraTriggers,
                               shared_memory_names: Dict[CameraId, str],
                               shm_lock: multiprocessing.Lock,
                               exit_event: multiprocessing.Event,
                               number_of_frames: Optional[int] = None,
                               ):
     logger.debug(f"Starting camera trigger loop for cameras: {list(camera_configs.keys())}")
-
-    multicam_triggers = MultiCameraTriggers.from_camera_configs(camera_configs)
 
     cameras = start_cameras(camera_configs=camera_configs,
                             lock=shm_lock,
@@ -97,6 +93,3 @@ def check_loop_count(number_of_frames: int,
         if loop_count + 1 >= number_of_frames:
             logger.trace(f"Reached number of frames: {number_of_frames} - setting `exit` event")
             exit_event.set()
-
-
-

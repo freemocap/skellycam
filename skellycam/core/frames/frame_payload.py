@@ -112,17 +112,22 @@ class FramePayload(BaseModel):
         bytes_payload = pickle.dumps(without_image_data)
         return bytes_payload
 
-    @staticmethod
-    def tuple_from_buffer(buffer: memoryview,
-                          image_shape: Tuple[int, ...],
-                          ) -> Tuple[bytes, bytes]:
+    @classmethod
+    def from_buffer(cls,
+                    buffer: memoryview,
+                    image_shape: Tuple[int, ...],
+                    ) -> Tuple[bytes, bytes]:
 
         image_size = np.prod(image_shape) * BYTES_PER_PIXEL
 
         # buffer should be [`image_bytes` + `unhydrated_bytes`]
         image_buffer = buffer[:image_size]
         unhydrated_buffer = buffer[image_size:]
-        return bytes(image_buffer), bytes(unhydrated_buffer)
+
+        instance = pickle.loads(unhydrated_buffer)
+        image  = instance.image_from_bytes(image_buffer)
+        instance.image = image
+        return instance
 
     def image_from_bytes(self, image_bytes: bytes):
         image = np.frombuffer(image_bytes, dtype=np.uint8).reshape(self.image_shape)

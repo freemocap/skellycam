@@ -88,9 +88,9 @@ def camera_config_fixture(camera_ids_fixture: List["CameraId"]) -> "CameraConfig
 
 
 @pytest.fixture
-def single_camera_triggers_fixture(camera_config_fixture):
+def single_camera_triggers_fixture(camera_id_fixture: "CameraId") -> "SingleCameraTriggers":
     from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
-    return SingleCameraTriggers.from_camera_config(camera_config_fixture)
+    return SingleCameraTriggers.from_camera_id(camera_id_fixture)
 
 
 @pytest.fixture

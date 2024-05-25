@@ -151,14 +151,14 @@ class CameraSharedMemory(BaseModel):
         logger.loop(
             f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory (took {elapsed_time_ms:.6}ms)")
 
-    def retrieve_frame(self) -> Tuple[bytes, bytes]:
+    def retrieve_frame(self) -> memoryview:
         tik = time.perf_counter_ns()
 
-        payload_buffer = self.shm.buf[:self.total_frame_buffer_size]  # this is where the magic happens (in reverse)
+        payload_buffer_mv = self.shm.buf[:self.total_frame_buffer_size]  # this is where the magic happens (in reverse)
 
         elapsed_get_from_shm = (time.perf_counter_ns() - tik) / 1e6
-        image_bytes, unhydrated_frame_bytes = FramePayload.tuple_from_buffer(buffer=payload_buffer,
-                                                                             image_shape=self.image_shape)
+        # image_bytes, unhydrated_frame_bytes = FramePayload.tuple_from_buffer(buffer=payload_buffer,
+        #                                                                      image_shape=self.image_shape)
 
         elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
         elapsed_during_copy = elapsed_time_ms - elapsed_get_from_shm
@@ -166,7 +166,7 @@ class CameraSharedMemory(BaseModel):
         #             f"from shared memory (took {elapsed_get_from_shm:.6}ms "
         #             f"to get from shm buffer and {elapsed_during_copy:.6}ms to "
         #             f"copy, {elapsed_time_ms:.6}ms total")
-        return image_bytes, unhydrated_frame_bytes
+        return payload_buffer_mv
 
 
 

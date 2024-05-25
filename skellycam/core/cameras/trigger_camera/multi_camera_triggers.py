@@ -30,19 +30,19 @@ class MultiCameraTriggers(BaseModel):
         self._await_frame_copied()
 
         # 5 - Make sure all the triggers are as they should be
-        self._verify_hunky_dory()
+        self._verify_hunky_dory_after_read()
 
     ##############################################################################################################
 
     @classmethod
     def from_camera_configs(cls, camera_configs: CameraConfigs):
         return cls(
-            single_camera_triggers={camera_id: SingleCameraTriggers.from_camera_config(camera_config)
+            single_camera_triggers={camera_id: SingleCameraTriggers.from_camera_id(camera_config.camera_id)
                                     for camera_id, camera_config in camera_configs.items()}
         )
 
     @property
-    def cameras_ready_triggers_set(self):
+    def cameras_ready(self):
         return all([triggers.camera_ready_event.is_set()
                     for triggers in self.single_camera_triggers.values()])
 
@@ -56,6 +56,14 @@ class MultiCameraTriggers(BaseModel):
         return not any([triggers.retrieve_frame_trigger.is_set()
                         for triggers in self.single_camera_triggers.values()])
 
+    @property
+    def new_frames_available(self):
+        return all([triggers.frame_copied_trigger.is_set()
+                    for triggers in self.single_camera_triggers.values()])
+
+    def set_frames_copied(self):
+        for triggers in self.single_camera_triggers.values():
+            triggers.frame_copied_trigger.set()
     def wait_for_cameras_ready(self):
         while not all([triggers.camera_ready_event.is_set() for triggers in self.single_camera_triggers.values()]):
             logger.trace("Waiting for all cameras to be ready...")
@@ -75,6 +83,7 @@ class MultiCameraTriggers(BaseModel):
                    for triggers in self.single_camera_triggers.values()]):
             self._wait_slow()
         logger.trace("Initial triggers reset!")
+
 
     def _fire_grab_trigger(self):
         logger.loop("Triggering all cameras to `grab` a frame...")
@@ -113,8 +122,22 @@ class MultiCameraTriggers(BaseModel):
             self._wait_fast()
 
     def _ensure_cameras_ready(self):
-        if not self.cameras_ready_triggers_set:
+        if not self.cameras_ready:
             raise AssertionError("Not all cameras are ready!")
+
+    def _verify_hunky_dory_after_read(self):
+        if not all([triggers.camera_ready_event.is_set()
+                    for triggers in self.single_camera_triggers.values()]):
+            raise AssertionError("Not all cameras are ready!")
+        if any([triggers.grab_frame_trigger.is_set()
+                for triggers in self.single_camera_triggers.values()]):
+            raise AssertionError("Not all `grab` triggers have been reset!")
+        if any([triggers.retrieve_frame_trigger.is_set()
+                for triggers in self.single_camera_triggers.values()]):
+            raise AssertionError("Not all `retrieve` triggers have been reset!")
+        if any([triggers.frame_copied_trigger.is_set()
+                for triggers in self.single_camera_triggers.values()]):
+            raise AssertionError("Not all `frame_copied` triggers have been reset!")
 
     @staticmethod
     def _wait_very_slow(wait_loop_time: float = 1.0):

@@ -4,7 +4,9 @@ from typing import Coroutine, Callable, Optional
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_process import MultiCameraTriggerProcess
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggers
 from skellycam.core.frames.frame_wrangler import FrameWrangler
+from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +15,9 @@ class CameraGroup:
     def __init__(
             self,
     ):
-        self._lock = multiprocessing.Lock()
+        self._shm_lock = multiprocessing.Lock()
+
+        self._multicam_triggers: Optional[MultiCameraTriggers] = None
         self._multi_camera_process: Optional[MultiCameraTriggerProcess] = None
         self._frame_wrangler = FrameWrangler()
 
@@ -28,11 +32,21 @@ class CameraGroup:
 
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
+        self._multicam_triggers = MultiCameraTriggers.from_camera_configs(configs)
+
+        camera_shm = CameraSharedMemoryManager(camera_configs=configs,
+                                               lock=self._shm_lock)
 
         self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=configs,
-                                                               pipe_connection=self._frame_wrangler.pipe_connection)
+                                                               shm_lock=self._shm_lock,
+                                                               shared_memory_names=camera_shm.shared_memory_names,
+                                                               multicam_triggers=self._multicam_triggers)
 
-        self._frame_wrangler.set_camera_configs(configs)
+        self._frame_wrangler.set_camera_configs(configs=configs,
+                                                multicam_triggers=self._multicam_triggers,
+                                                shared_memory_names=camera_shm.shared_memory_names)
+
+        camera_shm.close() #close the main thread's connection to the shared memory, but don't unlink (delete) it
 
     @property
     def frame_wrangler(self) -> FrameWrangler:

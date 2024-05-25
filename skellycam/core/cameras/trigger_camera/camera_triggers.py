@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import time
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
@@ -12,24 +12,19 @@ logger = logging.getLogger(__name__)
 
 class SingleCameraTriggers(BaseModel):
     camera_id: CameraId
-    camera_ready_event: multiprocessing.Event
-    initial_trigger: multiprocessing.Event
-    grab_frame_trigger: multiprocessing.Event
-    retrieve_frame_trigger: multiprocessing.Event
-    frame_copied_trigger: multiprocessing.Event
+    camera_ready_event: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
+    initial_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
+    grab_frame_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
+    retrieve_frame_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
+    copy_frame_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
 
     class Config:
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_camera_config(cls, camera_config: CameraConfig):
+    def from_camera_id(cls, camera_id: CameraId):
         return cls(
-            camera_id=CameraId(camera_config.camera_id),
-            camera_ready_event=multiprocessing.Event(),
-            initial_trigger=multiprocessing.Event(),
-            grab_frame_trigger=multiprocessing.Event(),
-            frame_grabbed_trigger=multiprocessing.Event(),
-            retrieve_frame_trigger=multiprocessing.Event(),
+            camera_id=camera_id,
         )
 
     def set_ready(self):

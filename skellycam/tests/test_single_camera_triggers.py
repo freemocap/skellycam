@@ -5,9 +5,9 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 
 
-def test_from_camera_config(camera_config_fixture):
-    triggers = SingleCameraTriggers.from_camera_config(camera_config_fixture)
-    assert triggers.camera_id == CameraId(camera_config_fixture.camera_id)
+def test_from_camera_config(camera_id_fixture: CameraId):
+    triggers = SingleCameraTriggers.from_camera_id(camera_id_fixture)
+    assert triggers.camera_id == camera_id_fixture
     assert isinstance(triggers.camera_ready_event, synchronize.Event)
 
 
