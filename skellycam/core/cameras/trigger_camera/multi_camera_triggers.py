@@ -53,8 +53,8 @@ class MultiCameraTriggers(BaseModel):
 
     @property
     def frame_retrieved(self):
-        return not any([triggers.retrieve_frame_trigger.is_set()
-                        for triggers in self.single_camera_triggers.values()])
+        return all([triggers.retrieve_frame_trigger.is_set()
+                    for triggers in self.single_camera_triggers.values()])
 
     @property
     def new_frames_available(self):
@@ -64,6 +64,7 @@ class MultiCameraTriggers(BaseModel):
     def set_frames_copied(self):
         for triggers in self.single_camera_triggers.values():
             triggers.frame_copied_trigger.set()
+
     def wait_for_cameras_ready(self):
         while not all([triggers.camera_ready_event.is_set() for triggers in self.single_camera_triggers.values()]):
             logger.trace("Waiting for all cameras to be ready...")
@@ -83,7 +84,6 @@ class MultiCameraTriggers(BaseModel):
                    for triggers in self.single_camera_triggers.values()]):
             self._wait_slow()
         logger.trace("Initial triggers reset!")
-
 
     def _fire_grab_trigger(self):
         logger.loop("Triggering all cameras to `grab` a frame...")

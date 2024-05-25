@@ -3,9 +3,6 @@ import logging
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.core.controller.singleton import get_or_create_controller
-
-
 logger = logging.getLogger(__name__)
 
 websocket_router = APIRouter()
@@ -56,8 +53,6 @@ async def websocket_server_connect(websocket: WebSocket):
         await websocket.send_bytes(data)
 
     await websocket_send_bytes(HELLO_CLIENT_BYTES_MESSAGE)
-    controller = get_or_create_controller()
-    controller.set_websocket_bytes_sender(websocket_send_bytes)
 
     async with WebsocketRunner():
         try:

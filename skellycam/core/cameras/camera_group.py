@@ -15,20 +15,18 @@ class CameraGroup:
     def __init__(
             self,
     ):
+        self._exit_event = multiprocessing.Event()
         self._shm_lock = multiprocessing.Lock()
 
         self._multicam_triggers: Optional[MultiCameraTriggers] = None
         self._multi_camera_process: Optional[MultiCameraTriggerProcess] = None
-        self._frame_wrangler = FrameWrangler()
+        self._frame_wrangler = FrameWrangler(exit_event=self._exit_event)
 
     @property
     def camera_ids(self):
         if self._multi_camera_process is None:
             return []
         return self._multi_camera_process.camera_ids
-
-    def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
-        self._frame_wrangler.set_websocket_bytes_sender(ws_send_bytes)
 
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
@@ -42,15 +40,13 @@ class CameraGroup:
                                                                shared_memory_names=camera_shm.shared_memory_names,
                                                                multicam_triggers=self._multicam_triggers)
 
-        self._frame_wrangler.set_camera_configs(configs=configs,
-                                                multicam_triggers=self._multicam_triggers,
-                                                shared_memory_names=camera_shm.shared_memory_names)
+        self._frame_wrangler.set_camera_info(camera_configs=configs,
+                                             shm_lock=self._shm_lock,
+                                             shared_memory_names=camera_shm.shared_memory_names,
+                                             multicam_triggers=self._multicam_triggers)
 
         camera_shm.close() #close the main thread's connection to the shared memory, but don't unlink (delete) it
 
-    @property
-    def frame_wrangler(self) -> FrameWrangler:
-        return self._frame_wrangler
 
     async def start_cameras(self, number_of_frames: Optional[int] = None):
         self._multi_camera_process.start(number_of_frames=number_of_frames)
@@ -59,7 +55,7 @@ class CameraGroup:
     async def update_configs(self, camera_configs: CameraConfigs):
         logger.info(f"Updating camera configs to {camera_configs}")
         await self._multi_camera_process.update_configs(camera_configs=camera_configs)
-        self._frame_wrangler.set_camera_configs(camera_configs)
+        self._frame_wrangler.set_camera_info(camera_configs)
 
     async def close(self):
         logger.debug("Closing camera group")

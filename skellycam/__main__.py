@@ -4,7 +4,7 @@ import multiprocessing
 import sys
 
 from skellycam.api.run_server import run_uvicorn_server
-from skellycam.system.utilities import setup_app_id_for_windows
+from skellycam.system.utilities.setup_windows_app_id import setup_app_id_for_windows
 
 logger = logging.getLogger(__name__)
 

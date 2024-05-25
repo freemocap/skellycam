@@ -19,8 +19,6 @@ class Controller:
         self._camera_configs: Optional[CameraConfigs] = None
         self._camera_group = CameraGroup()
 
-    def set_websocket_bytes_sender(self, ws_send_bytes: Callable[[bytes], Coroutine]):
-        self._camera_group.set_websocket_bytes_sender(ws_send_bytes)
 
     async def detect(self) -> AvailableDevices:
         logger.info(f"Detecting cameras...")
@@ -54,14 +52,6 @@ class Controller:
         await self._start_camera_group(number_of_frames=number_of_frames)
         return self._camera_group.camera_ids
 
-    def start_recording(self, recording_folder_path: str):
-        logger.debug(f"Starting recording...")
-        self._camera_group.frame_wrangler.start_recording(recording_folder_path)
-
-    def stop_recording(self):
-        logger.debug(f"Stopping recording...")
-        self._camera_group.frame_wrangler.stop_recording()
-
     async def _start_camera_group(self, number_of_frames: Optional[int] = None):
         logger.debug(f"Starting camera group with cameras: {self._camera_group.camera_ids}")
         if self._camera_configs is None or len(self._camera_configs) == 0:
@@ -72,10 +62,3 @@ class Controller:
         logger.debug(f"Closing camera group...")
         await self._camera_group.close()
 
-    async def update_camera_configs(self,
-                                    camera_configs: CameraConfigs):
-        logger.warning(f"Camera configs update not implemented yet!")
-        # logger.info(f"Updating camera configs to {camera_configs}")
-        # self._camera_configs = camera_configs
-        # if self._camera_group:
-        #     await self._camera_group.update_configs(camera_configs=camera_configs)

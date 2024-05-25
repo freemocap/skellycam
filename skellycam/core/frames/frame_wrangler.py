@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import time
 from typing import Optional, Dict
 
 from skellycam.core import CameraId
@@ -16,8 +15,8 @@ class FrameListenerProcess(multiprocessing.Process):
     def __init__(self,
                  camera_configs: CameraConfigs,
                  shm_lock: multiprocessing.Lock,
-                 multicam_triggers: MultiCameraTriggers,
                  shared_memory_names: Dict[CameraId, str],
+                 multicam_triggers: MultiCameraTriggers,
                  exit_event: multiprocessing.Event
                  ):
         super().__init__(name="FrameListenerProcess")
@@ -31,13 +30,13 @@ class FrameListenerProcess(multiprocessing.Process):
 
     def run(self):
         multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
-        camera_shm = CameraSharedMemoryManager(camera_configs=self._camera_configs,
+        cameras_shm = CameraSharedMemoryManager(camera_configs=self._camera_configs,
                                                lock=self._shm_lock,
                                                existing_shared_memory_names=self._shared_memory_names)
         try:
             while not self._exit_event.is_set():
                 logger.loop(f"Awaiting multi-frame payload...")
-                self._await_new_multi_frame(camera_shm, multi_frame_payload)
+                self._await_new_multi_frame(cameras_shm, multi_frame_payload)
 
         except Exception as e:
             logger.error(f"Error in listen_for_frames: {type(e).__name__} - {e}")
@@ -76,20 +75,34 @@ class FrameWrangler:
     def __init__(self, exit_event: multiprocessing.Event):
         super().__init__()
         self._exit_event = exit_event
+
+        self._camera_configs: Optional[CameraConfigs] = None
+        self._shm_lock: Optional[multiprocessing.Lock] = None
+        self._multicam_triggers: Optional[MultiCameraTriggers] = None
+        self._shared_memory_names: Optional[Dict[CameraId, str]] = None
+
         self._listener_process: Optional[FrameListenerProcess] = None
 
-    def start_frame_listener(self,
-                             camera_configs: CameraConfigs,
-                             shm_lock: multiprocessing.Lock,
-                             multi_camera_triggers: MultiCameraTriggers,
-                             shared_memory_names: Dict[CameraId, str]
-                             ):
+    def set_camera_info(self,
+                        camera_configs: CameraConfigs,
+                        shm_lock: multiprocessing.Lock,
+                        shared_memory_names: Dict[CameraId, str],
+                        multicam_triggers: MultiCameraTriggers,
+                        ):
+        logger.debug(f"Setting camera configs to {camera_configs}")
+
+        self._camera_configs = camera_configs
+        self._shm_lock = shm_lock
+        self._multicam_triggers = multicam_triggers
+        self._shared_memory_names = shared_memory_names
+
+    def start_frame_listener(self):
         logger.debug(f"Starting frame listener process...")
 
-        self._listener_process = FrameListenerProcess(camera_configs=camera_configs,
-                                                      shm_lock=shm_lock,
-                                                      multicam_triggers=multi_camera_triggers,
-                                                      shared_memory_names=shared_memory_names,
+        self._listener_process = FrameListenerProcess(camera_configs=self._camera_configs,
+                                                      shm_lock=self._shm_lock,
+                                                      multicam_triggers=self._multicam_triggers,
+                                                      shared_memory_names=self._shared_memory_names,
                                                       exit_event=self._exit_event)
         self._listener_process.start()
 

@@ -36,13 +36,16 @@ class TestFullSizeImageShapes(enum.Enum):
     # SQUARE_MONO = (640, 640)
 
 
-class TestImageShapes(enum.Enum):
+class WeeImageShapes(enum.Enum):
     LANDSCAPE = (48, 64, 3)
     PORTRAIT = (64, 48, 3)
     SQUARE = (64, 64, 3)
 
 
-test_images = {shape: np.random.randint(0, 256, size=shape.value, dtype=np.uint8) for shape in TestImageShapes}
+test_images = {shape: np.random.randint(0, 256, size=shape.value, dtype=np.uint8) for shape in WeeImageShapes}
+@pytest.fixture(params=WeeImageShapes)
+def image_fixture(request) -> np.ndarray:
+    return test_images[request.param]
 
 test_camera_ids = [1, "2", 4, ]
 
@@ -64,9 +67,6 @@ def full_size_image_fixture(request) -> np.ndarray:
     return test_images[request.param]
 
 
-@pytest.fixture(params=TestImageShapes)
-def image_fixture(request) -> np.ndarray:
-    return test_images[request.param]
 
 
 @pytest.fixture
