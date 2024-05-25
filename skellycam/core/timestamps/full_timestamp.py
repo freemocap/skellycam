@@ -7,23 +7,6 @@ from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
 
-    def to_descriptive_dict(self) -> dict:
-        """
-        Prints as a JSON and includes a description of all fields of this object
-        """
-        descriptive_dict = {}
-        descriptive_dict.update(self.model_dump())
-        descriptive_dict["_field_descriptions"] = self.field_description_dict()
-        return descriptive_dict
-
-    def field_description_dict(self) -> dict:
-        """
-        Prints the description of all fields of this object in a dictionary {field_name: field_description}
-        """
-        output = {"class_name": f"{self.__class__.__name__})"}
-        for field_name, field in self.__fields__.items():
-            output[field_name] = field.field_info.description
-        return output
 
 class FullTimestamp(BaseModel):
     """
