@@ -17,6 +17,7 @@ class SharedMemoryNames(BaseModel):
 
 
 class FrameMemoryView(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     image: memoryview
     metadata: memoryview
 

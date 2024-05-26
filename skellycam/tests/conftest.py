@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Tuple
 
 import numpy as np
@@ -7,6 +8,7 @@ from _pytest.terminal import TerminalReporter
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL
 
 TEST_ENV_NAME = 'TEST_ENV'
 
@@ -67,6 +69,37 @@ def dtype_fixture(request: pytest.fixture) -> np.dtype:
 def numpy_array_definition_fixture(array_shape_fixture: Tuple[int, ...],
                                    dtype_fixture: np.dtype) -> Tuple[Tuple[int, ...], np.dtype]:
     return array_shape_fixture, dtype_fixture
+
+
+@pytest.fixture()
+def frame_metadata_fixture() -> np.ndarray:
+    # massive overkill, but ufuncs are cool lol - https://numpy.org/doc/stable/reference/ufuncs.html
+    perf_counter_ufunc = np.frompyfunc(time.perf_counter_ns, nin=0, nout=1)
+    metadata_array = np.ndarray(FRAME_METADATA_MODEL.shape, dtype=FRAME_METADATA_MODEL.dtype)
+    metadata_array[:] = perf_counter_ufunc(*metadata_array.shape)
+    return metadata_array
+
+
+@pytest.fixture()
+def image_like_data_fixture(numpy_array_definition_fixture: Tuple[Tuple[int, ...], np.dtype]) -> np.ndarray:
+    shape, dtype = numpy_array_definition_fixture
+    min_val = np.iinfo(dtype).min
+    max_val = np.iinfo(dtype).max
+
+    # Create a ufunc from np.random.randint
+    produce_random_ufunc = np.frompyfunc(np.random.randint, 2, 1)
+
+    # Create the array and fill it with random values
+    random_array = np.empty(shape, dtype=dtype)
+    random_array[:] = produce_random_ufunc(min_val, max_val, size=random_array.shape)
+
+    return random_array
+
+
+@pytest.fixture()
+def frame_data_fixture(array_shape_fixture: Tuple[int, ...]) -> Tuple[np.ndarray, np.ndarray]:
+    return np.random.randint(0, 256, size=array_shape_fixture, dtype=np.uint8), np.random.randint(0, 256, size=(1,),
+                                                                                                  dtype=np.uint8)
 
 
 @pytest.fixture(params=[1, "2", 4, ])

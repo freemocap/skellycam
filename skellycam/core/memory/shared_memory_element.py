@@ -12,7 +12,9 @@ class SharedMemoryElement(BaseModel):
     shm: shared_memory.SharedMemory
 
     @classmethod
-    def create(cls, shape: Tuple[int, ...], dtype: Union[np.dtype, type, str]):
+    def create(cls,
+               shape: Tuple[int, ...],
+               dtype: Union[np.dtype, type, str]):
         dtype = cls._ensure_dtype(dtype)
         payload_size_bytes = int(np.prod(shape) * dtype.itemsize)
         shm = shared_memory.SharedMemory(size=payload_size_bytes, create=True)
@@ -20,7 +22,10 @@ class SharedMemoryElement(BaseModel):
         return cls(buffer=buffer, shm=shm, dtype=dtype)
 
     @classmethod
-    def recreate(cls, shm_name: str, shape: tuple, dtype: np.dtype):
+    def recreate(cls,
+                 shm_name: str,
+                 shape: tuple,
+                 dtype: np.dtype):
         dtype = np.dtype(dtype)
         shm = shared_memory.SharedMemory(name=shm_name)
         buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
