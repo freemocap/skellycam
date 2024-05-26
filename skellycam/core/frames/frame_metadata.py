@@ -30,11 +30,11 @@ class _FrameMetadataModel(DocPrintingBaseModel):
                                              description="copy_timestamp_ns (timestamp when frame was copied to shared memory)")
 
     @property
-    def frame_metadata_elements(self):
+    def number_of_elements(self) -> int:
         return len(_FrameMetadataModel.__annotations__)
 
     @property
-    def frame_metadata_buffer_size(self):
+    def size_in_bytes(self) -> int:
         return np.dtype(np.uint64).itemsize * self.frame_metadata_elements
 
 
