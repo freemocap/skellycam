@@ -73,7 +73,7 @@ def test_retrieve_frame(camera_config_fixture: CameraConfig):
     metadata = np.zeros((FRAME_METADATA_MODEL.number_of_elements,), dtype=np.uint64)
 
     cam_shm.put_new_frame(image, metadata)
-    retrieved_image, retrieved_metadata = cam_shm.retrieve_frame()
+    retrieved_image, retrieved_metadata = cam_shm.retrieve_frame_mv()
 
     assert np.array_equal(retrieved_image, image)
     assert np.array_equal(retrieved_metadata, metadata)
@@ -118,7 +118,7 @@ def test_integration_workflow(camera_config_fixture: CameraConfig):
     cam_shm_creator.put_new_frame(image, metadata)
 
     # Process 2: Retrieve frame
-    retrieved_image, retrieved_metadata = cam_shm_recreator.retrieve_frame()
+    retrieved_image, retrieved_metadata = cam_shm_recreator.retrieve_frame_mv()
 
     assert np.array_equal(retrieved_image, image)
     assert np.array_equal(retrieved_metadata, metadata)

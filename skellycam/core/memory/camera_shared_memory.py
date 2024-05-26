@@ -1,7 +1,5 @@
 import logging
 import time
-from multiprocessing import shared_memory
-from typing import Tuple
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
@@ -13,51 +11,57 @@ from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 logger = logging.getLogger(__name__)
 
 
+class SharedMemoryNames(BaseModel):
+    image_shm_name: str
+    metadata_shm_name: str
+
+
+class FrameMemoryView(BaseModel):
+    image: memoryview
+    metadata: memoryview
+
 class CameraSharedMemory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    image_shm_element: SharedMemoryElement
-    metadata_shm_element: SharedMemoryElement
+    camera_config: CameraConfig
+    image_shm: SharedMemoryElement
+    metadata_shm: SharedMemoryElement
 
     @classmethod
     def create(
             cls,
             camera_config: CameraConfig,
     ):
-        image_shm_element = SharedMemoryElement(
-            payload_size_bytes=camera_config.image_size_bytes,
-            buffer=np.ndarray(camera_config.image_shape, dtype=np.uint8),
-            shm=shared_memory.SharedMemory(size=camera_config.image_size_bytes, create=True),
+        image_shm = SharedMemoryElement.create(
+            shape=camera_config.image_shape,
+            dtype=np.uint8,
         )
-
-        metadata_shm_element = SharedMemoryElement(
-            payload_size_bytes=FRAME_METADATA_MODEL.size_in_bytes,
-            buffer=np.ndarray((FRAME_METADATA_MODEL.number_of_elements,), dtype=np.uint64),
-            shm=shared_memory.SharedMemory(size=FRAME_METADATA_MODEL.size_in_bytes, create=True),
+        metadata_shm = SharedMemoryElement.create(
+            shape=FRAME_METADATA_MODEL.shape,
+            dtype=FRAME_METADATA_MODEL.dtype,
         )
 
         return cls(
-            image_buffer=image_buffer,
+            camera_config=camera_config,
             image_shm=image_shm,
-            image_size_bytes=image_buffer_size,
-            metadata_buffer=metadata_buffer,
-            metadata_size_bytes=FRAME_METADATA_MODEL.size_in_bytes,
             metadata_shm=metadata_shm,
         )
 
     @classmethod
-    def recreate(cls, camera_config: CameraConfig, shared_memory_names: SharedMemoryNames):
-        image_shm = shared_memory.SharedMemory(name=shared_memory_names.image_shm_name)
-        image_buffer = np.ndarray(camera_config.image_shape, dtype=np.uint8, buffer=image_shm.buf)
-
-        metadata_shm = shared_memory.SharedMemory(name=shared_memory_names.metadata_shm_name)
-        metadata_buffer = np.ndarray(
-            (FRAME_METADATA_MODEL.number_of_elements,), dtype=np.uint64, buffer=metadata_shm.buf
+    def recreate(cls,
+                 camera_config: CameraConfig,
+                 shared_memory_names: SharedMemoryNames):
+        image_shm = SharedMemoryElement.recreate(
+            shared_memory_names.image_shm_name,
+            shape=camera_config.image_shape,
+            dtype=np.uint8,
         )
-
+        metadata_shm = SharedMemoryElement.recreate(
+            shared_memory_names.metadata_shm_name,
+            shape=FRAME_METADATA_MODEL.shape,
+            dtype=FRAME_METADATA_MODEL.dtype,
+        )
         return cls(
-            image_buffer=image_buffer,
-            metadata_buffer=metadata_buffer,
+            camera_config=camera_config,
             image_shm=image_shm,
             metadata_shm=metadata_shm,
         )
@@ -68,19 +72,19 @@ class CameraSharedMemory(BaseModel):
 
     def put_new_frame(self, image: np.ndarray, metadata: np.ndarray):
         metadata[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS] = time.perf_counter_ns()  # copy_timestamp_ns
-        self.image_buffer[:] = image
-        self.metadata_buffer[:] = metadata
+        self.image_shm.copy_into_buffer(image)
+        self.metadata_shm.copy_into_buffer(metadata)
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID]} put wrote frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER]} to shared memory"
         )
 
-    def retrieve_frame(self) -> Tuple[memoryview, memoryview]:
-        image_mv = memoryview(self.image_buffer)
-        metadata_mv = memoryview(self.metadata_buffer)
+    def retrieve_frame_memoryview(self) -> FrameMemoryView:
+        image_mv = memoryview(self.image_shm.copy_from_buffer())
+        metadata_mv = memoryview(self.metadata_shm.copy_from_buffer())
         logger.loop(
             f"Camera {metadata_mv[FRAME_METADATA_MODEL.CAMERA_ID]} retrieved frame#{metadata_mv[FRAME_METADATA_MODEL.FRAME_NUMBER]} from shared memory"
         )
-        return image_mv, metadata_mv
+        return FrameMemoryView(image=image_mv, metadata=metadata_mv)
 
     def close(self):
         self.image_shm.close()

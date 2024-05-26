@@ -56,7 +56,7 @@ class CameraSharedMemoryManager(BaseModel):
         payload = MultiFramePayload.from_previous(previous_payload)
 
         for camera_id, camera_shared_memory in self._camera_shms.items():
-            frame_buffer_mv = camera_shared_memory.retrieve_frame()
+            frame_buffer_mv = camera_shared_memory.retrieve_frame_mv()
             frame = FramePayload.from_buffer(buffer=frame_buffer_mv,
                                              image_shape=camera_shared_memory.image_shape)
             payload.add_frame(frame)

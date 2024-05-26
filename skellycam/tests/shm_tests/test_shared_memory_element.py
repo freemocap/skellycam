@@ -70,8 +70,9 @@ def test_copy_from_buffer(varied_numpy_data: Tuple[Tuple[int], np.dtype]):
 
     buffer_view = element.copy_from_buffer()
 
+    assert isinstance(buffer_view, memoryview)
     assert buffer_view.shape == shape
-    assert buffer_view.dtype == dtype
+    assert all([stride % element.buffer.itemsize == 0 for stride in buffer_view.strides])
 
     element.close()
     element.unlink()

@@ -20,7 +20,7 @@ def test_shared_memory_manager(
 
             cam_shm = child_shm_manager.get_camera_shared_memory(camera_id)
             cam_shm.put_new_frame(image=test_image, frame=unhydrated_frame)
-            frame_buffer_mv = cam_shm.retrieve_frame()
+            frame_buffer_mv = cam_shm.retrieve_frame_mv()
             assert isinstance(frame_buffer_mv, memoryview)
             retrieved_frame = FramePayload.from_buffer(frame_buffer_mv, test_image.shape)
             assert np.array_equal(retrieved_frame.image, test_image)
