@@ -1,152 +1,75 @@
 import logging
-import multiprocessing
 import time
 from multiprocessing import shared_memory
-from typing import Tuple, Union, Optional
+from typing import Tuple
 
 import numpy as np
-from pydantic import BaseModel, SkipValidation, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
-from skellycam.core import BYTES_PER_PIXEL
-from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_BUFFER_SIZE, FRAME_METADATA_ELEMENTS
 
 logger = logging.getLogger(__name__)
 
 
+class SharedMemoryNames(BaseModel):
+    image_shm_name: str
+    metadata_shm_name: str
+
+
 class CameraSharedMemory(BaseModel):
-    camera_config: CameraConfig
-    image_shape: Union[Tuple[int, int, int], Tuple[int, int]]
-    bytes_per_pixel: int = BYTES_PER_PIXEL
-    unhydrated_payload_size: int
-    image_buffer_size: int
-    total_frame_buffer_size: int
-    shm: shared_memory.SharedMemory
-    lock: SkipValidation[multiprocessing.Lock]
+    image_buffer: np.ndarray
+    metadata_buffer: np.ndarray
+    image_shm: shared_memory.SharedMemory
+    metadata_shm: shared_memory.SharedMemory
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    @classmethod
+    def create(cls, camera_config: CameraConfig, ):
+        image_buffer_size = camera_config.image_size_bytes
+        image_shm = shared_memory.SharedMemory(size=image_buffer_size, create=True)
+        image_buffer = np.ndarray(camera_config.image_shape, dtype=np.uint8, buffer=image_shm.buf)
+        metadata_shm = shared_memory.SharedMemory(size=FRAME_METADATA_BUFFER_SIZE, create=True)
+        metadata_buffer = np.ndarray((7,), dtype=np.uint64, buffer=metadata_shm.buf)
+
+        return cls(image_buffer=image_buffer,
+                   metadata_buffer=metadata_buffer,
+                   image_shm=image_shm,
+                   metadata_shm=metadata_shm,
+                   )
 
     @classmethod
-    def from_config(cls,
-                    camera_config: CameraConfig,
-                    lock: multiprocessing.Lock,
-                    shared_memory_name: str = None,
-                    ):
-        total_frame_buffer_size, image_size, unhydrated_payload_size = cls._calculate_payload_buffer_sizes(
-            camera_config)
+    def recreate(cls, camera_config: CameraConfig, shared_memory_names: SharedMemoryNames):
+        image_shm = shared_memory.SharedMemory(name=shared_memory_names.image_shm_name)
+        image_buffer = np.ndarray(camera_config.image_shape, dtype=np.uint8, buffer=image_shm.buf)
 
-        shm = cls._get_or_create_shared_memory(camera_id=camera_config.camera_id,
-                                               total_frame_buffer_size=total_frame_buffer_size,
-                                               shared_memory_name=shared_memory_name)
+        metadata_shm = shared_memory.SharedMemory(name=shared_memory_names.metadata_shm_name)
+        metadata_buffer = np.ndarray((FRAME_METADATA_ELEMENTS,), dtype=np.uint64, buffer=metadata_shm.buf)
 
-
-        return cls(camera_config=camera_config,
-                   image_shape=camera_config.image_shape,
-                   unhydrated_payload_size=unhydrated_payload_size,
-                   image_buffer_size=image_size,
-                   total_frame_buffer_size=total_frame_buffer_size,
-                   shm=shm,
-                   lock=lock)
+        return cls(image_buffer=image_buffer,
+                   metadata_buffer=metadata_buffer,
+                   image_shm=image_shm,
+                   metadata_shm=metadata_shm,
+                   )
 
     @property
-    def camera_id(self):
-        return self.camera_config.camera_id
-
-    @property
-    def image_size(self) -> int:
-        return np.prod(self.image_shape) * self.bytes_per_pixel
-
-    @property
-    def shared_memory_name(self):
-        return self.shm.name
-
-    @property
-    def shared_memory_size(self):
-        return self.shm.size
-
-    @classmethod
-    def _get_or_create_shared_memory(cls,
-                                     camera_id: CameraId,
-                                     total_frame_buffer_size: int,
-                                     shared_memory_name: Optional[str]):
-        if shared_memory_name is not None:  # get existing shared memory
-
-            shm = shared_memory.SharedMemory(name=shared_memory_name)
-            logger.trace(
-                f"RETRIEVING shared memory buffer for Camera{camera_id} - "
-                f"(Name: {shared_memory_name}, Size: {shm.size:,d} bytes)")
-
-        else:  # create new shared memory
-            init_shm = shared_memory.SharedMemory(create=True,
-                                                  size=int(total_frame_buffer_size))
-
-            # recreate so we can be sure the sizes match
-            shm = shared_memory.SharedMemory(name=init_shm.name)
-            init_shm.close()
-            logger.trace(
-                f"CREATING shared memory buffer for Camera {camera_id} - "
-                f"(Name: {shm.name}, Size: {shm.size:,d} bytes)")
-        if total_frame_buffer_size > shm.size:
-            raise ValueError(
-                f"Shared memory buffer size is too small for Camera {camera_id} - "
-                f"Expected: {total_frame_buffer_size:,d} bytes, "
-                f"Actual: {shm.size:,d} bytes")
-        return shm
-
-    @staticmethod
-    def _calculate_payload_buffer_sizes(camera_config: CameraConfig) -> Tuple[int, int, int]:
-        image_resolution = camera_config.resolution
-        color_channels = camera_config.color_channels
-        if color_channels == 3:
-            image_size = (image_resolution.height, image_resolution.width, color_channels)
-        elif color_channels == 1:
-            image_size = (image_resolution.height, image_resolution.width)
-        else:
-            raise ValueError(f"Unsupported number of color channels: {color_channels}")
-        dummy_image = np.random.randint(0,
-                                        255,
-                                        size=image_size,
-                                        dtype=np.uint8)
-
-        dummy_unhydrated_frame = FramePayload.create_unhydrated_dummy(camera_id=camera_config.camera_id,
-                                                                      image=dummy_image)
-
-        dummy_frame_buffer = dummy_unhydrated_frame.to_buffer(dummy_image)
-
-        image_size_in_bytes = len(dummy_image.tobytes())
-        unhydrated_frame_size_in_bytes = len(dummy_unhydrated_frame.to_unhydrated_bytes())
-        unhydrated_payload_number_of_bytes = len(dummy_frame_buffer) - image_size_in_bytes
-        total_frame_buffer_size = len(dummy_frame_buffer)
-        logger.debug(f"Calculated buffer size(s) for Camera {camera_config.camera_id} - \n"
-                     f"\t\tImage Size[i]: {image_size_in_bytes:,d} bytes\n"
-                     f"\t\tUnhydrated Frame Size[u]: {unhydrated_frame_size_in_bytes:,d} bytes\n"
-                     f"\t\tFrame Buffer Size[f]: {total_frame_buffer_size:,d} bytes\n")
-
-        return total_frame_buffer_size, image_size_in_bytes, unhydrated_payload_number_of_bytes
+    def shared_memory_names(self) -> SharedMemoryNames:
+        return SharedMemoryNames(image_shm_name=self.image_shm.name,
+                                 metadata_shm_name=self.metadata_shm.name)
 
     def put_new_frame(self,
                       image: np.ndarray,
-                      frame: FramePayload,
-                      ):
-        full_payload = frame.to_buffer(image=image)
-        self._validate_payload_size(full_payload)
-        self.shm.buf[:self.total_frame_buffer_size] = full_payload
+                      metadata: np.ndarray):
+        metadata[-1] = time.perf_counter_ns()  # copy_timestamp_ns
+        self.image_buffer[:] = image
+        self.metadata_buffer[:] = metadata
+        logger.loop(f"Camera {metadata[0]} put wrote frame#{metadata[1]} to shared memory")
 
-        logger.loop(
-            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory")
-
-
-
-    def retrieve_frame(self) -> memoryview:
-        return self.shm.buf[:self.total_frame_buffer_size]  # this is where the magic happens (in reverse)
-    def _validate_payload_size(self, full_payload):
-        if len(full_payload) != self.total_frame_buffer_size:
-            raise ValueError(
-                f"Payload size mismatch for Camera {self.camera_id} - "
-                f"Expected: {self.total_frame_buffer_size:,d} bytes, "
-                f"Actual: {len(full_payload):,d} bytes")
-
+    def retrieve_frame(self) -> Tuple[memoryview, memoryview]:
+        image_mv = memoryview(self.image_buffer)
+        metadata_mv = memoryview(self.metadata_buffer)
+        logger.loop(f"Camera {metadata_mv[0]} retrieved frame#{metadata_mv[1]} from shared memory")
+        return image_mv, metadata_mv
 
     def close(self):
         self.shm.close()
