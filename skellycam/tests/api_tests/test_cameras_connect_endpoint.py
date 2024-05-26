@@ -1,6 +1,5 @@
 import pytest
 
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.controller.controller import Controller
 
 

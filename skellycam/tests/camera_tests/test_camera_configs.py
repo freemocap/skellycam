@@ -10,7 +10,6 @@ def test_camera_configs_default():
     assert camera_configs[0] == CameraConfig(camera_id=CameraId(0))
 
 
-
 def test_camera_configs_str():
     camera_configs = CameraConfigs()
     assert "COMPUTED" in str(camera_configs)

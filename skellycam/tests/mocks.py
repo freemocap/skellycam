@@ -27,7 +27,7 @@ def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:
         """
         shape = 4  # k
         scale = mean_delay / shape  # θ
-        return gamma.rvs(a=shape, scale=scale)
+        return float(gamma.rvs(a=shape, scale=scale))
 
     def simulate_frame_grab_delay() -> None:
         """
@@ -99,7 +99,7 @@ def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:
         return True
 
     def get(prop_id: int) -> float:
-        return video_capture_mock.properties.get(prop_id, 0.0)
+        return float(video_capture_mock.properties.get(prop_id, 0.0))
 
     video_capture_mock.grab.side_effect = grab
     video_capture_mock.retrieve.side_effect = retrieve

@@ -4,7 +4,7 @@ import multiprocessing
 import sys
 
 from skellycam.api.run_server import run_uvicorn_server
-from skellycam.system.utilities.setup_windows_app_id import setup_app_id_for_windows
+from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,6 @@ PORT = 8003
 APP_URL = f"http://{HOSTNAME}:{PORT}"
 
 if __name__ == "__main__":
-
     multiprocessing.freeze_support()
     # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
 

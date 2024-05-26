@@ -3,7 +3,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from skellycam.core import CameraId, BYTES_PER_PIXEL
+from skellycam.core import CameraId, BYTES_PER_MONO_PIXEL
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.detection.image_rotation_types import RotationTypes
@@ -15,33 +15,32 @@ resolutions = list(WeeImageShapes)
 rotations = list(RotationTypes)
 
 all_combinations = list(
-    product(camera_ids,
-            resolutions,
-            rotations,
-            ))
-
-parametrization_config = (
-    "camera_id,resolution, rotation",
-    all_combinations
-
+    product(
+        camera_ids,
+        resolutions,
+        rotations,
+    )
 )
+
+parametrization_config = ("camera_id,resolution, rotation", all_combinations)
 
 
 @pytest.fixture
-def test_default_camera_config():
+def test_default_camera_config() -> None:
     assert CameraConfig()
 
 
 @pytest.mark.parametrize(*parametrization_config)
-def test_custom_config(camera_id,
-                       resolution,
-                       rotation,
-                       use_this_camera: bool = True,
-                       exposure: int = -7,
-                       framerate: float = 30,
-                       capture_fourcc: str = "MJPG",
-                       writer_fourcc: str = "MP4V",
-                       ):
+def test_custom_config(
+        camera_id,
+        resolution,
+        rotation,
+        use_this_camera: bool = True,
+        exposure: int = -7,
+        framerate: float = 30,
+        capture_fourcc: str = "MJPG",
+        writer_fourcc: str = "MP4V",
+) -> None:
     input_resolution = ImageResolution(height=resolution.value[0], width=resolution.value[1])
 
     if len(resolution.value) == 3:
@@ -75,5 +74,5 @@ def test_custom_config(camera_id,
     assert config.aspect_ratio == resolution.value[1] / resolution.value[0]
     assert config.image_shape == image_shape
     assert config.color_channels == number_of_color_channels
-    assert config.image_size_bytes == np.prod(resolution.value) * BYTES_PER_PIXEL
+    assert config.image_size_bytes == np.prod(resolution.value) * BYTES_PER_MONO_PIXEL
     assert "BASE CONFIG" in str(config)

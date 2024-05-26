@@ -2,7 +2,7 @@ from typing import Tuple
 
 from pydantic import BaseModel, Field, field_validator
 
-from skellycam.core import BYTES_PER_PIXEL
+from skellycam.core import BYTES_PER_MONO_PIXEL
 from skellycam.core import CameraId
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.detection.image_rotation_types import RotationTypes
@@ -11,8 +11,7 @@ from skellycam.core.detection.image_rotation_types import RotationTypes
 class CameraConfig(BaseModel):
     camera_id: CameraId = Field(
         default=CameraId(0),
-        description="The id of the camera to use, "
-                    "e.g. cv2.VideoCapture uses `0` for the first camera",
+        description="The id of the camera to use, " "e.g. cv2.VideoCapture uses `0` for the first camera",
     )
 
     use_this_camera: bool = Field(
@@ -25,7 +24,8 @@ class CameraConfig(BaseModel):
     )
     color_channels: int = Field(
         default=3,
-        description="The number of color channels in the image (3 for RGB, 1 for monochrome)", )
+        description="The number of color channels in the image (3 for RGB, 1 for monochrome)",
+    )
 
     exposure: int = Field(
         default=-7,
@@ -33,14 +33,11 @@ class CameraConfig(BaseModel):
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
     )
 
-    framerate: float = Field(
-        default=30, description="The framerate of the camera (in frames per second)."
-    )
+    framerate: float = Field(default=30, description="The framerate of the camera (in frames per second).")
 
     rotation: RotationTypes = Field(
         default=RotationTypes.NO_ROTATION,
-        description="The rotation to apply to the images "
-                    "of this camera (after they are captured)",
+        description="The rotation to apply to the images " "of this camera (after they are captured)",
     )
     capture_fourcc: str = Field(
         default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
@@ -52,7 +49,7 @@ class CameraConfig(BaseModel):
         description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object",
     )
 
-    @field_validator('camera_id', mode="before")
+    @field_validator("camera_id", mode="before")
     @classmethod
     def convert_camera_id(cls, v):
         return CameraId(v)
@@ -74,7 +71,7 @@ class CameraConfig(BaseModel):
 
     @property
     def image_size_bytes(self) -> int:
-        return self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_PIXEL
+        return self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_MONO_PIXEL
 
     def __eq__(self, other):
         return self.model_dump() == other.model_dump()

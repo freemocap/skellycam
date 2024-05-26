@@ -4,7 +4,7 @@ import multiprocessing
 from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core import CameraId
-from skellycam.system.utilities.wait_functions import wait_1us, wait_10ms
+from skellycam.utilities.wait_functions import wait_1us, wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -55,4 +55,3 @@ class SingleCameraTriggers(BaseModel):
 
     def set_frame_copied(self):
         self.new_frame_available_trigger.clear()
-

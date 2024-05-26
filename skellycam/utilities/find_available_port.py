@@ -4,7 +4,7 @@ import socket
 logger = logging.getLogger(__name__)
 
 
-def find_available_port(start_port) -> int:
+def find_available_port(start_port: int) -> int:
     logger.debug(f"Finding available port starting at {start_port}")
     port = start_port
     while True:

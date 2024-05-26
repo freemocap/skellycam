@@ -9,26 +9,28 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.cameras.trigger_camera.start_cameras import start_cameras
-from skellycam.system.utilities.wait_functions import wait_10ms
+from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
 
-def multi_camera_trigger_loop(camera_configs: CameraConfigs,
-                              multicam_triggers: MultiCameraTriggerOrchestrator,
-                              shared_memory_names: Dict[CameraId, str],
-                              shm_lock: multiprocessing.Lock,
-                              exit_event: multiprocessing.Event,
-                              number_of_frames: Optional[int] = None,
-                              ):
+def multi_camera_trigger_loop(
+        camera_configs: CameraConfigs,
+        multicam_triggers: MultiCameraTriggerOrchestrator,
+        shared_memory_names: Dict[CameraId, str],
+        shm_lock: multiprocessing.Lock,
+        exit_event: multiprocessing.Event,
+        number_of_frames: Optional[int] = None,
+):
     logger.debug(f"Starting camera trigger loop for cameras: {list(camera_configs.keys())}")
 
-    cameras = start_cameras(camera_configs=camera_configs,
-                            lock=shm_lock,
-                            shared_memory_names=shared_memory_names,
-                            multicam_triggers=multicam_triggers,
-                            exit_event=exit_event
-                            )
+    cameras = start_cameras(
+        camera_configs=camera_configs,
+        lock=shm_lock,
+        shared_memory_names=shared_memory_names,
+        multicam_triggers=multicam_triggers,
+        exit_event=exit_event,
+    )
 
     logger.info(f"Camera trigger loop started for cameras: {list(camera_configs.keys())}")
 
@@ -53,14 +55,14 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
 
     logger.debug(f"Multi-camera trigger loop for cameras: {list(cameras.keys())}  ended")
     wait_10ms()
-    log_time_stats(camera_configs=camera_configs,
-                   elapsed_in_trigger_ns=elapsed_in_trigger_ns,
-                   elapsed_per_loop_ns=elapsed_per_loop_ns)
+    log_time_stats(
+        camera_configs=camera_configs,
+        elapsed_in_trigger_ns=elapsed_in_trigger_ns,
+        elapsed_per_loop_ns=elapsed_per_loop_ns,
+    )
 
 
-def log_time_stats(camera_configs: CameraConfigs,
-                   elapsed_in_trigger_ns: List[int],
-                   elapsed_per_loop_ns: List[int]):
+def log_time_stats(camera_configs: CameraConfigs, elapsed_in_trigger_ns: List[int], elapsed_per_loop_ns: List[int]):
     number_of_cameras = len(camera_configs)
     resolution = str(camera_configs[0].resolution)
     number_of_frames = len(elapsed_per_loop_ns)
@@ -68,27 +70,21 @@ def log_time_stats(camera_configs: CameraConfigs,
 
     logger.info(
         f"Read {number_of_frames} x {resolution} images read from {number_of_cameras} camera(s):"
-
         f"\n\tTime elapsed per multi-frame loop  (ideal: {(ideal_framerate ** -1) / 1e6:.2f} ms) -  "
         f"\n\t\tmean   : {np.mean(elapsed_per_loop_ns) / 1e6:.2f} ms"
         f"\n\t\tmedian : {np.median(elapsed_per_loop_ns) / 1e6:.2f} ms"
         f"\n\t\tstd-dev: {np.std(elapsed_per_loop_ns) / 1e6:.2f} ms\n"
-
         f"\n\tTime elapsed in during multi-camera `grab` trigger (ideal: 0 ms) - "
         f"\n\t\tmean   : {np.mean(elapsed_in_trigger_ns) / 1e6:.2f} ms"
         f"\n\t\tmedian : {np.median(elapsed_in_trigger_ns) / 1e6:.2f} ms"
         f"\n\t\tstd-dev: {np.std(elapsed_in_trigger_ns) / 1e6:.2f} ms\n"
-
         f"\n\tMEASURED FRAMERATE (ideal: {ideal_framerate} fps): "
         f"\n\t\tmean   : {(1e9 / np.mean(elapsed_per_loop_ns)):.2f} fps "
         f"\n\t\tmedian : {(1e9 / np.median(elapsed_per_loop_ns)):.2f} fps \n"
-
     )
 
 
-def check_loop_count(number_of_frames: int,
-                     loop_count: int,
-                     exit_event: multiprocessing.Event):
+def check_loop_count(number_of_frames: int, loop_count: int, exit_event: multiprocessing.Event):
     if number_of_frames is not None:
         if loop_count + 1 >= number_of_frames:
             logger.trace(f"Reached number of frames: {number_of_frames} - setting `exit` event")

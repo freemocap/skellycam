@@ -7,19 +7,20 @@ from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
-from skellycam.system.utilities.wait_functions import wait_1ms
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
 
 class FrameListenerProcess(multiprocessing.Process):
-    def __init__(self,
-                 camera_configs: CameraConfigs,
-                 shm_lock: multiprocessing.Lock,
-                 shared_memory_names: Dict[CameraId, str],
-                 multicam_triggers: MultiCameraTriggerOrchestrator,
-                 exit_event: multiprocessing.Event
-                 ):
+    def __init__(
+            self,
+            camera_configs: CameraConfigs,
+            shm_lock: multiprocessing.Lock,
+            shared_memory_names: Dict[CameraId, str],
+            multicam_triggers: MultiCameraTriggerOrchestrator,
+            exit_event: multiprocessing.Event,
+    ):
         super().__init__(name="FrameListenerProcess")
         # self._video_recorder_manager = VideoRecorderProcessManager()
         # self._recorder_queue = recorder_queue
@@ -29,7 +30,7 @@ class FrameListenerProcess(multiprocessing.Process):
         self._shared_memory_names = shared_memory_names
         self._exit_event = exit_event
 
-        self._payloads_received: multiprocessing.Value = multiprocessing.Value('i', 0)
+        self._payloads_received: multiprocessing.Value = multiprocessing.Value("i", 0)
 
     @property
     def payloads_received(self) -> int:
@@ -37,9 +38,11 @@ class FrameListenerProcess(multiprocessing.Process):
 
     def run(self):
         multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
-        camera_shm_manager = CameraSharedMemoryManager(camera_configs=self._camera_configs,
-                                                       lock=self._shm_lock,
-                                                       existing_shared_memory_names=self._shared_memory_names)
+        camera_shm_manager = CameraSharedMemoryManager(
+            camera_configs=self._camera_configs,
+            lock=self._shm_lock,
+            existing_shared_memory_names=self._shared_memory_names,
+        )
         self._multi_camera_triggers.wait_for_cameras_ready()
         try:
             while not self._exit_event.is_set():
@@ -79,12 +82,13 @@ class FrameWrangler:
             return None
         return self._listener_process.payloads_received
 
-    def set_camera_info(self,
-                        camera_configs: CameraConfigs,
-                        shm_lock: multiprocessing.Lock,
-                        shared_memory_names: Dict[CameraId, str],
-                        multicam_triggers: MultiCameraTriggerOrchestrator,
-                        ):
+    def set_camera_info(
+            self,
+            camera_configs: CameraConfigs,
+            shm_lock: multiprocessing.Lock,
+            shared_memory_names: Dict[CameraId, str],
+            multicam_triggers: MultiCameraTriggerOrchestrator,
+    ):
         logger.debug(f"Setting camera configs to {camera_configs}")
 
         self._camera_configs = camera_configs
@@ -95,11 +99,13 @@ class FrameWrangler:
     def start_frame_listener(self):
         logger.debug(f"Starting frame listener process...")
 
-        self._listener_process = FrameListenerProcess(camera_configs=self._camera_configs,
-                                                      shm_lock=self._shm_lock,
-                                                      multicam_triggers=self._multicam_triggers,
-                                                      shared_memory_names=self._shared_memory_names,
-                                                      exit_event=self._exit_event)
+        self._listener_process = FrameListenerProcess(
+            camera_configs=self._camera_configs,
+            shm_lock=self._shm_lock,
+            multicam_triggers=self._multicam_triggers,
+            shared_memory_names=self._shared_memory_names,
+            exit_event=self._exit_event,
+        )
         self._listener_process.start()
 
     def close(self):

@@ -9,7 +9,7 @@ class Timestamp(BaseModel):
     start: int  # nanoseconds, from time.perf_counter_ns()
     end: Optional[int] = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.end is None:
             return f"{self.name}: (end timestamp not set)"
         duration_ms = (self.end - self.start) / 1e6
@@ -20,6 +20,7 @@ class PerfCounterToUnixMapping(BaseModel):
     """
     A mapping of the perf_counter_ns timestamp to an as-synchronous-as-possible unix timestamp_ns
     """
+
     perf_counter_ns: int = Field(
         description="The perf_counter_ns timestamp when the mapping was created, via `time.perf_counter_ns()`"
     )
@@ -28,7 +29,7 @@ class PerfCounterToUnixMapping(BaseModel):
     )
 
     @classmethod
-    def create(cls) -> 'PerfCounterToUnixMapping':
+    def create(cls) -> "PerfCounterToUnixMapping":
         return cls(
             perf_counter_ns=time.perf_counter_ns(),
             unix_timestamp_ns=time.time_ns(),
@@ -48,22 +49,22 @@ class TimestampLogs(BaseModel):
     def items(self) -> List[Tuple[str, Timestamp]]:
         return list(self.timestamps.items())
 
-    def __iter__(self):
+    def __iter__(self) -> List[str]:
         return iter(self.timestamps)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Timestamp:
         return self.timestamps[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         self.timestamps[key] = value
 
-    def __delitem__(self, key):
+    def __delitem__(self, key) -> None:
         del self.timestamps[key]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.timestamps)
 
-    def __str__(self):
+    def __str__(self) -> str:
         out_str = "Timestamps (attr_name:method:call#:duration_ms):\n\t"
         out_str += "\n\t".join([str(ts) for ts in self.timestamps.values()])
         return out_str
@@ -89,7 +90,7 @@ class TimestampingBaseModel(BaseModel):
         attr = super().__getattribute__(name)
 
         if callable(attr) and not name.startswith("_"):
-            def newfunc(*args, **kwargs):
+            def newfunc(*args, **kwargs) -> Any:
                 ts_tag = self._log_start_timestamp(f"{name}:call")
                 result = attr(*args, **kwargs)
                 self._log_end_timestamp(ts_tag)

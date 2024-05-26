@@ -1,3 +1,5 @@
+from typing import Hashable
+
 import numpy as np
 from pydantic import BaseModel
 
@@ -29,19 +31,23 @@ class ImageResolution(BaseModel):
     def aspect_ratio(self) -> float:
         return self.width / self.height
 
-    def __hash__(self):
+    def __hash__(self) -> Hashable:
         return hash((self.width, self.height))
 
-    def __lt__(self, other: "ImageResolution") -> bool:
+    def __lt__(self, other: object) -> bool:
         """
         Define this so we can sort a list of `VideoResolution`s
         """
+        if not isinstance(other, ImageResolution):
+            return False
         return self.width * self.height < other.width * other.height
 
-    def __eq__(self, other: "ImageResolution") -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Define this so we can compare `VideoResolution`s
         """
+        if not isinstance(other, ImageResolution):
+            return False
         return self.width == other.width and self.height == other.height
 
     def __str__(self) -> str:

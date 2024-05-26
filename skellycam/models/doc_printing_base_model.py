@@ -1,12 +1,12 @@
 import pprint
+from typing import Any, Dict
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
 
 class DocPrintingBaseModel(BaseModel):
-
-    def to_descriptive_dict(self, max_length: int = 100) -> dict:
+    def to_descriptive_dict(self, max_length: int = 100) -> Dict[str, Any]:
         """
         Creates a dictionary representation of the object values and includes a description of all fields of this object
         """
@@ -16,14 +16,14 @@ class DocPrintingBaseModel(BaseModel):
         # truncate very long strings with internal elipses
         for key, value in descriptive_dict.items():
             if isinstance(value, str) and len(value) > max_length:
-                start_str = value[:int(max_length / 2)]
+                start_str = value[: int(max_length / 2)]
                 end_str = value[-int(max_length / 2):]
                 descriptive_dict[key] = f"{start_str}...{end_str}"
 
         descriptive_dict["_field_descriptions"] = self.field_description_dict()
         return descriptive_dict
 
-    def field_description_dict(self) -> dict:
+    def field_description_dict(self) -> Dict[str, str]:
         """
         Prints the description of all fields of this object in a dictionary {field_name: field_description}
         """
@@ -59,5 +59,5 @@ class DocPrintingBaseModel(BaseModel):
         """
         return pprint.pformat(self.to_descriptive_dict(), indent=4)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.docs()

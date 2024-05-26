@@ -14,7 +14,6 @@ def test_app(client_fixture: TestClient) -> None:
     assert response.status_code == 200
 
 
-
 def test_app_hello(client_fixture: TestClient) -> None:
     response = client_fixture.get("/hello")
     assert response.status_code == 200

@@ -1,17 +1,9 @@
-from typing import List
-
-import pytest
-
-from skellycam.core import CameraId
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-
-
 
 
 def test_multi_frame_create_empty(camera_ids_fixture):
     # Arrange
-    multi_frame_payload = MultiFramePayload.create(camera_ids=camera_ids_fixture,
-                                                   multi_frame_number=0)
+    multi_frame_payload = MultiFramePayload.create(camera_ids=camera_ids_fixture, multi_frame_number=0)
 
     # Assert
     assert multi_frame_payload.multi_frame_number == 0
@@ -34,5 +26,3 @@ def test_multi_frame_from_previous(multi_frame_payload_fixture):
     assert all([frame is None for frame in multi_frame_payload.frames.values()])
     assert multi_frame_payload.utc_ns_to_perf_ns == previous_multi_frame_payload.utc_ns_to_perf_ns
     assert not multi_frame_payload.full
-
-

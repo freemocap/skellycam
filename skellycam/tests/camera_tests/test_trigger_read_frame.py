@@ -7,14 +7,12 @@ from skellycam.tests.mocks import create_cv2_video_capture_mock
 
 def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: "CameraSharedMemoryManager"):
     from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
-    from skellycam.system.utilities.wait_functions import wait_10ms
+    from skellycam.utilities.wait_functions import wait_10ms
 
     # init stuff
     shm_parent, shm_child = camera_shared_memory_fixture
     camera_configs = shm_parent.camera_configs
     multi_camera_triggers = MultiCameraTriggerOrchestrator.from_camera_configs(camera_configs)
-
-
 
     assert not multi_camera_triggers.cameras_ready
 
@@ -26,24 +24,26 @@ def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: "CameraSh
     wait_camera_ready_thread.join()
     assert multi_camera_triggers.cameras_ready
 
-
-
     # Grab a few frames
     number_of_frames_to_test = 4
     for frame_number in range(number_of_frames_to_test):
         # create capture mocks and threads for them to run in
-        caps = {camera_id: create_cv2_video_capture_mock(camera_config)
-                for camera_id, camera_config in camera_configs.items()}
+        caps = {
+            camera_id: create_cv2_video_capture_mock(camera_config)
+            for camera_id, camera_config in camera_configs.items()
+        }
 
         for cap in caps.values():
             assert cap.isOpened()
             assert not cap.grab.called
             assert not cap.retrieve.called
 
-        frame_read_threads = create_frame_read_threads(camera_configs=camera_configs,
-                                                       capture_mocks=caps,
-                                                       multi_camera_triggers=multi_camera_triggers,
-                                                       shared_memory_manager=shm_child)
+        frame_read_threads = create_frame_read_threads(
+            camera_configs=camera_configs,
+            capture_mocks=caps,
+            multi_camera_triggers=multi_camera_triggers,
+            shared_memory_manager=shm_child,
+        )
         [thread.start() for thread in frame_read_threads]
         wait_10ms()
         assert all([thread.is_alive() for thread in frame_read_threads])
@@ -95,27 +95,34 @@ def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: "CameraSh
         [thread.join() for thread in frame_read_threads]
 
 
-def create_frame_read_threads(camera_configs: "CameraConfigs",
-                              capture_mocks: Dict["CameraId", Mock],
-                              multi_camera_triggers: 'MultiCameraTriggers',
-                              shared_memory_manager: 'CameraSharedMemoryManager'
-                              ) -> List[threading.Thread]:
+def create_frame_read_threads(
+        camera_configs: "CameraConfigs",
+        capture_mocks: Dict["CameraId", Mock],
+        multi_camera_triggers: "MultiCameraTriggers",
+        shared_memory_manager: "CameraSharedMemoryManager",
+) -> List[threading.Thread]:
     from skellycam.core.cameras.trigger_camera.trigger_get_frame import get_frame
 
     # create thread for each camera to read mock frames
     frame_read_threads = []
     for camera_id, cap in capture_mocks.items():
         from skellycam.core.frames.frame_payload import FramePayload
-        frame = FramePayload.create_initial_frame(camera_id=camera_id,
-                                                  image_shape=camera_configs[camera_id].image_shape)
+
+        frame = FramePayload.create_initial_frame(
+            camera_id=camera_id, image_shape=camera_configs[camera_id].image_shape
+        )
         cam_shm = shared_memory_manager.get_camera_shared_memory(camera_id)
         cam_triggers = multi_camera_triggers.single_camera_triggers[camera_id]
-        frame_read_threads.append(threading.Thread(target=get_frame, args=(camera_id,
-                                                                           cam_shm,
-                                                                           cap,
-                                                                           frame,
-                                                                           cam_triggers,
-                                                                           )
-                                                   )
-                                  )
+        frame_read_threads.append(
+            threading.Thread(
+                target=get_frame,
+                args=(
+                    camera_id,
+                    cam_shm,
+                    cap,
+                    frame,
+                    cam_triggers,
+                ),
+            )
+        )
     return frame_read_threads

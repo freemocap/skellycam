@@ -16,6 +16,3 @@ def test_websocket_send_and_receive(client_fixture: TestClient) -> None:
         websocket.send_text("Hello, server!")
         bytes_data = websocket.receive_bytes()
         assert bytes_data == HELLO_CLIENT_BYTES_MESSAGE
-
-
-

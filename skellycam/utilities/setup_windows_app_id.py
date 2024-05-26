@@ -7,7 +7,5 @@ def setup_app_id_for_windows():
         import ctypes
         import skellycam
 
-        myappid = (
-            f"{skellycam.__package_name__}_{skellycam.__version__}"  # arbitrary string
-        )
+        myappid = f"{skellycam.__package_name__}_{skellycam.__version__}"  # arbitrary string
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)

@@ -4,7 +4,7 @@ from pydantic import Field
 
 from skellycam.models.doc_printing_base_model import DocPrintingBaseModel
 from skellycam.models.timestamping_base_model import TimestampingBaseModel
-from skellycam.system.utilities.wait_functions import wait_10ms
+from skellycam.utilities.wait_functions import wait_10ms
 
 
 class FancyBaseModel(TimestampingBaseModel, DocPrintingBaseModel):
@@ -19,7 +19,6 @@ if __name__ == "__main__":
         def example_method(self):
             wait_10ms()
             print("Method called!")
-
 
     # Testing the updated implementation
     model = MyFancyModel(attribute=10)

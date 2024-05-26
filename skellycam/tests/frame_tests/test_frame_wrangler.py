@@ -6,10 +6,9 @@ from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frame_wrangler import FrameWrangler
 
 
-def test_frame_wrangler(camera_shared_memory_fixture: "CameraSharedMemoryManager",
-                        multi_camera_triggers_fixture: "MultiCameraTriggers"
-                        ):
-
+def test_frame_wrangler(
+        camera_shared_memory_fixture: "CameraSharedMemoryManager", multi_camera_triggers_fixture: "MultiCameraTriggers"
+):
     og_shm_manager = camera_shared_memory_fixture[0]
     child_shm_manager = camera_shared_memory_fixture[1]
     child_shm_manager.close()
@@ -19,11 +18,12 @@ def test_frame_wrangler(camera_shared_memory_fixture: "CameraSharedMemoryManager
     exit_event = multiprocessing.Event()
 
     frame_wrangler = FrameWrangler(exit_event=exit_event)
-    frame_wrangler.set_camera_info(camera_configs=camera_configs,
-                                   shm_lock=og_shm_manager._lock,
-                                   shared_memory_names=og_shm_manager.shared_memory_names,
-                                   multicam_triggers=multi_camera_triggers_fixture
-                                   )
+    frame_wrangler.set_camera_info(
+        camera_configs=camera_configs,
+        shm_lock=og_shm_manager._lock,
+        shared_memory_names=og_shm_manager.shared_memory_names,
+        multicam_triggers=multi_camera_triggers_fixture,
+    )
     frame_wrangler.start_frame_listener()
     number_of_frames_to_test = 4
     for frame_number in range(number_of_frames_to_test):
@@ -31,13 +31,11 @@ def test_frame_wrangler(camera_shared_memory_fixture: "CameraSharedMemoryManager
             cam_shm = og_shm_manager.get_camera_shared_memory(camera_id)
             cam_triggers = multi_camera_triggers_fixture.single_camera_triggers[camera_id]
             image = np.random.randint(0, 256, size=config.image_shape, dtype=np.uint8)
-            unhydrated_frame = FramePayload.create_unhydrated_dummy(camera_id=camera_id,
-                                                                    image=image)
+            unhydrated_frame = FramePayload.create_unhydrated_dummy(camera_id=camera_id, image=image)
             assert not unhydrated_frame.hydrated
             assert not multi_camera_triggers_fixture.new_frames_available
             assert not cam_triggers.new_frame_available
-            cam_shm.put_new_frame(image=image,
-                                  frame=unhydrated_frame)
+            cam_shm.put_new_frame(image=image, frame=unhydrated_frame)
             cam_triggers.set_frame_retrieved()
             assert cam_triggers.new_frame_available
 
