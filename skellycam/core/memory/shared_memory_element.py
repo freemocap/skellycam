@@ -2,8 +2,7 @@ from multiprocessing import shared_memory
 from typing import Tuple, Union
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, model_validator
-from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict
 
 
 class SharedMemoryElement(BaseModel):
@@ -32,15 +31,6 @@ class SharedMemoryElement(BaseModel):
         if not isinstance(dtype, np.dtype):
             dtype = np.dtype(dtype)
         return dtype
-
-    @model_validator(mode="wrap")
-    def _validate_buffer(self) -> Self:
-        if self.buffer.dtype != np.dtype(self.dtype):
-            raise ValueError(f"Expected dtype {self.dtype}, got {self.buffer.dtype}")
-        if self.buffer.shape != self.shape:
-            raise ValueError(f"Expected shape {self.shape}, got {self.buffer.shape}")
-        if self.size != self.buffer.nbytes:
-            raise ValueError(f"Expected size {self.size}, got {self.buffer.nbytes}")
 
     @property
     def name(self) -> str:
