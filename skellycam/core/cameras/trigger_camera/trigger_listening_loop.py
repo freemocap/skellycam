@@ -33,6 +33,5 @@ def run_trigger_listening_loop(config: CameraConfig,
                           frame=frame,
                           triggers=triggers,
                           )
-        triggers.clear_frame_triggers()
 
     logger.trace(f"Camera {config.camera_id} trigger listening loop exited")

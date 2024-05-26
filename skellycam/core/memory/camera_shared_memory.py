@@ -129,44 +129,23 @@ class CameraSharedMemory(BaseModel):
                       image: np.ndarray,
                       frame: FramePayload,
                       ):
-        tik = time.perf_counter_ns()
         full_payload = frame.to_buffer(image=image)
+        self._validate_payload_size(full_payload)
         self.shm.buf[:self.total_frame_buffer_size] = full_payload
 
-        elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
         logger.loop(
-            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory (took {elapsed_time_ms:.6}ms)")
+            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory")
 
-    def move_latest_frame_to_read_buffer(self,
-                      image: np.ndarray,
-                      frame: FramePayload,
-                      ):
-        tik = time.perf_counter_ns()
-        full_payload = frame.to_buffer(image=image)
-        self.shm.buf[:self.total_frame_buffer_size] = full_payload
 
-        elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
-        logger.loop(
-            f"Camera {self.camera_id} wrote frame #{frame.frame_number} to shared memory (took {elapsed_time_ms:.6}ms)")
 
     def retrieve_frame(self) -> memoryview:
-        tik = time.perf_counter_ns()
-
-        payload_buffer_mv = self.shm.buf[:self.total_frame_buffer_size]  # this is where the magic happens (in reverse)
-
-        elapsed_get_from_shm = (time.perf_counter_ns() - tik) / 1e6
-        # image_bytes, unhydrated_frame_bytes = FramePayload.tuple_from_buffer(buffer=payload_buffer,
-        #                                                                      image_shape=self.image_shape)
-
-        elapsed_time_ms = (time.perf_counter_ns() - tik) / 1e6
-        elapsed_during_copy = elapsed_time_ms - elapsed_get_from_shm
-        # logger.loop(f"Camera {self.camera_id} read frame #{frame.frame_number} "
-        #             f"from shared memory (took {elapsed_get_from_shm:.6}ms "
-        #             f"to get from shm buffer and {elapsed_during_copy:.6}ms to "
-        #             f"copy, {elapsed_time_ms:.6}ms total")
-
-        return payload_buffer_mv
-
+        return self.shm.buf[:self.total_frame_buffer_size]  # this is where the magic happens (in reverse)
+    def _validate_payload_size(self, full_payload):
+        if len(full_payload) != self.total_frame_buffer_size:
+            raise ValueError(
+                f"Payload size mismatch for Camera {self.camera_id} - "
+                f"Expected: {self.total_frame_buffer_size:,d} bytes, "
+                f"Actual: {len(full_payload):,d} bytes")
 
 
     def close(self):

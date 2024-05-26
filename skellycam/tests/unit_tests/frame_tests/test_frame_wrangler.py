@@ -3,12 +3,12 @@ import multiprocessing
 import numpy as np
 
 from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.frames.frame_wrangler import FrameWrangler
 
 
 def test_frame_wrangler(camera_shared_memory_fixture: "CameraSharedMemoryManager",
                         multi_camera_triggers_fixture: "MultiCameraTriggers"
                         ):
-    from skellycam.core.frames.frame_wrangler import FrameWrangler
 
     og_shm_manager = camera_shared_memory_fixture[0]
     child_shm_manager = camera_shared_memory_fixture[1]

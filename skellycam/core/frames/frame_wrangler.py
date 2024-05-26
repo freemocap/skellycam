@@ -40,10 +40,11 @@ class FrameListenerProcess(multiprocessing.Process):
         camera_shm_manager = CameraSharedMemoryManager(camera_configs=self._camera_configs,
                                                        lock=self._shm_lock,
                                                        existing_shared_memory_names=self._shared_memory_names)
+        self._multi_camera_triggers.wait_for_cameras_ready()
         try:
             while not self._exit_event.is_set():
-                logger.loop(f"Awaiting multi-frame payload...")
                 if self._multi_camera_triggers.new_frames_available:
+                    logger.loop(f"Frame wrangler sees new frames available!")
                     payload = camera_shm_manager.get_multi_frame_payload(multi_frame_payload)
                     self._multi_camera_triggers.set_frames_copied()
                     self._handle_payload(payload)

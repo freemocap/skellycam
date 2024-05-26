@@ -12,27 +12,40 @@ class MultiCameraTriggerOrchestrator(BaseModel):
     single_camera_triggers: Dict[CameraId, SingleCameraTriggers]
 
     ##############################################################################################################
-    def trigger_multi_frames_read(self):
+    def trigger_multi_frame_read(self):
         # 0 - Make sure all cameras are ready
+        logger.info("Step# 0 - Make sure all cameras are ready")
         self._ensure_cameras_ready()
-
+        logger.info("All cameras are ready!")
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
+        logger.info("Step# 1 - Fire grab triggers")
         self._fire_grab_trigger()
+        logger.info("GRAB triggers fired!")
 
         # 2 - wait for all cameras to grab a frame
+        logger.info("Step# 2 - Wait for all cameras to GRAB a frame")
         self._await_frames_grabbed()
+        logger.info("All cameras have GRABbed a frame!")
 
         # 3- Trigger each camera to retrieve the frame using `cv2.VideoCapture.retrieve()`, which decodes the frame into an image/numpy array
+        logger.info("Step# 3 - Fire retrieve triggers")
         self._fire_retrieve_trigger()
+        logger.info("RETRIEVE triggers fired!")
 
         # 4 - wait for all cameras to retrieve the frame,
+        logger.info("Step# 4 - Wait for new frames to be available")
         self.await_new_frames_available()
+        logger.info("New frames are available!")
 
         # 5 - wait for the frame to be copied from the `write` buffer to the `read` buffer
+        logger.info("Step# 5 - Wait for all frames to be copied")
         self._await_frames_copied()
+        logger.info("All frames have been copied!")
 
         # 6 - Make sure all the triggers are as they should be
+        logger.info("Step# 6 - Verify that everything is hunky-dory after reading the frames")
         self._verify_hunky_dory_after_read()
+        logger.info("Everything is hunky-dory after reading the frames!")
 
     ##############################################################################################################
 

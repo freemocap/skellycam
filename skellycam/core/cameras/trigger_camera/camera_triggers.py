@@ -55,3 +55,4 @@ class SingleCameraTriggers(BaseModel):
 
     def set_frame_copied(self):
         self.new_frame_available_trigger.clear()
+

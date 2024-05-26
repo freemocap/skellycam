@@ -1,3 +1,4 @@
+import io
 import logging
 import pickle
 import time
@@ -104,7 +105,6 @@ class FramePayload(BaseModel):
                 "This method takes in the image separately here so we can avoid an unnecessary `copy` operation")
         image_bytes = image.tobytes()
         bytes_payload = self.to_unhydrated_bytes()
-        # bufffer should be [`image_bytes` + `unhydrated_bytes`]
         return image_bytes + bytes_payload
 
     def to_unhydrated_bytes(self) -> bytes:
@@ -124,15 +124,21 @@ class FramePayload(BaseModel):
         image_buffer = buffer[:image_size]
         unhydrated_buffer = buffer[image_size:]
 
-        instance = cls(**pickle.loads(unhydrated_buffer))
-        image  = instance.image_from_memoryview(image_buffer)
+        instance = cls.unhydrated_from_memoryview(unhydrated_buffer)
+        image = instance.image_from_memoryview(image_buffer)
         instance.image = image
         return instance
 
+    @classmethod
+    def unhydrated_from_memoryview(cls, memory_view: memoryview) -> 'FramePayload':
+        with io.BytesIO(memory_view) as bio:
+            return cls(**pickle.load(bio))
+
+
     def image_from_memoryview(self, image_mv: memoryview) -> np.ndarray:
-        image = np.frombuffer(image_mv, dtype=np.uint8).reshape(self.image_shape)
-        self._validate_image(image)
-        return image
+            image = np.frombuffer(image_mv, dtype=np.uint8).reshape(self.image_shape)
+            self._validate_image(image)
+            return image
 
     @property
     def hydrated(self) -> bool:

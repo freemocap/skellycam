@@ -1,10 +1,13 @@
 import multiprocessing
+import time
 from typing import Tuple
 
+import numpy as np
 import pytest
 
 from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
+from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frame_wrangler import FrameListenerProcess
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
@@ -36,7 +39,6 @@ class TestFrameListenerProcess:
             'shm_manager': shm_manager,
             'multicam_triggers': multicam_triggers,
             'flp': flp,
-            'mfp': multi_frame_payload_fixture,
             'exit_event': exit_event
         }
 
@@ -61,7 +63,7 @@ class TestFrameListenerProcess:
 
     def test_handle_payload(self, setup: dict):
         flp = setup['flp']
-        mfp = setup['mfp']
+        mfp = self._create_test_multiframe_payload(camera_configs=setup['camera_configs'])
         flp._handle_payload(payload=mfp)
         assert flp.payloads_received == 1
 
@@ -71,7 +73,8 @@ class TestFrameListenerProcess:
         wait_1s()
         shm_manager = setup['shm_manager']
         assert flp.payloads_received == 0
-        for camera_id, frame in setup['mfp'].frames.items():
+        mfp = self._create_test_multiframe_payload(camera_configs=setup['camera_configs'])
+        for camera_id, frame in mfp.frames.items():
             cam_shm = shm_manager.get_camera_shared_memory(camera_id)
             cam_triggers = setup['multicam_triggers'].single_camera_triggers[camera_id]
             image  = frame.image
@@ -85,3 +88,15 @@ class TestFrameListenerProcess:
         setup['exit_event'].set()
         flp.join()
         assert flp.payloads_received == 1
+
+    def _create_test_multiframe_payload(self, camera_configs: CameraConfigs) -> MultiFramePayload:
+        mfp = MultiFramePayload.create(camera_ids=camera_configs.keys())
+        for camera_id, camera_config in camera_configs.items():
+            image_shape = camera_config.image_shape
+            frame = FramePayload.create_initial_frame(camera_id=camera_id,
+                                                      image_shape=image_shape)
+            frame.timestamp_ns = time.perf_counter_ns()
+            frame.image = np.random.randint(0, 255, image_shape, dtype=np.uint8)
+            mfp.add_frame(frame)
+        assert mfp.full
+        return mfp

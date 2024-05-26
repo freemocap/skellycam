@@ -41,7 +41,7 @@ def multi_camera_trigger_loop(camera_configs: CameraConfigs,
     while not exit_event.is_set():
         tik = time.perf_counter_ns()
 
-        multicam_triggers.trigger_multi_frame_read(await_cameras_finished=True)
+        multicam_triggers.trigger_multi_frame_read()
 
         if number_of_frames is not None:
             check_loop_count(number_of_frames, loop_count, exit_event)
