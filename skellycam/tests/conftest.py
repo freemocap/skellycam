@@ -1,72 +1,89 @@
-# import enum
-# import multiprocessing
-# import os
-# import time
-# from copy import deepcopy
-# from typing import List, Tuple
-#
-# import numpy as np
-# import pytest
-# from fastapi import FastAPI
-# from starlette.testclient import TestClient
-#
-# from skellycam.api.app_factory import create_app
-# from skellycam.core import CameraId
-# from skellycam.core.cameras.config.camera_config import CameraConfig
-# from skellycam.core.cameras.config.camera_configs import CameraConfigs
-# from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
-# from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
-# from skellycam.core.detection.image_resolution import ImageResolution
-# from skellycam.core.frames.frame_payload import FramePayload
-# from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
-# from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-# from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
-#
-# TEST_ENV_NAME = 'TEST_ENV'
-#
-#
-# def pytest_terminal_summary(terminalreporter):
-#     """
-#     This hook is called after the whole test run finishes,
-#     you can use it to add a summary to the terminal output.
-#     """
-#     for report in terminalreporter.getreports("failed"):
-#         if report.location:
-#             file_path, line_num, _ = report.location
-#             terminalreporter.write_line(f"FAILED {file_path}:{line_num} - {report.longrepr}")
-#         else:
-#             terminalreporter.write_line(f"FAILED {report.longrepr}")
-#
-#
-#
-#
-# @pytest.fixture(scope='session', autouse=True)
-# def set_test_env_variable():
-#     # Set the environment variable before any tests run
-#     #TODO - make a better way to set the runtime environment - we'll want `testing` (running tests), `development`(running from source), and `production` (running from a built package, i.e. from pypi or a wheel file)
-#     os.environ[TEST_ENV_NAME] = 'true'
-#     yield
-#     # Clean up the environment variable after all tests have run
-#     del os.environ[TEST_ENV_NAME]
-#
-#
-# class TestFullSizeImageShapes(enum.Enum):
-#     RGB_LANDSCAPE = (480, 640, 3)
-#     RGB_PORTRAIT = (640, 480, 3)
-#     SQUARE_RGB = (640, 640, 3)
-#     RGB_720P = (720, 1280, 3)
-#     RGB_1080P = (1080, 1920, 3)
-#     RGB_4K = (2160, 3840, 3)
-#     # TODO - Support monochrome images
-#     # MONO_2 = (480, 640)
-#     # MONO_3 = (480, 640, 1)
-#     # SQUARE_MONO = (640, 640)
-#
-#
+import os
+from typing import Tuple
+
+import numpy as np
+import pytest
+from _pytest.terminal import TerminalReporter
+
+from skellycam.core import CameraId
+from skellycam.core.cameras.config.camera_config import CameraConfig
+
+TEST_ENV_NAME = 'TEST_ENV'
+
+
+def pytest_terminal_summary(terminalreporter: TerminalReporter) -> None:
+    """
+    This hook is called after the whole test run finishes,
+    you can use it to add a summary to the terminal output.
+    """
+    for report in terminalreporter.getreports("failed"):
+        if report.location:
+            file_path, line_num, _ = report.location
+            terminalreporter.write_line(f"FAILED {file_path}:{line_num} - {report.longrepr}")
+        else:
+            terminalreporter.write_line(f"FAILED {report.longrepr}")
+
+
+@pytest.fixture(scope='session', autouse=True)
+def set_test_env_variable() -> None:
+    # Set the environment variable before any tests run
+    # TODO - make a better way to set the runtime environment - we'll want `testing` (running tests), `development`(running from source), and `production` (running from a built package, i.e. from pypi or a wheel file)
+    os.environ[TEST_ENV_NAME] = 'true'
+    yield
+    # Clean up the environment variable after all tests have run
+    del os.environ[TEST_ENV_NAME]
+
+
+@pytest.fixture(
+    params=[
+        (256,),  # 1D
+        (256, 2),  # 2D
+        (64, 4, 4),  # 3D
+        (32, 2, 8, 4),  # 4D
+    ]
+)
+def array_shape_fixture(request: pytest.fixture) -> Tuple[int, ...]:
+    return request.param
+
+
+@pytest.fixture(params=[np.uint8,
+                        np.uint64,
+                        np.float32,
+                        np.float64,
+                        np.int8,
+                        np.int64,
+                        np.complex64,
+                        float,
+                        int,
+                        bool,
+                        complex,
+                        str,
+                        ])
+def dtype_fixture(request: pytest.fixture) -> np.dtype:
+    return request.param
+
+
+@pytest.fixture()
+def numpy_array_definition_fixture(array_shape_fixture: Tuple[int, ...],
+                                   dtype_fixture: np.dtype) -> Tuple[Tuple[int, ...], np.dtype]:
+    return array_shape_fixture, dtype_fixture
+
+
+@pytest.fixture(params=[1, "2", 4, ])
+def camera_id_fixture(request: pytest.fixture) -> CameraId:
+    return CameraId(request.param)
+
+
+@pytest.fixture()
+def camera_config_fixture(camera_id_fixture: CameraId) -> CameraConfig:
+    return CameraConfig(camera_id=camera_id_fixture)
+
+
 # class WeeImageShapes(enum.Enum):
 #     LANDSCAPE = (48, 64, 3)
 #     PORTRAIT = (64, 48, 3)
 #     SQUARE = (64, 64, 3)
+#     #TODO - support monocolor images
 #
 #
 # test_images = {shape: np.random.randint(0, 256, size=shape.value, dtype=np.uint8) for shape in WeeImageShapes}
@@ -77,13 +94,9 @@
 #     return test_images[request.param]
 #
 #
-# test_camera_ids = [1, "2", 4, ]
 #
 #
-# @pytest.fixture(params=test_camera_ids)
-# def camera_id_fixture(request) -> "CameraId":
-#     from skellycam.core import CameraId
-#     return CameraId(request.param)
+
 #
 #
 # @pytest.fixture(params=[[0], test_camera_ids])
@@ -107,10 +120,7 @@
 #     return configs
 #
 #
-# @pytest.fixture
-# def camera_config_fixture(camera_ids_fixture: List[CameraId]) -> CameraConfig:
-#     return CameraConfig(camera_id=camera_ids_fixture[0])
-#
+
 #
 # @pytest.fixture
 # def single_camera_triggers_fixture(camera_id_fixture: "CameraId") -> SingleCameraTriggers:

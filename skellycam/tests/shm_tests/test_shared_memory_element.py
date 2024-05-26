@@ -7,24 +7,13 @@ import pytest
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 
 
-@pytest.fixture(
-    params=[
-        ((256,), np.float64),  # 1D array
-        ((256, 2), np.int32),  # 2D array
-        ((64, 4, 4), np.float32),  # 3D array
-        ((32, 2, 8, 4), np.int64),  # 4D array
-        ((128,), np.uint8),  # 1D array
-        ((64, 4), np.uint16),  # 2D array
-        ((32, 4, 4), np.bool_),  # 3D array
-        ((16, 2, 8, 4), np.complex64),  # 4D array
-    ]
-)
-def varied_numpy_data(request):
-    return request.param
+def test_create(numpy_array_definition_fixture: Tuple[Tuple[int], np.dtype]):
+    shape, dtype = numpy_array_definition_fixture
+    if dtype == str:
+        with pytest.raises(ValueError):
+            SharedMemoryElement.create(shape=shape, dtype=dtype)
+        return
 
-
-def test_create(varied_numpy_data: Tuple[Tuple[int], np.dtype]):
-    shape, dtype = varied_numpy_data
     element = SharedMemoryElement.create(shape=shape, dtype=dtype)
 
     assert element.buffer.shape == shape
