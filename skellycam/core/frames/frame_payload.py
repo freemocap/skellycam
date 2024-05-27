@@ -1,217 +1,40 @@
-import io
-import logging
-import pickle
-import time
-from typing import Optional, Tuple, Union
+from dataclasses import dataclass
 
 import numpy as np
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 
-from skellycam.core import BYTES_PER_MONO_PIXEL
-from skellycam.core import CameraId
-
-logger = logging.getLogger(__name__)
-
-FRAME_NUMBER_BYTES_LENGTH = 4
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_MODEL
 
 
-def int_to_fixed_bytes(value: int, length: int = FRAME_NUMBER_BYTES_LENGTH) -> bytes:
-    return value.to_bytes(length, byteorder="big")
-
-
-def fixed_bytes_to_int(b: bytes) -> int:
-    return int.from_bytes(b, byteorder="big")
-
+@dataclass
+class FramePayloadDTO:
+    """
+    Lightweight data transfer object for FramePayload
+    """
+    image: np.ndarray
+    metadata: np.ndarray
 
 class FramePayload(BaseModel):
-    camera_id: CameraId = Field(
-        description="The camera ID of the camera that this frame came from e.g. `0` for `cv2.VideoCapture(0)`"
-    )
-
-    frame_number_bytes: bytes = Field(
-        description="The number of frames read from the camera since the camera was started, "
-                    "as a fixed-size byte array so the size in memory is always the same"
-    )
-
-    bytes_per_pixel: int = Field(default=BYTES_PER_MONO_PIXEL, description="The number of bytes per pixel in the image")
-
-    success: Optional[bool] = Field(
-        default=None, description="The `success` part of `success, image = cv2.VideoCapture.read()`"
-    )
-    image_data: Optional[bytes] = Field(
-        default=None, description="The raw image from `cv2.VideoCapture.read() as bytes"
-    )
-    image_shape: Optional[tuple] = Field(
-        default=None, description="The shape of the image as a tuple of `(height, width)`"
-    )
-    color_channels: Optional[int] = Field(
-        default=None, description="Number of color channels, 3 for RGB, 1 for monochrome"
-    )
-    timestamp_ns: Optional[int] = Field(
-        default=None, description="The time the frame was read from the camera in nanoseconds"
-    )
-    previous_frame_timestamp_ns: int = Field(
-        default=None,
-        description="Timestamp of the previous frame in nanoseconds (denotes object creation time for the first frame)",
-    )
-
-    @property
-    def frame_number(self) -> int:
-        return fixed_bytes_to_int(self.frame_number_bytes)
-
-    @frame_number.setter
-    def frame_number(self, value: int):
-        self.frame_number_bytes = int_to_fixed_bytes(value)
-
-    @field_validator("frame_number_bytes", mode="before")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    image: np.ndarray
+    metadata: np.ndarray
     @classmethod
-    def frame_number_int_to_bytes(cls, v: int) -> bytes:
-        if isinstance(v, int):
-            return int_to_fixed_bytes(v)
-        elif isinstance(v, bytes):
-            return v
-        else:
-            raise ValueError(f"Frame number must be an int or bytes, not {type(v)}")
+    def from_dto(cls, dto: FramePayloadDTO):
+        return cls(image=dto.image, metadata=dto.metadata)
 
+    @field_validator("metadata")
     @classmethod
-    def from_previous(cls, previous: "FramePayload") -> "FramePayload":
-        return cls(
-            camera_id=previous.camera_id,
-            image_shape=previous.image_shape,
-            frame_number_bytes=int_to_fixed_bytes(previous.frame_number + 1),
-            previous_frame_timestamp_ns=previous.timestamp_ns,
-        )
-
-    @classmethod
-    def create_initial_frame(
-            cls,
-            camera_id: CameraId,
-            image_shape: Tuple[int, ...],
-    ) -> "FramePayload":
-        image_shape, color_channels = cls._get_color_channels(image_shape)
-
-        return cls(
-            camera_id=camera_id,
-            image_shape=image_shape,
-            frame_number_bytes=int_to_fixed_bytes(0),
-            color_channels=color_channels,
-            previous_frame_timestamp_ns=time.perf_counter_ns(),
-        )
-
-    @classmethod
-    def create_unhydrated_dummy(
-            cls,
-            camera_id: CameraId,
-            image: np.ndarray,
-    ) -> "FramePayload":
-        image_shape, color_channels = cls._get_color_channels(image_shape=image.shape)
-        instance = cls.create_initial_frame(camera_id=camera_id, image_shape=image_shape)
-
-        instance.previous_frame_timestamp_ns = time.perf_counter_ns()
-        instance.timestamp_ns = time.perf_counter_ns()
-        return instance
-
-    def to_buffer(self, image: np.ndarray) -> bytes:
-        if self.hydrated:
-            raise ValueError(
-                "This method takes in the image separately here so we can avoid an unnecessary `copy` operation"
-            )
-        image_bytes = image.tobytes()
-        bytes_payload = self.to_unhydrated_bytes()
-        return image_bytes + bytes_payload
-
-    def to_unhydrated_bytes(self) -> bytes:
-        without_image_data = self.model_dump(exclude={"image_data"})
-        bytes_payload = pickle.dumps(without_image_data)
-        return bytes_payload
-
-    @classmethod
-    def from_buffer(
-            cls,
-            buffer: Union[memoryview, bytes],
-            image_shape: Tuple[int, ...],
-    ) -> "FramePayload":
-        image_size = np.prod(image_shape) * BYTES_PER_MONO_PIXEL
-
-        # buffer should be [`image_bytes` + `unhydrated_bytes`]
-        image_buffer = buffer[:image_size]
-        unhydrated_buffer = buffer[image_size:]
-
-        instance = cls.unhydrated_from_memoryview(unhydrated_buffer)
-        image = instance.image_from_memoryview(image_buffer)
-        instance.image = image
-        return instance
-
-    @classmethod
-    def unhydrated_from_memoryview(cls, memory_view: memoryview) -> "FramePayload":
-        with io.BytesIO(memory_view) as bio:
-            return cls(**pickle.load(bio))
-
-    def image_from_memoryview(self, image_mv: memoryview) -> np.ndarray:
-        image = np.frombuffer(image_mv, dtype=np.uint8).reshape(self.image_shape)
-        self._validate_image(image)
-        return image
-
+    def _validate_metadata(cls, metadata: np.ndarray):
+        if metadata.shape != FRAME_METADATA_SHAPE:
+            raise ValueError(f"Metadata shape mismatch - "
+                             f"Expected: {FRAME_METADATA_SHAPE}, "
+                             f"Actual: {metadata.shape}")
     @property
-    def hydrated(self) -> bool:
-        return self.image_data is not None
+    def camera_id(self):
+        return self.metadata[FRAME_METADATA_MODEL.CAMERA_ID]
 
-    @property
-    def image(self) -> np.ndarray:
-        return np.frombuffer(self.image_data, dtype=np.uint8).reshape(self.image_shape)
-
-    @image.setter
-    def image(self, image: np.ndarray):
-        self.image_data = image.tobytes()
-        self.image_shape = image.shape
-
-    @property
-    def height(self) -> int:
-        return self.image_shape[0]
-
-    @property
-    def width(self) -> int:
-        return self.image_shape[1]
-
-    @property
-    def resolution(self) -> tuple:
-        return self.height, self.width
-
-    @property
-    def payload_size_in_kilobytes(self) -> float:
-        return len(pickle.dumps(self.dict)) / 1024
-
-    @property
-    def time_since_last_frame_ns(self) -> float:
-        return self.timestamp_ns - self.previous_frame_timestamp_ns
-
-    def _validate_image(self, image: np.ndarray):
-        if self.image_shape != image.shape:
-            raise ValueError(f"Image shape mismatch - " f"Expected: {self.image_shape}, " f"Actual: {image.shape}")
-
-    @staticmethod
-    def calculate_image_checksum(image: np.ndarray) -> int:
-        return int(np.sum(image))
-
-    @staticmethod
-    def calculate_pickle_checksum(pickle_bytes: bytes) -> int:
-        return np.sum(np.frombuffer(pickle_bytes, dtype=np.uint8))
-
-    @classmethod
-    def _get_color_channels(cls, image_shape: Tuple[int, ...]) -> Tuple[Tuple[int, ...], int]:
-        if len(image_shape) == 2:
-            color_channels = 1
-        elif image_shape[-1] == 1:
-            color_channels = 1
-            image_shape = image_shape[:-1]
-        elif len(image_shape) == 3:
-            color_channels = image_shape[-1]
-        else:
-            raise ValueError(f"Image is the wrong shape - {image_shape}")
-        return image_shape, color_channels
-
-    def __eq__(self, other: "FramePayload") -> bool:
-        return self.model_dump() == other.model_dump()
+    def __eq__(self, other: "FramePayload"):
+        return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
 
     def __str__(self):
         print_str = (

@@ -2,7 +2,7 @@ import os
 
 import cv2
 
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.config.camera_config_model import CameraConfig
 from skellycam.core.cameras.opencv.determine_backend import determine_backend
 from skellycam.tests.mocks import create_cv2_video_capture_mock
 

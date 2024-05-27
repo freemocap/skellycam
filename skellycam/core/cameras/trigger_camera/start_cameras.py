@@ -3,8 +3,8 @@ import multiprocessing
 from typing import Dict
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.cameras.trigger_camera.trigger_camera_process import TriggerCameraProcess

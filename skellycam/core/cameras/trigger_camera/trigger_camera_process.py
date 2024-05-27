@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 
 from skellycam.core.cameras.config.apply_config import apply_camera_configuration
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.config.camera_config_model import CameraConfig
 from skellycam.core.cameras.opencv.create_cv2_video_capture import create_cv2_capture
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.cameras.trigger_camera.trigger_listening_loop import run_trigger_listening_loop

@@ -3,7 +3,7 @@ import multiprocessing
 from typing import Optional, Dict
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
@@ -37,7 +37,7 @@ class FrameListenerProcess(multiprocessing.Process):
         return self._payloads_received.value
 
     def run(self):
-        multi_frame_payload = MultiFramePayload.create(camera_ids=self._camera_configs.keys())
+        multi_frame_payload = MultiFramePayload.create_empty(camera_ids=self._camera_configs.keys())
         camera_shm_manager = CameraSharedMemoryManager(
             camera_configs=self._camera_configs,
             lock=self._shm_lock,

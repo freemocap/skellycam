@@ -11,10 +11,9 @@ def test_multi_camera_trigger_loop(
 
     shm_manager, recreated_shm_manager = camera_shared_memory_fixture
     shm_names = shm_manager.shared_memory_names
-    lock = shm_manager.lock
     exit_event = multiprocessing.Event()
     loop_thread = multiprocessing.Process(
-        target=multi_camera_trigger_loop, args=(camera_configs_fixture, shm_names, lock, exit_event)
+        target=multi_camera_trigger_loop, args=(camera_configs_fixture, shm_names, exit_event)
     )
     loop_thread.start()
     wait_1s()

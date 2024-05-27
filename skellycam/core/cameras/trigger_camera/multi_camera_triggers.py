@@ -3,7 +3,7 @@ from typing import Dict
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers, logger
 from skellycam.utilities.wait_functions import wait_1us, wait_10ms, wait_1s
 

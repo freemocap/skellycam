@@ -1,4 +1,5 @@
 import numpy as np
 
-BYTES_PER_MONO_PIXEL = np.dtype(np.uint8).itemsize
+IMAGE_DATA_DTYPE = np.uint8
+BYTES_PER_MONO_PIXEL = np.dtype(IMAGE_DATA_DTYPE).itemsize
 CameraId = int

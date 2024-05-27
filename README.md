@@ -114,7 +114,7 @@ to see video.
 > NOTE - Work in progress, no clean way to kill this window yet
 
 ```python
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.config.camera_config_model import CameraConfig
 , Camera
 
 if __name__ == "__main__":

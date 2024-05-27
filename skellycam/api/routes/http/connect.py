@@ -2,11 +2,12 @@ import logging
 from typing import Optional, List
 
 from fastapi import APIRouter, Body
+from pydantic import Field
 
 from skellycam.api.models.base_models import BaseResponse, BaseRequest
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
-from skellycam.core.controller.singleton import get_or_create_controller
 from skellycam.core import CameraId
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs, default_camera_configs_factory
+from skellycam.core.controller.singleton import get_or_create_controller
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class CamerasConnectedResponse(BaseResponse):
 
 
 class ConnectCamerasRequest(BaseRequest):
-    camera_configs: Optional[CameraConfigs] = CameraConfigs()
+    camera_configs: Optional[CameraConfigs] = Field(default_factory=default_camera_configs_factory)
 
 @camera_connection_router.post(
     "/connect",

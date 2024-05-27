@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from scipy.stats import gamma
 
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.config.camera_config_model import CameraConfig
 
 
 def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:

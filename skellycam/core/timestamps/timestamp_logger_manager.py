@@ -6,14 +6,14 @@ from typing import Dict, Optional, Tuple, List, Any, Hashable
 
 import polars as pl
 
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
 from skellycam.core import CameraId
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
+from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
-from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.timestamp_logger import (
     CameraTimestampLogger,
 )

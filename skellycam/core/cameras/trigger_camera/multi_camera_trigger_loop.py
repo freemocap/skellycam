@@ -6,7 +6,7 @@ from typing import Optional, List, Dict
 import numpy as np
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.cameras.trigger_camera.start_cameras import start_cameras
 from skellycam.utilities.wait_functions import wait_10ms

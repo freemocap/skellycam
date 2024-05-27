@@ -4,7 +4,7 @@ from multiprocessing import Process
 from typing import Optional, Dict
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_loop import multi_camera_trigger_loop
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 

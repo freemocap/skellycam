@@ -4,8 +4,9 @@ import time
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.config.camera_config_model import CameraConfig
 from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE
+from skellycam.core.frames.frame_payload import FramePayloadDTO
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 
 logger = logging.getLogger(__name__)
@@ -15,11 +16,6 @@ class SharedMemoryNames(BaseModel):
     image_shm_name: str
     metadata_shm_name: str
 
-
-class FrameMemoryView(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    image: memoryview
-    metadata: memoryview
 
 class CameraSharedMemory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -79,13 +75,13 @@ class CameraSharedMemory(BaseModel):
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} put wrote frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} to shared memory"
         )
 
-    def retrieve_frame_memoryview(self) -> FrameMemoryView:
-        image_mv = memoryview(self.image_shm.copy_from_buffer())
-        metadata_mv = memoryview(self.metadata_shm.copy_from_buffer())
+    def retrieve_frame(self) -> FramePayloadDTO:
+        image = self.image_shm.copy_from_buffer()
+        metadata = self.metadata_shm.copy_from_buffer()
         logger.loop(
-            f"Camera {metadata_mv[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata_mv[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
+            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
-        return FrameMemoryView(image=image_mv, metadata=metadata_mv)
+        return FramePayloadDTO(image=image, metadata=metadata)
 
     def close(self):
         self.image_shm.close()

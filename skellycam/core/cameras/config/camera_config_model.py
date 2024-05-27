@@ -1,51 +1,53 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 from pydantic import BaseModel, Field, field_validator
 
 from skellycam.core import BYTES_PER_MONO_PIXEL
 from skellycam.core import CameraId
+from skellycam.core.cameras.config.default_config import DefaultCameraConfig
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.detection.image_rotation_types import RotationTypes
 
 
 class CameraConfig(BaseModel):
     camera_id: CameraId = Field(
-        default=CameraId(0),
+        default=DefaultCameraConfig.CAMERA_ID.value,
         description="The id of the camera to use, " "e.g. cv2.VideoCapture uses `0` for the first camera",
     )
 
     use_this_camera: bool = Field(
-        default=True,
+        default=DefaultCameraConfig.USE_THIS_CAMERA.value,
         description="Whether or not to use this camera for streaming/recording",
     )
     resolution: ImageResolution = Field(
-        default=ImageResolution(height=1080, width=1920),
+        default=DefaultCameraConfig.RESOLUTION.value,
         description="The current resolution of the camera, in pixels.",
     )
     color_channels: int = Field(
-        default=3,
+        default=DefaultCameraConfig.COLOR_CHANNELS.value,
         description="The number of color channels in the image (3 for RGB, 1 for monochrome)",
     )
 
     exposure: int = Field(
-        default=-7,
+        default=DefaultCameraConfig.EXPOSURE.value,
         description="The exposure of the camera using the opencv convention - "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
     )
 
-    framerate: float = Field(default=30, description="The framerate of the camera (in frames per second).")
+    framerate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,
+                             description="The framerate of the camera (in frames per second).")
 
     rotation: RotationTypes = Field(
-        default=RotationTypes.NO_ROTATION,
+        default=DefaultCameraConfig.ROTATION.value,
         description="The rotation to apply to the images " "of this camera (after they are captured)",
     )
     capture_fourcc: str = Field(
-        default="MJPG",  # TODO - compare performance of MJPG vs H264 vs whatever else
+        default=DefaultCameraConfig.CAPTURE_FOURCC.value,
         description="The fourcc code to use for the video codec in the `cv2.VideoCapture` object",
     )
 
     writer_fourcc: str = Field(
-        default="MP4V",  # TODO - compare performance of MJPG vs H264 vs whatever else
+        default=DefaultCameraConfig.WRITER_FOURCC.value,
         description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object",
     )
 
@@ -53,6 +55,7 @@ class CameraConfig(BaseModel):
     @classmethod
     def convert_camera_id(cls, v):
         return CameraId(v)
+
 
     @property
     def orientation(self) -> str:
@@ -73,7 +76,7 @@ class CameraConfig(BaseModel):
     def image_size_bytes(self) -> int:
         return self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_MONO_PIXEL
 
-    def __eq__(self, other):
+    def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
 
     def __str__(self):
@@ -88,5 +91,12 @@ class CameraConfig(BaseModel):
         return out_str
 
 
+CameraConfigs = Dict[CameraId, CameraConfig]
+
+
+def default_camera_configs_factory():
+    return {
+        DefaultCameraConfig.CAMERA_ID: CameraConfig(),
+    }
 if __name__ == "__main__":
     print(CameraConfig(camera_id=0))

@@ -5,7 +5,7 @@ from typing import Tuple
 import numpy as np
 import pytest
 
-from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.cameras.config.camera_config_model import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frame_wrangler import FrameListenerProcess
@@ -88,7 +88,7 @@ class TestFrameListenerProcess:
         assert flp.payloads_received == 1
 
     def _create_test_multiframe_payload(self, camera_configs: CameraConfigs) -> MultiFramePayload:
-        mfp = MultiFramePayload.create(camera_ids=camera_configs.keys())
+        mfp = MultiFramePayload.create_empty(camera_ids=camera_configs.keys())
         for camera_id, camera_config in camera_configs.items():
             image_shape = camera_config.image_shape
             frame = FramePayload.create_initial_frame(camera_id=camera_id, image_shape=image_shape)

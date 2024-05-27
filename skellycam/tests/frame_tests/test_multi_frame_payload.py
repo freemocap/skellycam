@@ -3,7 +3,7 @@ from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 
 def test_multi_frame_create_empty(camera_ids_fixture):
     # Arrange
-    multi_frame_payload = MultiFramePayload.create(camera_ids=camera_ids_fixture, multi_frame_number=0)
+    multi_frame_payload = MultiFramePayload.create_empty(camera_ids=camera_ids_fixture, multi_frame_number=0)
 
     # Assert
     assert multi_frame_payload.multi_frame_number == 0

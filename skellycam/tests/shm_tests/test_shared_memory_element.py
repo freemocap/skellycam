@@ -24,18 +24,18 @@ def test_create(numpy_array_definition_fixture: Tuple[Tuple[int], np.dtype]):
     element.unlink()
 
 
-def test_recreate(array_shape_fixture: Tuple[int], dtype_fixture: np.dtype):
-    element = SharedMemoryElement.create(shape=array_shape_fixture,
+def test_recreate(ndarray_shape_fixture, dtype_fixture: np.dtype):
+    element = SharedMemoryElement.create(shape=ndarray_shape_fixture,
                                          dtype=dtype_fixture)
     shm_name = element.name
 
     recreated_element = SharedMemoryElement.recreate(
         shm_name=shm_name,
-        shape=array_shape_fixture,
+        shape=ndarray_shape_fixture,
         dtype=dtype_fixture
     )
 
-    assert recreated_element.buffer.shape == array_shape_fixture
+    assert recreated_element.buffer.shape == ndarray_shape_fixture
     assert recreated_element.buffer.dtype == dtype_fixture
     assert recreated_element.name == shm_name
 
@@ -44,10 +44,10 @@ def test_recreate(array_shape_fixture: Tuple[int], dtype_fixture: np.dtype):
     element.unlink()
 
 
-def test_copy_into_buffer(array_shape_fixture: Tuple[int], dtype_fixture: np.dtype):
-    element = SharedMemoryElement.create(shape=array_shape_fixture, dtype=dtype_fixture)
+def test_copy_into_buffer(ndarray_shape_fixture, dtype_fixture: np.dtype):
+    element = SharedMemoryElement.create(shape=ndarray_shape_fixture, dtype=dtype_fixture)
 
-    buffer = np.zeros(array_shape_fixture, dtype=dtype_fixture)
+    buffer = np.zeros(ndarray_shape_fixture, dtype=dtype_fixture)
     element.copy_into_buffer(buffer)
 
     assert np.array_equal(buffer, element.buffer)
@@ -77,8 +77,8 @@ def test_copy_from_buffer(random_array_fixture: np.ndarray):
     element.unlink()
 
 
-def test_close(array_shape_fixture: Tuple[int], dtype_fixture: np.dtype):
-    element = SharedMemoryElement.create(shape=array_shape_fixture,
+def test_close(ndarray_shape_fixture, dtype_fixture: np.dtype):
+    element = SharedMemoryElement.create(shape=ndarray_shape_fixture,
                                          dtype=dtype_fixture)
 
     element.close()
@@ -89,8 +89,8 @@ def test_close(array_shape_fixture: Tuple[int], dtype_fixture: np.dtype):
     element.unlink()
 
 
-def test_unlink(array_shape_fixture: Tuple[int], dtype_fixture: np.dtype):
-    element = SharedMemoryElement.create(shape=array_shape_fixture,
+def test_unlink(ndarray_shape_fixture, dtype_fixture: np.dtype):
+    element = SharedMemoryElement.create(shape=ndarray_shape_fixture,
                                          dtype=dtype_fixture)
 
     element.close()
