@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from skellycam.core import IMAGE_DATA_DTYPE
-from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE
 from skellycam.core.frames.frame_payload import FramePayloadDTO
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
@@ -49,7 +49,7 @@ def test_put_and_retrieve_frame(camera_config_fixture: CameraConfig,
     frame_dto = camera_shm.retrieve_frame()
     assert isinstance(frame_dto, FramePayloadDTO)
     assert np.array_equal(frame_dto.image, image)
-    assert np.array_equal(frame_dto.metadata, frame_metadata_fixture)
+    assert np.array_equal(frame_dto.frame_metadata, frame_metadata_fixture)
 
     camera_shm.close()
     camera_shm.unlink()
@@ -86,7 +86,7 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
 
     assert isinstance(frame_dto, FramePayloadDTO)
     assert np.array_equal(frame_dto.image, image)
-    assert np.array_equal(frame_dto.metadata, frame_metadata_fixture)
+    assert np.array_equal(frame_dto.frame_metadata, frame_metadata_fixture)
 
     # Cleanup
     camera_shm.close()

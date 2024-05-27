@@ -4,7 +4,7 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtWidgets import QTreeView
 from pydantic import BaseModel
 
-from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 
 
 class ParameterTreeView(QTreeView):

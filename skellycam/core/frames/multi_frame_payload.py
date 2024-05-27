@@ -15,11 +15,11 @@ class MultiFramePayload(BaseModel):
     multi_frame_number: int = 0
 
     @property
-    def camera_ids(self):
+    def camera_ids(self) -> List[CameraId]:
         return list(self.frames.keys())
 
     @property
-    def full(self):
+    def full(self) -> bool:
         return all([frame is not None for frame in self.frames.values()])
 
     @classmethod
@@ -27,17 +27,17 @@ class MultiFramePayload(BaseModel):
         return cls(frames={CameraId(camera_id): None for camera_id in camera_ids})
 
     @classmethod
-    def from_previous(cls, previous: 'MultiFramePayload'):
+    def from_previous(cls, previous: 'MultiFramePayload') -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    multi_frame_number=previous.multi_frame_number + 1,
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
                    )
 
-    def add_frame(self, frame_dto: FramePayloadDTO):
-        frame = FramePayload.from_dto(frame_dto)
-        self.frames[frame.camera_id] = FramePayload.from_dto(frame_dto)
+    def add_frame(self, frame_dto: FramePayloadDTO) -> None:
+        frame = FramePayload.from_dto(dto=frame_dto)
+        self.frames[frame.camera_id] = frame
 
-    def __str__(self):
+    def __str__(self) -> str:
         print_str = f""
         for camera_id, frame in self.frames.items():
             print_str += str(frame) + "\n"

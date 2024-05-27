@@ -1,6 +1,6 @@
 import threading
 
-from skellycam.core.cameras.config.camera_config_model import CameraConfigs
+from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 
 

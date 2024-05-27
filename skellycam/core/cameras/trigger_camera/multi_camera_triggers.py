@@ -3,9 +3,9 @@ from typing import Dict
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config_model import CameraConfigs
+from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers, logger
-from skellycam.utilities.wait_functions import wait_1us, wait_10ms, wait_1s
+from skellycam.utilities.wait_functions import wait_1us, wait_1s, wait_1ms
 
 
 class MultiCameraTriggerOrchestrator(BaseModel):
@@ -81,9 +81,12 @@ class MultiCameraTriggerOrchestrator(BaseModel):
         for triggers in self.single_camera_triggers.values():
             triggers.initial_trigger.set()
 
+        self._await_initial_triggers_reset()
+
+    def _await_initial_triggers_reset(self):
         logger.trace("Initial triggers set - waiting for all triggers to reset...")
         while any([triggers.initial_trigger.is_set() for triggers in self.single_camera_triggers.values()]):
-            wait_10ms()
+            wait_1ms()
         logger.trace("Initial triggers reset!")
 
     def wait_for_cameras_ready(self):

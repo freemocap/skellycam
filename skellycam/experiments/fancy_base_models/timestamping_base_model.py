@@ -1,10 +1,12 @@
 import time
-from typing import Optional, OrderedDict, List, Tuple, Any
+from typing import Optional, OrderedDict, List, Tuple, Any, Iterator
 
 from pydantic import BaseModel, Field
 
+from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
-class Timestamp(BaseModel):
+
+class DurationTimestamps(BaseModel):
     name: str
     start: int  # nanoseconds, from time.perf_counter_ns()
     end: Optional[int] = None
@@ -16,43 +18,25 @@ class Timestamp(BaseModel):
         return f"{self.name}: {duration_ms:.6f}ms)"
 
 
-class PerfCounterToUnixMapping(BaseModel):
-    """
-    A mapping of the perf_counter_ns timestamp to an as-synchronous-as-possible unix timestamp_ns
-    """
-
-    perf_counter_ns: int = Field(
-        description="The perf_counter_ns timestamp when the mapping was created, via `time.perf_counter_ns()`"
-    )
-    unix_timestamp_ns: int = Field(
-        description="The unix timestamp_ns timestamp when the mapping was created, via `time.time_ns()`"
-    )
-
-    @classmethod
-    def create(cls) -> "PerfCounterToUnixMapping":
-        return cls(
-            perf_counter_ns=time.perf_counter_ns(),
-            unix_timestamp_ns=time.time_ns(),
-        )
 
 
 class TimestampLogs(BaseModel):
-    mapping: PerfCounterToUnixMapping = Field(default_factory=PerfCounterToUnixMapping.create)
-    timestamps: OrderedDict[str, Timestamp] = Field(default_factory=OrderedDict)
+    mapping: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping)
+    timestamps: OrderedDict[str, DurationTimestamps] = Field(default_factory=OrderedDict)
 
     def keys(self) -> List[str]:
         return list(self.timestamps.keys())
 
-    def values(self) -> List[Timestamp]:
+    def values(self) -> List[DurationTimestamps]:
         return list(self.timestamps.values())
 
-    def items(self) -> List[Tuple[str, Timestamp]]:
+    def items(self) -> List[Tuple[str, DurationTimestamps]]:
         return list(self.timestamps.items())
 
-    def __iter__(self) -> List[str]:
-        return iter(self.timestamps)
+    def __iter__(self) -> Iterator[Tuple[str, DurationTimestamps]]:
+        return iter(self.timestamps.items())
 
-    def __getitem__(self, key) -> Timestamp:
+    def __getitem__(self, key) -> DurationTimestamps:
         return self.timestamps[key]
 
     def __setitem__(self, key, value) -> None:
@@ -106,7 +90,7 @@ class TimestampingBaseModel(BaseModel):
         while tag in self.timestamps.keys():  # duplicate tag
             tag_num = tag.split("-")[-1]
             tag = f"{tag[:-len(tag_num)]}{int(tag_num) + 1}"
-        self.timestamps[tag] = Timestamp(name=tag, start=time.perf_counter_ns())
+        self.timestamps[tag] = DurationTimestamps(name=tag, start=time.perf_counter_ns())
         return tag
 
     def _log_end_timestamp(self, tag: str) -> None:

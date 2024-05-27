@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config_model import CameraConfigs
+from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
 

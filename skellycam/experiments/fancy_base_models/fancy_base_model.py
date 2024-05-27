@@ -2,8 +2,8 @@ import pprint
 
 from pydantic import Field
 
-from skellycam.models.doc_printing_base_model import DocPrintingBaseModel
-from skellycam.models.timestamping_base_model import TimestampingBaseModel
+from skellycam.experiments.fancy_base_models.doc_printing_base_model import DocPrintingBaseModel
+from skellycam.experiments.fancy_base_models.timestamping_base_model import TimestampingBaseModel
 from skellycam.utilities.wait_functions import wait_10ms
 
 

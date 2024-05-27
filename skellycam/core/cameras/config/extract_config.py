@@ -3,7 +3,7 @@ import logging
 import cv2
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.detection.image_rotation_types import RotationTypes
 

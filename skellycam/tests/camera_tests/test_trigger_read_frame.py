@@ -2,12 +2,12 @@ import threading
 from typing import Dict, List
 from unittest.mock import Mock
 
+from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
+from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 from skellycam.tests.mocks import create_cv2_video_capture_mock
 
 
-def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: "CameraSharedMemoryManager"):
-    from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
-    from skellycam.utilities.wait_functions import wait_10ms
+def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: CameraSharedMemoryManager):
 
     # init stuff
     shm_parent, shm_child = camera_shared_memory_fixture
@@ -106,11 +106,6 @@ def create_frame_read_threads(
     # create thread for each camera to read mock frames
     frame_read_threads = []
     for camera_id, cap in capture_mocks.items():
-        from skellycam.core.frames.frame_payload import FramePayload
-
-        frame = FramePayload.create_initial_frame(
-            camera_id=camera_id, image_shape=camera_configs[camera_id].image_shape
-        )
         cam_shm = shared_memory_manager.get_camera_shared_memory(camera_id)
         cam_triggers = multi_camera_triggers.single_camera_triggers[camera_id]
         frame_read_threads.append(
@@ -120,8 +115,8 @@ def create_frame_read_threads(
                     camera_id,
                     cam_shm,
                     cap,
-                    frame,
                     cam_triggers,
+                    0,
                 ),
             )
         )

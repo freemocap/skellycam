@@ -4,7 +4,7 @@ import time
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE
 from skellycam.core.frames.frame_payload import FramePayloadDTO
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
@@ -68,7 +68,7 @@ class CameraSharedMemory(BaseModel):
         return SharedMemoryNames(image_shm_name=self.image_shm.name, metadata_shm_name=self.metadata_shm.name)
 
     def put_new_frame(self, image: np.ndarray, metadata: np.ndarray):
-        metadata[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()  # copy_timestamp_ns
+        metadata[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         self.image_shm.copy_into_buffer(image)
         self.metadata_shm.copy_into_buffer(metadata)
         logger.loop(
@@ -78,6 +78,7 @@ class CameraSharedMemory(BaseModel):
     def retrieve_frame(self) -> FramePayloadDTO:
         image = self.image_shm.copy_from_buffer()
         metadata = self.metadata_shm.copy_from_buffer()
+        metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )

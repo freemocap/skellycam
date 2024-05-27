@@ -6,7 +6,7 @@ from pydantic import Field
 
 from skellycam.api.models.base_models import BaseResponse, BaseRequest
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config_model import CameraConfigs, default_camera_configs_factory
+from skellycam.core.cameras.config.camera_config import CameraConfigs, default_camera_configs_factory
 from skellycam.core.controller.singleton import get_or_create_controller
 
 logger = logging.getLogger(__name__)

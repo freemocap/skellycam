@@ -7,7 +7,7 @@ from typing import Dict, Tuple
 from setproctitle import setproctitle
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorder.video_recorder import (
     VideoRecorder,

@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 from typing import Optional
 
-from skellycam.core.cameras.config.camera_config_model import CameraConfigs
+from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_process import MultiCameraTriggerProcess
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.frames.frame_wrangler import FrameWrangler

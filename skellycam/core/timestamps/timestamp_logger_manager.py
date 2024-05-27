@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple, List, Any, Hashable
 import polars as pl
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config_model import CameraConfigs
+from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.core.timestamps.full_timestamp import FullTimestamp

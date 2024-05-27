@@ -1,28 +1,55 @@
+from typing import List
+
+from skellycam.core import CameraId
+from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL
+from skellycam.core.frames.frame_payload import FramePayloadDTO
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 
 
-def test_multi_frame_create_empty(camera_ids_fixture):
-    # Arrange
-    multi_frame_payload = MultiFramePayload.create_empty(camera_ids=camera_ids_fixture, multi_frame_number=0)
+def test_initial_creation(camera_configs_fixture: CameraConfigs) -> None:
+    camera_ids: List[CameraId] = list(camera_configs_fixture.keys())
+    multi_frame_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_ids)
 
-    # Assert
+    assert len(multi_frame_payload.frames) == len(camera_ids)
+    assert all(value is None for value in multi_frame_payload.frames.values())
     assert multi_frame_payload.multi_frame_number == 0
-    assert len(multi_frame_payload.frames) == len(camera_ids_fixture)
-    assert all([frame is None for frame in multi_frame_payload.frames.values()])
-    assert multi_frame_payload.utc_ns_to_perf_ns["time.time_ns"] > 0
-    assert multi_frame_payload.utc_ns_to_perf_ns["time.perf_counter_ns"] > 0
+    assert isinstance(multi_frame_payload.utc_ns_to_perf_ns.perf_counter_ns, int)
+    assert isinstance(multi_frame_payload.utc_ns_to_perf_ns.time_ns, int)
+
+
+def test_from_previous(multi_frame_payload_fixture: MultiFramePayload) -> None:
+    previous_payload: MultiFramePayload = multi_frame_payload_fixture
+    next_payload: MultiFramePayload = MultiFramePayload.from_previous(previous_payload)
+
+    assert len(next_payload.frames) == len(previous_payload.frames)
+    assert all(value is None for value in next_payload.frames.values())
+    assert next_payload.multi_frame_number == previous_payload.multi_frame_number + 1
+    assert next_payload.utc_ns_to_perf_ns == previous_payload.utc_ns_to_perf_ns
+
+
+def test_add_frame(camera_configs_fixture: CameraConfigs,
+                   frame_payload_dto_fixture: FramePayloadDTO) -> None:
+    camera_ids: List[CameraId] = list(camera_configs_fixture.keys())
+    multi_frame_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_ids)
+
+    frame_dto: FramePayloadDTO = frame_payload_dto_fixture
+    frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_ids[0]  # Ensure the camera ID matches
+    multi_frame_payload.add_frame(frame_dto)
+
+    assert multi_frame_payload.frames[camera_ids[0]] is not None
+
+
+def test_full_property(camera_configs_fixture: CameraConfigs, frame_payload_dto_fixture: FramePayloadDTO) -> None:
+    camera_ids: List[CameraId] = list(camera_configs_fixture.keys())
+    multi_frame_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_ids)
+
+    frame_dto1: FramePayloadDTO = frame_payload_dto_fixture
+    frame_dto1.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_ids[0].id  # Ensure the camera ID matches
+    multi_frame_payload.add_frame(frame_dto1)
     assert not multi_frame_payload.full
-    assert str(multi_frame_payload)
 
-
-def test_multi_frame_from_previous(multi_frame_payload_fixture):
-    # Arrange
-    previous_multi_frame_payload = multi_frame_payload_fixture
-    multi_frame_payload = MultiFramePayload.from_previous(previous_multi_frame_payload)
-
-    # Assert
-    assert multi_frame_payload.multi_frame_number == previous_multi_frame_payload.multi_frame_number + 1
-    assert len(multi_frame_payload.frames) == len(previous_multi_frame_payload.frames)
-    assert all([frame is None for frame in multi_frame_payload.frames.values()])
-    assert multi_frame_payload.utc_ns_to_perf_ns == previous_multi_frame_payload.utc_ns_to_perf_ns
-    assert not multi_frame_payload.full
+    frame_dto2: FramePayloadDTO = frame_payload_dto_fixture
+    frame_dto2.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_ids[1].id  # Ensure the camera ID matches
+    multi_frame_payload.add_frame(frame_dto2)
+    assert multi_frame_payload.full

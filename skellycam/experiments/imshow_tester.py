@@ -2,7 +2,7 @@ import asyncio
 
 from skellycam.core import Camera
 from skellycam.core import detect_cameras
-from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 
 
 async def imshow_testing():

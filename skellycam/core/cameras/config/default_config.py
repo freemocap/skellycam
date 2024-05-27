@@ -6,6 +6,8 @@ from skellycam.core.detection.image_rotation_types import RotationTypes
 
 DEFAULT_IMAGE_HEIGHT: int = 1080
 DEFAULT_IMAGE_WIDTH: int = 1920
+DEFAULT_IMAGE_CHANNELS: int = 3
+DEFAULT_IMAGE_SHAPE: tuple = (DEFAULT_IMAGE_HEIGHT, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_CHANNELS)
 DEFAULT_CAMERA_ID: CameraId = CameraId(0)
 DEFAULT_RESOLUTION: ImageResolution = ImageResolution(height=DEFAULT_IMAGE_HEIGHT, width=DEFAULT_IMAGE_WIDTH)
 
@@ -14,7 +16,7 @@ class DefaultCameraConfig(Enum):
     CAMERA_ID = DEFAULT_CAMERA_ID
     USE_THIS_CAMERA = True
     RESOLUTION = DEFAULT_RESOLUTION
-    COLOR_CHANNELS: int = 3
+    COLOR_CHANNELS: int = DEFAULT_IMAGE_CHANNELS
     EXPOSURE: int = -7
     FRAMERATE: float = 30.0
     ROTATION: RotationTypes = RotationTypes.NO_ROTATION

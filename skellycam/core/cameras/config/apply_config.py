@@ -3,7 +3,7 @@ import traceback
 
 import cv2
 
-from skellycam.core.cameras.config.camera_config_model import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.extract_config import extract_config_from_cv2_capture
 
 logger = logging.getLogger(__name__)
