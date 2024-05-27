@@ -26,10 +26,10 @@ class SharedMemoryElement(BaseModel):
                  shm_name: str,
                  shape: tuple,
                  dtype: np.dtype):
-        dtype = np.dtype(dtype)
+        dtype = cls._ensure_dtype(dtype)
         shm = shared_memory.SharedMemory(name=shm_name)
         buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-        return cls(buffer=buffer, shm=shm)
+        return cls(buffer=buffer, shm=shm, dtype=dtype)
 
     @staticmethod
     def _ensure_dtype(dtype: Union[np.dtype, type, str]) -> np.dtype:
@@ -45,11 +45,11 @@ class SharedMemoryElement(BaseModel):
     def size(self) -> int:
         return self.shm.size
 
-    def copy_into_buffer(self, buffer):
-        np.copyto(buffer, self.buffer)
+    def copy_into_buffer(self, array: np.ndarray):
+        np.copyto(dst=self.buffer, src=array)
 
-    def copy_from_buffer(self) -> memoryview:
-        return memoryview(self.buffer)
+    def copy_from_buffer(self) -> np.ndarray:
+        return np.copy(self.buffer)
 
     def close(self):
         self.shm.close()

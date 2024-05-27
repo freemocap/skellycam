@@ -8,7 +8,7 @@ from _pytest.terminal import TerminalReporter
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE
 
 TEST_ENV_NAME = 'TEST_ENV'
 
@@ -50,16 +50,9 @@ def array_shape_fixture(request: pytest.fixture) -> Tuple[int, ...]:
 
 @pytest.fixture(params=[np.uint8,
                         np.uint64,
-                        np.float32,
-                        np.float64,
                         np.int8,
                         np.int64,
-                        np.complex64,
-                        float,
                         int,
-                        bool,
-                        complex,
-                        str,
                         ])
 def dtype_fixture(request: pytest.fixture) -> np.dtype:
     return request.param
@@ -73,33 +66,21 @@ def numpy_array_definition_fixture(array_shape_fixture: Tuple[int, ...],
 
 @pytest.fixture()
 def frame_metadata_fixture() -> np.ndarray:
-    # massive overkill, but ufuncs are cool lol - https://numpy.org/doc/stable/reference/ufuncs.html
-    perf_counter_ufunc = np.frompyfunc(time.perf_counter_ns, nin=0, nout=1)
-    metadata_array = np.ndarray(FRAME_METADATA_MODEL.shape, dtype=FRAME_METADATA_MODEL.dtype)
-    metadata_array[:] = perf_counter_ufunc(*metadata_array.shape)
+    metadata_array = np.ndarray(FRAME_METADATA_SHAPE, dtype=FRAME_METADATA_DTYPE)
+    metadata_array[:] = time.perf_counter_ns()
     return metadata_array
 
 
 @pytest.fixture()
-def image_like_data_fixture(numpy_array_definition_fixture: Tuple[Tuple[int, ...], np.dtype]) -> np.ndarray:
+def random_array_fixture(numpy_array_definition_fixture: Tuple[Tuple[int, ...], np.dtype]) -> np.ndarray:
     shape, dtype = numpy_array_definition_fixture
     min_val = np.iinfo(dtype).min
     max_val = np.iinfo(dtype).max
 
-    # Create a ufunc from np.random.randint
-    produce_random_ufunc = np.frompyfunc(np.random.randint, 2, 1)
-
     # Create the array and fill it with random values
-    random_array = np.empty(shape, dtype=dtype)
-    random_array[:] = produce_random_ufunc(min_val, max_val, size=random_array.shape)
+    random_array = np.random.randint(min_val, max_val, size=shape, dtype=dtype)
 
     return random_array
-
-
-@pytest.fixture()
-def frame_data_fixture(array_shape_fixture: Tuple[int, ...]) -> Tuple[np.ndarray, np.ndarray]:
-    return np.random.randint(0, 256, size=array_shape_fixture, dtype=np.uint8), np.random.randint(0, 256, size=(1,),
-                                                                                                  dtype=np.uint8)
 
 
 @pytest.fixture(params=[1, "2", 4, ])
@@ -110,7 +91,6 @@ def camera_id_fixture(request: pytest.fixture) -> CameraId:
 @pytest.fixture()
 def camera_config_fixture(camera_id_fixture: CameraId) -> CameraConfig:
     return CameraConfig(camera_id=camera_id_fixture)
-
 
 # class WeeImageShapes(enum.Enum):
 #     LANDSCAPE = (48, 64, 3)

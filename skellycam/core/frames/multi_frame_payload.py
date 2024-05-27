@@ -1,19 +1,17 @@
-import time
 from typing import Dict, Optional, List
 
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]] = Field(default_factory=dict,
                                                            description="A mapping of camera_id to FramePayload")
-    utc_ns_to_perf_ns: Dict[str, int] = Field(
-        description="A mapping of `time.time_ns()` to `time.perf_counter_ns()` "
-                    "to allow conversion of `time.perf_counter_ns()`'s arbitrary "
-                    "time base to unix time")
+    utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
+                                                       description=UtcToPerfCounterMapping.__doc__)
     multi_frame_number: int = 0
 
     @property
@@ -27,19 +25,8 @@ class MultiFramePayload(BaseModel):
         return all_not_none and all_hydrated
 
     @classmethod
-    def create(cls,
-               camera_ids: List[CameraId] = None,
-               multi_frame_number: int = 0,
-               ) -> 'MultiFramePayload':
-
-        if camera_ids is None:
-            camera_ids = []
-        utc_ns = time.time_ns()
-        perf_ns = time.perf_counter_ns()
-        return cls(frames={CameraId(camera_id): None for camera_id in camera_ids},
-                   utc_ns_to_perf_ns={"time.time_ns": int(utc_ns), "time.perf_counter_ns": int(perf_ns)},
-                   multi_frame_number=multi_frame_number
-                   )
+    def create(cls, camera_ids: List[CameraId], ) -> 'MultiFramePayload':
+        return cls(frames={CameraId(camera_id): None for camera_id in camera_ids})
 
     @classmethod
     def from_previous(cls, previous: 'MultiFramePayload'):
