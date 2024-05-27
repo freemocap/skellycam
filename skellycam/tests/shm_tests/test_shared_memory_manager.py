@@ -1,26 +1,59 @@
-from typing import Tuple
+from typing import Dict
 
-import numpy as np
+import pytest
 
-from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core import CameraId
+from skellycam.core.cameras.config.camera_configs import CameraConfigs
+from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
+from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 
-def test_shared_memory_manager(
-        camera_shared_memory_fixture: Tuple["CameraSharedMemoryManager", "CameraSharedMemoryManager"]
-):
-    og_shm_manager = camera_shared_memory_fixture[0]
-    child_shm_manager = camera_shared_memory_fixture[1]
-    camera_configs = og_shm_manager.camera_configs
-    number_of_frames_to_test = 10
+@pytest.fixture
+def camera_shared_memory_manager_fixture(camera_configs_fixture: CameraConfigs):
+    return CameraSharedMemoryManager.create(camera_configs=camera_configs_fixture)
 
-    for frame_number in range(number_of_frames_to_test):
-        for camera_id, config in camera_configs.items():
-            test_image = np.random.randint(0, 256, size=config.image_shape, dtype=np.uint8)
-            unhydrated_frame = FramePayload.create_unhydrated_dummy(camera_id=camera_id, image=test_image)
 
-            cam_shm = child_shm_manager.get_camera_shared_memory(camera_id)
-            cam_shm.put_new_frame(image=test_image, frame=unhydrated_frame)
-            frame_buffer_mv = cam_shm.retrieve_frame_mv()
-            assert isinstance(frame_buffer_mv, memoryview)
-            retrieved_frame = FramePayload.from_buffer(frame_buffer_mv, test_image.shape)
-            assert np.array_equal(retrieved_frame.image, test_image)
+def test_create_camera_shared_memory_manager(camera_configs_fixture: CameraConfigs):
+    manager = CameraSharedMemoryManager.create(camera_configs=camera_configs_fixture)
+    assert isinstance(manager, CameraSharedMemoryManager)
+    assert len(manager.camera_shms) == len(camera_configs_fixture)
+
+
+def test_recreate_camera_shared_memory_manager(camera_configs_fixture: CameraConfigs,
+                                               existing_shared_memory_names_fixture: Dict[CameraId, SharedMemoryNames]):
+    manager = CameraSharedMemoryManager.recreate(camera_configs=camera_configs_fixture,
+                                                 existing_shared_memory_names=existing_shared_memory_names_fixture)
+    assert isinstance(manager, CameraSharedMemoryManager)
+    assert len(manager.camera_shms) == len(camera_configs_fixture)
+
+
+def test_shared_memory_names_property(camera_shared_memory_manager_fixture: CameraSharedMemoryManager):
+    manager = camera_shared_memory_manager_fixture
+    shared_memory_names = manager.shared_memory_names
+    assert isinstance(shared_memory_names, Dict)
+    for shm_name in shared_memory_names.values():
+        assert isinstance(shm_name, SharedMemoryNames)
+
+
+def test_get_multi_frame_payload(camera_shared_memory_manager_fixture: CameraSharedMemoryManager):
+    manager = camera_shared_memory_manager_fixture
+    payload = manager.get_multi_frame_payload()
+    assert payload.full
+
+
+def test_get_camera_shared_memory(camera_shared_memory_manager_fixture: CameraSharedMemoryManager,
+                                  camera_configs_fixture: CameraConfigs):
+    manager = camera_shared_memory_manager_fixture
+    for camera_id in camera_configs_fixture.keys():
+        camera_shm = manager.get_camera_shared_memory(camera_id)
+        assert isinstance(camera_shm, CameraSharedMemory)
+
+
+def test_close_and_unlink(camera_shared_memory_manager_fixture: CameraSharedMemoryManager):
+    manager = camera_shared_memory_manager_fixture
+    manager.close_and_unlink()
+    for camera_shm in manager.camera_shms.values():
+        with pytest.raises(FileNotFoundError):
+            camera_shm.image_shm.shm.buf[:]
+        with pytest.raises(FileNotFoundError):
+            camera_shm.metadata_shm.shm.buf[:]
