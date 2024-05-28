@@ -1,7 +1,7 @@
 import os
 import time
 from typing import Tuple, List
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -13,12 +13,15 @@ from skellycam.api.app_factory import create_app
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.cameras.group import CameraGroupOrchestrator
+from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.controller import Controller, create_controller, get_controller
+from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
 from skellycam.core.frames.frame_payload import FramePayloadDTO
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.tests.mocks import create_cv2_video_capture_magic_mock
 
 TEST_ENV_NAME = 'TEST_ENV'
 
@@ -80,6 +83,39 @@ def dtype_fixture(request: pytest.fixture) -> np.dtype:
                         ])
 def image_shape_fixture(request: pytest.fixture) -> Tuple[int, int, int]:
     return request.param
+
+
+@pytest.fixture
+def image_resolution_fixture(image_shape_fixture: Tuple[int, int, int]
+                             ) -> ImageResolution:
+    return ImageResolution(width=image_shape_fixture[0], height=image_shape_fixture[1])
+
+
+@pytest.fixture
+def available_devices_fixture(camera_configs_fixture: CameraConfigs) -> AvailableDevices:
+    available_devices = {}
+    for camera_id, config in camera_configs_fixture.items():
+        d1 = DeviceVideoFormat(width=config.resolution.width,
+                               height=config.resolution.height,
+                               pixel_format=config.pixel_format,
+                               frame_rate=config.frame_rate)
+        d2 = DeviceVideoFormat(width=config.resolution.width // 2,
+                               height=config.resolution.height // 2,
+                               pixel_format=config.pixel_format,
+                               frame_rate=config.frame_rate * 2)
+        assert isinstance(d1, DeviceVideoFormat)
+        assert isinstance(d2, DeviceVideoFormat)
+        device_info = CameraDeviceInfo(device_address=f"device_{camera_id}/video{camera_id}/wheee!",
+                                       description=f"Camera {camera_id} - {config.resolution}",
+                                       cv2_port=camera_id,
+                                       available_video_formats=[d1, d2]
+                                       )
+        assert isinstance(device_info, CameraDeviceInfo)
+        available_devices[camera_id] = device_info
+
+    assert all([isinstance(device, CameraDeviceInfo) for device in available_devices.values()])
+    assert len(available_devices) == len(camera_configs_fixture)
+    return available_devices
 
 
 @pytest.fixture()
@@ -183,7 +219,6 @@ def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs) -> Came
     yield CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
 
 
-
 @pytest.fixture
 def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
                                  ) -> Tuple[CameraGroupSharedMemory, CameraGroupSharedMemory]:
@@ -198,24 +233,48 @@ def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
     recreated_manager.close_and_unlink()
 
 
-@pytest.fixture()
-def mock_cv2_video_capture(camera_config: CameraConfig) -> MagicMock:
-    from skellycam.tests.mocks import create_cv2_video_capture_mock
-    mock = create_cv2_video_capture_mock(camera_config=camera_config)
-    assert mock.isOpened()
-    yield mock
-    mock.release()
+# @pytest.fixture()
+# def mock_cv2_video_capture(camera_config: CameraConfig) -> MagicMock:
+#     from skellycam.tests.mocks import create_cv2_video_capture_mock
+#     mock = create_cv2_video_capture_mock(camera_config=camera_config)
+#     assert mock.isOpened()
+#     yield mock
+#     mock.release()
 
 
 @pytest.fixture
 def app_fixture() -> FastAPI:
-    return create_app()
+    app = create_app()
+    assert app
+    yield app
 
 
 @pytest.fixture
 def client_fixture(app_fixture: FastAPI) -> TestClient:
     with TestClient(app_fixture) as client:
         yield client
+    client.close()
+
+
+@pytest.fixture
+def controller_fixture() -> Controller:
+    create_controller()
+    controller = get_controller()
+    assert isinstance(controller, Controller)
+    yield controller
+    controller.close()
+
+
+@pytest.fixture
+def camera_group_orchestrator_fixture(camera_configs_fixture: CameraConfigs) -> CameraGroupOrchestrator:
+    return CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
+
+
+@pytest.fixture
+def mock_create_cv2_capture():
+    with patch('skellycam.core.cameras.opencv.create_cv2_video_capture',
+               side_effect=create_cv2_video_capture_magic_mock):
+        yield
 
 # @pytest.fixture
 # def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload) -> FrontendImagePayload:

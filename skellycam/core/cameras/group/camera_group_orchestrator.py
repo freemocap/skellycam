@@ -52,7 +52,7 @@ class CameraGroupOrchestrator(BaseModel):
     @classmethod
     def from_camera_configs(cls, camera_configs: CameraConfigs):
         return cls(
-            single_camera_triggers={
+            camera_triggers={
                 camera_id: CameraTriggers.from_camera_id(camera_config.camera_id)
                 for camera_id, camera_config in camera_configs.items()
             }

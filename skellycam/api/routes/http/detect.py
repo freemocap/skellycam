@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter
 
 from skellycam.api.models.base_models import BaseResponse
-from skellycam.core.controller import Controller
+from skellycam.core.controller import Controller, get_controller
 from skellycam.core.detection.detect_available_devices import AvailableDevices
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,8 @@ class CamerasDetectedResponse(BaseResponse):
                 "along with their available resolutions and framerates",
 )
 async def detect_cameras_route() -> CamerasDetectedResponse:
-    controller = Controller()
+    controller: Controller = get_controller()
+
     logger.api("Received `detect/` request")
     try:
         detected_cameras = await controller.detect()

@@ -9,8 +9,9 @@ from fastapi.routing import APIWebSocketRoute, APIRoute
 
 import skellycam
 from skellycam.__main__ import APP_URL
-from skellycam.api.routes.http import enabled_routers
 from skellycam.api.middleware.cors import cors
+from skellycam.api.routes.http import enabled_routers
+from skellycam.core.controller import create_controller
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,9 @@ async def lifespan(app:FastAPI):
     logger.api("Skellycam API starting...")
     logger.info(f"Skellycam API base folder path: {get_default_skellycam_base_folder_path()}")
     Path(get_default_skellycam_base_folder_path()).mkdir(parents=True, exist_ok=True)
-    logger.success(f"Skellycam API started successfully 💀📸✨")
+    logger.info(f"Creating `Contoller` instance...")
+    create_controller()
+    logger.success(f"Skellycam API (version:{skellycam.__version__}) started successfully 💀📸✨")
     logger.api(f"Skellycam API  running on: {APP_URL} 👈[click to open backend UI in your browser]\n")
     yield
     logger.api("Skellycam API ending...")

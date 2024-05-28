@@ -27,13 +27,13 @@ class BaseErrorResponse(BaseModel):
 
     @staticmethod
     def _remove_home_dir_from_traceback(traceback_str: str) -> str:
-        home_dir = str(Path.home())
+        home_dir_path = Path.home()
 
-        if home_dir in traceback_str:
-            if sys.platform == "win32":
-                traceback_str = traceback_str.replace(home_dir, "%USERPROFILE%")
-            else:
-                traceback_str = traceback_str.replace(home_dir, "~")
+        if sys.platform == "win32":
+            traceback_str = traceback_str.replace(str(home_dir_path),
+                                                  "%USERPROFILE%")
+        else:
+            traceback_str = traceback_str.replace(str(home_dir_path), "~")
         return traceback_str
 
     def __str__(self) -> str:

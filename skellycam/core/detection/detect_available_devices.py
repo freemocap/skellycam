@@ -1,16 +1,13 @@
 import logging
 from pprint import pprint
-from typing import Dict
 
 import cv2
 from PySide6.QtMultimedia import QMediaDevices
 
-from skellycam.core.detection.camera_device_info import CameraDeviceInfo
-from skellycam.core import CameraId
+from skellycam.core.detection.camera_device_info import CameraDeviceInfo, AvailableDevices
 
 logger = logging.getLogger(__name__)
 
-AvailableDevices = Dict[CameraId, CameraDeviceInfo]
 
 async def detect_available_devices(check_if_available: bool = False) -> AvailableDevices:
     logger.info("Detecting available cameras...")

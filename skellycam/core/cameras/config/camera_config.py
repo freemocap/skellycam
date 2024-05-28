@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -28,14 +28,18 @@ class CameraConfig(BaseModel):
         description="The number of color channels in the image (3 for RGB, 1 for monochrome)",
     )
 
+    # TODO - Handle options other than RGB
+    pixel_format: Literal["RGB", "BGR", "MONO", "GREY", "GRAY"] = Field(default="RGB",
+                                                                        description="How to interpret the color channels")
+
     exposure: int = Field(
         default=DefaultCameraConfig.EXPOSURE.value,
         description="The exposure of the camera using the opencv convention - "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
     )
 
-    framerate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,
-                             description="The framerate of the camera (in frames per second).")
+    frame_rate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,
+                              description="The frame rate of the camera (in frames per second).")
 
     rotation: RotationTypes = Field(
         default=DefaultCameraConfig.ROTATION.value,

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def extract_config_from_cv2_capture(camera_id: CameraId,
-        cv2_capture: cv2.VideoCapture,
+                                    cv2_capture: cv2.VideoCapture,
                                     rotation: RotationTypes = RotationTypes.NO_ROTATION,
                                     use_this_camera: bool = True) -> CameraConfig:
     try:
@@ -23,7 +23,7 @@ def extract_config_from_cv2_capture(camera_id: CameraId,
                 height=cv2_capture.get(cv2.CAP_PROP_FRAME_HEIGHT),
             ),
             exposure=cv2_capture.get(cv2.CAP_PROP_EXPOSURE),
-            framerate=cv2_capture.get(cv2.CAP_PROP_FPS),
+            frame_rate=cv2_capture.get(cv2.CAP_PROP_FPS),
             rotation=rotation,
         )
     except Exception as e:

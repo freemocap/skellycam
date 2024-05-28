@@ -73,8 +73,20 @@ def test_get_camera_shared_memory(camera_shared_memory_manager_fixture: CameraGr
 def test_close_and_unlink(camera_shared_memory_manager_fixture: CameraGroupSharedMemory):
     manager = camera_shared_memory_manager_fixture
     manager.close_and_unlink()
+
     for camera_shm in manager.camera_shms.values():
-        with pytest.raises(FileNotFoundError):
+        # Test for image_shm
+        image_shm_exception_raised = False
+        try:
             camera_shm.image_shm.shm.buf[:]
-        with pytest.raises(FileNotFoundError):
+        except TypeError:
+            image_shm_exception_raised = True
+        assert image_shm_exception_raised, "TypeError was not raised for image_shm"
+
+        # Test for metadata_shm
+        metadata_shm_exception_raised = False
+        try:
             camera_shm.metadata_shm.shm.buf[:]
+        except TypeError:
+            metadata_shm_exception_raised = True
+        assert metadata_shm_exception_raised, "TypeError was not raised for metadata_shm"

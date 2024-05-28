@@ -8,17 +8,23 @@ class ImageResolution(BaseModel):
     width: int
 
     @classmethod
-    def from_string(cls, tuple_str: str, split_on: str = "x") -> "ImageResolution":
+    def from_string(cls, tuple_str: str, delimiter: str = "x") -> "ImageResolution":
         """
         Create a `VideoResolution` from a string like "(720, 1280)"
         """
-        height, width = tuple_str.replace("(", "").replace(")", "").split(split_on)
+        height, width = tuple_str.replace("(", "").replace(")", "").split(delimiter)
         return cls(width=int(width), height=int(height))
 
 
     @property
     def orientation(self) -> str:
-        return "landscape" if self.width > self.height else "portrait"
+        if self.width > self.height:
+            return "landscape"
+        if self.width < self.height:
+            return "portrait"
+        if self.width == self.height:
+            return "square"
+
 
     @property
     def aspect_ratio(self) -> float:

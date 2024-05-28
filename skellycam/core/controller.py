@@ -8,12 +8,10 @@ from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
 )
 from skellycam.core.detection.detect_available_devices import AvailableDevices, detect_available_devices
-from skellycam.utilities.singleton_decorator import singleton
 
 logger = logging.getLogger(__name__)
 
 
-@singleton
 class Controller:
     def __init__(self,
                  ) -> None:
@@ -21,21 +19,19 @@ class Controller:
         self._camera_configs: Optional[CameraConfigs] = None
         self._camera_group = CameraGroup()
 
-
     async def detect(self) -> AvailableDevices:
         logger.info(f"Detecting cameras...")
         available_devices = await detect_available_devices()
-        self._camera_configs = CameraConfigs.create_empty()
 
         if len(available_devices) == 0:
             logger.warning(f"No cameras detected!")
             return available_devices
 
+        self._camera_configs = {}
         for camera_id in available_devices.keys():
             self._camera_configs[CameraId(camera_id)] = CameraConfig(camera_id=CameraId(camera_id))
         self._camera_group.set_camera_configs(self._camera_configs)
         return available_devices
-
 
     async def connect(self,
                       camera_configs: Optional[CameraConfigs] = None,
@@ -65,3 +61,19 @@ class Controller:
         if self._camera_group is not None:
             await self._camera_group.close()
 
+
+CONTROLLER = None
+
+
+def create_controller() -> Controller:
+    global CONTROLLER
+    if not CONTROLLER:
+        CONTROLLER = Controller()
+    return CONTROLLER
+
+
+def get_controller() -> Controller:
+    global CONTROLLER
+    if not isinstance(CONTROLLER, Controller):
+        raise ValueError("Controller not created!")
+    return CONTROLLER

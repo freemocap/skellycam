@@ -5,14 +5,14 @@ from unittest.mock import Mock
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.get_frame import get_frame
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.cameras.group import CameraGroupOrchestrator
+from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
-from skellycam.tests.mocks import create_cv2_video_capture_mock
+from skellycam.tests.mocks import create_cv2_video_capture_magic_mock
 from skellycam.utilities.wait_functions import wait_10ms
 
 
-def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: CameraGroupSharedMemory):
-
+def test_trigger_get_frame_deconstructed(
+        camera_shared_memory_fixture: tuple[CameraGroupSharedMemory, CameraGroupSharedMemory]):
     # init stuff
     shm_parent, shm_child = camera_shared_memory_fixture
     camera_configs = shm_parent.camera_configs
@@ -33,7 +33,7 @@ def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: CameraGro
     for frame_number in range(number_of_frames_to_test):
         # create capture mocks and threads for them to run in
         caps = {
-            camera_id: create_cv2_video_capture_mock(camera_config)
+            camera_id: create_cv2_video_capture_magic_mock(camera_config)
             for camera_id, camera_config in camera_configs.items()
         }
 

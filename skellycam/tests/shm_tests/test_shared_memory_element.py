@@ -2,7 +2,6 @@ from multiprocessing import shared_memory
 from typing import Tuple
 
 import numpy as np
-import pytest
 
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 
@@ -10,8 +9,12 @@ from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 def test_create(numpy_array_definition_fixture: Tuple[Tuple[int], np.dtype]):
     shape, dtype = numpy_array_definition_fixture
     if dtype == str:
-        with pytest.raises(ValueError):
+        value_error_exception_raised = False
+        try:
             SharedMemoryElement.create(shape=shape, dtype=dtype)
+        except ValueError:
+            value_error_exception_raised = True
+        assert value_error_exception_raised, "ValueError was not raised"
         return
 
     element = SharedMemoryElement.create(shape=shape, dtype=dtype)
@@ -84,8 +87,12 @@ def test_close(ndarray_shape_fixture, dtype_fixture: np.dtype):
     assert isinstance(element, SharedMemoryElement)
     element.close()
 
-    with pytest.raises(TypeError):
+    type_error_exception_raised = False
+    try:
         element.shm.buf[:]
+    except TypeError:
+        type_error_exception_raised = True
+    assert type_error_exception_raised, "TypeError was not raised"
 
     element.unlink()
 
@@ -97,5 +104,9 @@ def test_unlink(ndarray_shape_fixture, dtype_fixture: np.dtype):
     element.close()
     element.unlink()
 
-    with pytest.raises(FileNotFoundError):
+    file_not_found_exception_raised = False
+    try:
         shared_memory.SharedMemory(name=element.name)
+    except FileNotFoundError:
+        file_not_found_exception_raised = True
+    assert file_not_found_exception_raised, "FileNotFoundError was not raised"

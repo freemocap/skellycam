@@ -1,7 +1,6 @@
 from typing import Tuple
 
 import numpy as np
-import pytest
 
 from skellycam.core import IMAGE_DATA_DTYPE
 from skellycam.core.cameras.config.camera_config import CameraConfig
@@ -63,14 +62,25 @@ def test_close_and_unlink(camera_config_fixture: CameraConfig) -> None:
     camera_shm.close()
     camera_shm.unlink()
 
-    with pytest.raises(FileNotFoundError):
+    # Test for image_shm
+    image_shm_not_found_exception_raised = False
+    try:
         SharedMemoryElement.recreate(shm_name=camera_shm.shared_memory_names.image_shm_name,
                                      shape=camera_config_fixture.image_shape,
                                      dtype=IMAGE_DATA_DTYPE)
-    with pytest.raises(FileNotFoundError):
+    except FileNotFoundError:
+        image_shm_not_found_exception_raised = True
+    assert image_shm_not_found_exception_raised, "FileNotFoundError was not raised for image_shm"
+
+    # Test for metadata_shm
+    metadata_shm_not_found_exception_raised = False
+    try:
         SharedMemoryElement.recreate(shm_name=camera_shm.shared_memory_names.metadata_shm_name,
                                      shape=FRAME_METADATA_SHAPE,
                                      dtype=FRAME_METADATA_DTYPE)
+    except FileNotFoundError:
+        metadata_shm_not_found_exception_raised = True
+    assert metadata_shm_not_found_exception_raised, "FileNotFoundError was not raised for metadata_shm"
 
 
 def test_integration_workflow(camera_config_fixture: CameraConfig,

@@ -1,7 +1,7 @@
 import threading
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.cameras.group import CameraGroupOrchestrator
+from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 
 
 def test_multi_camera_triggers_from_camera_configs(camera_configs_fixture: CameraConfigs):

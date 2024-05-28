@@ -1,10 +1,11 @@
 import logging
 import platform
-from typing import List, Any
+from typing import List, Any, Dict
 
 from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
+from skellycam.core import CameraId
 from skellycam.core.detection.image_resolution import ImageResolution
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class DeviceVideoFormat(BaseModel):
     width: int
     height: int
     pixel_format: Any
-    framerate: float
+    frame_rate: float
 
 
 class CameraDeviceInfo(BaseModel):
@@ -50,7 +51,7 @@ class CameraDeviceInfo(BaseModel):
         Get a list of all available framerates, sorted from lowest ([0]) to highest ([-1])
         """
         all_framerates = [
-            video_format.framerate for video_format in self.available_video_formats
+            video_format.frame_rate for video_format in self.available_video_formats
         ]
         unique_framerates = list(set(all_framerates))
         unique_framerates.sort()
@@ -80,7 +81,7 @@ class CameraDeviceInfo(BaseModel):
                 width=video_format.resolution().width(),
                 height=video_format.resolution().height(),
                 pixel_format=video_format.pixelFormat(),
-                framerate=video_format.maxFrameRate(),
+                frame_rate=video_format.maxFrameRate(),
             )
             for video_format in available_video_formats
         ]
@@ -89,3 +90,6 @@ class CameraDeviceInfo(BaseModel):
 
     def __str__(self):
         return f"{self.description}"
+
+
+AvailableDevices = Dict[CameraId, CameraDeviceInfo]

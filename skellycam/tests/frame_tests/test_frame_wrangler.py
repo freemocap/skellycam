@@ -1,13 +1,15 @@
 import multiprocessing
 
 import numpy as np
+import pytest
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.cameras.group import CameraGroupOrchestrator
+from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 
 
+@pytest.mark.run(order=-2)
 def test_frame_wrangler(
         camera_configs_fixture: CameraConfigs,
         multi_camera_triggers_fixture: CameraGroupOrchestrator,
@@ -18,13 +20,12 @@ def test_frame_wrangler(
     shm_manager = CameraGroupSharedMemory.create(camera_configs=camera_configs_fixture)
     exit_event = multiprocessing.Event()
 
-    frame_wrangler = FrameWrangler(exit_event=exit_event)
-    frame_wrangler.set_camera_info(
-        camera_configs=camera_configs_fixture,
-        shared_memory_names=shm_manager.shared_memory_names,
-        multicam_triggers=multi_camera_triggers_fixture,
-    )
-    frame_wrangler.start_frame_listener()
+    frame_wrangler = FrameWrangler(camera_configs=camera_configs_fixture,
+                                   group_shm_names=shm_manager.shared_memory_names,
+                                   group_orchestrator=multi_camera_triggers_fixture,
+                                   exit_event=exit_event,
+                                   )
+    frame_wrangler.start()
     [triggers.set_ready() for triggers in multi_camera_triggers_fixture.camera_triggers.values()]
     multi_camera_triggers_fixture.fire_initial_triggers()
     [triggers.wait_for_initial_triggers_reset() for triggers in multi_camera_triggers_fixture.camera_triggers.values()]
