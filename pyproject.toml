@@ -74,7 +74,7 @@ dependencies = [
 "toml==0.10.2",
 "tqdm==4.66.1",
 ]
-requires-python = ">=3.9,<3.12"
+requires-python = ">=3.9,<3.13"
 
 dynamic = ["version", "description"]
 
