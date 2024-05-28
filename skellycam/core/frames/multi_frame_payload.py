@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload, FramePayloadDTO
-from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class MultiFramePayload(BaseModel):

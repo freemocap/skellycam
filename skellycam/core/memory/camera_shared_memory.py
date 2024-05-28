@@ -1,9 +1,11 @@
 import logging
 import time
+from typing import Dict
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE
 from skellycam.core.frames.frame_payload import FramePayloadDTO
@@ -16,6 +18,8 @@ class SharedMemoryNames(BaseModel):
     image_shm_name: str
     metadata_shm_name: str
 
+
+GroupSharedMemoryNames = Dict[CameraId, SharedMemoryNames]
 
 class CameraSharedMemory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)

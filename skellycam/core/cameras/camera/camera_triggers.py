@@ -9,14 +9,15 @@ from skellycam.utilities.wait_functions import wait_1us, wait_10ms
 logger = logging.getLogger(__name__)
 
 
-class SingleCameraTriggers(BaseModel):
+class CameraTriggers(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     camera_id: CameraId
     camera_ready_event: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     initial_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     grab_frame_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     retrieve_frame_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     new_frame_available_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def from_camera_id(cls, camera_id: CameraId):

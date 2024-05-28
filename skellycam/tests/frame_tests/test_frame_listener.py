@@ -6,27 +6,27 @@ import numpy as np
 import pytest
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
+from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.frame_wrangler import FrameListenerProcess
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
+from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1ms
 
 
 @pytest.fixture
-def flp_setup(camera_shared_memory_fixture: Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager],
+def flp_setup(camera_shared_memory_fixture: Tuple[CameraGroupSharedMemory, CameraGroupSharedMemory],
               multi_frame_payload_fixture: MultiFramePayload, ) -> Dict[str, any]:
     shm_manager, recreated_shm_manager = camera_shared_memory_fixture
     camera_configs = shm_manager.camera_configs
-    multicam_triggers = MultiCameraTriggerOrchestrator.from_camera_configs(camera_configs=camera_configs)
-    [cam_triggers.set_ready() for cam_triggers in multicam_triggers.single_camera_triggers.values()]
+    multicam_triggers = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs)
+    [cam_triggers.set_ready() for cam_triggers in multicam_triggers.camera_triggers.values()]
 
     exit_event = multiprocessing.Event()
 
     flp = FrameListenerProcess(
         camera_configs=camera_configs,
-        shared_memory_names=shm_manager.shared_memory_names,
+        group_shm_names=shm_manager.shared_memory_names,
         multicam_triggers=multicam_triggers,
         exit_event=exit_event,
     )
@@ -59,15 +59,15 @@ def test_start_and_exit(flp_setup: Dict[str, any]):
 def test_listen_for_frames(flp_setup: Dict[str, any]):
     flp = flp_setup["flp"]
     mfp: MultiFramePayload = flp_setup["mfp"]
-    multicam_triggers: MultiCameraTriggerOrchestrator = flp_setup["multicam_triggers"]
-    shm_manager: CameraSharedMemoryManager = flp_setup["shm_manager"]
+    multicam_triggers: CameraGroupOrchestrator = flp_setup["multicam_triggers"]
+    shm_manager: CameraGroupSharedMemory = flp_setup["shm_manager"]
 
     flp.start_process()
     wait_1ms()
     assert flp.payloads_received == 0
     for camera_id, frame in mfp.frames.items():
         cam_shm = shm_manager.get_camera_shared_memory(camera_id)
-        cam_triggers = multicam_triggers.single_camera_triggers[camera_id]
+        cam_triggers = multicam_triggers.camera_triggers[camera_id]
         image = frame.image
         metadata = frame.metadata
         cam_shm.put_new_frame(image=image, metadata=metadata)

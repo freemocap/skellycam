@@ -2,39 +2,19 @@ import logging
 import time
 
 import cv2
-import numpy as np
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
+from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
 from skellycam.core.frames.frame_metadata import create_empty_frame_metadata, FRAME_METADATA_MODEL
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
 
 
-def image_metadata_to_shm_npy(camera_id: CameraId,
-                              timestamp_ns: int,
-                              pre_grab_timestamp: int,
-                              post_grab_timestamp: int,
-                              pre_retrieve_timestamp: int,
-                              post_retrieve_return: int,
-                              shared_memory: CameraSharedMemory,
-                              ) -> np.ndarray:
-    return np.ndarray([camera_id,
-                       timestamp_ns,
-                       pre_grab_timestamp,
-                       post_grab_timestamp,
-                       pre_retrieve_timestamp,
-                       post_retrieve_return,
-                       ],
-                      dtype=np.uint64,
-                      buffer=shared_memory.metadata_shm.buf)
-
-
 def get_frame(camera_id: CameraId,
               camera_shared_memory: CameraSharedMemory,
               cap: cv2.VideoCapture,
-              triggers: SingleCameraTriggers,
+              triggers: CameraTriggers,
               frame_number: int,
               ) -> int:
     """

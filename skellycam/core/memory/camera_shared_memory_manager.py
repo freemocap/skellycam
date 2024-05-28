@@ -6,12 +6,12 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
+from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, GroupSharedMemoryNames
 
 logger = logging.getLogger(__name__)
 
 
-class CameraSharedMemoryManager(BaseModel):
+class CameraGroupSharedMemory(BaseModel):
     camera_configs: CameraConfigs
     camera_shms: Dict[CameraId, CameraSharedMemory]
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -26,16 +26,16 @@ class CameraSharedMemoryManager(BaseModel):
     @classmethod
     def recreate(cls,
                  camera_configs: CameraConfigs,
-                 shared_memory_names: Dict[CameraId, SharedMemoryNames]):
+                 group_shm_names: GroupSharedMemoryNames):
         camera_shms = {camera_id: CameraSharedMemory.recreate(camera_config=config,
-                                                              shared_memory_names=shared_memory_names[
+                                                              shared_memory_names=group_shm_names[
                                                                   camera_id])
                        for camera_id, config in camera_configs.items()}
         return cls(camera_configs=camera_configs,
                    camera_shms=camera_shms)
 
     @property
-    def shared_memory_names(self) -> Dict[CameraId, SharedMemoryNames]:
+    def shared_memory_names(self) -> GroupSharedMemoryNames:
         return {camera_id: camera_shared_memory.shared_memory_names for camera_id, camera_shared_memory in
                 self.camera_shms.items()}
 

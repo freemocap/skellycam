@@ -1,6 +1,6 @@
 import pytest
 
-from skellycam.core.controller.controller import Controller
+from skellycam.core.controller import Controller
 
 
 @pytest.fixture

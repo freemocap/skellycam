@@ -11,15 +11,14 @@ from starlette.testclient import TestClient
 
 from skellycam.api.app_factory import create_app
 from skellycam.core import CameraId
+from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.cameras.config.default_config import DEFAULT_IMAGE_SHAPE
-from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
+from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
 from skellycam.core.frames.frame_payload import FramePayloadDTO
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
+from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 
 TEST_ENV_NAME = 'TEST_ENV'
 
@@ -68,8 +67,7 @@ def dtype_fixture(request: pytest.fixture) -> np.dtype:
     return request.param
 
 
-@pytest.fixture(params=[DEFAULT_IMAGE_SHAPE,
-                        (12, 15, 3),  # landscape
+@pytest.fixture(params=[(12, 15, 3),  # landscape
                         (13, 4, 3),  # portrait
                         (10, 10, 3),  # square
                         (12, 15, 1),  # landscape grayscale
@@ -176,23 +174,24 @@ def multi_frame_payload_fixture(camera_configs_fixture: CameraConfigs,
 
 
 @pytest.fixture
-def single_camera_triggers_fixture(camera_id_fixture: CameraId) -> SingleCameraTriggers:
-    return SingleCameraTriggers.from_camera_id(camera_id_fixture)
+def single_camera_triggers_fixture(camera_id_fixture: CameraId) -> CameraTriggers:
+    return CameraTriggers.from_camera_id(camera_id_fixture)
 
 
 @pytest.fixture
-def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs) -> MultiCameraTriggerOrchestrator:
-    return MultiCameraTriggerOrchestrator.from_camera_configs(camera_configs_fixture)
+def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs) -> CameraGroupOrchestrator:
+    yield CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
+
 
 
 @pytest.fixture
 def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
-                                 ) -> Tuple[CameraSharedMemoryManager, CameraSharedMemoryManager]:
-    manager = CameraSharedMemoryManager.create(camera_configs=camera_configs_fixture)
+                                 ) -> Tuple[CameraGroupSharedMemory, CameraGroupSharedMemory]:
+    manager = CameraGroupSharedMemory.create(camera_configs=camera_configs_fixture)
     assert manager
-    recreated_manager = CameraSharedMemoryManager.recreate(camera_configs=camera_configs_fixture,
-                                                           shared_memory_names=manager.shared_memory_names
-                                                           )
+    recreated_manager = CameraGroupSharedMemory.recreate(camera_configs=camera_configs_fixture,
+                                                         group_shm_names=manager.shared_memory_names
+                                                         )
     yield manager, recreated_manager
 
     manager.close_and_unlink()

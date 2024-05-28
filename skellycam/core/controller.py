@@ -2,16 +2,18 @@ import logging
 from typing import Optional, List, Union
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera_group import (
-    CameraGroup,
-)
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.group.camera_group import (
+    CameraGroup,
+)
 from skellycam.core.detection.detect_available_devices import AvailableDevices, detect_available_devices
+from skellycam.utilities.singleton_decorator import singleton
 
 logger = logging.getLogger(__name__)
 
 
+@singleton
 class Controller:
     def __init__(self,
                  ) -> None:
@@ -56,7 +58,7 @@ class Controller:
         logger.debug(f"Starting camera group with cameras: {self._camera_group.camera_ids}")
         if self._camera_configs is None or len(self._camera_configs) == 0:
             raise ValueError("No cameras available to start camera group!")
-        await self._camera_group.start_cameras(number_of_frames=number_of_frames)
+        await self._camera_group.start(number_of_frames=number_of_frames)
 
     async def close(self):
         logger.debug(f"Closing camera group...")

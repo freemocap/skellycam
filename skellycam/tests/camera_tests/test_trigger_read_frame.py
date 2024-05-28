@@ -3,27 +3,27 @@ from typing import Dict, List
 from unittest.mock import Mock
 
 from skellycam.core import CameraId
+from skellycam.core.cameras.camera.get_frame import get_frame
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
-from skellycam.core.cameras.trigger_camera.trigger_get_frame import get_frame
-from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
+from skellycam.core.cameras.group import CameraGroupOrchestrator
+from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.tests.mocks import create_cv2_video_capture_mock
 from skellycam.utilities.wait_functions import wait_10ms
 
 
-def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: CameraSharedMemoryManager):
+def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: CameraGroupSharedMemory):
 
     # init stuff
     shm_parent, shm_child = camera_shared_memory_fixture
     camera_configs = shm_parent.camera_configs
-    multi_camera_triggers = MultiCameraTriggerOrchestrator.from_camera_configs(camera_configs)
+    multi_camera_triggers = CameraGroupOrchestrator.from_camera_configs(camera_configs)
 
     assert not multi_camera_triggers.cameras_ready
 
     # check cams ready
     wait_camera_ready_thread = threading.Thread(target=multi_camera_triggers.wait_for_cameras_ready)
     wait_camera_ready_thread.start()
-    for single_camera_triggers in multi_camera_triggers.single_camera_triggers.values():
+    for single_camera_triggers in multi_camera_triggers.camera_triggers.values():
         single_camera_triggers.camera_ready_event.set()
     wait_camera_ready_thread.join()
     assert multi_camera_triggers.cameras_ready
@@ -89,7 +89,7 @@ def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: CameraSha
         assert multi_camera_triggers.new_frames_available
 
         # 5
-        [triggers.set_frame_copied() for triggers in multi_camera_triggers.single_camera_triggers.values()]
+        [triggers.set_frame_copied() for triggers in multi_camera_triggers.camera_triggers.values()]
         multi_camera_triggers._await_frames_copied()
         assert not multi_camera_triggers.new_frames_available
 
@@ -102,14 +102,14 @@ def test_trigger_get_frame_deconstructed(camera_shared_memory_fixture: CameraSha
 def create_frame_read_threads(
         camera_configs: CameraConfigs,
         capture_mocks: Dict[CameraId, Mock],
-        multi_camera_triggers: MultiCameraTriggerOrchestrator,
-        shared_memory_manager: CameraSharedMemoryManager,
+        multi_camera_triggers: CameraGroupOrchestrator,
+        shared_memory_manager: CameraGroupSharedMemory,
 ) -> List[threading.Thread]:
     # create thread for each camera to read mock frames
     frame_read_threads = []
     for camera_id, cap in capture_mocks.items():
         cam_shm = shared_memory_manager.get_camera_shared_memory(camera_id)
-        cam_triggers = multi_camera_triggers.single_camera_triggers[camera_id]
+        cam_triggers = multi_camera_triggers.camera_triggers[camera_id]
         frame_read_threads.append(
             threading.Thread(
                 target=get_frame,

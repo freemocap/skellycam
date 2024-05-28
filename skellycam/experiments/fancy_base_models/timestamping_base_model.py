@@ -3,7 +3,7 @@ from typing import Optional, OrderedDict, List, Tuple, Any, Iterator
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class DurationTimestamps(BaseModel):

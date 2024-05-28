@@ -1,24 +1,23 @@
 import logging
 import multiprocessing
 import time
-from typing import Optional, List, Dict
+from typing import Optional, List
 
 import numpy as np
 
-from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
-from skellycam.core.cameras.trigger_camera.start_cameras import start_cameras
-from skellycam.core.memory.camera_shared_memory import SharedMemoryNames
+from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.cameras.group.start_cameras import start_cameras
+from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
 
-def multi_camera_trigger_loop(
+def camera_group_trigger_loop(
         camera_configs: CameraConfigs,
-        multicam_triggers: MultiCameraTriggerOrchestrator,
-        shared_memory_names: Dict[CameraId, SharedMemoryNames],
+        group_orchestrator: CameraGroupOrchestrator,
+        group_shm_names: GroupSharedMemoryNames,
         exit_event: multiprocessing.Event,
         number_of_frames: Optional[int] = None,
 ):
@@ -26,14 +25,14 @@ def multi_camera_trigger_loop(
 
     cameras = start_cameras(
         camera_configs=camera_configs,
-        shared_memory_names=shared_memory_names,
-        multicam_triggers=multicam_triggers,
+        shared_memory_names=group_shm_names,
+        group_orchestrator=group_orchestrator,
         exit_event=exit_event,
     )
 
     logger.info(f"Camera trigger loop started for cameras: {list(camera_configs.keys())}")
 
-    multicam_triggers.fire_initial_triggers()
+    group_orchestrator.fire_initial_triggers()
 
     loop_count = 0
     elapsed_in_trigger_ns = []
@@ -42,7 +41,7 @@ def multi_camera_trigger_loop(
     while not exit_event.is_set():
         tik = time.perf_counter_ns()
 
-        multicam_triggers.trigger_multi_frame_read()
+        group_orchestrator.trigger_multi_frame_read()
 
         if number_of_frames is not None:
             check_loop_count(number_of_frames, loop_count, exit_event)
