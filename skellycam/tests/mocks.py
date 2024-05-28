@@ -7,6 +7,7 @@ import numpy as np
 from scipy.stats import gamma
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.config.default_config import DEFAULT_FRAME_RATE
 
 
 def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:
@@ -58,7 +59,7 @@ def create_cv2_video_capture_mock(camera_config: CameraConfig) -> MagicMock:
         ```
         ...and it looks right ish to me lol
         """
-        ideal_frame_duration = 1 / 30  # 30fps -> 33.33ms per frame
+        ideal_frame_duration = 1 / DEFAULT_FRAME_RATE
         delay = gamma_delay(ideal_frame_duration)
         time.sleep(delay)  # Simulate the delay
 

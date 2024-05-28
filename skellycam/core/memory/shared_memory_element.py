@@ -46,6 +46,8 @@ class SharedMemoryElement(BaseModel):
         return self.shm.size
 
     def copy_into_buffer(self, array: np.ndarray):
+        if array.dtype != self.dtype:
+            raise ValueError(f"Array dtype {array.dtype} does not match SharedMemoryElement dtype {self.dtype}")
         np.copyto(dst=self.buffer, src=array)
 
     def copy_from_buffer(self) -> np.ndarray:

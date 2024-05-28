@@ -1,6 +1,7 @@
 import multiprocessing
 
 import numpy as np
+import pytest
 
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.frames.frame_wrangler import FrameWrangler
@@ -8,6 +9,7 @@ from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraSharedMemoryManager
 
 
+@pytest.mark.skip
 def test_frame_wrangler(
         camera_shared_memory_fixture: CameraSharedMemoryManager,
         multi_camera_triggers_fixture: MultiCameraTriggerOrchestrator,

@@ -7,7 +7,6 @@ import numpy as np
 from skellycam.core import CameraId
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.frames.frame_metadata import create_empty_frame_metadata, FRAME_METADATA_MODEL
-from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
@@ -83,4 +82,4 @@ def get_frame(camera_id: CameraId,
         image=image,
         metadata=frame_metadata,
     )
-    return FramePayload.from_previous(frame)
+    return frame_number + 1

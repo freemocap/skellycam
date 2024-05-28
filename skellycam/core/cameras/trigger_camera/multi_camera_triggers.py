@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers, logger
-from skellycam.utilities.wait_functions import wait_1us, wait_1s, wait_1ms
+from skellycam.utilities.wait_functions import wait_1us, wait_1ms, wait_10ms
 
 
 class MultiCameraTriggerOrchestrator(BaseModel):
@@ -90,9 +90,9 @@ class MultiCameraTriggerOrchestrator(BaseModel):
         logger.trace("Initial triggers reset!")
 
     def wait_for_cameras_ready(self):
+        logger.trace("Waiting for all cameras to be ready...")
         while not all([triggers.camera_ready_event.is_set() for triggers in self.single_camera_triggers.values()]):
-            logger.trace("Waiting for all cameras to be ready...")
-            wait_1s()
+            wait_10ms()
         logger.debug("All cameras are ready!")
 
     def await_new_frames_available(self):
