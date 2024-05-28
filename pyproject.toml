@@ -59,7 +59,7 @@ skellycam = "skellycam.__main__:main"
 
 
 [tool.pytest.ini_options]
-addopts = "--exitfirst --timeout=5 "#--numprocesses=auto"#--cov=skellycam --cov-report=term-missing
+addopts = "--exitfirst --timeout=5 "#--numprocesses=10"#--cov=skellycam --cov-report=term-missing
 testpaths = [
     "skellycam/tests",
 ]

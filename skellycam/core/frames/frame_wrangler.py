@@ -60,7 +60,7 @@ class FrameListenerProcess:
             while not exit_event.is_set():
                 if multicam_triggers.new_frames_available:
                     logger.loop(f"Frame wrangler sees new frames available!")
-                    payload = camera_shm_manager.get_multi_frame_payload(payload)
+                    payload = camera_shm_manager.get_multi_frame_payload(previous_payload=payload)
                     multicam_triggers.set_frames_copied()
                     payloads_received.value += 1
                 else:
@@ -98,7 +98,7 @@ class FrameWrangler:
     def set_camera_info(
             self,
             camera_configs: CameraConfigs,
-            shared_memory_names: Dict[CameraId, str],
+            shared_memory_names: Dict[CameraId, SharedMemoryNames],
             multicam_triggers: MultiCameraTriggerOrchestrator,
     ):
         logger.debug(f"Setting camera configs to {camera_configs}")

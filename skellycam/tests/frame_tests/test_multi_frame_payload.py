@@ -40,16 +40,13 @@ def test_add_frame(camera_configs_fixture: CameraConfigs,
     assert multi_frame_payload.frames[camera_ids[0]] is not None
 
 
-def test_full_property(camera_configs_fixture: CameraConfigs, frame_payload_dto_fixture: FramePayloadDTO) -> None:
-    camera_ids: List[CameraId] = list(camera_configs_fixture.keys())
-    multi_frame_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_ids)
+def test_full_property(frame_payload_dto_fixture: FramePayloadDTO,
+                       camera_ids_fixture: List[CameraId]) -> None:
+    multi_frame_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_ids_fixture)
 
-    frame_dto1: FramePayloadDTO = frame_payload_dto_fixture
-    frame_dto1.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_ids[0].id  # Ensure the camera ID matches
-    multi_frame_payload.add_frame(frame_dto1)
-    assert not multi_frame_payload.full
-
-    frame_dto2: FramePayloadDTO = frame_payload_dto_fixture
-    frame_dto2.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_ids[1].id  # Ensure the camera ID matches
-    multi_frame_payload.add_frame(frame_dto2)
+    for loop, camera_id in enumerate(camera_ids_fixture):
+        assert not multi_frame_payload.full
+        frame_dto: FramePayloadDTO = frame_payload_dto_fixture
+        frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_id
+        multi_frame_payload.add_frame(frame_dto)
     assert multi_frame_payload.full

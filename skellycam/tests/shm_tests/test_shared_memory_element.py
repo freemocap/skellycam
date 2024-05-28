@@ -80,10 +80,11 @@ def test_copy_from_buffer(random_array_fixture: np.ndarray):
 def test_close(ndarray_shape_fixture, dtype_fixture: np.dtype):
     element = SharedMemoryElement.create(shape=ndarray_shape_fixture,
                                          dtype=dtype_fixture)
-
+    assert isinstance(element.shm, shared_memory.SharedMemory)
+    assert isinstance(element, SharedMemoryElement)
     element.close()
 
-    with pytest.raises(OSError):
+    with pytest.raises(TypeError):
         element.shm.buf[:]
 
     element.unlink()

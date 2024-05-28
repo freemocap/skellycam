@@ -33,17 +33,14 @@ class CameraGroup:
         logger.debug(f"Setting camera configs to {configs}")
         self._multicam_triggers = MultiCameraTriggerOrchestrator.from_camera_configs(configs)
 
-        self._camera_shm_manager = CameraSharedMemoryManager(camera_configs=configs,
-                                                             lock=self._shm_lock)
+        self._camera_shm_manager = CameraSharedMemoryManager.create(camera_configs=configs, )
 
         self._multi_camera_process = MultiCameraTriggerProcess(camera_configs=configs,
-                                                               shm_lock=self._shm_lock,
                                                                shared_memory_names=self._camera_shm_manager.shared_memory_names,
                                                                multicam_triggers=self._multicam_triggers,
                                                                exit_event=self._exit_event, )
 
         self._frame_wrangler.set_camera_info(camera_configs=configs,
-                                             shm_lock=self._shm_lock,
                                              shared_memory_names=self._camera_shm_manager.shared_memory_names,
                                              multicam_triggers=self._multicam_triggers)
 

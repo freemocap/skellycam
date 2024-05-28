@@ -7,6 +7,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_trigger_loop import multi_camera_trigger_loop
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
+from skellycam.core.memory.camera_shared_memory import SharedMemoryNames
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +17,11 @@ class MultiCameraTriggerProcess:
             self,
             camera_configs: CameraConfigs,
             multicam_triggers: MultiCameraTriggerOrchestrator,
-            shm_lock: multiprocessing.Lock,
-            shared_memory_names: Dict[CameraId, str],
+            shared_memory_names: Dict[CameraId, SharedMemoryNames],
             exit_event: multiprocessing.Event,
     ):
         self._camera_configs = camera_configs
         self._multicam_triggers = multicam_triggers
-        self._shm_lock = shm_lock
         self._shared_memory_names = shared_memory_names
         self._exit_event = exit_event
 
@@ -35,7 +34,6 @@ class MultiCameraTriggerProcess:
             args=(self._camera_configs,
                   self._multicam_triggers,
                   self._shared_memory_names,
-                  self._shm_lock,
                   self._exit_event,
                   number_of_frames
                   )
@@ -44,8 +42,7 @@ class MultiCameraTriggerProcess:
     @staticmethod
     def _run_process(camera_configs: CameraConfigs,
                      multicam_triggers: MultiCameraTriggerOrchestrator,
-                     shared_memory_names: Dict[CameraId, str],
-                     shm_lock: multiprocessing.Lock,
+                     shared_memory_names: Dict[CameraId, SharedMemoryNames],
                      exit_event: multiprocessing.Event,
                      number_of_frames: Optional[int] = None
                      ):
@@ -53,7 +50,6 @@ class MultiCameraTriggerProcess:
         multi_camera_trigger_loop(camera_configs=camera_configs,
                                   multicam_triggers=multicam_triggers,
                                   shared_memory_names=shared_memory_names,
-                                  shm_lock=shm_lock,
                                   exit_event=exit_event,
                                   number_of_frames=number_of_frames,
                                   )

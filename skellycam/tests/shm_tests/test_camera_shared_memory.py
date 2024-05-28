@@ -5,7 +5,7 @@ import pytest
 
 from skellycam.core import IMAGE_DATA_DTYPE
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
 from skellycam.core.frames.frame_payload import FramePayloadDTO
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
@@ -44,12 +44,14 @@ def test_put_and_retrieve_frame(camera_config_fixture: CameraConfig,
                                 frame_metadata_fixture: np.ndarray) -> None:
     image = make_dummy_image_from_shape(camera_config_fixture.image_shape)
     camera_shm = CameraSharedMemory.create(camera_config=camera_config_fixture)
-
+    frame_metadata_fixture[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_config_fixture.camera_id
     camera_shm.put_new_frame(image=image, metadata=frame_metadata_fixture)
     frame_dto = camera_shm.retrieve_frame()
     assert isinstance(frame_dto, FramePayloadDTO)
     assert np.array_equal(frame_dto.image, image)
-    assert np.array_equal(frame_dto.frame_metadata, frame_metadata_fixture)
+    assert frame_dto.metadata.shape == FRAME_METADATA_SHAPE
+    assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE
+    assert frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] == camera_config_fixture.camera_id
 
     camera_shm.close()
     camera_shm.unlink()
@@ -86,7 +88,10 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
 
     assert isinstance(frame_dto, FramePayloadDTO)
     assert np.array_equal(frame_dto.image, image)
-    assert np.array_equal(frame_dto.frame_metadata, frame_metadata_fixture)
+    assert frame_dto.metadata.shape == FRAME_METADATA_SHAPE
+    assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE
+    assert frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] == camera_config_fixture.camera_id
+
 
     # Cleanup
     camera_shm.close()

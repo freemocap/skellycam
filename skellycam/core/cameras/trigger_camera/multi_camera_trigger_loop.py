@@ -9,6 +9,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.cameras.trigger_camera.start_cameras import start_cameras
+from skellycam.core.memory.camera_shared_memory import SharedMemoryNames
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 def multi_camera_trigger_loop(
         camera_configs: CameraConfigs,
         multicam_triggers: MultiCameraTriggerOrchestrator,
-        shared_memory_names: Dict[CameraId, str],
+        shared_memory_names: Dict[CameraId, SharedMemoryNames],
         exit_event: multiprocessing.Event,
         number_of_frames: Optional[int] = None,
 ):

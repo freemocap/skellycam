@@ -1,6 +1,7 @@
 import os
 import time
-from typing import Tuple
+from typing import Tuple, List
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -11,7 +12,7 @@ from starlette.testclient import TestClient
 from skellycam.api.app_factory import create_app
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.cameras.config.default_config import DEFAULT_CAMERA_ID, DEFAULT_IMAGE_SHAPE
+from skellycam.core.cameras.config.default_config import DEFAULT_IMAGE_SHAPE
 from skellycam.core.cameras.trigger_camera.camera_triggers import SingleCameraTriggers
 from skellycam.core.cameras.trigger_camera.multi_camera_triggers import MultiCameraTriggerOrchestrator
 from skellycam.core.detection.image_resolution import ImageResolution
@@ -108,10 +109,12 @@ def image_fixture(image_shape_fixture: Tuple[int, int, int]) -> np.ndarray:
 
 
 @pytest.fixture(params=[0, 1, 10, 1e5])
-def frame_metadata_fixture(request: pytest.fixture) -> np.ndarray:
+def frame_metadata_fixture(request: pytest.fixture,
+                           camera_config_fixture: CameraConfig
+                           ) -> np.ndarray:
     metadata_array = np.ndarray(FRAME_METADATA_SHAPE, dtype=FRAME_METADATA_DTYPE)
     metadata_array[:] = time.perf_counter_ns()
-    metadata_array[FRAME_METADATA_MODEL.CAMERA_ID.value] = DEFAULT_CAMERA_ID
+    metadata_array[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_config_fixture.camera_id
     metadata_array[FRAME_METADATA_MODEL.FRAME_NUMBER.value] = request.param
     return metadata_array
 
@@ -132,6 +135,11 @@ def camera_id_fixture(request: pytest.fixture) -> CameraId:
     return CameraId(request.param)
 
 
+@pytest.fixture(params=[[0], [0, "2"], [1e3]])
+def camera_ids_fixture(request: pytest.fixture) -> List[CameraId]:
+    return [CameraId(cam_id) for cam_id in request.param]
+
+
 @pytest.fixture()
 def default_camera_config_fixture() -> CameraConfig:
     return CameraConfig()
@@ -144,12 +152,12 @@ def camera_config_fixture(camera_id_fixture: CameraId,
     return CameraConfig(camera_id=camera_id_fixture, resolution=resolution)
 
 
-@pytest.fixture(params=[[0], [0, "2"], [1e3]])
-def camera_configs_fixture(request: pytest.fixture,
+@pytest.fixture()
+def camera_configs_fixture(camera_ids_fixture: List[CameraId],
                            image_shape_fixture: Tuple[int, int, int]
                            ) -> CameraConfigs:
     camera_configs = {}
-    for cam_id in request.param:
+    for cam_id in camera_ids_fixture:
         resolution = ImageResolution(height=image_shape_fixture[0], width=image_shape_fixture[1])
         camera_configs[CameraId(cam_id)] = CameraConfig(camera_id=CameraId(cam_id),
                                                         resolution=resolution)
@@ -189,6 +197,15 @@ def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
 
     manager.close_and_unlink()
     recreated_manager.close_and_unlink()
+
+
+@pytest.fixture()
+def mock_cv2_video_capture(camera_config: CameraConfig) -> MagicMock:
+    from skellycam.tests.mocks import create_cv2_video_capture_mock
+    mock = create_cv2_video_capture_mock(camera_config=camera_config)
+    assert mock.isOpened()
+    yield mock
+    mock.release()
 
 
 @pytest.fixture

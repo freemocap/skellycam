@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from pydantic import BaseModel, ConfigDict
 
@@ -39,11 +39,19 @@ class CameraSharedMemoryManager(BaseModel):
         return {camera_id: camera_shared_memory.shared_memory_names for camera_id, camera_shared_memory in
                 self.camera_shms.items()}
 
-    def get_multi_frame_payload(self, payload: Optional[MultiFramePayload]) -> MultiFramePayload:
-        if payload is None:
-            payload = MultiFramePayload(camera_ids=self.camera_configs.keys())
+    @property
+    def camera_ids(self) -> List[CameraId]:
+        return list(self.camera_shms.keys())
+
+    def get_multi_frame_payload(self, previous_payload: Optional[MultiFramePayload]) -> MultiFramePayload:
+        if previous_payload is None:
+            payload = MultiFramePayload.create_initial(camera_ids=self.camera_ids)
+        else:
+            payload = MultiFramePayload.from_previous(previous=previous_payload)
+
         for camera_id, camera_shared_memory in self.camera_shms.items():
-            payload.add_frame(camera_shared_memory.retrieve_frame())
+            frame_dto = camera_shared_memory.retrieve_frame()
+            payload.add_frame(frame_dto)
         if not payload.full:
             raise ValueError("Did not read full multi-frame payload!")
         return payload
