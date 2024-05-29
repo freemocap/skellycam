@@ -60,8 +60,7 @@ class CameraGroupProcess:
         finally:
             exit_event.set()
             frame_wrangler.close()
-
-        logger.debug(f"CameraGroupProcess completed")
+            logger.debug(f"CameraGroupProcess completed")
 
     def start(self, number_of_frames: Optional[int] = None):
         logger.debug("Stating CameraTriggerProcess...")

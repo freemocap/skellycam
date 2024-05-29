@@ -27,6 +27,9 @@ class CameraGroup:
                                            exit_event=self._exit_event, )
 
     async def start(self, number_of_frames: Optional[int] = None):
+        logger.info("Starting camera group")
+        if self._exit_event.is_set():
+            self._exit_event.clear()  # Reset the exit event if this is a restart
         self._process.start(number_of_frames=number_of_frames)
 
     async def close(self):
