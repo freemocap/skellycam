@@ -2,114 +2,113 @@ import threading
 from typing import Dict, List
 from unittest.mock import Mock
 
+import cv2
+
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.get_frame import get_frame
-from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.cameras.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
-from skellycam.tests.mocks import create_cv2_video_capture_magic_mock
-from skellycam.utilities.wait_functions import wait_10ms
+from skellycam.utilities.wait_functions import wait_1ms
 
 
 def test_trigger_get_frame_deconstructed(
-        camera_shared_memory_fixture: tuple[CameraGroupSharedMemory, CameraGroupSharedMemory]):
+        camera_group_shared_memory_fixture: tuple[CameraGroupSharedMemory, CameraGroupSharedMemory],
+        camera_group_orchestrator_fixture: CameraGroupOrchestrator,
+        mock_videocapture: cv2.VideoCapture):
     # init stuff
-    shm_parent, shm_child = camera_shared_memory_fixture
-    camera_configs = shm_parent.camera_configs
-    multi_camera_triggers = CameraGroupOrchestrator.from_camera_configs(camera_configs)
+    shm_parent, shm_child = camera_group_shared_memory_fixture
 
-    assert not multi_camera_triggers.cameras_ready
+    assert not camera_group_orchestrator_fixture.cameras_ready
 
     # check cams ready
-    wait_camera_ready_thread = threading.Thread(target=multi_camera_triggers.wait_for_cameras_ready)
+    wait_camera_ready_thread = threading.Thread(target=camera_group_orchestrator_fixture.wait_for_cameras_ready)
     wait_camera_ready_thread.start()
-    for single_camera_triggers in multi_camera_triggers.camera_triggers.values():
+    for single_camera_triggers in camera_group_orchestrator_fixture.camera_triggers.values():
         single_camera_triggers.camera_ready_event.set()
     wait_camera_ready_thread.join()
-    assert multi_camera_triggers.cameras_ready
+    assert camera_group_orchestrator_fixture.cameras_ready
 
     # Grab a few frames
     number_of_frames_to_test = 4
     for frame_number in range(number_of_frames_to_test):
         # create capture mocks and threads for them to run in
         caps = {
-            camera_id: create_cv2_video_capture_magic_mock(camera_config)
-            for camera_id, camera_config in camera_configs.items()
+            camera_id: create_cv2_video_capture(config=camera_config)
+            for camera_id, camera_config in shm_parent.camera_configs.items()
         }
 
         for cap in caps.values():
             assert cap.isOpened()
-            assert not cap.grab.called
-            assert not cap.retrieve.called
+            assert cap.grab_called_count == 0
+            assert cap.retrieve_called_count == 0
 
         frame_read_threads = create_frame_read_threads(
-            camera_configs=camera_configs,
             capture_mocks=caps,
-            multi_camera_triggers=multi_camera_triggers,
+            camera_group_orchestrator_fixture=camera_group_orchestrator_fixture,
             shared_memory_manager=shm_child,
         )
         [thread.start() for thread in frame_read_threads]
-        wait_10ms()
+        wait_1ms()
         assert all([thread.is_alive() for thread in frame_read_threads])
 
         # 0
-        multi_camera_triggers._ensure_cameras_ready()
-        wait_10ms()
+        camera_group_orchestrator_fixture._ensure_cameras_ready()
+        wait_1ms()
 
         for cap in caps.values():
             assert cap.isOpened()
-            assert not cap.grab.called
-            assert not cap.retrieve.called
+            assert cap.grab_called_count == 0
+            assert cap.retrieve_called_count == 0
 
         # 1
-        multi_camera_triggers._fire_grab_trigger()
-        wait_10ms()
+        camera_group_orchestrator_fixture._fire_grab_trigger()
+        wait_1ms()
 
         # 2
         for cap in caps.values():
             assert cap.isOpened()
-            assert cap.grab.called
-            assert not cap.retrieve.called
+            assert cap.grab_called_count == 1
+            assert cap.retrieve_called_count == 0
 
-        multi_camera_triggers._await_frames_grabbed()
-        assert multi_camera_triggers.frames_grabbed
+        camera_group_orchestrator_fixture._await_frames_grabbed()
+        assert camera_group_orchestrator_fixture.frames_grabbed
 
         # 3
-        multi_camera_triggers._fire_retrieve_trigger()
-        wait_10ms()
+        camera_group_orchestrator_fixture._fire_retrieve_trigger()
+        wait_1ms()
         for cap in caps.values():
             assert cap.isOpened()
-            assert cap.grab.called
-            assert cap.retrieve.called
+            assert cap.grab_called_count == 1
+            assert cap.retrieve_called_count == 1
 
         # 4
-        multi_camera_triggers.await_new_frames_available()
-        assert multi_camera_triggers.frames_retrieved
-        wait_10ms()
-        assert multi_camera_triggers.new_frames_available
+        camera_group_orchestrator_fixture.await_new_frames_available()
+        assert camera_group_orchestrator_fixture.frames_retrieved
+        wait_1ms()
+        assert camera_group_orchestrator_fixture.new_frames_available
 
         # 5
-        [triggers.set_frame_copied() for triggers in multi_camera_triggers.camera_triggers.values()]
-        multi_camera_triggers._await_frames_copied()
-        assert not multi_camera_triggers.new_frames_available
+        [triggers.set_frame_copied() for triggers in camera_group_orchestrator_fixture.camera_triggers.values()]
+        camera_group_orchestrator_fixture._await_frames_copied()
+        assert not camera_group_orchestrator_fixture.new_frames_available
 
         # 6
-        multi_camera_triggers._verify_hunky_dory_after_read()
+        camera_group_orchestrator_fixture._verify_hunky_dory_after_read()
 
         [thread.join() for thread in frame_read_threads]
 
 
 def create_frame_read_threads(
-        camera_configs: CameraConfigs,
         capture_mocks: Dict[CameraId, Mock],
-        multi_camera_triggers: CameraGroupOrchestrator,
+        camera_group_orchestrator_fixture: CameraGroupOrchestrator,
         shared_memory_manager: CameraGroupSharedMemory,
 ) -> List[threading.Thread]:
     # create thread for each camera to read mock frames
     frame_read_threads = []
     for camera_id, cap in capture_mocks.items():
         cam_shm = shared_memory_manager.get_camera_shared_memory(camera_id)
-        cam_triggers = multi_camera_triggers.camera_triggers[camera_id]
+        cam_triggers = camera_group_orchestrator_fixture.camera_triggers[camera_id]
         frame_read_threads.append(
             threading.Thread(
                 target=get_frame,

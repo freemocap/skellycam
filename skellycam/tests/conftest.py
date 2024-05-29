@@ -1,4 +1,4 @@
-import os
+import multiprocessing
 import time
 from typing import Tuple, List
 from unittest.mock import patch
@@ -19,21 +19,11 @@ from skellycam.core.detection.camera_device_info import AvailableDevices, Camera
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
 from skellycam.core.frames.frame_payload import FramePayloadDTO
+from skellycam.core.frames.frame_wrangler import FrameWrangler
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
+from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
-from skellycam.tests.mocks import create_cv2_video_capture_magic_mock
-
-TEST_ENV_NAME = 'TEST_ENV'
-
-
-@pytest.fixture(scope='session', autouse=True)
-def set_test_env_variable() -> None:
-    # Set the environment variable before any tests run
-    # TODO - make a better way to set the runtime environment - we'll want `testing` (running tests), `development`(running from source), and `production` (running from a built package, i.e. from pypi or a wheel file)
-    os.environ[TEST_ENV_NAME] = 'true'
-    yield
-    # Clean up the environment variable after all tests have run
-    del os.environ[TEST_ENV_NAME]
+from skellycam.tests.mocks import MockVideoCapture
 
 
 def pytest_terminal_summary(terminalreporter: TerminalReporter) -> None:
@@ -215,13 +205,8 @@ def single_camera_triggers_fixture(camera_id_fixture: CameraId) -> CameraTrigger
 
 
 @pytest.fixture
-def multi_camera_triggers_fixture(camera_configs_fixture: CameraConfigs) -> CameraGroupOrchestrator:
-    yield CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
-
-
-@pytest.fixture
-def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
-                                 ) -> Tuple[CameraGroupSharedMemory, CameraGroupSharedMemory]:
+def camera_group_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
+                                       ) -> Tuple[CameraGroupSharedMemory, CameraGroupSharedMemory]:
     manager = CameraGroupSharedMemory.create(camera_configs=camera_configs_fixture)
     assert manager
     recreated_manager = CameraGroupSharedMemory.recreate(camera_configs=camera_configs_fixture,
@@ -229,8 +214,50 @@ def camera_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
                                                          )
     yield manager, recreated_manager
 
+    recreated_manager.close()
     manager.close_and_unlink()
-    recreated_manager.close_and_unlink()
+
+
+def camera_group_orchestrator_fixture(camera_configs_fixture: CameraConfigs) -> CameraGroupOrchestrator:
+    yield CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
+
+
+def camera_group_shared_memory_names_fixture(camera_group_shared_memory_fixture: Tuple[
+    CameraGroupSharedMemory, CameraGroupSharedMemory]) -> GroupSharedMemoryNames:
+    og_manager, recreated_manager = camera_group_shared_memory_fixture
+    yield og_manager.shared_memory_names
+
+
+@pytest.fixture
+def exit_event_fixture() -> multiprocessing.Event:
+    yield multiprocessing.Event()
+
+
+@pytest.fixture
+def camera_group_shared_memory_names_fixture(camera_group_shared_memory_fixture: Tuple[
+    CameraGroupSharedMemory, CameraGroupSharedMemory]) -> GroupSharedMemoryNames:
+    og_manager, recreated_manager = camera_group_shared_memory_fixture
+    yield og_manager.shared_memory_names
+
+
+@pytest.fixture
+def frame_wrangler_fixture(camera_configs_fixture: CameraConfigs,
+                           camera_group_shared_memory_names_fixture: GroupSharedMemoryNames,
+                           camera_group_orchestrator_fixture: CameraGroupOrchestrator,
+                           exit_event_fixture: multiprocessing.Event) -> FrameWrangler:
+    frame_wrangler = FrameWrangler(camera_configs=camera_configs_fixture,
+                                   group_shm_names=camera_group_shared_memory_names_fixture,
+                                   group_orchestrator=camera_group_orchestrator_fixture,
+                                   exit_event=exit_event_fixture)
+    assert frame_wrangler
+    yield frame_wrangler
+    frame_wrangler.close()
+
+
+@pytest.fixture
+def mock_videocapture():
+    with patch('cv2.VideoCapture', MockVideoCapture):
+        yield
 
 
 # @pytest.fixture()
@@ -267,14 +294,7 @@ def controller_fixture() -> Controller:
 
 @pytest.fixture
 def camera_group_orchestrator_fixture(camera_configs_fixture: CameraConfigs) -> CameraGroupOrchestrator:
-    return CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
-
-
-@pytest.fixture
-def mock_create_cv2_capture():
-    with patch('skellycam.core.cameras.opencv.create_cv2_video_capture',
-               side_effect=create_cv2_video_capture_magic_mock):
-        yield
+    yield CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
 
 # @pytest.fixture
 # def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload) -> FrontendImagePayload:
