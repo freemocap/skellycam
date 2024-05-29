@@ -11,7 +11,8 @@ from skellycam.core.memory.camera_shared_memory_manager import CameraGroupShared
 from skellycam.utilities.wait_functions import wait_10ms
 
 
-@pytest.mark.skip(reason="This test is throwing a strange memory error")
+@pytest.mark.skip(
+    reason="Realized I don't need to mock the whole videocapture, just the outer method that this loop calls - need implement that before re-activating this test.")
 def test_multi_camera_trigger_loop(
         camera_configs_fixture: CameraConfigs,
         camera_group_shared_memory_fixture: CameraGroupSharedMemory,

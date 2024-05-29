@@ -22,7 +22,7 @@ def test_trigger_get_frame_deconstructed(
     assert not camera_group_orchestrator_fixture.cameras_ready
 
     # check cams ready
-    wait_camera_ready_thread = threading.Thread(target=camera_group_orchestrator_fixture.wait_for_cameras_ready)
+    wait_camera_ready_thread = threading.Thread(target=camera_group_orchestrator_fixture.await_for_cameras_ready)
     wait_camera_ready_thread.start()
     for single_camera_triggers in camera_group_orchestrator_fixture.camera_triggers.values():
         single_camera_triggers.camera_ready_event.set()

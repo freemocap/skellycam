@@ -1,6 +1,8 @@
+import multiprocessing
 from typing import Dict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SkipValidation, PrivateAttr
+from typing_extensions import Annotated
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers, logger
@@ -10,6 +12,46 @@ from skellycam.utilities.wait_functions import wait_1us, wait_1ms, wait_10ms
 
 class CameraGroupOrchestrator(BaseModel):
     camera_triggers: Dict[CameraId, CameraTriggers]
+    _exit_event: Annotated[multiprocessing.Event, SkipValidation] = PrivateAttr()
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._exit_event = data.get('_exit_event')
+
+    @classmethod
+    def from_camera_configs(cls,
+                            camera_configs: CameraConfigs,
+                            exit_event: multiprocessing.Event):
+        return cls(
+            camera_triggers={
+                camera_id: CameraTriggers.from_camera_id(camera_id=camera_id,
+                                                         exit_event=exit_event)
+                for camera_id, camera_config in camera_configs.items()
+            },
+            _exit_event=exit_event
+        )
+
+    @property
+    def should_continue(self):
+        return not self._exit_event.is_set()
+
+    @property
+    def cameras_ready(self):
+        return all([triggers.camera_ready_event.is_set() for triggers in self.camera_triggers.values()])
+
+    @property
+    def new_frames_available(self):
+        return all([triggers.new_frame_available_trigger.is_set() for triggers in self.camera_triggers.values()])
+
+    @property
+    def frames_grabbed(self):
+        return not any([triggers.grab_frame_trigger.is_set() for triggers in self.camera_triggers.values()])
+
+    @property
+    def frames_retrieved(self):
+        return not any([triggers.retrieve_frame_trigger.is_set() for triggers in self.camera_triggers.values()])
+
+
 
     ##############################################################################################################
     def trigger_multi_frame_read(self):
@@ -49,30 +91,6 @@ class CameraGroupOrchestrator(BaseModel):
 
     ##############################################################################################################
 
-    @classmethod
-    def from_camera_configs(cls, camera_configs: CameraConfigs):
-        return cls(
-            camera_triggers={
-                camera_id: CameraTriggers.from_camera_id(camera_config.camera_id)
-                for camera_id, camera_config in camera_configs.items()
-            }
-        )
-
-    @property
-    def cameras_ready(self):
-        return all([triggers.camera_ready_event.is_set() for triggers in self.camera_triggers.values()])
-
-    @property
-    def new_frames_available(self):
-        return all([triggers.new_frame_available_trigger.is_set() for triggers in self.camera_triggers.values()])
-
-    @property
-    def frames_grabbed(self):
-        return not any([triggers.grab_frame_trigger.is_set() for triggers in self.camera_triggers.values()])
-
-    @property
-    def frames_retrieved(self):
-        return not any([triggers.retrieve_frame_trigger.is_set() for triggers in self.camera_triggers.values()])
 
     def fire_initial_triggers(self):
         self._ensure_cameras_ready()
@@ -83,20 +101,15 @@ class CameraGroupOrchestrator(BaseModel):
 
         self._await_initial_triggers_reset()
 
-    def _await_initial_triggers_reset(self):
-        logger.trace("Initial triggers set - waiting for all triggers to reset...")
-        while any([triggers.initial_trigger.is_set() for triggers in self.camera_triggers.values()]):
-            wait_1ms()
-        logger.trace("Initial triggers reset!")
-
-    def wait_for_cameras_ready(self):
+    def await_for_cameras_ready(self):
         logger.trace("Waiting for all cameras to be ready...")
-        while not all([triggers.camera_ready_event.is_set() for triggers in self.camera_triggers.values()]):
+        while not all([triggers.camera_ready_event.is_set() for triggers in
+                       self.camera_triggers.values()]) and self.should_continue:
             wait_10ms()
         logger.debug("All cameras are ready!")
 
     def await_new_frames_available(self):
-        while not self.frames_retrieved or not self.new_frames_available:
+        while (not self.frames_retrieved or not self.new_frames_available) and self.should_continue:
             wait_1us()
         self._clear_retrieve_frames_triggers()
 
@@ -104,8 +117,15 @@ class CameraGroupOrchestrator(BaseModel):
         for triggers in self.camera_triggers.values():
             triggers.set_frame_copied()
 
+    def _await_initial_triggers_reset(self):
+        logger.trace("Initial triggers set - waiting for all triggers to reset...")
+        while any([triggers.initial_trigger.is_set() for triggers in
+                   self.camera_triggers.values()]) and self.should_continue:
+            wait_1ms()
+        logger.trace("Initial triggers reset!")
+
     def _await_frames_grabbed(self):
-        while not self.frames_grabbed:
+        while not self.frames_grabbed and self.should_continue:
             wait_1us()
 
     def _clear_retrieve_frames_triggers(self):
@@ -113,7 +133,7 @@ class CameraGroupOrchestrator(BaseModel):
             triggers.retrieve_frame_trigger.clear()
 
     def _await_frames_copied(self):
-        while self.new_frames_available:
+        while self.new_frames_available and self.should_continue:
             wait_1us()
         self._clear_retrieve_frames_triggers()
 
@@ -129,11 +149,11 @@ class CameraGroupOrchestrator(BaseModel):
             triggers.retrieve_frame_trigger.set()
 
     def _wait_for_frames_grabbed_triggers_reset(self):
-        while self.frames_grabbed:
+        while self.frames_grabbed and self.should_continue:
             wait_1us()
 
     def _wait_for_retrieve_triggers_reset(self):
-        while self.frames_retrieved:
+        while self.frames_retrieved and self.should_continue:
             wait_1us()
 
     def _ensure_cameras_ready(self):

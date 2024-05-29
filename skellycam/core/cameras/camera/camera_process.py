@@ -19,13 +19,13 @@ class CameraProcess:
                  exit_event: multiprocessing.Event,
                  ):
         self._config = config
-
+        self._exit_event = exit_event
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=f"Camera{self._config.camera_id}",
                                                 args=(self._config,
                                                       shared_memory_names,
                                                       triggers,
-                                                      exit_event
+                                                      self._exit_event,
                                                       )
                                                 )
 
@@ -53,6 +53,9 @@ class CameraProcess:
             camera_shared_memory.close()
             cv2_video_capture.release()
 
-
     def start(self):
         self._process.start()
+
+    def close(self):
+        self._exit_event.set()
+        self._process.join()

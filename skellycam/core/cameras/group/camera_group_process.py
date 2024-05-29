@@ -39,7 +39,8 @@ class CameraGroupProcess:
                      exit_event: multiprocessing.Event,
                      number_of_frames: Optional[int] = None
                      ):
-        group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=configs)
+        group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=configs,
+                                                                         exit_event=exit_event)
 
         group_shm = CameraGroupSharedMemory.create(camera_configs=configs)
 
@@ -47,18 +48,20 @@ class CameraGroupProcess:
                                        camera_configs=configs,
                                        group_shm_names=group_shm.shared_memory_names,
                                        group_orchestrator=group_orchestrator)
-        frame_wrangler.start()
-        # if self._frame_wrangler:
-        #     self._frame_wrangler.close()
-        logger.debug(f"CameraTriggerProcess started")
-        camera_group_trigger_loop(camera_configs=configs,
-                                  group_orchestrator=group_orchestrator,
-                                  group_shm_names=group_shm.shared_memory_names,
-                                  exit_event=exit_event,
-                                  number_of_frames=number_of_frames,
-                                  )
+        try:
+            logger.debug(f"CameraGroupProcess started")
+            frame_wrangler.start()
+            camera_group_trigger_loop(camera_configs=configs,
+                                      group_orchestrator=group_orchestrator,
+                                      group_shm_names=group_shm.shared_memory_names,
+                                      exit_event=exit_event,
+                                      number_of_frames=number_of_frames,
+                                      )
+        finally:
+            exit_event.set()
+            frame_wrangler.close()
 
-        logger.debug(f"CameraTriggerProcess completed")
+        logger.debug(f"CameraGroupProcess completed")
 
     def start(self, number_of_frames: Optional[int] = None):
         logger.debug("Stating CameraTriggerProcess...")

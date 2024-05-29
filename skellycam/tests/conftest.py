@@ -200,8 +200,10 @@ def multi_frame_payload_fixture(camera_configs_fixture: CameraConfigs,
 
 
 @pytest.fixture
-def single_camera_triggers_fixture(camera_id_fixture: CameraId) -> CameraTriggers:
-    return CameraTriggers.from_camera_id(camera_id_fixture)
+def single_camera_triggers_fixture(camera_id_fixture: CameraId,
+                                   exit_event_fixture: multiprocessing.Event
+                                   ) -> CameraTriggers:
+    return CameraTriggers.from_camera_id(camera_id=camera_id_fixture, exit_event=exit_event_fixture)
 
 
 @pytest.fixture
@@ -218,8 +220,11 @@ def camera_group_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
     manager.close_and_unlink()
 
 
-def camera_group_orchestrator_fixture(camera_configs_fixture: CameraConfigs) -> CameraGroupOrchestrator:
-    yield CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
+def camera_group_orchestrator_fixture(camera_configs_fixture: CameraConfigs,
+                                      exit_event_fixture: multiprocessing.Event
+                                      ) -> CameraGroupOrchestrator:
+    yield CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs_fixture,
+                                                      exit_event=exit_event_fixture)
 
 
 def camera_group_shared_memory_names_fixture(camera_group_shared_memory_fixture: Tuple[
@@ -290,11 +295,6 @@ def controller_fixture() -> Controller:
     assert isinstance(controller, Controller)
     yield controller
     controller.close()
-
-
-@pytest.fixture
-def camera_group_orchestrator_fixture(camera_configs_fixture: CameraConfigs) -> CameraGroupOrchestrator:
-    yield CameraGroupOrchestrator.from_camera_configs(camera_configs_fixture)
 
 # @pytest.fixture
 # def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload) -> FrontendImagePayload:

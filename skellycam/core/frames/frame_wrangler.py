@@ -55,7 +55,7 @@ class FrameListenerProcess:
         try:
 
             logger.trace(f"Frame listener process started")
-            group_orchestrator.wait_for_cameras_ready()
+            group_orchestrator.await_for_cameras_ready()
             payload: Optional[MultiFramePayload] = None
 
             # Frame listener loop
