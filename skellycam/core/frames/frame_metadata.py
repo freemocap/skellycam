@@ -29,9 +29,12 @@ def create_empty_frame_metadata(
         camera_id: int,
         frame_number: int
 ) -> np.ndarray:
-    metadata_array = np.nan * np.empty(FRAME_METADATA_SHAPE, dtype=FRAME_METADATA_DTYPE)
+    metadata_array = np.zeros(FRAME_METADATA_SHAPE,
+                              dtype=FRAME_METADATA_DTYPE)
     metadata_array[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_id
     metadata_array[FRAME_METADATA_MODEL.FRAME_NUMBER.value] = frame_number
+    if metadata_array.dtype != FRAME_METADATA_DTYPE:
+        raise ValueError(f"Metadata array has the wrong dtype: {metadata_array.dtype}")
     return metadata_array
 
 

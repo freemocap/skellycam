@@ -47,7 +47,7 @@ class CameraGroupProcess:
                                        camera_configs=configs,
                                        group_shm_names=group_shm.shared_memory_names,
                                        group_orchestrator=group_orchestrator)
-        frame_wrangler.start_frame_listener()
+        frame_wrangler.start()
         # if self._frame_wrangler:
         #     self._frame_wrangler.close()
         logger.debug(f"CameraTriggerProcess started")
