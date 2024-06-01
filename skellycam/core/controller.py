@@ -41,8 +41,7 @@ class Controller:
         if camera_configs:
             self._camera_configs = camera_configs
             self._camera_group.set_camera_configs(camera_configs)
-
-        if not self._camera_configs:
+        else:
             logger.info(f"Available cameras not set - Executing `detect` method...")
             if not await self.detect():
                 raise ValueError("No cameras detected!")
