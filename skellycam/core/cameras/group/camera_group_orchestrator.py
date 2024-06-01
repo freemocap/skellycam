@@ -59,6 +59,7 @@ class CameraGroupOrchestrator(BaseModel):
         logger.loop("Step# 0 - Make sure all cameras are ready")
         self._ensure_cameras_ready()
         logger.loop("All cameras are ready!")
+        
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
         logger.loop("Step# 1 - Fire grab triggers")
         self._fire_grab_trigger()
