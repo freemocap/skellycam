@@ -2,7 +2,7 @@
 
 __author__ = """Skelly FreeMoCap"""
 __email__ = "info@freemocap.org"
-__version__ = "v2024.06.1091"
+__version__ = "v2024.07.1092"
 
 __description__ = "A simple python API for efficiently connecting to and recording synchronized videos from one or multiple cameras 💀📸"
 __package_name__ = "skellycam"
