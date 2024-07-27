@@ -65,6 +65,7 @@ class CameraDeviceInfo(BaseModel):
             cv2_port = camera_number
         else:
             logger.trace(f"Non-Windows detected, using camera address as cv2 port")
+            # TODO: this doesn't work on mac, device address looks like "obs-virtual-cam-device" or "47B4B64B70674B9CAD2BAE273A71F4B5"
             cv2_port = device_address.split("video")[1]
         return cls(
             description=f"{device_address} - {camera.description()}",
