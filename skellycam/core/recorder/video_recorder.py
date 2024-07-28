@@ -85,7 +85,7 @@ class VideoRecorder:
         self._video_save_path.parent.mkdir(parents=True, exist_ok=True)
         video_writer_object = cv2.VideoWriter(
             str(self._video_save_path),
-            cv2.VideoWriter_fourcc(*self._camera_config.writer_fourcc),
+            cv2.VideoWriter.fourcc(*self._camera_config.writer_fourcc),
             self._camera_config.frame_rate,
             self._initialization_frame.get_resolution(),
         )

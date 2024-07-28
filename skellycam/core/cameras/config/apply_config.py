@@ -34,7 +34,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
         cv2_vid_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
         cv2_vid_capture.set(cv2.CAP_PROP_FPS, config.frame_rate)
         cv2_vid_capture.set(
-            cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc)
+            cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc)
         )
         extracted_config = extract_config_from_cv2_capture(camera_id=config.camera_id,
                                                            cv2_capture=cv2_vid_capture,
