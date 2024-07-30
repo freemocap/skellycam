@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Tuple
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
@@ -34,6 +35,12 @@ class FramePayload(BaseModel):
     @property
     def camera_id(self):
         return self.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
+    
+    def get_image(self) -> np.ndarray:
+        return self.image
+    
+    def get_resolution(self) -> Tuple[int, int]:
+        return self.image.shape[0], self.image.shape[1]
 
     def __eq__(self, other: "FramePayload"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
