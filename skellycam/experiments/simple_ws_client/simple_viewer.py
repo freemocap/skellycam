@@ -5,7 +5,7 @@ import cv2
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
+from skellycam.core.consumers.frontend.frontend_image_payload import FrontendImagePayload
 from skellycam.experiments.simple_ws_client.simple_viewer_window import SimpleViewerWindow
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class SimpleViewer(BaseModel):
 
     def display_images(self, frontend_payload: FrontendImagePayload):
         try:
-            for camera_id, jpeg_image in frontend_payload.jpeg_images_by_camera.items():
+            for camera_id, jpeg_image in frontend_payload.jpeg_images.items():
                 if not jpeg_image:
                     continue
                 if camera_id not in self.windows:
