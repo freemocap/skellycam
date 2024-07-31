@@ -1,11 +1,10 @@
 export default defineNuxtConfig({
   // (optional) Enable the Nuxt devtools
   devtools: { enabled: true },
+
   ssr: false,
-  modules: ['@pinia/nuxt'],
-  pinia: {
-    storesDirs: ['./stores/**'],
-  },
+  modules: [],
+
   vite: {
     // Better support for Tauri CLI output
     clearScreen: false,
@@ -26,4 +25,6 @@ export default defineNuxtConfig({
       },
     },
   },
+
+  compatibilityDate: '2024-07-31',
 });

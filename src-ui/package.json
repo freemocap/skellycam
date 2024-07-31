@@ -12,6 +12,7 @@
   "dependencies": {
     "@msgpack/msgpack": "^3.0.0-beta2",
     "nuxt": "^3.11.2",
+    "pinia": "^2.2.0",
     "vue": "^3.4.27",
     "vue-router": "^4.3.2"
   }
