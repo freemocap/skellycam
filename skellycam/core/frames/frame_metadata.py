@@ -18,6 +18,8 @@ class FRAME_METADATA_MODEL(Enum):
     POST_RETRIEVE_TIMESTAMP_NS: int = 6  # post_retrieve_timestamp_ns (timestamp after calling cv2.VideoCapture.retrieve())
     COPY_TO_BUFFER_TIMESTAMP_NS: int = 7  # copy_timestamp_ns (timestamp when frame was copied to shared memory)
     COPY_FROM_BUFFER_TIMESTAMP_NS: int = 8  # copy_timestamp_ns (timestamp when frame was copied from shared memory
+    PRE_QUEUE_TIMESTAMP_NS: int = 9  # pre_queue_timestamp_ns (timestamp before putting frame in queue)
+    POST_QUEUE_TIMESTAMP_NS: int = 10  # post_queue_timestamp_ns (timestamp after frame consumer pulls frame from queue)
 
 
 FRAME_METADATA_DTYPE = np.uint64
