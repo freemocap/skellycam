@@ -1,11 +1,12 @@
+import logging
 from typing import Dict, Optional, List
-
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.frames.frame_payload import FramePayload, FramePayloadDTO
 from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
+logger = logging.getLogger(__name__)
 
 class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]] = Field(default_factory=dict,
@@ -36,6 +37,13 @@ class MultiFramePayload(BaseModel):
     def add_frame(self, frame_dto: FramePayloadDTO) -> None:
         frame = FramePayload.from_dto(dto=frame_dto)
         self.frames[frame.camera_id] = frame
+
+    def set_timestamps(self, metadata_index: int, timestamp_ns: int) -> None:
+        for camera_id, frame_payload in self.frames.items():
+            if frame_payload is None:
+                logger.warning(f"Camera {camera_id} has no frame in MultiFramePayload")
+                continue
+            frame_payload.metadata[metadata_index] = timestamp_ns
 
     def __str__(self) -> str:
         print_str = f""

@@ -1,9 +1,11 @@
 import logging
 import multiprocessing
+from multiprocessing.synchronize import Event as MultiprocessingEvent
 from typing import Optional
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
+from skellycam.core.consumers.frame_consumer_process import FrameConsumerProcess
 
 logger = logging.getLogger(__name__)
 
@@ -11,9 +13,13 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
             self,
+            consumer: FrameConsumerProcess,  # TODO: include in tests
+            exit_event: MultiprocessingEvent,
     ):
-        self._exit_event = multiprocessing.Event()
+        self._exit_event = exit_event
         self._process: Optional[CameraGroupProcess] = None
+
+        self._consumer = consumer
 
     @property
     def camera_ids(self):
@@ -24,6 +30,7 @@ class CameraGroup:
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
         self._process = CameraGroupProcess(camera_configs=configs,
+                                           consumer=self._consumer,
                                            exit_event=self._exit_event, )
 
     async def start(self, number_of_frames: Optional[int] = None):

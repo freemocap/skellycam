@@ -1,12 +1,14 @@
 import logging
 import multiprocessing
 from multiprocessing import Process
-from typing import Optional
+from multiprocessing.synchronize import Event as MultiprocessingEvent
+from typing import List, Optional
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.consumers.frame_consumer_process import FrameConsumerProcess
 from skellycam.core.frames.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 
@@ -17,18 +19,22 @@ class CameraGroupProcess:
     def __init__(
             self,
             camera_configs: CameraConfigs,
-            exit_event: multiprocessing.Event,
+            consumer: FrameConsumerProcess,  # TODO: include in tests
+            exit_event: MultiprocessingEvent,
     ):
         self._camera_configs = camera_configs
         self._exit_event = exit_event
 
         self._process: Optional[Process] = None
 
+        self._consumer = consumer
+
     def _create_process(self, number_of_frames: Optional[int] = None):
         self._process = Process(
             name="MultiCameraTriggerProcess",
             target=CameraGroupProcess._run_process,
             args=(self._camera_configs,
+                  self._consumer.consumer_queue,
                   self._exit_event,
                   number_of_frames
                   )
@@ -36,7 +42,8 @@ class CameraGroupProcess:
 
     @staticmethod
     def _run_process(configs: CameraConfigs,
-                     exit_event: multiprocessing.Event,
+                     consumer_queue: multiprocessing.Queue,
+                     exit_event: MultiprocessingEvent,
                      number_of_frames: Optional[int] = None
                      ):
         group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=configs,
@@ -47,7 +54,8 @@ class CameraGroupProcess:
         frame_wrangler = FrameWrangler(exit_event=exit_event,
                                        camera_configs=configs,
                                        group_shm_names=group_shm.shared_memory_names,
-                                       group_orchestrator=group_orchestrator)
+                                       group_orchestrator=group_orchestrator,
+                                       consumer_queue=consumer_queue)
         try:
             logger.debug(f"CameraGroupProcess started")
             frame_wrangler.start()
@@ -80,5 +88,5 @@ class CameraGroupProcess:
         logger.debug("CameraTriggerProcess closed")
 
     @property
-    def camera_ids(self) -> [CameraId]:
+    def camera_ids(self) -> List[CameraId]:
         return [CameraId(camera_id) for camera_id in self._camera_configs.keys()]
