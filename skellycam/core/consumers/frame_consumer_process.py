@@ -123,11 +123,11 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
                 wait_1ms()
             except Exception as e:
                 logger.exception(e)
-            finally:    
-                logger.info(f"\tFrame payloads received from consumer queue: {len(times_across_queue)}"
-                    f"\n\tAverage time across queue (ms): {mean(times_across_queue):.2f}"
-                    f"\n\tMedian time across queue (ms): {median(times_across_queue):.2f}"
-                    f"\n\tFirst ten times across queue (ms): {times_across_queue[:10]}")
+ 
+        logger.info(f"\tFrame payloads received from consumer queue: {len(times_across_queue)}"
+            f"\n\tAverage time across queue (ms): {(mean(times_across_queue) if len(times_across_queue) > 0 else 0):.2f}" # TODO: handling this error that appeared, but need to dig into why
+            f"\n\tMedian time across queue (ms): {(median(times_across_queue) if len(times_across_queue) > 0 else 0):.2f}"
+            f"\n\tFirst ten times across queue (ms): {times_across_queue[:10]}")
         # once exit event is set, we still need to empty recording queue to make sure we don't miss frames
                 
     def _setup_process(self) -> multiprocessing.Process:

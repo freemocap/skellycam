@@ -29,7 +29,7 @@ class CameraGroupProcess:
 
         self._consumer = consumer
 
-    def _create_process(self, number_of_frames: Optional[int] = None):
+    def _create_process(self, number_of_frames: Optional[int] = None): # TODO: this process does not seem to close properly on shutdown
         self._process = Process(
             name="MultiCameraTriggerProcess",
             target=CameraGroupProcess._run_process,

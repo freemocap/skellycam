@@ -4,6 +4,7 @@ from typing import Tuple
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL
 from skellycam.core.frames.frame_payload import FramePayload
 
 
@@ -53,16 +54,16 @@ class CameraTimestampLog(BaseModel):
         previous_frame_timestamp_ns: int,
     ):
         unix_timestamp_ns = timestamp_mapping[1] + (
-            frame_payload.timestamp_ns - timestamp_mapping[0]
+            frame_payload.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value] - timestamp_mapping[0]
         )
         return cls(
             camera_id=frame_payload.camera_id,
             multi_frame_number=multi_frame_number,
-            camera_frame_number=frame_payload.frame_number,
-            perf_counter_ns_timestamp=frame_payload.timestamp_ns,
-            timestamp_from_zero_ns=frame_payload.timestamp_ns
+            camera_frame_number=frame_payload.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value],
+            perf_counter_ns_timestamp=frame_payload.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value],
+            timestamp_from_zero_ns=frame_payload.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value]
             - first_frame_timestamp_ns,
-            frame_duration_ns=frame_payload.timestamp_ns - previous_frame_timestamp_ns,
+            frame_duration_ns=frame_payload.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value] - previous_frame_timestamp_ns,
             timestamp_unix_utc_ns=unix_timestamp_ns,
             timestamp_utc_iso8601=datetime.fromtimestamp(
                 unix_timestamp_ns / 1e9

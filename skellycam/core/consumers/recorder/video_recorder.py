@@ -24,7 +24,7 @@ class VideoRecorder:
         self._camera_config = camera_config
         self._video_save_path = Path(video_save_path)
 
-        self._previous_frame_timestamp: Optional[int] = None  # TODO: we don't seem to be using this
+        # self._previous_frame_timestamp: Optional[int] = None  # TODO: we don't seem to be using this
         self._initialization_frame: Optional[FramePayload] = None
         self._cv2_video_writer: Optional[cv2.VideoWriter] = None
         self._timestamp_file = None
@@ -67,14 +67,14 @@ class VideoRecorder:
         )
         self._cv2_video_writer.release() if self._cv2_video_writer is not None else None
 
-    def _initialize_on_first_frame(self, frame_payload):
+    def _initialize_on_first_frame(self, frame_payload: FramePayload):
         logger.debug(
             f"Initializing video writer for camera {self._camera_config.camera_id} to save video at: {self._video_save_path} using first frame with resolution: {frame_payload.get_resolution()}"
         )
-        self._initialization_frame = frame_payload.copy(deep=True)
+        self._initialization_frame = frame_payload.model_copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
         self._check_if_writer_open()
-        self._previous_frame_timestamp = frame_payload.timestamp_ns
+        # self._previous_frame_timestamp = frame_payload.timestamp_ns
 
     def _create_video_writer(
         self,

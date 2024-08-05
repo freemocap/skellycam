@@ -8,6 +8,7 @@ from typing import Tuple
 import polars as pl
 
 from skellycam.core import CameraId
+from skellycam.core.frames.frame_metadata import FRAME_METADATA_MODEL
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 
@@ -68,7 +69,7 @@ class CameraTimestampLogger:
         self, multi_frame_number: int, frame: FramePayload
     ) -> CameraTimestampLog:
         if self._previous_frame_timestamp is None:
-            self._previous_frame_timestamp = frame.timestamp_ns
+            self._previous_frame_timestamp = frame.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value]  # TODO: figure out what the "real" timestamp from the metadata is
 
         self._validate_timestamp_mapping()
 
@@ -79,7 +80,7 @@ class CameraTimestampLogger:
             first_frame_timestamp_ns=self._first_frame_timestamp,
             previous_frame_timestamp_ns=self._previous_frame_timestamp,
         )
-        self._previous_frame_timestamp = frame.timestamp_ns
+        self._previous_frame_timestamp = frame.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value]
         self._timestamp_logs.append(log)
         return log
 
