@@ -24,7 +24,7 @@ class VideoRecorder:
         self._camera_config = camera_config
         self._video_save_path = Path(video_save_path)
 
-        self._previous_frame_timestamp: Optional[int] = None
+        self._previous_frame_timestamp: Optional[int] = None  # TODO: we don't seem to be using this
         self._initialization_frame: Optional[FramePayload] = None
         self._cv2_video_writer: Optional[cv2.VideoWriter] = None
         self._timestamp_file = None

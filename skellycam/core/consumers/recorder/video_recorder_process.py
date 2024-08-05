@@ -1,6 +1,8 @@
 import logging
 import multiprocessing
 from multiprocessing import Process
+from multiprocessing.synchronize import Event as MultiprocessingEvent
+from queue import Empty
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -9,12 +11,13 @@ from setproctitle import setproctitle
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
-from skellycam.core.recorder.video_recorder import (
+from skellycam.core.consumers.recorder.video_recorder import (
     VideoRecorder,
 )
 from skellycam.core.timestamps.timestamp_logger_manager import (
     TimestampLoggerManager,
 )
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +29,12 @@ class VideoRecorderProcess(Process):
         start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int],
         recording_folder_path: str,
         multi_frame_queue: multiprocessing.Queue,
+        recording_event: MultiprocessingEvent
     ):
         super().__init__()
         self._multi_frame_number = 0
         self._multi_frame_queue = multi_frame_queue
+        self._recording_event = recording_event
         self._camera_configs = camera_configs
         self._start_time_perf_counter_ns_to_unix_mapping = (
             start_time_perf_counter_ns_to_unix_mapping
@@ -44,14 +49,21 @@ class VideoRecorderProcess(Process):
         logger.debug("Starting save frames process...")
         setproctitle("Video Recorder Manager Process")
         while True:
-            multi_frame_payload = self._multi_frame_queue.get()
+            try:
+                multi_frame_payload = self._multi_frame_queue.get()
 
-            if multi_frame_payload is None:
-                logger.debug(
-                    "Received None from multi frame queue, exiting save frames process..."
-                )
-                break
-            self._handle_multi_frame_payload(multi_frame_payload)
+                if multi_frame_payload is None:
+                    logger.debug(
+                        "Received None from multi frame queue, exiting save frames process..."
+                    )
+                    break
+                self._handle_multi_frame_payload(multi_frame_payload)
+
+            except Empty:
+                if self._recording_event.is_set():
+                    wait_1ms()
+                else:
+                    break  # its the role of the frame_consumer to stop putting frames in the queue once recording_event is cleared
 
         logger.debug("Exiting save frames process...")
         self._timestamp_manager.close()
@@ -62,14 +74,14 @@ class VideoRecorderProcess(Process):
     def _handle_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         self._multi_frame_number += 1
         logger.trace(f"Handling multi frame payload #{self._multi_frame_number}...")
-        self._save_frame_to_disk(multi_frame_payload)
+        self._save_frames_to_disk(multi_frame_payload)
 
         self._timestamp_manager.handle_multi_frame_payload(
             multi_frame_payload=multi_frame_payload,
             multi_frame_number=self._multi_frame_number,
         )
 
-    def _save_frame_to_disk(self, multi_frame_payload: MultiFramePayload):
+    def _save_frames_to_disk(self, multi_frame_payload: MultiFramePayload):
         """
         Save each frame from this multi-frame payload to disk.
         """

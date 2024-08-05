@@ -98,8 +98,8 @@ class FullTimestamp(BaseModel):
         Prints the description of all fields of this object in a dictionary {field_name: field_description}
         """
         output = {"class_name": f"{self.__class__.__name__})"}
-        for field_name, field in self.__fields__.items():
-            output[field_name] = field.field_info.description
+        for field_name, field_info in self.model_fields.items():
+            output[field_name] = field_info.description
         return output
 
     def to_descriptive_dict(self) -> dict:

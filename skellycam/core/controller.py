@@ -10,14 +10,22 @@ from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
 )
 from skellycam.core.consumers.frame_consumer_process import FrameConsumerProcess
-from skellycam.core.detection.detect_available_devices import AvailableDevices, detect_available_devices
+from skellycam.core.consumers.recorder.video_recorder_manager import (
+    VideoRecorderProcessManager,
+)
+from skellycam.core.detection.detect_available_devices import (
+    AvailableDevices,
+    detect_available_devices,
+)
+from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 logger = logging.getLogger(__name__)
 
 
 class Controller:
-    def __init__(self,
-                 ) -> None:
+    def __init__(
+        self,
+    ) -> None:
         super().__init__()
         self._camera_configs: Optional[CameraConfigs] = None
         """ 
@@ -30,8 +38,17 @@ class Controller:
         FrameConsumer could use an exit_event, but that is created by CameraGroup
         """
         self._exit_event = multiprocessing.Event()
-        self._frame_consumer = FrameConsumerProcess(exit_event=self._exit_event)  # TODO: include in tests
-        self._camera_group = CameraGroup(consumer=self._frame_consumer, exit_event=self._exit_event)
+        self._recording_event = multiprocessing.Event()
+        self._frame_consumer = FrameConsumerProcess(
+            exit_event=self._exit_event, recording_event=self._recording_event
+        )  # TODO: include in tests
+        self._camera_group = CameraGroup(
+            consumer=self._frame_consumer, exit_event=self._exit_event
+        )
+        self._recording_manager = VideoRecorderProcessManager(
+            recording_queue=self._frame_consumer.recording_queue,
+            recording_event=self._recording_event,
+        )
 
     async def detect(self) -> AvailableDevices:
         logger.info(f"Detecting cameras...")
@@ -43,13 +60,17 @@ class Controller:
 
         self._camera_configs = {}
         for camera_id in available_devices.keys():
-            self._camera_configs[CameraId(camera_id)] = CameraConfig(camera_id=CameraId(camera_id))
+            self._camera_configs[CameraId(camera_id)] = CameraConfig(
+                camera_id=CameraId(camera_id)
+            )
         self._camera_group.set_camera_configs(self._camera_configs)
         return available_devices
 
-    async def connect(self,
-                      camera_configs: Optional[CameraConfigs] = None,
-                      number_of_frames: Optional[int] = None) -> Union[bool, List[CameraId]]:
+    async def connect(
+        self,
+        camera_configs: Optional[CameraConfigs] = None,
+        number_of_frames: Optional[int] = None,
+    ) -> Union[bool, List[CameraId]]:
         logger.info(f"Connecting to available cameras...")
 
         if camera_configs:
@@ -64,15 +85,26 @@ class Controller:
         return self._camera_group.camera_ids
 
     async def _start_camera_group(self, number_of_frames: Optional[int] = None):
-        logger.debug(f"Starting camera group with cameras: {self._camera_group.camera_ids}")
+        logger.debug(
+            f"Starting camera group with cameras: {self._camera_group.camera_ids}"
+        )
         if self._camera_configs is None or len(self._camera_configs) == 0:
             raise ValueError("No cameras available to start camera group!")
-        
+
         logger.info("Starting consumer process")
         self._frame_consumer.start_process()
 
+        logger.info("Starting recording process")
+        self._recording_manager.start_recording(
+            camera_configs=self._camera_configs,
+            start_time_perf_counter_ns_to_unix_mapping=(UtcToPerfCounterMapping().perf_counter_ns, UtcToPerfCounterMapping().time_ns),  # is this what was meant?
+            recording_folder_path="/Users/philipqueen/skellycam_test_recording"
+        )
+
         logger.info("Starting logging task")
-        logging_monitor_task = asyncio.create_task(self._frame_consumer.monitor_logging_queue())
+        logging_monitor_task = asyncio.create_task(
+            self._frame_consumer.monitor_logging_queue()
+        )
 
         logger.info("Starting camera group")
         await self._camera_group.start(number_of_frames=number_of_frames)
@@ -87,8 +119,8 @@ class Controller:
 
         logger.info("Setting exit event")
         self._exit_event.set()
+        self._recording_manager.stop_recording()
         self._frame_consumer.close()
-        
 
 
 CONTROLLER = None

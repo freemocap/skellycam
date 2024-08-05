@@ -22,7 +22,7 @@ from skellycam.utilities.wait_functions import wait_1ms
 logger = logging.getLogger(__name__)
 
 
-class FrameConsumerProcess:
+class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Process? What would that achieve?
     """
     Consumes frames from the consumer queue, and spits them out into destination queues (display, recording, output)
 
@@ -32,12 +32,15 @@ class FrameConsumerProcess:
     def __init__(
         self,
         exit_event: MultiprocessingEvent,
+        recording_event: MultiprocessingEvent,
         consumer_queue: Queue = Queue(),
         display_queue: Optional[Queue] = Queue(),
         recording_queue: Optional[Queue] = Queue(),
         output_queue: Optional[Queue] = Queue(),
-    ):
+    ):  
+        # TODO: double check, but probably all of these can be private (_...)
         self.exit_event = exit_event
+        self.recording_event = recording_event
         self.consumer_queue = consumer_queue
         self.display_queue = display_queue
         self.recording_queue = recording_queue
@@ -67,7 +70,7 @@ class FrameConsumerProcess:
             self.output_queue.close()
             self.output_queue.cancel_join_thread()
 
-        if self._process.is_alive():
+        if self._process and self._process.is_alive():
             self._process.join()
 
     def _pull_from_queue(self):
@@ -89,14 +92,14 @@ class FrameConsumerProcess:
 
                 time_across_queue = (metadata_array[FRAME_METADATA_MODEL.POST_QUEUE_TIMESTAMP_NS.value] - metadata_array[FRAME_METADATA_MODEL.PRE_QUEUE_TIMESTAMP_NS.value]) / 1e6
                 times_across_queue.append(time_across_queue)
-                # print(f"time across queue in ms: {time_across_queue:.2f}")
 
                 # need to consider cost of queueing/enqueuing here
                 # could we pickle here, and the shove the pickle into each queue
 
                 # task 1
-                # if self.recording_queue:
-                #     self.recording_queue.put(multiframe_payload) # don't use put_nowait here, because we don't want to skip recording any frames
+                if self.recording_queue and self.recording_event.is_set():
+                    self.recording_queue.put(multiframe_payload) # don't use put_nowait here, because we don't want to skip recording any frames
+
 
                 # # task 2
                 # if self.display_queue:
