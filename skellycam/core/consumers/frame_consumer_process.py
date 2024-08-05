@@ -121,10 +121,10 @@ class FrameConsumerProcess:
             except Exception as e:
                 logger.exception(e)
             finally:    
-                print(f"\tFrame payloads received from consumer queue: {len(times_across_queue)}")
-                print(f"\tAverage time across queue (ms): {mean(times_across_queue):.2f}")
-                print(f"\tMedian time across queue (ms): {median(times_across_queue):.2f}")
-                print(f"\tFirst ten times across queue (ms): {times_across_queue[:10]}")
+                logger.info(f"\tFrame payloads received from consumer queue: {len(times_across_queue)}"
+                    f"\n\tAverage time across queue (ms): {mean(times_across_queue):.2f}"
+                    f"\n\tMedian time across queue (ms): {median(times_across_queue):.2f}"
+                    f"\n\tFirst ten times across queue (ms): {times_across_queue[:10]}")
         # once exit event is set, we still need to empty recording queue to make sure we don't miss frames
                 
     def _setup_process(self) -> multiprocessing.Process:
@@ -147,10 +147,10 @@ class FrameConsumerProcess:
             await asyncio.sleep(0.1)
             while not self.logging_queue.empty():
                 record = self.logging_queue.get()
-                logger.info(f"message: {record.msg}")
+                logger.info(f"{record.msg}")  #TODO: we should be able to replace defaulting to "info" by accessing record.levelno
 
         while not self.logging_queue.empty():
             record = self.logging_queue.get()
-            logger.info(f"message: {record.msg}")
+            logger.info(f"{record.msg}")
 
-        logger.info("Finished consumer process")
+        logger.debug("Finished monitoring consumer process")

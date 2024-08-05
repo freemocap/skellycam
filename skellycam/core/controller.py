@@ -71,14 +71,14 @@ class Controller:
         logger.info("Starting consumer process")
         self._frame_consumer.start_process()
 
-        # logger.info("Starting logging task")
-        # logging_monitor_task = asyncio.create_task(self._frame_consumer.monitor_logging_queue())
+        logger.info("Starting logging task")
+        logging_monitor_task = asyncio.create_task(self._frame_consumer.monitor_logging_queue())
 
         logger.info("Starting camera group")
         await self._camera_group.start(number_of_frames=number_of_frames)
 
-        # logger.info("awaiting logging monitor task")
-        # await logging_monitor_task
+        logger.info("awaiting logging monitor task")
+        await logging_monitor_task
 
     async def close(self):
         logger.debug(f"Closing camera group...")
