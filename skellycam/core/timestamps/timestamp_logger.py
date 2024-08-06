@@ -128,7 +128,7 @@ class CameraTimestampLogger:
         logger.debug(
             f"Saving timestamp logs for camera {self._camera_id} to {self._timestamp_csv_path} with {len(self._timestamp_logs)} frames (rows) of timestamp data..."
         )
-        self.to_dataframe().to_csv(self._timestamp_csv_path, index=False)
+        self.to_dataframe().write_csv(file = self._timestamp_csv_path) # removed the "index=False" here, can't find polars equivalent
 
     def _save_timestamp_stats(self):
         self._timestamp_csv_path.parent.mkdir(parents=True, exist_ok=True)
