@@ -100,7 +100,7 @@ class MultiFrameTimestampLog(BaseModel):
 
     @classmethod
     def as_csv_header(cls, camera_ids: List[CameraId]) -> str:
-        column_names = list(cls.__fields__.keys())
+        column_names = list(cls.model_fields.keys())
         column_names.remove("camera_logs")
         for camera_id in camera_ids:
             column_names.append(f"camera_{camera_id}_log")

@@ -27,6 +27,7 @@ class VideoRecorder:
         # self._previous_frame_timestamp: Optional[int] = None  # TODO: we don't seem to be using this
         self._initialization_frame: Optional[FramePayload] = None
         self._cv2_video_writer: Optional[cv2.VideoWriter] = None
+        self._number_of_frames_written: int = 0
         self._timestamp_file = None
 
     def save_frame_to_disk(self, frame_payload: FramePayload):
@@ -43,6 +44,7 @@ class VideoRecorder:
         self._validate_frame(frame=frame)
         image = frame.get_image()
         self._cv2_video_writer.write(image)
+        self._number_of_frames_written += 1
 
     def _check_if_writer_open(self):
         if self._cv2_video_writer is None:
@@ -63,7 +65,7 @@ class VideoRecorder:
 
     def close(self):
         logger.debug(
-            f"Closing video recorder for camera {self._camera_config.camera_id}"
+            f"Closing video recorder for camera {self._camera_config.camera_id} with {self._number_of_frames_written} frames"
         )
         (
             self._cv2_video_writer.release()
@@ -78,6 +80,7 @@ class VideoRecorder:
         self._initialization_frame = frame_payload.model_copy(deep=True)
         self._cv2_video_writer = self._create_video_writer()
         self._check_if_writer_open()
+        self._number_of_frames_written = 0
         # self._previous_frame_timestamp = frame_payload.timestamp_ns
 
     def _create_video_writer(

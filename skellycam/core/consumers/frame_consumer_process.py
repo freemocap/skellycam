@@ -95,12 +95,11 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
                 times_across_queue.append(time_across_queue)
 
                 # need to consider cost of queueing/enqueuing here
-                # could we pickle here, and the shove the pickle into each queue
+                # could we pickle here, and the shove the pickle into each queue?
 
                 # task 1
                 if self.recording_queue and self.recording_event.is_set():
                     self.recording_queue.put(multiframe_payload) # don't use put_nowait here, because we don't want to skip recording any frames
-
 
                 # # task 2
                 # if self.display_queue:

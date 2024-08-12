@@ -52,14 +52,19 @@ class CameraTimestampLogger:
 
     def to_dataframe(self) -> pl.DataFrame:
         df = pl.DataFrame(
-            [timestamp_log.model_dump() for timestamp_log in self._timestamp_logs]
+            [timestamp_log.model_dump(exclude={"timestamp_mapping"}) for timestamp_log in self._timestamp_logs]
         )
         return df
 
-    def check_if_finished(self) -> bool:
-        csv_file_exists = self._timestamp_csv_path.exists()
-        stats_file_exists = self._stats_json_path.exists()
-        return csv_file_exists and stats_file_exists
+    def check_if_finished(self) -> None:
+        if not self._timestamp_csv_path.exists():
+            raise AssertionError(
+                f"Failed to save timestamp logs for camera {self._camera_id} to {self._timestamp_csv_path} with {len(self._timestamp_logs)} frames (rows) of timestamp data..."
+            )
+        if not self._stats_json_path.exists():
+            raise AssertionError(
+                f"Failed to save timestamp statistics for camera {self._camera_id} to {self._stats_json_path}"
+            )
 
     def set_time_mapping(self, perf_counter_to_unix_mapping: Tuple[int, int]):
         self._perf_counter_to_unix_mapping = perf_counter_to_unix_mapping
@@ -89,13 +94,10 @@ class CameraTimestampLogger:
             f"Closing CameraTimestampLogger for camera {self._camera_id} with {len(self._timestamp_logs)} logs..."
         )
         # TODO: lots of bugs in here, bypassing for now to diagnose video errors
-        # self._save_logs_as_csv()
-        # self._save_documentation()
-        # self._save_timestamp_stats()
-        # if not self.check_if_finished():
-        #     raise AssertionError(
-        #         f"Failed to save timestamp logs for camera {self._camera_id} to {self._timestamp_csv_path} with {len(self._timestamp_logs)} frames (rows) of timestamp data..."
-        #     )
+        self._save_logs_as_csv()
+        self._save_documentation()
+        self._save_timestamp_stats()
+        self.check_if_finished()
         logger.success(
             f"Timestamp logs for camera {self._camera_id} saved successfully!"
         )
@@ -130,7 +132,7 @@ class CameraTimestampLogger:
             f"Saving timestamp logs for camera {self._camera_id} to {self._timestamp_csv_path} with {len(self._timestamp_logs)} frames (rows) of timestamp data..."
         )
         # TODO: polars.exceptions.ComputeError: CSV format does not support nested data
-        # self.to_dataframe().write_csv(file = self._timestamp_csv_path) # removed the "index=False" here, can't find polars equivalent
+        self.to_dataframe().write_csv(file = self._timestamp_csv_path) # removed the "index=False" here, can't find polars equivalent
 
     def _save_timestamp_stats(self):
         self._timestamp_csv_path.parent.mkdir(parents=True, exist_ok=True)

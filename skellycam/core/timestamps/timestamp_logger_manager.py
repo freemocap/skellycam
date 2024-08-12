@@ -54,20 +54,21 @@ class TimestampLoggerManager:
 
     def to_dataframe(self) -> pl.DataFrame:
         df = pl.DataFrame(
-            [timestamp_log.model_dump() for timestamp_log in self._multi_frame_timestamp_logs]
-        )
+            [timestamp_log.model_dump(exclude={"timestamp_mapping", "camera_logs"}) for timestamp_log in self._multi_frame_timestamp_logs]
+        )  # TODO: polars doesn't seem to like the nested "camera_logs" list, getting "TypeError: 'int' object cannot be converted to 'PyString'"
         return df
 
-    def check_if_finished(self):
-        all_loggers_finished = all(
-            [
-                timestamp_logger.check_if_finished()
-                for timestamp_logger in self._timestamp_loggers.values()
-            ]
-        )
-        timestamp_csv_exists = self._timestamps_csv_path.exists()
-        timestamp_stats_exists = self._stats_path.exists()
-        return all_loggers_finished and timestamp_csv_exists and timestamp_stats_exists
+    def check_if_finished(self) -> None:
+        for timestamp_logger in self._timestamp_loggers.values():
+            timestamp_logger.check_if_finished()
+        if not self._timestamps_csv_path.exists():
+            raise AssertionError(
+                f"Failed to save multi-camera timestamp log to csv at {self._timestamps_csv_path}"
+            )
+        if not self._stats_path.exists():
+            raise AssertionError(
+                f"Failed to save all camera timestamp statistics to file at {self._stats_path}"
+            )
 
     def set_time_mapping(
         self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]
@@ -110,13 +111,10 @@ class TimestampLoggerManager:
 
 
         # TODO: a lot of bugs in these implementations! bypassing now to diagnose video error
-        # self._save_documentation()
-        # self._convert_to_dataframe_and_save()
-        # self._save_timestamp_stats()
-        # if not self.check_if_finished():
-        #     raise AssertionError(
-        #         "Failed to save timestamp logs for all cameras to CSV and JSON files!"
-        #     )
+        self._save_documentation()
+        self._convert_to_dataframe_and_save()
+        self._save_timestamp_stats()
+        self.check_if_finished()
 
         logger.success("Timestamp logs saved successfully!")
 
@@ -146,7 +144,7 @@ class TimestampLoggerManager:
 
     def _convert_to_dataframe_and_save(self):
         df = self.to_dataframe()
-        df.to_csv(self._timestamps_csv_path, index=False)
+        df.write_csv(self._timestamps_csv_path)
         logger.info(
             f"Saved multi-frame timestamp logs to {self._timestamps_csv_path} \n\n"
             f"Total frames: {len(self._multi_frame_timestamp_logs)}\n\n"

@@ -76,7 +76,7 @@ class CameraSharedMemory(BaseModel):
         self.image_shm.copy_into_buffer(image)
         self.metadata_shm.copy_into_buffer(metadata)
         logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} put wrote frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} to shared memory"
+            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} wrote frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} to shared memory"
         )
 
     def retrieve_frame(self) -> FramePayloadDTO:

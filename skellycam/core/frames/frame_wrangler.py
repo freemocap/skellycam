@@ -96,7 +96,7 @@ class FrameListenerProcess:
                     wait_1ms()
 
         finally:
-            logger.trace(f"Stopped listening for multi-frames")
+            logger.trace(f"Stopped listening for multi-frames after {payloads_received.value} frames")
             camera_group_shm.close()  # close but don't unlink - parent process will unlink
 
     def is_alive(self) -> bool:

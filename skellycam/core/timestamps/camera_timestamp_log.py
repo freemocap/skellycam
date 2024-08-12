@@ -25,7 +25,7 @@ class CameraTimestampLog(BaseModel):
         description="- The timestamp of the frame, in nanoseconds since the first frame was received by the camera group"
     )
     frame_duration_ns: int = Field(
-        description="- The duration of the frame, in nanoseconds since the previous frame was received by the camera group (defined as 0 on the first frame"
+        description="- The duration of the frame, in nanoseconds since the previous frame was received by the camera group (defined as 0 on the first frame)"
     )
     timestamp_unix_utc_ns: int = Field(
         description="- The timestamp of the frame, in nanoseconds since the Unix epoch"
