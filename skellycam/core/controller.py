@@ -4,8 +4,7 @@ import multiprocessing
 from typing import Optional, List, Union
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
 )
@@ -97,20 +96,15 @@ class Controller:
         logger.info("Starting recording process")
         self._recording_manager.start_recording(
             camera_configs=self._camera_configs,
-            start_time_perf_counter_ns_to_unix_mapping=(UtcToPerfCounterMapping().perf_counter_ns, UtcToPerfCounterMapping().time_ns),  # is this what was meant?
-            recording_folder_path="/Users/philipqueen/skellycam_test_recording"
-        )
-
-        logger.info("Starting logging task")
-        logging_monitor_task = asyncio.create_task(
-            self._frame_consumer.monitor_logging_queue()
+            start_time_perf_counter_ns_to_unix_mapping=(
+                UtcToPerfCounterMapping().perf_counter_ns,
+                UtcToPerfCounterMapping().time_ns,
+            ),  # is this what was meant?
+            recording_folder_path="/Users/philipqueen/skellycam_test_recording",
         )
 
         logger.info("Starting camera group")
         await self._camera_group.start(number_of_frames=number_of_frames)
-
-        logger.info("awaiting logging monitor task")
-        await logging_monitor_task
 
     async def close(self):
         logger.debug(f"Closing camera group...")

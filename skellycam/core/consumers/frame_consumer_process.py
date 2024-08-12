@@ -51,7 +51,8 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
 
     def start_process(self):
         if self._process is not None and self._process.is_alive():
-            raise RuntimeError("Process is already running")
+            raise RuntimeError("Process is already running")  # TODO: we might not want to error here, or we need to be more careful to avoid states where this happens
+            # I ran into this after "ensure cameras are ready" errored - ideally that error stops the execution and we don't get to here.
 
         self._process = self._setup_process()
         self._process.start()
@@ -123,6 +124,8 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
                 wait_1ms()
             except Exception as e:
                 logger.exception(e)
+
+        self.recording_event.clear()  # if the consumer ends, end the recording
  
         logger.info(f"\tFrame payloads received from consumer queue: {len(times_across_queue)}"
             f"\n\tAverage time across queue (ms): {(mean(times_across_queue) if len(times_across_queue) > 0 else 0):.2f}" # TODO: handling this error that appeared, but need to dig into why
@@ -143,17 +146,3 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
         logger.addHandler(handler)
 
         self._pull_from_queue()
-
-    # TODO: this wasn't working, but I've fixed a lot since I wrote it so maybe it will?
-    async def monitor_logging_queue(self):
-        while self._process.is_alive():
-            await asyncio.sleep(0.1)
-            while not self.logging_queue.empty():
-                record = self.logging_queue.get()
-                logger.info(f"{record.msg}")  #TODO: we should be able to replace defaulting to "info" by accessing record.levelno
-
-        while not self.logging_queue.empty():
-            record = self.logging_queue.get()
-            logger.info(f"{record.msg}")
-
-        logger.debug("Finished monitoring consumer process")
