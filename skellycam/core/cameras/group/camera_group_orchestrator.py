@@ -136,7 +136,7 @@ class CameraGroupOrchestrator(BaseModel):
     def _await_frames_copied(self):
         while self.new_frames_available and self.should_continue:
             wait_1us()
-        self._clear_retrieve_frames_triggers()
+        self._clear_retrieve_frames_triggers() # TODO: we're already clearing these triggers in await_new_frames_available
 
     def _fire_grab_trigger(self):
         logger.loop("Triggering all cameras to `grab` a frame...")

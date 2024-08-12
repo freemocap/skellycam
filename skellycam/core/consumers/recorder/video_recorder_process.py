@@ -62,14 +62,14 @@ class VideoRecorderProcess(Process):
             except Empty:
                 if self._recording_event.is_set():
                     wait_1ms()
-                else:
+                else:  # TODO: this is exiting before the last frame is being put into shared memory, because the exit event is being set too early by camera_group_loop
                     break  # its the role of the frame_consumer to stop putting frames in the queue once recording_event is cleared
 
         logger.debug("Exiting save frames process...")
         self._timestamp_manager.close()
         self._close_video_recorders()
 
-        # TODO: somehow this is not being closed properly?? running connect multiple times gives you extra processes, and these debug statements aren't being
+        # TODO: somehow this is not being closed properly?? running connect multiple times gives you extra processes, and these debug statements aren't being logged
 
         logger.debug("Exiting save frames process...")
 

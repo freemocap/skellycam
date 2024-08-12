@@ -44,7 +44,7 @@ def camera_group_trigger_loop(
             group_orchestrator.trigger_multi_frame_read()
 
             if number_of_frames is not None:
-                check_loop_count(number_of_frames, loop_count, exit_event)
+                check_loop_count(number_of_frames, loop_count, exit_event, group_orchestrator)
 
             if loop_count > 0:
                 elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
@@ -81,8 +81,12 @@ def log_time_stats(camera_configs: CameraConfigs,
     )
 
 
-def check_loop_count(number_of_frames: int, loop_count: int, exit_event: multiprocessing.Event):
+def check_loop_count(number_of_frames: int, loop_count: int, exit_event: multiprocessing.Event, group_orchestrator: CameraGroupOrchestrator):
     if number_of_frames is not None:
         if loop_count + 1 >= number_of_frames:
+            # TODO: we were setting the exit event immediately after triggering the cameras, causing issues downstream
+            # in particular, sometimes we stop listening for frames before the last frame is captured
+            # is there a way to set the exit event at the end of the camera loop/once frames are put into shared memory?
+            # waiting 30 ms seems to do the trick, but doesn't seem reliable
             logger.trace(f"Reached number of frames: {number_of_frames} - setting `exit` event")
             exit_event.set()
