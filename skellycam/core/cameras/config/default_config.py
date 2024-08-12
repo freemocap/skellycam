@@ -4,7 +4,7 @@ from skellycam.core import CameraId
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.detection.image_rotation_types import RotationTypes
 
-DEFAULT_EXPOSURE = -7
+DEFAULT_EXPOSURE = 0  # The -7 was breaking my integrated webcam, and there's no easy way to change this on the swaggerui
 
 DEFAULT_IMAGE_HEIGHT: int = 1080
 DEFAULT_IMAGE_WIDTH: int = 1920
@@ -24,4 +24,4 @@ class DefaultCameraConfig(Enum):
     FRAMERATE: float = DEFAULT_FRAME_RATE
     ROTATION: RotationTypes = RotationTypes.NO_ROTATION
     CAPTURE_FOURCC: str = "MJPG"  # TODO - consider other capture codecs
-    WRITER_FOURCC: str = "MP4V"  # TODO - consider other writer codecs
+    WRITER_FOURCC: str = "mp4v"  # TODO - consider other writer codecs

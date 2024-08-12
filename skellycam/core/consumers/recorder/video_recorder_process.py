@@ -50,7 +50,7 @@ class VideoRecorderProcess(Process):
         setproctitle("Video Recorder Manager Process")
         while True:
             try:
-                multi_frame_payload = self._multi_frame_queue.get()
+                multi_frame_payload = self._multi_frame_queue.get_nowait()  # using get_nowait so we error when queue is empty
 
                 if multi_frame_payload is None:
                     logger.debug(
@@ -68,6 +68,8 @@ class VideoRecorderProcess(Process):
         logger.debug("Exiting save frames process...")
         self._timestamp_manager.close()
         self._close_video_recorders()
+
+        # TODO: somehow this is not being closed properly?? running connect multiple times gives you extra processes, and these debug statements aren't being
 
         logger.debug("Exiting save frames process...")
 
@@ -146,7 +148,7 @@ def make_video_file_path(
 def fourcc_to_file_extension(writer_fourcc: str) -> str:
     if writer_fourcc == "MJPG" or writer_fourcc == "XVID":
         video_format = "avi"
-    elif writer_fourcc == "H264" or writer_fourcc == "MP4V":
+    elif writer_fourcc == "H264" or writer_fourcc == "mp4v":
         video_format = "mp4"
     else:
         logger.error(f"Unknown video format {writer_fourcc}")

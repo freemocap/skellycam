@@ -26,7 +26,7 @@ class CameraGroupOrchestrator(BaseModel):
             camera_triggers={
                 camera_id: CameraTriggers.from_camera_id(camera_id=camera_id,
                                                          exit_event=exit_event)
-                for camera_id, camera_config in camera_configs.items()
+                for camera_id in camera_configs.keys()
             },
             _exit_event=exit_event
         )

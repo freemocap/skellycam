@@ -13,7 +13,9 @@ class FailedToApplyCameraConfigurationError(Exception):
     pass
 
 
-def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> CameraConfig:
+def apply_camera_configuration(
+    cv2_vid_capture: cv2.VideoCapture, config: CameraConfig
+) -> CameraConfig:
     # set camera stream parameters
 
     logger.info(
@@ -36,10 +38,14 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
         cv2_vid_capture.set(
             cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc)
         )
-        extracted_config = extract_config_from_cv2_capture(camera_id=config.camera_id,
-                                                           cv2_capture=cv2_vid_capture,
-                                                           rotation=config.rotation,
-                                                           use_this_camera=config.use_this_camera)
+        extracted_config = extract_config_from_cv2_capture(
+            camera_id=config.camera_id,
+            cv2_capture=cv2_vid_capture,
+            rotation=config.rotation,
+            use_this_camera=config.use_this_camera,
+        )
+
+        verify_applied_config(provided_config=config, extracted_config=extracted_config)  #TODO: we might not want to error out here, although a mismatch in configs could cause problems elsewhere
 
         return extracted_config
     except Exception as e:
@@ -48,3 +54,27 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
         raise FailedToApplyCameraConfigurationError(
             f"Failed to apply configuration to Camera {config.camera_id} - {type(e).__name__} - {e}"
         )
+
+
+def verify_applied_config(
+    provided_config: CameraConfig, extracted_config: CameraConfig
+) -> None:
+    # TODO: the __eq__ method in Camera Config achieves this, but without good reporting on where they aren't equal
+    assert (
+        extracted_config.camera_id == provided_config.camera_id
+    ), f"Provided camera id {provided_config.camera_id} does not match extracted camera id {extracted_config.camera_id}"
+    assert (
+        extracted_config.exposure == provided_config.exposure
+    ), f"Provided camera exposure {provided_config.exposure} does not match extracted camera exposure {extracted_config.exposure}"
+    assert (
+        extracted_config.resolution.height == provided_config.resolution.height
+    ), f"Provided height {provided_config.resolution.height} does not match extracted height {extracted_config.resolution.height}"
+    assert (
+        extracted_config.resolution.width == provided_config.resolution.width
+    ), f"Provided width {provided_config.resolution.width} does not match extracted width {extracted_config.resolution.width}"
+    assert (
+        extracted_config.frame_rate == provided_config.frame_rate
+    ), f"Provided framerate {provided_config.frame_rate} does not match extracted framerate {extracted_config.frame_rate}"
+    assert (
+        extracted_config.capture_fourcc == provided_config.capture_fourcc
+    ), f"Provided fourcc {provided_config.capture_fourcc} does not match extracted fourcc {extracted_config.capture_fourcc}"

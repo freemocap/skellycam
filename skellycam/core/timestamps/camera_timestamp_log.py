@@ -75,7 +75,7 @@ class CameraTimestampLog(BaseModel):
 
     @classmethod
     def as_csv_header(cls) -> str:
-        return ",".join(cls.__fields__.keys()) + "\n"
+        return ",".join(cls.model_fields.keys()) + "\n"
 
     def to_csv_row(self):
         return ",".join([str(x) for x in self.model_dump().values()]) + "\n"
@@ -87,8 +87,8 @@ class CameraTimestampLog(BaseModel):
         """
         document = "# Camera Timestamp Log Field Descriptions:\n"
         document += f"The following fields are included in the camera timestamp log, as defined in the {cls.__class__.__name__} data model/class:\n"
-        for field_name, field in cls.__fields__.items():
-            document += f"- **{field_name}**:{field.field_info.description}\n\n"
+        for field_name, field in cls.model_fields.items():
+            document += f"- **{field_name}**:{field.description}\n\n"
             if field_name.startswith("_"):
                 document += f"    - note, this is a private field and is not included in the CSV output. You can find it in the `recording_start_timestamp.json` file in the recording folder\n"
         return document

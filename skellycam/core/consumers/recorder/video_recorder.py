@@ -65,7 +65,11 @@ class VideoRecorder:
         logger.debug(
             f"Closing video recorder for camera {self._camera_config.camera_id}"
         )
-        self._cv2_video_writer.release() if self._cv2_video_writer is not None else None
+        (
+            self._cv2_video_writer.release()
+            if self._cv2_video_writer is not None
+            else logger.error("couldn't release cap")
+        )
 
     def _initialize_on_first_frame(self, frame_payload: FramePayload):
         logger.debug(

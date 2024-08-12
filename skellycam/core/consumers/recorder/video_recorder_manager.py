@@ -15,7 +15,7 @@ class VideoRecorderProcessManager:
     def __init__(
         self,
         recording_queue: Queue,
-        recording_event: MultiprocessingEvent
+        recording_event: MultiprocessingEvent,
     ):
         self.recording_queue = recording_queue
         self.recording_event = recording_event
