@@ -40,7 +40,7 @@ class FramePayload(BaseModel):
         return self.image
     
     def get_resolution(self) -> Tuple[int, int]:
-        return self.image.shape[0], self.image.shape[1]
+        return self.image.shape[1], self.image.shape[0]
 
     def __eq__(self, other: "FramePayload"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
