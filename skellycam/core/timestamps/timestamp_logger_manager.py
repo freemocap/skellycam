@@ -53,6 +53,7 @@ class TimestampLoggerManager:
         }
 
     def to_dataframe(self) -> pl.DataFrame:
+        # TODO: every time we call this we're making a new dataframe. Will the data update between calls, or should we be checking if the df already exists before constructing it?
         df = pl.DataFrame(
             [timestamp_log.model_dump(exclude={"timestamp_mapping", "camera_logs"}) for timestamp_log in self._multi_frame_timestamp_logs]
         )  # TODO: polars doesn't seem to like the nested "camera_logs" list, getting "TypeError: 'int' object cannot be converted to 'PyString'"
@@ -109,8 +110,6 @@ class TimestampLoggerManager:
         for timestamp_logger in self._timestamp_loggers.values():
             timestamp_logger.close()
 
-
-        # TODO: a lot of bugs in these implementations! bypassing now to diagnose video error
         self._save_documentation()
         self._convert_to_dataframe_and_save()
         self._save_timestamp_stats()

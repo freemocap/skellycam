@@ -93,7 +93,6 @@ class CameraTimestampLogger:
         logger.debug(
             f"Closing CameraTimestampLogger for camera {self._camera_id} with {len(self._timestamp_logs)} logs..."
         )
-        # TODO: lots of bugs in here, bypassing for now to diagnose video errors
         self._save_logs_as_csv()
         self._save_documentation()
         self._save_timestamp_stats()

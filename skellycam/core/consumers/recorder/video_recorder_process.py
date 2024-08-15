@@ -29,7 +29,7 @@ class VideoRecorderProcess(Process):
         start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int],
         recording_folder_path: str,
         multi_frame_queue: multiprocessing.Queue,
-        recording_event: MultiprocessingEvent
+        recording_event: MultiprocessingEvent,
     ):
         super().__init__()
         self._multi_frame_number = 0
@@ -64,12 +64,10 @@ class VideoRecorderProcess(Process):
                     wait_1ms()
                 else:  # TODO: this is exiting before the last frame is being put into shared memory, because the exit event is being set too early by camera_group_loop
                     break  # its the role of the frame_consumer to stop putting frames in the queue once recording_event is cleared
-
-        logger.debug("Exiting save frames process...")
-        self._timestamp_manager.close()
+        
+        logger.debug("Closing recorders and timestamp manager")
         self._close_video_recorders()
-
-        # TODO: somehow this is not being closed properly?? running connect multiple times gives you extra processes, and these debug statements aren't being logged
+        self._timestamp_manager.close()
 
         logger.debug("Exiting save frames process...")
 

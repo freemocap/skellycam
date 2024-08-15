@@ -49,7 +49,6 @@ class FrameListenerProcess:
         return self._payloads_received.value
 
     def start_process(self):
-        logger.trace(f"Starting frame listener process")
         self._process.start()
 
     @staticmethod
@@ -66,7 +65,6 @@ class FrameListenerProcess:
             group_shm_names=group_shm_names,
         )
         try:
-
             logger.trace(f"Frame listener process started")
             group_orchestrator.await_for_cameras_ready()
             payload: Optional[MultiFramePayload] = None

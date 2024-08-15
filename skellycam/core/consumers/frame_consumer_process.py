@@ -1,7 +1,5 @@
-import asyncio
 import logging
 import multiprocessing
-import sys
 import time
 from statistics import mean, median
 from multiprocessing import Queue
@@ -24,20 +22,18 @@ logger = logging.getLogger(__name__)
 
 class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Process? What would that achieve?
     """
-    Consumes frames from the consumer queue, and spits them out into destination queues (display, recording, output)
-
-    Probably want to run in its own process, but still figuring out details of that
+    Consumes frames from the consumer queue, and spits them out into destination queues/sockets (display, recording, output)
     """
 
     def __init__(
         self,
         exit_event: MultiprocessingEvent,
         recording_event: MultiprocessingEvent,
-        consumer_queue: Queue = Queue(),
+        consumer_queue: Queue,
         display_queue: Optional[Queue] = Queue(),
         recording_queue: Optional[Queue] = Queue(),
         output_queue: Optional[Queue] = Queue(),
-    ):  
+    ):
         # TODO: double check, but probably all of these can be private (_...)
         self.exit_event = exit_event
         self.recording_event = recording_event
@@ -47,15 +43,6 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
         self.output_queue = output_queue
 
         self.logging_queue = multiprocessing.Queue()
-        self._process = None
-
-    def start_process(self):
-        if self._process is not None and self._process.is_alive():
-            raise RuntimeError("Process is already running")  # TODO: we might not want to error here, or we need to be more careful to avoid states where this happens
-            # I ran into this after "ensure cameras are ready" errored - ideally that error stops the execution and we don't get to here.
-
-        self._process = self._setup_process()
-        self._process.start()
 
     def close(self):
         self.exit_event.set()
@@ -63,21 +50,18 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
         # we need the recording queue to empty itself though, as we can't don't want to miss recording frames
 
         # TODO: need to verify this, this is just what I needed when I prototyped a shm based camera system
-        if self.display_queue:
-            self.display_queue.close()
-            self.display_queue.cancel_join_thread()
+        # if self.display_queue:
+        #     self.display_queue.close()
+        #     self.display_queue.cancel_join_thread()
 
-        if self.output_queue:
-            self.output_queue.close()
-            self.output_queue.cancel_join_thread()
-
-        if self._process and self._process.is_alive():
-            self._process.join()
+        # if self.output_queue:
+        #     self.output_queue.close()
+        #     self.output_queue.cancel_join_thread()
 
     def _pull_from_queue(self):
         times_across_queue = []
         while not self.exit_event.is_set():
-            try: 
+            try:
                 multiframe_payload: MultiFramePayload = self.consumer_queue.get()
 
                 if multiframe_payload is None or multiframe_payload.frames is None:
@@ -88,10 +72,13 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
                     timestamp_ns=time.perf_counter_ns(),
                 )
 
-                if (single_payload := next(iter(multiframe_payload.frames.values()))):
+                if single_payload := next(iter(multiframe_payload.frames.values())):
                     metadata_array = single_payload.metadata
 
-                time_across_queue = (metadata_array[FRAME_METADATA_MODEL.POST_QUEUE_TIMESTAMP_NS.value] - metadata_array[FRAME_METADATA_MODEL.PRE_QUEUE_TIMESTAMP_NS.value]) / 1e6
+                time_across_queue = (
+                    metadata_array[FRAME_METADATA_MODEL.POST_QUEUE_TIMESTAMP_NS.value]
+                    - metadata_array[FRAME_METADATA_MODEL.PRE_QUEUE_TIMESTAMP_NS.value]
+                ) / 1e6
                 times_across_queue.append(time_across_queue)
 
                 # need to consider cost of queueing/enqueuing here
@@ -99,7 +86,9 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
 
                 # task 1
                 if self.recording_queue and self.recording_event.is_set():
-                    self.recording_queue.put(multiframe_payload) # don't use put_nowait here, because we don't want to skip recording any frames
+                    self.recording_queue.put(
+                        multiframe_payload
+                    )  # don't use put_nowait here, because we don't want to skip recording any frames
 
                 # # task 2
                 # if self.display_queue:
@@ -125,19 +114,19 @@ class FrameConsumerProcess:  # TODO: should this inherit from multiprocessing.Pr
                 logger.exception(e)
 
         self.recording_event.clear()  # if the consumer ends, end the recording
- 
-        logger.info(f"\tFrame payloads received from consumer queue: {len(times_across_queue)}"
-            f"\n\tAverage time across queue (ms): {(mean(times_across_queue) if len(times_across_queue) > 0 else 0):.2f}" # TODO: handling this error that appeared, but need to dig into why
+        if self.recording_queue:
+            self.recording_queue.put(None) # TODO: I think this is useless
+        self.close()
+
+        logger.info(
+            f"\tFrame payloads received from consumer queue: {len(times_across_queue)}"
+            f"\n\tAverage time across queue (ms): {(mean(times_across_queue) if len(times_across_queue) > 0 else 0):.2f}"  # TODO: handling this error that appeared, but need to dig into why
             f"\n\tMedian time across queue (ms): {(median(times_across_queue) if len(times_across_queue) > 0 else 0):.2f}"
-            f"\n\tFirst ten times across queue (ms): {times_across_queue[:10]}")
+            f"\n\tFirst ten times across queue (ms): {times_across_queue[:10]}"
+        )
         # once exit event is set, we still need to empty recording queue to make sure we don't miss frames
-                
-    def _setup_process(self) -> multiprocessing.Process:
-        return multiprocessing.Process(target=self._run_process,
-                                                name=f"FrameConsumerProcess",
-                                                )
-                
-    def _run_process(self):
+
+    def run_process(self):
         handler = DirectQueueHandler(self.logging_queue)
         self.default_logging_formatter = CustomFormatter(
             fmt=LoggerBuilder.format_string, datefmt="%Y-%m-%dT%H:%M:%S"

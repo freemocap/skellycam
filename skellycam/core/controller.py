@@ -1,6 +1,6 @@
-import asyncio
 import logging
 import multiprocessing
+from pathlib import Path
 from typing import Optional, List, Union
 
 from skellycam.core import CameraId
@@ -8,7 +8,7 @@ from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConf
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
 )
-from skellycam.core.consumers.frame_consumer_process import FrameConsumerProcess
+from skellycam.core.consumers.consumer_manager import ConsumerManager
 from skellycam.core.consumers.recorder.video_recorder_manager import (
     VideoRecorderProcessManager,
 )
@@ -38,14 +38,14 @@ class Controller:
         """
         self._exit_event = multiprocessing.Event()
         self._recording_event = multiprocessing.Event()
-        self._frame_consumer = FrameConsumerProcess(
+        self._consumer = ConsumerManager(
             exit_event=self._exit_event, recording_event=self._recording_event
         )  # TODO: include in tests
         self._camera_group = CameraGroup(
-            consumer=self._frame_consumer, exit_event=self._exit_event
+            consumer_queue=self._consumer.recording_queue, exit_event=self._exit_event
         )
         self._recording_manager = VideoRecorderProcessManager(
-            recording_queue=self._frame_consumer.recording_queue,
+            recording_queue=self._consumer.recording_queue,
             recording_event=self._recording_event,
         )
 
@@ -69,7 +69,7 @@ class Controller:
         self,
         camera_configs: Optional[CameraConfigs] = None,
         number_of_frames: Optional[int] = None,
-    ) -> Union[bool, List[CameraId]]:
+    ) -> Union[bool, List[CameraId]]:  # this return type hint appears incorrect
         logger.info(f"Connecting to available cameras...")
 
         if camera_configs:
@@ -91,7 +91,7 @@ class Controller:
             raise ValueError("No cameras available to start camera group!")
 
         logger.info("Starting consumer process")
-        self._frame_consumer.start_process()
+        self._consumer.start_process()
 
         logger.info("Starting recording process")
         self._recording_manager.start_recording(
@@ -99,8 +99,8 @@ class Controller:
             start_time_perf_counter_ns_to_unix_mapping=(
                 UtcToPerfCounterMapping().perf_counter_ns,
                 UtcToPerfCounterMapping().time_ns,
-            ),  # is this what was meant?
-            recording_folder_path="/Users/philipqueen/skellycam_test_recording",
+            ),  # is this what was meant for this variable? or just time.perf_counter_ns and time.time_ns?
+            recording_folder_path=str(Path().home() / "skellycam_test_recording"),
         )
 
         logger.info("Starting camera group")
@@ -114,7 +114,7 @@ class Controller:
         logger.info("Setting exit event")
         self._exit_event.set()
         self._recording_manager.stop_recording()
-        self._frame_consumer.close()
+        self._consumer.close_process()
 
 
 CONTROLLER = None

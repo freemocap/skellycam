@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from multiprocessing.synchronize import Event as MultiprocessingEvent
 from typing import List, Optional
 
@@ -8,7 +8,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.consumers.frame_consumer_process import FrameConsumerProcess
+
 from skellycam.core.frames.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 
@@ -19,7 +19,7 @@ class CameraGroupProcess:
     def __init__(
             self,
             camera_configs: CameraConfigs,
-            consumer: FrameConsumerProcess,  # TODO: include in tests
+            consumer_queue: Queue,  # TODO: include in tests
             exit_event: MultiprocessingEvent,
     ):
         self._camera_configs = camera_configs
@@ -27,14 +27,14 @@ class CameraGroupProcess:
 
         self._process: Optional[Process] = None
 
-        self._consumer = consumer
+        self._consumer_queue = consumer_queue
 
     def _create_process(self, number_of_frames: Optional[int] = None): # TODO: this process does not seem to close properly on shutdown
         self._process = Process(
             name="MultiCameraTriggerProcess",
             target=CameraGroupProcess._run_process,
             args=(self._camera_configs,
-                  self._consumer.consumer_queue,
+                  self._consumer_queue,
                   self._exit_event,
                   number_of_frames
                   )

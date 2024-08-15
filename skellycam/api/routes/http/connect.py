@@ -73,6 +73,7 @@ async def test_camera_connection(number_of_frames: int = 10) -> BaseResponse:
     try:
         # Record for the specified number of frames
         connected_cameras = await controller.connect(number_of_frames=number_of_frames)
+        # await controller.close()  # this isn't correct, but when connect returns we do want to call close for everything to work properly
         logger.api("`/connect/test` GET request handled successfully.")
         return CamerasConnectedResponse(connected_cameras=connected_cameras)
     except Exception as e:

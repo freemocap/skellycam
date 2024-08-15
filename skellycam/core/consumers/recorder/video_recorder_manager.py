@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class VideoRecorderProcessManager:
     def __init__(
         self,
-        recording_queue: Queue,
+        recording_queue: Queue,  # TODO: potentially, we make this optional and just bypass the start process if no queue is provided, covering the case where we just don't record?
         recording_event: MultiprocessingEvent,
     ):
         self.recording_queue = recording_queue

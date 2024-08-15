@@ -33,7 +33,6 @@ class CameraTimestampLog(BaseModel):
     timestamp_utc_iso8601: str = Field(
         description="- The timestamp of the frame, in ISO 8601 format, e.g. 2021-01-01T00:00:00.000000"
     )
-
     timestamp_mapping: Tuple[int, int] = Field(
         description="- Tuple of simultaneously recorded (time.perf_counter_ns(), time.time_ns()) that maps perf_counter_ns to a unix_timestamp_ns"
     )
