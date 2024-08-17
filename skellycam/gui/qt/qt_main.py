@@ -14,7 +14,7 @@ def qt_gui_main():
     if sys.platform == "win32":
         setup_app_id_for_windows()
 
-    app = get_qt_app(sys.argv)
+    qt_app = get_qt_app(sys.argv)
 
     timer = QTimer()
     timer.start(500)
@@ -22,7 +22,7 @@ def qt_gui_main():
 
     main_window = SkellyCamMainWindow()
     main_window.show()
-    error_code = app.exec()
+    error_code = qt_app.exec()
 
     logger.info(f"Exiting with code: {error_code}")
     print("Thank you for using Skelly Cam \U0001F480 \U0001F4F8")

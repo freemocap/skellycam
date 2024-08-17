@@ -1,9 +1,9 @@
 import logging
 import time
 
-from freemocap.api.run_server import APP_URL
-from freemocap.gui.qt.client.http_client import HTTPClient
-from freemocap.gui.qt.client.websocket_client import WebSocketClient
+from skellycam.api.client.http_client import HTTPClient
+from skellycam.api.client.websocket_client import WebSocketClient
+from skellycam.api.server.run_server import APP_URL
 
 logger = logging.getLogger(__name__)
 

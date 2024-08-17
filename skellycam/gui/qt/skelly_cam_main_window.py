@@ -22,7 +22,7 @@ from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path, create_default_recording_folder_path, \
-    create_new_synchronized_videos_folder, default_recording_name
+    create_new_synchronized_videos_folder, default_recording_name, PATH_TO_SKELLY_CAM_LOGO_SVG
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class SkellyCamMainWindow(QMainWindow):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__(parent=parent)
         self.setGeometry(100, 100, 1600, 900)
-        self.setWindowIcon(QIcon())
+        self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
 
         if session_folder_path is None:
             self._session_folder_path = create_default_recording_folder_path()

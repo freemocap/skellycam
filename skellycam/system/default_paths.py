@@ -19,7 +19,7 @@ CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING = "\U0001F503"
 
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
-PATH_TO_SKELLY_CAM_LOGO_SVG = Path(__file__).parent.parent.parent / "shared" / "logo" / "skelly_cam_logo.svg"
+PATH_TO_SKELLY_CAM_LOGO_SVG = str(Path(__file__).parent.parent.parent / "shared" / "logo" / "skelly-cam-logo.svg")
 
 def os_independent_home_dir() -> str:
     return str(Path.home())

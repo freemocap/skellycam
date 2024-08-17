@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import QApplication
 
-APP = None
+QT_APP = None
 
 
 def get_qt_app(sys_argv=None) -> QApplication:
-    global APP
-    if APP is None:
-        APP = QApplication(sys_argv)
-    return APP
+    global QT_APP
+    if QT_APP is None:
+        QT_APP = QApplication(sys_argv)
+    return QT_APP

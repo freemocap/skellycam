@@ -3,15 +3,11 @@ import logging
 import multiprocessing
 from multiprocessing import Process
 
-from skellycam.api import run_uvicorn_server
+from skellycam.api.server.run_server import run_uvicorn_server
 from skellycam.gui.qt.qt_main import qt_gui_main
 from skellycam.utilities.clean_path import clean_path
 
 logger = logging.getLogger(__name__)
-
-HOSTNAME = "localhost"
-PORT = 8003
-APP_URL = f"http://{HOSTNAME}:{PORT}"
 
 
 def main():
@@ -23,7 +19,7 @@ def main():
     logger.info(f"Starting frontend process")
     frontend_process.start()
 
-    backend_process = Process(target=run_uvicorn_server, args=(HOSTNAME, PORT))
+    backend_process = Process(target=run_uvicorn_server)
     logger.info(f"Starting backend process")
     backend_process.start()
 
