@@ -9,8 +9,8 @@ from fastapi.routing import APIWebSocketRoute, APIRoute
 
 import skellycam
 from skellycam.__main__ import APP_URL
-from skellycam.api.middleware.cors import cors
-from skellycam.api.routes.http import enabled_routers
+from skellycam.api.server.middleware.cors import cors
+from skellycam.api.server.routes.http import enabled_routers
 from skellycam.core.controller import create_controller
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 

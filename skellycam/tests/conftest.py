@@ -9,7 +9,7 @@ from _pytest.terminal import TerminalReporter
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from skellycam.api.app_factory import create_app
+from skellycam.api import create_app
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs

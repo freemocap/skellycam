@@ -1,6 +1,6 @@
 from starlette.testclient import TestClient
 
-from skellycam.api.routes.websocket.websocket_server import HELLO_CLIENT_TEXT_MESSAGE, HELLO_CLIENT_BYTES_MESSAGE
+from skellycam.api import HELLO_CLIENT_TEXT_MESSAGE, HELLO_CLIENT_BYTES_MESSAGE
 
 
 def test_websocket_connection(client_fixture: TestClient) -> None:

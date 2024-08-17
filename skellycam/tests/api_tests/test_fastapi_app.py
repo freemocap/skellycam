@@ -1,6 +1,6 @@
 from starlette.testclient import TestClient
 
-from skellycam.api.routes.http.health import HELLO_FROM_SKELLYCAM_BACKEND_MESSAGE
+from skellycam.api import HELLO_FROM_SKELLYCAM_BACKEND_MESSAGE
 
 
 def test_app(client_fixture: TestClient) -> None:

@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 from multiprocessing import Process
 
-from skellycam.api.run_server import run_uvicorn_server
+from skellycam.api import run_uvicorn_server
 from skellycam.gui.qt.qt_main import qt_gui_main
 from skellycam.utilities.clean_path import clean_path
 

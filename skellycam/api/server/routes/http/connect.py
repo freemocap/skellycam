@@ -4,7 +4,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Body
 from pydantic import Field
 
-from skellycam.api.models.base_models import BaseResponse, BaseRequest
+from skellycam.api.server.models.base_models import BaseResponse, BaseRequest
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs, default_camera_configs_factory
 from skellycam.core.controller import Controller, get_controller

@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter
 
-from skellycam.api.models.base_models import BaseResponse
+from skellycam.api.server.models.base_models import BaseResponse
 from skellycam.core.controller import Controller, get_controller
 from skellycam.core.detection.detect_available_devices import AvailableDevices
 

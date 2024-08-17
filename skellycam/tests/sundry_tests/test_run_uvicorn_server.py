@@ -1,6 +1,6 @@
 from pytest_mock import MockerFixture
 
-from skellycam.api.run_server import run_uvicorn_server
+from skellycam.api import run_uvicorn_server
 
 
 def test_run_uvicorn_server(mocker: MockerFixture) -> None:
