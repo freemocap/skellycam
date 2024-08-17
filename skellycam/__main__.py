@@ -1,10 +1,11 @@
 # __main__.py
 import logging
 import multiprocessing
-import sys
+from multiprocessing import Process
 
 from skellycam.api.run_server import run_uvicorn_server
-from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
+from skellycam.gui.qt.qt_main import qt_gui_main
+from skellycam.utilities.clean_path import clean_path
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +17,23 @@ APP_URL = f"http://{HOSTNAME}:{PORT}"
 def main():
     multiprocessing.freeze_support()
     # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
-    print(f"Running from __main__: {__name__} - {__file__} [print via `print(...)`]")
-    logger.info(f"Running from __main__: {__name__} - {__file__} [log via `logger.info(...)`]")
-    if sys.platform == "win32":
-        setup_app_id_for_windows()
-    run_uvicorn_server(HOSTNAME, PORT)
-    print("\n\n--------------------------------------------------\n--------------------------------------------------")
-    print("Thank you for using SkellyCam \U0001F480 \U0001F4F8 \U00002728 \U0001F495")
-    print("--------------------------------------------------\n--------------------------------------------------\n\n")
-    logger.success("Done!")
+    logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)} [log via `logger.info(...)`]")
+
+    frontend_process = multiprocessing.Process(target=qt_gui_main)
+    logger.info(f"Starting frontend process")
+    frontend_process.start()
+
+    backend_process = Process(target=run_uvicorn_server, args=(HOSTNAME, PORT))
+    logger.info(f"Starting backend process")
+    backend_process.start()
+
+    frontend_process.join()
+    backend_process.join()
+    logger.info(f"Exiting `main`...")
 
 
 if __name__ == "__main__":
     main()
+    print("\n\n--------------------------------------------------\n--------------------------------------------------")
+    print("Thank you for using SkellyCam \U0001F480 \U0001F4F8 \U00002728 \U0001F495")
+    print("--------------------------------------------------\n--------------------------------------------------\n\n")
