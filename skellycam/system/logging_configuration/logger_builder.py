@@ -2,7 +2,6 @@ import logging
 import sys
 from logging.config import dictConfig
 
-from ..default_paths import get_log_file_path
 from .custom_formatter import (
     CustomFormatter,
 )
@@ -15,6 +14,7 @@ from .log_level_enum import (
 from .logging_color_helpers import (
     get_hashed_color,
 )
+from ..default_paths import get_log_file_path
 
 
 class LoggerBuilder:

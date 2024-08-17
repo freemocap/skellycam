@@ -3,8 +3,6 @@ from pathlib import Path
 from typing import Dict, Union
 
 from PySide6.QtCore import Signal, QThread
-from skellycam.opencv.video_recorder.save_synchronized_videos import save_synchronized_videos
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
 

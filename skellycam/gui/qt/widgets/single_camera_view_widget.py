@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
-from skellycam import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig
 
 
 class SingleCameraViewWidget(QWidget):

@@ -6,9 +6,6 @@ from typing import Union
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
-from skellycam.system.environment.default_paths import get_default_session_folder_path, \
-    get_default_skellycam_base_folder_path, create_new_synchronized_videos_folder, get_default_recording_name, \
-    PATH_TO_SKELLY_CAM_LOGO_SVG
 
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
@@ -24,6 +21,8 @@ from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamD
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
+from skellycam.system.default_paths import get_default_skellycam_base_folder_path, create_default_recording_folder_path, \
+    create_new_synchronized_videos_folder, default_recording_name
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +35,10 @@ class SkellyCamMainWindow(QMainWindow):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__(parent=parent)
         self.setGeometry(100, 100, 1600, 900)
-        self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
+        self.setWindowIcon(QIcon())
 
         if session_folder_path is None:
-            self._session_folder_path = get_default_session_folder_path()
+            self._session_folder_path = create_default_recording_folder_path()
         else:
             self._session_folder_path = session_folder_path
 
@@ -60,7 +59,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._camera_viewer_widget = SkellyCamWidget(
             get_new_synchronized_videos_folder_callable=
             lambda: create_new_synchronized_videos_folder(
-                Path(self._session_folder_path) / get_default_recording_name()
+                Path(self._session_folder_path) / default_recording_name()
             ),
             parent=self
         )

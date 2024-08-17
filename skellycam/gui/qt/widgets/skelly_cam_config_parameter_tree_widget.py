@@ -5,16 +5,16 @@ from typing import Dict
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from skellycam.opencv.camera.models.camera_config import CameraConfig
-from skellycam.system.environment.default_paths import RED_X_EMOJI_STRING, MAGNIFYING_GLASS_EMOJI_STRING, \
-    CAMERA_WITH_FLASH_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
 
+from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          EXPAND_ALL_STRING, ROTATE_180_STRING,
                                                          ROTATE_90_CLOCKWISE_STRING, ROTATE_90_COUNTERCLOCKWISE_STRING,
                                                          rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
+from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X_EMOJI_STRING, \
+    MAGNIFYING_GLASS_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
 
 logger = logging.getLogger(__name__)
 

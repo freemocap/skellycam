@@ -6,14 +6,11 @@ from typing import List, Union
 import cv2
 from PySide6.QtCore import Signal, Qt, QThread
 from PySide6.QtGui import QImage
-from skellycam.detection.charuco.charuco_definition import CharucoBoardDefinition
-from skellycam.detection.charuco.charuco_detection import draw_charuco_on_image
-from skellycam.detection.models.frame_payload import FramePayload
-from skellycam.opencv.camera.types.camera_id import CameraId
-from skellycam.opencv.group.camera_group import CameraGroup
-from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
 
-from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWorker
+from skellycam.core import CameraId
+from skellycam.core.cameras.group.camera_group import CameraGroup
+from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +105,7 @@ class CamGroupThreadWorker(QThread):
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
 
-        if self.annotate_images:
-            charuco_board = CharucoBoardDefinition()
+
 
         while self._camera_group.is_capturing and should_continue:
             if self._updating_camera_settings_bool:
@@ -122,9 +118,6 @@ class CamGroupThreadWorker(QThread):
                         if self._should_record_frames_bool:
                             self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-
-                        if self.annotate_images:
-                            draw_charuco_on_image(image=frame_payload.image, charuco_board=charuco_board)
 
                         q_image = self._convert_frame(frame_payload)
 
@@ -218,15 +211,15 @@ class CamGroupThreadWorker(QThread):
             if video_recorder.number_of_frames > 0:
                 video_recorders_to_save[camera_id] = deepcopy(video_recorder)
 
-        self._video_save_thread_worker = VideoSaveThreadWorker(
-            dictionary_of_video_recorders=video_recorders_to_save,
-            folder_to_save_videos=str(synchronized_videos_folder),
-            create_diagnostic_plots_bool=True,
-        )
-        self._video_save_thread_worker.start()
-        self._video_save_thread_worker.finished_signal.connect(
-            self._handle_videos_save_thread_worker_finished
-        )
+        # self._video_save_thread_worker = VideoSaveThreadWorker(
+        #     dictionary_of_video_recorders=video_recorders_to_save,
+        #     folder_to_save_videos=str(synchronized_videos_folder),
+        #     create_diagnostic_plots_bool=True,
+        # )
+        # self._video_save_thread_worker.start()
+        # self._video_save_thread_worker.finished_signal.connect(
+        #     self._handle_videos_save_thread_worker_finished
+        # )
 
     def _handle_videos_save_thread_worker_finished(self, folder_path: str):
         logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")

@@ -17,7 +17,7 @@ APP_URL = f"http://{HOSTNAME}:{PORT}"
 def main():
     multiprocessing.freeze_support()
     # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
-    logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)} [log via `logger.info(...)`]")
+    logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
 
     frontend_process = multiprocessing.Process(target=qt_gui_main)
     logger.info(f"Starting frontend process")

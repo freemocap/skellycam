@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
-from skellycam.system.environment.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG
+from skellycam.system.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG
 
 
 class WelcomeToSkellyCamWidget(QWidget):

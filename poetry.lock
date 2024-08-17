@@ -1299,6 +1299,20 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pyqtgraph"
+version = "0.13.7"
+description = "Scientific Graphics and GUI Library for Python"
+optional = false
+python-versions = ">=3.9"
+files = [
+    { file = "pyqtgraph-0.13.7-py3-none-any.whl", hash = "sha256:7754edbefb6c367fa0dfb176e2d0610da3ada20aa7a5318516c74af5fb72bf7a" },
+    { file = "pyqtgraph-0.13.7.tar.gz", hash = "sha256:64f84f1935c6996d0e09b1ee66fe478a7771e3ca6f3aaa05f00f6e068321d9e3" },
+]
+
+[package.dependencies]
+numpy = ">=1.22.0"
+
+[[package]]
 name = "pyside6"
 version = "6.7.1"
 description = "Python bindings for the Qt cross-platform application and UI framework"
@@ -2242,4 +2256,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">3.9, <3.13"
-content-hash = "1f0c3a1f2e699d18478e716711d7ebeb5256c070fff02d25f8f1a79b9ac4c357"
+content-hash = "ed44dc0d7412bed4498f3916b0c7298f345f6e4764f36352ff78b6e0597ea788"

@@ -4,8 +4,8 @@ from copy import copy
 from pathlib import Path
 from typing import Union
 
+from PySide6 import QtGui
 from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
-from qtpy import QtGui
 
 logger = logging.getLogger(__name__)
 
