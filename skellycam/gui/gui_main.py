@@ -10,7 +10,7 @@ from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 logger = logging.getLogger(__name__)
 
 
-def gui_main():
+def gui_main(shutdown_event=None):
     if sys.platform == "win32":
         setup_app_id_for_windows()
 
@@ -20,7 +20,7 @@ def gui_main():
     timer.start(500)
     timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
 
-    main_window = SkellyCamMainWindow()
+    main_window = SkellyCamMainWindow(shutdown_event=shutdown_event)
     main_window.show()
 
     error_code = qt_app.exec()  # Will block until the GUI window is closed

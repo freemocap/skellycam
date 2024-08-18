@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import threading
 import time
 
@@ -71,11 +72,15 @@ def get_server_manager(*args, **kwargs) -> UvicornServerManager:
     return UVICORN_SERVER_MANAGER
 
 
-def run_server():
+def run_server(shutdown_event: multiprocessing.Event = None):
     server_manager = get_server_manager()
     server_manager.start_server()
     while server_manager.is_running:
         time.sleep(1)
+        if shutdown_event and shutdown_event.is_set():
+            server_manager.shutdown_server()
+            break
+
     logger.info("Server main process ended")
 
 

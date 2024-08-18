@@ -19,16 +19,20 @@ def main():
     # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
     logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
 
-    frontend_process = multiprocessing.Process(target=gui_main)
+    shutdown_event = multiprocessing.Event()
+
+    frontend_process = multiprocessing.Process(target=gui_main, args=(shutdown_event,))
     logger.info(f"Starting frontend process")
     frontend_process.start()
 
-    backend_process = Process(target=run_server)
+    backend_process = Process(target=run_server, args=(shutdown_event,))
     logger.info(f"Starting backend process")
     backend_process.start()
 
     frontend_process.join()
     logger.info("Frontend process ended - terminating backend process")
+    shutdown_event.set()
+    backend_process.join()
     logger.info(f"Exiting `main`...")
 
 

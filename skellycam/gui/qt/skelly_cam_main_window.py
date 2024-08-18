@@ -32,21 +32,25 @@ class SkellyCamMainWindow(QMainWindow):
 
     def __init__(self,
                  session_folder_path: Union[str, Path] = None,
+                 shutdown_event: multiprocessing.Event = None,
                  parent=None):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__(parent=parent)
-        self.initUI(session_folder_path)
-        self.client = get_client()
-        self._connect_signals_to_slots()
-
-    def initUI(self, session_folder_path):
-        self.setGeometry(100, 100, 1600, 900)
-        self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
         if session_folder_path is None:
             self._session_folder_path = create_default_recording_folder_path()
         else:
             self._session_folder_path = session_folder_path
+
         self._base_folder_path = get_default_skellycam_base_folder_path()
+
+        self._shutdown_event = shutdown_event
+        self.initUI()
+        self.client = get_client()
+        self._connect_signals_to_slots()
+
+    def initUI(self):
+        self.setGeometry(100, 100, 1600, 900)
+        self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
         self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
         self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
         self._central_widget = QWidget()
@@ -134,6 +138,7 @@ class SkellyCamMainWindow(QMainWindow):
 
         logger.info("Shutting down client server...")
         shutdown_client_server()
+        self._shutdown_event.set()
 
 
 
