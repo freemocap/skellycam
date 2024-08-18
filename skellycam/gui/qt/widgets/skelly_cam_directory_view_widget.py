@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 class SkellyCamDirectoryViewWidget(QWidget):
     def __init__(self, folder_path: Union[str, Path] = None):
-        logger.info("Creating QtDirectoryViewWidget")
         super().__init__()
         self._minimum_width = 300
         self.setMinimumWidth(self._minimum_width)
@@ -44,7 +43,6 @@ class SkellyCamDirectoryViewWidget(QWidget):
         if collapse_other_directories:
             logger.info("Collapsing other directories")
             self._tree_view_widget.collapseAll()
-        logger.info(f"Expanding directory at  path: {str(directory_path)}")
         og_index = self._file_system_model.index(str(directory_path))
         self._tree_view_widget.expand(og_index)
 
@@ -52,13 +50,11 @@ class SkellyCamDirectoryViewWidget(QWidget):
         while Path(self._file_system_model.rootPath()) in Path(parent_path).parents:
             parent_path = Path(parent_path).parent
             index = self._file_system_model.index(str(parent_path))
-            logger.info(f"Expanding parent directory at  path: {str(parent_path)}")
             self._tree_view_widget.expand(index)
 
         self._tree_view_widget.scrollTo(og_index)
 
     def set_folder_as_root(self, folder_path: Union[str, Path]):
-        logger.info(f"Setting root folder to {str(folder_path)}")
         self._tree_view_widget.setWindowTitle(str(folder_path))
         self._file_system_model.setRootPath(str(folder_path))
         self._tree_view_widget.setRootIndex(
@@ -79,7 +75,6 @@ class SkellyCamDirectoryViewWidget(QWidget):
     def open_file(self):
         index = self._tree_view_widget.currentIndex()
         file_path = self._file_system_model.filePath(index)
-        logger.info(f"Opening file from file_system_view_widget: {file_path}")
         os.startfile(file_path)
 
 
