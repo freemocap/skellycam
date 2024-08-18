@@ -106,21 +106,19 @@ class SkellyCamMainWindow(QMainWindow):
         )
 
     def _connect_signals_to_slots(self):
-        self._skellycam_widget.camera_group_created_signal.connect(
-            self.skellycam_control_panel.update_camera_config_parameter_tree
-        )
+
 
         self._skellycam_widget.cameras_detected_signal.connect(
-            self.skellycam_control_panel.update_camera_config_parameter_tree
+            self.skellycam_control_panel.handle_cameras_detected
+        )
+        self._skellycam_widget.cameras_connected_signal.connect(
+            self.skellycam_control_panel.handle_cameras_connected
         )
 
         self._skellycam_widget.detect_available_cameras_push_button.clicked.connect(
             self._welcome_to_skellycam_widget.hide
         )
 
-        self._skellycam_widget.videos_saved_to_this_folder_signal.connect(
-            self._handle_videos_saved_to_this_folder
-        )
 
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")

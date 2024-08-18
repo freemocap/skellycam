@@ -27,7 +27,6 @@ class SkellyCamControlPanel(QWidget):
                  skellycam_widget: SkellyCamWidget):
 
         super().__init__()
-
         # self.setMinimumWidth(250)
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
@@ -72,16 +71,11 @@ class SkellyCamControlPanel(QWidget):
         self._apply_settings_to_cameras_button.clicked.connect(
             self._emit_camera_configs_dict
         )
-        # self._apply_settings_to_cameras_button.setEnabled(False)
         self._layout.addWidget(self._apply_settings_to_cameras_button)
         self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
         self._layout.addWidget(self._close_cameras_button)
-        # self._close_cameras_button.setEnabled(False)
 
     def _connect_signals_to_slots(self, camera_viewer_widget: SkellyCamWidget):
-        camera_viewer_widget.camera_group_created_signal.connect(
-            self.update_camera_config_parameter_tree
-        )
 
         self.emitting_camera_configs_signal.connect(
             camera_viewer_widget.update_camera_configs
@@ -90,21 +84,9 @@ class SkellyCamControlPanel(QWidget):
         self._close_cameras_button.clicked.connect(
             self._handle_close_cameras_button_clicked
         )
-        self._skellycam_widget.cameras_connected_signal.connect(
-            lambda: self._close_cameras_button.setEnabled(True)
-        )
-        self._skellycam_widget.cameras_connected_signal.connect(
-            lambda: self._detect_available_cameras_button.setEnabled(True)
-        )
 
-        self._skellycam_widget.cameras_connected_signal.connect(
-            lambda: self._apply_settings_to_cameras_button.setEnabled(True)
-        )
-
-    def update_camera_config_parameter_tree(
-            self, cameras_connected_response_dict: dict
-    ):
-        logger.info("Updating camera configs in parameter tree")
+    def update(self):
+        logger.info("Updating SkellyCamControlPanel")
 
         self._parameter_tree_widget.clear()
         self._add_expand_collapse_buttons()

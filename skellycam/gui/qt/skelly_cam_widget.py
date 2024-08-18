@@ -1,8 +1,8 @@
 import logging
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 import cv2
-from PySide6.QtCore import Signal, Qt, Slot
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import (
     QGridLayout,
@@ -13,12 +13,12 @@ from PySide6.QtWidgets import (
 )
 
 from skellycam.api.client.fastapi_client import get_client, FastAPIClient
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
-from skellycam.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, \
-    create_new_synchronized_videos_folder, SPARKLES_EMOJI_STRING
+    SPARKLES_EMOJI_STRING
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,7 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class SkellyCamWidget(QWidget):
-    cameras_detected_signal = Signal(dict)
-    cameras_connected_signal = Signal(dict)
-    camera_group_created_signal = Signal(dict)
-    incoming_camera_configs_signal = Signal(dict)
-    videos_saved_to_this_folder_signal = Signal(str)
+
 
     def __init__(
             self,
@@ -70,8 +66,8 @@ class SkellyCamWidget(QWidget):
         self._camera_views_layout.addLayout(self._camera_portrait_grid_layout)
         self._layout.addLayout(self._camera_views_layout)
 
-        self._camera_ids = camera_ids
-        # self._cam_group_frame_worker = self._create_cam_group_frame_worker()
+        self._camera_configs: Optional[CameraConfigs] = None
+        self._available_devices: Optional[AvailableDevices] = None
 
         self.detect_available_cameras_push_button = self._create_detect_cameras_button()
         self._layout.addWidget(self.detect_available_cameras_push_button)
@@ -81,7 +77,6 @@ class SkellyCamWidget(QWidget):
         self._cameras_disconnected_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._cameras_disconnected_label.setStyleSheet(title_label_style_string)
         self._cameras_disconnected_label.hide()
-        self.cameras_connected_signal.connect(self._cameras_disconnected_label.hide)
         # self._cam_group_frame_worker.cameras_closed_signal.connect(self._show_cameras_disconnected_message)
 
         self._no_cameras_found_label = QLabel(no_cameras_found_message_string)
@@ -166,34 +161,16 @@ class SkellyCamWidget(QWidget):
 
     def detect_available_cameras(self):
         logger.info("Connecting to cameras")
-        result = self.client.detect_cameras()
-        logger.debug(f"Received result from `detect_cameras` call: {result}")
-        self.cameras_detected_signal.emit(result.model_dump_json())
+        detect_cameras_response = self.client.detect_cameras()
+        logger.debug(f"Received result from `detect_cameras` call: {detect_cameras_response}")
+        self._camera_configs = detect_cameras_response.detected_cameras
 
-        # self._detect_cameras_worker = DetectCamerasWorker()
-        # self._detect_cameras_worker.cameras_detected_signal.connect(
-        #     self._handle_detected_cameras
-        # )
-        # self._detect_cameras_worker.start()
 
-    # def _start_camera_group_frame_worker(self, camera_ids):
-    #
-    #     logger.info(f"Starting camera group frame worker with camera_ids: {camera_ids}")
-    #     self._cam_group_frame_worker.annotate_images = self.annotate_images
-    #     self._cam_group_frame_worker.camera_ids = camera_ids
-    #     self._dictionary_of_single_camera_view_widgets = self._create_camera_view_widgets_and_add_them_to_grid_layout(
-    #         camera_config_dictionary=self._cam_group_frame_worker.camera_config_dictionary
-    #     )
-    #     self._cam_group_frame_worker.start()
-    #     self._cam_group_frame_worker.new_image_signal.connect(self._handle_image_update)
 
     def disconnect_from_cameras(self):
         logger.info("Disconnecting from cameras")
         self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
-        # self._cam_group_frame_worker.close()
 
-    # def pause(self):
-    #     self._cam_group_frame_worker.pause()
 
     def _create_detect_cameras_button(self):
         detect_available_cameras_push_button = QPushButton(
@@ -214,32 +191,8 @@ class SkellyCamWidget(QWidget):
         logger.info("Connecting to cameras")
         connect_to_cameras_response = self.client.connect_to_cameras()
         logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
-        self.cameras_connected_signal.emit(connect_to_cameras_response.model_dump_json())
-
-    def _create_cam_group_frame_worker(self):
-        cam_group_frame_worker = CamGroupThreadWorker(
-            camera_ids=self._camera_ids,
-            get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
-            annotate_images=self.annotate_images
-        )
-        #
-        # cam_group_frame_worker.cameras_connected_signal.connect(
-        #     self._handle_cameras_connected
-        # )
-
-        cam_group_frame_worker.camera_group_created_signal.connect(
-            self.camera_group_created_signal.emit
-        )
-
-        cam_group_frame_worker.videos_saved_to_this_folder_signal.connect(
-            self._handle_cam_group_frame_worker_videos_saved_to_this_folder
-        )
-
-        return cam_group_frame_worker
-
-    def _handle_cam_group_frame_worker_videos_saved_to_this_folder(self, folder_path: str):
-        logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
-        self.videos_saved_to_this_folder_signal.emit(folder_path)
+        self._camera_configs = connect_to_cameras_response.connected_cameras
+        self._available_devices = connect_to_cameras_response.detected_cameras
 
 
     @Slot(str, QImage, dict)
@@ -302,18 +255,3 @@ class SkellyCamWidget(QWidget):
         self.close()
 
 
-if __name__ == "__main__":
-    import sys
-
-    from PySide6.QtWidgets import QApplication, QMainWindow
-
-    app = QApplication(sys.argv)
-    main_window = QMainWindow()
-    qt_multi_camera_viewer_widget = SkellyCamWidget(
-        get_new_synchronized_videos_folder_callable=create_new_synchronized_videos_folder)
-    main_window.setCentralWidget(qt_multi_camera_viewer_widget)
-    main_window.show()
-    error_code = app.exec()
-    qt_multi_camera_viewer_widget.close()
-
-    sys.exit()
