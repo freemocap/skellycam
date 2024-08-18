@@ -3,6 +3,8 @@ import logging
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
+from skellycam.api.client.fastapi_client import get_client
+
 logger = logging.getLogger(__name__)
 
 websocket_router = APIRouter()
@@ -19,6 +21,7 @@ async def listen_for_client_messages(websocket: WebSocket):
 
             if not message:
                 logger.api("Empty message received, ending listener task...")
+                get_client().shutdown_server()
                 break
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending listener task...")

@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.api.client.fastapi_client import get_client
+from skellycam.api.client.fastapi_client import get_client, shutdown_client_server
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
@@ -131,7 +131,10 @@ class SkellyCamMainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
-        self.client.close()
+
+        logger.info("Shutting down client server...")
+        shutdown_client_server()
+
 
 
 def remove_empty_directories(root_dir: Union[str, Path]):
