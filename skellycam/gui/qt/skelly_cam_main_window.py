@@ -34,7 +34,6 @@ class SkellyCamMainWindow(QMainWindow):
                  session_folder_path: Union[str, Path] = None,
                  shutdown_event: multiprocessing.Event = None,
                  parent=None):
-        logger.info("Initializing QtGUIMainWindow")
         super().__init__(parent=parent)
         if session_folder_path is None:
             self._session_folder_path = create_default_recording_folder_path()

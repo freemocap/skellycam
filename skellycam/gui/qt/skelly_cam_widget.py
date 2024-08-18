@@ -43,9 +43,6 @@ class SkellyCamWidget(QWidget):
             parent=None,
     ):
 
-        logger.info(
-            f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
-        )
         super().__init__(parent=parent)
 
         self.client: FastAPIClient = get_client()
