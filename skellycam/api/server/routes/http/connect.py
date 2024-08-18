@@ -6,8 +6,8 @@ from pydantic import Field
 
 from skellycam.api.server.models.base_models import BaseResponse, BaseRequest
 from skellycam.core import CameraId
+from skellycam.core.camera_group_manager import CameraGroupManager, get_controller
 from skellycam.core.cameras.config.camera_config import CameraConfigs, default_camera_configs_factory
-from skellycam.core.controller import Controller, get_controller
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ConnectCamerasRequest(BaseRequest):
 async def connect_cameras_route(
         request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
 ) -> CamerasConnectedResponse:
-    controller: Controller = get_controller()
+    controller: CameraGroupManager = get_controller()
 
     logger.api("Received `/connect` POST request...")
     try:
@@ -48,7 +48,7 @@ async def connect_cameras_route(
     summary="Connect to all available cameras with default settings",
 )
 async def connect_cameras_route() -> CamerasConnectedResponse:
-    controller: Controller = get_controller()
+    controller: CameraGroupManager = get_controller()
 
     logger.api("Received `/connect` GET request...")
     try:
@@ -67,7 +67,7 @@ async def connect_cameras_route() -> CamerasConnectedResponse:
     summary="Test camera connection by recording a set number of frames",
 )
 async def test_camera_connection(number_of_frames: int = 10) -> BaseResponse:
-    controller: Controller = get_controller()
+    controller: CameraGroupManager = get_controller()
 
     logger.api("Received `/connect/test` GET request...")
     try:

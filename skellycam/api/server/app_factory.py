@@ -11,7 +11,7 @@ import skellycam
 from skellycam.api.server.middleware.cors import cors
 from skellycam.api.server.routes.http import enabled_routers
 from skellycam.api.server.run_server import APP_URL
-from skellycam.core.controller import create_controller
+from skellycam.core.camera_group_manager import create_controller
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)

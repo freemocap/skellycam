@@ -12,12 +12,13 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout,
 )
 
+from skellycam.api.client.fastapi_client import get_client, FastAPIClient
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
 from skellycam.gui.qt.workers.camera_group_thread_worker import CamGroupThreadWorker
-from skellycam.system.default_paths import MAGNIFYING_GLASS_EMOJI_STRING, CAMERA_WITH_FLASH_EMOJI_STRING, \
-    create_new_synchronized_videos_folder
+from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, \
+    create_new_synchronized_videos_folder, SPARKLES_EMOJI_STRING
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,9 @@ class SkellyCamWidget(QWidget):
         logger.info(
             f"Initializing QtMultiCameraViewerWidget with camera_ids: {camera_ids}"
         )
+        super().__init__(parent=parent)
 
+        self.client: FastAPIClient = get_client()
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
         self.annotate_images = annotate_images
 
@@ -56,7 +59,6 @@ class SkellyCamWidget(QWidget):
         self._detect_cameras_worker = None
         self._dictionary_of_single_camera_view_widgets = None
 
-        super().__init__(parent=parent)
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
@@ -203,8 +205,8 @@ class SkellyCamWidget(QWidget):
 
     def _create_detect_cameras_button(self):
         detect_available_cameras_push_button = QPushButton(
-            f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
-        detect_available_cameras_push_button.clicked.connect(self.detect_available_cameras)
+            f"Connect To Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
+        detect_available_cameras_push_button.clicked.connect(self.client.connect_to_cameras)
         detect_available_cameras_push_button.hasFocus()
         detect_available_cameras_push_button.setStyleSheet("""
                                                             border-width: 2px;

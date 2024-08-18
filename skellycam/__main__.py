@@ -4,8 +4,12 @@ import multiprocessing
 from multiprocessing import Process
 
 from skellycam.api.server.run_server import run_uvicorn_server
-from skellycam.gui.qt.qt_main import qt_gui_main
+from skellycam.gui.gui_main import gui_main
+from skellycam.system.logging_configuration.configure_logging import configure_logging
+from skellycam.system.logging_configuration.log_level_enum import LogLevels
 from skellycam.utilities.clean_path import clean_path
+
+configure_logging(level=LogLevels.DEBUG)
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +19,7 @@ def main():
     # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
     logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
 
-    frontend_process = multiprocessing.Process(target=qt_gui_main)
+    frontend_process = multiprocessing.Process(target=gui_main)
     logger.info(f"Starting frontend process")
     frontend_process.start()
 

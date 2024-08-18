@@ -14,35 +14,9 @@ from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, CO
                                                          rotate_cv2_code_to_str, rotate_image_str_to_cv2_code,
                                                          USE_THIS_CAMERA_STRING)
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X_EMOJI_STRING, \
-    MAGNIFYING_GLASS_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
+    MAGNIFYING_GLASS_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING, SPARKLES_EMOJI_STRING
 
 logger = logging.getLogger(__name__)
-
-
-#
-# parameter_tree_stylesheet_string = """
-#                                     QTreeView {
-#                                         background-color: rgb(0, 152, 154);
-#                                         alternate-background-color: rgb(139, 144, 145);
-#                                         color: rgb(28, 100, 28);
-#                                     }
-#                                     QLabel {
-#                                         color: rgb(28, 123, 28);
-#                                     }
-#                                     QPushbutton {
-#                                         color: rgb(0, 28, 8);
-#                                     }
-#                                     QTreeView::item:has-children {
-#                                         background-color: '#212627';
-#                                         color: rgb(233, 185, 110);
-#                                     }
-#                                     QTreeView::item:selected {
-#                                         background-color: rgb(92, 53, 102);
-#                                     }
-#                                     QTreeView::item:selected:active {
-#                                         background-color: rgb(92, 53, 102);
-#                                     }
-#                                     """
 
 
 class SkellyCamParameterTreeWidget(QWidget):
@@ -69,15 +43,17 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
-        self._layout.addWidget(self._close_cameras_button)
-        self._close_cameras_button.setEnabled(False)
-
         self._detect_available_cameras_button = QPushButton(
             f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         self._layout.addWidget(self._detect_available_cameras_button)
-        self._detect_available_cameras_button.setEnabled(False)
+        # self._detect_available_cameras_button.setEnabled(False)
         self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.detect_available_cameras)
+
+        self._connect_cameras_button = QPushButton(
+            f"Connect Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
+        self._layout.addWidget(self._connect_cameras_button)
+        # self._close_cameras_button.setEnabled(False)
+
 
         self._apply_settings_to_cameras_button = QPushButton(
             f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
@@ -85,8 +61,13 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._apply_settings_to_cameras_button.clicked.connect(
             self._emit_camera_configs_dict
         )
-        self._apply_settings_to_cameras_button.setEnabled(False)
+        # self._apply_settings_to_cameras_button.setEnabled(False)
         self._layout.addWidget(self._apply_settings_to_cameras_button)
+
+        self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
+        self._layout.addWidget(self._close_cameras_button)
+        # self._close_cameras_button.setEnabled(False)
+
 
         self._parameter_tree_widget = ParameterTree(parent=self, showHeader=False)
         # self._parameter_tree_widget.setStyleSheet(parameter_tree_stylesheet_string)

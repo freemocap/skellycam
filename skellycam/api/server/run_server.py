@@ -7,7 +7,7 @@ APP_FACTORY_PATH = "skellycam.api.server.app_factory:create_app"
 logger = logging.getLogger(__name__)
 
 HOSTNAME = "localhost"
-PORT = 8003
+PORT = 8004
 APP_URL = f"http://{HOSTNAME}:{PORT}"
 
 def run_uvicorn_server(

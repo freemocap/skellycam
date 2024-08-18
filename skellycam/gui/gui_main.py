@@ -10,7 +10,7 @@ from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 logger = logging.getLogger(__name__)
 
 
-def qt_gui_main():
+def gui_main():
     if sys.platform == "win32":
         setup_app_id_for_windows()
 
@@ -22,6 +22,7 @@ def qt_gui_main():
 
     main_window = SkellyCamMainWindow()
     main_window.show()
+
     error_code = qt_app.exec()
 
     logger.info(f"Exiting with code: {error_code}")
@@ -30,4 +31,4 @@ def qt_gui_main():
 
 
 if __name__ == "__main__":
-    qt_gui_main()
+    gui_main()
