@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 from multiprocessing import Process
 
-from skellycam.api.server.run_server import run_uvicorn_server
+from skellycam.api.server.server_main import run_server
 from skellycam.gui.gui_main import gui_main
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.log_level_enum import LogLevels
@@ -23,12 +23,12 @@ def main():
     logger.info(f"Starting frontend process")
     frontend_process.start()
 
-    backend_process = Process(target=run_uvicorn_server)
+    backend_process = Process(target=run_server)
     logger.info(f"Starting backend process")
     backend_process.start()
 
     frontend_process.join()
-    backend_process.join()
+    logger.info("Frontend process ended - terminating backend process")
     logger.info(f"Exiting `main`...")
 
 

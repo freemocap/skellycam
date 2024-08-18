@@ -38,7 +38,7 @@ class WebsocketRunner:
         pass
 
 
-@websocket_router.websocket("/ws/connect")
+@websocket_router.websocket("/connect")
 async def websocket_server_connect(websocket: WebSocket):
     """
     Websocket endpoint for client connection to the server - handles image data streaming to frontend.

@@ -20,11 +20,11 @@ from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X
 logger = logging.getLogger(__name__)
 
 
-class SkellyCamParameterTreeWidget(QWidget):
+class SkellyCamControlPanel(QWidget):
     emitting_camera_configs_signal = Signal(dict)
 
     def __init__(self,
-                 camera_viewer_widget: SkellyCamWidget):
+                 skellycam_widget: SkellyCamWidget):
 
         super().__init__()
 
@@ -32,7 +32,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
 
-        self._camera_viewer_widget = camera_viewer_widget
+        self._skellycam_widget = skellycam_widget
         self.setStyleSheet("""
         QPushButton{
         border-width: 2px;
@@ -44,31 +44,7 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._detect_available_cameras_button = QPushButton(
-            f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
-        self._layout.addWidget(self._detect_available_cameras_button)
-        # self._detect_available_cameras_button.setEnabled(False)
-        self._detect_available_cameras_button.clicked.connect(self._camera_viewer_widget.detect_available_cameras)
-
-        self._connect_cameras_button = QPushButton(
-            f"Connect Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
-        self._layout.addWidget(self._connect_cameras_button)
-        # self._close_cameras_button.setEnabled(False)
-
-
-        self._apply_settings_to_cameras_button = QPushButton(
-            f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
-        )
-        self._apply_settings_to_cameras_button.clicked.connect(
-            self._emit_camera_configs_dict
-        )
-        # self._apply_settings_to_cameras_button.setEnabled(False)
-        self._layout.addWidget(self._apply_settings_to_cameras_button)
-
-        self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
-        self._layout.addWidget(self._close_cameras_button)
-        # self._close_cameras_button.setEnabled(False)
-
+        self._make_buttons()
 
         self._parameter_tree_widget = ParameterTree(parent=self, showHeader=False)
         # self._parameter_tree_widget.setStyleSheet(parameter_tree_stylesheet_string)
@@ -77,7 +53,30 @@ class SkellyCamParameterTreeWidget(QWidget):
             Parameter(name="No cameras connected...", value="", type="str")
         )
 
-        self._connect_signals_to_slots(self._camera_viewer_widget)
+        self._connect_signals_to_slots(self._skellycam_widget)
+
+    def _make_buttons(self):
+        self._detect_available_cameras_button = QPushButton(
+            f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
+        self._detect_available_cameras_button.clicked.connect(self._skellycam_widget.detect_available_cameras)
+        self._layout.addWidget(self._detect_available_cameras_button)
+
+        self._detect_available_cameras_button.clicked.connect(self._skellycam_widget.detect_available_cameras)
+        self._connect_cameras_button = QPushButton(
+            f"Connect Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
+        self._layout.addWidget(self._connect_cameras_button)
+        # self._close_cameras_button.setEnabled(False)
+        self._apply_settings_to_cameras_button = QPushButton(
+            f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
+        )
+        self._apply_settings_to_cameras_button.clicked.connect(
+            self._emit_camera_configs_dict
+        )
+        # self._apply_settings_to_cameras_button.setEnabled(False)
+        self._layout.addWidget(self._apply_settings_to_cameras_button)
+        self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
+        self._layout.addWidget(self._close_cameras_button)
+        # self._close_cameras_button.setEnabled(False)
 
     def _connect_signals_to_slots(self, camera_viewer_widget: SkellyCamWidget):
         camera_viewer_widget.camera_group_created_signal.connect(
@@ -91,14 +90,14 @@ class SkellyCamParameterTreeWidget(QWidget):
         self._close_cameras_button.clicked.connect(
             self._handle_close_cameras_button_clicked
         )
-        self._camera_viewer_widget.cameras_connected_signal.connect(
+        self._skellycam_widget.cameras_connected_signal.connect(
             lambda: self._close_cameras_button.setEnabled(True)
         )
-        self._camera_viewer_widget.cameras_connected_signal.connect(
+        self._skellycam_widget.cameras_connected_signal.connect(
             lambda: self._detect_available_cameras_button.setEnabled(True)
         )
 
-        self._camera_viewer_widget.cameras_connected_signal.connect(
+        self._skellycam_widget.cameras_connected_signal.connect(
             lambda: self._apply_settings_to_cameras_button.setEnabled(True)
         )
 
@@ -275,7 +274,7 @@ class SkellyCamParameterTreeWidget(QWidget):
                 camera_parameter.setOpts(expanded=False)
 
     def _handle_close_cameras_button_clicked(self):
-        self._camera_viewer_widget.disconnect_from_cameras()
+        self._skellycam_widget.disconnect_from_cameras()
 
 
 if __name__ == "__main__":
@@ -284,9 +283,9 @@ if __name__ == "__main__":
     from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qt_camera_config_parameter_tree_widget = SkellyCamParameterTreeWidget(camera_viewer_widget=SkellyCamWidget())
-    qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree(
+    skellycam_control_panel = SkellyCamControlPanel(skellycam_widget=SkellyCamWidget())
+    skellycam_control_panel.update_camera_config_parameter_tree(
         {"0": CameraConfig(camera_id=0), "1": CameraConfig(camera_id=1)}
     )
-    qt_camera_config_parameter_tree_widget.show()
+    skellycam_control_panel.show()
     sys.exit(app.exec())

@@ -7,12 +7,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
+from skellycam.api.client.fastapi_client import get_client
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
 from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import (
-    SkellyCamParameterTreeWidget,
+    SkellyCamControlPanel,
 )
 from skellycam.gui.qt.widgets.skelly_cam_controller_widget import (
     SkellyCamControllerWidget,
@@ -35,7 +36,7 @@ class SkellyCamMainWindow(QMainWindow):
         logger.info("Initializing QtGUIMainWindow")
         super().__init__(parent=parent)
         self.initUI(session_folder_path)
-
+        self.client = get_client()
         self._connect_signals_to_slots()
 
     def initUI(self, session_folder_path):
@@ -73,12 +74,12 @@ class SkellyCamMainWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
-        self._qt_camera_config_parameter_tree_widget = (
-            SkellyCamParameterTreeWidget(self._skellycam_widget)
+        self.skellycam_control_panel = (
+            SkellyCamControlPanel(self._skellycam_widget)
         )
         # self._layout.addWidget(self._qt_camera_config_parameter_tree_widget)
         self._parameter_tree_dock_widget.setWidget(
-            self._qt_camera_config_parameter_tree_widget
+            self.skellycam_control_panel
         )
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_tree_dock_widget
@@ -102,11 +103,11 @@ class SkellyCamMainWindow(QMainWindow):
 
     def _connect_signals_to_slots(self):
         self._skellycam_widget.camera_group_created_signal.connect(
-            self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
+            self.skellycam_control_panel.update_camera_config_parameter_tree
         )
 
         self._skellycam_widget.cameras_detected_signal.connect(
-            self._qt_camera_config_parameter_tree_widget.update_camera_config_parameter_tree
+            self.skellycam_control_panel.update_camera_config_parameter_tree
         )
 
         self._skellycam_widget.detect_available_cameras_push_button.clicked.connect(
@@ -123,13 +124,14 @@ class SkellyCamMainWindow(QMainWindow):
 
     def closeEvent(self, a0) -> None:
 
-        remove_empty_directories(get_default_skellycam_base_folder_path())
+        # remove_empty_directories(get_default_skellycam_base_folder_path())
 
         try:
             self._skellycam_widget.close()
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
+        self.client.close()
 
 
 def remove_empty_directories(root_dir: Union[str, Path]):

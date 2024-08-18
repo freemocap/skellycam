@@ -56,7 +56,6 @@ class SkellyCamWidget(QWidget):
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
         self.annotate_images = annotate_images
 
-        self._camera_config_dictionary = None
         self._detect_cameras_worker = None
         self._dictionary_of_single_camera_view_widgets = None
 
@@ -74,8 +73,8 @@ class SkellyCamWidget(QWidget):
         self._camera_ids = camera_ids
         # self._cam_group_frame_worker = self._create_cam_group_frame_worker()
 
-        self._detect_available_cameras_push_button = self._create_detect_cameras_button()
-        self._layout.addWidget(self._detect_available_cameras_push_button)
+        self.detect_available_cameras_push_button = self._create_detect_cameras_button()
+        self._layout.addWidget(self.detect_available_cameras_push_button)
 
         self._cameras_disconnected_label = QLabel(" - No Cameras Connected - ")
         self._layout.addWidget(self._cameras_disconnected_label)
@@ -91,7 +90,7 @@ class SkellyCamWidget(QWidget):
         self._no_cameras_found_label.setStyleSheet(title_label_style_string)
         self._no_cameras_found_label.hide()
         self.cameras_connected_signal.connect(self._no_cameras_found_label.hide)
-        self._detect_available_cameras_push_button.clicked.connect(self._no_cameras_found_label.hide)
+        self.detect_available_cameras_push_button.clicked.connect(self._no_cameras_found_label.hide)
 
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
@@ -115,21 +114,19 @@ class SkellyCamWidget(QWidget):
     # def is_recording(self):
     #     return self._cam_group_frame_worker.is_recording
 
-    @property
-    def detect_available_cameras_push_button(self):
-        return self._detect_available_cameras_push_button
+
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
         self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
         self._cameras_disconnected_label.show()
-        self._detect_available_cameras_push_button.show()
+        self.detect_available_cameras_push_button.show()
 
     def _show_no_cameras_found_message(self):
         logger.info("Showing `no cameras found` message")
         self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
         self._no_cameras_found_label.show()
-        self._detect_available_cameras_push_button.show()
+        self.detect_available_cameras_push_button.show()
 
     def _create_camera_view_widgets_and_add_them_to_grid_layout(self, camera_config_dictionary: Dict[
         str, CameraConfig]) -> dict:
@@ -168,16 +165,10 @@ class SkellyCamWidget(QWidget):
         return dictionary_of_single_camera_view_widgets
 
     def detect_available_cameras(self):
-        try:
-            self.disconnect_from_cameras()
-        except Exception as e:
-            logger.error(f"Problem disconnecting from cameras: {e}")
-
         logger.info("Connecting to cameras")
-
-        self._detect_available_cameras_push_button.setText("Detecting Cameras...")
-        self._detect_available_cameras_push_button.setEnabled(False)
-        self._cameras_disconnected_label.hide()
+        result = self.client.detect_cameras()
+        logger.debug(f"Received result from `detect_cameras` call: {result}")
+        self.cameras_detected_signal.emit(result.json())
 
         # self._detect_cameras_worker = DetectCamerasWorker()
         # self._detect_cameras_worker.cameras_detected_signal.connect(
@@ -221,10 +212,9 @@ class SkellyCamWidget(QWidget):
 
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")
-        result = self.client.connect_to_cameras()
-        logger.debug(f"Received result from `connect_to_cameras` call: {result}")
-        self._camera_config_dictionary = result["connected_cameras"]
-        self.cameras_detected_signal.emit(self._camera_config_dictionary)
+        connect_to_cameras_response = self.client.connect_to_cameras()
+        logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
+        self.cameras_detected_signal.emit(connect_to_cameras_response.to_dict())
 
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupThreadWorker(
@@ -232,10 +222,10 @@ class SkellyCamWidget(QWidget):
             get_new_synchronized_videos_folder_callable=self._get_new_synchronized_videos_folder_callable,
             annotate_images=self.annotate_images
         )
-
-        cam_group_frame_worker.cameras_connected_signal.connect(
-            self._handle_cameras_connected
-        )
+        #
+        # cam_group_frame_worker.cameras_connected_signal.connect(
+        #     self._handle_cameras_connected
+        # )
 
         cam_group_frame_worker.camera_group_created_signal.connect(
             self.camera_group_created_signal.emit
@@ -257,9 +247,9 @@ class SkellyCamWidget(QWidget):
         self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image,
                                                                                       frame_diagnostics_dictionary=frame_diagnostics_dictionary)
 
-    def _reset_detect_available_cameras_button(self):
-        self._detect_available_cameras_push_button.setText("Detect Available Cameras")
-        self._detect_available_cameras_push_button.setEnabled(True)
+    # def _reset_detect_available_cameras_button(self):
+    #     self._detect_available_cameras_push_button.setText("Detect Available Cameras")
+    #     self._detect_available_cameras_push_button.setEnabled(True)
 
     def update_camera_configs(self, camera_config_dictionary):
         logger.info(f"Updating camera configs: {camera_config_dictionary}")

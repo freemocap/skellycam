@@ -11,7 +11,7 @@ from starlette.testclient import TestClient
 
 from skellycam.api import create_app
 from skellycam.core import CameraId
-from skellycam.core.camera_group_manager import CameraGroupManager, create_controller, get_controller
+from skellycam.core.camera_group_manager import CameraGroupManager, create_controller, get_camera_group_manager
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
@@ -291,7 +291,7 @@ def client_fixture(app_fixture: FastAPI) -> TestClient:
 @pytest.fixture
 def controller_fixture() -> CameraGroupManager:
     create_controller()
-    controller = get_controller()
+    controller = get_camera_group_manager()
     assert isinstance(controller, CameraGroupManager)
     yield controller
     controller.close()

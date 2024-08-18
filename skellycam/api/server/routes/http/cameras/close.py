@@ -3,11 +3,11 @@ import logging
 from fastapi import APIRouter
 
 from skellycam.api.server.models.base_models import BaseResponse
-from skellycam.core.camera_group_manager import CameraGroupManager, get_controller
+from skellycam.core.camera_group_manager import CameraGroupManager, get_camera_group_manager
 
 logger = logging.getLogger(__name__)
 
-camera_close_router = APIRouter(
+close_cameras_router = APIRouter(
 
 )
 
@@ -16,13 +16,13 @@ class CamerasClosedResponse(BaseResponse):
     pass
 
 
-@camera_close_router.get("/close",
-                         response_model=CamerasClosedResponse,
-                         summary="Close camera connections")
+@close_cameras_router.get("/close",
+                          response_model=CamerasClosedResponse,
+                          summary="Close camera connections")
 async def close_camera_connections():
     logger.api("Received `/close` request...")
 
-    controller: CameraGroupManager = get_controller()
+    controller: CameraGroupManager = get_camera_group_manager()
     try:
         await controller.close()
         logger.api("`/close` request handled successfully.")
