@@ -206,7 +206,8 @@ class SkellyCamWidget(QWidget):
     def _create_detect_cameras_button(self):
         detect_available_cameras_push_button = QPushButton(
             f"Connect To Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
-        detect_available_cameras_push_button.clicked.connect(self.client.connect_to_cameras)
+        detect_available_cameras_push_button.clicked.connect(self.connect_to_cameras)
+        detect_available_cameras_push_button.clicked.connect(detect_available_cameras_push_button.hide)
         detect_available_cameras_push_button.hasFocus()
         detect_available_cameras_push_button.setStyleSheet("""
                                                             border-width: 2px;
@@ -216,6 +217,12 @@ class SkellyCamWidget(QWidget):
         detect_available_cameras_push_button.setProperty("recommended_next", True)
 
         return detect_available_cameras_push_button
+
+    def connect_to_cameras(self):
+        logger.info("Connecting to cameras")
+        result = self.client.connect_to_cameras()
+        logger.debug(f"Received result from `connect_to_cameras` call: {result}")
+        self._handle_detected_cameras(result.connected_cameras)
 
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupThreadWorker(

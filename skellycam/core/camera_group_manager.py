@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Union
+from typing import Optional, Union
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
@@ -35,7 +35,7 @@ class CameraGroupManager:
 
     async def connect(self,
                       camera_configs: Optional[CameraConfigs] = None,
-                      number_of_frames: Optional[int] = None) -> Union[bool, List[CameraId]]:
+                      number_of_frames: Optional[int] = None) -> Union[bool, CameraConfigs]:
         logger.info(f"Connecting to available cameras...")
 
         if camera_configs:
@@ -47,7 +47,7 @@ class CameraGroupManager:
                 raise ValueError("No cameras detected!")
 
         await self._start_camera_group(number_of_frames=number_of_frames)
-        return self._camera_group.camera_ids
+        return self._camera_configs
 
     async def _start_camera_group(self, number_of_frames: Optional[int] = None):
         logger.debug(f"Starting camera group with cameras: {self._camera_group.camera_ids}")

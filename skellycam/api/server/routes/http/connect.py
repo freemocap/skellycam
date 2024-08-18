@@ -1,11 +1,10 @@
 import logging
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import APIRouter, Body
 from pydantic import Field
 
 from skellycam.api.server.models.base_models import BaseResponse, BaseRequest
-from skellycam.core import CameraId
 from skellycam.core.camera_group_manager import CameraGroupManager, get_controller
 from skellycam.core.cameras.config.camera_config import CameraConfigs, default_camera_configs_factory
 
@@ -15,7 +14,7 @@ camera_connection_router = APIRouter()
 
 
 class CamerasConnectedResponse(BaseResponse):
-    connected_cameras: Optional[List[CameraId]] = None
+    connected_cameras: Optional[CameraConfigs] = None
 
 
 class ConnectCamerasRequest(BaseRequest):
