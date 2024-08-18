@@ -34,7 +34,7 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 class SkellyCamWidget(QWidget):
     cameras_detected_signal = Signal(dict)
-    cameras_connected_signal = Signal()
+    cameras_connected_signal = Signal(dict)
     camera_group_created_signal = Signal(dict)
     incoming_camera_configs_signal = Signal(dict)
     videos_saved_to_this_folder_signal = Signal(str)
@@ -168,7 +168,7 @@ class SkellyCamWidget(QWidget):
         logger.info("Connecting to cameras")
         result = self.client.detect_cameras()
         logger.debug(f"Received result from `detect_cameras` call: {result}")
-        self.cameras_detected_signal.emit(result.json())
+        self.cameras_detected_signal.emit(result.model_dump_json())
 
         # self._detect_cameras_worker = DetectCamerasWorker()
         # self._detect_cameras_worker.cameras_detected_signal.connect(
@@ -214,7 +214,7 @@ class SkellyCamWidget(QWidget):
         logger.info("Connecting to cameras")
         connect_to_cameras_response = self.client.connect_to_cameras()
         logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
-        self.cameras_detected_signal.emit(connect_to_cameras_response.to_json())
+        self.cameras_connected_signal.emit(connect_to_cameras_response.model_dump_json())
 
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupThreadWorker(

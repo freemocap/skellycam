@@ -9,7 +9,7 @@ from skellycam.gui.qt.skelly_cam_widget import (
 logger = logging.getLogger(__name__)
 
 
-class SkellyCamControllerWidget(QWidget):
+class SkellyCamRecordButtonsPanel(QWidget):
     def __init__(
             self, camera_viewer_widget: SkellyCamWidget, parent=None
     ):

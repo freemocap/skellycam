@@ -51,11 +51,11 @@ async def connect_cameras_route(
     summary="Connect to all available cameras with default settings",
 )
 async def connect_cameras_route() -> ConnectCamerasResponse:
-    controller: CameraGroupManager = get_camera_group_manager()
+    camera_group_manager: CameraGroupManager = get_camera_group_manager()
 
     logger.api("Received `/connect` GET request...")
     try:
-        connected_cameras, available_devices = await controller.connect_to_cameras()
+        connected_cameras, available_devices = await camera_group_manager.connect_to_cameras()
         logger.api("`/connect` GET request handled successfully.")
         return ConnectCamerasResponse(connected_cameras=connected_cameras,
                                       detected_cameras=available_devices)

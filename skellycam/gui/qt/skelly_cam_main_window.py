@@ -12,13 +12,13 @@ from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
-from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import (
+from skellycam.gui.qt.widgets.skellycam_control_panel import (
     SkellyCamControlPanel,
 )
-from skellycam.gui.qt.widgets.skelly_cam_controller_widget import (
-    SkellyCamControllerWidget,
+from skellycam.gui.qt.widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
+from skellycam.gui.qt.widgets.skellycam_record_buttons_panel import (
+    SkellyCamRecordButtonsPanel,
 )
-from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
@@ -67,11 +67,11 @@ class SkellyCamMainWindow(QMainWindow):
             parent=self
         )
         self._skellycam_widget.resize(1280, 720)
-        self._qt_camera_controller_widget = SkellyCamControllerWidget(
+        self._skellycam_record_buttons = SkellyCamRecordButtonsPanel(
             camera_viewer_widget=self._skellycam_widget,
             parent=self,
         )
-        self._layout.addWidget(self._qt_camera_controller_widget)
+        self._layout.addWidget(self._skellycam_record_buttons)
         self._layout.addWidget(self._skellycam_widget)
         self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
         self._parameter_tree_dock_widget.setFeatures(

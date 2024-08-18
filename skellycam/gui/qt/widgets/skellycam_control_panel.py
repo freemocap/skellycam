@@ -102,13 +102,13 @@ class SkellyCamControlPanel(QWidget):
         )
 
     def update_camera_config_parameter_tree(
-            self, camera_configs_dict: dict
+            self, cameras_connected_response_dict: dict
     ):
         logger.info("Updating camera configs in parameter tree")
 
         self._parameter_tree_widget.clear()
         self._add_expand_collapse_buttons()
-        for camera_config_dict in camera_configs_dict.values():
+        for camera_config_dict in cameras_connected_response_dict.values():
             camera_config = CameraConfig(**camera_config_dict)
             self._camera_parameter_group_dictionary[
                 camera_config.camera_id
