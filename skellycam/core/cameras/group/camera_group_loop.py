@@ -68,7 +68,7 @@ def log_time_stats(camera_configs: CameraConfigs,
     number_of_cameras = len(camera_configs)
     resolution = str(camera_configs[0].resolution)
     number_of_frames = len(elapsed_per_loop_ns) + 1
-    ideal_frame_rate = min([camera_config.frame_rate for camera_config in camera_configs.values()])
+    ideal_frame_rate = min([camera_config.framerate for camera_config in camera_configs.values()])
 
     logger.info(
         f"Read {number_of_frames} x {resolution} images read from {number_of_cameras} camera(s):"

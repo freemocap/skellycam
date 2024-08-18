@@ -38,8 +38,8 @@ class CameraConfig(BaseModel):
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
     )
 
-    frame_rate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,
-                              description="The frame rate of the camera (in frames per second).")
+    framerate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,
+                             description="The frame rate of the camera (in frames per second).")
 
     rotation: RotationTypes = Field(
         default=DefaultCameraConfig.ROTATION.value,

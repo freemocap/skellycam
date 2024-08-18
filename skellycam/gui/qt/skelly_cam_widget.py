@@ -33,6 +33,7 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class SkellyCamWidget(QWidget):
+    cameras_detected_signal = Signal(dict)
     cameras_connected_signal = Signal()
     camera_group_created_signal = Signal(dict)
     incoming_camera_configs_signal = Signal(dict)
@@ -222,7 +223,8 @@ class SkellyCamWidget(QWidget):
         logger.info("Connecting to cameras")
         result = self.client.connect_to_cameras()
         logger.debug(f"Received result from `connect_to_cameras` call: {result}")
-        self._handle_detected_cameras(result.connected_cameras)
+        self._camera_config_dictionary = result["connected_cameras"]
+        self.cameras_detected_signal.emit(self._camera_config_dictionary)
 
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupThreadWorker(
@@ -249,24 +251,6 @@ class SkellyCamWidget(QWidget):
         logger.debug(f"Emitting `videos_saved_to_this_folder_signal` with string: {folder_path}")
         self.videos_saved_to_this_folder_signal.emit(folder_path)
 
-    def _handle_detected_cameras(self, camera_ids):
-        if len(camera_ids) == 0:
-            logger.info("No cameras detected")
-            self._reset_detect_available_cameras_button()
-            self._show_no_cameras_found_message()
-            return
-
-        logger.info(f"Detected cameras: {camera_ids}")
-        self._detect_available_cameras_push_button.hide()
-        self._camera_ids = camera_ids
-        self._detect_available_cameras_push_button.setText(
-            f"Connecting to Cameras {camera_ids}..."
-        )
-        # self._start_camera_group_frame_worker(self._camera_ids)
-
-    def _handle_cameras_connected(self):
-        self.cameras_connected_signal.emit()
-        self._reset_detect_available_cameras_button()
 
     @Slot(str, QImage, dict)
     def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary: Dict):

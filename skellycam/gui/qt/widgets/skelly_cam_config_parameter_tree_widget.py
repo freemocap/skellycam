@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          EXPAND_ALL_STRING, ROTATE_180_STRING,
@@ -102,13 +103,14 @@ class SkellyCamParameterTreeWidget(QWidget):
         )
 
     def update_camera_config_parameter_tree(
-            self, dictionary_of_camera_configs: Dict[str, CameraConfig]
+            self, camera_configs_dict: dict
     ):
         logger.info("Updating camera configs in parameter tree")
 
         self._parameter_tree_widget.clear()
         self._add_expand_collapse_buttons()
-        for camera_config in dictionary_of_camera_configs.values():
+        for camera_config_dict in camera_configs_dict.values():
+            camera_config = CameraConfig(**camera_config_dict)
             self._camera_parameter_group_dictionary[
                 camera_config.camera_id
             ] = self._convert_camera_config_to_parameter(camera_config)
@@ -139,23 +141,28 @@ class SkellyCamParameterTreeWidget(QWidget):
                         ROTATE_90_COUNTERCLOCKWISE_STRING,
                         ROTATE_180_STRING,
                     ],
-                    value=rotate_cv2_code_to_str(camera_config.rotate_video_cv2_code),
+                    value=rotate_cv2_code_to_str(camera_config.rotation.value),
                 ),
                 dict(name="Exposure", type="int", value=camera_config.exposure),
                 dict(
                     name="Resolution Width",
                     type="int",
-                    value=camera_config.resolution_width,
+                    value=camera_config.resolution.width,
                 ),
                 dict(
                     name="Resolution Height",
                     type="int",
-                    value=camera_config.resolution_height,
+                    value=camera_config.resolution.height,
                 ),
                 dict(
-                    name="FourCC",
+                    name="Capture FourCC",
                     type="str",
-                    value=camera_config.fourcc,
+                    value=camera_config.capture_fourcc,
+                ),
+                dict(
+                    name="Writer FourCC",
+                    type="str",
+                    value=camera_config.writer_fourcc,
                 ),
                 dict(
                     name="Framerate",
@@ -195,14 +202,14 @@ class SkellyCamParameterTreeWidget(QWidget):
             camera_config_dictionary[camera_id] = CameraConfig(
                 camera_id=camera_id,
                 exposure=camera_parameter_group.param("Exposure").value(),
-                resolution_width=camera_parameter_group.param(
+                resolution=ImageResolution(width=camera_parameter_group.param(
                     "Resolution Width"
                 ).value(),
-                resolution_height=camera_parameter_group.param(
-                    "Resolution Height"
-                ).value(),
+                                           height=camera_parameter_group.param("Resolution Height").value(),
+                                           ),
                 framerate=camera_parameter_group.param("Framerate").value(),
-                fourcc=camera_parameter_group.param("FourCC").value(),
+                capture_fourcc=camera_parameter_group.param("Capture FourCC").value(),
+                writer_fourcc=camera_parameter_group.param("Writer FourCC").value(),
                 rotate_video_cv2_code=rotate_image_str_to_cv2_code(
                     camera_parameter_group.param("Rotate Image").value()
                 ),

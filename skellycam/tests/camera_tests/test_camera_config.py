@@ -16,7 +16,7 @@ def test_default_camera_config(default_camera_config_fixture: CameraConfig):
     assert c.resolution == DefaultCameraConfig.RESOLUTION.value
     assert c.color_channels == DefaultCameraConfig.COLOR_CHANNELS.value
     assert c.exposure == DefaultCameraConfig.EXPOSURE.value
-    assert c.frame_rate == DefaultCameraConfig.FRAMERATE.value
+    assert c.framerate == DefaultCameraConfig.FRAMERATE.value
     assert c.rotation == DefaultCameraConfig.ROTATION.value
     assert c.capture_fourcc == DefaultCameraConfig.CAPTURE_FOURCC.value
     assert c.writer_fourcc == DefaultCameraConfig.WRITER_FOURCC.value
@@ -61,7 +61,7 @@ def test_custom_config(camera_id: CameraId,
     assert config.resolution == resolution
     assert config.color_channels == color_channels
     assert config.exposure == -7
-    assert config.frame_rate == 30
+    assert config.framerate == 30
     assert config.rotation == rotation
     assert config.capture_fourcc == "MJPG"
     assert config.writer_fourcc == "MP4V"
