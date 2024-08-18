@@ -214,7 +214,7 @@ class SkellyCamWidget(QWidget):
         logger.info("Connecting to cameras")
         connect_to_cameras_response = self.client.connect_to_cameras()
         logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
-        self.cameras_detected_signal.emit(connect_to_cameras_response.to_dict())
+        self.cameras_detected_signal.emit(connect_to_cameras_response.to_json())
 
     def _create_cam_group_frame_worker(self):
         cam_group_frame_worker = CamGroupThreadWorker(

@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 import skellycam
 from skellycam.api.server.lifespan import lifespan
 from skellycam.api.server.middleware.cors import cors
-from skellycam.api.server.routes.http.routers import enabled_routers
+from skellycam.api.server.routes.routers import enabled_routers
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.log_level_enum import LogLevels
 

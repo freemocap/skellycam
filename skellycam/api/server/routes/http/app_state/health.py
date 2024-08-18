@@ -5,9 +5,10 @@ from fastapi import APIRouter
 HELLO_FROM_SKELLYCAM_BACKEND_MESSAGE = {"message": "Hello from the SkellyCam Backend 💀📸✨"}
 
 logger = logging.getLogger(__name__)
-healthcheck_router = APIRouter()
+health_router = APIRouter()
 
-@healthcheck_router.get("/hello", summary="👋")
+
+@health_router.get("/healthcheck", summary="Hello👋")
 async def hello():
     """
     A simple endpoint to greet the user of the SkellyCam API.
