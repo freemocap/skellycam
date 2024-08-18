@@ -114,3 +114,5 @@ ENV/
 site/
 
 pip*
+node_modules
+.nuxt
