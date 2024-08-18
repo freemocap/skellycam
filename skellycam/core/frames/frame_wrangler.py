@@ -2,8 +2,10 @@ import logging
 import multiprocessing
 from typing import Optional
 
+from skellycam.api.client.fastapi_client import get_client
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
@@ -52,19 +54,21 @@ class FrameListenerProcess:
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
         )
+        client = get_client()
         try:
 
             logger.trace(f"Frame listener process started")
             group_orchestrator.await_for_cameras_ready()
-            payload: Optional[MultiFramePayload] = None
+            mf_payload: Optional[MultiFramePayload] = None
 
             # Frame listener loop
             while not exit_event.is_set():
                 if group_orchestrator.new_frames_available:
                     logger.loop(f"Frame wrangler sees new frames available!")
-                    payload = camera_group_shm.get_multi_frame_payload(previous_payload=payload)
+                    mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
                     group_orchestrator.set_frames_copied()
                     payloads_received.value += 1
+                    fe_payload = FrontendImagePayload.from_multi_frame_payload(mf_payload)
                 else:
                     wait_1ms()
 

@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import cv2
 import msgpack
@@ -12,6 +12,8 @@ from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 
 class FrontendImagePayload(BaseModel):
     jpeg_images: Dict[CameraId, Optional[bytes]]
+    metadata: Dict[CameraId, List[int]] = Field(default_factory=dict,
+                                                description="Metadata for each frame, based on FRAME_METADATA_MODEL")
     utc_ns_to_perf_ns: Dict[str, int] = Field(
         description="A mapping of `time.time_ns()` to `time.perf_counter_ns()` "
                     "to allow conversion of `time.perf_counter_ns()`'s arbitrary "
