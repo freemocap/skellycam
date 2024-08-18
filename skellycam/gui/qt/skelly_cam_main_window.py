@@ -12,7 +12,7 @@ from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
-from skellycam.gui.qt.widgets.skellycam_control_panel import (
+from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_side_panel import (
     SkellyCamControlPanel,
 )
 from skellycam.gui.qt.widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget

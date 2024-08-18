@@ -150,6 +150,13 @@ class SkellyCamWidget(QWidget):
         logger.info("Disconnecting from cameras")
         self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
 
+    def connect_to_cameras(self):
+        logger.info("Connecting to cameras")
+        connect_to_cameras_response = self.client.connect_to_cameras()
+        logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
+        self.gui_state.camera_configs = connect_to_cameras_response.connected_cameras
+        self.gui_state.available_devices = connect_to_cameras_response.detected_cameras
+        self.gui_state_changed.emit()
 
     def _create_detect_cameras_button(self):
         detect_available_cameras_push_button = QPushButton(
@@ -166,13 +173,6 @@ class SkellyCamWidget(QWidget):
 
         return detect_available_cameras_push_button
 
-    def connect_to_cameras(self):
-        logger.info("Connecting to cameras")
-        connect_to_cameras_response = self.client.connect_to_cameras()
-        logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
-        self.gui_state.camera_configs = connect_to_cameras_response.connected_cameras
-        self.gui_state.available_devices = connect_to_cameras_response.detected_cameras
-        self.gui_state_changed.emit()
 
 
     @Slot(str, QImage, dict)
