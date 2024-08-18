@@ -16,12 +16,12 @@ class GUIState:
     _lock: multiprocessing.Lock = multiprocessing.Lock()
 
     @property
-    def cameras_configs(self) -> Optional[CameraConfigs]:
+    def camera_configs(self) -> Optional[CameraConfigs]:
         with self._lock:
             return self._cameras_configs
 
-    @cameras_configs.setter
-    def cameras_configs(self, value: Optional[CameraConfigs]) -> None:
+    @camera_configs.setter
+    def camera_configs(self, value: Optional[CameraConfigs]) -> None:
         with self._lock:
             self._cameras_configs = value
 

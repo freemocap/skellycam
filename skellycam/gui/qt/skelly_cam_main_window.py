@@ -68,7 +68,7 @@ class SkellyCamMainWindow(QMainWindow):
         )
         self._skellycam_widget.resize(1280, 720)
         self._skellycam_record_buttons = SkellyCamRecordButtonsPanel(
-            camera_viewer_widget=self._skellycam_widget,
+            skellycam_widget=self._skellycam_widget,
             parent=self,
         )
         self._layout.addWidget(self._skellycam_record_buttons)
@@ -106,14 +106,7 @@ class SkellyCamMainWindow(QMainWindow):
         )
 
     def _connect_signals_to_slots(self):
-
-
-        self._skellycam_widget.cameras_detected_signal.connect(
-            self.skellycam_control_panel.handle_cameras_detected
-        )
-        self._skellycam_widget.cameras_connected_signal.connect(
-            self.skellycam_control_panel.handle_cameras_connected
-        )
+        self._skellycam_widget.gui_state_changed.connect(self.skellycam_control_panel.update)
 
         self._skellycam_widget.detect_available_cameras_push_button.clicked.connect(
             self._welcome_to_skellycam_widget.hide

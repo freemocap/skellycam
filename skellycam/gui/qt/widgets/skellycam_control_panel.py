@@ -8,6 +8,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from skellycam.core.cameras.config.camera_config import CameraConfig
 from skellycam.core.detection.image_resolution import ImageResolution
+from skellycam.gui.gui_state import get_gui_state
 from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.gui.qt.utilities.qt_label_strings import (COLLAPSE_ALL_STRING, COPY_SETTINGS_TO_CAMERAS_STRING,
                                                          EXPAND_ALL_STRING, ROTATE_180_STRING,
@@ -27,6 +28,8 @@ class SkellyCamControlPanel(QWidget):
                  skellycam_widget: SkellyCamWidget):
 
         super().__init__()
+
+        self.gui_state = get_gui_state()
         # self.setMinimumWidth(250)
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
@@ -39,14 +42,13 @@ class SkellyCamControlPanel(QWidget):
         }
         """)
 
-        self._camera_parameter_group_dictionary = {}
+        self._camera_parameter_groups = {}
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
         self._make_buttons()
 
         self._parameter_tree_widget = ParameterTree(parent=self, showHeader=False)
-        # self._parameter_tree_widget.setStyleSheet(parameter_tree_stylesheet_string)
         self._layout.addWidget(self._parameter_tree_widget)
         self._parameter_tree_widget.addParameters(
             Parameter(name="No cameras connected...", value="", type="str")
@@ -90,13 +92,10 @@ class SkellyCamControlPanel(QWidget):
 
         self._parameter_tree_widget.clear()
         self._add_expand_collapse_buttons()
-        for camera_config_dict in cameras_connected_response_dict.values():
-            camera_config = CameraConfig(**camera_config_dict)
-            self._camera_parameter_group_dictionary[
-                camera_config.camera_id
-            ] = self._convert_camera_config_to_parameter(camera_config)
+        for camera in self.gui_state.camera_configs.values():
+            self._camera_parameter_groups[camera.camera_id] = self._convert_camera_config_to_parameter(camera)
             self._parameter_tree_widget.addParameters(
-                self._camera_parameter_group_dictionary[camera_config.camera_id]
+                self._camera_parameter_groups[camera.camera_id]
             )
 
     def _emit_camera_configs_dict(self):
@@ -179,7 +178,7 @@ class SkellyCamControlPanel(QWidget):
         for (
                 camera_id,
                 camera_parameter_group,
-        ) in self._camera_parameter_group_dictionary.items():
+        ) in self._camera_parameter_groups.items():
             camera_config_dictionary[camera_id] = CameraConfig(
                 camera_id=camera_id,
                 exposure=camera_parameter_group.param("Exposure").value(),
@@ -249,7 +248,7 @@ class SkellyCamControlPanel(QWidget):
         self._parameter_tree_widget.addParameters(collapse_all_button_parameter)
 
     def _expand_or_collapse_all_action(self, action):
-        for camera_parameter in self._camera_parameter_group_dictionary.values():
+        for camera_parameter in self._camera_parameter_groups.values():
             if action.name() == EXPAND_ALL_STRING:
                 camera_parameter.setOpts(expanded=True)
             elif action.name() == COLLAPSE_ALL_STRING:

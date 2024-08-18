@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Union, Optional
 
 import cv2
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot, Signal
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import (
     QGridLayout,
@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from skellycam.api.client.fastapi_client import get_client, FastAPIClient
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.gui.gui_state import GUIState, get_gui_state
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, \
@@ -33,13 +34,12 @@ MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
 
 
 class SkellyCamWidget(QWidget):
-
+    gui_state_changed = Signal()
 
     def __init__(
             self,
             get_new_synchronized_videos_folder_callable: callable,
             camera_ids: List[Union[str, int]] = None,
-            annotate_images: bool = False,
             parent=None,
     ):
 
@@ -49,8 +49,9 @@ class SkellyCamWidget(QWidget):
         super().__init__(parent=parent)
 
         self.client: FastAPIClient = get_client()
+        self.gui_state: [GUIState] = get_gui_state()
+
         self._get_new_synchronized_videos_folder_callable = get_new_synchronized_videos_folder_callable
-        self.annotate_images = annotate_images
 
         self._detect_cameras_worker = None
         self._dictionary_of_single_camera_view_widgets = None
@@ -84,30 +85,11 @@ class SkellyCamWidget(QWidget):
         self._no_cameras_found_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._no_cameras_found_label.setStyleSheet(title_label_style_string)
         self._no_cameras_found_label.hide()
-        self.cameras_connected_signal.connect(self._no_cameras_found_label.hide)
         self.detect_available_cameras_push_button.clicked.connect(self._no_cameras_found_label.hide)
 
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-        # self._layout.addStretch()
-
-    #
-    # @property
-    # def controller_slot_dictionary(self):
-    #     return self._cam_group_frame_worker.slot_dictionary
-    #
-    # @property
-    # def camera_config_dicationary(self):
-    #     return self._camera_config_dicationary
-    #
-    # @property
-    # def cameras_connected(self):
-    #     return self._cam_group_frame_worker.cameras_connected
-    #
-    # @property
-    # def is_recording(self):
-    #     return self._cam_group_frame_worker.is_recording
 
 
 
@@ -191,18 +173,15 @@ class SkellyCamWidget(QWidget):
         logger.info("Connecting to cameras")
         connect_to_cameras_response = self.client.connect_to_cameras()
         logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
-        self._camera_configs = connect_to_cameras_response.connected_cameras
-        self._available_devices = connect_to_cameras_response.detected_cameras
+        self.gui_state.camera_configs = connect_to_cameras_response.connected_cameras
+        self.gui_state.available_devices = connect_to_cameras_response.detected_cameras
+        self.gui_state_changed.emit()
 
 
     @Slot(str, QImage, dict)
     def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary: Dict):
         self._dictionary_of_single_camera_view_widgets[camera_id].handle_image_update(q_image=q_image,
                                                                                       frame_diagnostics_dictionary=frame_diagnostics_dictionary)
-
-    # def _reset_detect_available_cameras_button(self):
-    #     self._detect_available_cameras_push_button.setText("Detect Available Cameras")
-    #     self._detect_available_cameras_push_button.setEnabled(True)
 
     def update_camera_configs(self, camera_config_dictionary):
         logger.info(f"Updating camera configs: {camera_config_dictionary}")
@@ -220,10 +199,6 @@ class SkellyCamWidget(QWidget):
             else:
                 self._dictionary_of_single_camera_view_widgets[camera_id].hide()
                 self._dictionary_of_single_camera_view_widgets[camera_id].hide()
-
-        # self._cam_group_frame_worker.update_camera_group_configs(
-        #     camera_config_dictionary=camera_config_dictionary
-        # )
 
     def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:
         if (
