@@ -12,7 +12,7 @@ from skellycam.core.detection.detect_available_devices import AvailableDevices, 
 logger = logging.getLogger(__name__)
 
 
-class CameraGroupManager:
+class Controller:
     def __init__(self,
                  ) -> None:
         super().__init__()
@@ -65,15 +65,15 @@ class CameraGroupManager:
 CAMERA_GROUP_MANAGER = None
 
 
-def create_camera_group_manager() -> CameraGroupManager:
+def create_controller() -> Controller:
     global CAMERA_GROUP_MANAGER
     if not CAMERA_GROUP_MANAGER:
-        CAMERA_GROUP_MANAGER = CameraGroupManager()
+        CAMERA_GROUP_MANAGER = Controller()
     return CAMERA_GROUP_MANAGER
 
 
-def get_camera_group_manager() -> CameraGroupManager:
+def get_controller() -> Controller:
     global CAMERA_GROUP_MANAGER
-    if not isinstance(CAMERA_GROUP_MANAGER, CameraGroupManager):
+    if not isinstance(CAMERA_GROUP_MANAGER, Controller):
         raise ValueError("Controller not created!")
     return CAMERA_GROUP_MANAGER

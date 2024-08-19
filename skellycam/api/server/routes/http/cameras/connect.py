@@ -5,8 +5,8 @@ from fastapi import APIRouter, Body
 from pydantic import Field
 
 from skellycam.api.server.models.base_models import BaseResponse, BaseRequest
-from skellycam.core.camera_group_manager import CameraGroupManager, get_camera_group_manager
 from skellycam.core.cameras.config.camera_config import CameraConfigs, default_camera_configs_factory
+from skellycam.core.controller import Controller, get_controller
 from skellycam.core.detection.camera_device_info import AvailableDevices
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class ConnectCamerasRequest(BaseRequest):
 async def connect_cameras_route(
         request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
 ) -> ConnectCamerasResponse:
-    controller: CameraGroupManager = get_camera_group_manager()
+    controller: Controller = get_controller()
 
     logger.api("Received `/connect` POST request...")
     try:
@@ -51,11 +51,11 @@ async def connect_cameras_route(
     summary="Connect to all available cameras with default settings",
 )
 async def connect_cameras_route() -> ConnectCamerasResponse:
-    camera_group_manager: CameraGroupManager = get_camera_group_manager()
+    controller: Controller = get_controller()
 
     logger.api("Received `/connect` GET request...")
     try:
-        connected_cameras, available_devices = await camera_group_manager.connect_to_cameras()
+        connected_cameras, available_devices = await controller.connect_to_cameras()
         logger.api("`/connect` GET request handled successfully.")
         return ConnectCamerasResponse(connected_cameras=connected_cameras,
                                       detected_cameras=available_devices)
@@ -65,20 +65,22 @@ async def connect_cameras_route() -> ConnectCamerasResponse:
         return ConnectCamerasResponse.from_exception(e)
 
 
+# TODO - merge with above - remove redundant code, but keep the ability to directly hit a 10-frame test
 @connect_cameras_router.get(
     "/connect/test",
     response_model=BaseResponse,
     summary="Test camera connection by recording a set number of frames",
 )
-async def test_camera_connection(number_of_frames: int = 10) -> BaseResponse:
-    controller: CameraGroupManager = get_camera_group_manager()
+async def camera_connection_test(number_of_frames: int = 10) -> BaseResponse:
+    controller: Controller = get_controller()
 
     logger.api("Received `/connect/test` GET request...")
     try:
         # Record for the specified number of frames
-        connected_cameras = await controller.connect(number_of_frames=number_of_frames)
+        connected_cameras, available_devices = await controller.connect_to_cameras(number_of_frames=number_of_frames)
         logger.api("`/connect/test` GET request handled successfully.")
-        return ConnectCamerasResponse(connected_cameras=connected_cameras)
+        return ConnectCamerasResponse(connected_cameras=connected_cameras,
+                                      detected_cameras=available_devices)
     except Exception as e:
         logger.error(f"Error during camera test recording: {type(e).__name__} - {e}")
         logger.exception(e)

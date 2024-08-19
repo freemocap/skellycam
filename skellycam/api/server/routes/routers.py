@@ -6,7 +6,7 @@ from skellycam.api.server.routes.http.cameras.detect import detect_cameras_route
 from skellycam.api.server.routes.websocket.websocket_server import websocket_router
 
 enabled_routers = {
-    "/app": {
+    "/app_state": {
         "health": health_router,
         "shutdown": shutdown_router
     },
@@ -16,7 +16,7 @@ enabled_routers = {
         "close": close_cameras_router
     },
 
-    "/ws": {
+    "/websocket": {
         "connect": websocket_router
     }
 }

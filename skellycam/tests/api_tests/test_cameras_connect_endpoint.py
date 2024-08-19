@@ -1,12 +1,12 @@
 import pytest
 
-from skellycam.core.camera_group_manager import CameraGroupManager
 from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.controller import Controller
 
 
 @pytest.mark.skip(reason="This test is not implemented yet.")
 @pytest.mark.asyncio
-async def test_camera_connect(controller_fixture: CameraGroupManager,
+async def test_camera_connect(controller_fixture: Controller,
                               camera_configs_fixture: CameraConfigs,
                               number_of_frames: int = 3):
     await controller_fixture.connect(camera_configs=camera_configs_fixture,

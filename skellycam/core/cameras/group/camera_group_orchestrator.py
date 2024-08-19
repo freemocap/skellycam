@@ -175,4 +175,4 @@ class CameraGroupOrchestrator(BaseModel):
             raise AssertionError("New frames available trigger not reset!")
 
     def clear_triggers(self):
-        [triggers.clear() for triggers in self.camera_triggers.values()]
+        [triggers.clear_all() for triggers in self.camera_triggers.values()]

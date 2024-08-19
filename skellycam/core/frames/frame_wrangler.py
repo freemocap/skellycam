@@ -4,7 +4,6 @@ from typing import Optional
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
@@ -49,29 +48,25 @@ class FrameListenerProcess:
                      group_orchestrator: CameraGroupOrchestrator,
                      payloads_received: multiprocessing.Value,
                      exit_event: multiprocessing.Event):
+        logger.trace(f"Frame listener process started!")
         camera_group_shm = CameraGroupSharedMemory.recreate(
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
         )
-        from skellycam.gui import get_client
-        client = get_client()
         logger.api(f"Connecting to client websocket...")
-        client.ws_client.connect()
         try:
 
-            logger.trace(f"Frame listener process started")
             group_orchestrator.await_for_cameras_ready()
             mf_payload: Optional[MultiFramePayload] = None
 
             # Frame listener loop
             while not exit_event.is_set():
+                logger.loop(f"Frame wrangler waiting for new frames...")
                 if group_orchestrator.new_frames_available:
                     logger.loop(f"Frame wrangler sees new frames available!")
                     mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
                     group_orchestrator.set_frames_copied()
                     payloads_received.value += 1
-                    fe_payload = FrontendImagePayload.from_multi_frame_payload(mf_payload)
-                    client.ws_client.send_message(fe_payload.model_dump())
                 else:
                     wait_1ms()
 

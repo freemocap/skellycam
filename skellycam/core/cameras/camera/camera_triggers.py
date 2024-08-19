@@ -71,7 +71,7 @@ class CameraTriggers(BaseModel):
     def set_frame_copied(self):
         self.new_frame_available_trigger.clear()
 
-    def clear(self):
+    def clear_all(self):
         self.camera_ready_event.clear()
         self.initial_trigger.clear()
         self.grab_frame_trigger.clear()
