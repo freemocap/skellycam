@@ -4,8 +4,8 @@ import numpy as np
 
 from skellycam.core import IMAGE_DATA_DTYPE
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
-from skellycam.core.frames.frame_payload import FramePayloadDTO
+from skellycam.core.frames.models.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
+from skellycam.core.frames.models.frame_payload import FramePayloadDTO
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 

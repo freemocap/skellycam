@@ -28,6 +28,10 @@ class ImageResolution(BaseModel):
     def aspect_ratio(self) -> float:
         return self.width / self.height
 
+    @property
+    def as_tuple(self) -> tuple:
+        return self.height, self.width
+
     def __hash__(self) -> Hashable:
         return hash((self.width, self.height))
 

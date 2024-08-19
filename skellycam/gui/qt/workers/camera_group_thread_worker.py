@@ -9,7 +9,7 @@ from PySide6.QtGui import QImage
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.group.camera_group import CameraGroup
-from skellycam.core.frames.frame_payload import FramePayload
+from skellycam.core.frames.models.frame_payload import FramePayload
 from skellycam.core.recorder.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)

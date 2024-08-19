@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.frames.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_MODEL
+from skellycam.core.frames.models.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_MODEL
 
 
 @dataclass

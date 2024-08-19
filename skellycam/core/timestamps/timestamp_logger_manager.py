@@ -8,7 +8,7 @@ import polars as pl
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.frames.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.models.multi_frame_payload import MultiFramePayload
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.multi_frame_timestamp_log import (

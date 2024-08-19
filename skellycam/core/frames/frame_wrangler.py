@@ -4,7 +4,7 @@ from typing import Optional
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.frames.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.models.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1ms
@@ -73,7 +73,10 @@ class FrameListenerProcess:
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             camera_group_shm.close()  # close but don't unlink - parent process will unlink
-            multiframe_queue.put(None)
+            try:
+                multiframe_queue.put(None)
+            except BrokenPipeError:
+                pass
 
     def is_alive(self) -> bool:
         return self._process.is_alive()
@@ -107,14 +110,17 @@ class FrameExporterProcess:
         logger.trace(f"Frame exporter process started!")
         try:
             while not exit_event.is_set():
-                logger.trace(f"Frame exporter waiting for new frames...")
                 mf_payload: MultiFramePayload = multiframe_queue.get()
                 if not mf_payload:
                     logger.trace(f"Received empty payload - exiting")
                     break
-                logger.success(f"FrameExporter - Received multi-frame payload: {mf_payload}")
+                logger.loop(f"FrameExporter - Received multi-frame payload: {mf_payload}")
 
         finally:
+            try:
+                multiframe_queue.put(None)
+            except BrokenPipeError:
+                pass
             logger.trace(f"Stopped listening for multi-frames")
 
 

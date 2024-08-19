@@ -30,7 +30,7 @@ def get_default_skellycam_base_folder_path() -> str:
     return str(Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME)
 
 
-def create_default_recording_folder_path(create_folder: bool = True, string_tag: str = None) -> str:
+def create_recording_folder(create_folder: bool = True, string_tag: str = None) -> str:
     folder_path = (
             Path(get_default_skellycam_base_folder_path()) / "recordings" / default_recording_name(
         string_tag=string_tag)
