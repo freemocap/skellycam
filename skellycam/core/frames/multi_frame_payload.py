@@ -38,7 +38,8 @@ class MultiFramePayload(BaseModel):
         self.frames[frame.camera_id] = frame
 
     def __str__(self) -> str:
-        print_str = f""
+        print_str = f"["
         for camera_id, frame in self.frames.items():
             print_str += str(frame) + "\n"
+        print_str += "]"
         return print_str

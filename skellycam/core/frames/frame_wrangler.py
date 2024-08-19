@@ -55,15 +55,13 @@ class FrameListenerProcess:
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
         )
-        logger.api(f"Connecting to client websocket...")
         try:
 
             group_orchestrator.await_for_cameras_ready()
             mf_payload: Optional[MultiFramePayload] = None
-
+            logger.loop(f"Starting FrameListener loop...")
             # Frame listener loop
             while not exit_event.is_set():
-                logger.loop(f"Frame wrangler waiting for new frames...")
                 if group_orchestrator.new_frames_available:
                     logger.loop(f"Frame wrangler sees new frames available!")
                     multiframe_queue.put(camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload))
@@ -109,14 +107,12 @@ class FrameExporterProcess:
         logger.trace(f"Frame exporter process started!")
         try:
             while not exit_event.is_set():
-                logger.loop(f"Frame exporter waiting for new frames...")
-                if not multiframe_queue.empty():
-                    logger.loop(f"Frame exporter sees new frames available!")
-                    mf_payload = multiframe_queue.get()
-                    if not mf_payload:
-                        logger.trace(f"Received empty payload - exiting")
-                        break
-                    logger.loop(f"Frame exporter received new frames!")
+                logger.trace(f"Frame exporter waiting for new frames...")
+                mf_payload: MultiFramePayload = multiframe_queue.get()
+                if not mf_payload:
+                    logger.trace(f"Received empty payload - exiting")
+                    break
+                logger.success(f"FrameExporter - Received multi-frame payload: {mf_payload}")
 
         finally:
             logger.trace(f"Stopped listening for multi-frames")
@@ -143,6 +139,10 @@ class FrameWrangler:
             multiframe_queue=self._multiframe_queue,
             exit_event=self._exit_event,
         )
+        self._exporter_process = FrameExporterProcess(
+            multiframe_queue=self._multiframe_queue,
+            exit_event=self._exit_event,
+        )
 
     @property
     def payloads_received(self) -> Optional[int]:
@@ -153,14 +153,17 @@ class FrameWrangler:
     def start(self):
         logger.debug(f"Starting frame listener process...")
         self._listener_process.start_process()
+        self._exporter_process.start_process()
 
     def is_alive(self) -> bool:
-        if self._listener_process is None:
+        if self._listener_process is None or self._exporter_process is None:
             return False
-        return self._listener_process.is_alive()
+        return self._listener_process.is_alive() and self._exporter_process.is_alive()
+
 
     def join(self):
         self._listener_process.join()
+        self._exporter_process.join()
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
@@ -169,3 +172,4 @@ class FrameWrangler:
         if self.is_alive():
             self.join()
         self._multiframe_queue.close()
+        logger.debug(f"Frame wrangler closed")
