@@ -35,6 +35,20 @@ class FramePayload(BaseModel):
     def camera_id(self):
         return self.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
 
+    @property
+    def frame_number(self):
+        return self.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
+
+    @property
+    def height(self):
+        return self.image.shape[0]
+
+    @property
+    def width(self):
+        return self.image.shape[1]
+
+
+
     def __eq__(self, other: "FramePayload"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
 

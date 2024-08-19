@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class FrameSaver(BaseModel):
-    recording_name: str
+    recording_folder: str
     camera_configs: CameraConfigs
 
     video_savers: Dict[CameraId, VideoSaver]
@@ -25,6 +25,10 @@ class FrameSaver(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+    @property
+    def recording_name(self):
+        return Path(self.recording_folder).name
 
     @classmethod
     def create(cls,
@@ -44,11 +48,15 @@ class FrameSaver(BaseModel):
                                                         config=camera_configs[camera_id],
                                                         )
 
-            metadata_lists[camera_id] = FrameMetadataSaver.create(frame_metadata=FrameMetadata.create(frame=frame))
-        return cls(recording_name=recording_name,
+            metadata_lists[camera_id] = FrameMetadataSaver.create(
+                frame_metadata=FrameMetadata.from_array(metadata_array=frame.metadata),
+                recording_name=recording_name,
+                save_path=metadata_folder,
+            )
+        return cls(recording_folder=recording_folder,
                    camera_configs=camera_configs,
-                   video_writers=video_savers,
-                   frame_metadata_lists=metadata_lists)
+                   video_savers=video_savers,
+                   frame_metadata_savers=metadata_lists)
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
         mf_payload.lifecycle_timestamps_ns.append({"start_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
@@ -60,9 +68,10 @@ class FrameSaver(BaseModel):
 
         mf_payload.lifecycle_timestamps_ns.append({"before_add_multi_frame_to_metadata_savers": time.perf_counter_ns()})
         for camera_id, frame in mf_payload.frames.items():
-            self.frame_metadata_lists[camera_id].add_frame(FrameMetadata.create(frame=frame))
+            self.frame_metadata_savers[camera_id].add_frame(frame=frame)
         mf_payload.lifecycle_timestamps_ns.append({"done_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
-        logger.success(f"Added multi-frame {mf_payload.number} to FrameSaver {self.recording_name}")
+        logger.success(f"Added multi-frame {mf_payload.multi_frame_number} to FrameSaver {self.recording_name}")
+
     @classmethod
     def _create_subfolders(cls, recording_folder: str) -> Tuple[str, str]:
         videos_folder = Path(recording_folder) / "videos"

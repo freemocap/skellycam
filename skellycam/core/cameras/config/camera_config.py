@@ -48,6 +48,7 @@ def get_video_file_type(fourcc_code: int) -> Optional[str]:
     file_format = fourcc_to_extension.get(fourcc_code, None)
     if file_format is None:
         raise ValueError(f"Unrecognized FOURCC code: {fourcc_code}")
+    return file_format
 
 
 class CameraConfig(BaseModel):
