@@ -66,6 +66,7 @@ class UvicornServerManager:
 # singleton
 UVICORN_SERVER_MANAGER = None
 
+
 def get_server_manager(*args, **kwargs) -> UvicornServerManager:
     global UVICORN_SERVER_MANAGER
     if UVICORN_SERVER_MANAGER is None:

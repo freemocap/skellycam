@@ -67,12 +67,16 @@ class FrameListenerProcess:
             while not exit_event.is_set():
                 if group_orchestrator.new_frames_available:
                     logger.loop(f"Frame wrangler sees new frames available!")
-                    multiframe_queue.put(camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload))
+                    mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
+                    # Reset the flag to allow new frame loop to begin BEFORE we put the payload in the queue
                     group_orchestrator.set_frames_copied()
+                    mf_payload.lifecycle_timestamps_ns.append({"before_put_in_mf_queue": time.perf_counter_ns()})
+                    multiframe_queue.put(mf_payload)
                     payloads_received.value += 1
                 else:
                     wait_1ms()
-
+        except Exception as e:
+            logger.error(f"Frame listener process error: {e}")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             camera_group_shm.close()  # close but don't unlink - parent process will unlink
@@ -118,17 +122,20 @@ class FrameExporterProcess:
         frame_saver: Optional[FrameSaver] = None
         try:
             while not exit_event.is_set():
-                mf_payload: MultiFramePayload = multiframe_queue.get()
-                mf_payload.lifecycle_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
-                if not mf_payload:
-                    logger.trace(f"Received empty payload - exiting")
-                    break
-                logger.loop(f"FrameExporter - Received multi-frame payload: {mf_payload}")
-                if not frame_saver:
-                    frame_saver = FrameSaver.create(mf_payload=mf_payload,
-                                                    camera_configs=camera_configs,
-                                                    recording_folder=create_recording_folder(string_tag=None))
-                frame_saver.add_multi_frame(mf_payload)
+                if not multiframe_queue.empty():
+                    mf_payload: MultiFramePayload = multiframe_queue.get()
+                    mf_payload.lifecycle_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
+                    if not mf_payload:
+                        logger.trace(f"Received empty payload - exiting")
+                        break
+                    logger.loop(f"FrameExporter - Received multi-frame payload: {mf_payload}")
+                    if not frame_saver:
+                        frame_saver = FrameSaver.create(mf_payload=mf_payload,
+                                                        camera_configs=camera_configs,
+                                                        recording_folder=create_recording_folder(string_tag=None))
+                    frame_saver.add_multi_frame(mf_payload)
+                else:
+                    wait_1ms()
         finally:
             try:
                 multiframe_queue.put(None)
@@ -137,6 +144,8 @@ class FrameExporterProcess:
             logger.trace(f"Stopped listening for multi-frames")
             if frame_saver:
                 frame_saver.close()
+            exit_event.set()
+
 
 class FrameWrangler:
     def __init__(self,

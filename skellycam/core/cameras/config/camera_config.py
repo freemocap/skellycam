@@ -1,5 +1,6 @@
-from typing import Tuple, Dict, Literal
+from typing import Tuple, Dict, Literal, Optional
 
+import cv2
 from pydantic import BaseModel, Field, field_validator
 
 from skellycam.core import BYTES_PER_MONO_PIXEL
@@ -7,6 +8,46 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.config.default_config import DefaultCameraConfig
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.detection.image_rotation_types import RotationTypes
+
+
+def get_video_file_type(fourcc_code: int) -> Optional[str]:
+    """
+    Get the video file type based on an OpenCV FOURCC code.
+
+    Parameters
+    ----------
+    fourcc_code : int
+        The FOURCC code representing the codec.
+
+    Returns
+    -------
+    Optional[str]
+        The file extension of the video file type, or None if not recognized.
+
+    Examples
+    --------
+    >>> get_video_file_type(cv2.VideoWriter_fourcc(*'mp4v'))
+    '.mp4'
+    """
+    fourcc_to_extension = {
+        cv2.VideoWriter_fourcc(*'MP4V'): '.mp4',
+        cv2.VideoWriter_fourcc(*'H264'): '.mp4',
+        cv2.VideoWriter_fourcc(*'X264'): '.mp4',
+
+        cv2.VideoWriter_fourcc(*'XVID'): '.avi',
+        cv2.VideoWriter_fourcc(*'DIVX'): '.avi',
+
+        cv2.VideoWriter_fourcc(*'MJPG'): '.mjpeg',
+        cv2.VideoWriter_fourcc(*'VP80'): '.webm',
+        cv2.VideoWriter_fourcc(*'THEO'): '.ogv',
+        cv2.VideoWriter_fourcc(*'WMV1'): '.wmv',
+        cv2.VideoWriter_fourcc(*'WMV2'): '.wmv',
+        cv2.VideoWriter_fourcc(*'FLV1'): '.flv',
+    }
+
+    file_format = fourcc_to_extension.get(fourcc_code, None)
+    if file_format is None:
+        raise ValueError(f"Unrecognized FOURCC code: {fourcc_code}")
 
 
 class CameraConfig(BaseModel):
@@ -78,6 +119,11 @@ class CameraConfig(BaseModel):
     @property
     def image_size_bytes(self) -> int:
         return self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_MONO_PIXEL
+
+    @property
+    def video_file_extension(self) -> str:
+        return get_video_file_type(cv2.VideoWriter_fourcc(*self.writer_fourcc))
+
 
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()

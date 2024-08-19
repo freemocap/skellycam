@@ -1,6 +1,6 @@
 from csv import DictWriter
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pydantic import BaseModel
 
@@ -16,8 +16,11 @@ class FrameMetadataSaver(BaseModel):
     camera_id: CameraId
     frame_metadata_list: List[FrameMetadata]
 
-    file_handle: Optional[any] = None
+    file_handle: Optional[Any] = None
     csv_writer: Optional[DictWriter] = None
+
+    class Config:
+        arbitrary_types_allowed = True
 
     @classmethod
     def create(cls, frame_metadata: FrameMetadata, save_path: str):

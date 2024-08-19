@@ -15,6 +15,9 @@ class VideoSaver(BaseModel):
     camera_id: CameraId
     video_writer: cv2.VideoWriter
 
+    class Config:
+        arbitrary_types_allowed = True
+
     @classmethod
     def create(cls,
                recording_name: str,
@@ -23,7 +26,7 @@ class VideoSaver(BaseModel):
                config: CameraConfig,
                ):
         video_file_path = str(
-            Path(videos_folder) / f"{recording_name}_camera_{frame.camera_id}.{config.video_file_format}")
+            Path(videos_folder) / f"{recording_name}_camera_{frame.camera_id}.{config.video_file_extension}")
         writer = cls._initialize_video_writer(frame=frame,
                                               config=config,
                                               video_file_path=video_file_path)

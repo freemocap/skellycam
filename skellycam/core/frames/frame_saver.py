@@ -23,6 +23,9 @@ class FrameSaver(BaseModel):
     video_savers: Dict[CameraId, VideoSaver]
     frame_metadata_savers: Dict[CameraId, FrameMetadataSaver]
 
+    class Config:
+        arbitrary_types_allowed = True
+
     @classmethod
     def create(cls,
                mf_payload: MultiFramePayload,
@@ -59,7 +62,7 @@ class FrameSaver(BaseModel):
         for camera_id, frame in mf_payload.frames.items():
             self.frame_metadata_lists[camera_id].add_frame(FrameMetadata.create(frame=frame))
         mf_payload.lifecycle_timestamps_ns.append({"done_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
-
+        logger.success(f"Added multi-frame {mf_payload.number} to FrameSaver {self.recording_name}")
     @classmethod
     def _create_subfolders(cls, recording_folder: str) -> Tuple[str, str]:
         videos_folder = Path(recording_folder) / "videos"
@@ -98,9 +101,9 @@ class FrameSaver(BaseModel):
         if frame.camera_id != config.camera_id:
             raise ValidationError(
                 f"Frame camera_id {frame.camera_id} does not match config camera_id {config.camera_id}")
-        if frame.image.shape != (config.height, config.width, config.color_channels):
+        if frame.image.shape != (config.resolution.height, config.resolution.width, config.color_channels):
             raise ValidationError(f"Frame shape {frame.image.shape} does not match config shape "
-                                  f"({config.height}, {config.width}, {config.color_channels})")
+                                  f"({config.resolution.height}, {config.resolution.width}, {config.color_channels})")
         if frame.metadata.shape != FRAME_METADATA_SHAPE:
             raise ValidationError(f"Metadata shape mismatch - "
                                   f"Expected: {FRAME_METADATA_SHAPE}, "
@@ -112,8 +115,23 @@ class FrameSaver(BaseModel):
             video_saver.close()
         for metadata_saver in self.frame_metadata_savers.values():
             metadata_saver.close()
+        self.finalize_recording()
 
+    def finalize_recording(self):
+        logger.debug(f"Finalizing recording: `{self.recording_name}`...")
         self.finalize_timestamps()
         self.save_recording_summary()
+        self.validate_recording()
+        logger.success(f"Recording `{self.recording_name} Successfully recorded to: {self.recording_folder}")
 
-    def f
+    def finalize_timestamps(self):
+        # TODO - combine all the `[camera]_timestamps.csv` into a combined `[recording]_timestamps.csv`
+        pass
+
+    def save_recording_summary(self):
+        # TODO - save a summary of the recording to the recording folder, like stats and whatnot, also a `README.md`
+        pass
+
+    def validate_recording(self):
+        # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
+        pass

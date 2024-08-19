@@ -77,5 +77,3 @@ class CameraTriggers(BaseModel):
         self.grab_frame_trigger.clear()
         self.retrieve_frame_trigger.clear()
         self.new_frame_available_trigger.clear()
-
-

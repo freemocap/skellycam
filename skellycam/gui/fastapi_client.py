@@ -41,5 +41,3 @@ class FastAPIClient:
         self.http_client.get("/app/shutdown")
         self.http_client.close()
         self.ws_client.close()
-
-
