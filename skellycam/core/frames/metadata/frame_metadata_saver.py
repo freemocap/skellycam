@@ -1,11 +1,11 @@
-from csv import DictWriter
+from io import TextIOWrapper
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import List
 
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.metadata.frame_metadata import FrameMetadata, FRAME_METADATA_MODEL
+from skellycam.core.frames.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payload_models.frame_payload import FramePayload
 
 
@@ -16,8 +16,7 @@ class FrameMetadataSaver(BaseModel):
     camera_id: CameraId
     frame_metadata_list: List[FrameMetadata] = Field(default_factory=list)
 
-    file_handle: Optional[Any] = None
-    csv_writer: Optional[DictWriter] = None
+    file_handle: TextIOWrapper
 
     class Config:
         arbitrary_types_allowed = True
@@ -30,12 +29,11 @@ class FrameMetadataSaver(BaseModel):
         cls._validate_input(frame_metadata, save_path)
         csv_file_name = f"{recording_name}_camera_{frame_metadata.camera_id}_timestamps.csv"
         full_csv_path = str(Path(save_path) / csv_file_name)
-        file_handle = open(full_csv_path, mode="x", newline="")
-        csv_writer = DictWriter(file_handle, fieldnames=[key.value for key in FRAME_METADATA_MODEL])
-        csv_writer.writeheader()
+        file_handle = open(full_csv_path, mode="w", newline="")
+        header = ",".join(list(frame_metadata.model_dump().keys()))
+        file_handle.write(header + "\n")
         return cls(camera_id=frame_metadata.camera_id,
-                   file_handle=file_handle,
-                   csv_writer=csv_writer)
+                   file_handle=file_handle)
 
     @classmethod
     def _validate_input(cls, frame_metadata, save_path):
@@ -49,6 +47,7 @@ class FrameMetadataSaver(BaseModel):
         frame_metadata = FrameMetadata.from_array(metadata_array=frame.metadata)
         self._validate(frame_metadata)
         self.frame_metadata_list.append(frame_metadata)
+        self.file_handle.write(",".join([str(value) for value in frame_metadata.model_dump().values()]) + "\n")
 
     def _validate(self, frame_metadata: FrameMetadata):
         if frame_metadata.camera_id != self.camera_id:
