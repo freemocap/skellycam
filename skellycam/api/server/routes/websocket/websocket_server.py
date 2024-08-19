@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.api.client.client_singleton import get_client
+from skellycam.gui import get_client
 
 logger = logging.getLogger(__name__)
 

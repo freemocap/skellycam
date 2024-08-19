@@ -53,7 +53,7 @@ class FrameListenerProcess:
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
         )
-        from skellycam.api.client.client_singleton import get_client
+        from skellycam.gui import get_client
         client = get_client()
         logger.api(f"Connecting to client websocket...")
         client.ws_client.connect()

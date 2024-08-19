@@ -12,10 +12,10 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout,
 )
 
-from skellycam.api.client.client_singleton import get_client
-from skellycam.api.client.fastapi_client import FastAPIClient
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.gui import get_client
+from skellycam.gui.fastapi_client import FastAPIClient
 from skellycam.gui.gui_state import GUIState, get_gui_state
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
 from skellycam.gui.qt.widgets.single_camera_view_widget import SingleCameraViewWidget
