@@ -1,6 +1,5 @@
 import time
 from enum import Enum
-from pprint import pprint, pformat
 
 import numpy as np
 from pydantic import BaseModel, computed_field
@@ -15,21 +14,25 @@ class FRAME_METADATA_MODEL(Enum):
     We will store the metadata in an numpy array while we're doing the shared memory nonsense, and convert to a Pydantic model when we're safely away from Camera land.
     """
     CAMERA_ID: int = 0  # CameraId (as an int corresponding the int used to create the cv2.VideoCapture object)
-    FRAME_NUMBER: int = 1  # frame_number (The number of frames that have been captured by the camera since it was started)
-    INITIALIZED: int = 2  # initialized (timestamp when the metadata was initialized)
-    PRE_GRAB_TIMESTAMP_NS: int = 3  # pre_grab_timestamp_ns (timestamp before calling cv2.VideoCapture.grab())
-    POST_GRAB_TIMESTAMP_NS: int = 4  # post_grab_timestamp_ns (timestamp after calling cv2.VideoCapture.grab())
-    PRE_RETRIEVE_TIMESTAMP_NS: int = 5  # pre_retrieve_timestamp_ns (timestamp before calling cv2.VideoCapture.retrieve())
-    POST_RETRIEVE_TIMESTAMP_NS: int = 6  # post_retrieve_timestamp_ns (timestamp after calling cv2.VideoCapture.retrieve())
-    COPY_TO_BUFFER_TIMESTAMP_NS: int = 7  # copy_timestamp_ns (timestamp when frame was copied to shared memory)
-    COPY_FROM_BUFFER_TIMESTAMP_NS: int = 8  # copy_timestamp_ns (timestamp when frame was copied from shared memory
-    START_CONVERT_TO_FRONTEND_PAYLOAD_TIMESTAMP_NS: int = 9  # start_convert_to_frontend_payload_timestamp_ns
-    END_CONVERT_TO_FRONTEND_PAYLOAD_TIMESTAMP_NS: int = 10  # end_convert_to_frontend_payload_timestamp_ns
-    START_SEND_DOWN_WEBSOCKET_TIMESTAMP_NS: int = 11  # start_send_down_websocket_timestamp_ns
+    FRAME_NUMBER: int = 1  # (The number of frames that have been captured by the camera since it was started)
+    INITIALIZED: int = 2  # (timestamp when the metadata was initialized)
+    PRE_GRAB_TIMESTAMP_NS: int = 3  # (timestamp before calling cv2.VideoCapture.grab())
+    POST_GRAB_TIMESTAMP_NS: int = 4  # (timestamp after calling cv2.VideoCapture.grab())
+    PRE_RETRIEVE_TIMESTAMP_NS: int = 5  # (timestamp before calling cv2.VideoCapture.retrieve())
+    POST_RETRIEVE_TIMESTAMP_NS: int = 6  # (timestamp after calling cv2.VideoCapture.retrieve())
+    COPY_TO_BUFFER_TIMESTAMP_NS: int = 7  # (timestamp when frame was copied to shared memory)
+    COPY_FROM_BUFFER_TIMESTAMP_NS: int = 8  # (timestamp when frame was copied from shared memory)
+    START_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 9  # (timestamp before compressing to jpeg)
+    END_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 10  # (timestamp_ns (timestamp after compressing to jpeg)
+    START_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 11  # (timestamp before annotating image)
+    END_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 12  # (timestamp after annotating image)
+
 
 FRAME_METADATA_DTYPE = np.uint64
 FRAME_METADATA_SHAPE = (len(FRAME_METADATA_MODEL),)
 FRAME_METADATA_SIZE_BYTES = np.dtype(FRAME_METADATA_DTYPE).itemsize * np.prod(FRAME_METADATA_SHAPE)
+
+
 def create_empty_frame_metadata(
         camera_id: int,
         frame_number: int
@@ -52,16 +55,17 @@ class FrameMetadata(BaseModel):
     camera_id: int = CameraId(0)
     frame_number: int = 0
 
-    initialized_timestamp_ns: int = time.perf_counter_ns()
-    pre_grab_timestamp_ns: int = time.perf_counter_ns()
-    post_grab_timestamp_ns: int = time.perf_counter_ns()
-    pre_retrieve_timestamp_ns: int = time.perf_counter_ns()
-    post_retrieve_timestamp_ns: int = time.perf_counter_ns()
-    copy_to_buffer_timestamp_ns: int = time.perf_counter_ns()
-    copy_from_buffer_timestamp_ns: int = time.perf_counter_ns()
-    start_convert_to_frontend_payload_timestamp_ns: int = time.perf_counter_ns()
-    end_convert_to_frontend_payload_timestamp_ns: int = time.perf_counter_ns()
-    start_send_down_websocket_timestamp_ns: int = time.perf_counter_ns()
+    initialized_timestamp_ns: int
+    pre_grab_timestamp_ns: int
+    post_grab_timestamp_ns: int
+    pre_retrieve_timestamp_ns: int
+    post_retrieve_timestamp_ns: int
+    copy_to_buffer_timestamp_ns: int
+    copy_from_buffer_timestamp_ns: int
+    start_annotate_image_timestamp_ns: int
+    end_annotate_image_timestamp_ns: int
+    start_compress_to_jpeg_timestamp_ns: int
+    end_compress_to_jpeg_timestamp_ns: int
 
     @classmethod
     def from_array(cls, metadata_array: np.ndarray):
@@ -79,17 +83,20 @@ class FrameMetadata(BaseModel):
             post_retrieve_timestamp_ns=metadata_array[FRAME_METADATA_MODEL.POST_RETRIEVE_TIMESTAMP_NS.value],
             copy_to_buffer_timestamp_ns=metadata_array[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS.value],
             copy_from_buffer_timestamp_ns=metadata_array[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value],
-            start_convert_to_frontend_payload_timestamp_ns=metadata_array[
-                FRAME_METADATA_MODEL.START_CONVERT_TO_FRONTEND_PAYLOAD_TIMESTAMP_NS.value],
-            end_convert_to_frontend_payload_timestamp_ns=metadata_array[
-                FRAME_METADATA_MODEL.END_CONVERT_TO_FRONTEND_PAYLOAD_TIMESTAMP_NS.value],
-            send_down_websocket_timestamp_ns=metadata_array[
-                FRAME_METADATA_MODEL.START_SEND_DOWN_WEBSOCKET_TIMESTAMP_NS.value]
+            start_annotate_image_timestamp_ns=metadata_array[
+                FRAME_METADATA_MODEL.START_IMAGE_ANNOTATION_TIMESTAMP_NS.value],
+            end_annotate_image_timestamp_ns=metadata_array[
+                FRAME_METADATA_MODEL.END_IMAGE_ANNOTATION_TIMESTAMP_NS.value],
+            start_compress_to_jpeg_timestamp_ns=metadata_array[
+                FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value],
+            end_compress_to_jpeg_timestamp_ns=metadata_array[
+                FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value],
+
         )
 
     @computed_field
     def total_time_ns(self) -> int:
-        return self.start_send_down_websocket_timestamp_ns - self.initialized_timestamp_ns
+        return self.end_compress_to_jpeg_timestamp_ns - self.initialized_timestamp_ns
 
     @computed_field
     def time_before_grab_ns(self) -> int:
@@ -116,23 +123,24 @@ class FrameMetadata(BaseModel):
         return self.copy_from_buffer_timestamp_ns - self.copy_to_buffer_timestamp_ns
 
     @computed_field
-    def time_spent_waiting_to_start_converting_to_frontend_payload_ns(self) -> int:
-        return self.start_convert_to_frontend_payload_timestamp_ns - self.copy_from_buffer_timestamp_ns
+    def time_spent_waiting_to_start_annotate_image_ns(self) -> int:
+        return self.start_annotate_image_timestamp_ns - self.copy_from_buffer_timestamp_ns
 
     @computed_field
-    def time_spent_converting_to_frontend_payload_ns(self) -> int:
-        return self.end_convert_to_frontend_payload_timestamp_ns - self.start_convert_to_frontend_payload_timestamp_ns
+    def time_spent_in_annotate_image_ns(self) -> int:
+        return self.end_annotate_image_timestamp_ns - self.start_annotate_image_timestamp_ns
 
     @computed_field
-    def time_spent_waiting_to_be_spent_down_websocket_ns(self) -> int:
-        return self.start_send_down_websocket_timestamp_ns - self.end_convert_to_frontend_payload_timestamp_ns
+    def time_spent_waiting_to_start_compress_to_jpeg_ns(self) -> int:
+        return self.start_compress_to_jpeg_timestamp_ns - self.copy_from_buffer_timestamp_ns
 
-
+    @computed_field
+    def time_spent_in_compress_to_jpeg_ns(self) -> int:
+        return self.end_compress_to_jpeg_timestamp_ns - self.start_compress_to_jpeg_timestamp_ns
 
 
 
 if __name__ == "__main__":
-    from pprint import pprint
     print(FRAME_METADATA_MODEL)
     print(FRAME_METADATA_DTYPE)
     print(FRAME_METADATA_SHAPE)
@@ -148,7 +156,3 @@ if __name__ == "__main__":
     time_elapsed_ns = empty_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] - empty_metadata[
         FRAME_METADATA_MODEL.INITIALIZED.value]
     print(f"Time elapsed: {time_elapsed_ns} ns ({time_elapsed_ns / 1_000_000} ms, {time_elapsed_ns / 1_000_000_000} s)")
-
-    print('\n\n-------------------\n\n--- FrameMetadata ---\n\n')
-    metadata_model = FrameMetadata()
-    print(pformat(metadata_model.model_dump(), indent=2, sort_dicts=False))

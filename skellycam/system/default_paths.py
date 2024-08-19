@@ -21,6 +21,7 @@ SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in 
 
 PATH_TO_SKELLY_CAM_LOGO_SVG = str(Path(__file__).parent.parent.parent / "shared" / "logo" / "skelly-cam-logo.svg")
 
+
 def os_independent_home_dir() -> str:
     return str(Path.home())
 
@@ -43,6 +44,7 @@ def create_new_synchronized_videos_folder(parent_folder_path: Path) -> Path:
     synchronized_videos_folder_path = parent_folder_path / SYNCHRONIZED_VIDEOS_FOLDER_NAME
     synchronized_videos_folder_path.mkdir(parents=True, exist_ok=True)
     return synchronized_videos_folder_path
+
 
 def get_log_file_path() -> str:
     log_folder_path = (

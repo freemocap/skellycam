@@ -20,6 +20,7 @@ if __name__ == "__main__":
             wait_10ms()
             print("Method called!")
 
+
     # Testing the updated implementation
     model = MyFancyModel(attribute=10)
     model.attribute = 20

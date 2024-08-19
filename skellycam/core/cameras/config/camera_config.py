@@ -60,7 +60,6 @@ class CameraConfig(BaseModel):
     def convert_camera_id(cls, v):
         return CameraId(v)
 
-
     @property
     def orientation(self) -> str:
         return self.resolution.orientation
@@ -102,5 +101,7 @@ def default_camera_configs_factory():
     return {
         DefaultCameraConfig.CAMERA_ID: CameraConfig(),
     }
+
+
 if __name__ == "__main__":
     print(CameraConfig(camera_id=0))

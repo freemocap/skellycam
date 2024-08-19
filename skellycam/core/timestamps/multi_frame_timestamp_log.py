@@ -11,7 +11,7 @@ from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 class MultiFrameTimestampLog(BaseModel):
     multi_frame_number: int = Field(
         description="The number of multi-frame payloads that have been received by the camera group, "
-        "will be the same for all cameras and corresponds to the frame number in saved videos"
+                    "will be the same for all cameras and corresponds to the frame number in saved videos"
     )
     mean_timestamp_from_zero_s: float = Field(
         description="The mean timestamp of the individual frames in this multi-frame, in seconds since the first frame was received by the camera group"
@@ -45,11 +45,11 @@ class MultiFrameTimestampLog(BaseModel):
 
     @classmethod
     def from_timestamp_logs(
-        cls,
-        timestamp_logs: Dict[CameraId, CameraTimestampLog],
-        timestamp_mapping: Tuple[int, int],
-        first_frame_timestamp_ns: int,
-        multi_frame_number: int,
+            cls,
+            timestamp_logs: Dict[CameraId, CameraTimestampLog],
+            timestamp_mapping: Tuple[int, int],
+            first_frame_timestamp_ns: int,
+            multi_frame_number: int,
     ):
         timestamps_per_camera = [
             timestamp_log.timestamp_unix_utc_ns / 1e9
@@ -68,21 +68,21 @@ class MultiFrameTimestampLog(BaseModel):
                     for timestamp_log in timestamp_logs.values()
                 ]
             )
-            / 1e9,
+                                       / 1e9,
             mean_frame_duration_s=np.mean(
                 [
                     timestamp_log.frame_duration_ns
                     for timestamp_log in timestamp_logs.values()
                 ]
             )
-            / 1e9,
+                                  / 1e9,
             mean_timestamp_unix_utc_s=np.mean(
                 [
                     timestamp_log.timestamp_unix_utc_ns
                     for timestamp_log in timestamp_logs.values()
                 ]
             )
-            / 1e9,
+                                      / 1e9,
             mean_timestamp_utc_iso8601=datetime.fromtimestamp(
                 np.mean(
                     [

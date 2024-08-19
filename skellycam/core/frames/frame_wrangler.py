@@ -2,7 +2,6 @@ import logging
 import multiprocessing
 from typing import Optional
 
-from skellycam.api.client.fastapi_client import get_client
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.frontend_image_payload import FrontendImagePayload
@@ -54,7 +53,10 @@ class FrameListenerProcess:
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
         )
+        from skellycam.api.client.client_singleton import get_client
         client = get_client()
+        logger.api(f"Connecting to client websocket...")
+        client.ws_client.connect()
         try:
 
             logger.trace(f"Frame listener process started")
@@ -69,6 +71,7 @@ class FrameListenerProcess:
                     group_orchestrator.set_frames_copied()
                     payloads_received.value += 1
                     fe_payload = FrontendImagePayload.from_multi_frame_payload(mf_payload)
+                    client.ws_client.send_message(fe_payload.model_dump())
                 else:
                     wait_1ms()
 

@@ -31,5 +31,3 @@ async def close_camera_connections():
         logger.error(f"Failed to close cameras: {type(e).__name__} - {e}")
         logger.exception(e)
         return CamerasClosedResponse.from_exception(e)
-
-

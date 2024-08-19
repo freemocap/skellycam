@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
 
-
 class FullTimestamp(BaseModel):
     """
     The world's most extravagant timestamp object

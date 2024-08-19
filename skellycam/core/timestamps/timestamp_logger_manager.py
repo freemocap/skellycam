@@ -70,7 +70,7 @@ class TimestampLoggerManager:
         return all_loggers_finished and timestamp_csv_exists and timestamp_stats_exists
 
     def set_time_mapping(
-        self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]
+            self, start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int]
     ):
         logger.debug(
             f"Setting (`perf_coutner_ns`:`unix_time_ns`) time mapping: {start_time_perf_counter_ns_to_unix_mapping}..."
@@ -89,7 +89,7 @@ class TimestampLoggerManager:
             )
 
     def handle_multi_frame_payload(
-        self, multi_frame_payload: MultiFramePayload, multi_frame_number: int
+            self, multi_frame_payload: MultiFramePayload, multi_frame_number: int
     ):
         timestamp_log_by_camera = {}
         for camera_id, frame in multi_frame_payload.frames.items():
@@ -122,17 +122,17 @@ class TimestampLoggerManager:
         self._starting_timestamp = FullTimestamp.from_perf_to_unix_mapping(perf_counter_to_unix_mapping)
         # save starting timestamp to JSON file
         with open(
-            self._starting_timestamp_json_path,
-            "w",
+                self._starting_timestamp_json_path,
+                "w",
         ) as f:
             f.write(
                 json.dumps(self._starting_timestamp.to_descriptive_dict(), indent=4)
             )
 
     def _log_main_timestamp(
-        self,
-        timestamp_log_by_camera: Dict[CameraId, CameraTimestampLog],
-        multi_frame_number: int,
+            self,
+            timestamp_log_by_camera: Dict[CameraId, CameraTimestampLog],
+            multi_frame_number: int,
     ):
         multi_frame_timestamp_log = MultiFrameTimestampLog.from_timestamp_logs(
             timestamp_logs=timestamp_log_by_camera,
@@ -232,18 +232,18 @@ class TimestampLoggerManager:
         self._main_timestamp_path = video_path / "timestamps"
         self._main_timestamp_path.mkdir(parents=True, exist_ok=True)
         self._timestamps_csv_path = (
-            self._main_timestamp_path / f"{self._file_name_prefix}_timestamps.csv"
+                self._main_timestamp_path / f"{self._file_name_prefix}_timestamps.csv"
         )
 
         self._starting_timestamp_json_path = (
-            self._main_timestamp_path
-            / f"{self._file_name_prefix}_recording_start_timestamp.json"
+                self._main_timestamp_path
+                / f"{self._file_name_prefix}_recording_start_timestamp.json"
         )
 
         self._documentation_path = (
-            self._main_timestamp_path / f"{self._file_name_prefix}_documentation.txt"
+                self._main_timestamp_path / f"{self._file_name_prefix}_documentation.txt"
         )
 
         self._stats_path = (
-            self._main_timestamp_path / f"{self._file_name_prefix}_timestamp_stats.json"
+                self._main_timestamp_path / f"{self._file_name_prefix}_timestamp_stats.json"
         )

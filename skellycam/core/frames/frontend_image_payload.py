@@ -1,23 +1,22 @@
-from typing import Dict, Optional, List
+import time
+from typing import Dict, Optional
 
 import cv2
 import msgpack
 import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from skellycam.core import CameraId
+from skellycam.core.frames.frame_metadata import FrameMetadata, FRAME_METADATA_MODEL
 from skellycam.core.frames.frame_payload import FramePayload
 from skellycam.core.frames.multi_frame_payload import MultiFramePayload
+from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class FrontendImagePayload(BaseModel):
     jpeg_images: Dict[CameraId, Optional[bytes]]
-    metadata: Dict[CameraId, List[int]] = Field(default_factory=dict,
-                                                description="Metadata for each frame, based on FRAME_METADATA_MODEL")
-    utc_ns_to_perf_ns: Dict[str, int] = Field(
-        description="A mapping of `time.time_ns()` to `time.perf_counter_ns()` "
-                    "to allow conversion of `time.perf_counter_ns()`'s arbitrary "
-                    "time base to unix time")
+    metadata: Dict[CameraId, FrameMetadata]
+    utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
 
     @property
@@ -28,20 +27,29 @@ class FrontendImagePayload(BaseModel):
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
                                  jpeg_quality: int = 90):
+
         if not multi_frame_payload.full:
             raise ValueError("MultiFramePayload must be full to convert to FrontendImagePayload")
 
         jpeg_images = {}
+        frame_metadatas = {}
         for camera_id, frame in multi_frame_payload.frames.items():
             if frame is None:
                 continue
             frontend_image = frame.image.copy()
-            # frontend_image = cv2.resize(frontend_image, (0, 0), fx=0.5, fy=0.5)
-            jpeg_images[camera_id] = cls._image_to_jpeg(frontend_image, quality=jpeg_quality)
+            frame.metadata[FRAME_METADATA_MODEL.START_IMAGE_ANNOTATION_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            annotated_image = cls._annotate_image(frame=frame,
+                                                  image=frontend_image)
+            frame.metadata[FRAME_METADATA_MODEL.END_IMAGE_ANNOTATION_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            jpeg_images[camera_id] = cls._image_to_jpeg(annotated_image, quality=jpeg_quality)
+            frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            frame_metadatas[camera_id] = FrameMetadata.from_array(frame.metadata)
 
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
-                   jpeg_images=jpeg_images)
+                   jpeg_images=jpeg_images,
+                   metadata=frame_metadatas)
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.model_dump(), use_bin_type=True)
@@ -68,10 +76,10 @@ class FrontendImagePayload(BaseModel):
 
     @staticmethod
     def _annotate_image(frame: FramePayload,
-                        image=np.ndarray) -> np.ndarray:
+                        image: np.ndarray) -> np.ndarray:
         annotation_text = [
             f"Camera ID: {frame.camera_id}",
-            f"Frame Number: {frame.frame_number}",
+            f"Frame Number: {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}",
         ]
         font_scale = 0.5
         font_thickness = 1

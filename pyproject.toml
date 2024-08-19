@@ -25,6 +25,7 @@ scipy = "^1.13.0"
 
 pytest-xdist = { extras = ["psutil"], version = "^3.6.1" }
 pyqtgraph = "^0.13.7"
+websocket-client = "^1.8.0"
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"
 pre-commit = "^3.4.0"

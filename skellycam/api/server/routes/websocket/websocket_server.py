@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.api.client.fastapi_client import get_client
+from skellycam.api.client.client_singleton import get_client
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +11,7 @@ websocket_router = APIRouter()
 
 HELLO_CLIENT_TEXT_MESSAGE = "👋Hello, client!"
 HELLO_CLIENT_BYTES_MESSAGE = b"Beep boop - these are bytes from the websocket server wow"
+
 
 async def listen_for_client_messages(websocket: WebSocket):
     logger.info("Starting listener for client messages...")

@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.api.client.fastapi_client import get_client, shutdown_client_server
+from skellycam.api.client.client_singleton import get_client, shutdown_client_server
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
@@ -111,7 +111,6 @@ class SkellyCamMainWindow(QMainWindow):
             self._welcome_to_skellycam_widget.hide
         )
 
-
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")
         self._directory_view_widget.expand_directory_to_path(folder_path)
@@ -129,7 +128,6 @@ class SkellyCamMainWindow(QMainWindow):
         logger.info("Shutting down client server...")
         shutdown_client_server()
         self._shutdown_event.set()
-
 
 
 def remove_empty_directories(root_dir: Union[str, Path]):

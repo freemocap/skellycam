@@ -118,10 +118,10 @@ class SimpleViewerWindow(BaseModel):
         annotated_image = image_rgb
         for i, line in enumerate(annotation_text):
             y_pos = font_position[1] + i * line_gap
-            #draw text outline
+            # draw text outline
             annotated_image = cv2.putText(annotated_image, line, (font_position[0], y_pos), font,
                                           font_scale, font_outline_color, font_outline_thickness, font_line_type)
-            #draw text
+            # draw text
             annotated_image = cv2.putText(annotated_image, line, (font_position[0], y_pos), font,
                                           font_scale, font_color, font_thickness, font_line_type)
 
@@ -137,4 +137,3 @@ class SimpleViewerWindow(BaseModel):
         image_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         return image_rgb
-

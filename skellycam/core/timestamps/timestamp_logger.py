@@ -65,7 +65,7 @@ class CameraTimestampLogger:
         self._first_frame_timestamp = perf_counter_to_unix_mapping[0]
 
     def log_timestamp(
-        self, multi_frame_number: int, frame: FramePayload
+            self, multi_frame_number: int, frame: FramePayload
     ) -> CameraTimestampLog:
         if self._previous_frame_timestamp is None:
             self._previous_frame_timestamp = frame.timestamp_ns
@@ -101,15 +101,15 @@ class CameraTimestampLogger:
     def _create_save_paths(self):
         camera_timestamps_path = Path(self._save_directory) / "camera_timestamps"
         self._timestamp_csv_path = (
-            camera_timestamps_path / f"{self.file_name_prefix}_timestamps.csv"
+                camera_timestamps_path / f"{self.file_name_prefix}_timestamps.csv"
         )
 
         self._stats_json_path = (
-            camera_timestamps_path / f"{self.file_name_prefix}_timestamp_stats.json"
+                camera_timestamps_path / f"{self.file_name_prefix}_timestamp_stats.json"
         )
 
         self._documentation_path = (
-            camera_timestamps_path.parent / "camera_timestamps_field_descriptions.md"
+                camera_timestamps_path.parent / "camera_timestamps_field_descriptions.md"
         )
 
     def _save_documentation(self):

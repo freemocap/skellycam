@@ -25,7 +25,6 @@ def gui_main(shutdown_event=None):
 
     error_code = qt_app.exec()  # Will block until the GUI window is closed
 
-
     logger.info(f"Exiting with code: {error_code}")
     print("Thank you for using Skelly Cam \U0001F480 \U0001F4F8")
     sys.exit()

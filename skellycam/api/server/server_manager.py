@@ -1,7 +1,5 @@
 import logging
-import multiprocessing
 import threading
-import time
 
 import uvicorn
 from uvicorn import Server
@@ -60,30 +58,3 @@ class UvicornServerManager:
             self.server.should_exit = True
             self.server_thread.join()
             logger.info("Uvicorn Server shutdown successfully")
-
-
-UVICORN_SERVER_MANAGER = None
-
-
-def get_server_manager(*args, **kwargs) -> UvicornServerManager:
-    global UVICORN_SERVER_MANAGER
-    if UVICORN_SERVER_MANAGER is None:
-        UVICORN_SERVER_MANAGER = UvicornServerManager(*args, **kwargs)
-    return UVICORN_SERVER_MANAGER
-
-
-def run_server(shutdown_event: multiprocessing.Event = None):
-    server_manager = get_server_manager()
-    server_manager.start_server()
-    while server_manager.is_running:
-        time.sleep(1)
-        if shutdown_event and shutdown_event.is_set():
-            server_manager.shutdown_server()
-            break
-
-    logger.info("Server main process ended")
-
-
-if __name__ == "__main__":
-    run_server()
-    print("Done!")

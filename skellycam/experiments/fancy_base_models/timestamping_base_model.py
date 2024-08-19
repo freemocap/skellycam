@@ -18,8 +18,6 @@ class DurationTimestamps(BaseModel):
         return f"{self.name}: {duration_ms:.6f}ms)"
 
 
-
-
 class TimestampLogs(BaseModel):
     mapping: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping)
     timestamps: OrderedDict[str, DurationTimestamps] = Field(default_factory=OrderedDict)

@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 
 import skellycam
-from skellycam.api.server.server_main import APP_URL
+from skellycam.api.server.server_manager import APP_URL
 from skellycam.core.camera_group_manager import create_camera_group_manager
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 

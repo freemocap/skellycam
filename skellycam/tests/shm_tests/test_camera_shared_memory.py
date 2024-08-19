@@ -102,7 +102,6 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
     assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE
     assert frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] == camera_config_fixture.camera_id
 
-
     # Cleanup
     camera_shm.close()
     camera_shm.unlink()

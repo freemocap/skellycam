@@ -21,7 +21,6 @@ class CameraTriggers(BaseModel):
     new_frame_available_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     _exit_event: Annotated[multiprocessing.Event, SkipValidation] = PrivateAttr()
 
-
     @classmethod
     def from_camera_id(cls,
                        camera_id: CameraId,
@@ -78,6 +77,7 @@ class CameraTriggers(BaseModel):
         self.grab_frame_trigger.clear()
         self.retrieve_frame_trigger.clear()
         self.new_frame_available_trigger.clear()
+
 
 if __name__ == "__main__":
     ct = CameraTriggers.from_camera_id(1, multiprocessing.Event())

@@ -12,7 +12,8 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout,
 )
 
-from skellycam.api.client.fastapi_client import get_client, FastAPIClient
+from skellycam.api.client.client_singleton import get_client
+from skellycam.api.client.fastapi_client import FastAPIClient
 from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.gui.gui_state import GUIState, get_gui_state
@@ -53,7 +54,6 @@ class SkellyCamWidget(QWidget):
         self._detect_cameras_worker = None
         self._dictionary_of_single_camera_view_widgets = None
 
-
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
@@ -86,9 +86,6 @@ class SkellyCamWidget(QWidget):
 
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
-
-
-
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
@@ -144,8 +141,6 @@ class SkellyCamWidget(QWidget):
         logger.debug(f"Received result from `detect_cameras` call: {detect_cameras_response}")
         self._camera_configs = detect_cameras_response.detected_cameras
 
-
-
     def disconnect_from_cameras(self):
         logger.info("Disconnecting from cameras")
         self._clear_camera_grid_view(self._dictionary_of_single_camera_view_widgets)
@@ -172,8 +167,6 @@ class SkellyCamWidget(QWidget):
         detect_available_cameras_push_button.setProperty("recommended_next", True)
 
         return detect_available_cameras_push_button
-
-
 
     @Slot(str, QImage, dict)
     def _handle_image_update(self, camera_id: str, q_image: QImage, frame_diagnostics_dictionary: Dict):
@@ -225,5 +218,3 @@ class SkellyCamWidget(QWidget):
         logger.info("Close event detected - closing camera group frame worker")
         # self._cam_group_frame_worker.close()
         self.close()
-
-

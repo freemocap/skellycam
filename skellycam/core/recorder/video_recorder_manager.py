@@ -11,17 +11,17 @@ logger = logging.getLogger(__name__)
 
 class VideoRecorderProcessManager:
     def __init__(
-        self,
+            self,
     ):
         self._camera_configs: CameraConfigs = {}
 
         self._process: Optional[VideoRecorderProcess] = None
 
     def start_recording(
-        self,
-        camera_configs: CameraConfigs,
-        start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int],
-        recording_folder_path: str,
+            self,
+            camera_configs: CameraConfigs,
+            start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int],
+            recording_folder_path: str,
     ):
         logger.debug(f"Starting recording with folder path: {recording_folder_path}...")
         self._process = VideoRecorderProcess(

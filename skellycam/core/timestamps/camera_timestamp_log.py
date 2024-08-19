@@ -45,15 +45,15 @@ class CameraTimestampLog(BaseModel):
 
     @classmethod
     def from_frame_payload(
-        cls,
-        frame_payload: FramePayload,
-        timestamp_mapping: Tuple[int, int],
-        first_frame_timestamp_ns: int,
-        multi_frame_number: int,
-        previous_frame_timestamp_ns: int,
+            cls,
+            frame_payload: FramePayload,
+            timestamp_mapping: Tuple[int, int],
+            first_frame_timestamp_ns: int,
+            multi_frame_number: int,
+            previous_frame_timestamp_ns: int,
     ):
         unix_timestamp_ns = timestamp_mapping[1] + (
-            frame_payload.timestamp_ns - timestamp_mapping[0]
+                frame_payload.timestamp_ns - timestamp_mapping[0]
         )
         return cls(
             camera_id=frame_payload.camera_id,
@@ -61,7 +61,7 @@ class CameraTimestampLog(BaseModel):
             camera_frame_number=frame_payload.frame_number,
             perf_counter_ns_timestamp=frame_payload.timestamp_ns,
             timestamp_from_zero_ns=frame_payload.timestamp_ns
-            - first_frame_timestamp_ns,
+                                   - first_frame_timestamp_ns,
             frame_duration_ns=frame_payload.timestamp_ns - previous_frame_timestamp_ns,
             timestamp_unix_utc_ns=unix_timestamp_ns,
             timestamp_utc_iso8601=datetime.fromtimestamp(

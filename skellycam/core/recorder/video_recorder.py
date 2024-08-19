@@ -16,9 +16,9 @@ class FailedToWriteFrameToVideoException(Exception):
 
 class VideoRecorder:
     def __init__(
-        self,
-        camera_config: CameraConfig,
-        video_save_path: str,
+            self,
+            camera_config: CameraConfig,
+            video_save_path: str,
     ):
         self._perf_counter_to_unix_mapping: Optional[Dict[int, int]] = None
         self._camera_config = camera_config
@@ -77,7 +77,7 @@ class VideoRecorder:
         self._previous_frame_timestamp = frame_payload.timestamp_ns
 
     def _create_video_writer(
-        self,
+            self,
     ) -> cv2.VideoWriter:
         logger.debug(
             f"Creating video writer for camera {self._camera_config.camera_id} to save video at: {self._video_save_path}"

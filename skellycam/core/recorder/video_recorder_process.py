@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 
 class VideoRecorderProcess(Process):
     def __init__(
-        self,
-        camera_configs: Dict[CameraId, CameraConfig],
-        start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int],
-        recording_folder_path: str,
-        multi_frame_queue: multiprocessing.Queue,
+            self,
+            camera_configs: Dict[CameraId, CameraConfig],
+            start_time_perf_counter_ns_to_unix_mapping: Tuple[int, int],
+            recording_folder_path: str,
+            multi_frame_queue: multiprocessing.Queue,
     ):
         super().__init__()
         self._multi_frame_number = 0
@@ -77,7 +77,7 @@ class VideoRecorderProcess(Process):
             video_recorder.save_frame_to_disk(multi_frame_payload.frames[camera_id])
 
     def _initialize_timestamp_manager(
-        self,
+            self,
     ):
         logger.debug(
             f"Initializing timestamp manager with recording folder path: {self._recording_folder_path}"
@@ -91,8 +91,8 @@ class VideoRecorderProcess(Process):
         )
 
     def _initialize_video_recorders(
-        self,
-        recording_folder_path: str,
+            self,
+            recording_folder_path: str,
     ):
         logger.debug(
             f"Initializing video recorders with recording folder path: {recording_folder_path}"
@@ -117,7 +117,7 @@ class VideoRecorderProcess(Process):
 
 
 def make_video_file_path(
-    camera_id: CameraId, recording_folder_path: str, writer_fourcc: str
+        camera_id: CameraId, recording_folder_path: str, writer_fourcc: str
 ):
     video_file_extension = fourcc_to_file_extension(writer_fourcc)
 

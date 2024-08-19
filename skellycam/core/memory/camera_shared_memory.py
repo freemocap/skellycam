@@ -21,6 +21,7 @@ class SharedMemoryNames(BaseModel):
 
 GroupSharedMemoryNames = Dict[CameraId, SharedMemoryNames]
 
+
 class CameraSharedMemory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     camera_config: CameraConfig

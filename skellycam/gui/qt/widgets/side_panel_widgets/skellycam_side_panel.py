@@ -62,6 +62,3 @@ class SkellyCamControlPanel(QWidget):
         self._layout.addWidget(self._apply_settings_to_cameras_button)
         self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
         self._layout.addWidget(self._close_cameras_button)
-
-
-

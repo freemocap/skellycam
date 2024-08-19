@@ -35,7 +35,7 @@ class CameraGroupManager:
         return self._available_devices
 
     async def connect_to_cameras(self,
-                      camera_configs: Optional[CameraConfigs] = None,
+                                 camera_configs: Optional[CameraConfigs] = None,
                                  number_of_frames: Optional[int] = None) -> Tuple[CameraConfigs, AvailableDevices]:
         logger.info(f"Connecting to available cameras...")
 

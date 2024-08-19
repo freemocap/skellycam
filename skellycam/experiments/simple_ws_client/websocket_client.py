@@ -28,7 +28,8 @@ async def listen_for_server_messages(websocket: websockets.WebSocketClientProtoc
                 quit_event.set()
                 break
             frontend_payload = FrontendImagePayload.from_msgpack(message)
-            logger.trace(f"Received ws binary message: {len(message) / 1024}kb with images from Cameras [{skellycam.core.memory.shared_memory_demo.camera_ids}]")
+            logger.trace(
+                f"Received ws binary message: {len(message) / 1024}kb with images from Cameras [{skellycam.core.memory.shared_memory_demo.camera_ids}]")
             if len(frontend_payload) > 0:
                 viewer.display_images(frontend_payload)
     logger.info("`quit_event` set - listener loop has stopped.")

@@ -51,15 +51,13 @@ class CameraGroupOrchestrator(BaseModel):
     def frames_retrieved(self):
         return not any([triggers.retrieve_frame_trigger.is_set() for triggers in self.camera_triggers.values()])
 
-
-
     ##############################################################################################################
     def trigger_multi_frame_read(self):
         # 0 - Make sure all cameras are ready
         logger.loop("Step# 0 - Make sure all cameras are ready")
         self._ensure_cameras_ready()
         logger.loop("All cameras are ready!")
-        
+
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
         logger.loop("Step# 1 - Fire grab triggers")
         self._fire_grab_trigger()
@@ -91,7 +89,6 @@ class CameraGroupOrchestrator(BaseModel):
         logger.loop("Everything is hunky-dory after reading the frames!")
 
     ##############################################################################################################
-
 
     def fire_initial_triggers(self):
         self._ensure_cameras_ready()

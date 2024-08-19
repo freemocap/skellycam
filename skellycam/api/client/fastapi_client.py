@@ -5,10 +5,9 @@ from skellycam.api.client.http_client import HTTPClient
 from skellycam.api.client.websocket_client import WebSocketClient
 from skellycam.api.server.routes.http.cameras.connect import ConnectCamerasResponse
 from skellycam.api.server.routes.http.cameras.detect import DetectCamerasResponse
-from skellycam.api.server.server_main import APP_URL, get_server_manager
+from skellycam.api.server.server_manager import APP_URL
 
 logger = logging.getLogger(__name__)
-
 
 
 class FastAPIClient:
@@ -43,20 +42,6 @@ class FastAPIClient:
         self.http_client.close()
         self.ws_client.close()
 
-
-FASTAPI_CLIENT = None
-
-
-def get_client() -> FastAPIClient:
-    global FASTAPI_CLIENT
-    if FASTAPI_CLIENT is None:
-        FASTAPI_CLIENT = FastAPIClient()
-    return FASTAPI_CLIENT
-
-
-def shutdown_client_server() -> None:
-    if get_server_manager().is_running:
-        get_client().shutdown_server()
 
 # Example usage
 if __name__ == "__main__":

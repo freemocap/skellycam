@@ -15,7 +15,6 @@ class ImageResolution(BaseModel):
         height, width = tuple_str.replace("(", "").replace(")", "").split(delimiter)
         return cls(width=int(width), height=int(height))
 
-
     @property
     def orientation(self) -> str:
         if self.width > self.height:
@@ -24,7 +23,6 @@ class ImageResolution(BaseModel):
             return "portrait"
         if self.width == self.height:
             return "square"
-
 
     @property
     def aspect_ratio(self) -> float:

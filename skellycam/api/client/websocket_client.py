@@ -1,9 +1,8 @@
-import asyncio
 import json
 import logging
 from typing import Union, Dict, Any
 
-import websockets
+import websocket
 
 logger = logging.getLogger(__name__)
 
@@ -16,22 +15,28 @@ class WebSocketClient:
 
     def __init__(self, base_url: str):
         self.websocket_url = base_url.replace("http", "ws") + "/ws/connect"
-        self.loop = asyncio.get_event_loop()
-        self.websocket = None
+        self.websocket = websocket.WebSocketApp(
+            self.websocket_url,
+            on_message=self._on_message,
+            on_error=self._on_error,
+            on_close=self._on_close,
+        )
 
-    async def _ws_connect(self) -> None:
-        async with websockets.connect(self.websocket_url) as websocket:
-            self.websocket = websocket
-            logger.info(f"Connected to WebSocket at {self.websocket_url}")
-            try:
-                await self._receive_messages()
-            except websockets.ConnectionClosed:
-                logger.info("WebSocket connection closed")
+    def connect(self) -> None:
+        self.websocket.on_open = self._on_open
+        self.websocket.run_forever()
 
-    async def _receive_messages(self) -> None:
-        while True:
-            message = await self.websocket.recv()
-            self._handle_websocket_message(message)
+    def _on_open(self, ws) -> None:
+        logger.info(f"Connected to WebSocket at {self.websocket_url}")
+
+    def _on_message(self, ws, message: Union[str, bytes]) -> None:
+        self._handle_websocket_message(message)
+
+    def _on_error(self, ws, error) -> None:
+        logger.error(f"WebSocket error: {error}")
+
+    def _on_close(self, ws, close_status_code, close_msg) -> None:
+        logger.info("WebSocket connection closed")
 
     def _handle_websocket_message(self, message: Union[str, bytes]) -> None:
         if isinstance(message, str):
@@ -56,23 +61,20 @@ class WebSocketClient:
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
         logger.info(f"Received JSON message: {message}")
-        pass
 
-    async def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
+    def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:
             if isinstance(message, dict):
-                await self.websocket.send(json.dumps(message))
+                self.websocket.send(json.dumps(message))
                 logger.info(f"Sent JSON message: {message}")
             elif isinstance(message, str):
-                await self.websocket.send(message)
+                self.websocket.send(message)
                 logger.info(f"Sent text message: {message}")
             elif isinstance(message, bytes):
-                await self.websocket.send_binary(message)
+                self.websocket.send_binary(message)
                 logger.info(f"Sent binary message of length {len(message)}")
 
-    def start_websocket(self) -> None:
-        self.loop.run_until_complete(self._ws_connect())
-
     def close(self) -> None:
+        if self.websocket:
+            self.websocket.close()
         logger.info("Closing WebSocket client")
-        self.loop.stop()
