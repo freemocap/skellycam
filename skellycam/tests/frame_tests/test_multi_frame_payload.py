@@ -2,9 +2,9 @@ from typing import List
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.frames.models.frame_metadata import FRAME_METADATA_MODEL
-from skellycam.core.frames.models.frame_payload import FramePayloadDTO
-from skellycam.core.frames.models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_MODEL
+from skellycam.core.frames.payload_models.frame_payload import FramePayloadDTO
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 
 
 def test_initial_creation(camera_configs_fixture: CameraConfigs) -> None:

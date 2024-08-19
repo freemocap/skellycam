@@ -18,9 +18,10 @@ from skellycam.core.controller import Controller, create_controller, get_control
 from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_wrangler import FrameWrangler
-from skellycam.core.frames.models.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
-from skellycam.core.frames.models.frame_payload import FramePayloadDTO
-from skellycam.core.frames.models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, \
+    FRAME_METADATA_MODEL
+from skellycam.core.frames.payload_models.frame_payload import FramePayloadDTO
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.tests.mocks import MockVideoCapture

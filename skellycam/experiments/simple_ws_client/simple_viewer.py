@@ -5,7 +5,7 @@ import cv2
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.frames.models.frontend_image_payload import FrontendImagePayload
+from skellycam.core.frames.payload_models.frontend_image_payload import FrontendImagePayload
 from skellycam.experiments.simple_ws_client.simple_viewer_window import SimpleViewerWindow
 
 logger = logging.getLogger(__name__)

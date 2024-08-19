@@ -1,12 +1,15 @@
 import logging
 import multiprocessing
+import time
 from typing import Optional
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.frames.models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.frame_saver import FrameSaver
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.system.default_paths import create_recording_folder
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -88,11 +91,14 @@ class FrameListenerProcess:
 class FrameExporterProcess:
     def __init__(self,
                  multiframe_queue: multiprocessing.Queue,
+                 camera_configs: CameraConfigs,
                  exit_event: multiprocessing.Event, ):
         self._multiframe_queue = multiframe_queue
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
-                                                args=(multiframe_queue, exit_event))
+                                                args=(multiframe_queue,
+                                                      camera_configs,
+                                                      exit_event))
 
     def start_process(self):
         logger.trace(f"Starting frame listener process")
@@ -106,24 +112,31 @@ class FrameExporterProcess:
 
     @staticmethod
     def _run_process(multiframe_queue: multiprocessing.Queue,
+                     camera_configs: CameraConfigs,
                      exit_event: multiprocessing.Event):
         logger.trace(f"Frame exporter process started!")
+        frame_saver: Optional[FrameSaver] = None
         try:
             while not exit_event.is_set():
                 mf_payload: MultiFramePayload = multiframe_queue.get()
+                mf_payload.lifecycle_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
                 if not mf_payload:
                     logger.trace(f"Received empty payload - exiting")
                     break
                 logger.loop(f"FrameExporter - Received multi-frame payload: {mf_payload}")
-
+                if not frame_saver:
+                    frame_saver = FrameSaver.create(mf_payload=mf_payload,
+                                                    camera_configs=camera_configs,
+                                                    recording_folder=create_recording_folder(string_tag=None))
+                frame_saver.add_multi_frame(mf_payload)
         finally:
             try:
                 multiframe_queue.put(None)
             except BrokenPipeError:
                 pass
             logger.trace(f"Stopped listening for multi-frames")
-
-
+            if frame_saver:
+                frame_saver.close()
 
 class FrameWrangler:
     def __init__(self,
@@ -147,6 +160,7 @@ class FrameWrangler:
         )
         self._exporter_process = FrameExporterProcess(
             multiframe_queue=self._multiframe_queue,
+            camera_configs=camera_configs,
             exit_event=self._exit_event,
         )
 
@@ -165,7 +179,6 @@ class FrameWrangler:
         if self._listener_process is None or self._exporter_process is None:
             return False
         return self._listener_process.is_alive() and self._exporter_process.is_alive()
-
 
     def join(self):
         self._listener_process.join()

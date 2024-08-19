@@ -8,7 +8,7 @@ from setproctitle import setproctitle
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.frames.models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorder.video_recorder import (
     VideoRecorder,
 )

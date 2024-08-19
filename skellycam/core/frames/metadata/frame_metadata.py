@@ -1,6 +1,5 @@
 import time
 from enum import Enum
-from typing import List
 
 import numpy as np
 from pydantic import BaseModel, computed_field
@@ -138,37 +137,6 @@ class FrameMetadata(BaseModel):
     @computed_field
     def time_spent_in_compress_to_jpeg_ns(self) -> int:
         return self.end_compress_to_jpeg_timestamp_ns - self.start_compress_to_jpeg_timestamp_ns
-
-
-class FrameMetadaList(BaseModel):
-    """
-    Holds a list of FrameMetadata objects, one per frame of a recording
-    """
-    camera_id: CameraId
-    frame_metadata_list: List[FrameMetadata]
-
-    @classmethod
-    def initialize(cls, frame_metadata: FrameMetadata):
-        if frame_metadata.frame_number != 0:
-            raise ValueError(f"FrameMetadata frame_number {frame_metadata.frame_number} must be 0")
-        return cls(camera_id=frame_metadata.camera_id,
-                   frame_metadata_list=[frame_metadata])
-
-    def add(self, frame_metadata: FrameMetadata):
-        self._validate(frame_metadata)
-        self.frame_metadata_list.append(frame_metadata)
-
-    def _validate(self, frame_metadata: FrameMetadata):
-        if frame_metadata.camera_id != self.camera_id:
-            raise ValueError(
-                f"FrameMetadata camera_id {frame_metadata.camera_id} does not match FrameMetadatums camera_id {self.camera_id}")
-        if frame_metadata.frame_number != len(self.frame_metadata_list):
-            raise ValueError(
-                f"FrameMetadata frame_number {frame_metadata.frame_number} does not match FrameMetadatums frame_number: {len(self.frame_metadata_list)}")
-
-    def __len__(self):
-        return len(self.frame_metadata_list)
-
 
 
 if __name__ == "__main__":

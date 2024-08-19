@@ -1,9 +1,11 @@
+import time
 from typing import Dict, Optional, List
 
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.models.frame_payload import FramePayload, FramePayloadDTO
+from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_MODEL
+from skellycam.core.frames.payload_models.frame_payload import FramePayload, FramePayloadDTO
 from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
@@ -13,6 +15,7 @@ class MultiFramePayload(BaseModel):
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
     multi_frame_number: int = 0
+    lifecycle_timestamps_ns: List[Dict[str, int]] = Field(default_factory=lambda: {"created": time.perf_counter_ns()})
 
     @property
     def camera_ids(self) -> List[CameraId]:
@@ -34,6 +37,8 @@ class MultiFramePayload(BaseModel):
                    )
 
     def add_frame(self, frame_dto: FramePayloadDTO) -> None:
+        self.lifecycle_timestamps_ns.append({
+                                                f"add_camera_{frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID]}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER]}": time.perf_counter_ns()})
         frame = FramePayload.from_dto(dto=frame_dto)
         self.frames[frame.camera_id] = frame
 

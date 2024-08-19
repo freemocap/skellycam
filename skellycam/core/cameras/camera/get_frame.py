@@ -5,7 +5,7 @@ import cv2
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
-from skellycam.core.frames.models.frame_metadata import create_empty_frame_metadata, FRAME_METADATA_MODEL
+from skellycam.core.frames.metadata.frame_metadata import create_empty_frame_metadata, FRAME_METADATA_MODEL
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)

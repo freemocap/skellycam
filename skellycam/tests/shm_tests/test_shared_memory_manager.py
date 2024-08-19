@@ -3,8 +3,8 @@ from typing import Dict
 import pytest
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.frames.models.frame_metadata import FRAME_METADATA_MODEL
-from skellycam.core.frames.models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_MODEL
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 

@@ -8,7 +8,7 @@ from typing import Tuple
 import polars as pl
 
 from skellycam.core import CameraId
-from skellycam.core.frames.models.frame_payload import FramePayload
+from skellycam.core.frames.payload_models.frame_payload import FramePayload
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 
 logger = logging.getLogger(__name__)
