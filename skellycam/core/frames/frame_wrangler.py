@@ -18,11 +18,11 @@ class FrameListenerProcess:
             camera_configs: CameraConfigs,
             group_shm_names: GroupSharedMemoryNames,
             group_orchestrator: CameraGroupOrchestrator,
+            multiframe_queue: multiprocessing.Queue,
             exit_event: multiprocessing.Event,
     ):
         super().__init__()
         self._payloads_received: multiprocessing.Value = multiprocessing.Value("i", 0)
-        self._exit_event = exit_event
 
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
@@ -30,6 +30,7 @@ class FrameListenerProcess:
                                                       group_shm_names,
                                                       group_orchestrator,
                                                       self._payloads_received,
+                                                      multiframe_queue,
                                                       exit_event,
                                                       )
                                                 )
@@ -47,6 +48,7 @@ class FrameListenerProcess:
                      group_shm_names: GroupSharedMemoryNames,
                      group_orchestrator: CameraGroupOrchestrator,
                      payloads_received: multiprocessing.Value,
+                     multiframe_queue: multiprocessing.Queue,
                      exit_event: multiprocessing.Event):
         logger.trace(f"Frame listener process started!")
         camera_group_shm = CameraGroupSharedMemory.recreate(
@@ -64,7 +66,7 @@ class FrameListenerProcess:
                 logger.loop(f"Frame wrangler waiting for new frames...")
                 if group_orchestrator.new_frames_available:
                     logger.loop(f"Frame wrangler sees new frames available!")
-                    mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
+                    multiframe_queue.put(camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload))
                     group_orchestrator.set_frames_copied()
                     payloads_received.value += 1
                 else:
@@ -73,12 +75,52 @@ class FrameListenerProcess:
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             camera_group_shm.close()  # close but don't unlink - parent process will unlink
+            multiframe_queue.put(None)
 
     def is_alive(self) -> bool:
         return self._process.is_alive()
 
     def join(self):
         self._process.join()
+
+
+class FrameExporterProcess:
+    def __init__(self,
+                 multiframe_queue: multiprocessing.Queue,
+                 exit_event: multiprocessing.Event, ):
+        self._multiframe_queue = multiframe_queue
+        self._process = multiprocessing.Process(target=self._run_process,
+                                                name=self.__class__.__name__,
+                                                args=(multiframe_queue, exit_event))
+
+    def start_process(self):
+        logger.trace(f"Starting frame listener process")
+        self._process.start()
+
+    def is_alive(self) -> bool:
+        return self._process.is_alive()
+
+    def join(self):
+        self._process.join()
+
+    @staticmethod
+    def _run_process(multiframe_queue: multiprocessing.Queue,
+                     exit_event: multiprocessing.Event):
+        logger.trace(f"Frame exporter process started!")
+        try:
+            while not exit_event.is_set():
+                logger.loop(f"Frame exporter waiting for new frames...")
+                if not multiframe_queue.empty():
+                    logger.loop(f"Frame exporter sees new frames available!")
+                    mf_payload = multiframe_queue.get()
+                    if not mf_payload:
+                        logger.trace(f"Received empty payload - exiting")
+                        break
+                    logger.loop(f"Frame exporter received new frames!")
+
+        finally:
+            logger.trace(f"Stopped listening for multi-frames")
+
 
 
 class FrameWrangler:
@@ -93,10 +135,12 @@ class FrameWrangler:
         camera_configs: CameraConfigs = camera_configs
         group_orchestrator: CameraGroupOrchestrator = group_orchestrator
 
+        self._multiframe_queue = multiprocessing.Queue()
         self._listener_process = FrameListenerProcess(
             camera_configs=camera_configs,
             group_orchestrator=group_orchestrator,
             group_shm_names=group_shm_names,
+            multiframe_queue=self._multiframe_queue,
             exit_event=self._exit_event,
         )
 
@@ -121,5 +165,7 @@ class FrameWrangler:
     def close(self):
         logger.debug(f"Closing frame wrangler...")
         self._exit_event.set()
+        self._multiframe_queue.put(None)
         if self.is_alive():
             self.join()
+        self._multiframe_queue.close()

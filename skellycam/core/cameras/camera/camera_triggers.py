@@ -79,7 +79,3 @@ class CameraTriggers(BaseModel):
         self.new_frame_available_trigger.clear()
 
 
-if __name__ == "__main__":
-    ct = CameraTriggers.from_camera_id(1, multiprocessing.Event())
-    print(ct)
-    print(f"Camera ID: {ct.camera_id}, Should Continue: {ct.should_continue}")
