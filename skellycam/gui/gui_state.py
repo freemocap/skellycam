@@ -65,6 +65,7 @@ class GUIState:
         with self._lock:
             self._latest_frames = value
 
+
 GUI_STATE = None
 
 

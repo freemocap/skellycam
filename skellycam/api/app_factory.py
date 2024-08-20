@@ -8,8 +8,6 @@ import skellycam
 from skellycam.api.lifespan import lifespan
 from skellycam.api.middleware.cors import cors
 from skellycam.api.routes.routers import enabled_routers
-from skellycam.system.logging_configuration.configure_logging import configure_logging
-from skellycam.system.logging_configuration.log_level_enum import LogLevels
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +42,6 @@ def customize_swagger_ui(app: FastAPI):
 
 
 def create_app(*args, **kwargs) -> FastAPI:
-    configure_logging(LogLevels.ALL)
     logger.api("Creating FastAPI app")
     app = FastAPI(lifespan=lifespan)
     cors(app)

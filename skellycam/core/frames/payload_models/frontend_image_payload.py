@@ -48,7 +48,7 @@ class FrontendFramePayload(BaseModel):
             jpeg_images[camera_id] = cls._image_to_jpeg(annotated_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
             frame_metadatas[camera_id] = FrameMetadata.from_array(frame.metadata)
-        lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifecycle_timestamps_ns)
+        lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
         lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
 
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,

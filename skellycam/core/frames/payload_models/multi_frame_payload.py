@@ -15,7 +15,7 @@ class MultiFramePayload(BaseModel):
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
     multi_frame_number: int = 0
-    lifecycle_timestamps_ns: List[Dict[str, int]] = Field(default_factory=lambda: [{"created": time.perf_counter_ns()}])
+    lifespan_timestamps_ns: List[Dict[str, int]] = Field(default_factory=lambda: [{"created": time.perf_counter_ns()}])
 
     @property
     def camera_ids(self) -> List[CameraId]:
@@ -37,7 +37,7 @@ class MultiFramePayload(BaseModel):
                    )
 
     def add_frame(self, frame_dto: FramePayloadDTO) -> None:
-        self.lifecycle_timestamps_ns.append({
+        self.lifespan_timestamps_ns.append({
             f"add_camera_{frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}": time.perf_counter_ns()})
         frame = FramePayload.from_dto(dto=frame_dto)
         self.frames[frame.camera_id] = frame

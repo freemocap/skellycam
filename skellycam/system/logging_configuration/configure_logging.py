@@ -38,7 +38,6 @@ def configure_logging(level: LogLevels = LogLevels.DEBUG):
     logger = logging.getLogger(__name__)
 
 
-
 if __name__ == "__main__":
     logger_test = logging.getLogger(__name__)
     log_test_messages(logger_test)

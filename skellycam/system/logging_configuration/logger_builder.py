@@ -89,7 +89,6 @@ class LoggerBuilder:
 
     def build_console_handler(self):
         console_handler = self.ColoredConsoleHandler(stream=sys.stdout)
-        console_handler.setLevel(LogLevels.LOOP.value)
         console_handler.setFormatter(self.default_logging_formatter)
         console_handler.addFilter(DeltaTimeFilter())
         return console_handler

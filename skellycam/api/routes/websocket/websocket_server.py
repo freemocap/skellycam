@@ -7,8 +7,7 @@ from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from skellycam.core.controller import get_controller
-
-HELLO = {"message": "Hello, websocket client!"}
+from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +16,7 @@ websocket_router = APIRouter()
 HELLO_CLIENT_TEXT_MESSAGE = "👋Hello, websocket client!"
 HELLO_CLIENT_BYTES_MESSAGE = b"Beep boop - these are bytes from the websocket server wow"
 HELLO_CLIENT_JSON_MESSAGE = {"message": HELLO_CLIENT_TEXT_MESSAGE + " I'm a JSON message!"}
+
 
 async def listen_for_client_messages(websocket: WebSocket):
     logger.info("Starting listener for client messages...")
@@ -42,13 +42,13 @@ async def relay_messages_from_queue_to_client(websocket: WebSocket, frontend_pay
     while True:
         try:
             if not frontend_payload_queue.empty():
-                fe_payload = frontend_payload_queue.get()
+                fe_payload: FrontendFramePayload = frontend_payload_queue.get()
                 if not fe_payload:
                     logger.api("Received empty payload, ending listener task...")
                     break
                 logger.loop(
                     f"Pulled front-end payload from fe_queue and sending down `websocket` to client: {fe_payload}")
-                fe_payload.lifecycle_timestamps_ns.append({"sent_down_websocket": time.perf_counter_ns()})
+                fe_payload.lifespan_timestamps_ns.append({"sent_down_websocket": time.perf_counter_ns()})
                 await websocket.send_json(fe_payload.model_dump())
             else:
                 await asyncio.sleep(0.001)
@@ -56,6 +56,7 @@ async def relay_messages_from_queue_to_client(websocket: WebSocket, frontend_pay
             logger.api("Client disconnected, ending listener task...")
 
     logger.info("Ending listener for client messages...")
+
 
 class WebsocketRunner:
     async def __aenter__(self):
@@ -65,7 +66,6 @@ class WebsocketRunner:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         logger.debug("WebsocketRunner ended...")
         pass
-
 
 
 @websocket_router.websocket("/connect")
@@ -81,7 +81,6 @@ async def websocket_server_connect(websocket: WebSocket):
     await websocket.send_bytes(HELLO_CLIENT_BYTES_MESSAGE)
     await websocket.send_json(HELLO_CLIENT_JSON_MESSAGE)
     logger.success(f"Websocket connection established!")
-
 
     async with WebsocketRunner():
         try:
@@ -100,4 +99,3 @@ async def websocket_server_connect(websocket: WebSocket):
                 await websocket.send_text("Goodbye, client👋")
                 await websocket.close()
             logger.info("Websocket closed")
-

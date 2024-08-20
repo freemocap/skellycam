@@ -88,12 +88,13 @@ class WebSocketClient:
         pass
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
-        logger.trace(f"Received JSON message, size: {len(message)}")
         if "jpeg_images" in message:
             fe_payload = FrontendFramePayload(**message)
             fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
             self.latest_fronted_payload = fe_payload
-            logger.info(f"Received FrontendFramePayload with {len(self.latest_fronted_payload.camera_ids)} cameras")
+            logger.loop(f"Received FrontendFramePayload with {len(self.latest_fronted_payload.camera_ids)} cameras")
+        else:
+            logger.info(f"Received JSON message: {message}")
 
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:

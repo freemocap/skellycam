@@ -47,8 +47,6 @@ class FramePayload(BaseModel):
     def width(self):
         return self.image.shape[1]
 
-
-
     def __eq__(self, other: "FramePayload"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
 

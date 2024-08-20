@@ -125,7 +125,6 @@ class CameraConfig(BaseModel):
     def video_file_extension(self) -> str:
         return get_video_file_type(cv2.VideoWriter_fourcc(*self.writer_fourcc))
 
-
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
 

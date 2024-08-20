@@ -59,17 +59,17 @@ class FrameSaver(BaseModel):
                    frame_metadata_savers=metadata_lists)
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
-        mf_payload.lifecycle_timestamps_ns.append({"start_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
+        mf_payload.lifespan_timestamps_ns.append({"start_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
         self._validate_multi_frame(mf_payload=mf_payload, camera_configs=self.camera_configs)
-        mf_payload.lifecycle_timestamps_ns.append({"before_add_multi_frame_to_video_savers": time.perf_counter_ns()})
+        mf_payload.lifespan_timestamps_ns.append({"before_add_multi_frame_to_video_savers": time.perf_counter_ns()})
         for camera_id, frame in mf_payload.frames.items():
             self._validate_frame(frame=frame, config=self.camera_configs[camera_id])
             self.video_savers[camera_id].add_frame(frame=frame)
 
-        mf_payload.lifecycle_timestamps_ns.append({"before_add_multi_frame_to_metadata_savers": time.perf_counter_ns()})
+        mf_payload.lifespan_timestamps_ns.append({"before_add_multi_frame_to_metadata_savers": time.perf_counter_ns()})
         for camera_id, frame in mf_payload.frames.items():
             self.frame_metadata_savers[camera_id].add_frame(frame=frame)
-        mf_payload.lifecycle_timestamps_ns.append({"done_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
+        mf_payload.lifespan_timestamps_ns.append({"done_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
         logger.success(f"Added multi-frame {mf_payload.multi_frame_number} to FrameSaver {self.recording_name}")
 
     @classmethod

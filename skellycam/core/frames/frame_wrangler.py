@@ -71,7 +71,7 @@ class FrameListenerProcess:
                     mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
                     # Reset the flag to allow new frame loop to begin BEFORE we put the payload in the queue
                     group_orchestrator.set_frames_copied()
-                    mf_payload.lifecycle_timestamps_ns.append({"before_put_in_mf_queue": time.perf_counter_ns()})
+                    mf_payload.lifespan_timestamps_ns.append({"before_put_in_mf_queue": time.perf_counter_ns()})
                     multiframe_queue.put(mf_payload)
                     payloads_received.value += 1
                 else:
@@ -129,7 +129,7 @@ class FrameExporterProcess:
             while not exit_event.is_set():
                 if not multiframe_queue.empty():
                     mf_payload: MultiFramePayload = multiframe_queue.get()
-                    mf_payload.lifecycle_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
+                    mf_payload.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
                     if not mf_payload:
                         logger.trace(f"Received empty payload - exiting")
                         break
@@ -140,7 +140,7 @@ class FrameExporterProcess:
                                                             camera_configs=camera_configs,
                                                             recording_folder=create_recording_folder(string_tag=None))
                         frame_saver.add_multi_frame(mf_payload)
-                    mf_payload.lifecycle_timestamps_ns.append({"put_in_frontend_queue": time.perf_counter_ns()})
+                    mf_payload.lifespan_timestamps_ns.append({"put_in_frontend_queue": time.perf_counter_ns()})
                     frontend_queue.put(FrontendFramePayload.from_multi_frame_payload(mf_payload))
                 else:
                     wait_1ms()
