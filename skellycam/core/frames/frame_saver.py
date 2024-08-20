@@ -76,7 +76,7 @@ class FrameSaver(BaseModel):
         for camera_id, frame in mf_payload.frames.items():
             self.frame_metadata_savers[camera_id].add_frame(frame=frame)
         mf_payload.lifespan_timestamps_ns.append({"done_adding_multi_frame_to_framesaver": time.perf_counter_ns()})
-        logger.success(f"Added multi-frame {mf_payload.multi_frame_number} to FrameSaver {self.recording_name}")
+        logger.loop(f"Added multi-frame {mf_payload.multi_frame_number} to FrameSaver {self.recording_name}")
 
     @classmethod
     def _create_subfolders(cls, recording_folder: str) -> Tuple[str, str]:

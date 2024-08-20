@@ -59,7 +59,8 @@ class VideoSaver(BaseModel):
         )
         if not writer.isOpened():
             raise ValidationError(f"Failed to open video writer for camera {frame.camera_id}")
-
+        logger.debug(
+            f"Initialized VideoWriter for camera {frame.camera_id} - Video file will be saved to {video_file_path}")
         return writer
 
     def close(self):
