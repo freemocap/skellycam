@@ -12,20 +12,21 @@ from skellycam.core.frames.payload_models.frontend_image_payload import Frontend
 
 @dataclass
 class GUIState(QWidget):
-    _cameras_configs: Optional[CameraConfigs] = None
-    _available_devices: Optional[AvailableDevices] = None
-    _is_recording: bool = False
-    _recording_info: Optional[RecordingInfo] = None
-    _latest_frontend_payload: Optional[FrontendFramePayload] = None
-    _new_frontend_payload_available: bool = False
 
-    _lock: multiprocessing.Lock = multiprocessing.Lock()
+    def __init__(self):
+        super().__init__()
+        self._cameras_configs: Optional[CameraConfigs] = None
+        self._available_devices: Optional[AvailableDevices] = None
+        self._is_recording: bool = False
+        self._recording_info: Optional[RecordingInfo] = None
+        self._latest_frontend_payload: Optional[FrontendFramePayload] = None
+        self._new_frontend_payload_available: bool = False
+        self._lock: multiprocessing.Lock = multiprocessing.Lock()
 
-    _image_update_callable: Optional[Callable] = None
+        self._image_update_callable: Optional[Callable] = None
 
-    def set_image_update_callable(self, image_update_callable: Callable) -> None:
-        with self._lock:
-            self._image_update_callable = image_update_callable
+    def set_image_update_callable(self, callable: Callable) -> None:
+        self._image_update_callable = callable
 
     @property
     def camera_configs(self) -> Optional[CameraConfigs]:
@@ -83,10 +84,21 @@ class GUIState(QWidget):
         with self._lock:
             self._new_frontend_payload_available = True
             self._latest_frontend_payload = value
+            self._image_update_callable(value)
 
-            if self._image_update_callable is not None:
-                self._image_update_callable(value)
+    @property
+    def number_of_frames(self) -> Optional[int]:
+        with self._lock:
+            if self._recording_info is None:
+                return None
+            return self._latest_frontend_payload.multi_frame_number + 1
 
+    @property
+    def number_of_cameras(self) -> Optional[int]:
+        with self._lock:
+            if self._cameras_configs is None:
+                return None
+            return len(self._latest_frontend_payload.jpeg_images)
 
 GUI_STATE = None
 

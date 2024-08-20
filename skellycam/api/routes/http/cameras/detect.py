@@ -13,7 +13,7 @@ detect_cameras_router = APIRouter()
 
 
 class DetectCamerasResponse(BaseResponse):
-    detected_cameras: Optional[AvailableDevices]
+    available_cameras: Optional[AvailableDevices]
 
 
 @detect_cameras_router.get(

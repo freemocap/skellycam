@@ -7,7 +7,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.gui import get_client, shutdown_client_server
+from skellycam.gui import shutdown_client_server
+from skellycam.gui.gui_state import get_gui_state
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
@@ -42,7 +43,7 @@ class SkellyCamMainWindow(QMainWindow):
 
         self._shutdown_event = shutdown_event
         self.initUI()
-        self.client = get_client()
+        self._gui_state = get_gui_state()
         self._connect_signals_to_slots()
 
     def initUI(self):
@@ -97,9 +98,14 @@ class SkellyCamMainWindow(QMainWindow):
         )
 
     def _connect_signals_to_slots(self):
-        self._skellycam_widget.gui_state_changed.connect(self.skellycam_control_panel.update_parameter_tree)
-        self._skellycam_widget.gui_state_changed.connect(
+
+        self._skellycam_widget.devices_detected.connect(self.skellycam_control_panel.update_parameter_tree)
+        self._skellycam_widget.cameras_connected.connect(
             self._skellycam_widget.camera_view_grid.create_single_camera_views)
+        self._skellycam_widget.new_frames_available.connect(self._skellycam_widget.recording_panel.update)
+        self._skellycam_widget.new_frames_available.connect(
+            self._skellycam_widget.camera_view_grid.handle_new_frontend_payload)
+
 
         self._connect_to_cameras_button.button.clicked.connect(
             self._welcome_to_skellycam_widget.hide

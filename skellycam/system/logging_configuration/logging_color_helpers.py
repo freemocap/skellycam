@@ -16,6 +16,16 @@ def ensure_not_grey(r: int, g: int, b: int, threshold_diff: int = 100):
     return r, g, b
 
 
+def ensure_not_red(r: int, g: int, b: int, threshold_diff: int = 100):
+    """Ensure that the color isn't too red (which looks like an error)."""
+    if r - g > threshold_diff and r - b > threshold_diff:
+        r = int(r / 2)
+        if g > b:
+            g = 255
+        else:
+            b = 255
+    return r, g, b
+
 def get_hashed_color(value: int):
     """Generate a consistent random color for the given value."""
     # Use modulo to ensure it's within the range of normal terminal colors.
@@ -25,5 +35,6 @@ def get_hashed_color(value: int):
     blue = ensure_min_brightness(hashed & 255)
 
     red, green, blue = ensure_not_grey(red, green, blue)
+    red, green, blue = ensure_not_red(red, green, blue)
 
     return "\033[38;2;{};{};{}m".format(red, green, blue)

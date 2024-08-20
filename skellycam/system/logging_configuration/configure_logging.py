@@ -11,6 +11,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.INFO)
 logging.getLogger("watchfiles").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 # Add custom log levels
 logging.addLevelName(LogLevels.LOOP.value, "LOOP")

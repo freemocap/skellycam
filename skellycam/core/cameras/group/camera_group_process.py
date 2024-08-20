@@ -28,6 +28,10 @@ class CameraGroupProcess:
 
         self._process: Optional[Process] = None
 
+    @property
+    def is_running(self) -> bool:
+        return self._process is not None and self._process.is_alive()
+
     def _create_process(self, number_of_frames: Optional[int] = None):
         self._process = Process(
             name="MultiCameraTriggerProcess",
