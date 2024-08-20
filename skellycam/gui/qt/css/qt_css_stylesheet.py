@@ -49,4 +49,5 @@ QT_CSS_STYLE_SHEET_STRING = """
                             QTreeView::item:hover {
                                 background-color: #378e90;
                             }    
+                            
                             """

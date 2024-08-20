@@ -23,7 +23,7 @@ from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path, create_recording_folder, \
-    create_new_synchronized_videos_folder, default_recording_name, PATH_TO_SKELLY_CAM_LOGO_SVG
+    PATH_TO_SKELLY_CAM_LOGO_SVG
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +58,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._central_widget.setLayout(self._layout)
         self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
         self._layout.addWidget(self._welcome_to_skellycam_widget)
-        self._skellycam_widget = SkellyCamWidget(
-            get_new_synchronized_videos_folder_callable=
-            lambda: create_new_synchronized_videos_folder(
-                Path(self._session_folder_path) / default_recording_name()
-            ),
-            parent=self
-        )
+        self._skellycam_widget = SkellyCamWidget(parent=self)
         self._skellycam_widget.resize(1280, 720)
         self._skellycam_record_buttons = SkellyCamRecordButtonsPanel(
             skellycam_widget=self._skellycam_widget,
@@ -105,7 +99,9 @@ class SkellyCamMainWindow(QMainWindow):
         )
 
     def _connect_signals_to_slots(self):
-        self._skellycam_widget.gui_state_changed.connect(self.skellycam_control_panel.update)
+        self._skellycam_widget.gui_state_changed.connect(self.skellycam_control_panel.update_parameter_tree)
+        self._skellycam_widget.gui_state_changed.connect(
+            self._skellycam_widget.camera_view_grid.update_single_camera_views)
 
         self._skellycam_widget.detect_available_cameras_push_button.clicked.connect(
             self._welcome_to_skellycam_widget.hide

@@ -1,10 +1,11 @@
 import logging
 from typing import Dict
 
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.gui.gui_state import GUIState, get_gui_state
 from skellycam.gui.qt.widgets.single_camera_view import SingleCameraViewWidget
 
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
@@ -16,20 +17,33 @@ logger = logging.getLogger(__name__)
 class CameraViewGrid(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self._layout = QHBoxLayout()
+        self._layout = QVBoxLayout()
+        self.setLayout(self._layout)
+
+        self._camera_grids_layout = QHBoxLayout()
+        self._layout.addLayout(self._camera_grids_layout)
+
         self._camera_landscape_grid_layout = QGridLayout()
-        self._layout.addLayout(self._camera_landscape_grid_layout)
+        self._camera_grids_layout.addLayout(self._camera_landscape_grid_layout)
+
         self._camera_portrait_grid_layout = QGridLayout()
-        self._layout.addLayout(self._camera_portrait_grid_layout)
-        self._layout.addLayout(self._layout)
+        self._camera_grids_layout.addLayout(self._camera_portrait_grid_layout)
 
+        self.setStyleSheet("""
+                            font-size: 12px;
+                            font-weight: bold;
+                            font-family: "Dosis", sans-serif;
+        """)
         self._single_camera_views: Dict[CameraId, SingleCameraViewWidget] = {}
+        self._gui_state: GUIState = get_gui_state()
 
-    def create_single_camera_views(self, camera_configs: CameraConfigs):
+    @Slot()
+    def update_single_camera_views(self):
+        logger.debug("Updating camera views")
 
         landscape_camera_number = -1
         portrait_camera_number = -1
-        for camera_id, camera_config in camera_configs.items():
+        for camera_id, camera_config in self._gui_state.camera_configs.items():
 
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
                                                         camera_config=camera_config,

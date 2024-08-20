@@ -11,6 +11,7 @@ from skellycam.gui import get_client
 from skellycam.gui.client.fastapi_client import FastAPIClient
 from skellycam.gui.gui_state import GUIState, get_gui_state
 from skellycam.gui.qt.utilities.qt_label_strings import no_cameras_found_message_string
+from skellycam.gui.qt.widgets.camera_grid_view import CameraViewGrid
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, \
     SPARKLES_EMOJI_STRING
 
@@ -21,6 +22,7 @@ title_label_style_string = """
                            font-weight: bold;
                            font-family: "Dosis", sans-serif;
                            """
+
 
 class SkellyCamWidget(QWidget):
     gui_state_changed = Signal()
@@ -37,8 +39,8 @@ class SkellyCamWidget(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._camera_grid_view = CameraViewGrid(parent=self)
-        self._layout.addWidget(self._camera_grid_view)
+        self.camera_view_grid = CameraViewGrid(parent=self)
+        self._layout.addWidget(self.camera_view_grid)
 
         self.detect_available_cameras_push_button = self._create_detect_cameras_button()
         self._layout.addWidget(self.detect_available_cameras_push_button)
@@ -61,13 +63,13 @@ class SkellyCamWidget(QWidget):
 
     def _show_cameras_disconnected_message(self):
         logger.info("Showing `cameras disconnected` message")
-        self._camera_grid_view.clear_camera_views()
+        self.camera_view_grid.clear_camera_views()
         self._cameras_disconnected_label.show()
         self.detect_available_cameras_push_button.show()
 
     def _show_no_cameras_found_message(self):
         logger.info("Showing `no cameras found` message")
-        self._camera_grid_view.clear_camera_views()
+        self.camera_view_grid.clear_camera_views()
         self._no_cameras_found_label.show()
         self.detect_available_cameras_push_button.show()
 
@@ -79,7 +81,7 @@ class SkellyCamWidget(QWidget):
 
     def disconnect_from_cameras(self):
         logger.info("Disconnecting from cameras")
-        self._camera_grid_view.clear_camera_views()
+        self.camera_view_grid.clear_camera_views()
 
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")
@@ -103,8 +105,6 @@ class SkellyCamWidget(QWidget):
         detect_available_cameras_push_button.setProperty("recommended_next", True)
 
         return detect_available_cameras_push_button
-
-
 
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")
