@@ -21,7 +21,6 @@ def camera_group_trigger_loop(
         exit_event: multiprocessing.Event,
         number_of_frames: Optional[int] = None,
 ):
-    logger.debug(f"Starting camera trigger loop for cameras: {list(camera_configs.keys())}...")
 
     cameras = start_cameras(
         camera_configs=camera_configs,
@@ -35,7 +34,7 @@ def camera_group_trigger_loop(
     loop_count = 0
     elapsed_per_loop_ns = []
     try:
-        logger.info(f"Camera trigger loop started for cameras: {list(camera_configs.keys())}")
+        logger.debug(f"Starting camera trigger loop for cameras: {list(camera_configs.keys())}...")
         while not exit_event.is_set():
             tik = time.perf_counter_ns()
 

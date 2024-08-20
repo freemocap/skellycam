@@ -61,11 +61,11 @@ class Controller:
         if self._camera_group is not None:
             await self._camera_group.close()
 
-    def start_recording(self):
-        self._camera_group.start_recording()
+    def start_recording(self) -> bool:
+        return self._camera_group.start_recording()
 
-    def stop_recording(self):
-        self._camera_group.stop_recording()
+    def stop_recording(self) -> bool:
+        return self._camera_group.stop_recording()
 
 
 CAMERA_GROUP_MANAGER = None

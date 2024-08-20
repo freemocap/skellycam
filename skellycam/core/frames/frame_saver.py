@@ -41,7 +41,7 @@ class FrameSaver(BaseModel):
                mf_payload: MultiFramePayload,
                camera_configs: CameraConfigs,
                recording_folder: str):
-        logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
+        logger.trace(f"Creating FrameSaver for recording folder {recording_folder}")
         cls._validate_input(mf_payload=mf_payload, camera_configs=camera_configs, recording_folder=recording_folder)
         recording_name = Path(recording_folder).name
         videos_folder, metadata_folder = cls._create_subfolders(recording_folder)
@@ -98,9 +98,10 @@ class FrameSaver(BaseModel):
 
     @classmethod
     def _validate_multi_frame(cls, mf_payload: MultiFramePayload, camera_configs: CameraConfigs):
-        if len(mf_payload.frames) == 0 or len(camera_configs) == 0:
-            raise ValidationError(f"MultiFramePayload or CameraConfigs are empty")
-
+        if len(mf_payload.frames) == 0:
+            raise ValidationError(f"MultiFramePayload is empty")
+        if len(camera_configs) == 0:
+            raise ValidationError(f"CameraConfigs is empty")
         if not mf_payload.full:
             raise ValidationError(f"MultiFramePayload is not full")
         if not len(camera_configs) == len(mf_payload.frames):

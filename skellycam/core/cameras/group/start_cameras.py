@@ -28,5 +28,5 @@ def start_cameras(camera_configs: CameraConfigs,
 
     [camera.start() for camera in cameras.values()]
     group_orchestrator.await_for_cameras_ready()
-
+    logger.success(f"Cameras {list(camera_configs.keys())} started successfully!")
     return cameras

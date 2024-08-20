@@ -43,14 +43,14 @@ class CameraGroup:
         logger.info("Camera group closed.")
 
     def start_recording(self) -> bool:
-        if not self._process.is_running:
+        if not self._process or not self._process.is_running:
             logger.warning("Cannot start recording - Camera group is not running")
             return False
         self._start_recording_event.set()
         return True
 
     def stop_recording(self) -> bool:
-        if not self._process.is_running:
+        if not self._process or not self._process.is_running:
             logger.warning("Cannot stop recording - Camera group is not running")
             return False
 

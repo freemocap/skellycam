@@ -120,7 +120,7 @@ class CameraGroupOrchestrator(BaseModel):
         while any([triggers.initial_trigger.is_set() for triggers in
                    self.camera_triggers.values()]) and self.should_continue:
             wait_1ms()
-        logger.trace("Initial triggers reset!")
+        logger.trace("Initial triggers reset - Cameras ready to roll!")
 
     def _await_frames_grabbed(self):
         while not self.frames_grabbed and self.should_continue:

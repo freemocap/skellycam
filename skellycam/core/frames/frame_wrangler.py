@@ -143,6 +143,8 @@ class FrameExporterProcess:
                             frame_saver = FrameSaver.create(mf_payload=mf_payload,
                                                             camera_configs=camera_configs,
                                                             recording_folder=create_recording_folder(string_tag=None))
+                            logger.debug(
+                                f"FrameExporter - Created FrameSaver for recording {frame_saver.recording_name}")
                             frontend_queue.put(frame_saver.recording_info)
                         frame_saver.add_multi_frame(mf_payload)
                     else:
@@ -156,6 +158,8 @@ class FrameExporterProcess:
                     wait_1ms()
         except Exception as e:
             logger.error(f"Frame exporter process error: {e}")
+            logger.traceback(e)
+            raise e
         finally:
             try:
                 multiframe_queue.put(None)

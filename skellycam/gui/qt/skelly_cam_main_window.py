@@ -21,8 +21,8 @@ from skellycam.gui.qt.widgets.skellycam_directory_view import SkellyCamDirectory
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
-from skellycam.system.default_paths import get_default_skellycam_base_folder_path, create_recording_folder, \
-    PATH_TO_SKELLY_CAM_LOGO_SVG
+from skellycam.system.default_paths import get_default_skellycam_base_folder_path, PATH_TO_SKELLY_CAM_LOGO_SVG, \
+    get_default_skellycam_recordings_path
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +30,9 @@ logger = logging.getLogger(__name__)
 class SkellyCamMainWindow(QMainWindow):
 
     def __init__(self,
-                 session_folder_path: Union[str, Path] = None,
                  shutdown_event: multiprocessing.Event = None,
                  parent=None):
         super().__init__(parent=parent)
-        if session_folder_path is None:
-            self._session_folder_path = create_recording_folder()
-        else:
-            self._session_folder_path = session_folder_path
-
-        self._base_folder_path = get_default_skellycam_base_folder_path()
-
         self._shutdown_event = shutdown_event
         self.initUI()
         self._gui_state = get_gui_state()
@@ -82,7 +74,7 @@ class SkellyCamMainWindow(QMainWindow):
         )
         self._directory_view_dock_widget = QDockWidget("Directory View", self)
         self._directory_view_widget = SkellyCamDirectoryViewWidget(
-            folder_path=self._base_folder_path
+            folder_path=get_default_skellycam_recordings_path()
         )
         self._directory_view_dock_widget.setWidget(self._directory_view_widget)
         self._directory_view_dock_widget.setFeatures(
@@ -135,6 +127,8 @@ class SkellyCamMainWindow(QMainWindow):
         logger.info("Shutting down client server...")
         shutdown_client_server()
         self._shutdown_event.set()
+        remove_empty_directories(get_default_skellycam_base_folder_path())
+
 
 
 def remove_empty_directories(root_dir: Union[str, Path]):

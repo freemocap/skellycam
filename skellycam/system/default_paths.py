@@ -30,6 +30,9 @@ def get_default_skellycam_base_folder_path() -> str:
     return str(Path(os_independent_home_dir()) / DEFAULT_SKELLYCAM_BASE_FOLDER_NAME)
 
 
+def get_default_skellycam_recordings_path() -> str:
+    return str(Path(get_default_skellycam_base_folder_path()) / "recordings")
+
 def create_recording_folder(create_folder: bool = True, string_tag: str = None) -> str:
     folder_path = (
             Path(get_default_skellycam_base_folder_path()) / "recordings" / default_recording_name(
@@ -39,11 +42,6 @@ def create_recording_folder(create_folder: bool = True, string_tag: str = None) 
         folder_path.mkdir(parents=True, exist_ok=True)
     return str(folder_path)
 
-
-def create_new_synchronized_videos_folder(parent_folder_path: Path) -> Path:
-    synchronized_videos_folder_path = parent_folder_path / SYNCHRONIZED_VIDEOS_FOLDER_NAME
-    synchronized_videos_folder_path.mkdir(parents=True, exist_ok=True)
-    return synchronized_videos_folder_path
 
 
 def get_log_file_path() -> str:
