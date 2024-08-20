@@ -99,6 +99,7 @@ class FrameExporterProcess:
                  frontend_queue: multiprocessing.Queue,
                  camera_configs: CameraConfigs,
                  exit_event: multiprocessing.Event, ):
+
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
                                                 args=(multiframe_queue,
@@ -125,6 +126,7 @@ class FrameExporterProcess:
                      ):
         logger.trace(f"Frame exporter process started!")
         frame_saver: Optional[FrameSaver] = None
+
         try:
             while not exit_event.is_set():
                 if not multiframe_queue.empty():

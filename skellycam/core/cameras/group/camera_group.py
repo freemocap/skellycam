@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 from typing import Optional
 
+from skellycam.api.routes.websocket.frontend_payload_queue import get_frontend_payload_queue
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
 
@@ -13,7 +14,6 @@ class CameraGroup:
             self,
     ):
         self._exit_event = multiprocessing.Event()
-        self._fe_queue: Optional[multiprocessing.Queue] = None
         self._process: Optional[CameraGroupProcess] = None
 
     @property
@@ -25,7 +25,7 @@ class CameraGroup:
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
         self._process = CameraGroupProcess(camera_configs=configs,
-                                           frontend_payload_queue=self._fe_queue,
+                                           frontend_payload_queue=get_frontend_payload_queue(),
                                            exit_event=self._exit_event, )
 
     async def start(self, number_of_frames: Optional[int] = None):

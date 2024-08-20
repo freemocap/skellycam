@@ -67,13 +67,16 @@ class FrontendFramePayload(BaseModel):
         return instance
 
     @staticmethod
-    def _image_to_jpeg(image: np.ndarray, quality: int = 95) -> str:
+    def _image_to_jpeg(image: np.ndarray, quality: int = 80, resize: float = .5) -> str:
         """
         Convert a numpy array image to a JPEG image using OpenCV.
         """
+        if resize < 0 or resize > 1:
+            raise ValueError("Resize must be between 0 and 1")
         # Encode the image as JPEG
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
-        result, jpeg_image = cv2.imencode('.jpg', image, encode_param)
+        resized_image = cv2.resize(image, dsize=(image.shape[1] // 2, image.shape[0] // 2))
+        result, jpeg_image = cv2.imencode('.jpg', resized_image, encode_param)
 
         if not result:
             raise ValueError("Could not encode image to JPEG")

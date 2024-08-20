@@ -42,7 +42,8 @@ class CameraViewGrid(QWidget):
     @Slot()
     def create_single_camera_views(self):
         logger.debug("Updating camera views")
-
+        if not self._gui_state.camera_configs:
+            return
         landscape_camera_number = -1
         portrait_camera_number = -1
         for camera_id, camera_config in self._gui_state.camera_configs.items():

@@ -47,7 +47,6 @@ class CameraParameterTree(QWidget):
             self._parameter_tree.clear()
         self._parameter_groups = {}
         for camera_config, camera_info in zip(camera_configs.values(), available_devices.values()):
-            print(f"l;opploppl - {camera_config}")
             self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config=camera_config,
                                                                                          camera_info=camera_info)
             self._parameter_tree.addParameters(self._parameter_groups[camera_config.camera_id])
