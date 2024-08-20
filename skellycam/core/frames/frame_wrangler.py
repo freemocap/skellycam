@@ -149,11 +149,11 @@ class FrameExporterProcess:
         finally:
             try:
                 multiframe_queue.put(None)
-            except BrokenPipeError:
+            except Exception as e:
                 pass
             try:
                 frontend_queue.put(None)
-            except BrokenPipeError:
+            except Exception as e:
                 pass
             logger.trace(f"Stopped listening for multi-frames")
             if frame_saver:

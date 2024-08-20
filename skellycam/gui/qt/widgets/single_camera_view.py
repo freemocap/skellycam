@@ -62,7 +62,7 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def handle_image_update(self, base64_str: str):
+    def update_image(self, base64_str: str):
         q_image = self.image_updater.update_image(base64_str)
         self._current_pixmap = QPixmap.fromImage(q_image)
         self.update_pixmap()
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     while widget.isVisible():
         # Simulate updating the widget with dummy data
         for i, frame in enumerate(dummy_frames):
-            widget.handle_image_update(frame)
+            widget.update_image(frame)
             app.processEvents()
             time.sleep(0.01)  # Simulate a delay between frames
 

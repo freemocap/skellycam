@@ -1,6 +1,6 @@
 import multiprocessing
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Callable
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
@@ -17,6 +17,12 @@ class GUIState:
     _new_frontend_payload_available: bool = False
 
     _lock: multiprocessing.Lock = multiprocessing.Lock()
+
+    _image_update_callable: Optional[Callable] = None
+
+    def set_image_update_callable(self, image_update_callable: Callable) -> None:
+        with self._lock:
+            self._image_update_callable = image_update_callable
 
     @property
     def camera_configs(self) -> Optional[CameraConfigs]:
@@ -74,6 +80,9 @@ class GUIState:
         with self._lock:
             self._new_frontend_payload_available = True
             self._latest_frontend_payload = value
+
+            if self._image_update_callable is not None:
+                self._image_update_callable(value)
 
 
 GUI_STATE = None

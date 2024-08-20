@@ -101,7 +101,7 @@ class SkellyCamMainWindow(QMainWindow):
     def _connect_signals_to_slots(self):
         self._skellycam_widget.gui_state_changed.connect(self.skellycam_control_panel.update_parameter_tree)
         self._skellycam_widget.gui_state_changed.connect(
-            self._skellycam_widget.camera_view_grid.update_single_camera_views)
+            self._skellycam_widget.camera_view_grid.create_single_camera_views)
 
         self._skellycam_widget.detect_available_cameras_push_button.clicked.connect(
             self._welcome_to_skellycam_widget.hide
