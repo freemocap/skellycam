@@ -99,5 +99,3 @@ class LoggerBuilder:
             for handler in handlers:
                 if handler not in logging.getLogger("").handlers:
                     logging.getLogger("").handlers.append(handler)
-        else:
-            logger = logging.getLogger(__name__)

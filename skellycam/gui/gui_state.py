@@ -4,6 +4,7 @@ from typing import Optional
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 
 @dataclass
@@ -12,6 +13,8 @@ class GUIState:
     _available_devices: Optional[AvailableDevices] = None
     _is_recording: bool = False
     _recording_save_folder: Optional[str] = None
+    _latest_frontend_payload: Optional[FrontendFramePayload] = None
+    _new_frontend_payload_available: bool = False
 
     _lock: multiprocessing.Lock = multiprocessing.Lock()
 
@@ -56,14 +59,21 @@ class GUIState:
             self._recording_save_folder = value
 
     @property
-    def latest_frames(self):
+    def new_frontend_payload_available(self) -> bool:
         with self._lock:
-            return self._latest_frames
+            return self._new_frontend_payload_available
 
-    @latest_frames.setter
-    def latest_frames(self, value):
+    @property
+    def latest_frontend_payload(self):
         with self._lock:
-            self._latest_frames = value
+            self._new_frontend_payload_available = False
+            return self._latest_frontend_payload
+
+    @latest_frontend_payload.setter
+    def latest_frontend_payload(self, value):
+        with self._lock:
+            self._new_frontend_payload_available = True
+            self._latest_frontend_payload = value
 
 
 GUI_STATE = None

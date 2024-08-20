@@ -7,6 +7,7 @@ from typing import Union, Dict, Any, Optional
 import websocket
 
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
+from skellycam.gui.gui_state import GUIState, get_gui_state
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,8 @@ class WebSocketClient:
     def __init__(self, base_url: str):
         self.websocket_url = base_url.replace("http", "ws") + "/websocket/connect"
         self.websocket = self._create_websocket()
-        self._latest_frontend_payload: Optional[FrontendFramePayload] = None
-        self._new_frames_ready = False
         self._websocket_thread: Optional[threading.Thread] = None
+        self._gui_state: GUIState = get_gui_state()
 
     def _create_websocket(self):
         return websocket.WebSocketApp(
@@ -39,21 +39,6 @@ class WebSocketClient:
                                                   daemon=True)
         self._websocket_thread.start()
 
-    @property
-    def latest_fronted_payload(self):
-        self._new_frames_ready = False
-        self._latest_frontend_payload.lifespan_timestamps_ns.append(
-            {"retrieved from 'latest frames' property": time.perf_counter_ns()})
-        return self._latest_frontend_payload
-
-    @latest_fronted_payload.setter
-    def latest_fronted_payload(self, value: FrontendFramePayload):
-        self._new_frames_ready = True
-        self._latest_frontend_payload = value
-
-    @property
-    def new_frames_ready(self):
-        return self._new_frames_ready
 
     def _on_open(self, ws) -> None:
         logger.info(f"Connected to WebSocket at {self.websocket_url}")
@@ -90,9 +75,9 @@ class WebSocketClient:
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
         if "jpeg_images" in message:
             fe_payload = FrontendFramePayload(**message)
+            logger.loop(f"Received FrontendFramePayload with {len(fe_payload.camera_ids)} cameras")
             fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
-            self.latest_fronted_payload = fe_payload
-            logger.loop(f"Received FrontendFramePayload with {len(self.latest_fronted_payload.camera_ids)} cameras")
+            self._gui_state.latest_frontend_payload = fe_payload
         else:
             logger.info(f"Received JSON message: {message}")
 
@@ -105,7 +90,7 @@ class WebSocketClient:
                 self.websocket.send(message)
                 logger.info(f"Sent text message: {message}")
             elif isinstance(message, bytes):
-                self.websocket.send_binary(message)
+                self.websocket.send(message)
                 logger.info(f"Sent binary message of length {len(message)}")
 
     def close(self) -> None:
