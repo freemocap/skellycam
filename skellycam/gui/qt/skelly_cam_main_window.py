@@ -12,13 +12,11 @@ from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
+from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
 from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_side_panel import (
     SkellyCamControlPanel,
 )
 from skellycam.gui.qt.widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
-from skellycam.gui.qt.widgets.skellycam_record_buttons_panel import (
-    SkellyCamRecordButtonsPanel,
-)
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
@@ -56,16 +54,17 @@ class SkellyCamMainWindow(QMainWindow):
         self.setCentralWidget(self._central_widget)
         self._layout = QVBoxLayout()
         self._central_widget.setLayout(self._layout)
+
         self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
         self._layout.addWidget(self._welcome_to_skellycam_widget)
+
+        self._connect_to_cameras_button = ConnectToCamerasButton(parent=self)
+        self._layout.addWidget(self._connect_to_cameras_button)
+
         self._skellycam_widget = SkellyCamWidget(parent=self)
-        self._skellycam_widget.resize(1280, 720)
-        self._skellycam_record_buttons = SkellyCamRecordButtonsPanel(
-            skellycam_widget=self._skellycam_widget,
-            parent=self,
-        )
-        self._layout.addWidget(self._skellycam_record_buttons)
+        self._skellycam_widget.hide()
         self._layout.addWidget(self._skellycam_widget)
+
         self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
         self._parameter_tree_dock_widget.setFeatures(
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
@@ -74,7 +73,6 @@ class SkellyCamMainWindow(QMainWindow):
         self.skellycam_control_panel = (
             SkellyCamControlPanel(self._skellycam_widget)
         )
-        # self._layout.addWidget(self._qt_camera_config_parameter_tree_widget)
         self._parameter_tree_dock_widget.setWidget(
             self.skellycam_control_panel
         )
@@ -103,9 +101,16 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_widget.gui_state_changed.connect(
             self._skellycam_widget.camera_view_grid.create_single_camera_views)
 
-        self._skellycam_widget.detect_available_cameras_push_button.clicked.connect(
+        self._connect_to_cameras_button.button.clicked.connect(
             self._welcome_to_skellycam_widget.hide
         )
+        self._connect_to_cameras_button.button.clicked.connect(
+            self._connect_to_cameras_button.hide
+        )
+        self._connect_to_cameras_button.button.clicked.connect(
+            self._skellycam_widget.show
+        )
+        self._connect_to_cameras_button.button.clicked.connect(self._skellycam_widget.connect_to_cameras)
 
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")
