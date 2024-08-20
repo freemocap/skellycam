@@ -1,12 +1,11 @@
 import asyncio
 import logging
-import multiprocessing
 import time
 
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.core.controller import get_controller
+from skellycam.api.routes.websocket.frontend_payload_queue import get_frontend_payload_queue
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 logger = logging.getLogger(__name__)
@@ -37,8 +36,9 @@ async def listen_for_client_messages(websocket: WebSocket):
             break
 
 
-async def relay_messages_from_queue_to_client(websocket: WebSocket, frontend_payload_queue: multiprocessing.Queue):
+async def relay_messages_from_queue_to_client(websocket: WebSocket):
     logger.info("Starting listener for frontend payload messages in queue...")
+    frontend_payload_queue = get_frontend_payload_queue()
     while True:
         try:
             if not frontend_payload_queue.empty():
@@ -73,8 +73,7 @@ async def websocket_server_connect(websocket: WebSocket):
     """
     Websocket endpoint for client connection to the server - handles image data streaming to frontend.
     """
-    frontend_payload_queue = multiprocessing.Queue()
-    get_controller().set_frontend_payload_queue(fe_queue=frontend_payload_queue)
+
 
     await websocket.accept()
     await websocket.send_text(HELLO_CLIENT_TEXT_MESSAGE)
@@ -86,8 +85,7 @@ async def websocket_server_connect(websocket: WebSocket):
         try:
             logger.api("Creating listener task...")
             listener_task = listen_for_client_messages(websocket)
-            relay_task = relay_messages_from_queue_to_client(websocket=websocket,
-                                                             frontend_payload_queue=frontend_payload_queue)
+            relay_task = relay_messages_from_queue_to_client(websocket=websocket)
             await asyncio.gather(listener_task, relay_task)
         except WebSocketDisconnect:
             logger.info("Client disconnected")
