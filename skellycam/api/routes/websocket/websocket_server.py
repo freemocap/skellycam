@@ -80,7 +80,6 @@ async def websocket_server_connect(websocket: WebSocket):
     Websocket endpoint for client connection to the server - handles image data streaming to frontend.
     """
 
-
     await websocket.accept()
     await websocket.send_text(HELLO_CLIENT_TEXT_MESSAGE)
     await websocket.send_bytes(HELLO_CLIENT_BYTES_MESSAGE)

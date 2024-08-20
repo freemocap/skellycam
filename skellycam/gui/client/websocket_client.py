@@ -7,6 +7,7 @@ from typing import Union, Dict, Any, Optional
 import websocket
 
 from skellycam.api.routes.websocket.websocket_server import FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT
+from skellycam.core.frames.frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.gui.gui_state import GUIState, get_gui_state
 
@@ -39,7 +40,6 @@ class WebSocketClient:
         self._websocket_thread = threading.Thread(target=lambda: self.websocket.run_forever(reconnect=True),
                                                   daemon=True)
         self._websocket_thread.start()
-
 
     def _on_open(self, ws) -> None:
         logger.info(f"Connected to WebSocket at {self.websocket_url}")
@@ -80,6 +80,10 @@ class WebSocketClient:
             fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
             self._gui_state.latest_frontend_payload = fe_payload
             self.websocket.send_text(FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT)
+        elif "recording_name" in message:
+            recording_info = RecordingInfo(**message)
+            logger.info(f"Received RecordingInfo: {recording_info}")
+            self._gui_state.recording_info = recording_info
         else:
             logger.info(f"Received JSON message: {message}")
 
@@ -100,3 +104,5 @@ class WebSocketClient:
             self.websocket.close()
         self.websocket = self._create_websocket()
         logger.info("Closing WebSocket client")
+        if self._websocket_thread:
+            self._websocket_thread.join()

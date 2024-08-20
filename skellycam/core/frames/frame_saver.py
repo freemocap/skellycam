@@ -1,7 +1,8 @@
 import logging
 import time
+import uuid
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 
 from pydantic import BaseModel, ValidationError
 
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class FrameSaver(BaseModel):
+    recording_uuid: str = uuid.uuid4()
     recording_folder: str
     camera_configs: CameraConfigs
 
@@ -25,6 +27,10 @@ class FrameSaver(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+    @property
+    def recording_info(self) -> "RecordingInfo":
+        return RecordingInfo.from_frame_saver(self)
 
     @property
     def recording_name(self):
@@ -144,3 +150,17 @@ class FrameSaver(BaseModel):
     def validate_recording(self):
         # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
         pass
+
+
+class RecordingInfo(BaseModel):
+    recording_uuid: str = uuid.uuid4()
+    recording_name: str
+    recording_folder: str
+    camera_configs: Dict[CameraId, Dict[str, Any]]  # CameraConfig model dump
+
+    @classmethod
+    def from_frame_saver(cls, frame_saver: FrameSaver):
+        camera_configs = {camera_id: config.model_dump() for camera_id, config in frame_saver.camera_configs.items()}
+        return cls(recording_name=frame_saver.recording_name,
+                   recording_folder=frame_saver.recording_folder,
+                   camera_configs=camera_configs)

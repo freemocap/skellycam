@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 from typing import Optional, Tuple
 
 from skellycam.core import CameraId
@@ -62,8 +61,11 @@ class Controller:
         if self._camera_group is not None:
             await self._camera_group.close()
 
-    def set_frontend_payload_queue(self, fe_queue: multiprocessing.Queue):
-        self._camera_group.set_frontend_payload_queue(fe_queue=fe_queue)
+    def start_recording(self):
+        self._camera_group.start_recording()
+
+    def stop_recording(self):
+        self._camera_group.stop_recording()
 
 
 CAMERA_GROUP_MANAGER = None

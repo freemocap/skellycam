@@ -45,7 +45,6 @@ class SkellyCamWidget(QWidget):
         self.camera_view_grid = CameraViewGrid(parent=self)
         self._layout.addWidget(self.camera_view_grid)
 
-
         self._cameras_disconnected_label = QLabel(" - No Cameras Connected - ")
         self._layout.addWidget(self._cameras_disconnected_label)
         self._cameras_disconnected_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -79,8 +78,6 @@ class SkellyCamWidget(QWidget):
         self.gui_state.camera_configs = connect_to_cameras_response.connected_cameras
         self.gui_state.available_devices = connect_to_cameras_response.detected_cameras
         self.gui_state_changed.emit()
-
-
 
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")

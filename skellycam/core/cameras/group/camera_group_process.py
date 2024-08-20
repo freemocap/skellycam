@@ -18,10 +18,12 @@ class CameraGroupProcess:
             self,
             camera_configs: CameraConfigs,
             frontend_payload_queue: multiprocessing.Queue,
+            start_recording_event: multiprocessing.Event,
             exit_event: multiprocessing.Event,
     ):
         self._camera_configs = camera_configs
         self._fe_payload_queue = frontend_payload_queue
+        self._start_recording_event = start_recording_event
         self._exit_event = exit_event
 
         self._process: Optional[Process] = None
@@ -32,6 +34,7 @@ class CameraGroupProcess:
             target=CameraGroupProcess._run_process,
             args=(self._camera_configs,
                   self._fe_payload_queue,
+                  self._start_recording_event,
                   self._exit_event,
                   number_of_frames
                   )
@@ -40,6 +43,7 @@ class CameraGroupProcess:
     @staticmethod
     def _run_process(configs: CameraConfigs,
                      frontend_payload_queue: multiprocessing.Queue,
+                     start_recording_event: multiprocessing.Event,
                      exit_event: multiprocessing.Event,
                      number_of_frames: Optional[int] = None
                      ):
@@ -52,6 +56,7 @@ class CameraGroupProcess:
                                        group_shm_names=group_shm.shared_memory_names,
                                        group_orchestrator=group_orchestrator,
                                        frontend_payload_queue=frontend_payload_queue,
+                                       start_recording_event=start_recording_event,
                                        exit_event=exit_event, )
         try:
             logger.debug(f"CameraGroupProcess started")

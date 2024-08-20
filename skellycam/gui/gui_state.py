@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QWidget
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.core.frames.frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 
@@ -14,7 +15,7 @@ class GUIState(QWidget):
     _cameras_configs: Optional[CameraConfigs] = None
     _available_devices: Optional[AvailableDevices] = None
     _is_recording: bool = False
-    _recording_save_folder: Optional[str] = None
+    _recording_info: Optional[RecordingInfo] = None
     _latest_frontend_payload: Optional[FrontendFramePayload] = None
     _new_frontend_payload_available: bool = False
 
@@ -57,14 +58,14 @@ class GUIState(QWidget):
             self._is_recording = value
 
     @property
-    def recording_save_folder(self) -> Optional[str]:
+    def recording_info(self) -> Optional[RecordingInfo]:
         with self._lock:
-            return self._recording_save_folder
+            return self._recording_info
 
-    @recording_save_folder.setter
-    def recording_save_folder(self, value: Optional[str]) -> None:
+    @recording_info.setter
+    def recording_info(self, value: Optional[RecordingInfo]) -> None:
         with self._lock:
-            self._recording_save_folder = value
+            self._recording_info = value
 
     @property
     def new_frontend_payload_available(self) -> bool:
