@@ -140,6 +140,7 @@ class FrameExporterProcess:
                                                             camera_configs=camera_configs,
                                                             recording_folder=create_recording_folder(string_tag=None))
                         frame_saver.add_multi_frame(mf_payload)
+
                     mf_payload.lifespan_timestamps_ns.append({"put_in_frontend_queue": time.perf_counter_ns()})
                     frontend_queue.put(FrontendFramePayload.from_multi_frame_payload(mf_payload))
                 else:

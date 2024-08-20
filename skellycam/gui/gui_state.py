@@ -2,13 +2,15 @@ import multiprocessing
 from dataclasses import dataclass
 from typing import Optional, Callable
 
+from PySide6.QtWidgets import QWidget
+
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 
 @dataclass
-class GUIState:
+class GUIState(QWidget):
     _cameras_configs: Optional[CameraConfigs] = None
     _available_devices: Optional[AvailableDevices] = None
     _is_recording: bool = False
