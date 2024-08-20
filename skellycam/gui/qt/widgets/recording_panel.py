@@ -21,6 +21,8 @@ class RecordingPanel(QWidget):
         self.setLayout(self._layout)
 
         self._recording_button = self._create_button()
+        self._recording_button.clicked.connect(self._handle_recording_button_click)
+
         self._layout.addWidget(self._recording_button)
 
         self._recording_status_bar = self._create_recording_status_bar()
@@ -29,8 +31,7 @@ class RecordingPanel(QWidget):
         self._gui_state: GUIState = get_gui_state()
         self._client: FastAPIClient = get_client()
 
-    def update(self):
-        super().update()
+    def update_recording_info(self):
         if self._gui_state.is_recording:
             self._recording_status_label.setText(
                 f"Recording Status: Recording! ({self._gui_state.number_of_frames} from {self._gui_state.number_of_cameras} cameras)")
@@ -45,18 +46,23 @@ class RecordingPanel(QWidget):
         recording_button = QPushButton("\U0001F534 Start Recording")
         recording_button.setStyleSheet("background-color: #29696a")
         recording_button.setEnabled(True)
-        recording_button.clicked.connect(self._start_recording)
         return recording_button
 
+    def _handle_recording_button_click(self):
+        logger.trace(f"Recording Button Clicked and `is_recording` is: {self._gui_state.is_recording}")
+        if self._gui_state.is_recording:
+            self._stop_recording()
+        else:
+            self._start_recording()
     def _start_recording(self):
-        logger.debug("Starting Recording")
+        logger.debug("Starting Recording...")
         self._client.start_recording()
         self._gui_state.is_recording = True
         self._recording_button.setText("\U0001F534 Stop Recording")
         self._recording_button.setStyleSheet("background-color: #860111 ")
 
     def _stop_recording(self):
-        logger.debug("Stopping Recording")
+        logger.debug("Stopping Recording.")
         self._client.stop_recording()
         self._gui_state.is_recording = False
         self._recording_button.setStyleSheet("background-color: #29696a")

@@ -98,6 +98,8 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_widget.new_frames_available.connect(
             self._skellycam_widget.camera_view_grid.handle_new_frontend_payload)
 
+        self._skellycam_widget.new_frames_available.connect(
+            self._skellycam_widget.recording_panel.update_recording_info)
 
         self._connect_to_cameras_button.button.clicked.connect(
             self._welcome_to_skellycam_widget.hide

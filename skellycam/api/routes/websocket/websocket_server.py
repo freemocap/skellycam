@@ -1,11 +1,13 @@
 import asyncio
 import logging
 import time
+from typing import Union
 
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.api.routes.websocket.frontend_payload_queue import get_frontend_payload_queue
+from skellycam.api.routes.websocket.frontend_queue import get_frontend_queue
+from skellycam.core.frames.frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 logger = logging.getLogger(__name__)
@@ -37,23 +39,26 @@ async def listen_for_client_messages(websocket: WebSocket,
             break
 
 
-async def relay_messages_from_queue_to_client(websocket: WebSocket,
-                                              frontend_ready_event: asyncio.Event):
+async def relay_messages_from_queue_to_frontend_websocket(websocket: WebSocket,
+                                                          frontend_ready_event: asyncio.Event):
     logger.info("Starting listener for frontend payload messages in queue...")
-    frontend_payload_queue = get_frontend_payload_queue()
+    frontend_queue = get_frontend_queue()
     while True:
         try:
-            if not frontend_payload_queue.empty():
-                fe_payload: FrontendFramePayload = frontend_payload_queue.get()
-                if not fe_payload:
+            if not frontend_queue.empty():
+                payload: Union[RecordingInfo, FrontendFramePayload] = frontend_queue.get()
+                if not payload:
                     logger.api("Received empty payload, ending listener task...")
                     break
+
+                if isinstance(payload, FrontendFramePayload):
+                    payload.lifespan_timestamps_ns.append({"sent_down_websocket": time.perf_counter_ns()})
+
                 logger.loop(
-                    f"Pulled front-end payload from fe_queue and sending down `websocket` to client: {fe_payload}")
-                fe_payload.lifespan_timestamps_ns.append({"sent_down_websocket": time.perf_counter_ns()})
+                    f"Pulled front-end payload from fe_queue and sending down `websocket` to client: {payload}")
 
                 if frontend_ready_event.is_set():
-                    await websocket.send_json(fe_payload.model_dump())
+                    await websocket.send_json(payload.model_dump())
                     frontend_ready_event.clear()
 
             else:
@@ -93,14 +98,12 @@ async def websocket_server_connect(websocket: WebSocket):
         try:
             logger.api("Creating listener task...")
             listener_task = listen_for_client_messages(websocket=websocket, frontend_ready_event=frontend_ready_event)
-            relay_task = relay_messages_from_queue_to_client(websocket=websocket,
-                                                             frontend_ready_event=frontend_ready_event)
+            relay_task = relay_messages_from_queue_to_frontend_websocket(websocket=websocket,
+                                                                         frontend_ready_event=frontend_ready_event)
             await asyncio.gather(listener_task, relay_task)
         except WebSocketDisconnect:
             logger.info("Client disconnected")
-        except Exception as e:
-            logger.exception(e)
-            logger.error(f"Error while running camera loop: {type(e).__name__}- {e}")
+
         finally:
             if not websocket.client_state == WebSocketState.DISCONNECTED:
                 await websocket.send_text("Goodbye, client👋")
