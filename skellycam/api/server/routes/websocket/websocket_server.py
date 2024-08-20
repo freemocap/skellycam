@@ -42,20 +42,18 @@ async def relay_messages_from_queue_to_client(websocket: WebSocket, frontend_pay
     while True:
         try:
             if not frontend_payload_queue.empty():
-                mf_payload = frontend_payload_queue.get()
-                if not mf_payload:
+                fe_payload = frontend_payload_queue.get()
+                if not fe_payload:
                     logger.api("Received empty payload, ending listener task...")
                     break
-                mf_payload.lifecycle_timestamps_ns.append({"before_send_down_websocket": time.perf_counter_ns()})
                 logger.loop(
-                    f"Pulled multi-frame payload from queue and sending down `websocket` to client: {mf_payload}")
-                await websocket.send_json(mf_payload)
+                    f"Pulled front-end payload from fe_queue and sending down `websocket` to client: {fe_payload}")
+                fe_payload.lifecycle_timestamps_ns.append({"sent_down_websocket": time.perf_counter_ns()})
+                await websocket.send_json(fe_payload.model_dump())
             else:
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.001)
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending listener task...")
-        finally:
-            frontend_payload_queue.put(None)
 
     logger.info("Ending listener for client messages...")
 

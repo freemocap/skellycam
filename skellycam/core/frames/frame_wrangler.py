@@ -6,6 +6,7 @@ from typing import Optional
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.frame_saver import FrameSaver
+from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
@@ -140,9 +141,11 @@ class FrameExporterProcess:
                                                             recording_folder=create_recording_folder(string_tag=None))
                         frame_saver.add_multi_frame(mf_payload)
                     mf_payload.lifecycle_timestamps_ns.append({"put_in_frontend_queue": time.perf_counter_ns()})
-                    frontend_queue.put(mf_payload)
+                    frontend_queue.put(FrontendFramePayload.from_multi_frame_payload(mf_payload))
                 else:
                     wait_1ms()
+        except Exception as e:
+            logger.error(f"Frame exporter process error: {e}")
         finally:
             try:
                 multiframe_queue.put(None)

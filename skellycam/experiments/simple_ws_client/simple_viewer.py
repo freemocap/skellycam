@@ -5,7 +5,7 @@ import cv2
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payload_models.frontend_image_payload import FrontendImagePayload
+from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.experiments.simple_ws_client.simple_viewer_window import SimpleViewerWindow
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class SimpleViewer(BaseModel):
     prescribed_framerate = 30
     windows: Dict[CameraId, SimpleViewerWindow] = {}
 
-    def display_images(self, frontend_payload: FrontendImagePayload):
+    def display_images(self, frontend_payload: FrontendFramePayload):
         try:
             for camera_id, jpeg_image in frontend_payload.jpeg_images_by_camera.items():
                 if not jpeg_image:

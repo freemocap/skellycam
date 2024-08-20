@@ -1,11 +1,12 @@
 import json
 import logging
 import threading
+import time
 from typing import Union, Dict, Any, Optional
 
 import websocket
 
-from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class WebSocketClient:
     def __init__(self, base_url: str):
         self.websocket_url = base_url.replace("http", "ws") + "/websocket/connect"
         self.websocket = self._create_websocket()
-        self._latest_frames: Optional[MultiFramePayload] = None
+        self._latest_frontend_payload: Optional[FrontendFramePayload] = None
         self._new_frames_ready = False
         self._websocket_thread: Optional[threading.Thread] = None
 
@@ -39,14 +40,16 @@ class WebSocketClient:
         self._websocket_thread.start()
 
     @property
-    def latest_frames(self):
+    def latest_fronted_payload(self):
         self._new_frames_ready = False
-        return self._latest_frames
+        self._latest_frontend_payload.lifespan_timestamps_ns.append(
+            {"retrieved from 'latest frames' property": time.perf_counter_ns()})
+        return self._latest_frontend_payload
 
-    @latest_frames.setter
-    def latest_frames(self, value: MultiFramePayload):
+    @latest_fronted_payload.setter
+    def latest_fronted_payload(self, value: FrontendFramePayload):
         self._new_frames_ready = True
-        self._latest_frames = value
+        self._latest_frontend_payload = value
 
     @property
     def new_frames_ready(self):
@@ -68,7 +71,6 @@ class WebSocketClient:
         if isinstance(message, str):
             try:
                 json_data = json.loads(message)
-                logger.info(f"Received JSON message: {json_data}")
                 self._handle_json_message(json_data)
             except json.JSONDecodeError:
                 logger.info(f"Received text message: {message}")
@@ -86,8 +88,12 @@ class WebSocketClient:
         pass
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
-        logger.info(f"Received JSON message: {message}")
-
+        logger.trace(f"Received JSON message, size: {len(message)}")
+        if "jpeg_images" in message:
+            fe_payload = FrontendFramePayload(**message)
+            fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
+            self.latest_fronted_payload = fe_payload
+            logger.info(f"Received FrontendFramePayload with {len(self.latest_fronted_payload.camera_ids)} cameras")
 
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:

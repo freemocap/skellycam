@@ -148,7 +148,7 @@ class SkellyCamWidget(QWidget):
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")
         connect_to_cameras_response = self.client.connect_to_cameras()
-        logger.debug(f"Received result from `connect_to_cameras` call: {connect_to_cameras_response}")
+        logger.debug(f"`connect_to_cameras` success: {connect_to_cameras_response.success}")
         self.gui_state.camera_configs = connect_to_cameras_response.connected_cameras
         self.gui_state.available_devices = connect_to_cameras_response.detected_cameras
         self.gui_state_changed.emit()

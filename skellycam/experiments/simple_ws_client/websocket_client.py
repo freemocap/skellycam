@@ -5,7 +5,7 @@ import websockets
 from skellycam.frontend import SimpleViewer
 from tenacity import retry, wait_fixed, stop_after_attempt, before_sleep_log
 
-from skellycam.core.frames.payload_models.frontend_image_payload import FrontendImagePayload
+from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 RETRY_DELAY = 1  # seconds
 MAX_RETRIES = 5
@@ -27,7 +27,7 @@ async def listen_for_server_messages(websocket: websockets.WebSocketClientProtoc
                 logger.info("Viewer quit - Closing client connection...")
                 quit_event.set()
                 break
-            frontend_payload = FrontendImagePayload.from_msgpack(message)
+            frontend_payload = FrontendFramePayload.from_msgpack(message)
             logger.trace(
                 f"Received ws binary message: {len(message) / 1024}kb with images from Cameras [{skellycam.core.memory.shared_memory_demo.camera_ids}]")
             if len(frontend_payload) > 0:

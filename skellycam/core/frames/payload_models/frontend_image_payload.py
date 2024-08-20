@@ -1,5 +1,7 @@
+import base64
 import time
-from typing import Dict, Optional
+from copy import deepcopy
+from typing import Dict, Optional, List
 
 import cv2
 import msgpack
@@ -13,9 +15,10 @@ from skellycam.core.frames.payload_models.multi_frame_payload import MultiFrameP
 from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
-class FrontendImagePayload(BaseModel):
-    jpeg_images: Dict[CameraId, Optional[bytes]]
+class FrontendFramePayload(BaseModel):
+    jpeg_images: Dict[CameraId, Optional[str]]
     metadata: Dict[CameraId, FrameMetadata]
+    lifespan_timestamps_ns: List[Dict[str, int]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
 
@@ -45,9 +48,12 @@ class FrontendImagePayload(BaseModel):
             jpeg_images[camera_id] = cls._image_to_jpeg(annotated_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
             frame_metadatas[camera_id] = FrameMetadata.from_array(frame.metadata)
+        lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifecycle_timestamps_ns)
+        lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
 
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
+                   lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
                    metadata=frame_metadatas)
 
@@ -61,7 +67,7 @@ class FrontendImagePayload(BaseModel):
         return instance
 
     @staticmethod
-    def _image_to_jpeg(image: np.ndarray, quality: int = 95) -> bytes:
+    def _image_to_jpeg(image: np.ndarray, quality: int = 95) -> str:
         """
         Convert a numpy array image to a JPEG image using OpenCV.
         """
@@ -71,8 +77,8 @@ class FrontendImagePayload(BaseModel):
 
         if not result:
             raise ValueError("Could not encode image to JPEG")
-
-        return jpeg_image.tobytes()
+        base64_image = base64.b64encode(jpeg_image).decode('utf-8')
+        return base64_image
 
     @staticmethod
     def _annotate_image(frame: FramePayload,
@@ -115,11 +121,14 @@ class FrontendImagePayload(BaseModel):
         return image
 
     def __str__(self):
+        total_bytes = sum([len(jpeg) for jpeg in self.jpeg_images.values()])
+        out_str = f"FrontendImagePayload with {len(self.jpeg_images)} images: \n"
         frame_strs = []
         for camera_id, frame in self.jpeg_images.items():
             if frame:
-                frame_strs.append(f"{camera_id}: {len(frame)} bytes")
+                frame_strs.append(f"{camera_id}: {len(frame)} bytes, \n")
             else:
                 frame_strs.append(f"{camera_id}: None")
-
-        return ",".join(frame_strs)
+        out_str += ",".join(frame_strs)
+        out_str += f"Total size: {total_bytes} bytes\n"
+        return out_str

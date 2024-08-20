@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class HTTPClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
-        self.client = httpx.Client(base_url=self.base_url)
+        self.client = httpx.Client(base_url=self.base_url, timeout=60)
         self.executor = ThreadPoolExecutor(max_workers=10)
 
     def get(self, endpoint: str, params: Dict[str, Any] = None) -> Future:

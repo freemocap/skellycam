@@ -62,7 +62,7 @@ class CameraTriggers(BaseModel):
     def await_retrieve_trigger(self):
         while not self.retrieve_frame_trigger.is_set() and self.should_continue:
             wait_1us()
-        logger.trace(f"Camera {self.camera_id} process received `retrieve_frame_trigger`")
+        logger.loop(f"Camera {self.camera_id} process received `retrieve_frame_trigger`")
 
     def set_frame_retrieved(self):
         self.retrieve_frame_trigger.clear()
