@@ -95,12 +95,13 @@ class FrameListenerProcess:
 class FrameExporterProcess:
     def __init__(self,
                  multiframe_queue: multiprocessing.Queue,
+                 frontend_queue: multiprocessing.Queue,
                  camera_configs: CameraConfigs,
                  exit_event: multiprocessing.Event, ):
-        self._multiframe_queue = multiframe_queue
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
                                                 args=(multiframe_queue,
+                                                      frontend_queue,
                                                       camera_configs,
                                                       exit_event))
 
@@ -116,8 +117,11 @@ class FrameExporterProcess:
 
     @staticmethod
     def _run_process(multiframe_queue: multiprocessing.Queue,
+                     frontend_queue: multiprocessing.Queue,
                      camera_configs: CameraConfigs,
-                     exit_event: multiprocessing.Event):
+                     exit_event: multiprocessing.Event,
+                     record_frames: multiprocessing.Event = multiprocessing.Event(),
+                     ):
         logger.trace(f"Frame exporter process started!")
         frame_saver: Optional[FrameSaver] = None
         try:
@@ -129,16 +133,23 @@ class FrameExporterProcess:
                         logger.trace(f"Received empty payload - exiting")
                         break
                     logger.loop(f"FrameExporter - Received multi-frame payload: {mf_payload}")
-                    if not frame_saver:
-                        frame_saver = FrameSaver.create(mf_payload=mf_payload,
-                                                        camera_configs=camera_configs,
-                                                        recording_folder=create_recording_folder(string_tag=None))
-                    frame_saver.add_multi_frame(mf_payload)
+                    if record_frames.is_set():
+                        if not frame_saver:
+                            frame_saver = FrameSaver.create(mf_payload=mf_payload,
+                                                            camera_configs=camera_configs,
+                                                            recording_folder=create_recording_folder(string_tag=None))
+                        frame_saver.add_multi_frame(mf_payload)
+                    mf_payload.lifecycle_timestamps_ns.append({"put_in_frontend_queue": time.perf_counter_ns()})
+                    frontend_queue.put(mf_payload)
                 else:
                     wait_1ms()
         finally:
             try:
                 multiframe_queue.put(None)
+            except BrokenPipeError:
+                pass
+            try:
+                frontend_queue.put(None)
             except BrokenPipeError:
                 pass
             logger.trace(f"Stopped listening for multi-frames")
@@ -152,6 +163,7 @@ class FrameWrangler:
                  camera_configs: CameraConfigs,
                  group_shm_names: GroupSharedMemoryNames,
                  group_orchestrator: CameraGroupOrchestrator,
+                 frontend_payload_queue: multiprocessing.Queue,
                  exit_event: multiprocessing.Event):
         super().__init__()
         self._exit_event = exit_event
@@ -169,6 +181,7 @@ class FrameWrangler:
         )
         self._exporter_process = FrameExporterProcess(
             multiframe_queue=self._multiframe_queue,
+            frontend_queue=frontend_payload_queue,
             camera_configs=camera_configs,
             exit_event=self._exit_event,
         )

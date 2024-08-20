@@ -13,6 +13,7 @@ class CameraGroup:
             self,
     ):
         self._exit_event = multiprocessing.Event()
+        self._fe_queue: Optional[multiprocessing.Queue] = None
         self._process: Optional[CameraGroupProcess] = None
 
     @property
@@ -24,6 +25,7 @@ class CameraGroup:
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
         self._process = CameraGroupProcess(camera_configs=configs,
+                                           frontend_payload_queue=self._fe_queue,
                                            exit_event=self._exit_event, )
 
     async def start(self, number_of_frames: Optional[int] = None):
@@ -37,3 +39,6 @@ class CameraGroup:
         if self._process:
             self._process.close()
         logger.info("Camera group closed.")
+
+    def set_frontend_payload_queue(self, fe_queue: multiprocessing.Queue):
+        self._fe_queue = fe_queue

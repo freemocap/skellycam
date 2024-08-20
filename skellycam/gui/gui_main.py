@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def gui_main(shutdown_event=None):
+    logger.info("Starting GUI main...")
     if sys.platform == "win32":
         setup_app_id_for_windows()
 
@@ -22,7 +23,7 @@ def gui_main(shutdown_event=None):
 
     main_window = SkellyCamMainWindow(shutdown_event=shutdown_event)
     main_window.show()
-
+    logger.success("GUI main window presumably opened")
     error_code = qt_app.exec()  # Will block until the GUI window is closed
 
     logger.info(f"Exiting with code: {error_code}")

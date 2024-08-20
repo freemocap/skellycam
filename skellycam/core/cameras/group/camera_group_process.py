@@ -17,9 +17,11 @@ class CameraGroupProcess:
     def __init__(
             self,
             camera_configs: CameraConfigs,
+            frontend_payload_queue: multiprocessing.Queue,
             exit_event: multiprocessing.Event,
     ):
         self._camera_configs = camera_configs
+        self._fe_payload_queue = frontend_payload_queue
         self._exit_event = exit_event
 
         self._process: Optional[Process] = None
@@ -29,6 +31,7 @@ class CameraGroupProcess:
             name="MultiCameraTriggerProcess",
             target=CameraGroupProcess._run_process,
             args=(self._camera_configs,
+                  self._fe_payload_queue,
                   self._exit_event,
                   number_of_frames
                   )
@@ -36,6 +39,7 @@ class CameraGroupProcess:
 
     @staticmethod
     def _run_process(configs: CameraConfigs,
+                     frontend_payload_queue: multiprocessing.Queue,
                      exit_event: multiprocessing.Event,
                      number_of_frames: Optional[int] = None
                      ):
@@ -44,10 +48,11 @@ class CameraGroupProcess:
 
         group_shm = CameraGroupSharedMemory.create(camera_configs=configs)
 
-        frame_wrangler = FrameWrangler(exit_event=exit_event,
-                                       camera_configs=configs,
+        frame_wrangler = FrameWrangler(camera_configs=configs,
                                        group_shm_names=group_shm.shared_memory_names,
-                                       group_orchestrator=group_orchestrator)
+                                       group_orchestrator=group_orchestrator,
+                                       frontend_payload_queue=frontend_payload_queue,
+                                       exit_event=exit_event, )
         try:
             logger.debug(f"CameraGroupProcess started")
             frame_wrangler.start()

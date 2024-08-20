@@ -1,5 +1,4 @@
 import logging
-import os
 
 from .log_level_enum import LogLevels
 from .log_test_messages import log_test_messages
@@ -38,7 +37,6 @@ def configure_logging(level: LogLevels = LogLevels.DEBUG):
     builder.configure()
     logger = logging.getLogger(__name__)
 
-    logger.debug(f"Logging configured for Process ID {os.getpid()} - log level: {level} (value: {level.value})")
 
 
 if __name__ == "__main__":

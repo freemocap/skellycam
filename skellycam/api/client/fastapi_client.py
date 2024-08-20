@@ -1,11 +1,13 @@
 import logging
 import time
+from typing import Optional
 
 from skellycam.api.client.http_client import HTTPClient
 from skellycam.api.client.websocket_client import WebSocketClient
 from skellycam.api.server.routes.http.cameras.connect import ConnectCamerasResponse
 from skellycam.api.server.routes.http.cameras.detect import DetectCamerasResponse
 from skellycam.api.server.run_server import APP_URL
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +17,14 @@ class FastAPIClient:
         self.http_client = HTTPClient(base_url)
         self.ws_client = WebSocketClient(base_url)
 
+    @property
+    def latest_frames(self) -> Optional[MultiFramePayload]:
+        return self.ws_client.latest_frames
+
     def connect_to_cameras(self) -> ConnectCamerasResponse:
         logger.info("Calling /connect endpoint")
+        self.ws_client.connect()
+        print("weeeeee")
         future_response = self.http_client.get("/cameras/connect")
         response = future_response.result()
         return ConnectCamerasResponse(**response.json())
@@ -29,6 +37,7 @@ class FastAPIClient:
 
     def close_cameras(self):
         logger.info("Calling /close endpoint")
+        self.ws_client.close()
         future_response = self.http_client.get("/cameras/close")
         response = future_response.result()
         return response.json()

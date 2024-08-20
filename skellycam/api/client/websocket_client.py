@@ -1,8 +1,11 @@
 import json
 import logging
-from typing import Union, Dict, Any
+import threading
+from typing import Union, Dict, Any, Optional
 
 import websocket
+
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -14,17 +17,40 @@ class WebSocketClient:
     """
 
     def __init__(self, base_url: str):
-        self.websocket_url = base_url.replace("http", "ws") + "/ws/connect"
-        self.websocket = websocket.WebSocketApp(
+        self.websocket_url = base_url.replace("http", "ws") + "/websocket/connect"
+        self.websocket = self._create_websocket()
+        self._latest_frames: Optional[MultiFramePayload] = None
+        self._new_frames_ready = False
+        self._websocket_thread: Optional[threading.Thread] = None
+
+    def _create_websocket(self):
+        return websocket.WebSocketApp(
             self.websocket_url,
             on_message=self._on_message,
+            on_open=self._on_open,
             on_error=self._on_error,
             on_close=self._on_close,
         )
 
     def connect(self) -> None:
-        self.websocket.on_open = self._on_open
-        self.websocket.run_forever()
+        logger.info(f"Connecting to WebSocket at {self.websocket_url}...")
+        self._websocket_thread = threading.Thread(target=lambda: self.websocket.run_forever(reconnect=True),
+                                                  daemon=True)
+        self._websocket_thread.start()
+
+    @property
+    def latest_frames(self):
+        self._new_frames_ready = False
+        return self._latest_frames
+
+    @latest_frames.setter
+    def latest_frames(self, value: MultiFramePayload):
+        self._new_frames_ready = True
+        self._latest_frames = value
+
+    @property
+    def new_frames_ready(self):
+        return self._new_frames_ready
 
     def _on_open(self, ws) -> None:
         logger.info(f"Connected to WebSocket at {self.websocket_url}")
@@ -62,6 +88,7 @@ class WebSocketClient:
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
         logger.info(f"Received JSON message: {message}")
 
+
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:
             if isinstance(message, dict):
@@ -77,4 +104,5 @@ class WebSocketClient:
     def close(self) -> None:
         if self.websocket:
             self.websocket.close()
+        self.websocket = self._create_websocket()
         logger.info("Closing WebSocket client")

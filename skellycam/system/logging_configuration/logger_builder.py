@@ -102,4 +102,3 @@ class LoggerBuilder:
                     logging.getLogger("").handlers.append(handler)
         else:
             logger = logging.getLogger(__name__)
-            logger.trace("Logging already configured")
