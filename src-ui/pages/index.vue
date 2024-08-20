@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 
-const wsUrl = 'ws://localhost:8003/ws/connect'; // Update this with your actual WebSocket URL
+const wsUrl = 'ws://localhost:8005/ws/connect';
 const {
   connectWebSocket,
   sendMessage,

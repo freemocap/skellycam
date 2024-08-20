@@ -6,6 +6,7 @@ from typing import Union, Dict, Any, Optional
 
 import websocket
 
+from skellycam.api.routes.websocket.websocket_server import FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.gui.gui_state import GUIState, get_gui_state
 
@@ -78,6 +79,7 @@ class WebSocketClient:
             logger.loop(f"Received FrontendFramePayload with {len(fe_payload.camera_ids)} cameras")
             fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
             self._gui_state.latest_frontend_payload = fe_payload
+            self.websocket.send_text(FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT)
         else:
             logger.info(f"Received JSON message: {message}")
 
