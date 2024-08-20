@@ -55,6 +55,15 @@ class GUIState:
         with self._lock:
             self._recording_save_folder = value
 
+    @property
+    def latest_frames(self):
+        with self._lock:
+            return self._latest_frames
+
+    @latest_frames.setter
+    def latest_frames(self, value):
+        with self._lock:
+            self._latest_frames = value
 
 GUI_STATE = None
 

@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 from multiprocessing import Process
 
-from skellycam.api.server.run_server import run_server
+from skellycam.api.run_server import run_server
 from skellycam.gui.gui_main import gui_main
 from skellycam.utilities.clean_path import clean_path
 

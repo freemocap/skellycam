@@ -1,5 +1,5 @@
-from skellycam.api.client.fastapi_client import FastAPIClient
-from skellycam.api.server.run_server import get_server_manager
+from skellycam.api.run_server import get_server_manager
+from skellycam.gui.client.fastapi_client import FastAPIClient
 
 FASTAPI_CLIENT = None
 

@@ -2,12 +2,12 @@ import logging
 import time
 from typing import Optional
 
-from skellycam.api.client.http_client import HTTPClient
-from skellycam.api.client.websocket_client import WebSocketClient
-from skellycam.api.server.routes.http.cameras.connect import ConnectCamerasResponse
-from skellycam.api.server.routes.http.cameras.detect import DetectCamerasResponse
-from skellycam.api.server.run_server import APP_URL
+from skellycam.api.routes.http.cameras.connect import ConnectCamerasResponse
+from skellycam.api.routes.http.cameras.detect import DetectCamerasResponse
+from skellycam.api.run_server import APP_URL
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
+from skellycam.gui.client.http_client import HTTPClient
+from skellycam.gui.client.websocket_client import WebSocketClient
 
 logger = logging.getLogger(__name__)
 
