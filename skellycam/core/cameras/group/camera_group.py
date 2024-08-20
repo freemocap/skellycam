@@ -23,6 +23,12 @@ class CameraGroup:
             return []
         return self._process.camera_ids
 
+    @property
+    def is_running(self):
+        if self._process is None:
+            return False
+        return self._process.is_running
+
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
         self._process = CameraGroupProcess(camera_configs=configs,
@@ -59,3 +65,6 @@ class CameraGroup:
             return False
         self._start_recording_event.clear()
         return True
+
+    def update_camera_configs(self, camera_configs: CameraConfigs):
+        pass

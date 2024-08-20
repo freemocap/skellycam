@@ -39,15 +39,18 @@ class Controller:
                                  number_of_frames: Optional[int] = None) -> Tuple[CameraConfigs, AvailableDevices]:
         logger.info(f"Connecting to available cameras...")
 
-        if camera_configs:
-            self._camera_configs = camera_configs
-            self._camera_group.set_camera_configs(camera_configs)
-        else:
-            logger.info(f"Available cameras not set - Executing `detect` method...")
-            if not await self.detect():
-                raise ValueError("No cameras detected!")
+        if not self._camera_group.is_running:
+            if camera_configs:
+                self._camera_configs = camera_configs
+                self._camera_group.set_camera_configs(camera_configs)
+            else:
+                logger.info(f"Available cameras not set - Executing `detect` method...")
+                if not await self.detect():
+                    raise ValueError("No cameras detected!")
 
-        await self._start_camera_group(number_of_frames=number_of_frames)
+            await self._start_camera_group(number_of_frames=number_of_frames)
+        else:
+            self._camera_group.update_camera_configs(camera_configs)
         return self._camera_configs, self._available_devices
 
     async def _start_camera_group(self, number_of_frames: Optional[int] = None):

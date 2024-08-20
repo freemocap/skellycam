@@ -24,18 +24,19 @@ class ConnectCamerasRequest(BaseRequest):
 
 
 @connect_cameras_router.post(
-    "/connect",
+    "/connect/update",
     response_model=ConnectCamerasResponse,
-    summary="Connect to cameras specified in the request",
+    summary="Connect/update specified cameras with configuration settings",
 )
-async def connect_cameras_route(
+async def cameras_update_route(
         request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
 ) -> ConnectCamerasResponse:
     controller: Controller = get_controller()
 
     logger.api("Received `/connect` POST request...")
     try:
-        connected_cameras, available_devices = await controller.connect_to_cameras(request.camera_configs)
+        connected_cameras, available_devices = await controller.connect_to_cameras(
+            camera_configs=request.camera_configs)
         logger.api("`/connect` POST request handled successfully.")
         return ConnectCamerasResponse(connected_cameras=connected_cameras,
                                       detected_cameras=available_devices)
@@ -50,7 +51,7 @@ async def connect_cameras_route(
     response_model=ConnectCamerasResponse,
     summary="Connect to all available cameras with default settings",
 )
-async def connect_cameras_route() -> ConnectCamerasResponse:
+async def cameras_connect_route() -> ConnectCamerasResponse:
     controller: Controller = get_controller()
 
     logger.api("Received `/connect` GET request...")

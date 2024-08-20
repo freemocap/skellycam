@@ -42,6 +42,7 @@ class CameraProcess:
             logger.debug(f"Camera {config.camera_id} process started")
             apply_camera_configuration(cv2_video_capture, config)
             triggers.set_ready()
+
             run_trigger_listening_loop(config=config,
                                        cv2_video_capture=cv2_video_capture,
                                        camera_shared_memory=camera_shared_memory,
