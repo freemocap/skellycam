@@ -15,7 +15,7 @@ from skellycam.gui.qt.utilities.qt_label_strings import USE_THIS_CAMERA_STRING, 
 logger = logging.getLogger(__name__)
 
 
-class CameraParameterTree(QWidget):
+class CameraSettingsPanel(QWidget):
 
     def __init__(self, parent: QWidget):
         super().__init__(parent=parent)

@@ -24,7 +24,7 @@ async def close_camera_connections():
 
     controller: Controller = get_controller()
     try:
-        await controller.close()
+        await controller.close_cameras()
         logger.api("`/close` request handled successfully.")
         return CamerasClosedResponse()
     except Exception as e:

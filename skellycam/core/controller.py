@@ -59,7 +59,7 @@ class Controller:
             raise ValueError("No cameras available to start camera group!")
         await self._camera_group.start(number_of_frames=number_of_frames)
 
-    async def close(self):
+    async def close_cameras(self):
         logger.debug(f"Closing camera group...")
         if self._camera_group is not None:
             await self._camera_group.close()

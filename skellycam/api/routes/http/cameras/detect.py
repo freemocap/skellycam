@@ -31,7 +31,7 @@ async def detect_cameras_route() -> DetectCamerasResponse:
     try:
         detected_cameras = await controller.detect()
         logger.api(f"`detect/` request handled successfully - detected cameras: [{detected_cameras}]")
-        return DetectCamerasResponse(detected_cameras=detected_cameras)
+        return DetectCamerasResponse(available_cameras=detected_cameras)
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")
         logger.exception(e)

@@ -4,6 +4,7 @@ import time
 from skellycam.api.routes.http.cameras.connect import ConnectCamerasResponse
 from skellycam.api.routes.http.cameras.detect import DetectCamerasResponse
 from skellycam.api.run_server import APP_URL
+from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.gui.client.http_client import HTTPClient
 from skellycam.gui.client.websocket_client import WebSocketClient
 
@@ -52,3 +53,8 @@ class FastAPIClient:
     def stop_recording(self):
         logger.api("Calling `/cameras/record/stop` endpoint")
         self.http_client.get("/cameras/record/stop")
+
+    def apply_settings_to_cameras(self, camera_configs: CameraConfigs):
+        logger.api("Calling `/cameras/connect/apply` endpoint")
+        self.http_client.post(endpoint="/cameras/connect/apply",
+                              data=camera_configs)

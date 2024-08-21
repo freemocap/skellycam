@@ -56,7 +56,7 @@ class CameraGroupProcess:
 
     def _create_process(self, number_of_frames: Optional[int] = None):
         self._process = Process(
-            name="MultiCameraTriggerProcess",
+            name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
             args=(self._camera_configs,
                   self._fe_payload_queue,
@@ -110,7 +110,9 @@ class CameraGroupProcess:
                 camera_loop_thread.start()
 
                 reset_all = False
-                while not exit_event.is_set() and not reset_all:
+                while not exit_event.is_set():
+                    if reset_all:
+                        break
                     wait_1s()
                     if not update_queue.empty():
                         update_instructions = update_queue.get()
@@ -126,6 +128,6 @@ class CameraGroupProcess:
         finally:
             exit_event.set()
             frame_wrangler.close() if frame_wrangler else None
-            camera_manager.stop_cameras() if camera_manager else None
-            group_shm.close() if group_shm else None
+            camera_manager.close() if camera_manager else None
+            group_shm.close_and_unlink() if group_shm else None
             logger.debug(f"CameraGroupProcess completed")

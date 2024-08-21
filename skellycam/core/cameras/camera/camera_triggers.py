@@ -52,15 +52,15 @@ class CameraTriggers(BaseModel):
         logger.trace(f"Camera {self.camera_id} process received `initial_trigger`")
         self.initial_trigger.clear()
 
-    def await_grab_trigger(self, wait_loop_time: float = 0.0001):
-        while not self.grab_frame_trigger.is_set() and self.should_continue:
+    def await_grab_trigger(self, close_self_event: multiprocessing.Event):
+        while not self.grab_frame_trigger.is_set() and self.should_continue and not close_self_event.is_set():
             wait_1us()
 
     def set_frame_grabbed(self):
         self.grab_frame_trigger.clear()
 
-    def await_retrieve_trigger(self):
-        while not self.retrieve_frame_trigger.is_set() and self.should_continue:
+    def await_retrieve_trigger(self, close_self_event: multiprocessing.Event):
+        while not self.retrieve_frame_trigger.is_set() and self.should_continue and not close_self_event.is_set():
             wait_1us()
         logger.loop(f"Camera {self.camera_id} process received `retrieve_frame_trigger`")
 

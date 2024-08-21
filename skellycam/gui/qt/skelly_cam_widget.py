@@ -23,6 +23,7 @@ title_label_style_string = """
 class SkellyCamWidget(QWidget):
     devices_detected = Signal()
     cameras_connected = Signal()
+    cameras_closed = Signal()
     recording_started = Signal()
     recording_stopped = Signal
     new_frames_available = Signal()
@@ -32,6 +33,7 @@ class SkellyCamWidget(QWidget):
             parent=None,
     ):
         super().__init__(parent=parent)
+
 
         self._client: FastAPIClient = get_client()
         self._gui_state: GUIState = get_gui_state()
@@ -57,9 +59,6 @@ class SkellyCamWidget(QWidget):
         self._gui_state.available_devices = detect_cameras_response.available_cameras
         self.devices_detected.emit()
 
-    def disconnect_from_cameras(self):
-        logger.info("Disconnecting from cameras")
-        self.camera_view_grid.clear_camera_views()
 
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")
@@ -69,6 +68,17 @@ class SkellyCamWidget(QWidget):
         self._gui_state.available_devices = connect_to_cameras_response.detected_cameras
         self.cameras_connected.emit()
         self.devices_detected.emit()
+
+    def close_cameras(self):
+        logger.info("Closing cameras")
+        self._client.close_cameras()
+        self.camera_view_grid.clear_camera_views()
+        self.cameras_closed.emit()
+
+    def apply_settings_to_cameras(self):
+        logger.info("Applying settings to cameras")
+        self._client.apply_settings_to_cameras(camera_configs=self._gui_state.camera_configs)
+        self.cameras_connected.emit()
 
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")

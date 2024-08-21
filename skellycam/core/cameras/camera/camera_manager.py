@@ -44,9 +44,9 @@ class CameraManager:
         self.group_orchestrator.await_for_cameras_ready()
         logger.success(f"Cameras {self.camera_ids} started successfully!")
 
-    def stop_cameras(self):
-        logger.info(f"Stopping cameras: {self.camera_ids} (setting exit event)")
-        [camera.close() for camera in self.camera_processes.values()]
+    def close(self):
+        logger.info(f"Stopping cameras: {self.camera_ids}")
+        self._close_cameras()
         self.exit_event.set()
 
     def update_cameras(self, update_instructions: UpdateInstructions):
@@ -55,8 +55,7 @@ class CameraManager:
         for camera_id in update_instructions.update_these_cameras:
             self.update_queues[camera_id].put(update_instructions.new_configs[camera_id])
 
-
-    def _close_cameras(self, close_these_cameras: Optional[List[CameraId]]):
+    def _close_cameras(self, close_these_cameras: Optional[List[CameraId]] = None):
         if not close_these_cameras:
             close_these_cameras = self.camera_ids
         logger.debug(f"Closing cameras: {close_these_cameras}")

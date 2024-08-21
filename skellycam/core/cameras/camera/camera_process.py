@@ -75,8 +75,7 @@ class CameraProcess:
                                        exit_event=exit_event)
             logger.debug(f"Camera {config.camera_id} process completed")
         finally:
-            exit_event.set()
-            camera_shared_memory.close()
+            logger.debug(f"Releasing camera {config.camera_id} `cv2.VideoCapture` and shutting down CameraProcess")
             cv2_video_capture.release()
 
 
@@ -92,22 +91,26 @@ def run_trigger_listening_loop(
     triggers.await_initial_trigger()
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
     frame_number = 0
+    try:
+        # Trigger listening loop
+        while not exit_event.is_set() and not close_self_event.is_set():
 
-    # Trigger listening loop
-    while not exit_event.is_set() and not close_self_event.is_set():
+            if update_queue.qsize() > 0:
+                new_config = update_queue.get()
+                apply_camera_configuration(cv2_video_capture, new_config)
+                logger.debug(f"Camera {config.camera_id} updated with new config: {new_config}")
+            else:
+                wait_1ms()
 
-        if update_queue.qsize() > 0:
-            new_config = update_queue.get()
-            apply_camera_configuration(cv2_video_capture, new_config)
-            logger.debug(f"Camera {config.camera_id} updated with new config: {new_config}")
-        else:
-            wait_1ms()
+            logger.loop(f"Camera {config.camera_id} ready to get next frame")
+            frame_number = get_frame(
+                camera_id=config.camera_id,
+                cap=cv2_video_capture,
+                camera_shared_memory=camera_shared_memory,
+                triggers=triggers,
+                frame_number=frame_number,
+                close_self_event=close_self_event,
+            )
 
-        logger.loop(f"Camera {config.camera_id} ready to get next frame")
-        frame_number = get_frame(
-            camera_id=config.camera_id,
-            cap=cv2_video_capture,
-            camera_shared_memory=camera_shared_memory,
-            frame_number=frame_number,
-            triggers=triggers,
-        )
+    finally:
+        logger.debug(f"Camera {config.camera_id} trigger listening loop ended")
