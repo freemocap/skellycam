@@ -5,6 +5,7 @@ from typing import Optional
 from skellycam.api.routes.websocket.frontend_queue import get_frontend_queue
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
+from skellycam.core.cameras.group.update_instructions import UpdateInstructions
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ class CameraGroup:
     def __init__(
             self,
     ):
+        self._camera_configs: Optional[CameraConfigs] = None
         self._exit_event = multiprocessing.Event()  # shut it down!
         self._start_recording_event = multiprocessing.Event()  # Start/stop recording
         self._update_queue = multiprocessing.Queue()  # Update camera configs
@@ -33,8 +35,10 @@ class CameraGroup:
 
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
-        self._process = CameraGroupProcess(camera_configs=configs,
+        self._camera_configs = configs
+        self._process = CameraGroupProcess(camera_configs=self._camera_configs,
                                            frontend_payload_queue=self._frontend_queue,
+                                           update_queue=self._update_queue,
                                            start_recording_event=self._start_recording_event,
                                            exit_event=self._exit_event, )
 
@@ -68,6 +72,15 @@ class CameraGroup:
         self._start_recording_event.clear()
         return True
 
-    def update_camera_configs(self, camera_configs: CameraConfigs):
-        logger.trace(f"Sending new camera configs to camera group process")
-        self._update_queue.put(camera_configs)
+    def update_camera_configs(self, new_configs: CameraConfigs):
+        if not self._process or not self._process.is_running:
+            logger.warning("Cannot update camera configs - Camera group is not running")
+            self._camera_configs = new_configs
+            return
+
+        update_instructions = UpdateInstructions.from_configs(new_configs=new_configs,
+                                                              old_configs=self._camera_configs)
+        logger.debug(
+            f"Sending new camera configs to camera group process: {new_configs}, update_instructions: {update_instructions}")
+        self._camera_configs = new_configs
+        self._update_queue.put(update_instructions)

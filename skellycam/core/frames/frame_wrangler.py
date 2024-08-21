@@ -69,8 +69,9 @@ class FrameListenerProcess:
                 if group_orchestrator.new_frames_available:
                     logger.loop(f"Frame wrangler sees new frames available!")
                     mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
-                    # Reset the flag to allow new frame loop to begin BEFORE we put the payload in the queue
+                    # NOTE - Reset the flag to allow new frame loop to begin BEFORE we put the payload in the queue
                     group_orchestrator.set_frames_copied()
+
                     mf_payload.lifespan_timestamps_ns.append({"before_put_in_mf_queue": time.perf_counter_ns()})
                     multiframe_queue.put(mf_payload)
                     payloads_received.value += 1

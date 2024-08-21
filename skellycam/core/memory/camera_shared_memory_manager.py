@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class CameraGroupSharedMemory(BaseModel):
     camera_configs: CameraConfigs
     camera_shms: Dict[CameraId, CameraSharedMemory]
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod

@@ -32,6 +32,10 @@ class CameraGroupOrchestrator(BaseModel):
         )
 
     @property
+    def camera_ids(self):
+        return list(self.camera_triggers.keys())
+
+    @property
     def should_continue(self):
         return not self._exit_event.is_set()
 

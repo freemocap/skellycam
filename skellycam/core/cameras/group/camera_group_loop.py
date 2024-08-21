@@ -5,10 +5,8 @@ from typing import Optional, List
 
 import numpy as np
 
-from skellycam.core.cameras.camera.camera_manager import CameraManager
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -17,23 +15,13 @@ logger = logging.getLogger(__name__)
 def camera_group_trigger_loop(
         camera_configs: CameraConfigs,
         group_orchestrator: CameraGroupOrchestrator,
-        group_shm_names: GroupSharedMemoryNames,
         exit_event: multiprocessing.Event,
         number_of_frames: Optional[int] = None,
 ):
-    camera_manager = CameraManager(camera_configs=camera_configs,
-                                   shared_memory_names=group_shm_names,
-                                   group_orchestrator=group_orchestrator,
-                                   exit_event=exit_event,
-                                   )
-    camera_manager.start_cameras()
-
-    group_orchestrator.fire_initial_triggers()
-
     loop_count = 0
     elapsed_per_loop_ns = []
     try:
-        logger.debug(f"Starting camera trigger loop for cameras: {list(camera_configs.keys())}...")
+        logger.debug(f"Starting camera trigger loop for cameras: {group_orchestrator.camera_ids}...")
         while not exit_event.is_set():
             tik = time.perf_counter_ns()
 
@@ -46,16 +34,15 @@ def camera_group_trigger_loop(
                 elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
             loop_count += 1
 
-        logger.debug(f"Multi-camera trigger loop for cameras: {camera_manager.camera_ids}  ended")
+        logger.debug(f"Multi-camera trigger loop for cameras: {group_orchestrator.camera_ids}  ended")
         wait_10ms()
         log_time_stats(
             camera_configs=camera_configs,
             elapsed_per_loop_ns=elapsed_per_loop_ns,
         )
     finally:
-        camera_manager.stop_cameras()
         group_orchestrator.clear_triggers()
-        logger.debug(f"Multi-camera trigger loop for cameras: {camera_manager.camera_ids}  exited")
+        logger.debug(f"Multi-camera trigger loop for cameras: {group_orchestrator.camera_ids}  exited")
 
 
 def log_time_stats(camera_configs: CameraConfigs,
