@@ -116,7 +116,7 @@ class VideoCaptureThread(threading.Thread):
             self._cv2_video_capture.grab()
             success, image = self._cv2_video_capture.retrieve()
             retrieval_timestamp = time.perf_counter_ns()
-            if self._config.rotate_video_cv2_code is not None:
+            if self._config.rotate_video_cv2_code != 0:
                 image = cv2.rotate(image, self._config.rotate_video_cv2_code)
 
         except:
