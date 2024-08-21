@@ -73,7 +73,7 @@ class CameraManager(BaseModel):
                 close_these_cameras.append(camera_id)
             else:
                 ### Case2 - if a camera exists in `new_configs`, but `use_this_camera` is False, stop the camera
-                if new_configs[camera_id].use_this_camera == False:
+                if not new_configs[camera_id].use_this_camera:
                     close_these_cameras.append(camera_id)
         camera_close_threads = []
         for camera_id in close_these_cameras:
