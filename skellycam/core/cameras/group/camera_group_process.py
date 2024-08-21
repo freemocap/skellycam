@@ -81,7 +81,7 @@ class CameraGroupProcess:
         frame_wrangler: Optional[FrameWrangler] = None
         try:
             should_continue = True
-            while should_continue:
+            while should_continue and not exit_event.is_set():
 
                 group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs,
                                                                                  exit_event=exit_event)
