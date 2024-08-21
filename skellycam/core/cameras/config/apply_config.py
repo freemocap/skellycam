@@ -40,7 +40,10 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
                                                            cv2_capture=cv2_vid_capture,
                                                            rotation=config.rotation,
                                                            use_this_camera=config.use_this_camera)
-
+        if not cv2_vid_capture.isOpened():
+            raise FailedToApplyCameraConfigurationError(
+                f"Failed to apply configuration to Camera {config.camera_id} - Camera closed when applying configuration"
+            )
         return extracted_config
     except Exception as e:
         logger.error(f"Problem applying configuration for camera: {config.camera_id}")
