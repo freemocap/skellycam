@@ -13,8 +13,10 @@ class CameraGroup:
     def __init__(
             self,
     ):
-        self._exit_event = multiprocessing.Event()
-        self._start_recording_event = multiprocessing.Event()
+        self._exit_event = multiprocessing.Event()  # shut it down!
+        self._start_recording_event = multiprocessing.Event()  # Start/stop recording
+        self._update_queue = multiprocessing.Queue()  # Update camera configs
+        self._frontend_queue = get_frontend_queue()  # Queue messages will be relayed through the frontend websocket
         self._process: Optional[CameraGroupProcess] = None
 
     @property
@@ -32,7 +34,7 @@ class CameraGroup:
     def set_camera_configs(self, configs: CameraConfigs):
         logger.debug(f"Setting camera configs to {configs}")
         self._process = CameraGroupProcess(camera_configs=configs,
-                                           frontend_payload_queue=get_frontend_queue(),
+                                           frontend_payload_queue=self._frontend_queue,
                                            start_recording_event=self._start_recording_event,
                                            exit_event=self._exit_event, )
 
@@ -67,4 +69,5 @@ class CameraGroup:
         return True
 
     def update_camera_configs(self, camera_configs: CameraConfigs):
-        pass
+        logger.trace(f"Sending new camera configs to camera group process")
+        self._update_queue.put(camera_configs)
