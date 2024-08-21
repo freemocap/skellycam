@@ -24,20 +24,20 @@ class ConnectCamerasRequest(BaseRequest):
 
 
 @connect_cameras_router.post(
-    "/connect/update",
+    "/connect/apply",
     response_model=ConnectCamerasResponse,
-    summary="Connect/update specified cameras with configuration settings",
+    summary="Connect/Update specified cameras and apply provided configuration settings",
 )
-async def cameras_update_route(
+async def cameras_apply_config_route(
         request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
 ) -> ConnectCamerasResponse:
     controller: Controller = get_controller()
 
-    logger.api("Received `/connect` POST request...")
+    logger.api("Received `/connect/apply` POST request...")
     try:
         connected_cameras, available_devices = await controller.connect_to_cameras(
             camera_configs=request.camera_configs)
-        logger.api("`/connect` POST request handled successfully.")
+        logger.api("`/connect/apply` POST request handled successfully.")
         return ConnectCamerasResponse(connected_cameras=connected_cameras,
                                       detected_cameras=available_devices)
     except Exception as e:
