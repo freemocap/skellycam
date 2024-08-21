@@ -76,13 +76,15 @@ class CameraGroupProcess:
                      number_of_frames: Optional[int] = None
                      ):
         logger.debug(f"CameraGroupProcess started")
+        camera_manager: Optional[CameraManager] = None
+        group_shm: Optional[CameraGroupSharedMemory] = None
+        frame_wrangler: Optional[FrameWrangler] = None
         try:
             should_continue = True
             while should_continue:
 
                 group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs,
                                                                                  exit_event=exit_event)
-                group_orchestrator.fire_initial_triggers()
 
                 group_shm = CameraGroupSharedMemory.create(camera_configs=camera_configs)
 
@@ -92,18 +94,21 @@ class CameraGroupProcess:
                                                frontend_payload_queue=frontend_payload_queue,
                                                start_recording_event=start_recording_event,
                                                exit_event=exit_event, )
-                frame_wrangler.start()
                 camera_manager = CameraManager(camera_configs=camera_configs,
                                                shared_memory_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,
                                                exit_event=exit_event,
                                                )
-                camera_manager.start_cameras()
                 camera_loop_thread = threading.Thread(target=camera_group_trigger_loop,
                                                       args=(camera_configs,
                                                             group_orchestrator,
                                                             exit_event))
+
+                frame_wrangler.start()
+                camera_manager.start_cameras()
+                group_orchestrator.fire_initial_triggers()
                 camera_loop_thread.start()
+
                 reset_all = False
                 while not exit_event.is_set() and not reset_all:
                     wait_1s()
@@ -118,12 +123,9 @@ class CameraGroupProcess:
                             reset_all = True
                         else:
                             camera_manager.update_cameras(update_instructions)
-
-
-
         finally:
             exit_event.set()
-            frame_wrangler.close()
+            frame_wrangler.close() if frame_wrangler else None
+            camera_manager.stop_cameras() if camera_manager else None
+            group_shm.close() if group_shm else None
             logger.debug(f"CameraGroupProcess completed")
-
-

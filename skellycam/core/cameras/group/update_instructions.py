@@ -1,11 +1,12 @@
+import logging
 from typing import List
 
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.config.camera_config import CameraConfigs
-from skellycam.core.cameras.group.camera_group_process import logger
 
+logger = logging.getLogger(__name__)
 
 class UpdateInstructions(BaseModel):
     """
