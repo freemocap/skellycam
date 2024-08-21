@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class FrameSaver(BaseModel):
-    recording_uuid: str = uuid.uuid4()
+    recording_uuid: str = str(uuid.uuid4())
     recording_folder: str
     camera_configs: CameraConfigs
 
