@@ -4,19 +4,15 @@ from typing import Optional
 from fastapi import APIRouter, Body
 from pydantic import Field
 
-from skellycam.api.models.base_models import BaseResponse, BaseRequest
+from skellycam.api.app.app_state import get_app_state
+from skellycam.api.models.base_models import BaseRequest
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, default_camera_configs_factory
-from skellycam.core.controller import Controller, get_controller
-from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.core.controller import get_controller
 
 logger = logging.getLogger(__name__)
 
 connect_cameras_router = APIRouter()
 
-
-class ConnectCamerasResponse(BaseResponse):
-    connected_cameras: Optional[CameraConfigs] = None
-    detected_cameras: Optional[AvailableDevices] = None
 
 
 class ConnectCamerasRequest(BaseRequest):
@@ -25,64 +21,36 @@ class ConnectCamerasRequest(BaseRequest):
 
 @connect_cameras_router.post(
     "/connect/apply",
-    response_model=ConnectCamerasResponse,
+
     summary="Connect/Update specified cameras and apply provided configuration settings",
 )
 async def cameras_apply_config_route(
         request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
-) -> ConnectCamerasResponse:
-    controller: Controller = get_controller()
+):
+    get_app_state().log_api_call("cameras/connect/apply")
 
     logger.api("Received `/connect/apply` POST request...")
     try:
-        connected_cameras, available_devices = await controller.connect_to_cameras(
+        await get_controller().connect_to_cameras(
             camera_configs=request.camera_configs)
         logger.api("`/connect/apply` POST request handled successfully.")
-        return ConnectCamerasResponse(connected_cameras=connected_cameras,
-                                      detected_cameras=available_devices)
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)
-        return ConnectCamerasResponse.from_exception(e)
 
 
 @connect_cameras_router.get(
     "/connect",
-    response_model=ConnectCamerasResponse,
     summary="Connect to all available cameras with default settings",
 )
-async def cameras_connect_route() -> ConnectCamerasResponse:
-    controller: Controller = get_controller()
-
+async def cameras_connect_route():
     logger.api("Received `/connect` GET request...")
+    get_app_state().log_api_call("cameras/connect")
     try:
-        connected_cameras, available_devices = await controller.connect_to_cameras()
+        await get_controller().connect_to_cameras()
         logger.api("`/connect` GET request handled successfully.")
-        return ConnectCamerasResponse(connected_cameras=connected_cameras,
-                                      detected_cameras=available_devices)
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {type(e).__name__} - {e}")
         logger.exception(e)
-        return ConnectCamerasResponse.from_exception(e)
 
 
-# TODO - merge with above - remove redundant code, but keep the ability to directly hit a 10-frame test
-@connect_cameras_router.get(
-    "/connect/test",
-    response_model=BaseResponse,
-    summary="Test camera connection by recording a set number of frames",
-)
-async def camera_connection_test(number_of_frames: int = 10) -> BaseResponse:
-    controller: Controller = get_controller()
-
-    logger.api("Received `/connect/test` GET request...")
-    try:
-        # Record for the specified number of frames
-        connected_cameras, available_devices = await controller.connect_to_cameras(number_of_frames=number_of_frames)
-        logger.api("`/connect/test` GET request handled successfully.")
-        return ConnectCamerasResponse(connected_cameras=connected_cameras,
-                                      detected_cameras=available_devices)
-    except Exception as e:
-        logger.error(f"Error during camera test recording: {type(e).__name__} - {e}")
-        logger.exception(e)
-        return ConnectCamerasResponse.from_exception(e)

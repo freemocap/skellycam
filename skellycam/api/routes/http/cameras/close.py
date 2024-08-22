@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from skellycam.api.app.app_state import get_app_state
 from skellycam.api.models.base_models import BaseResponse
-from skellycam.core.controller import Controller, get_controller
+from skellycam.core.controller import get_controller
 
 logger = logging.getLogger(__name__)
 
@@ -18,17 +18,14 @@ class CamerasClosedResponse(BaseResponse):
 
 
 @close_cameras_router.get("/close",
-                          response_model=CamerasClosedResponse,
                           summary="Close camera connections")
 async def close_camera_connections():
     logger.api("Received `/close` request...")
     get_app_state().log_api_call("cameras/close")
-    controller: Controller = get_controller()
+
     try:
-        await controller.close_cameras()
+        await get_controller().close_cameras()
         logger.api("`/close` request handled successfully.")
-        return CamerasClosedResponse()
     except Exception as e:
         logger.error(f"Failed to close cameras: {type(e).__name__} - {e}")
         logger.exception(e)
-        return CamerasClosedResponse.from_exception(e)

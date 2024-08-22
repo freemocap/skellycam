@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from skellycam.api.app.app_state import get_app_state
 from skellycam.core.controller import get_controller
 
 logger = logging.getLogger(__name__)
@@ -14,23 +15,15 @@ record_cameras_router = APIRouter()
                            summary="Start recording video from cameras")
 async def start_recording() -> bool:
     logger.api("Received `/record/start` request...")
-    success = get_controller().start_recording()
-    if not success:
-        logger.warning("Recording could not be started - check if cameras are connected.")
-        raise HTTPException(status_code=409, detail="Recording could not be started - check if cameras are connected.")
+    get_app_state().add_api_call("record/start")
+    await get_controller().start_recording()
     logger.api("`/record/start` request handled successfully.")
-    return success
 
 
 @record_cameras_router.get("/record/stop",
                            summary="Stop recording video from cameras")
 async def stop_recording() -> bool:
     logger.api("Received `/record/stop` request...")
-    success = get_controller().stop_recording()
-    if not success:
-        logger.warning(
-            "Recording could not be stopped - Either no recording was in progress or cameras are not connected.")
-        raise HTTPException(status_code=409,
-                            detail="Recording could not be stopped - Either no recording was in progress or cameras are not connected.")
+    get_app_state().add_api_call("record/stop")
+    await get_controller().stop_recording()
     logger.api("`/record/stop` request handled successfully.")
-    return success

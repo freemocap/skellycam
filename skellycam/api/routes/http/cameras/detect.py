@@ -1,38 +1,29 @@
 import logging
-from typing import Optional
 
 from fastapi import APIRouter
 
-from skellycam.api.models.base_models import BaseResponse
-from skellycam.core.controller import Controller, get_controller
-from skellycam.core.detection.detect_available_devices import AvailableDevices
+from skellycam.api.app.app_state import get_app_state
+from skellycam.core.controller import get_controller
 
 logger = logging.getLogger(__name__)
 
 detect_cameras_router = APIRouter()
 
 
-class DetectCamerasResponse(BaseResponse):
-    available_cameras: Optional[AvailableDevices]
-
 
 @detect_cameras_router.get(
     "/detect",
-    response_model=DetectCamerasResponse,
     summary="Detect available cameras",
     description="Detect all available cameras connected to the system. "
                 "This will return a list of cameras that the system can attempt to connect to, "
                 "along with their available resolutions and framerates",
 )
-async def detect_cameras_route() -> DetectCamerasResponse:
-    controller: Controller = get_controller()
-
+async def detect_cameras_route():
     logger.api("Received `detect/` request")
+    get_app_state().add_api_call("cameras/detect")
     try:
-        detected_cameras = await controller.detect_available_cameras()
-        logger.api(f"`detect/` request handled successfully - detected cameras: [{detected_cameras}]")
-        return DetectCamerasResponse(available_cameras=detected_cameras)
+        await get_controller().detect_available_cameras()
+        logger.api(f"`detect/` request handled successfully")
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")
         logger.exception(e)
-        return DetectCamerasResponse.from_exception(e)
