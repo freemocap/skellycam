@@ -4,6 +4,7 @@ from copy import copy
 from pathlib import Path
 from typing import Union
 
+import PySide6
 from PySide6 import QtGui
 from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
 
@@ -32,6 +33,8 @@ class SkellyCamDirectoryViewWidget(QWidget):
         self._tree_view_widget.doubleClicked.connect(self.open_file)
 
         self._tree_view_widget.setModel(self._file_system_model)
+        self._file_system_model.sort(3,
+                                     PySide6.QtCore.Qt.SortOrder.DescendingOrder)  # 3 is the column index for "Last Modified"
 
         self._tree_view_widget.setAlternatingRowColors(True)
         self._tree_view_widget.resizeColumnToContents(1)
