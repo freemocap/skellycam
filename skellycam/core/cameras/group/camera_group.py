@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 from typing import Optional
 
-from skellycam.api.routes.websocket.frontend_queue import get_frontend_queue
+from skellycam.api.routes.websocket.frontend_pipe import get_frontend_pipe_frame_wrangler_connection
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
@@ -18,7 +18,7 @@ class CameraGroup:
         self._exit_event = multiprocessing.Event()  # shut it down!
         self._start_recording_event = multiprocessing.Event()  # Start/stop recording
         self._update_queue = multiprocessing.Queue()  # Update camera configs
-        self._frontend_queue = get_frontend_queue()  # Queue messages will be relayed through the frontend websocket
+        self._frontend_pipe = get_frontend_pipe_frame_wrangler_connection()  # Queue messages will be relayed through the frontend websocket
         self._process: Optional[CameraGroupProcess] = None
 
     @property
@@ -37,7 +37,7 @@ class CameraGroup:
         logger.debug(f"Setting camera configs to {configs}")
         self._camera_configs = configs
         self._process = CameraGroupProcess(camera_configs=self._camera_configs,
-                                           frontend_payload_queue=self._frontend_queue,
+                                           frontend_pipe=self._frontend_pipe,
                                            update_queue=self._update_queue,
                                            start_recording_event=self._start_recording_event,
                                            exit_event=self._exit_event, )
@@ -58,6 +58,7 @@ class CameraGroup:
         if not self._process or not self._process.is_running:
             logger.warning("Cannot start recording - Camera group is not running")
             return False
+        logger.debug("Starting recording (Setting `start_recording_event`)")
         self._start_recording_event.set()
         return True
 
@@ -69,6 +70,7 @@ class CameraGroup:
         if not self._start_recording_event.is_set():
             logger.warning("Cannot stop recording - Camera group is not recording")
             return False
+        logger.debug("Stopping recording (Clearing `start_recording_event`)")
         self._start_recording_event.clear()
         return True
 

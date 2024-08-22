@@ -21,13 +21,13 @@ class CameraGroupProcess:
     def __init__(
             self,
             camera_configs: CameraConfigs,
-            frontend_payload_queue: multiprocessing.Queue,
+            frontend_pipe: multiprocessing.Pipe,
             update_queue: multiprocessing.Queue,
             start_recording_event: multiprocessing.Event,
             exit_event: multiprocessing.Event,
     ):
         self._camera_configs = camera_configs
-        self._fe_payload_queue = frontend_payload_queue
+        self._fe_payload_pipe = frontend_pipe
         self._update_queue = update_queue
         self._start_recording_event = start_recording_event
         self._exit_event = exit_event
@@ -59,7 +59,7 @@ class CameraGroupProcess:
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
             args=(self._camera_configs,
-                  self._fe_payload_queue,
+                  self._fe_payload_pipe,
                   self._update_queue,
                   self._start_recording_event,
                   self._exit_event,
@@ -69,7 +69,7 @@ class CameraGroupProcess:
 
     @staticmethod
     def _run_process(camera_configs: CameraConfigs,
-                     frontend_payload_queue: multiprocessing.Queue,
+                     frontend_pipe: multiprocessing.Pipe,
                      update_queue: multiprocessing.Queue,
                      start_recording_event: multiprocessing.Event,
                      exit_event: multiprocessing.Event,
@@ -91,7 +91,7 @@ class CameraGroupProcess:
                 frame_wrangler = FrameWrangler(camera_configs=camera_configs,
                                                group_shm_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,
-                                               frontend_payload_queue=frontend_payload_queue,
+                                               frontend_pipe=frontend_pipe,
                                                start_recording_event=start_recording_event,
                                                exit_event=exit_event, )
                 camera_manager = CameraManager(camera_configs=camera_configs,

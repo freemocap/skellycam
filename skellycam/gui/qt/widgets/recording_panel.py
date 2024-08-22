@@ -20,16 +20,17 @@ class RecordingPanel(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
+        buttons_layout = QHBoxLayout()
         self._start_recording_button = QPushButton("\U0001F534 Start Recording")
-        self._start_recording_button.setStyleSheet("background-color: #29696a")
         self._start_recording_button.clicked.connect(self._start_recording)
         self._start_recording_button.setEnabled(True)
 
-        self._stop_recording_button = QPushButton("\U0001F534 Stop Recording")
+        self._stop_recording_button = QPushButton("Stop Recording")
         self._stop_recording_button.setEnabled(False)
         self._stop_recording_button.clicked.connect(self._stop_recording)
-
-        self._layout.addWidget(self._start_recording_button)
+        buttons_layout.addWidget(self._start_recording_button)
+        buttons_layout.addWidget(self._stop_recording_button)
+        self._layout.addLayout(buttons_layout)
 
         self._recording_status_bar = self._create_recording_status_bar()
         self._layout.addLayout(self._recording_status_bar)
@@ -59,7 +60,7 @@ class RecordingPanel(QWidget):
         self._gui_state.is_recording = True
         self._client.start_recording()
         self._start_recording_button.setText("\U0001F534 Recording...")
-        self._start_recording_button.setStyleSheet("background-color: #AA0111 ")
+        # self._start_recording_button.setStyleSheet("background-color: #AA0111 ")
 
     def _stop_recording(self):
         logger.debug("Stopping Recording.")
@@ -67,7 +68,6 @@ class RecordingPanel(QWidget):
             raise ValueError("No recording in progress! Button should be disabled.")
         self._client.stop_recording()
         self._gui_state.is_recording = False
-        self._start_recording_button.setStyleSheet("background-color: #29696a")
         self._start_recording_button.setText("\U0001F534 Start Recording")
         self._start_recording_button.setEnabled(True)
         self._stop_recording_button.setEnabled(False)

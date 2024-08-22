@@ -1,12 +1,14 @@
 import json
 import logging
+import pickle
 import threading
 import time
 from typing import Union, Dict, Any, Optional
 
 import websocket
 
-from skellycam.api.routes.websocket.websocket_server import FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT
+from skellycam.api.routes.websocket.websocket_server import FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT, \
+    HELLO_CLIENT_BYTES_MESSAGE
 from skellycam.core.frames.frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.gui.gui_state import GUIState, get_gui_state
@@ -71,7 +73,20 @@ class WebSocketClient:
 
     def _handle_binary_message(self, message: bytes) -> None:
         logger.info(f"Received binary message of length {len(message)}")
-        pass
+        if message == HELLO_CLIENT_BYTES_MESSAGE:
+            logger.info("Received HELLO_CLIENT_BYTES_MESSAGE")
+            return
+        payload = pickle.loads(message)
+        if isinstance(payload, FrontendFramePayload):
+            logger.loop(f"Received FrontendFramePayload with {len(payload.camera_ids)} cameras")
+            payload.lifespan_timestamps_ns.append({"unpickled_from_websocket": time.perf_counter_ns()})
+            self._gui_state.latest_frontend_payload = payload
+            self.websocket.send_text(FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT)
+        elif isinstance(payload, RecordingInfo):
+            logger.info(f"Received RecordingInfo: {payload}")
+            self._gui_state.recording_info = payload
+        else:
+            logger.info(f"Received binary message: {payload}")
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
         if "jpeg_images" in message:

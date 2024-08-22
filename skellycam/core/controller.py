@@ -71,18 +71,18 @@ class Controller:
         return self._camera_group.stop_recording()
 
 
-CAMERA_GROUP_MANAGER = None
+CONTROLLER = None
 
 
 def create_controller() -> Controller:
-    global CAMERA_GROUP_MANAGER
-    if not CAMERA_GROUP_MANAGER:
-        CAMERA_GROUP_MANAGER = Controller()
-    return CAMERA_GROUP_MANAGER
+    global CONTROLLER
+    if not CONTROLLER:
+        CONTROLLER = Controller()
+    return CONTROLLER
 
 
 def get_controller() -> Controller:
-    global CAMERA_GROUP_MANAGER
-    if not isinstance(CAMERA_GROUP_MANAGER, Controller):
+    global CONTROLLER
+    if not isinstance(CONTROLLER, Controller):
         raise ValueError("Controller not created!")
-    return CAMERA_GROUP_MANAGER
+    return CONTROLLER

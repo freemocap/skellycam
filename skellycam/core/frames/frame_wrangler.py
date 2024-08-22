@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import pickle
 import time
 from typing import Optional
 
@@ -23,7 +24,7 @@ class FrameListenerProcess:
             group_shm_names: GroupSharedMemoryNames,
             group_orchestrator: CameraGroupOrchestrator,
             multiframe_queue: multiprocessing.Queue,
-            frontend_queue: multiprocessing.Queue,
+            frontend_pipe: multiprocessing.Pipe,
             exit_event: multiprocessing.Event,
     ):
         super().__init__()
@@ -36,7 +37,7 @@ class FrameListenerProcess:
                                                       group_orchestrator,
                                                       self._payloads_received,
                                                       multiframe_queue,
-                                                      frontend_queue,
+                                                      frontend_pipe,
                                                       exit_event,
                                                       )
                                                 )
@@ -55,7 +56,7 @@ class FrameListenerProcess:
                      group_orchestrator: CameraGroupOrchestrator,
                      payloads_received: multiprocessing.Value,
                      multiframe_queue: multiprocessing.Queue,
-                     frontend_queue: multiprocessing.Queue,
+                     frontend_pipe: multiprocessing.Pipe,
                      exit_event: multiprocessing.Event):
         logger.trace(f"Frame listener process started!")
         camera_group_shm = CameraGroupSharedMemory.recreate(
@@ -77,7 +78,10 @@ class FrameListenerProcess:
 
                     mf_payload.lifespan_timestamps_ns.append({"before_put_in_mf_queue": time.perf_counter_ns()})
                     multiframe_queue.put(mf_payload)
-                    frontend_queue.put(FrontendFramePayload.from_multi_frame_payload(mf_payload))
+
+                    # Pickle and send_bytes, to avoid paying thepickle cost twice when relaying through websocket
+                    frontend_bytes = pickle.dumps(FrontendFramePayload.from_multi_frame_payload(mf_payload))
+                    frontend_pipe.send_bytes(frontend_bytes)
                     payloads_received.value += 1
                 else:
                     wait_1ms()
@@ -101,7 +105,7 @@ class FrameListenerProcess:
 class VideoRecorderProcess:
     def __init__(self,
                  multiframe_queue: multiprocessing.Queue,
-                 frontend_queue: multiprocessing.Queue,
+                 frontend_pipe: multiprocessing.Pipe,
                  start_recording_event: multiprocessing.Event,
                  camera_configs: CameraConfigs,
                  exit_event: multiprocessing.Event, ):
@@ -109,7 +113,7 @@ class VideoRecorderProcess:
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
                                                 args=(multiframe_queue,
-                                                      frontend_queue,
+                                                      frontend_pipe,
                                                       start_recording_event,
                                                       camera_configs,
                                                       exit_event))
@@ -126,7 +130,7 @@ class VideoRecorderProcess:
 
     @staticmethod
     def _run_process(multiframe_queue: multiprocessing.Queue,
-                     frontend_queue: multiprocessing.Queue,
+                     frontend_pipe: multiprocessing.Pipe,
                      start_recording_event: multiprocessing.Event,
                      camera_configs: CameraConfigs,
                      exit_event: multiprocessing.Event,
@@ -150,14 +154,15 @@ class VideoRecorderProcess:
                                                             recording_folder=create_recording_folder(string_tag=None))
                             logger.debug(
                                 f"FrameExporter - Created FrameSaver for recording {frame_saver.recording_name}")
-                            frontend_queue.put(frame_saver.recording_info)
+                            frontend_pipe.send_bytes(pickle.dumps(
+                                frame_saver.recording_info))  # send  as bytes so it can use same ws/ relay as the frontend_payload's
                         frame_saver.add_multi_frame(mf_payload)
                     else:
                         if frame_saver:
                             frame_saver.close()
                             frame_saver = None
 
-                    mf_payload.lifespan_timestamps_ns.append({"put_in_frontend_queue": time.perf_counter_ns()})
+                    mf_payload.lifespan_timestamps_ns.append({"put_in_frontend_pipe": time.perf_counter_ns()})
                 else:
                     wait_1ms()
         except Exception as e:
@@ -170,7 +175,7 @@ class VideoRecorderProcess:
             except Exception as e:
                 pass
             try:
-                frontend_queue.put(None)
+                frontend_pipe.put(None)
             except Exception as e:
                 pass
             logger.trace(f"Stopped listening for multi-frames")
@@ -184,7 +189,7 @@ class FrameWrangler:
                  camera_configs: CameraConfigs,
                  group_shm_names: GroupSharedMemoryNames,
                  group_orchestrator: CameraGroupOrchestrator,
-                 frontend_payload_queue: multiprocessing.Queue,
+                 frontend_pipe: multiprocessing.Pipe,
                  start_recording_event: multiprocessing.Event,
                  exit_event: multiprocessing.Event):
         super().__init__()
@@ -199,12 +204,12 @@ class FrameWrangler:
             group_orchestrator=group_orchestrator,
             group_shm_names=group_shm_names,
             multiframe_queue=self._multiframe_queue,
-            frontend_queue=frontend_payload_queue,
+            frontend_pipe=frontend_pipe,
             exit_event=self._exit_event,
         )
         self._video_recorder_process = VideoRecorderProcess(
             multiframe_queue=self._multiframe_queue,
-            frontend_queue=frontend_payload_queue,
+            frontend_pipe=frontend_pipe,
             start_recording_event=start_recording_event,
             camera_configs=camera_configs,
             exit_event=self._exit_event,
