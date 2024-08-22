@@ -25,15 +25,15 @@ class CameraGroupProcess:
     ):
         self._fe_payload_pipe = frontend_pipe
         self._update_queue = update_queue
-        self._backend_state: AppState = get_app_state()
+        self._app_state: AppState = get_app_state()
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
-            args=(self._backend_state.camera_configs,
+            args=(self._app_state.camera_configs,
                   self._fe_payload_pipe,
                   self._update_queue,
-                  self._backend_state.record_frames_flag,
-                  self._backend_state.kill_camera_group_flag
+                  self._app_state.record_frames_flag,
+                  self._app_state.kill_camera_group_flag
                   )
         )
 
@@ -44,7 +44,7 @@ class CameraGroupProcess:
     async def start(self):
         logger.debug("Starting `CameraGroupProcess`...")
         self._process.start()
-        await self._backend_state.add_process(self._process)
+        await self._app_state.add_process(self._process)
 
     @staticmethod
     def _run_process(camera_configs: CameraConfigs,

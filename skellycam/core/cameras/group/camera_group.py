@@ -19,7 +19,7 @@ class CameraGroup:
         self._frontend_pipe = get_frontend_pipe_frame_wrangler_connection()  # Queue messages will be relayed through the frontend websocket
         self._process = CameraGroupProcess(frontend_pipe=self._frontend_pipe,
                                            update_queue=self._update_queue)
-        self._backend_state: AppState = get_app_state()
+        self._app_state: AppState = get_app_state()
 
 
 
@@ -30,7 +30,7 @@ class CameraGroup:
 
     async def close(self):
         logger.debug("Closing camera group")
-        self._backend_state.kill_camera_group_flag.value = True
+        self._app_state.kill_camera_group_flag.value = True
         if self._process:
             self._process.close()
         logger.info("Camera group closed.")
@@ -38,12 +38,12 @@ class CameraGroup:
     async def update_camera_configs(self, new_configs: CameraConfigs):
         if not self._process or not self._process.is_running:
             logger.warning("Cannot update camera configs - Camera group is not running")
-            self._backend_state.camera_configs = new_configs
+            self._app_state.camera_configs = new_configs
             return
 
         update_instructions = UpdateInstructions.from_configs(new_configs=new_configs,
-                                                              old_configs=await self._backend_state.camera_configs)
+                                                              old_configs=await self._app_state.camera_configs)
         logger.debug(
             f"Sending new camera configs to camera group process: {new_configs}, update_instructions: {update_instructions}")
-        self._backend_state.camera_configs = new_configs
+        self._app_state.camera_configs = new_configs
         self._update_queue.put(update_instructions)

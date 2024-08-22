@@ -22,9 +22,9 @@ class Controller:
         self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self._tasks: List[asyncio.Task] = []
 
-        self._backend_state: AppState = get_app_state()
-        self._backend_state.record_frames_flag = self._record_frames_flag
-        self._backend_state.kill_camera_group_flag = self._kill_camera_group_flag
+        self._app_state: AppState = get_app_state()
+        self._app_state.record_frames_flag = self._record_frames_flag
+        self._app_state.kill_camera_group_flag = self._kill_camera_group_flag
 
     async def detect_available_cameras(self):
         logger.info(f"Detecting available cameras...")
@@ -34,7 +34,7 @@ class Controller:
         if camera_configs is None:
             logger.info(f"Connecting to available cameras...")
         else:
-            self._backend_state.camera_configs = camera_configs
+            self._app_state.camera_configs = camera_configs
             logger.info(f"Connecting to cameras: {camera_configs.keys()}")
 
         self._tasks.append(asyncio.create_task(self._camera_group.start()))
@@ -60,7 +60,7 @@ class Controller:
             self._kill_camera_group_flag.value = True
             await self._camera_group.close()
 
-        if self._backend_state.camera_configs is None:
+        if self._app_state.camera_configs is None:
             await detect_available_devices()
 
         self._kill_camera_group_flag.value = False
