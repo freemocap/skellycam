@@ -90,10 +90,7 @@ class FrameListenerProcess:
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             camera_group_shm.close()  # close but don't unlink - parent process will unlink
-            try:
-                multiframe_queue.put(None)
-            except BrokenPipeError:
-                pass
+            exit_event.set()
 
     def is_alive(self) -> bool:
         return self._process.is_alive()
@@ -154,11 +151,13 @@ class VideoRecorderProcess:
                                                             recording_folder=create_recording_folder(string_tag=None))
                             logger.debug(
                                 f"FrameExporter - Created FrameSaver for recording {frame_saver.recording_name}")
-                            frontend_pipe.send_bytes(pickle.dumps(
-                                frame_saver.recording_info))  # send  as bytes so it can use same ws/ relay as the frontend_payload's
+                            # send  as bytes so it can use same ws/ relay as the frontend_payload's
+                            frontend_pipe.send_bytes(pickle.dumps(frame_saver.recording_info))
                         frame_saver.add_multi_frame(mf_payload)
                     else:
                         if frame_saver:
+                            logger.debug(
+                                f"FrameExporter - Closing FrameSaver for recording {frame_saver.recording_name}")
                             frame_saver.close()
                             frame_saver = None
 
@@ -175,7 +174,7 @@ class VideoRecorderProcess:
             except Exception as e:
                 pass
             try:
-                frontend_pipe.put(None)
+                frontend_pipe.send_bytes(None)
             except Exception as e:
                 pass
             logger.trace(f"Stopped listening for multi-frames")

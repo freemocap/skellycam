@@ -15,17 +15,15 @@ HELLO_CLIENT_BYTES_MESSAGE = b"Beep boop - these are bytes from the websocket se
 HELLO_CLIENT_JSON_MESSAGE = {"message": HELLO_CLIENT_TEXT_MESSAGE + " I'm a JSON message!"}
 
 FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT = "frontend_ready_for_next_payload"
+CLOSE_WEBSOCKET_MESSAGE = "close_websocket"
 
 
-async def listen_for_client_messages(websocket: WebSocket,
-                                     frontend_ready_event: asyncio.Event):
+async def listen_for_client_messages(websocket: WebSocket):
     logger.info("Starting listener for client messages...")
     while True:
         try:
             message = await websocket.receive_text()
             logger.loop(f"Message from client: '{message}'")
-            if message == FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT:  # Frontend is ready for next payload
-                frontend_ready_event.set()
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending listener task...")
@@ -35,29 +33,24 @@ async def listen_for_client_messages(websocket: WebSocket,
             break
 
 
-async def relay_messages_from_queue_to_frontend_websocket(websocket: WebSocket,
-                                                          frontend_ready_event: asyncio.Event):
+async def relay_messages_from_queue_to_frontend_websocket(websocket: WebSocket):
     logger.info("Starting listener for frontend payload messages in queue...")
     frontend_pipe = get_frontend_pipe_ws_relay_connection()
-    while True:
-        try:
+    try:
+        while True:
             if not frontend_pipe.poll():
                 payload = frontend_pipe.recv_bytes()
-                if not payload:
-                    logger.api("Received empty payload, ending listener task...")
-                    break
 
                 logger.loop(
                     f"Pulled front-end payload from fe_queue and sending down `websocket` to client: {payload}")
 
-                if frontend_ready_event.is_set():
-                    await websocket.send_bytes(payload)
-                    frontend_ready_event.clear()
-
+                await websocket.send_bytes(payload)
             else:
                 await asyncio.sleep(0.001)
-        except WebSocketDisconnect:
-            logger.api("Client disconnected, ending listener task...")
+    except WebSocketDisconnect:
+        logger.api("Client disconnected, ending listener task...")
+    finally:
+        logger.info("Ending listener for frontend payload messages in queue...")
 
     logger.info("Ending listener for client messages...")
 
@@ -84,15 +77,11 @@ async def websocket_server_connect(websocket: WebSocket):
     await websocket.send_json(HELLO_CLIENT_JSON_MESSAGE)
     logger.success(f"Websocket connection established!")
 
-    frontend_ready_event = asyncio.Event()
-    frontend_ready_event.set()
-
     async with WebsocketRunner():
         try:
             logger.api("Creating listener task...")
-            listener_task = listen_for_client_messages(websocket=websocket, frontend_ready_event=frontend_ready_event)
-            relay_task = relay_messages_from_queue_to_frontend_websocket(websocket=websocket,
-                                                                         frontend_ready_event=frontend_ready_event)
+            listener_task = listen_for_client_messages(websocket=websocket)
+            relay_task = relay_messages_from_queue_to_frontend_websocket(websocket=websocket)
             await asyncio.gather(listener_task, relay_task)
         except WebSocketDisconnect:
             logger.info("Client disconnected")

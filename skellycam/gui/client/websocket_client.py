@@ -7,14 +7,12 @@ from typing import Union, Dict, Any, Optional
 
 import websocket
 
-from skellycam.api.routes.websocket.websocket_server import FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT, \
-    HELLO_CLIENT_BYTES_MESSAGE
+from skellycam.api.routes.websocket.websocket_server import HELLO_CLIENT_BYTES_MESSAGE, CLOSE_WEBSOCKET_MESSAGE
 from skellycam.core.frames.frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.gui.gui_state import GUIState, get_gui_state
 
 logger = logging.getLogger(__name__)
-
 
 class WebSocketClient:
     """
@@ -64,7 +62,7 @@ class WebSocketClient:
                 logger.info(f"Received text message: {message}")
                 self._handle_text_message(message)
         elif isinstance(message, bytes):
-            logger.info(f"Received binary message of length {len(message)}")
+            logger.loop(f"Received binary message of length {len(message)}")
             self._handle_binary_message(message)
 
     def _handle_text_message(self, message: str) -> None:
@@ -72,16 +70,15 @@ class WebSocketClient:
         pass
 
     def _handle_binary_message(self, message: bytes) -> None:
-        logger.info(f"Received binary message of length {len(message)}")
         if message == HELLO_CLIENT_BYTES_MESSAGE:
             logger.info("Received HELLO_CLIENT_BYTES_MESSAGE")
             return
         payload = pickle.loads(message)
         if isinstance(payload, FrontendFramePayload):
-            logger.loop(f"Received FrontendFramePayload with {len(payload.camera_ids)} cameras")
+            logger.loop(
+                f"Received FrontendFramePayload with {len(payload.camera_ids)} cameras - size: {len(message)} bytes")
             payload.lifespan_timestamps_ns.append({"unpickled_from_websocket": time.perf_counter_ns()})
             self._gui_state.latest_frontend_payload = payload
-            self.websocket.send_text(FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT)
         elif isinstance(payload, RecordingInfo):
             logger.info(f"Received RecordingInfo: {payload}")
             self._gui_state.recording_info = payload
@@ -89,17 +86,6 @@ class WebSocketClient:
             logger.info(f"Received binary message: {payload}")
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
-        if "jpeg_images" in message:
-            fe_payload = FrontendFramePayload(**message)
-            logger.loop(f"Received FrontendFramePayload with {len(fe_payload.camera_ids)} cameras")
-            fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
-            self._gui_state.latest_frontend_payload = fe_payload
-            self.websocket.send_text(FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT)
-        elif "recording_name" in message:
-            recording_info = RecordingInfo(**message)
-            logger.info(f"Received RecordingInfo: {recording_info}")
-            self._gui_state.recording_info = recording_info
-        else:
             logger.info(f"Received JSON message: {message}")
 
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
@@ -116,6 +102,7 @@ class WebSocketClient:
 
     def close(self) -> None:
         if self.websocket:
+            self.websocket.send(CLOSE_WEBSOCKET_MESSAGE)
             self.websocket.close()
         self.websocket = self._create_websocket()
         logger.info("Closing WebSocket client")
