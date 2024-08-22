@@ -8,6 +8,8 @@ from PySide6.QtCore import Qt, QByteArray, QBuffer
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy
 
+from skellycam.core.frames.metadata.frame_metadata import FrameMetadata
+
 
 class EfficientQImageUpdater:
     def __init__(self):
@@ -62,10 +64,14 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def update_image(self, base64_str: str):
+    def update_image(self, base64_str: str, frame_metadata: FrameMetadata):
         q_image = self.image_updater.update_image(base64_str)
         self._current_pixmap = QPixmap.fromImage(q_image)
         self.update_pixmap()
+        self.update_title(frame_metadata)
+
+    def update_title(self, frame_metadata: FrameMetadata):
+        self._title_label_widget.setText(f"Camera {self.camera_id} - Frame# {frame_metadata.frame_number}")
 
     def resizeEvent(self, event):
         self.update_pixmap()

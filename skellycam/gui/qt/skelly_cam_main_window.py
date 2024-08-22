@@ -96,7 +96,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_widget.devices_detected.connect(self.skellycam_control_panel.update_parameter_tree)
         self._skellycam_widget.cameras_connected.connect(
             self._skellycam_widget.camera_view_grid.create_single_camera_views)
-        self._skellycam_widget.new_frames_available.connect(self._skellycam_widget.recording_panel.update)
+
         self._skellycam_widget.new_frames_available.connect(
             self._skellycam_widget.camera_view_grid.handle_new_frontend_payload)
 

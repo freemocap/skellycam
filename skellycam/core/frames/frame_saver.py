@@ -154,7 +154,7 @@ class FrameSaver(BaseModel):
 
 
 class RecordingInfo(BaseModel):
-    recording_uuid: str = uuid.uuid4()
+    recording_uuid: str = str(uuid.uuid4())
     recording_name: str
     recording_folder: str
     camera_configs: Dict[CameraId, Dict[str, Any]]  # CameraConfig model dump

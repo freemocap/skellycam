@@ -26,6 +26,15 @@ class FrontendFramePayload(BaseModel):
     def camera_ids(self):
         return list(self.jpeg_images.keys())
 
+    def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayload]:
+        if camera_id not in self.jpeg_images:
+            return None
+        jpeg_image = self.jpeg_images[camera_id]
+        if jpeg_image is None:
+            return None
+        metadata = self.metadata[camera_id]
+        return FramePayload.from_jpeg_image(jpeg_image=jpeg_image, metadata=metadata)
+
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,

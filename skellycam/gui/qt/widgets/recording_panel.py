@@ -20,10 +20,16 @@ class RecordingPanel(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self._recording_button = self._create_button()
-        self._recording_button.clicked.connect(self._handle_recording_button_click)
+        self._start_recording_button = QPushButton("\U0001F534 Start Recording")
+        self._start_recording_button.setStyleSheet("background-color: #29696a")
+        self._start_recording_button.clicked.connect(self._start_recording)
+        self._start_recording_button.setEnabled(True)
 
-        self._layout.addWidget(self._recording_button)
+        self._stop_recording_button = QPushButton("\U0001F534 Stop Recording")
+        self._stop_recording_button.setEnabled(False)
+        self._stop_recording_button.clicked.connect(self._stop_recording)
+
+        self._layout.addWidget(self._start_recording_button)
 
         self._recording_status_bar = self._create_recording_status_bar()
         self._layout.addLayout(self._recording_status_bar)
@@ -42,31 +48,29 @@ class RecordingPanel(QWidget):
             self._recording_folder_label.setText(
                 f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
 
-    def _create_button(self) -> QPushButton:
-        recording_button = QPushButton("\U0001F534 Start Recording")
-        recording_button.setStyleSheet("background-color: #29696a")
-        recording_button.setEnabled(True)
-        return recording_button
 
-    def _handle_recording_button_click(self):
-        logger.trace(f"Recording Button Clicked and `is_recording` is: {self._gui_state.is_recording}")
-        if self._gui_state.is_recording:
-            self._stop_recording()
-        else:
-            self._start_recording()
+
     def _start_recording(self):
         logger.debug("Starting Recording...")
-        self._client.start_recording()
+        if self._gui_state.is_recording:
+            raise ValueError("Recording is already in progress! Button should be disabled.")
+        self._start_recording_button.setEnabled(False)
+        self._stop_recording_button.setEnabled(True)
         self._gui_state.is_recording = True
-        self._recording_button.setText("\U0001F534 Stop Recording")
-        self._recording_button.setStyleSheet("background-color: #860111 ")
+        self._client.start_recording()
+        self._start_recording_button.setText("\U0001F534 Recording...")
+        self._start_recording_button.setStyleSheet("background-color: #AA0111 ")
 
     def _stop_recording(self):
         logger.debug("Stopping Recording.")
+        if not self._gui_state.is_recording:
+            raise ValueError("No recording in progress! Button should be disabled.")
         self._client.stop_recording()
         self._gui_state.is_recording = False
-        self._recording_button.setStyleSheet("background-color: #29696a")
-        self._recording_button.setText("\U0001F534 Start Recording")
+        self._start_recording_button.setStyleSheet("background-color: #29696a")
+        self._start_recording_button.setText("\U0001F534 Start Recording")
+        self._start_recording_button.setEnabled(True)
+        self._stop_recording_button.setEnabled(False)
 
     def _create_recording_status_bar(self) -> QHBoxLayout:
         recording_status_bar = QHBoxLayout()
