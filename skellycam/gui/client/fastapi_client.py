@@ -56,5 +56,6 @@ class FastAPIClient:
 
     def apply_settings_to_cameras(self, camera_configs: CameraConfigs):
         logger.api("Calling `/cameras/connect/apply` endpoint")
+        data = {camera_id: config.model_dump() for camera_id, config in camera_configs.items()}
         self.http_client.post(endpoint="/cameras/connect/apply",
-                              data=camera_configs)
+                              data=data)

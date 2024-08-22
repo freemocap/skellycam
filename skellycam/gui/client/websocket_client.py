@@ -8,7 +8,7 @@ from typing import Union, Dict, Any, Optional
 import websocket
 
 from skellycam.api.routes.websocket.websocket_server import HELLO_CLIENT_BYTES_MESSAGE, CLOSE_WEBSOCKET_MESSAGE
-from skellycam.core.frames.frame_saver import RecordingInfo
+from skellycam.core.frames.multi_frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.gui.gui_state import GUIState, get_gui_state
 
@@ -101,9 +101,13 @@ class WebSocketClient:
                 logger.info(f"Sent binary message of length {len(message)}")
 
     def close(self) -> None:
+
         if self.websocket:
-            self.websocket.send(CLOSE_WEBSOCKET_MESSAGE)
-            self.websocket.close()
+            try:
+                self.websocket.send(CLOSE_WEBSOCKET_MESSAGE)
+                self.websocket.close()
+            except websocket.WebSocketConnectionClosedException:
+                pass
         self.websocket = self._create_websocket()
         logger.info("Closing WebSocket client")
         if self._websocket_thread:

@@ -65,6 +65,7 @@ class Controller:
             await self._camera_group.close()
 
     def start_recording(self) -> bool:
+        logger.debug("Starting recording...")
         return self._camera_group.start_recording()
 
     def stop_recording(self) -> bool:

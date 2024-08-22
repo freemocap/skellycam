@@ -58,7 +58,7 @@ class CameraGroup:
         if not self._process or not self._process.is_running:
             logger.warning("Cannot start recording - Camera group is not running")
             return False
-        logger.debug("Starting recording (Setting `start_recording_event`)")
+        logger.debug("Setting `start_recording_event`...")
         self._start_recording_event.set()
         return True
 

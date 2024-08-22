@@ -4,7 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any
 
 import httpx
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,7 @@ class HTTPClient:
         self.executor = ThreadPoolExecutor(max_workers=10)
 
     def get(self, endpoint: str, params: Dict[str, Any] = None) -> Future:
-        logger.info(f"GET request to {endpoint} with params {params}")
+        logger.info(f"GET request to {endpoint} with params `{params}`")
         return self.executor.submit(self._get, endpoint, params)
 
     def _get(self, endpoint: str, params: Dict[str, Any] = None) -> httpx.Response:
@@ -24,12 +23,12 @@ class HTTPClient:
         response.raise_for_status()
         return response
 
-    def post(self, endpoint: str, data: BaseModel) -> Future:
+    def post(self, endpoint: str, data: dict) -> Future:
         logger.info(f"POST request to {endpoint} with data {data}")
         return self.executor.submit(self._post, endpoint, data)
 
-    def _post(self, endpoint: str, data: BaseModel) -> httpx.Response:
-        response = self.client.post(endpoint, json=data.dict())
+    def _post(self, endpoint: str, data: dict) -> httpx.Response:
+        response = self.client.post(endpoint, json=data)
         response.raise_for_status()
         return response
 

@@ -35,7 +35,7 @@ class UvicornServerManager:
             APP_FACTORY_PATH,
             host=self.hostname,
             port=self.port,
-            log_level=self.log_level,
+            log_level=0,  # self.log_level,
             reload=True,
             factory=True
         )

@@ -17,7 +17,7 @@ from skellycam.core.videos.video_saver import VideoSaver
 logger = logging.getLogger(__name__)
 
 
-class FrameSaver(BaseModel):
+class MultiFrameSaver(BaseModel):
     recording_uuid: str = str(uuid.uuid4())
     recording_folder: str
     camera_configs: CameraConfigs
@@ -41,7 +41,7 @@ class FrameSaver(BaseModel):
                mf_payload: MultiFramePayload,
                camera_configs: CameraConfigs,
                recording_folder: str):
-        logger.trace(f"Creating FrameSaver for recording folder {recording_folder}")
+        logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
         cls._validate_input(mf_payload=mf_payload, camera_configs=camera_configs, recording_folder=recording_folder)
         recording_name = Path(recording_folder).name
         videos_folder, metadata_folder = cls._create_subfolders(recording_folder)
@@ -145,8 +145,10 @@ class FrameSaver(BaseModel):
         pass
 
     def save_recording_summary(self):
-        # TODO - save a summary of the recording to the recording folder, like stats and whatnot, also a `README.md`
-        pass
+        # TODO - save a summary of the recording to the recording folder, like stats and whatnot, also a `recording_README.md`
+        # Save the recording info to a `[recording_name]_info.json` in the recording folder
+        self.recording_info.save_to_file()
+
 
     def validate_recording(self):
         # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
@@ -160,8 +162,13 @@ class RecordingInfo(BaseModel):
     camera_configs: Dict[CameraId, Dict[str, Any]]  # CameraConfig model dump
 
     @classmethod
-    def from_frame_saver(cls, frame_saver: FrameSaver):
+    def from_frame_saver(cls, frame_saver: MultiFrameSaver):
         camera_configs = {camera_id: config.model_dump() for camera_id, config in frame_saver.camera_configs.items()}
         return cls(recording_name=frame_saver.recording_name,
                    recording_folder=frame_saver.recording_folder,
                    camera_configs=camera_configs)
+
+    def save_to_file(self):
+        logger.debug(f"Saving recording info to [{self.recording_folder}/{self.recording_name}_info.json]")
+        with open(f"{self.recording_folder}/{self.recording_name}_info.json", "w") as f:
+            f.write(self.model_dump_json(indent=4))

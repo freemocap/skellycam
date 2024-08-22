@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget
 
 from skellycam.core.cameras.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
-from skellycam.core.frames.frame_saver import RecordingInfo
+from skellycam.core.frames.multi_frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 
 
