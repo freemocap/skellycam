@@ -7,22 +7,22 @@ from typing import Dict, Tuple, Any
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.frames.metadata.frame_metadata import FrameMetadata, FRAME_METADATA_SHAPE
 from skellycam.core.frames.metadata.frame_metadata_saver import FrameMetadataSaver
 from skellycam.core.frames.payload_models.frame_payload import FramePayload
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
-from skellycam.core.videos.video_saver import VideoSaver
+from skellycam.core.videos.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__)
 
 
-class MultiFrameSaver(BaseModel):
+class VideoRecorderManager(BaseModel):
     recording_uuid: str = str(uuid.uuid4())
     recording_folder: str
     camera_configs: CameraConfigs
 
-    video_savers: Dict[CameraId, VideoSaver]
+    video_savers: Dict[CameraId, VideoRecorder]
     frame_metadata_savers: Dict[CameraId, FrameMetadataSaver]
 
     class Config:
@@ -48,11 +48,11 @@ class MultiFrameSaver(BaseModel):
         video_savers = {}
         metadata_lists = {}
         for camera_id, frame in mf_payload.frames.items():
-            video_savers[camera_id] = VideoSaver.create(recording_name=recording_name,
-                                                        videos_folder=videos_folder,
-                                                        frame=frame,
-                                                        config=camera_configs[camera_id],
-                                                        )
+            video_savers[camera_id] = VideoRecorder.create(recording_name=recording_name,
+                                                           videos_folder=videos_folder,
+                                                           frame=frame,
+                                                           config=camera_configs[camera_id],
+                                                           )
 
             metadata_lists[camera_id] = FrameMetadataSaver.create(
                 frame_metadata=FrameMetadata.from_array(metadata_array=frame.metadata),
@@ -162,7 +162,7 @@ class RecordingInfo(BaseModel):
     camera_configs: Dict[CameraId, Dict[str, Any]]  # CameraConfig model dump
 
     @classmethod
-    def from_frame_saver(cls, frame_saver: MultiFrameSaver):
+    def from_frame_saver(cls, frame_saver: VideoRecorderManager):
         camera_configs = {camera_id: config.model_dump() for camera_id, config in frame_saver.camera_configs.items()}
         return cls(recording_name=frame_saver.recording_name,
                    recording_folder=frame_saver.recording_folder,

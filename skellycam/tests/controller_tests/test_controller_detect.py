@@ -13,5 +13,5 @@ async def test_detect_with_cameras(controller_fixture: Controller,
     with patch('skellycam.core.detection.detect_available_devices.detect_available_devices',
                new_callable=AsyncMock) as mock_detect:
         mock_detect.return_value = available_devices_fixture
-        available_devices = await controller_fixture.detect()
+        available_devices = await controller_fixture.detect_available_cameras()
         assert controller_fixture._camera_configs.keys() == available_devices.keys()

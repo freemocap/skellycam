@@ -6,29 +6,29 @@ from typing_extensions import Annotated
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers, logger
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.utilities.wait_functions import wait_1us, wait_1ms, wait_10ms
 
 
 class CameraGroupOrchestrator(BaseModel):
     camera_triggers: Dict[CameraId, CameraTriggers]
-    _exit_event: Annotated[multiprocessing.Event, SkipValidation] = PrivateAttr()
+    _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
 
     def __init__(self, **data):
         super().__init__(**data)
-        self._exit_event = data.get('_exit_event')
+        self._kill_camera_group_flag = data.get('_kill_camera_group_flag')
 
     @classmethod
     def from_camera_configs(cls,
                             camera_configs: CameraConfigs,
-                            exit_event: multiprocessing.Event):
+                            kill_camera_group_flag: multiprocessing.Value):
         return cls(
             camera_triggers={
                 camera_id: CameraTriggers.from_camera_id(camera_id=camera_id,
-                                                         exit_event=exit_event)
+                                                         kill_camera_group_flag=kill_camera_group_flag)
                 for camera_id, camera_config in camera_configs.items()
             },
-            _exit_event=exit_event
+            _kill_camera_group_flag=kill_camera_group_flag
         )
 
     @property
@@ -37,7 +37,7 @@ class CameraGroupOrchestrator(BaseModel):
 
     @property
     def should_continue(self):
-        return not self._exit_event.is_set()
+        return not self._kill_camera_group_flag.value
 
     @property
     def cameras_ready(self):

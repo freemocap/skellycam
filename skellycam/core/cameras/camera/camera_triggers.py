@@ -19,21 +19,21 @@ class CameraTriggers(BaseModel):
     grab_frame_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     retrieve_frame_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     new_frame_available_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
-    _exit_event: Annotated[multiprocessing.Event, SkipValidation] = PrivateAttr()
+    _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
 
     @classmethod
     def from_camera_id(cls,
                        camera_id: CameraId,
-                       exit_event: multiprocessing.Event
+                       kill_camera_group_flag: multiprocessing.Value
                        ):
         return cls(
             camera_id=camera_id,
-            _exit_event=exit_event
+            _kill_camera_group_flag=kill_camera_group_flag
         )
 
     def __init__(self, **data):
         super().__init__(**data)
-        self._exit_event = data.get('_exit_event')
+        self._kill_camera_group_flag = data.get('_kill_camera_group_flag')
 
     @property
     def new_frame_available(self):
@@ -41,7 +41,7 @@ class CameraTriggers(BaseModel):
 
     @property
     def should_continue(self):
-        return not self._exit_event.is_set()
+        return not self._kill_camera_group_flag.value
 
     def set_ready(self):
         self.camera_ready_event.set()

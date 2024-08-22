@@ -5,10 +5,10 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.camera.config.camera_config import CameraConfig
+from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
+from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo
-from skellycam.core.detection.image_resolution import ImageResolution
-from skellycam.core.detection.image_rotation_types import RotationTypes
 from skellycam.gui.gui_state import get_gui_state
 from skellycam.gui.qt.utilities.qt_label_strings import USE_THIS_CAMERA_STRING, COPY_SETTINGS_TO_CAMERAS_STRING
 

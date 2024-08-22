@@ -29,7 +29,7 @@ async def detect_cameras_route() -> DetectCamerasResponse:
 
     logger.api("Received `detect/` request")
     try:
-        detected_cameras = await controller.detect()
+        detected_cameras = await controller.detect_available_cameras()
         logger.api(f"`detect/` request handled successfully - detected cameras: [{detected_cameras}]")
         return DetectCamerasResponse(available_cameras=detected_cameras)
     except Exception as e:

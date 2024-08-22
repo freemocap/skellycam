@@ -1,13 +1,14 @@
+import asyncio
 import logging
-from typing import Optional, Tuple
+import multiprocessing
+from typing import Optional, List
 
-from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.backend_state import BackendState, get_backend_state
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
 )
-from skellycam.core.detection.detect_available_devices import AvailableDevices, detect_available_devices
+from skellycam.core.detection.detect_available_devices import detect_available_devices
 
 logger = logging.getLogger(__name__)
 
@@ -16,61 +17,57 @@ class Controller:
     def __init__(self,
                  ) -> None:
         super().__init__()
-        self._camera_configs: Optional[CameraConfigs] = None
-        self._available_devices: Optional[AvailableDevices] = None
-        self._camera_group = CameraGroup()
+        self._camera_group: Optional[CameraGroup] = None
+        self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+        self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+        self._tasks: List[asyncio.Task] = []
 
-    async def detect(self) -> AvailableDevices:
-        logger.info(f"Detecting cameras...")
-        self._available_devices = await detect_available_devices()
+        self._backend_state: BackendState = get_backend_state()
+        self._backend_state.record_frames_flag = self._record_frames_flag
+        self._backend_state.kill_camera_group_flag = self._kill_camera_group_flag
 
-        if len(self._available_devices) == 0:
-            logger.warning(f"No cameras detected!")
-            return self._available_devices
+    async def detect_available_cameras(self):
+        logger.info(f"Detecting available cameras...")
+        self._tasks.append(asyncio.create_task(detect_available_devices()))
 
-        self._camera_configs = {}
-        for camera_id in self._available_devices.keys():
-            self._camera_configs[CameraId(camera_id)] = CameraConfig(camera_id=CameraId(camera_id))
-        self._camera_group.set_camera_configs(self._camera_configs)
-        return self._available_devices
-
-    async def connect_to_cameras(self,
-                                 camera_configs: Optional[CameraConfigs] = None,
-                                 number_of_frames: Optional[int] = None) -> Tuple[CameraConfigs, AvailableDevices]:
-        logger.info(f"Connecting to available cameras...")
-
-        if not self._camera_group.is_running:
-            if camera_configs:
-                self._camera_configs = camera_configs
-                self._camera_group.set_camera_configs(camera_configs)
-            else:
-                logger.info(f"Available cameras not set - Executing `detect` method...")
-                if not await self.detect():
-                    raise ValueError("No cameras detected!")
-
-            await self._start_camera_group(number_of_frames=number_of_frames)
+    async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
+        if camera_configs is None:
+            logger.info(f"Connecting to available cameras...")
         else:
-            self._camera_group.update_camera_configs(camera_configs)
-        return self._camera_configs, self._available_devices
+            self._backend_state.camera_configs = camera_configs
+            logger.info(f"Connecting to cameras: {camera_configs.keys()}")
 
-    async def _start_camera_group(self, number_of_frames: Optional[int] = None):
-        logger.debug(f"Starting camera group with cameras: {self._camera_group.camera_ids}")
-        if self._camera_configs is None or len(self._camera_configs) == 0:
-            raise ValueError("No cameras available to start camera group!")
-        await self._camera_group.start(number_of_frames=number_of_frames)
+        self._tasks.append(asyncio.create_task(self._camera_group.start()))
 
     async def close_cameras(self):
-        logger.debug(f"Closing camera group...")
         if self._camera_group is not None:
+            logger.debug(f"Closing camera group...")
+            self._tasks.append(asyncio.create_task(self._camera_group.close()))
+            return
+        logger.warning("No camera group to close!")
+
+    def start_recording(self):
+        logger.debug("Setting `record_frames_flag` ")
+        self._record_frames_flag.value = True
+
+    def stop_recording(self):
+        logger.debug("Setting `record_frames_flag` to False")
+        self._record_frames_flag.value = False
+
+    async def _create_camera_group(self):
+        if self._camera_group:
+            logger.debug("Closing existing camera group...")
+            self._kill_camera_group_flag.value = True
             await self._camera_group.close()
 
-    def start_recording(self) -> bool:
-        logger.debug("Starting recording...")
-        return self._camera_group.start_recording()
+        if self._backend_state.camera_configs is None:
+            await detect_available_devices()
 
-    def stop_recording(self) -> bool:
-        return self._camera_group.stop_recording()
+        self._kill_camera_group_flag.value = False
+        self._record_frames_flag.value = False
 
+        self._camera_group = CameraGroup()
+        await self._camera_group.start()
 
 CONTROLLER = None
 

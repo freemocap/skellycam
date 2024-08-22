@@ -5,7 +5,7 @@ from typing import Optional, List
 
 import numpy as np
 
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.utilities.wait_functions import wait_10ms
 

@@ -12,11 +12,11 @@ from starlette.testclient import TestClient
 from skellycam.api import create_app
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
-from skellycam.core.cameras.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.cameras.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
+from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.controller import Controller, create_controller, get_controller
 from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
-from skellycam.core.detection.image_resolution import ImageResolution
 from skellycam.core.frames.frame_wrangler import FrameWrangler
 from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, \
     FRAME_METADATA_MODEL

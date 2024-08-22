@@ -4,7 +4,7 @@ import time
 from skellycam.api.routes.http.cameras.connect import ConnectCamerasResponse
 from skellycam.api.routes.http.cameras.detect import DetectCamerasResponse
 from skellycam.api.run_server import APP_URL
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.gui.client.http_client import HTTPClient
 from skellycam.gui.client.websocket_client import WebSocketClient
 

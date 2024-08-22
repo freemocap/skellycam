@@ -4,9 +4,9 @@ import threading
 from multiprocessing import Process
 from typing import Optional
 
-from skellycam.core import CameraId
+from skellycam.core.backend_state import get_backend_state, BackendState
 from skellycam.core.cameras.camera.camera_manager import CameraManager
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
@@ -20,60 +20,38 @@ logger = logging.getLogger(__name__)
 class CameraGroupProcess:
     def __init__(
             self,
-            camera_configs: CameraConfigs,
             frontend_pipe: multiprocessing.Pipe,
             update_queue: multiprocessing.Queue,
-            start_recording_event: multiprocessing.Event,
-            exit_event: multiprocessing.Event,
     ):
-        self._camera_configs = camera_configs
         self._fe_payload_pipe = frontend_pipe
         self._update_queue = update_queue
-        self._start_recording_event = start_recording_event
-        self._exit_event = exit_event
-
-        self._process: Optional[Process] = None
-
-    @property
-    def camera_ids(self) -> [CameraId]:
-        return [CameraId(camera_id) for camera_id in self._camera_configs.keys()]
+        self._backend_state: BackendState = get_backend_state()
+        self._process = Process(
+            name=CameraGroupProcess.__name__,
+            target=CameraGroupProcess._run_process,
+            args=(self._backend_state.camera_configs,
+                  self._fe_payload_pipe,
+                  self._update_queue,
+                  self._backend_state.record_frames_flag,
+                  self._backend_state.kill_camera_group_flag
+                  )
+        )
 
     @property
     def is_running(self) -> bool:
         return self._process is not None and self._process.is_alive()
 
-    def start(self, number_of_frames: Optional[int] = None):
-        logger.debug("Stating CameraTriggerProcess...")
-        self._create_process(number_of_frames=number_of_frames)
+    async def start(self):
+        logger.debug("Starting `CameraGroupProcess`...")
         self._process.start()
-
-    def close(self):
-        logger.debug("Closing CameraTriggerProcess...")
-        self._exit_event.set()
-        if self._process is not None:
-            self._process.join()
-        logger.debug("CameraTriggerProcess closed")
-
-    def _create_process(self, number_of_frames: Optional[int] = None):
-        self._process = Process(
-            name=CameraGroupProcess.__name__,
-            target=CameraGroupProcess._run_process,
-            args=(self._camera_configs,
-                  self._fe_payload_pipe,
-                  self._update_queue,
-                  self._start_recording_event,
-                  self._exit_event,
-                  number_of_frames
-                  )
-        )
+        await self._backend_state.add_process(self._process)
 
     @staticmethod
     def _run_process(camera_configs: CameraConfigs,
                      frontend_pipe: multiprocessing.Pipe,
                      update_queue: multiprocessing.Queue,
-                     start_recording_event: multiprocessing.Event,
-                     exit_event: multiprocessing.Event,
-                     number_of_frames: Optional[int] = None
+                     record_frames_flag: multiprocessing.Value,
+                     kill_camera_group_flag: multiprocessing.Value,
                      ):
         logger.debug(f"CameraGroupProcess started")
         camera_manager: Optional[CameraManager] = None
@@ -81,10 +59,10 @@ class CameraGroupProcess:
         frame_wrangler: Optional[FrameWrangler] = None
         try:
             should_continue = True
-            while should_continue and not exit_event.is_set():
+            while should_continue and not kill_camera_group_flag.value:
 
                 group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs,
-                                                                                 exit_event=exit_event)
+                                                                                 kill_camera_group_flag=kill_camera_group_flag)
 
                 group_shm = CameraGroupSharedMemory.create(camera_configs=camera_configs)
 
@@ -92,8 +70,8 @@ class CameraGroupProcess:
                                                group_shm_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,
                                                frontend_pipe=frontend_pipe,
-                                               start_recording_event=start_recording_event,
-                                               exit_event=exit_event, )
+                                               record_frames_flag=record_frames_flag,
+                                               kill_camera_group_flag=kill_camera_group_flag)
                 camera_manager = CameraManager(camera_configs=camera_configs,
                                                shared_memory_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,

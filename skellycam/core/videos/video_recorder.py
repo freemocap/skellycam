@@ -5,13 +5,13 @@ import cv2
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payload_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
 
-class VideoSaver(BaseModel):
+class VideoRecorder(BaseModel):
     camera_id: CameraId
     video_path: str
     video_writer: cv2.VideoWriter

@@ -4,7 +4,7 @@ from typing import Dict
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_process import CameraProcess
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 

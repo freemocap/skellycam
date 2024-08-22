@@ -3,7 +3,7 @@ from typing import Tuple
 import numpy as np
 
 from skellycam.core import IMAGE_DATA_DTYPE
-from skellycam.core.cameras.config.camera_config import CameraConfig
+from skellycam.core.cameras.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, \
     FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.frame_payload import FramePayloadDTO

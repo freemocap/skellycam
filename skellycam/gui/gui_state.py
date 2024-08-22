@@ -4,10 +4,10 @@ from typing import Optional, Callable
 
 from PySide6.QtWidgets import QWidget
 
-from skellycam.core.cameras.config.camera_config import CameraConfigs
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
-from skellycam.core.frames.multi_frame_saver import RecordingInfo
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
+from skellycam.core.videos.video_recorder_manager import RecordingInfo
 
 
 @dataclass

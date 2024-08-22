@@ -1,7 +1,7 @@
 import cv2
 
-from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.opencv.determine_backend import determine_backend
+from skellycam.core.cameras.camera.config.camera_config import CameraConfig
+from skellycam.core.cameras.camera.opencv.determine_backend import determine_backend
 
 
 # from skellycam.tests.mocks import create_cv2_vieo_capture_mock

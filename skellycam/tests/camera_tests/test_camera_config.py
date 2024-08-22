@@ -3,10 +3,10 @@ from itertools import product
 import pytest
 
 from skellycam.core import CameraId, BYTES_PER_MONO_PIXEL
-from skellycam.core.cameras.config.camera_config import CameraConfig
-from skellycam.core.cameras.config.default_config import DefaultCameraConfig
-from skellycam.core.detection.image_resolution import ImageResolution
-from skellycam.core.detection.image_rotation_types import RotationTypes
+from skellycam.core.cameras.camera.config.camera_config import CameraConfig
+from skellycam.core.cameras.camera.config.default_config import DefaultCameraConfig
+from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
+from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
 
 
 def test_default_camera_config(default_camera_config_fixture: CameraConfig):

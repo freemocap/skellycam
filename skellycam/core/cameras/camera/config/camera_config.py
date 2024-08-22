@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field, field_validator
 
 from skellycam.core import BYTES_PER_MONO_PIXEL
 from skellycam.core import CameraId
-from skellycam.core.cameras.config.default_config import DefaultCameraConfig
-from skellycam.core.detection.image_resolution import ImageResolution
-from skellycam.core.detection.image_rotation_types import RotationTypes
+from skellycam.core.cameras.camera.config.default_config import DefaultCameraConfig
+from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
+from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
 
 
 def get_video_file_type(fourcc_code: int) -> Optional[str]:
