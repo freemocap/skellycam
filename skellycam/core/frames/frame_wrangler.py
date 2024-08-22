@@ -23,6 +23,7 @@ class FrameListenerProcess:
             group_shm_names: GroupSharedMemoryNames,
             group_orchestrator: CameraGroupOrchestrator,
             multiframe_queue: multiprocessing.Queue,
+            frontend_queue: multiprocessing.Queue,
             exit_event: multiprocessing.Event,
     ):
         super().__init__()
@@ -35,6 +36,7 @@ class FrameListenerProcess:
                                                       group_orchestrator,
                                                       self._payloads_received,
                                                       multiframe_queue,
+                                                      frontend_queue,
                                                       exit_event,
                                                       )
                                                 )
@@ -53,6 +55,7 @@ class FrameListenerProcess:
                      group_orchestrator: CameraGroupOrchestrator,
                      payloads_received: multiprocessing.Value,
                      multiframe_queue: multiprocessing.Queue,
+                     frontend_queue: multiprocessing.Queue,
                      exit_event: multiprocessing.Event):
         logger.trace(f"Frame listener process started!")
         camera_group_shm = CameraGroupSharedMemory.recreate(
@@ -74,6 +77,7 @@ class FrameListenerProcess:
 
                     mf_payload.lifespan_timestamps_ns.append({"before_put_in_mf_queue": time.perf_counter_ns()})
                     multiframe_queue.put(mf_payload)
+                    frontend_queue.put(FrontendFramePayload.from_multi_frame_payload(mf_payload))
                     payloads_received.value += 1
                 else:
                     wait_1ms()
@@ -94,7 +98,7 @@ class FrameListenerProcess:
         self._process.join()
 
 
-class FrameExporterProcess:
+class VideoRecorderProcess:
     def __init__(self,
                  multiframe_queue: multiprocessing.Queue,
                  frontend_queue: multiprocessing.Queue,
@@ -154,7 +158,6 @@ class FrameExporterProcess:
                             frame_saver = None
 
                     mf_payload.lifespan_timestamps_ns.append({"put_in_frontend_queue": time.perf_counter_ns()})
-                    frontend_queue.put(FrontendFramePayload.from_multi_frame_payload(mf_payload))
                 else:
                     wait_1ms()
         except Exception as e:
@@ -196,9 +199,10 @@ class FrameWrangler:
             group_orchestrator=group_orchestrator,
             group_shm_names=group_shm_names,
             multiframe_queue=self._multiframe_queue,
+            frontend_queue=frontend_payload_queue,
             exit_event=self._exit_event,
         )
-        self._exporter_process = FrameExporterProcess(
+        self._video_recorder_process = VideoRecorderProcess(
             multiframe_queue=self._multiframe_queue,
             frontend_queue=frontend_payload_queue,
             start_recording_event=start_recording_event,
@@ -215,16 +219,16 @@ class FrameWrangler:
     def start(self):
         logger.debug(f"Starting frame listener process...")
         self._listener_process.start_process()
-        self._exporter_process.start_process()
+        self._video_recorder_process.start_process()
 
     def is_alive(self) -> bool:
-        if self._listener_process is None or self._exporter_process is None:
+        if self._listener_process is None or self._video_recorder_process is None:
             return False
-        return self._listener_process.is_alive() and self._exporter_process.is_alive()
+        return self._listener_process.is_alive() and self._video_recorder_process.is_alive()
 
     def join(self):
         self._listener_process.join()
-        self._exporter_process.join()
+        self._video_recorder_process.join()
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
