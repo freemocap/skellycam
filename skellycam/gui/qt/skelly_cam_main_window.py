@@ -14,10 +14,10 @@ from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
 from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
+from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
 from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_side_panel import (
     SkellyCamControlPanel,
 )
-from skellycam.gui.qt.widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
@@ -84,10 +84,12 @@ class SkellyCamMainWindow(QMainWindow):
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock_widget
         )
-        self.tabifyDockWidget(
-            self._directory_view_dock_widget,
-            self._parameter_tree_dock_widget,
-        )
+
+        #
+        # self.tabifyDockWidget(
+        #     # self._directory_view_dock_widget,
+        #     self._parameter_tree_dock_widget,
+        # )
 
     def _connect_signals_to_slots(self):
 

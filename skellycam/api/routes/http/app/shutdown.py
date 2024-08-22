@@ -14,7 +14,7 @@ shutdown_router = APIRouter()
 @shutdown_router.get("/shutdown", summary="goodbye👋")
 async def shutdown_server():
     logger.api("Shutdown requested - Closing camera connections and shutting down server...")
-    await get_controller().close()
+    await get_controller().close_cameras()
     get_server_manager().shutdown_server()
     logger.api("Server shutdown complete - Killing process... Bye!👋")
     os.kill(os.getpid(), signal.SIGINT)

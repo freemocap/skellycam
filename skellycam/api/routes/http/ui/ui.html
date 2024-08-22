@@ -74,13 +74,23 @@
             }
         }
 
+        function addLogEntry(entry) {
+            const logContainer = document.getElementById('log-container');
+            const logEntry = document.createElement('div');
+            logEntry.innerText = entry;
+            logContainer.prepend(logEntry);
+        }
+
         async function callApi(endpoint, method = 'GET') {
             try {
                 const response = await fetch(endpoint, {method});
                 const data = await response.json();
                 document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+                addLogEntry(`Success: ${endpoint} - ${JSON.stringify(data)}`);
+
             } catch (error) {
                 document.getElementById('result').innerText = `Error: ${error.message}`;
+                addLogEntry(`Error: ${endpoint} - ${error.message}`);
             }
         }
     </script>
@@ -102,5 +112,6 @@
 <button onclick="callApi('http://localhost:8005/cameras/close')">Close Camera Connections</button>
 <pre id="result"></pre>
 <div id="images-container"></div>
+<div id="log-container"></div>
 </body>
 </html>

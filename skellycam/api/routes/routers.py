@@ -1,5 +1,5 @@
-from skellycam.api.routes.http.app_state.health import health_router
-from skellycam.api.routes.http.app_state.shutdown import shutdown_router
+from skellycam.api.routes.http.app.health import health_router
+from skellycam.api.routes.http.app.shutdown import shutdown_router
 from skellycam.api.routes.http.cameras.close import close_cameras_router
 from skellycam.api.routes.http.cameras.connect import connect_cameras_router
 from skellycam.api.routes.http.cameras.detect import detect_cameras_router
