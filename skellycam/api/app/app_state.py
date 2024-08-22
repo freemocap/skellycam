@@ -81,10 +81,10 @@ class AppState:
     def available_devices(self, value):
         with self._lock:
             self._available_devices = value
+
             if self._camera_configs is None:
-                self._camera_configs = CameraConfigs()
-                for camera_id in self._available_devices.keys():
-                    self._camera_configs[camera_id] = CameraConfig(camera_id=camera_id)
+                self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
+                                        self._available_devices.keys()}
 
     @property
     def websocket_status(self):

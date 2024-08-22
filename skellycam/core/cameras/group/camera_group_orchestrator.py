@@ -163,20 +163,21 @@ class CameraGroupOrchestrator(BaseModel):
             raise AssertionError("Not all cameras are ready!")
 
     def _verify_hunky_dory_after_read(self):
-        if not self.cameras_ready:
-            raise AssertionError("Not all cameras are ready!")
+        if self.should_continue:
+            if not self.cameras_ready:
+                raise AssertionError("Not all cameras are ready!")
 
-        if not self.frames_grabbed:
-            raise AssertionError("`grab` triggers not reset!")
+            if not self.frames_grabbed:
+                raise AssertionError("`grab` triggers not reset!")
 
-        if not self.frames_retrieved:
-            raise AssertionError("`retrieve` triggers not reset!")
+            if not self.frames_retrieved:
+                raise AssertionError("`retrieve` triggers not reset!")
 
-        any_new = any(
-            [triggers.new_frame_available_trigger.is_set() for triggers in self.camera_triggers.values()]
-        )
-        if self.new_frames_available or any_new:
-            raise AssertionError("New frames available trigger not reset!")
+            any_new = any(
+                [triggers.new_frame_available_trigger.is_set() for triggers in self.camera_triggers.values()]
+            )
+            if self.new_frames_available or any_new:
+                raise AssertionError("New frames available trigger not reset!")
 
     def clear_triggers(self):
         [triggers.clear_all() for triggers in self.camera_triggers.values()]

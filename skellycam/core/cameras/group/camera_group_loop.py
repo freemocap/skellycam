@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 def camera_group_trigger_loop(
         camera_configs: CameraConfigs,
         group_orchestrator: CameraGroupOrchestrator,
-        exit_event: multiprocessing.Event,
+        kill_camera_group_flag: multiprocessing.Value,
         number_of_frames: Optional[int] = None,
 ):
     loop_count = 0
     elapsed_per_loop_ns = []
     try:
         logger.debug(f"Starting camera trigger loop for cameras: {group_orchestrator.camera_ids}...")
-        while not exit_event.is_set():
+        while not kill_camera_group_flag.value:
             tik = time.perf_counter_ns()
 
             group_orchestrator.trigger_multi_frame_read()

@@ -20,7 +20,7 @@ detect_cameras_router = APIRouter()
 )
 async def detect_cameras_route():
     logger.api("Received `detect/` request")
-    get_app_state().add_api_call("cameras/detect")
+    get_app_state().log_api_call("cameras/detect")
     try:
         await get_controller().detect_available_cameras()
         logger.api(f"`detect/` request handled successfully")
