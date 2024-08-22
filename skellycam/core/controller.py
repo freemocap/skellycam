@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import multiprocessing
 from typing import Optional, List
 
 from skellycam.api.app.app_state import AppState, get_app_state
@@ -18,13 +17,10 @@ class Controller:
                  ) -> None:
         super().__init__()
         self._camera_group: Optional[CameraGroup] = None
-        self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
-        self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+
         self._tasks: List[asyncio.Task] = []
 
         self._app_state: AppState = get_app_state()
-        self._app_state.record_frames_flag = self._record_frames_flag
-        self._app_state.kill_camera_group_flag = self._kill_camera_group_flag
 
     async def detect_available_cameras(self):
         logger.info(f"Detecting available cameras...")
@@ -37,7 +33,7 @@ class Controller:
             self._app_state.camera_configs = camera_configs
             logger.info(f"Connecting to cameras: {camera_configs.keys()}")
 
-        self._tasks.append(asyncio.create_task(self._camera_group.start()))
+        self._tasks.append(asyncio.create_task(self._create_camera_group()))
 
     async def close_cameras(self):
         if self._camera_group is not None:
@@ -48,11 +44,11 @@ class Controller:
 
     def start_recording(self):
         logger.debug("Setting `record_frames_flag` ")
-        self._record_frames_flag.value = True
+        self._app_state._record_frames_flag.value = True
 
     def stop_recording(self):
         logger.debug("Setting `record_frames_flag` to False")
-        self._record_frames_flag.value = False
+        self._app_state._record_frames_flag.value = False
 
     async def _create_camera_group(self):
         if self._camera_group:
@@ -61,15 +57,15 @@ class Controller:
         if self._app_state.camera_configs is None:
             await detect_available_devices()
 
-        self._kill_camera_group_flag.value = False
-        self._record_frames_flag.value = False
+        self._app_state.kill_camera_group_flag.value = False
+        self._app_state.record_frames_flag.value = False
 
         self._camera_group = CameraGroup()
         await self._camera_group.start()
 
     async def _close_camera_group(self):
         logger.debug("Closing existing camera group...")
-        self._kill_camera_group_flag.value = True
+        self._app_state.kill_camera_group_flag.value = True
         await self._camera_group.close()
         self._camera_group = None
 

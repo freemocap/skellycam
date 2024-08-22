@@ -101,8 +101,8 @@
 <button onclick="connectWebSocket()">Connect WebSocket</button>
 <button onclick="sendMessage('Hello from the client')">Send WS Message</button>
 <button onclick="callApi('http://localhost:8005/')">Read Root</button>
-<button onclick="callApi('http://localhost:8005/app_state/healthcheck')">Hello👋</button>
-<button onclick="callApi('http://localhost:8005/app_state/shutdown')">goodbye👋</button>
+<button onclick="callApi('http://localhost:8005/app/state')">App State</button>
+<button onclick="callApi('http://localhost:8005/app/healthcheck')">Hello👋</button>
 <button onclick="callApi('http://localhost:8005/cameras/connect/apply', 'POST')">Connect/Update Cameras</button>
 <button onclick="callApi('http://localhost:8005/cameras/connect')">Connect to Cameras</button>
 <button onclick="callApi('http://localhost:8005/cameras/connect/test')">Test Camera Connection</button>
@@ -110,6 +110,7 @@
 <button onclick="callApi('http://localhost:8005/cameras/record/start')">Start Recording</button>
 <button onclick="callApi('http://localhost:8005/cameras/record/stop')">Stop Recording</button>
 <button onclick="callApi('http://localhost:8005/cameras/close')">Close Camera Connections</button>
+<button onclick="callApi('http://localhost:8005/app_state/shutdown')">goodbye👋</button>
 <pre id="result"></pre>
 <div id="images-container"></div>
 <div id="log-container"></div>

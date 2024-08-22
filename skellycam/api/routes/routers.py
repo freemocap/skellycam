@@ -1,5 +1,6 @@
 from skellycam.api.routes.http.app.health import health_router
 from skellycam.api.routes.http.app.shutdown import shutdown_router
+from skellycam.api.routes.http.app.state import state_router
 from skellycam.api.routes.http.cameras.close import close_cameras_router
 from skellycam.api.routes.http.cameras.connect import connect_cameras_router
 from skellycam.api.routes.http.cameras.detect import detect_cameras_router
@@ -11,8 +12,9 @@ enabled_routers = {
     "/ui": {
         "ui": ui_router
     },
-    "/app_state": {
+    "/app": {
         "health": health_router,
+        "state": state_router,
         "shutdown": shutdown_router
     },
     "/cameras": {

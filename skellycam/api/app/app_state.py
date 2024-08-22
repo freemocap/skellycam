@@ -1,6 +1,8 @@
-import asyncio
 import logging
 import multiprocessing
+import threading
+import time
+from datetime import datetime
 from typing import Optional, List, Dict
 
 from pydantic import BaseModel
@@ -35,23 +37,30 @@ class ApiCallLog(BaseModel):
     endpoint: str
     timestamp: float
 
+    @classmethod
+    def from_endpoint(cls, endpoint: str):
+        return cls(
+            endpoint=endpoint,
+            timestamp=time.time()
+        )
+
 
 logger = logging.getLogger(__name__)
+
 
 class AppState:
     def __init__(self):
         self._camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
         self._websocket_status: Optional[WebSocketStatus] = None
-        self._record_frames_flag: Optional[multiprocessing.Value] = None
-        self._kill_camera_group_flag: Optional[multiprocessing.Value] = None
+        self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+        self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self._api_call_history: List[ApiCallLog] = []
         self._processes: Optional[Dict[str, ProcessStatus]] = None
         self._lock = multiprocessing.Lock()
 
         self._process_status_update_queue = multiprocessing.Queue()
-        self._listener_task = asyncio.create_task(self._run_listener_loop())
-
+        self._listener_thread = threading.Thread(target=self._run_listener_loop)
 
     @property
     def camera_configs(self):
@@ -104,7 +113,7 @@ class AppState:
         if self._kill_camera_group_flag is None:
             return False
         with self._lock:
-            return self._kill_camera_group_flag.value
+            return self._kill_camera_group_flag
 
     @kill_camera_group_flag.setter
     def kill_camera_group_flag(self, value: multiprocessing.Value):
@@ -117,19 +126,19 @@ class AppState:
             return self._api_call_history
 
     @property
-    async def processes(self):
+    def processes(self):
         with self._lock:
             return self._processes
 
-    async def log_api_call(self, api_call_log: ApiCallLog):
+    def log_api_call(self, route: str):
         with self._lock:
-            self._api_call_history.append(api_call_log)
+            self._api_call_history.append(ApiCallLog.from_endpoint(route))
 
-    async def add_process(self, process: multiprocessing.Process):
+    def add_process(self, process: multiprocessing.Process):
         with self._lock:
             self._processes[str(process.pid)] = ProcessStatus.from_process(process)
 
-    async def remove_processes(self, process: multiprocessing.Process):
+    def remove_processes(self, process: multiprocessing.Process):
         with self._lock:
             self._processes.pop(str(process.pid))
 
@@ -137,9 +146,26 @@ class AppState:
     def process_status_update_queue(self):
         return self._process_status_update_queue
 
+    def state(self):
+        return {
+            "datetime": datetime.now().isoformat(),
+            "camera_configs": {camera_id: config.model_dump() for camera_id, config in
+                               self._camera_configs.items()} if self._camera_configs is not None else {},
+            "available_devices": {camera_id: device.description for camera_id, device in
+                                  self._available_devices.items()} if self._available_devices is not None else {},
+            "websocket_status": self._websocket_status if self._websocket_status is not None else {},
+            "record_frames_flag": self.record_frames_flag.value,
+            "kill_camera_group_flag": self.kill_camera_group_flag.value,
+            "api_call_history": [log.model_dump() for log in
+                                 self._api_call_history] if self._api_call_history is not None else [],
+            "processes": {pid: process.model_dump() for pid, process in
+                          self._processes.items()} if self._processes is not None else {},
+        }
+
     def _run_listener_loop(self):
         logger.trace("Starting AppState listener loop...")
         while True:
+            time.sleep(1)
             update_process_status: ProcessStatus = self._process_status_update_queue.get()
             if update_process_status is None:
                 break
@@ -155,7 +181,9 @@ class AppState:
         self._listener_task.cancel()
         self._listener_task = None
 
+
 APP_STATE = None
+
 
 def get_app_state():
     global APP_STATE

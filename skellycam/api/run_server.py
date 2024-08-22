@@ -7,7 +7,7 @@ from typing import Optional
 import uvicorn
 from uvicorn import Server
 
-APP_FACTORY_PATH = "skellycam.api.app_factory:create_app"
+APP_FACTORY_PATH = "skellycam.api.app.app_factory:create_app"
 
 logger = logging.getLogger(__name__)
 PROTOCOL = "http"
