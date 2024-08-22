@@ -62,12 +62,14 @@ class Controller:
 
         self._camera_group = CameraGroup()
         await self._camera_group.start()
+        logger.success("Camera group started successfully")
 
     async def _close_camera_group(self):
         logger.debug("Closing existing camera group...")
         self._app_state.kill_camera_group_flag.value = True
         await self._camera_group.close()
         self._camera_group = None
+        logger.success("Camera group closed successfully")
 
 
 CONTROLLER = None

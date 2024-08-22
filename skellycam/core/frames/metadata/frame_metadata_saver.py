@@ -11,6 +11,7 @@ from skellycam.core.frames.payload_models.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
+
 class FrameMetadataSaver(BaseModel):
     """
     Holds a list of FrameMetadata objects, one per frame of a recording
@@ -43,7 +44,6 @@ class FrameMetadataSaver(BaseModel):
     def _validate_input(cls, frame_metadata, save_path):
         if not Path(save_path).exists():
             raise ValueError(f"Save path {save_path} does not exist")
-
 
     def add_frame(self, frame: FramePayload):
         frame_metadata = FrameMetadata.from_array(metadata_array=frame.metadata)

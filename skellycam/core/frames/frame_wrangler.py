@@ -48,7 +48,6 @@ class FrameWrangler:
             kill_camera_group_flag=self._kill_camera_group_flag,
         )
 
-
     def start(self):
         logger.debug(f"Starting frame listener process...")
         self._listener_process.start()
@@ -60,7 +59,6 @@ class FrameWrangler:
             ProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
         self._process_status_update_queue.put(
             ProcessStatus.from_process(self._video_recorder_process.process, parent_pid=os.getpid()))
-
 
     def is_alive(self) -> bool:
         if self._listener_process is None or self._video_recorder_process is None:

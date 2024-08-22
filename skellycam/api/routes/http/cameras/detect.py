@@ -2,13 +2,11 @@ import logging
 
 from fastapi import APIRouter
 
-from skellycam.api.app.app_state import get_app_state
 from skellycam.core.controller import get_controller
 
 logger = logging.getLogger(__name__)
 
 detect_cameras_router = APIRouter()
-
 
 
 @detect_cameras_router.get(
@@ -20,7 +18,6 @@ detect_cameras_router = APIRouter()
 )
 async def detect_cameras_route():
     logger.api("Received `detect/` request")
-    get_app_state().log_api_call("cameras/detect")
     try:
         await get_controller().detect_available_cameras()
         logger.api(f"`detect/` request handled successfully")

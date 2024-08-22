@@ -34,7 +34,6 @@ class SkellyCamWidget(QWidget):
     ):
         super().__init__(parent=parent)
 
-
         self._client: FastAPIClient = get_client()
         self._gui_state: GUIState = get_gui_state()
 
@@ -47,7 +46,6 @@ class SkellyCamWidget(QWidget):
         self.camera_view_grid = CameraViewGrid(parent=self)
         self._layout.addWidget(self.camera_view_grid)
 
-
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
         self._layout.addStretch()
@@ -58,7 +56,6 @@ class SkellyCamWidget(QWidget):
         logger.debug(f"Received result from `detect_cameras` call: {detect_cameras_response}")
         self._gui_state.available_devices = detect_cameras_response.available_cameras
         self.devices_detected.emit()
-
 
     def connect_to_cameras(self):
         logger.info("Connecting to cameras")

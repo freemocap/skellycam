@@ -149,7 +149,6 @@ class VideoRecorderManager(BaseModel):
         # Save the recording info to a `[recording_name]_info.json` in the recording folder
         self.recording_info.save_to_file()
 
-
     def validate_recording(self):
         # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
         pass

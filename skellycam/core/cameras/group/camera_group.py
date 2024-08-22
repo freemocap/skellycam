@@ -22,14 +22,11 @@ class CameraGroup:
                                            config_update_queue=self._update_queue)
         self._app_state: AppState = get_app_state()
 
-
-
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")
         await self._process.start()
         self._app_state.process_status_update_queue.put(
             ProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
-        logger.success("Camera group started!")
 
     async def close(self):
         logger.debug("Closing camera group")

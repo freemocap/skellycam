@@ -49,8 +49,6 @@ class RecordingPanel(QWidget):
             self._recording_folder_label.setText(
                 f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
 
-
-
     def _start_recording(self):
         logger.debug("Starting Recording...")
         if self._gui_state.is_recording:

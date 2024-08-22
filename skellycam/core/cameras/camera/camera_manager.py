@@ -14,6 +14,7 @@ from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 
 logger = logging.getLogger(__name__)
 
+
 class CameraManager:
     def __init__(self,
                  camera_configs: CameraConfigs,
@@ -30,10 +31,10 @@ class CameraManager:
 
         for camera_id, config in camera_configs.items():
             self._camera_processes[camera_id] = CameraProcess(config=config,
-                                                             triggers=group_orchestrator.camera_triggers[camera_id],
-                                                             shared_memory_names=shared_memory_names[camera_id],
+                                                              triggers=group_orchestrator.camera_triggers[camera_id],
+                                                              shared_memory_names=shared_memory_names[camera_id],
                                                               kill_camera_group_flag=kill_camera_group_flag,
-                                                             )
+                                                              )
 
     @property
     def camera_ids(self):

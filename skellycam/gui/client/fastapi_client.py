@@ -16,7 +16,6 @@ class FastAPIClient:
         self.http_client = HTTPClient(base_url)
         self.ws_client = WebSocketClient(base_url)
 
-
     def connect_to_cameras(self) -> ConnectCamerasResponse:
         logger.api("Calling `cameras/connect` endpoint")
         self.ws_client.connect()

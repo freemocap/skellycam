@@ -13,6 +13,7 @@ from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
+
 class FrameSaverProcess:
     def __init__(self,
                  video_recorder_queue: multiprocessing.Queue,

@@ -26,6 +26,7 @@ def ensure_not_red(r: int, g: int, b: int, threshold_diff: int = 100):
             b = 255
     return r, g, b
 
+
 def get_hashed_color(value: int):
     """Generate a consistent random color for the given value."""
     # Use modulo to ensure it's within the range of normal terminal colors.

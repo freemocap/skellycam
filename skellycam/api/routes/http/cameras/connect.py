@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 connect_cameras_router = APIRouter()
 
 
-
 class ConnectCamerasRequest(BaseRequest):
     camera_configs: Optional[CameraConfigs] = Field(default_factory=default_camera_configs_factory)
 
@@ -27,8 +26,6 @@ class ConnectCamerasRequest(BaseRequest):
 async def cameras_apply_config_route(
         request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
 ):
-    get_app_state().log_api_call("cameras/connect/apply")
-
     logger.api("Received `/connect/apply` POST request...")
     try:
         await get_controller().connect_to_cameras(
@@ -52,5 +49,3 @@ async def cameras_connect_route():
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {type(e).__name__} - {e}")
         logger.exception(e)
-
-

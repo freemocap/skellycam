@@ -34,14 +34,19 @@ class ProcessStatus(BaseModel):
 
 
 class ApiCallLog(BaseModel):
-    endpoint: str
-    timestamp: float
+    url_path: str
+    log_timestamp: str = datetime.now().isoformat()
+    start_time: float
+    process_time: float
+    status_code: int
 
     @classmethod
-    def from_endpoint(cls, endpoint: str):
+    def create(cls, url_path: str, timestamp: float, process_time: float, status_code: int):
         return cls(
-            endpoint=endpoint,
-            timestamp=time.time()
+            url_path=url_path,
+            start_time=timestamp,
+            process_time=process_time,
+            status_code=status_code,
         )
 
 
@@ -130,13 +135,16 @@ class AppState:
         with self._lock:
             return self._processes
 
-    def log_api_call(self, route: str):
+    def log_api_call(self, url_path: str, start_time: float, process_time: float, status_code: int):
         with self._lock:
-            self._api_call_history.append(ApiCallLog.from_endpoint(route))
+            self._api_call_history.append(ApiCallLog.create(url_path=url_path,
+                                                            timestamp=start_time,
+                                                            process_time=process_time,
+                                                            status_code=status_code))
 
-    def add_process(self, process: multiprocessing.Process):
+    def add_process(self, process: multiprocessing.Process, parent_pid: int):
         with self._lock:
-            self._processes[str(process.pid)] = ProcessStatus.from_process(process)
+            self._processes[str(process.pid)] = ProcessStatus.from_process(process=process, parent_pid=parent_pid)
 
     def remove_processes(self, process: multiprocessing.Process):
         with self._lock:

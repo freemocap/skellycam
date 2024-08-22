@@ -18,7 +18,10 @@ async def lifespan(app: FastAPI):
     logger.api("Skellycam API starting...")
     logger.info(f"Skellycam API base folder path: {get_default_skellycam_base_folder_path()}")
     Path(get_default_skellycam_base_folder_path()).mkdir(parents=True, exist_ok=True)
-    logger.info(f"Creating `Contoller` instance...")
+
+    logger.info("Adding middleware...")
+
+    logger.info(f"Creating `Controller` instance...")
     controller = create_controller()
     logger.success(f"Skellycam API (version:{skellycam.__version__}) started successfully 💀📸✨")
     logger.api(f"Skellycam API  running on: {APP_URL} 👈[click to open backend UI in your browser]\n")

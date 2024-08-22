@@ -100,6 +100,7 @@ class GUIState(QWidget):
                 return None
             return len(self._latest_frontend_payload.jpeg_images)
 
+
 GUI_STATE = None
 
 

@@ -14,6 +14,7 @@ from skellycam.gui.gui_state import GUIState, get_gui_state
 
 logger = logging.getLogger(__name__)
 
+
 class WebSocketClient:
     """
     A simple WebSocket client that connects to a WebSocket server and handles incoming messages.
@@ -86,7 +87,7 @@ class WebSocketClient:
             logger.info(f"Received binary message: {payload}")
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
-            logger.info(f"Received JSON message: {message}")
+        logger.info(f"Received JSON message: {message}")
 
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:

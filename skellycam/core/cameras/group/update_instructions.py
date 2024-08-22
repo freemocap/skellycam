@@ -8,6 +8,7 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 
 logger = logging.getLogger(__name__)
 
+
 class UpdateInstructions(BaseModel):
     """
     Update instructions for CameraGroupProcess

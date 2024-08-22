@@ -20,6 +20,7 @@ CLOCKWISE_VERTICAL_ARROWS_EMOJI_STRING = "\U0001F503"
 SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in hours"
 
 PATH_TO_SKELLY_CAM_LOGO_SVG = str(Path(__file__).parent.parent.parent / "shared" / "logo" / "skelly-cam-logo.svg")
+FAVICON_PATH = str(Path(__file__).parent.parent.parent / "shared" / "logo" / "skelly-cam-favicon.ico")
 
 
 def os_independent_home_dir() -> str:
@@ -33,6 +34,7 @@ def get_default_skellycam_base_folder_path() -> str:
 def get_default_skellycam_recordings_path() -> str:
     return str(Path(get_default_skellycam_base_folder_path()) / "recordings")
 
+
 def create_recording_folder(create_folder: bool = True, string_tag: str = None) -> str:
     folder_path = (
             Path(get_default_skellycam_base_folder_path()) / "recordings" / default_recording_name(
@@ -41,7 +43,6 @@ def create_recording_folder(create_folder: bool = True, string_tag: str = None) 
     if create_folder:
         folder_path.mkdir(parents=True, exist_ok=True)
     return str(folder_path)
-
 
 
 def get_log_file_path() -> str:

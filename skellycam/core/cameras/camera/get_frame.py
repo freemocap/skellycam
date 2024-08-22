@@ -12,7 +12,6 @@ from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 logger = logging.getLogger(__name__)
 
 
-
 def get_frame(camera_id: CameraId,
               cap: cv2.VideoCapture,
               camera_shared_memory: CameraSharedMemory,

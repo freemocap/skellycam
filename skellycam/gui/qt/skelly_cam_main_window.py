@@ -118,7 +118,6 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_widget.cameras_connected.connect(self._connect_to_cameras_button.hide)
         self._skellycam_widget.cameras_connected.connect(self._welcome_to_skellycam_widget.hide)
 
-
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")
         self._directory_view_widget.expand_directory_to_path(folder_path)
@@ -137,7 +136,6 @@ class SkellyCamMainWindow(QMainWindow):
         shutdown_client_server()
         self._shutdown_event.set()
         remove_empty_directories(get_default_skellycam_base_folder_path())
-
 
 
 def remove_empty_directories(root_dir: Union[str, Path]):
