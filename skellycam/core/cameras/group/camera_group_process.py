@@ -21,21 +21,24 @@ class CameraGroupProcess:
     def __init__(
             self,
             frontend_pipe: multiprocessing.Pipe,
-            update_queue: multiprocessing.Queue,
+            config_update_queue: multiprocessing.Queue,
     ):
-        self._fe_payload_pipe = frontend_pipe
-        self._update_queue = update_queue
-        self._app_state: AppState = get_app_state()
+        app_state: AppState = get_app_state()
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
-            args=(self._app_state.camera_configs,
-                  self._fe_payload_pipe,
-                  self._update_queue,
-                  self._app_state.record_frames_flag,
-                  self._app_state.kill_camera_group_flag
+            args=(frontend_pipe,
+                  config_update_queue,
+                  app_state.process_status_update_queue,
+                  app_state.camera_configs,
+                  app_state.record_frames_flag,
+                  app_state.kill_camera_group_flag
                   )
         )
+
+    @property
+    def process(self):
+        return self._process
 
     @property
     def is_running(self) -> bool:
@@ -44,12 +47,18 @@ class CameraGroupProcess:
     async def start(self):
         logger.debug("Starting `CameraGroupProcess`...")
         self._process.start()
-        await self._app_state.add_process(self._process)
+
+    async def close(self):
+        logger.debug("Closing `CameraGroupProcess`...")
+        get_app_state().kill_camera_group_flag.value = True
+        self._process.join()
+        logger.debug("CameraGroupProcess closed.")
 
     @staticmethod
-    def _run_process(camera_configs: CameraConfigs,
-                     frontend_pipe: multiprocessing.Pipe,
-                     update_queue: multiprocessing.Queue,
+    def _run_process(frontend_pipe: multiprocessing.Pipe,
+                     config_update_queue: multiprocessing.Queue,
+                     process_status_update_queue: multiprocessing.Queue,
+                     camera_configs: CameraConfigs,
                      record_frames_flag: multiprocessing.Value,
                      kill_camera_group_flag: multiprocessing.Value,
                      ):
@@ -58,9 +67,7 @@ class CameraGroupProcess:
         group_shm: Optional[CameraGroupSharedMemory] = None
         frame_wrangler: Optional[FrameWrangler] = None
         try:
-            should_continue = True
-            while should_continue and not kill_camera_group_flag.value:
-
+            while not kill_camera_group_flag.value:
                 group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs,
                                                                                  kill_camera_group_flag=kill_camera_group_flag)
 
@@ -70,42 +77,51 @@ class CameraGroupProcess:
                                                group_shm_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,
                                                frontend_pipe=frontend_pipe,
+                                               update_queue=config_update_queue,
+                                               process_status_update_queue=process_status_update_queue,
                                                record_frames_flag=record_frames_flag,
-                                               kill_camera_group_flag=kill_camera_group_flag)
+                                               kill_camera_group_flag=kill_camera_group_flag,
+                                               )
                 camera_manager = CameraManager(camera_configs=camera_configs,
                                                shared_memory_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,
-                                               exit_event=exit_event,
+                                               process_status_update_queue=process_status_update_queue,
+                                               kill_camera_group_flag=kill_camera_group_flag,
                                                )
                 camera_loop_thread = threading.Thread(target=camera_group_trigger_loop,
                                                       args=(camera_configs,
                                                             group_orchestrator,
-                                                            exit_event))
+                                                            kill_camera_group_flag))
 
                 frame_wrangler.start()
                 camera_manager.start_cameras()
                 group_orchestrator.fire_initial_triggers()
                 camera_loop_thread.start()
 
-                reset_all = False
-                while not exit_event.is_set():
-                    if reset_all:
-                        break
-                    wait_1s()
-                    if not update_queue.empty():
-                        update_instructions = update_queue.get()
-                        if not isinstance(update_instructions, UpdateInstructions):
-                            raise ValueError(
-                                f"Expected type: `UpdateInstructions`, got type: `{type(update_instructions)}`")
-                        logger.debug(f"Received update instructions: {update_instructions}")
-                        if update_instructions.reset_all:
-                            camera_configs = update_instructions.camera_configs
-                            reset_all = True
-                        else:
-                            camera_manager.update_cameras(update_instructions)
+                run_config_queue_listener(camera_manager=camera_manager,
+                                          kill_camera_group_flag=kill_camera_group_flag,
+                                          config_update_queue=config_update_queue)
         finally:
-            exit_event.set()
+            kill_camera_group_flag.value = True
             frame_wrangler.close() if frame_wrangler else None
             camera_manager.close() if camera_manager else None
             group_shm.close_and_unlink() if group_shm else None
             logger.debug(f"CameraGroupProcess completed")
+
+
+def run_config_queue_listener(camera_manager: CameraManager,
+                              kill_camera_group_flag: multiprocessing.Value,
+                              config_update_queue: multiprocessing.Queue):
+    logger.trace(f"Starting config queue listener")
+    while not kill_camera_group_flag.value:
+        wait_1s()
+        if not config_update_queue.empty():
+            update_instructions = config_update_queue.get()
+            if not isinstance(update_instructions, UpdateInstructions):
+                raise ValueError(
+                    f"Expected type: `UpdateInstructions`, got type: `{type(update_instructions)}`")
+            logger.debug(f"Received update instructions: {update_instructions}")
+            if update_instructions.reset_all:
+                raise ValueError("Config update requires a reset - this should have happened in the parent process")
+            else:
+                camera_manager.update_camera_configs(update_instructions)

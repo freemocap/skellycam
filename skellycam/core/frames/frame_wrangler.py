@@ -5,25 +5,27 @@ import os
 from skellycam.api.app.app_state import ProcessStatus
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.frames.frame_listener_process import FrameListenerProcess
+from skellycam.core.frames.frame_listener_process import FrameListenerProcess, STOP_RECORDING_SIGNAL
 from skellycam.core.frames.frame_saver_process import FrameSaverProcess
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 
 logger = logging.getLogger(__name__)
 
 
-
 class FrameWrangler:
+
     def __init__(self,
                  camera_configs: CameraConfigs,
                  group_shm_names: GroupSharedMemoryNames,
                  group_orchestrator: CameraGroupOrchestrator,
-                 update_queue: multiprocessing.Queue,
                  frontend_pipe: multiprocessing.Pipe,
+                 update_queue: multiprocessing.Queue,
+                 process_status_update_queue: multiprocessing.Queue,
                  record_frames_flag: multiprocessing.Value,
                  kill_camera_group_flag: multiprocessing.Value, ):
         super().__init__()
-        self._update_queue = update_queue
+        self._config_update_queue = update_queue
+        self._process_status_update_queue = process_status_update_queue
         self._kill_camera_group_flag = kill_camera_group_flag
 
         camera_configs: CameraConfigs = camera_configs
@@ -51,8 +53,13 @@ class FrameWrangler:
         logger.debug(f"Starting frame listener process...")
         self._listener_process.start()
         self._video_recorder_process.start()
-        self._update_queue.put(ProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
-        self._update_queue.put(ProcessStatus.from_process(self._video_recorder_process.process, parent_pid=os.getpid()))
+        self.update_process_states()
+
+    def update_process_states(self):
+        self._process_status_update_queue.put(
+            ProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
+        self._process_status_update_queue.put(
+            ProcessStatus.from_process(self._video_recorder_process.process, parent_pid=os.getpid()))
 
 
     def is_alive(self) -> bool:
@@ -71,4 +78,5 @@ class FrameWrangler:
         if self.is_alive():
             self.join()
         self._video_recorder_queue.close()
+        self.update_process_states()
         logger.debug(f"Frame wrangler closed")

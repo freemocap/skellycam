@@ -42,7 +42,7 @@ class Controller:
     async def close_cameras(self):
         if self._camera_group is not None:
             logger.debug(f"Closing camera group...")
-            self._tasks.append(asyncio.create_task(self._camera_group.close()))
+            self._tasks.append(asyncio.create_task(self._close_camera_group()))
             return
         logger.warning("No camera group to close!")
 
@@ -56,9 +56,7 @@ class Controller:
 
     async def _create_camera_group(self):
         if self._camera_group:
-            logger.debug("Closing existing camera group...")
-            self._kill_camera_group_flag.value = True
-            await self._camera_group.close()
+            await self._close_camera_group()
 
         if self._app_state.camera_configs is None:
             await detect_available_devices()
@@ -68,6 +66,13 @@ class Controller:
 
         self._camera_group = CameraGroup()
         await self._camera_group.start()
+
+    async def _close_camera_group(self):
+        logger.debug("Closing existing camera group...")
+        self._kill_camera_group_flag.value = True
+        await self._camera_group.close()
+        self._camera_group = None
+
 
 CONTROLLER = None
 

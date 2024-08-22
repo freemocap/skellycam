@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import multiprocessing
 from typing import Optional, List, Dict
 
@@ -14,24 +16,27 @@ class WebSocketStatus(BaseModel):
 
 class ProcessStatus(BaseModel):
     process_name: str
-    pid: int
-    parent_pid: int
+    is_alive: bool
+    pid: str
+    parent_pid: str
 
     @classmethod
     def from_process(cls, process: multiprocessing.Process,
                      parent_pid: int):
         return cls(
             process_name=process.name,
-            pid=process.pid,
-            parent_pid=parent_pid,
+            is_alive=process.is_alive(),
+            pid=str(process.pid),
+            parent_pid=str(parent_pid),
         )
 
 
 class ApiCallLog(BaseModel):
     endpoint: str
     timestamp: float
-    success: bool
 
+
+logger = logging.getLogger(__name__)
 
 class AppState:
     def __init__(self):
@@ -43,6 +48,10 @@ class AppState:
         self._api_call_history: List[ApiCallLog] = []
         self._processes: Optional[Dict[str, ProcessStatus]] = None
         self._lock = multiprocessing.Lock()
+
+        self._process_status_update_queue = multiprocessing.Queue()
+        self._listener_task = asyncio.create_task(self._run_listener_loop())
+
 
     @property
     def camera_configs(self):
@@ -116,17 +125,37 @@ class AppState:
         with self._lock:
             self._api_call_history.append(api_call_log)
 
-    async def add_process(self, value: multiprocessing.Process):
+    async def add_process(self, process: multiprocessing.Process):
         with self._lock:
-            self._processes[value.name] = ProcessStatus.from_process(value)
+            self._processes[str(process.pid)] = ProcessStatus.from_process(process)
 
-    async def remove_processes(self, value: multiprocessing.Process):
+    async def remove_processes(self, process: multiprocessing.Process):
         with self._lock:
-            self._processes.pop(value.name)
+            self._processes.pop(str(process.pid))
 
+    @property
+    def process_status_update_queue(self):
+        return self._process_status_update_queue
+
+    def _run_listener_loop(self):
+        logger.trace("Starting AppState listener loop...")
+        while True:
+            update_process_status: ProcessStatus = self._process_status_update_queue.get()
+            if update_process_status is None:
+                break
+            logger.trace(f"Received update: {update_process_status}")
+            with self._lock:
+                if not update_process_status.is_alive:
+                    self._processes.pop(update_process_status.pid)
+                else:
+                    self._processes[update_process_status.pid] = update_process_status
+
+    def close(self):
+        self._process_status_update_queue.put(None)
+        self._listener_task.cancel()
+        self._listener_task = None
 
 APP_STATE = None
-
 
 def get_app_state():
     global APP_STATE

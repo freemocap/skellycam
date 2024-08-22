@@ -18,7 +18,7 @@ def get_frame(camera_id: CameraId,
               camera_shared_memory: CameraSharedMemory,
               triggers: CameraTriggers,
               frame_number: int,
-              close_self_event: multiprocessing.Event,
+              close_self_flag: multiprocessing.Value,
               ) -> int:
     """
     THIS IS WHERE THE MAGIC HAPPENS
@@ -39,7 +39,7 @@ def get_frame(camera_id: CameraId,
     # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
     """
     frame_metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=frame_number)
-    triggers.await_grab_trigger(close_self_event=close_self_event)
+    triggers.await_grab_trigger(close_self_flag=close_self_flag)
     logger.loop(f"Camera {camera_id} received `grab` trigger - calling `cv2.VideoCapture.grab()`")
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
@@ -51,7 +51,7 @@ def get_frame(camera_id: CameraId,
     else:
         raise ValueError(f"Failed to grab frame from camera {camera_id}")
 
-    triggers.await_retrieve_trigger(close_self_event=close_self_event)
+    triggers.await_retrieve_trigger(close_self_flag=close_self_flag)
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
     retrieve_success, image = cap.retrieve()  # decode the frame into an image
