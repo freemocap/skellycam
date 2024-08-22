@@ -4,7 +4,7 @@ import threading
 from multiprocessing import Process
 from typing import Optional
 
-from skellycam.core.backend_state import get_backend_state, BackendState
+from skellycam.api.app.app_state import get_app_state, AppState
 from skellycam.core.cameras.camera.camera_manager import CameraManager
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
@@ -25,7 +25,7 @@ class CameraGroupProcess:
     ):
         self._fe_payload_pipe = frontend_pipe
         self._update_queue = update_queue
-        self._backend_state: BackendState = get_backend_state()
+        self._backend_state: AppState = get_app_state()
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,

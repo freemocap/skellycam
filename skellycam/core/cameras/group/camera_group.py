@@ -2,8 +2,8 @@ import logging
 import multiprocessing
 from typing import Optional
 
+from skellycam.api.app.app_state import AppState, get_app_state
 from skellycam.api.routes.websocket.frontend_pipe import get_frontend_pipe_frame_wrangler_connection
-from skellycam.core.backend_state import BackendState, get_backend_state
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
@@ -19,7 +19,7 @@ class CameraGroup:
         self._frontend_pipe = get_frontend_pipe_frame_wrangler_connection()  # Queue messages will be relayed through the frontend websocket
         self._process = CameraGroupProcess(frontend_pipe=self._frontend_pipe,
                                            update_queue=self._update_queue)
-        self._backend_state: BackendState = get_backend_state()
+        self._backend_state: AppState = get_app_state()
 
 
 

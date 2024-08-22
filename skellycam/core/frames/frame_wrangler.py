@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import os
 
-from skellycam.core.backend_state import ProcessStatus
+from skellycam.api.app.app_state import ProcessStatus
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.frame_listener_process import FrameListenerProcess

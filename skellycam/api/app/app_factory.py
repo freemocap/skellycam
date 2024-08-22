@@ -5,7 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
 
 import skellycam
-from skellycam.api.lifespan import lifespan
+from skellycam.api.app.lifespan import lifespan
 from skellycam.api.middleware.cors import cors
 from skellycam.api.routes.routers import enabled_routers
 

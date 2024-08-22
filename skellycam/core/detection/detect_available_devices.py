@@ -4,7 +4,7 @@ from pprint import pprint
 import cv2
 from PySide6.QtMultimedia import QMediaDevices
 
-from skellycam.core.backend_state import get_backend_state
+from skellycam.api.app.app_state import get_app_state
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo, AvailableDevices
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ async def detect_available_devices(check_if_available: bool = False) -> Availabl
         )
         cameras[camera_device_info.cv2_port] = camera_device_info
     logger.debug(f"Detected cameras: {list(cameras.keys())}")
-    get_backend_state().available_devices = AvailableDevices(cameras=cameras)
+    get_app_state().available_devices = AvailableDevices(cameras=cameras)
     return cameras
 
 

@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 from typing import Optional, List
 
-from skellycam.core.backend_state import BackendState, get_backend_state
+from skellycam.api.app.app_state import AppState, get_app_state
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
@@ -22,7 +22,7 @@ class Controller:
         self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self._tasks: List[asyncio.Task] = []
 
-        self._backend_state: BackendState = get_backend_state()
+        self._backend_state: AppState = get_app_state()
         self._backend_state.record_frames_flag = self._record_frames_flag
         self._backend_state.kill_camera_group_flag = self._kill_camera_group_flag
 

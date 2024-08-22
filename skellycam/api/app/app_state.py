@@ -14,12 +14,12 @@ class WebSocketStatus(BaseModel):
 
 class ProcessStatus(BaseModel):
     process_name: str
-    pid: Optional[int] = None
-    parent_pid: Optional[int] = None
+    pid: int
+    parent_pid: int
 
     @classmethod
     def from_process(cls, process: multiprocessing.Process,
-                     parent_pid: Optional[int] = None):
+                     parent_pid: int):
         return cls(
             process_name=process.name,
             pid=process.pid,
@@ -33,7 +33,7 @@ class ApiCallLog(BaseModel):
     success: bool
 
 
-class BackendState:
+class AppState:
     def __init__(self):
         self._camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
@@ -125,11 +125,11 @@ class BackendState:
             self._processes.pop(value.name)
 
 
-BACKEND_STATE = None
+APP_STATE = None
 
 
-def get_backend_state():
-    global BACKEND_STATE
-    if BACKEND_STATE is None:
-        BACKEND_STATE = BackendState()
-    return BACKEND_STATE
+def get_app_state():
+    global APP_STATE
+    if APP_STATE is None:
+        APP_STATE = AppState()
+    return APP_STATE
