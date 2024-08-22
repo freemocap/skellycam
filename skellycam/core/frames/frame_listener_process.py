@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import pickle
 import time
@@ -5,12 +6,15 @@ from typing import Optional
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.frames.frame_wrangler import logger, STOP_RECORDING_SIGNAL
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1ms
+
+logger = logging.getLogger(__name__)
+
+STOP_RECORDING_SIGNAL = "STOP_RECORDING"
 
 
 class FrameListenerProcess:

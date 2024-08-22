@@ -1,15 +1,17 @@
+import logging
 import multiprocessing
 import pickle
 import time
 from typing import Optional, Union
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.frame_wrangler import logger, STOP_RECORDING_SIGNAL
+from skellycam.core.frames.frame_listener_process import STOP_RECORDING_SIGNAL
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import create_recording_folder
 from skellycam.utilities.wait_functions import wait_1ms
 
+logger = logging.getLogger(__name__)
 
 class FrameSaverProcess:
     def __init__(self,

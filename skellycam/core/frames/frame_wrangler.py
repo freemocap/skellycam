@@ -11,7 +11,6 @@ from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 
 logger = logging.getLogger(__name__)
 
-STOP_RECORDING_SIGNAL = "STOP_RECORDING"
 
 
 class FrameWrangler:

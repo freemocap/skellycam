@@ -1,15 +1,16 @@
+import logging
 import multiprocessing
 import threading
 from typing import Optional, List, Dict
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_process import CameraProcess
-from skellycam.core.cameras.camera.config import logger
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.cameras.group import CameraGroupOrchestrator
-from skellycam.core.cameras.group import UpdateInstructions
+from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.cameras.group.update_instructions import UpdateInstructions
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 
+logger = logging.getLogger(__name__)
 
 class CameraManager:
     def __init__(self,

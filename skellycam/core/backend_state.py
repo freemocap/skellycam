@@ -45,22 +45,22 @@ class BackendState:
         self._lock = multiprocessing.Lock()
 
     @property
-    async def camera_configs(self):
+    def camera_configs(self):
         with self._lock:
             return self._camera_configs
 
     @camera_configs.setter
-    async def camera_configs(self, value):
+    def camera_configs(self, value):
         with self._lock:
             self._camera_configs = value
 
     @property
-    async def available_devices(self):
+    def available_devices(self):
         with self._lock:
             return self._available_devices
 
     @available_devices.setter
-    async def available_devices(self, value):
+    def available_devices(self, value):
         with self._lock:
             self._available_devices = value
             if self._camera_configs is None:
@@ -69,52 +69,52 @@ class BackendState:
                     self._camera_configs[camera_id] = CameraConfig(camera_id=camera_id)
 
     @property
-    async def websocket_status(self):
+    def websocket_status(self):
         with self._lock:
             return self._websocket_status
 
     @websocket_status.setter
-    async def websocket_status(self, value):
+    def websocket_status(self, value):
         with self._lock:
             self._websocket_status = value
 
     @property
-    async def record_frames_flag(self):
+    def record_frames_flag(self):
         if self._record_frames_flag is None:
             return False
         with self._lock:
             return self._record_frames_flag
 
     @record_frames_flag.setter
-    async def record_frames_flag(self, value: multiprocessing.Value):
+    def record_frames_flag(self, value: multiprocessing.Value):
         with self._lock:
             self._record_frames_flag = value
 
     @property
-    async def kill_camera_group_flag(self):
+    def kill_camera_group_flag(self):
         if self._kill_camera_group_flag is None:
             return False
         with self._lock:
             return self._kill_camera_group_flag.value
 
     @kill_camera_group_flag.setter
-    async def kill_camera_group_flag(self, value: multiprocessing.Value):
+    def kill_camera_group_flag(self, value: multiprocessing.Value):
         with self._lock:
             self._kill_camera_group_flag = value
 
     @property
-    async def api_call_history(self):
+    def api_call_history(self):
         with self._lock:
             return self._api_call_history
-
-    async def log_api_call(self, api_call_log: ApiCallLog):
-        with self._lock:
-            self._api_call_history.append(api_call_log)
 
     @property
     async def processes(self):
         with self._lock:
             return self._processes
+
+    async def log_api_call(self, api_call_log: ApiCallLog):
+        with self._lock:
+            self._api_call_history.append(api_call_log)
 
     async def add_process(self, value: multiprocessing.Process):
         with self._lock:

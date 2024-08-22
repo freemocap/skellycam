@@ -4,10 +4,10 @@ import multiprocessing
 import cv2
 
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
-from skellycam.core.cameras.camera.config import apply_camera_configuration
+from skellycam.core.cameras.camera.config.apply_config import apply_camera_configuration
 from skellycam.core.cameras.camera.config.camera_config import CameraConfig
 from skellycam.core.cameras.camera.get_frame import get_frame
-from skellycam.core.cameras.camera.opencv import create_cv2_video_capture
+from skellycam.core.cameras.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
 from skellycam.utilities.wait_functions import wait_1ms
 
