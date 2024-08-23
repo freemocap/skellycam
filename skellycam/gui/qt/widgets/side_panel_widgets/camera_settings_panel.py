@@ -21,8 +21,8 @@ class CameraSettingsPanel(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent=parent)
 
-        self._camera_configs: Optional[CameraConfigs] = {}
-        self._available_devices: Optional[AvailableDevices] = {}
+        self._camera_configs: Optional[CameraConfigs] = None
+        self._available_devices: Optional[AvailableDevices] = None
 
         self._gui_state = get_gui_state()
         self._parameter_groups = {}
