@@ -1,7 +1,6 @@
 import logging
-from typing import Dict
+from typing import Dict, List
 
-from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
@@ -39,7 +38,18 @@ class CameraViewGrid(QWidget):
         self._gui_state: GUIState = get_gui_state()
         self._gui_state.set_image_update_callable(self.handle_new_frontend_payload)
 
-    @Slot()
+    @property
+    def camera_ids(self) -> List[CameraId]:
+        if self._single_camera_views:
+            return list(self._single_camera_views.keys())
+        return []
+
+    def update(self):
+        super().update()
+        if self._gui_state.camera_ids != self.camera_ids:
+            self.clear_camera_views()
+            self.create_single_camera_views()
+
     def create_single_camera_views(self):
         logger.debug("Updating camera views")
         if not self._gui_state.camera_configs:

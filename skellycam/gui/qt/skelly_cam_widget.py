@@ -43,6 +43,11 @@ class SkellyCamWidget(QWidget):
         self.sizePolicy().setVerticalStretch(1)
         self._layout.addStretch()
 
+    def update(self):
+        super().update()
+        self.recording_panel.update()
+        self.camera_view_grid.update()
+
     def detect_available_cameras(self):
         logger.info("Connecting to cameras")
         self._client.detect_cameras()

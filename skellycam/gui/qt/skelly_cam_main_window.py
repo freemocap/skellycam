@@ -94,6 +94,7 @@ class SkellyCamMainWindow(QMainWindow):
 
     def update(self):
         super().update()
+        self._skellycam_widget.update()
         self._skellycam_control_panel.update()
         self._directory_view_dock.update()
 

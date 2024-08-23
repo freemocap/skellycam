@@ -39,6 +39,11 @@ class GUIState(QWidget):
         self.record_frames_flag_status = app_state_dto.record_frames_flag_status
         self.kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
 
+    @property
+    def camera_ids(self):
+        if self._cameras_configs:
+            return list(self._cameras_configs.keys())
+        return []
 
     @property
     def camera_configs(self) -> Optional[CameraConfigs]:

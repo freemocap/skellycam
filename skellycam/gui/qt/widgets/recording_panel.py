@@ -38,16 +38,18 @@ class RecordingPanel(QWidget):
         self._gui_state: GUIState = get_gui_state()
         self._client: FastAPIClient = get_client()
 
-    def update_recording_info(self):
-        if self._gui_state.is_recording:
+    def update(self):
+        super().update()
+        if self._gui_state.record_frames_flag_status:
             self._recording_status_label.setText(
                 f"Recording Status: Recording! ({self._gui_state.number_of_frames} from {self._gui_state.number_of_cameras} cameras)")
             self._recording_folder_label.setText(
                 f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}")
         else:
             self._recording_status_label.setText("Recording Status:  - Not Recording -")
-            self._recording_folder_label.setText(
-                f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
+            if self._gui_state.recording_info:
+                self._recording_folder_label.setText(
+                    f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
 
     def _start_recording(self):
         logger.debug("Starting Recording...")
