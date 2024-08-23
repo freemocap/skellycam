@@ -3,8 +3,7 @@ import multiprocessing
 import os
 from typing import Optional
 
-from skellycam.api.app.app_state import AppState, get_app_state, ProcessStatus
-from skellycam.api.routes.websocket.ipc import get_frame_wrangler_pipe
+from skellycam.api.app.app_state import AppState, get_app_state, SubProcessStatus
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
@@ -15,18 +14,21 @@ logger = logging.getLogger(__name__)
 class CameraGroup:
     def __init__(
             self,
+            ipc_queue: multiprocessing.Queue,
+            frontend_pipe: multiprocessing.Pipe,
     ):
         self._update_queue = multiprocessing.Queue()  # Update camera configs
-        self._frontend_pipe = get_frame_wrangler_pipe()  # Queue messages will be relayed through the frontend websocket
+        self._frontend_pipe = frontend_pipe
         self._process = CameraGroupProcess(frontend_pipe=self._frontend_pipe,
-                                           config_update_queue=self._update_queue)
+                                           config_update_queue=self._update_queue,
+                                           ipc_queue=ipc_queue)
         self._app_state: AppState = get_app_state()
 
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")
         await self._process.start()
         self._app_state.ipc_queue.put(
-            ProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
+            SubProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
 
     async def close(self):
         logger.debug("Closing camera group")
@@ -34,7 +36,7 @@ class CameraGroup:
         if self._process:
             await self._process.close()
         self._app_state.ipc_queue.put(
-            ProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
+            SubProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
         logger.info("Camera group closed.")
 
     async def update_camera_configs(self, new_configs: CameraConfigs):

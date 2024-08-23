@@ -4,7 +4,7 @@ import os
 import threading
 from typing import Optional, List, Dict
 
-from skellycam.api.app.app_state import ProcessStatus
+from skellycam.api.app.app_state import SubProcessStatus
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_process import CameraProcess
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
@@ -52,7 +52,7 @@ class CameraManager:
 
     def _update_process_state(self):
         for camera in self._camera_processes.values():
-            self._ipc_queue.put(ProcessStatus.from_process(camera.process, parent_pid=os.getpid()))
+            self._ipc_queue.put(SubProcessStatus.from_process(camera.process, parent_pid=os.getpid()))
 
     def close(self):
         logger.info(f"Stopping cameras: {self.camera_ids}")

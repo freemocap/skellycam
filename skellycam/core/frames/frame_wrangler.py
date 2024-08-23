@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import os
 
-from skellycam.api.app.app_state import ProcessStatus
+from skellycam.api.app.app_state import SubProcessStatus
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.frame_listener_process import FrameListenerProcess, STOP_RECORDING_SIGNAL
@@ -56,9 +56,9 @@ class FrameWrangler:
 
     def update_process_states(self):
         self._ipc_queue.put(
-            ProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
+            SubProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
         self._ipc_queue.put(
-            ProcessStatus.from_process(self._video_recorder_process.process, parent_pid=os.getpid()))
+            SubProcessStatus.from_process(self._video_recorder_process.process, parent_pid=os.getpid()))
 
     def is_alive(self) -> bool:
         if self._listener_process is None or self._video_recorder_process is None:

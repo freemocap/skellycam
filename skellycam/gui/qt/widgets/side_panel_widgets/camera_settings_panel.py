@@ -56,8 +56,11 @@ class CameraSettingsPanel(QWidget):
 
     def _update_parameter_tree(self):
         logger.loop("Updating Camera Parameter Tree")
-
+        self._camera_configs = self._gui_state.camera_configs
+        self._available_devices = self._gui_state.available_devices
         if not self._camera_configs or len(self._camera_configs) == 0:
+            return
+        if not self._available_devices or len(self._available_devices) == 0:
             return
         if len(self._parameter_groups) > 0:
             self._parameter_tree.clear()

@@ -1,11 +1,12 @@
 import asyncio
 import logging
+import pickle
 
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.api.app.app_state import AppState, get_app_state
-from skellycam.api.routes.websocket.ipc import get_frontend_ws_relay_frame_pipe, get_ipc_queue
+from skellycam.api.app.app_state import get_app_state, SubProcessStatus, AppStateDTO
+from skellycam.api.routes.websocket.ipc import get_frontend_ws_relay_pipe, get_ipc_queue
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ async def websocket_relay(websocket: WebSocket):
     Relay messages from the sub-processes to the frontend via the websocket.
     """
     logger.info("Starting websocket relay listener...")
-    frontend_frame_pipe = get_frontend_ws_relay_frame_pipe()  # Receives frame payloads and recording info (bytes only)
+    frontend_frame_pipe = get_frontend_ws_relay_pipe()  # Receives frames from the sub-processes (bytes only!)
     ipc_queue = get_ipc_queue()  # Receives messages the sub-processes
     app_state = get_app_state()
     try:
@@ -54,14 +55,20 @@ async def websocket_relay(websocket: WebSocket):
 
             if not ipc_queue.empty():
                 message = ipc_queue.get()
-                logger.trace(f"Relaying message from sub-process: {message}")
-                if isinstance(message, AppState):
-                    app_state.update_state(message)
-                    await websocket.send_json(message.state().model_dump_json())
+                if isinstance(message, AppStateDTO):
+                    logger.trace(f"Relaying AppStateDTO to frontend")
+                    await websocket.send_bytes(pickle.dumps(message))
+                elif isinstance(message, SubProcessStatus):
+                    app_state.update_process_status(message)
+                else:
+                    raise ValueError(f"Unknown message type: {type(message)}")
             else:
                 await asyncio.sleep(0.001)
     except WebSocketDisconnect:
         logger.api("Client disconnected, ending listener task...")
+    except Exception as e:
+        logger.exception(f"Error in websocket relay: {e.__class__}: {e}")
+        raise e
     finally:
         logger.info("Ending listener for frontend payload messages in queue...")
 

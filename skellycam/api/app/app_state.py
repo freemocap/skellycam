@@ -1,10 +1,11 @@
 import logging
 import multiprocessing
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 
 from pydantic import BaseModel
 
+from skellycam.api.routes.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.detection.camera_device_info import AvailableDevices
 
@@ -14,7 +15,7 @@ class WebSocketStatus(BaseModel):
     ping_interval_ns: Optional[int] = None
 
 
-class ProcessStatus(BaseModel):
+class SubProcessStatus(BaseModel):
     process_name: str
     is_alive: bool
     pid: str
@@ -57,12 +58,14 @@ class AppState:
         self._available_devices: Optional[AvailableDevices] = None
         self._websocket_status: Optional[WebSocketStatus] = None
         self._api_call_history: List[ApiCallLog] = []
-        self._processes: Optional[Dict[str, ProcessStatus]] = None
+        self._sub_processes: Optional[Dict[str, SubProcessStatus]] = None
 
         self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
 
         self._lock = multiprocessing.Lock()
+
+        self._ipc_queue = get_ipc_queue()
 
     @property
     def camera_configs(self):
@@ -73,6 +76,7 @@ class AppState:
     def camera_configs(self, value):
         with self._lock:
             self._camera_configs = value
+        self._ipc_queue.put(self.state_dto())
 
     @property
     def available_devices(self):
@@ -87,6 +91,7 @@ class AppState:
             if self._camera_configs is None:
                 self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
                                         self._available_devices.keys()}
+        self._ipc_queue.put(self.state_dto())
 
     @property
     def websocket_status(self):
@@ -97,6 +102,7 @@ class AppState:
     def websocket_status(self, value):
         with self._lock:
             self._websocket_status = value
+        self._ipc_queue.put(self.state_dto())
 
     @property
     def record_frames_flag(self):
@@ -109,6 +115,7 @@ class AppState:
     def record_frames_flag(self, value: multiprocessing.Value):
         with self._lock:
             self._record_frames_flag = value
+        self._ipc_queue.put(self.state_dto())
 
     @property
     def kill_camera_group_flag(self):
@@ -121,6 +128,7 @@ class AppState:
     def kill_camera_group_flag(self, value: multiprocessing.Value):
         with self._lock:
             self._kill_camera_group_flag = value
+        self._ipc_queue.put(self.state_dto())
 
     @property
     def api_call_history(self):
@@ -128,9 +136,9 @@ class AppState:
             return self._api_call_history
 
     @property
-    def processes(self):
+    def sub_processes(self):
         with self._lock:
-            return self._processes
+            return self._sub_processes
 
     def log_api_call(self, url_path: str, start_time: float, process_time: float, status_code: int):
         with self._lock:
@@ -138,46 +146,36 @@ class AppState:
                                                             timestamp=start_time,
                                                             process_time=process_time,
                                                             status_code=status_code))
+        self._ipc_queue.put(self.state_dto())
 
-    def add_process(self, process: multiprocessing.Process, parent_pid: int):
+    def update_process_status(self, process_status: SubProcessStatus):
         with self._lock:
-            self._processes[str(process.pid)] = ProcessStatus.from_process(process=process, parent_pid=parent_pid)
-
-    def remove_processes(self, process: multiprocessing.Process):
-        with self._lock:
-            self._processes.pop(str(process.pid))
-
-    def update(self, new_data: Any):
-        with self._lock:
-            if isinstance(new_data, CameraConfigs):
-                self.camera_configs = new_data
-            elif isinstance(new_data, AvailableDevices):
-                self.available_devices = new_data
-            elif isinstance(new_data, WebSocketStatus):
-                self.websocket_status = new_data
-            elif isinstance(new_data, ProcessStatus):
-                self._processes[new_data.pid] = new_data
+            if self._sub_processes is None:
+                self._sub_processes = {}
+            if process_status.is_alive:
+                self._sub_processes[process_status.pid] = process_status
             else:
-                logger.exception(f"Unknown data type: {new_data}")
-                raise ValueError(f"Unknown data type: {new_data}")
+                self._sub_processes.pop(process_status.pid, None)
+        self._ipc_queue.put(self.state_dto())
 
-    def state(self) -> 'AppStateDTO':
+    def state_dto(self) -> 'AppStateDTO':
         return AppStateDTO.from_state(self)
 
 
 class AppStateDTO(BaseModel):
     """
-    Data Transfer Object for the AppState
+    Serializable Data Transfer Object for the AppState
     """
+    state_timestamp: str = datetime.now().isoformat()
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableDevices]
     websocket_status: Optional[WebSocketStatus]
 
     api_call_history: Optional[List[ApiCallLog]]
-    processes: Optional[Dict[str, ProcessStatus]]
+    sub_processes: Optional[Dict[str, SubProcessStatus]]
 
-    record_frames_flag: bool
-    kill_camera_group_flag: bool
+    record_frames_flag_status: bool
+    kill_camera_group_flag_status: bool
 
     @classmethod
     def from_state(cls, state: AppState):
@@ -185,10 +183,10 @@ class AppStateDTO(BaseModel):
             camera_configs=state.camera_configs,
             available_devices=state.available_devices,
             websocket_status=state.websocket_status,
-            record_frames_flag=state.record_frames_flag,
-            kill_camera_group_flag=state.kill_camera_group_flag,
+            record_frames_flag_status=state.record_frames_flag.value,
+            kill_camera_group_flag_status=state.kill_camera_group_flag.value,
             api_call_history=state.api_call_history,
-            processes=state.processes,
+            sub_processes=state.sub_processes,
         )
 
 

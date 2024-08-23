@@ -5,7 +5,6 @@ from multiprocessing import Process
 from typing import Optional
 
 from skellycam.api.app.app_state import get_app_state, AppState
-from skellycam.api.routes.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.camera_manager import CameraManager
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
@@ -23,6 +22,7 @@ class CameraGroupProcess:
             self,
             frontend_pipe: multiprocessing.Pipe,
             config_update_queue: multiprocessing.Queue,
+            ipc_queue: multiprocessing.Queue,
     ):
         app_state: AppState = get_app_state()
         self._process = Process(
@@ -30,7 +30,7 @@ class CameraGroupProcess:
             target=CameraGroupProcess._run_process,
             args=(frontend_pipe,
                   config_update_queue,
-                  get_ipc_queue(),
+                  ipc_queue,
                   app_state.camera_configs,
                   app_state.record_frames_flag,
                   app_state.kill_camera_group_flag

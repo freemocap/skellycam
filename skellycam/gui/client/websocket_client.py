@@ -89,13 +89,17 @@ class WebSocketClient:
         elif isinstance(payload, RecordingInfo):
             logger.info(f"Received RecordingInfo: {payload}")
             self._gui_state.recording_info = payload
+        elif isinstance(payload, AppStateDTO):
+            logger.info(f"Received AppStateDTO (state_timestamp: {payload.state_timestamp})")
+            self._gui_state.update_app_state(app_state_dto=payload)
         else:
-            logger.info(f"Received binary message: {payload}")
+            logger.info(f"Received binary message: {len(payload) * .001:.3f}kB")
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
-        logger.info(f"Received JSON message with keys: {message.keys()}")
-        if 'camera_configs' in message:
-            self._gui_state.update_app_state(app_state_dto=AppStateDTO(**message))
+        if "message" in message:
+            logger.info(f"Received message: {message['message']}")
+        else:
+            logger.info(f"Received JSON message, size: {len(json.dumps(message))} bytes")
 
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:

@@ -1,15 +1,16 @@
 import multiprocessing
 from dataclasses import dataclass
-from typing import Optional, Callable
+from typing import Optional, Callable, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
 
-from skellycam.api.app.app_state import AppStateDTO
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 
+if TYPE_CHECKING:
+    from skellycam.api.app.app_state import AppStateDTO
 
 @dataclass
 class GUIState(QWidget):
@@ -18,8 +19,8 @@ class GUIState(QWidget):
         super().__init__()
         self._cameras_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
-        self._camera_group_kill_flag: bool = False
-        self._recording_frames_flag: bool = False
+        self._kill_camera_group_flag_status: bool = False
+        self._record_frames_flag_status: bool = False
 
         self._recording_info: Optional[RecordingInfo] = None
         self._latest_frontend_payload: Optional[FrontendFramePayload] = None
@@ -32,11 +33,11 @@ class GUIState(QWidget):
     def set_image_update_callable(self, update_callable: Callable) -> None:
         self._image_update_callable = update_callable
 
-    def update_app_state(self, app_state_dto: AppStateDTO):
+    def update_app_state(self, app_state_dto: 'AppStateDTO') -> None:
         self.camera_configs = app_state_dto.camera_configs
         self.available_devices = app_state_dto.available_devices
-        self.is_recording = app_state_dto.record_frames_flag
-        self.kill_camera_group_flag = app_state_dto.kill_camera_group_flag
+        self.record_frames_flag_status = app_state_dto.record_frames_flag_status
+        self.kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
 
 
     @property
@@ -60,24 +61,24 @@ class GUIState(QWidget):
             self._available_devices = value
 
     @property
-    def is_recording(self) -> bool:
+    def record_frames_flag_status(self) -> bool:
         with self._lock:
-            return self._recording_frames_flag
+            return self._record_frames_flag_status
 
-    @is_recording.setter
-    def is_recording(self, value: bool) -> None:
+    @record_frames_flag_status.setter
+    def record_frames_flag_status(self, value: bool) -> None:
         with self._lock:
-            self._recording_frames_flag = value
+            self._record_frames_flag_status = value
 
     @property
-    def kill_camera_group_flag(self) -> bool:
+    def kill_camera_group_flag_status(self) -> bool:
         with self._lock:
-            return self._camera_group_kill_flag
+            return self._kill_camera_group_flag_status
 
-    @kill_camera_group_flag.setter
-    def kill_camera_group_flag(self, value: bool) -> None:
+    @kill_camera_group_flag_status.setter
+    def kill_camera_group_flag_status(self, value: bool) -> None:
         with self._lock:
-            self._camera_group_kill_flag = value
+            self._kill_camera_group_flag_status = value
 
     @property
     def recording_info(self) -> Optional[RecordingInfo]:

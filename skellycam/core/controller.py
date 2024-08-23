@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import multiprocessing
 from typing import Optional, List
 
 from skellycam.api.app.app_state import get_app_state, AppState
+from skellycam.api.routes.websocket.ipc import get_ipc_queue, get_frame_wrangler_pipe
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
@@ -21,6 +23,13 @@ class Controller:
         self._tasks: List[asyncio.Task] = []
 
         self._app_state: AppState = get_app_state()
+        self._ipc_queue = get_ipc_queue()
+        self._frame_wrangler_pipe = get_frame_wrangler_pipe()
+
+    @property
+    def ipc_queue(self) -> multiprocessing.Queue:
+        return self._ipc_queue
+
 
     async def detect_available_cameras(self):
         logger.info(f"Detecting available cameras...")
@@ -60,7 +69,8 @@ class Controller:
         self._app_state.kill_camera_group_flag.value = False
         self._app_state.record_frames_flag.value = False
 
-        self._camera_group = CameraGroup()
+        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue,
+                                         frontend_pipe=self._frame_wrangler_pipe, )
         await self._camera_group.start()
         logger.success("Camera group started successfully")
 
