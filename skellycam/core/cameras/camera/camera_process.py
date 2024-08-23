@@ -47,6 +47,7 @@ class CameraProcess:
         logger.debug(f"Closing camera {self._config.camera_id}")
         self._close_self_flag.value = True
         self._process.join()
+        self._config_update_queue.close()
 
     def is_alive(self) -> bool:
         return self._process.is_alive()

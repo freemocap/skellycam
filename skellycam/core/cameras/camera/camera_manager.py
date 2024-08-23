@@ -73,11 +73,10 @@ class CameraManager:
 
         camera_close_threads = []
         for camera_id in close_these_cameras:
-            camera_close_threads.append(threading.Thread(target=self.camera_processes[camera_id].close))
+            camera_close_threads.append(threading.Thread(target=self._camera_processes[camera_id].close))
         [thread.start() for thread in camera_close_threads]
         [thread.join() for thread in camera_close_threads]
         for camera_id in close_these_cameras:
-            del self.camera_processes[camera_id]
-            del self.update_queues[camera_id]
+            del self._camera_processes[camera_id]
 
         logger.trace(f"Cameras closed: {close_these_cameras}")

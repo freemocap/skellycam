@@ -41,11 +41,15 @@ class RecordingPanel(QWidget):
     def update(self):
         super().update()
         if self._gui_state.record_frames_flag_status:
+            self._start_recording_button.setEnabled(False)
+            self._stop_recording_button.setEnabled(True)
             self._recording_status_label.setText(
                 f"Recording Status: Recording! ({self._gui_state.number_of_frames} from {self._gui_state.number_of_cameras} cameras)")
             self._recording_folder_label.setText(
                 f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}")
         else:
+            self._start_recording_button.setEnabled(True)
+            self._stop_recording_button.setEnabled(False)
             self._recording_status_label.setText("Recording Status:  - Not Recording -")
             if self._gui_state.recording_info:
                 self._recording_folder_label.setText(
@@ -53,7 +57,7 @@ class RecordingPanel(QWidget):
 
     def _start_recording(self):
         logger.debug("Starting Recording...")
-        if self._gui_state.is_recording:
+        if self._gui_state.record_frames_flag_status:
             raise ValueError("Recording is already in progress! Button should be disabled.")
         self._start_recording_button.setEnabled(False)
         self._stop_recording_button.setEnabled(True)
