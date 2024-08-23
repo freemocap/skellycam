@@ -21,6 +21,7 @@ class HTTPClient:
     def _get(self, endpoint: str, params: Dict[str, Any] = None) -> httpx.Response:
         response = self.client.get(endpoint, params=params)
         response.raise_for_status()
+        logger.debug(f"GET response: {response.json()}")
         return response
 
     def post(self, endpoint: str, data: dict) -> Future:
@@ -30,6 +31,7 @@ class HTTPClient:
     def _post(self, endpoint: str, data: dict) -> httpx.Response:
         response = self.client.post(endpoint, json=data)
         response.raise_for_status()
+        logger.debug(f"POST response: {response.json()}")
         return response
 
     def close(self) -> None:

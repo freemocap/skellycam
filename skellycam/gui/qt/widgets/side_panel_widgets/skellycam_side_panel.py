@@ -59,7 +59,7 @@ class SkellyCamControlPanel(QWidget):
 
         self._parameter_tree_widget = CameraSettingsPanel(parent=self)
         self._layout.addWidget(self._parameter_tree_widget)
-        self.apply_settings_to_cameras_button.clicked.connect(self._parameter_tree_widget.update_gui_state)
 
-    def update_parameter_tree(self):
-        self._parameter_tree_widget.update_parameter_tree()
+    def update(self):
+        super().update()
+        self._parameter_tree_widget.update()

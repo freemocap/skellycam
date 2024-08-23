@@ -4,7 +4,6 @@ from typing import Optional
 from fastapi import APIRouter, Body
 from pydantic import Field
 
-from skellycam.api.app.app_state import get_app_state
 from skellycam.api.models.base_models import BaseRequest
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, default_camera_configs_factory
 from skellycam.core.controller import get_controller
@@ -42,7 +41,6 @@ async def cameras_apply_config_route(
 )
 async def cameras_connect_route():
     logger.api("Received `/connect` GET request...")
-    get_app_state().log_api_call("cameras/connect")
     try:
         await get_controller().connect_to_cameras()
         logger.api("`/connect` GET request handled successfully.")

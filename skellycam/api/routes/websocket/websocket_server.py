@@ -4,15 +4,16 @@ import logging
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.api.routes.websocket.frontend_pipe import get_frontend_pipe_ws_relay_connection
+from skellycam.api.app.app_state import AppState, get_app_state
+from skellycam.api.routes.websocket.ipc import get_frontend_ws_relay_frame_pipe, get_ipc_queue
 
 logger = logging.getLogger(__name__)
 
 websocket_router = APIRouter()
 
 HELLO_CLIENT_TEXT_MESSAGE = "👋Hello, websocket client!"
-HELLO_CLIENT_BYTES_MESSAGE = b"Beep boop - these are bytes from the websocket server wow"
-HELLO_CLIENT_JSON_MESSAGE = {"message": HELLO_CLIENT_TEXT_MESSAGE + " I'm a JSON message!"}
+HELLO_CLIENT_BYTES_MESSAGE = b"Beep boop - hi im bytes wow"
+HELLO_CLIENT_JSON_MESSAGE = {"message": "hey wow im json!"}
 
 FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT = "frontend_ready_for_next_payload"
 CLOSE_WEBSOCKET_MESSAGE = "close_websocket"
@@ -33,18 +34,30 @@ async def listen_for_client_messages(websocket: WebSocket):
             break
 
 
-async def relay_messages_from_queue_to_frontend_websocket(websocket: WebSocket):
-    logger.info("Starting listener for frontend payload messages in queue...")
-    frontend_pipe = get_frontend_pipe_ws_relay_connection()
+async def websocket_relay(websocket: WebSocket):
+    """
+    Relay messages from the sub-processes to the frontend via the websocket.
+    """
+    logger.info("Starting websocket relay listener...")
+    frontend_frame_pipe = get_frontend_ws_relay_frame_pipe()  # Receives frame payloads and recording info (bytes only)
+    ipc_queue = get_ipc_queue()  # Receives messages the sub-processes
+    app_state = get_app_state()
     try:
         while True:
-            if not frontend_pipe.poll():
-                payload = frontend_pipe.recv_bytes()
+            if frontend_frame_pipe.poll():
+                payload: bytes = frontend_frame_pipe.recv_bytes()
 
                 logger.loop(
-                    f"Pulled front-end payload from fe_queue and sending down `websocket` to client: {payload}")
+                    f"Relay bytes payload through websocket, size:  {len(payload) * .001:.3f}kB")
 
                 await websocket.send_bytes(payload)
+
+            if not ipc_queue.empty():
+                message = ipc_queue.get()
+                logger.trace(f"Relaying message from sub-process: {message}")
+                if isinstance(message, AppState):
+                    app_state.update_state(message)
+                    await websocket.send_json(message.state().model_dump_json())
             else:
                 await asyncio.sleep(0.001)
     except WebSocketDisconnect:
@@ -81,7 +94,7 @@ async def websocket_server_connect(websocket: WebSocket):
         try:
             logger.api("Creating listener task...")
             listener_task = listen_for_client_messages(websocket=websocket)
-            relay_task = relay_messages_from_queue_to_frontend_websocket(websocket=websocket)
+            relay_task = websocket_relay(websocket=websocket)
             await asyncio.gather(listener_task, relay_task)
         except WebSocketDisconnect:
             logger.info("Client disconnected")

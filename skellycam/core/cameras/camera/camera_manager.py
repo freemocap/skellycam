@@ -20,13 +20,13 @@ class CameraManager:
                  camera_configs: CameraConfigs,
                  shared_memory_names: GroupSharedMemoryNames,
                  group_orchestrator: CameraGroupOrchestrator,
-                 process_status_update_queue: multiprocessing.Queue,
+                 ipc_queue: multiprocessing.Queue,
                  kill_camera_group_flag: multiprocessing.Value, ):
         self._kill_camera_group_flag = kill_camera_group_flag
         self._camera_configs = camera_configs
         self._shared_memory_names = shared_memory_names
         self._group_orchestrator = group_orchestrator
-        self._process_status_update_queue = process_status_update_queue
+        self._ipc_queue = ipc_queue
         self._camera_processes: Dict[CameraId, CameraProcess] = {}
 
         for camera_id, config in camera_configs.items():
@@ -52,7 +52,7 @@ class CameraManager:
 
     def _update_process_state(self):
         for camera in self._camera_processes.values():
-            self._process_status_update_queue.put(ProcessStatus.from_process(camera.process, parent_pid=os.getpid()))
+            self._ipc_queue.put(ProcessStatus.from_process(camera.process, parent_pid=os.getpid()))
 
     def close(self):
         logger.info(f"Stopping cameras: {self.camera_ids}")

@@ -5,6 +5,7 @@ from multiprocessing import Process
 from typing import Optional
 
 from skellycam.api.app.app_state import get_app_state, AppState
+from skellycam.api.routes.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.camera_manager import CameraManager
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
@@ -29,7 +30,7 @@ class CameraGroupProcess:
             target=CameraGroupProcess._run_process,
             args=(frontend_pipe,
                   config_update_queue,
-                  app_state.process_status_update_queue,
+                  get_ipc_queue(),
                   app_state.camera_configs,
                   app_state.record_frames_flag,
                   app_state.kill_camera_group_flag
@@ -57,7 +58,7 @@ class CameraGroupProcess:
     @staticmethod
     def _run_process(frontend_pipe: multiprocessing.Pipe,
                      config_update_queue: multiprocessing.Queue,
-                     process_status_update_queue: multiprocessing.Queue,
+                     ipc_queue: multiprocessing.Queue,
                      camera_configs: CameraConfigs,
                      record_frames_flag: multiprocessing.Value,
                      kill_camera_group_flag: multiprocessing.Value,
@@ -78,14 +79,14 @@ class CameraGroupProcess:
                                                group_orchestrator=group_orchestrator,
                                                frontend_pipe=frontend_pipe,
                                                update_queue=config_update_queue,
-                                               process_status_update_queue=process_status_update_queue,
+                                               ipc_queue=ipc_queue,
                                                record_frames_flag=record_frames_flag,
                                                kill_camera_group_flag=kill_camera_group_flag,
                                                )
                 camera_manager = CameraManager(camera_configs=camera_configs,
                                                shared_memory_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,
-                                               process_status_update_queue=process_status_update_queue,
+                                               ipc_queue=ipc_queue,
                                                kill_camera_group_flag=kill_camera_group_flag,
                                                )
                 camera_loop_thread = threading.Thread(target=camera_group_trigger_loop,

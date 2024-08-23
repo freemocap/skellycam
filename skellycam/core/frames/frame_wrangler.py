@@ -20,12 +20,12 @@ class FrameWrangler:
                  group_orchestrator: CameraGroupOrchestrator,
                  frontend_pipe: multiprocessing.Pipe,
                  update_queue: multiprocessing.Queue,
-                 process_status_update_queue: multiprocessing.Queue,
+                 ipc_queue: multiprocessing.Queue,
                  record_frames_flag: multiprocessing.Value,
                  kill_camera_group_flag: multiprocessing.Value, ):
         super().__init__()
         self._config_update_queue = update_queue
-        self._process_status_update_queue = process_status_update_queue
+        self._ipc_queue = ipc_queue
         self._kill_camera_group_flag = kill_camera_group_flag
 
         camera_configs: CameraConfigs = camera_configs
@@ -55,9 +55,9 @@ class FrameWrangler:
         self.update_process_states()
 
     def update_process_states(self):
-        self._process_status_update_queue.put(
+        self._ipc_queue.put(
             ProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
-        self._process_status_update_queue.put(
+        self._ipc_queue.put(
             ProcessStatus.from_process(self._video_recorder_process.process, parent_pid=os.getpid()))
 
     def is_alive(self) -> bool:

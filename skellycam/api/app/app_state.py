@@ -1,9 +1,7 @@
 import logging
 import multiprocessing
-import threading
-import time
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from pydantic import BaseModel
 
@@ -58,14 +56,13 @@ class AppState:
         self._camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
         self._websocket_status: Optional[WebSocketStatus] = None
-        self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
-        self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self._api_call_history: List[ApiCallLog] = []
         self._processes: Optional[Dict[str, ProcessStatus]] = None
-        self._lock = multiprocessing.Lock()
 
-        self._process_status_update_queue = multiprocessing.Queue()
-        self._listener_thread = threading.Thread(target=self._run_listener_loop)
+        self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+        self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+
+        self._lock = multiprocessing.Lock()
 
     @property
     def camera_configs(self):
@@ -150,44 +147,49 @@ class AppState:
         with self._lock:
             self._processes.pop(str(process.pid))
 
-    @property
-    def process_status_update_queue(self):
-        return self._process_status_update_queue
+    def update(self, new_data: Any):
+        with self._lock:
+            if isinstance(new_data, CameraConfigs):
+                self.camera_configs = new_data
+            elif isinstance(new_data, AvailableDevices):
+                self.available_devices = new_data
+            elif isinstance(new_data, WebSocketStatus):
+                self.websocket_status = new_data
+            elif isinstance(new_data, ProcessStatus):
+                self._processes[new_data.pid] = new_data
+            else:
+                logger.exception(f"Unknown data type: {new_data}")
+                raise ValueError(f"Unknown data type: {new_data}")
 
-    def state(self):
-        return {
-            "datetime": datetime.now().isoformat(),
-            "camera_configs": {camera_id: config.model_dump() for camera_id, config in
-                               self._camera_configs.items()} if self._camera_configs is not None else {},
-            "available_devices": {camera_id: device.description for camera_id, device in
-                                  self._available_devices.items()} if self._available_devices is not None else {},
-            "websocket_status": self._websocket_status if self._websocket_status is not None else {},
-            "record_frames_flag": self.record_frames_flag.value,
-            "kill_camera_group_flag": self.kill_camera_group_flag.value,
-            "api_call_history": [log.model_dump() for log in
-                                 self._api_call_history] if self._api_call_history is not None else [],
-            "processes": {pid: process.model_dump() for pid, process in
-                          self._processes.items()} if self._processes is not None else {},
-        }
+    def state(self) -> 'AppStateDTO':
+        return AppStateDTO.from_state(self)
 
-    def _run_listener_loop(self):
-        logger.trace("Starting AppState listener loop...")
-        while True:
-            time.sleep(1)
-            update_process_status: ProcessStatus = self._process_status_update_queue.get()
-            if update_process_status is None:
-                break
-            logger.trace(f"Received update: {update_process_status}")
-            with self._lock:
-                if not update_process_status.is_alive:
-                    self._processes.pop(update_process_status.pid)
-                else:
-                    self._processes[update_process_status.pid] = update_process_status
 
-    def close(self):
-        self._process_status_update_queue.put(None)
-        self._listener_task.cancel()
-        self._listener_task = None
+class AppStateDTO(BaseModel):
+    """
+    Data Transfer Object for the AppState
+    """
+    camera_configs: Optional[CameraConfigs]
+    available_devices: Optional[AvailableDevices]
+    websocket_status: Optional[WebSocketStatus]
+
+    api_call_history: Optional[List[ApiCallLog]]
+    processes: Optional[Dict[str, ProcessStatus]]
+
+    record_frames_flag: bool
+    kill_camera_group_flag: bool
+
+    @classmethod
+    def from_state(cls, state: AppState):
+        return cls(
+            camera_configs=state.camera_configs,
+            available_devices=state.available_devices,
+            websocket_status=state.websocket_status,
+            record_frames_flag=state.record_frames_flag,
+            kill_camera_group_flag=state.kill_camera_group_flag,
+            api_call_history=state.api_call_history,
+            processes=state.processes,
+        )
 
 
 APP_STATE = None

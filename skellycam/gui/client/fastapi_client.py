@@ -1,8 +1,5 @@
 import logging
-import time
 
-from skellycam.api.routes.http.cameras.connect import ConnectCamerasResponse
-from skellycam.api.routes.http.cameras.detect import DetectCamerasResponse
 from skellycam.api.run_server import APP_URL
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.gui.client.http_client import HTTPClient
@@ -16,31 +13,25 @@ class FastAPIClient:
         self.http_client = HTTPClient(base_url)
         self.ws_client = WebSocketClient(base_url)
 
-    def connect_to_cameras(self) -> ConnectCamerasResponse:
-        logger.api("Calling `cameras/connect` endpoint")
-        self.ws_client.connect()
-        future_response = self.http_client.get("/cameras/connect")
-        response = future_response.result()
-        return ConnectCamerasResponse(**response.json())
+    def connect_websocket(self):
+        logger.api("Client sending request to connect to WebSocket")
+        self.ws_client.connect_websocket()
 
-    def detect_cameras(self) -> DetectCamerasResponse:
+    def connect_to_cameras(self):
+        logger.api("Calling `cameras/connect` endpoint")
+        self.http_client.get("/cameras/connect")
+
+    def detect_cameras(self):
         logger.api("Calling `cameras/detect` endpoint")
-        future_response = self.http_client.get("/cameras/detect")
-        response = future_response.result()
-        return DetectCamerasResponse(**response.json())
+        self.http_client.get("/cameras/detect")
 
     def close_cameras(self):
         logger.api("Calling `cameras/close` endpoint")
         self.ws_client.close()
-        future_response = self.http_client.get("/cameras/close")
-        response = future_response.result()
-        return response.json()
+        self.http_client.get("/cameras/close")
 
     def shutdown_server(self) -> None:
         logger.api("Calling `/app/shutdown` endpoint")
-
-        self.close_cameras()
-        time.sleep(1)
         self.http_client.get("/app/shutdown")
         self.http_client.close()
         self.ws_client.close()

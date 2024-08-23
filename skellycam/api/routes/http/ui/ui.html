@@ -96,21 +96,32 @@
     </script>
 </head>
 <body>
+<!-- Header Section -->
 <h1>SkellyCam API Tester with WebSocket</h1>
 <p> WebSocket status: <span id="ws-status">Disconnected</span></p>
+
+<!-- WebSocket Section -->
 <button onclick="connectWebSocket()">Connect WebSocket</button>
 <button onclick="sendMessage('Hello from the client')">Send WS Message</button>
+
+<!-- API Calls Section -->
+<!-- Root and App API Calls -->
 <button onclick="callApi('http://localhost:8005/')">Read Root</button>
 <button onclick="callApi('http://localhost:8005/app/state')">App State</button>
 <button onclick="callApi('http://localhost:8005/app/healthcheck')">Hello👋</button>
+<button onclick="callApi('http://localhost:8005/app_state/shutdown')">goodbye👋</button>
+
+<!-- Camera Connection API Calls -->
 <button onclick="callApi('http://localhost:8005/cameras/connect/apply', 'POST')">Connect/Update Cameras</button>
 <button onclick="callApi('http://localhost:8005/cameras/connect')">Connect to Cameras</button>
-<button onclick="callApi('http://localhost:8005/cameras/connect/test')">Test Camera Connection</button>
+<button onclick="callApi('http://localhost:8005/cameras/close')">Close Camera Connections</button>
+
+<!-- Camera Operation API Calls -->
 <button onclick="callApi('http://localhost:8005/cameras/detect')">Detect Cameras</button>
 <button onclick="callApi('http://localhost:8005/cameras/record/start')">Start Recording</button>
 <button onclick="callApi('http://localhost:8005/cameras/record/stop')">Stop Recording</button>
-<button onclick="callApi('http://localhost:8005/cameras/close')">Close Camera Connections</button>
-<button onclick="callApi('http://localhost:8005/app_state/shutdown')">goodbye👋</button>
+
+<!-- Results and Logs Section -->
 <pre id="result"></pre>
 <div id="images-container"></div>
 <div id="log-container"></div>

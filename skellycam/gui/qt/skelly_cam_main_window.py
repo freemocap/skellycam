@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.gui import shutdown_client_server
+from skellycam.gui import shutdown_client_server, get_client
 from skellycam.gui.gui_state import get_gui_state
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
@@ -34,11 +34,7 @@ class SkellyCamMainWindow(QMainWindow):
                  parent=None):
         super().__init__(parent=parent)
         self._shutdown_event = shutdown_event
-        self.initUI()
-        self._gui_state = get_gui_state()
-        self._connect_signals_to_slots()
 
-    def initUI(self):
         self.setGeometry(100, 100, 1600, 900)
         self.setWindowIcon(QIcon(PATH_TO_SKELLY_CAM_LOGO_SVG))
         self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
@@ -58,50 +54,51 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_widget.hide()
         self._layout.addWidget(self._skellycam_widget)
 
-        self._parameter_tree_dock_widget = QDockWidget("Camera Settings", self)
-        self._parameter_tree_dock_widget.setFeatures(
+        self._control_panel_dock = QDockWidget("Camera Settings", self)
+        self._control_panel_dock.setFeatures(
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
-        self.skellycam_control_panel = (
+        self._skellycam_control_panel = (
             SkellyCamControlPanel(self._skellycam_widget)
         )
-        self._parameter_tree_dock_widget.setWidget(
-            self.skellycam_control_panel
+        self._control_panel_dock.setWidget(
+            self._skellycam_control_panel
         )
         self.addDockWidget(
-            Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_tree_dock_widget
+            Qt.DockWidgetArea.RightDockWidgetArea, self._control_panel_dock
         )
-        self._directory_view_dock_widget = QDockWidget("Directory View", self)
+        self._directory_view_dock = QDockWidget("Directory View", self)
         self._directory_view_widget = SkellyCamDirectoryViewWidget(
             folder_path=get_default_skellycam_recordings_path()
         )
-        self._directory_view_dock_widget.setWidget(self._directory_view_widget)
-        self._directory_view_dock_widget.setFeatures(
+        self._directory_view_dock.setWidget(self._directory_view_widget)
+        self._directory_view_dock.setFeatures(
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
         self.addDockWidget(
-            Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock_widget
+            Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock
         )
 
         #
         # self.tabifyDockWidget(
-        #     # self._directory_view_dock_widget,
-        #     self._parameter_tree_dock_widget,
+        #     # self._directory_view_dock,
+        #     self._control_panel_dock,
         # )
 
+        self._connect_signals_to_slots()
+        self._gui_state = get_gui_state()
+        self._client = get_client()
+        self._client.connect_websocket()
+
+    def update(self):
+        super().update()
+        self._skellycam_control_panel.update()
+        self._directory_view_dock.update()
+
+
     def _connect_signals_to_slots(self):
-
-        self._skellycam_widget.devices_detected.connect(self.skellycam_control_panel.update_parameter_tree)
-        self._skellycam_widget.cameras_connected.connect(
-            self._skellycam_widget.camera_view_grid.create_single_camera_views)
-
-        self._skellycam_widget.new_frames_available.connect(
-            self._skellycam_widget.camera_view_grid.handle_new_frontend_payload)
-
-        self._skellycam_widget.new_frames_available.connect(
-            self._skellycam_widget.recording_panel.update_recording_info)
 
         self._connect_to_cameras_button.button.clicked.connect(
             self._welcome_to_skellycam_widget.hide
@@ -109,14 +106,8 @@ class SkellyCamMainWindow(QMainWindow):
         self._connect_to_cameras_button.button.clicked.connect(
             self._connect_to_cameras_button.hide
         )
-        self._connect_to_cameras_button.button.clicked.connect(
-            self._skellycam_widget.show
-        )
+        self._connect_to_cameras_button.button.clicked.connect(self._skellycam_widget.show)
         self._connect_to_cameras_button.button.clicked.connect(self._skellycam_widget.connect_to_cameras)
-
-        self._skellycam_widget.cameras_closed.connect(self._connect_to_cameras_button.show)
-        self._skellycam_widget.cameras_connected.connect(self._connect_to_cameras_button.hide)
-        self._skellycam_widget.cameras_connected.connect(self._welcome_to_skellycam_widget.hide)
 
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")

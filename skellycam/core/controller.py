@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional, List
 
-from skellycam.api.app.app_state import AppState, get_app_state
+from skellycam.api.app.app_state import get_app_state, AppState
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,

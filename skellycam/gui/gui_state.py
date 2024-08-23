@@ -4,6 +4,7 @@ from typing import Optional, Callable
 
 from PySide6.QtWidgets import QWidget
 
+from skellycam.api.app.app_state import AppStateDTO
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
@@ -17,16 +18,26 @@ class GUIState(QWidget):
         super().__init__()
         self._cameras_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
-        self._is_recording: bool = False
+        self._camera_group_kill_flag: bool = False
+        self._recording_frames_flag: bool = False
+
         self._recording_info: Optional[RecordingInfo] = None
         self._latest_frontend_payload: Optional[FrontendFramePayload] = None
         self._new_frontend_payload_available: bool = False
+
         self._lock: multiprocessing.Lock = multiprocessing.Lock()
 
         self._image_update_callable: Optional[Callable] = None
 
-    def set_image_update_callable(self, callable: Callable) -> None:
-        self._image_update_callable = callable
+    def set_image_update_callable(self, update_callable: Callable) -> None:
+        self._image_update_callable = update_callable
+
+    def update_app_state(self, app_state_dto: AppStateDTO):
+        self.camera_configs = app_state_dto.camera_configs
+        self.available_devices = app_state_dto.available_devices
+        self.is_recording = app_state_dto.record_frames_flag
+        self.kill_camera_group_flag = app_state_dto.kill_camera_group_flag
+
 
     @property
     def camera_configs(self) -> Optional[CameraConfigs]:
@@ -51,12 +62,22 @@ class GUIState(QWidget):
     @property
     def is_recording(self) -> bool:
         with self._lock:
-            return self._is_recording
+            return self._recording_frames_flag
 
     @is_recording.setter
     def is_recording(self, value: bool) -> None:
         with self._lock:
-            self._is_recording = value
+            self._recording_frames_flag = value
+
+    @property
+    def kill_camera_group_flag(self) -> bool:
+        with self._lock:
+            return self._camera_group_kill_flag
+
+    @kill_camera_group_flag.setter
+    def kill_camera_group_flag(self, value: bool) -> None:
+        with self._lock:
+            self._camera_group_kill_flag = value
 
     @property
     def recording_info(self) -> Optional[RecordingInfo]:
@@ -111,7 +132,3 @@ def get_gui_state() -> GUIState:
     return GUI_STATE
 
 
-def reset_gui_state() -> None:
-    global GUI_STATE
-    GUI_STATE = GUIState()
-    return GUI_STATE

@@ -16,13 +16,13 @@ def gui_main(shutdown_event=None):
         setup_app_id_for_windows()
 
     qt_app = get_qt_app(sys.argv)
-
-    timer = QTimer()
-    timer.start(500)
-    timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
-
     main_window = SkellyCamMainWindow(shutdown_event=shutdown_event)
     main_window.show()
+
+    timer = QTimer()
+    timer.start(1000)
+    timer.timeout.connect(lambda: main_window.update())  # Update the main window once per second
+
     logger.success("GUI main window presumably opened")
     error_code = qt_app.exec()  # Will block until the GUI window is closed
 

@@ -7,6 +7,7 @@ from typing import Union, Dict, Any, Optional
 
 import websocket
 
+from skellycam.api.app.app_state import AppStateDTO
 from skellycam.api.routes.websocket.websocket_server import HELLO_CLIENT_BYTES_MESSAGE, CLOSE_WEBSOCKET_MESSAGE
 from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
@@ -36,9 +37,14 @@ class WebSocketClient:
             on_close=self._on_close,
         )
 
-    def connect(self) -> None:
+    @property
+    def connected(self) -> bool:
+        return self.websocket.sock and self.websocket.sock.connected
+
+    def connect_websocket(self) -> None:
         logger.info(f"Connecting to WebSocket at {self.websocket_url}...")
-        self._websocket_thread = threading.Thread(target=lambda: self.websocket.run_forever(reconnect=True),
+        self._websocket_thread = threading.Thread(
+            target=lambda: self.websocket.run_forever(reconnect=True, ping_interval=5),
                                                   daemon=True)
         self._websocket_thread.start()
 
@@ -63,7 +69,7 @@ class WebSocketClient:
                 logger.info(f"Received text message: {message}")
                 self._handle_text_message(message)
         elif isinstance(message, bytes):
-            logger.loop(f"Received binary message of length {len(message)}")
+            logger.loop(f"Received binary message: size: {len(message) * .001:.3f}kB")
             self._handle_binary_message(message)
 
     def _handle_text_message(self, message: str) -> None:
@@ -87,7 +93,9 @@ class WebSocketClient:
             logger.info(f"Received binary message: {payload}")
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
-        logger.info(f"Received JSON message: {message}")
+        logger.info(f"Received JSON message with keys: {message.keys()}")
+        if 'camera_configs' in message:
+            self._gui_state.update_app_state(app_state_dto=AppStateDTO(**message))
 
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:

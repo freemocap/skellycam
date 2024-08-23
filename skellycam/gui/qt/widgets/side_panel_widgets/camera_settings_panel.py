@@ -1,14 +1,15 @@
 import logging
 from copy import deepcopy
+from typing import Optional
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.camera_config import CameraConfig
+from skellycam.core.cameras.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
 from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
-from skellycam.core.detection.camera_device_info import CameraDeviceInfo
+from skellycam.core.detection.camera_device_info import CameraDeviceInfo, AvailableDevices
 from skellycam.gui.gui_state import get_gui_state
 from skellycam.gui.qt.utilities.qt_label_strings import USE_THIS_CAMERA_STRING, COPY_SETTINGS_TO_CAMERAS_STRING
 
@@ -19,6 +20,10 @@ class CameraSettingsPanel(QWidget):
 
     def __init__(self, parent: QWidget):
         super().__init__(parent=parent)
+
+        self._camera_configs: Optional[CameraConfigs] = {}
+        self._available_devices: Optional[AvailableDevices] = {}
+
         self._gui_state = get_gui_state()
         self._parameter_groups = {}
 
@@ -38,22 +43,30 @@ class CameraSettingsPanel(QWidget):
         self._parameter_tree = ParameterTree(parent=self, showHeader=False)
         self._layout.addWidget(self._parameter_tree)
 
-    def update_parameter_tree(self):
-        logger.debug("Updating Camera Parameter Tree")
-        available_devices = self._gui_state.available_devices
-        camera_configs = self._gui_state.camera_configs
-        if len(camera_configs) == 0:
+    def update(self):
+        super().update()
+        new_available_devices = self._gui_state.available_devices
+        new_camera_configs = self._gui_state.camera_configs
+        available_devices_changed = not new_available_devices == self._available_devices
+        camera_configs_changed = not new_camera_configs == self._camera_configs
+        if available_devices_changed or camera_configs_changed:
+            self._available_devices = new_available_devices
+            self._camera_configs = new_camera_configs
+            self._update_parameter_tree()
+
+    def _update_parameter_tree(self):
+        logger.loop("Updating Camera Parameter Tree")
+
+        if not self._camera_configs or len(self._camera_configs) == 0:
             return
         if len(self._parameter_groups) > 0:
             self._parameter_tree.clear()
         self._parameter_groups = {}
-        for camera_config, camera_info in zip(camera_configs.values(), available_devices.values()):
+        for camera_config, camera_info in zip(self._camera_configs.values(), self._available_devices.values()):
             self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config=camera_config,
                                                                                          camera_info=camera_info)
             self._parameter_tree.addParameters(self._parameter_groups[camera_config.camera_id])
 
-    def update_gui_state(self):
-        self._gui_state.camera_configs = self._extract_camera_configs_from_tree()
 
     def _convert_to_parameter(self, camera_config: CameraConfig,
                               camera_info: CameraDeviceInfo) -> Parameter:
@@ -157,6 +170,3 @@ class CameraSettingsPanel(QWidget):
                 child_parameter.setOpts(enabled=use_this_camera_checked)
                 child_parameter.setReadonly(use_this_camera_checked)
 
-    # def _handle_parameter_tree_change(self):
-    #     logger.trace(f"Parameter tree changed -  emitting camera_configs_changed signal")
-    #     self.camera_configs_changed.emit(self.camera_configs)
