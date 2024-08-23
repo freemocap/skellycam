@@ -26,6 +26,10 @@ class FrontendFramePayload(BaseModel):
     def camera_ids(self):
         return list(self.jpeg_images.keys())
 
+    @property
+    def timestamp_ns(self) -> float:
+        return np.mean([md.post_grab_timestamp_ns for md in self.metadata.values()])
+
     def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayload]:
         if camera_id not in self.jpeg_images:
             return None

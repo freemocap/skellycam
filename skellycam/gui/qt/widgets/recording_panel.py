@@ -40,11 +40,12 @@ class RecordingPanel(QWidget):
 
     def update(self):
         super().update()
+        self._frontend_framerate_label.setText(f"Frontend {self._gui_state.frontend_framerate_stats.median_std_str}")
         if self._gui_state.record_frames_flag_status:
             self._start_recording_button.setEnabled(False)
             self._stop_recording_button.setEnabled(True)
             self._recording_status_label.setText(
-                f"Recording Status: Recording! ({self._gui_state.number_of_frames} from {self._gui_state.number_of_cameras} cameras)")
+                f"Recording Status: Recording! ({self._gui_state.frame_number} from {self._gui_state.number_of_cameras} cameras)")
             self._recording_folder_label.setText(
                 f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}")
         else:
@@ -82,4 +83,6 @@ class RecordingPanel(QWidget):
         recording_status_bar.addWidget(self._recording_status_label)
         self._recording_folder_label = QLabel("Active Recording Folder:  - None -")
         recording_status_bar.addWidget(self._recording_folder_label)
+        self._frontend_framerate_label = QLabel("Frontend Median/Std FPS:  - None -")
+        recording_status_bar.addWidget(self._frontend_framerate_label)
         return recording_status_bar

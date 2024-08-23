@@ -3,7 +3,7 @@ import logging
 import pickle
 import threading
 import time
-from typing import Union, Dict, Any, Optional
+from typing import Union, Dict, Any, Optional, Callable
 
 import websocket
 
@@ -27,6 +27,7 @@ class WebSocketClient:
         self.websocket = self._create_websocket()
         self._websocket_thread: Optional[threading.Thread] = None
         self._gui_state: GUIState = get_gui_state()
+        self._image_update_callable: Optional[Callable] = None
 
     def _create_websocket(self):
         return websocket.WebSocketApp(
