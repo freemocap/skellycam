@@ -55,6 +55,7 @@ class MultiFramePayload(BaseModel):
         return print_str
 
 
+
 class MultiFrameMetadata(BaseModel):
     frame_number: int
     frame_metadata_by_camera: Dict[CameraId, FrameMetadata]
@@ -68,13 +69,15 @@ class MultiFrameMetadata(BaseModel):
             frame_metadata_by_camera={
                 camera_id: FrameMetadata.from_frame_metadata_array(frame.metadata)
                 for camera_id, frame in multi_frame_payload.frames.items()
-            }
+            },
+            multi_frame_lifespan_timestamps_ns=multi_frame_payload.lifespan_timestamps_ns,
+            utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns
         )
 
     @property
     def timestamp_unix_seconds(self) -> float:
         mean_frame_grab_ns = np.mean([
-            frame_metadata.post_grab_timestamp_ns
+            frame_metadata.frame_lifespan_timestamps_ns.post_grab_timestamp_ns
             for frame_metadata in self.frame_metadata_by_camera.values()
         ]) / 1e9
 

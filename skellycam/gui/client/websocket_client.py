@@ -6,6 +6,7 @@ import time
 from typing import Union, Dict, Any, Optional, Callable
 
 import websocket
+from websocket import WebSocketApp
 
 from skellycam.api.app.app_state import AppStateDTO
 from skellycam.api.routes.websocket.websocket_server import HELLO_CLIENT_BYTES_MESSAGE, CLOSE_WEBSOCKET_MESSAGE
@@ -52,14 +53,15 @@ class WebSocketClient:
     def _on_open(self, ws) -> None:
         logger.info(f"Connected to WebSocket at {self.websocket_url}")
 
-    def _on_message(self, ws, message: Union[str, bytes]) -> None:
+    def _on_message(self, ws: WebSocketApp, message: Union[str, bytes]) -> None:
         self._handle_websocket_message(message)
 
-    def _on_error(self, ws, error) -> None:
-        logger.error(f"WebSocket error: {error}")
+    def _on_error(self, ws: WebSocketApp, exception: Exception) -> None:
+        logger.exception(f"WebSocket exception: {exception.__class__.__name__}: {exception}")
+        raise exception
 
-    def _on_close(self, ws, close_status_code, close_msg) -> None:
-        logger.info("WebSocket connection closed")
+    def _on_close(self, ws: WebSocketApp, close_status_code, close_msg) -> None:
+        logger.info(f"WebSocket connection closed: Close status code: {close_status_code}, Close message: {close_msg}")
 
     def _handle_websocket_message(self, message: Union[str, bytes]) -> None:
         if isinstance(message, str):

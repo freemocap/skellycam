@@ -99,5 +99,5 @@ class CameraViewGrid(QWidget):
         logger.loop(f"Updating camera views with new frontend payload: {frontend_payload.multi_frame_number}")
         for camera_id, single_camera_view in self._single_camera_views.items():
             single_camera_view.update_image(base64_str=frontend_payload.jpeg_images[camera_id],
-                                            frame_metadata=frontend_payload.metadata[camera_id])
-
+                                            frame_metadata=
+                                            frontend_payload.multi_frame_metadata.frame_metadata_by_camera[camera_id])

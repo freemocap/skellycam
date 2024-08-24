@@ -41,7 +41,6 @@ class SkellyCamWidget(QWidget):
 
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
-        self._layout.addStretch()
 
     def update(self):
         super().update()

@@ -10,15 +10,14 @@ from pydantic import BaseModel
 
 from skellycam.core import CameraId
 from skellycam.core.frames.payload_models.frame_payload import FramePayload
-from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
-from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class FrontendFramePayload(BaseModel):
     jpeg_images: Dict[CameraId, Optional[str]]
-    metadata: Dict[CameraId, FrameMetadata]
+    multi_frame_metadata: MultiFrameMetadata
     lifespan_timestamps_ns: List[Dict[str, int]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
@@ -28,8 +27,8 @@ class FrontendFramePayload(BaseModel):
         return list(self.jpeg_images.keys())
 
     @property
-    def timestamp_ns(self) -> float:
-        return np.mean([md.post_grab_timestamp_ns for md in self.metadata.values()])
+    def timestamp_unix_seconds(self) -> float:
+        return self.multi_frame_metadata.timestamp_unix_seconds
 
     def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayload]:
         if camera_id not in self.jpeg_images:
@@ -67,7 +66,7 @@ class FrontendFramePayload(BaseModel):
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
-                   metadata=multi_frame_payload.to_metadata())
+                   multi_frame_metadata=multi_frame_payload.to_metadata())
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.model_dump(), use_bin_type=True)

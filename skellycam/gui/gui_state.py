@@ -149,7 +149,7 @@ class GUIState:
             self._latest_frontend_payload = value
             self._frame_number = value.multi_frame_number
             if value.multi_frame_number > 30:
-                self._timestamps_ns.append(value.timestamp_ns)
+                self._timestamps_ns.append(value.timestamp_unix_seconds)
             if self._image_update_callable:
                 self._image_update_callable(value)
     
