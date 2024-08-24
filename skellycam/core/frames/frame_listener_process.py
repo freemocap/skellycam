@@ -59,6 +59,7 @@ class FrameListenerProcess:
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
         )
+        frontend_payload: Optional[FrontendFramePayload] = None
         try:
 
             group_orchestrator.await_for_cameras_ready()
@@ -83,8 +84,10 @@ class FrameListenerProcess:
                         logger.debug(f"FrameListener - Sending STOP signal to video recorder")
                         video_recorder_queue.put(STOP_RECORDING_SIGNAL)
                     # Pickle and send_bytes, to avoid paying the pickle cost twice when relaying through websocket
-                    frontend_bytes = pickle.dumps(FrontendFramePayload.from_multi_frame_payload(mf_payload))
-                    frontend_pipe.send_bytes(frontend_bytes)
+                    frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
+                                                                                     previous_frontend_payload=frontend_payload)
+
+                    frontend_pipe.send_bytes(pickle.dumps(frontend_payload))
             else:
                 wait_1ms()
         except Exception as e:

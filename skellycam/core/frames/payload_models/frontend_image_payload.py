@@ -13,7 +13,25 @@ from skellycam.core.frames.payload_models.frame_payload import FramePayload
 from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
+
+class RecentMetadata(BaseModel):
+    recent_metadata: List[MultiFrameMetadata] = []
+    max_recent_metadata: int = 1000
+
+    def append(self, metadata: MultiFrameMetadata):
+        self.recent_metadata.append(metadata)
+        if len(self.recent_metadata) > self.max_recent_metadata:
+            self.recent_metadata.pop(0)
+
+    @property
+    def timestamps_unix_seconds(self) -> List[float]:
+        return [metadata.timestamp_unix_seconds for metadata in self.recent_metadata]
+
+    @property
+    def stats(self) -> DescriptiveStatistics:
+        return DescriptiveStatistics.from_samples(np.diff(self.timestamps_unix_seconds))
 
 class FrontendFramePayload(BaseModel):
     jpeg_images: Dict[CameraId, Optional[str]]
@@ -21,6 +39,7 @@ class FrontendFramePayload(BaseModel):
     lifespan_timestamps_ns: List[Dict[str, int]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
+    recent_metadata: RecentMetadata
 
     @property
     def camera_ids(self):
@@ -29,6 +48,10 @@ class FrontendFramePayload(BaseModel):
     @property
     def timestamp_unix_seconds(self) -> float:
         return self.multi_frame_metadata.timestamp_unix_seconds
+
+    @property
+    def recent_timestamp_stats(self) -> DescriptiveStatistics:
+        return RecentMetadata(recent_metadata=self.recent_metadata).stats
 
     def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayload]:
         if camera_id not in self.jpeg_images:
@@ -42,10 +65,18 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
+                                 previous_frontend_payload: Optional['FrontendFramePayload'] = None,
                                  jpeg_quality: int = 90):
 
         if not multi_frame_payload.full:
             raise ValueError("MultiFramePayload must be full to convert to FrontendImagePayload")
+
+        mf_metadata = multi_frame_payload.to_metadata()
+        if previous_frontend_payload:
+            recent_metadata = previous_frontend_payload.recent_metadata
+            recent_metadata.append(multi_frame_payload.to_metadata())
+        else:
+            recent_metadata = RecentMetadata(recent_metadata=[multi_frame_payload.to_metadata()])
 
         jpeg_images = {}
         for camera_id, frame in multi_frame_payload.frames.items():
@@ -54,7 +85,8 @@ class FrontendFramePayload(BaseModel):
             frontend_image = frame.image.copy()
             frame.metadata[FRAME_METADATA_MODEL.START_IMAGE_ANNOTATION_TIMESTAMP_NS.value] = time.perf_counter_ns()
             annotated_image = cls._annotate_image(frame=frame,
-                                                  image=frontend_image)
+                                                  image=frontend_image,
+                                                  recent_metadata=recent_metadata)
             frame.metadata[FRAME_METADATA_MODEL.END_IMAGE_ANNOTATION_TIMESTAMP_NS.value] = time.perf_counter_ns()
             frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
             jpeg_images[camera_id] = cls._image_to_jpeg(annotated_image, quality=jpeg_quality)
@@ -62,11 +94,13 @@ class FrontendFramePayload(BaseModel):
         lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
         lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
 
+
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
-                   multi_frame_metadata=multi_frame_payload.to_metadata())
+                   multi_frame_metadata=mf_metadata,
+                   recent_metadata=recent_metadata)
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.model_dump(), use_bin_type=True)
@@ -96,20 +130,22 @@ class FrontendFramePayload(BaseModel):
 
     @staticmethod
     def _annotate_image(frame: FramePayload,
-                        image: np.ndarray) -> np.ndarray:
+                        image: np.ndarray,
+                        recent_metadata: RecentMetadata) -> np.ndarray:
         annotation_text = [
             f"Camera ID: {frame.camera_id}",
-            f"Frame Number: {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}",
+            f"Frames Read: {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}",
+            f"Mean ± Std Dev: {recent_metadata.stats.mean:.2f} ± {recent_metadata.stats.std_dev:.2f} s",
         ]
-        font_scale = 0.5
-        font_thickness = 1
+        font_scale = 1
+        font_thickness = 2
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_outline_thickness = 2
         font_outline_color = (0, 0, 0)
         font_color = (255, 0, 255)
-        font_position = (10, 20)  # Starting position (x, y)
+        font_position = (10, 40)  # Starting position (x, y)
         font_line_type = cv2.LINE_AA
-        line_gap = 20  # Gap between lines
+        line_gap = 40  # Gap between lines
 
         for i, line in enumerate(annotation_text):
             y_pos = font_position[1] + i * line_gap

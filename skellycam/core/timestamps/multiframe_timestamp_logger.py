@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
-from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.timestamps.multi_frame_timestamp_log import (
+from skellycam.core.timestamps.old.camera_timestamp_log import CameraTimestampLog
+from skellycam.core.timestamps.old.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
 
@@ -48,12 +48,6 @@ class MultiframeTimestampLogger(BaseModel):
 
     def log_multiframe(self, multi_frame_payload: MultiFramePayload):
         self.multi_frame_metadatas.append(multi_frame_payload.to_metadata())
-
-    def to_dataframe(self) -> pl.DataFrame:
-        df = pl.DataFrame(
-            [timestamp_log.model_dump() for timestamp_log in self._multi_frame_timestamp_logs]
-        )
-        return df
 
     def check_if_finished(self):
         all_loggers_finished = all(
@@ -139,9 +133,15 @@ class MultiframeTimestampLogger(BaseModel):
         )
         self._multi_frame_timestamp_logs.append(multi_frame_timestamp_log)
 
+    def to_dataframe(self) -> pl.DataFrame:
+        df = pl.DataFrame(
+            [timestamp_log.model_dump() for timestamp_log in self._multi_frame_timestamp_logs]
+        )
+        return df
+
     def _convert_to_dataframe_and_save(self):
         df = self.to_dataframe()
-        df.to_csv(self._timestamps_csv_path, index=False)
+        df.write_csv(file=self._timestamps_csv_path)
         logger.info(
             f"Saved multi-frame timestamp logs to {self._timestamps_csv_path} \n\n"
             f"Total frames: {len(self._multi_frame_timestamp_logs)}\n\n"
