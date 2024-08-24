@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from typing import Tuple
 
@@ -73,8 +74,24 @@ class CameraTimestampLog(BaseModel):
         )
 
     @classmethod
+    def create_test_instance(cls):
+        return cls(
+            camera_id=CameraId(0),
+            multi_frame_number=0,
+            camera_frame_number=1,
+            perf_counter_ns_timestamp=time.perf_counter_ns(),
+            timestamp_from_zero_ns=123,
+            frame_duration_ns=23,
+            timestamp_unix_utc_ns=time.time_ns(),
+            timestamp_utc_iso8601="1970-01-01T00:00:00.000000",
+            timestamp_mapping=(time.time_ns(), time.perf_counter_ns()),
+            first_frame_timestamp_ns=time.perf_counter_ns(),
+            previous_frame_timestamp_ns=time.perf_counter_ns(),
+        )
+
+    @classmethod
     def as_csv_header(cls) -> str:
-        return ",".join(cls.__fields__.keys()) + "\n"
+        return ",".join(cls.model_fields.keys()) + "\n"
 
     def to_csv_row(self):
         return ",".join([str(x) for x in self.model_dump().values()]) + "\n"
@@ -87,7 +104,25 @@ class CameraTimestampLog(BaseModel):
         document = "# Camera Timestamp Log Field Descriptions:\n"
         document += f"The following fields are included in the camera timestamp log, as defined in the {cls.__class__.__name__} data model/class:\n"
         for field_name, field in cls.__fields__.items():
-            document += f"- **{field_name}**:{field.field_info.description}\n\n"
+            document += f"- **{field_name}**:{field.description}\n\n"
             if field_name.startswith("_"):
                 document += f"    - note, this is a private field and is not included in the CSV output. You can find it in the `recording_start_timestamp.json` file in the recording folder\n"
         return document
+
+
+if __name__ == "__main__":
+    t = CameraTimestampLog.create_test_instance()
+    print("CameraTimestampLog")
+    print(t)
+
+    print("\n______\n_____\nCameraTimestampLog.to_document():")
+    print(t.to_document())
+
+    print("\n______\n_____\nCameraTimestampLog.as_csv_header():")
+    print(t.as_csv_header())
+
+    print("\n______\n_____\nCameraTimestampLog.to_csv_row():")
+    print(t.to_csv_row())
+
+    print("\n______\n_____\nCameraTimestampLog.to_document():")
+    print(CameraTimestampLog.to_document())

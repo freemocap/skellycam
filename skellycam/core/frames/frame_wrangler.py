@@ -41,7 +41,7 @@ class FrameWrangler:
             record_frames_flag=record_frames_flag,
             kill_camera_group_flag=self._kill_camera_group_flag,
         )
-        self._video_recorder_process = FrameSaverProcess(
+        self._frame_saver_process = FrameSaverProcess(
             video_recorder_queue=self._video_recorder_queue,
             frontend_pipe=frontend_pipe,
             camera_configs=camera_configs,
@@ -51,23 +51,23 @@ class FrameWrangler:
     def start(self):
         logger.debug(f"Starting frame listener process...")
         self._listener_process.start()
-        self._video_recorder_process.start()
+        self._frame_saver_process.start()
         self.update_process_states()
 
     def update_process_states(self):
         self._ipc_queue.put(
             SubProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
         self._ipc_queue.put(
-            SubProcessStatus.from_process(self._video_recorder_process.process, parent_pid=os.getpid()))
+            SubProcessStatus.from_process(self._frame_saver_process.process, parent_pid=os.getpid()))
 
     def is_alive(self) -> bool:
-        if self._listener_process is None or self._video_recorder_process is None:
+        if self._listener_process is None or self._frame_saver_process is None:
             return False
-        return self._listener_process.is_alive() and self._video_recorder_process.is_alive()
+        return self._listener_process.is_alive() and self._frame_saver_process.is_alive()
 
     def join(self):
         self._listener_process.join()
-        self._video_recorder_process.join()
+        self._frame_saver_process.join()
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")

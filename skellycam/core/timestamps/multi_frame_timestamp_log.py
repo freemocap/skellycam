@@ -13,17 +13,17 @@ class MultiFrameTimestampLog(BaseModel):
         description="The number of multi-frame payloads that have been received by the camera group, "
                     "will be the same for all cameras and corresponds to the frame number in saved videos"
     )
-    mean_timestamp_from_zero_s: float = Field(
-        description="The mean timestamp of the individual frames in this multi-frame, in seconds since the first frame was received by the camera group"
+    timestamp_from_zero_s: float = Field(
+        description="The mean timestamp of the individual frames in this multi-frame, in seconds since the first frame was received by this camera group"
     )
-    mean_frame_duration_s: float = Field(
-        description="The mean duration of the multi-frame, in seconds since the previous frame was received by the camera group"
+    frame_duration_s: float = Field(
+        description="The mean duration of the individual frames in this multi-frame, in seconds since the previous frame was received by the camera group"
     )
-    mean_timestamp_unix_utc_s: float = Field(
+    timestamp_unix_utc_s: float = Field(
         description="The mean timestamp of the frames in this multi-frame, in seconds since the Unix epoch"
     )
-    mean_timestamp_utc_iso8601: str = Field(
-        description="The mean timestamp of the multi-frame, made by converting `mean_timestamp_unix_utc_s` in ISO 8601 format, e.g. 2021-01-01T00:00:00.000000"
+    timestamp_utc_iso8601: str = Field(
+        description="The mean timestamp of the frames in this multi-frame, made by converting `mean_timestamp_unix_utc_s` in ISO 8601 format, e.g. 2021-01-01T00:00:00.000000"
     )
     inter_camera_timestamp_range_s: float = Field(
         description="The range of timestamps between cameras, in seconds"
@@ -100,7 +100,7 @@ class MultiFrameTimestampLog(BaseModel):
 
     @classmethod
     def as_csv_header(cls, camera_ids: List[CameraId]) -> str:
-        column_names = list(cls.__fields__.keys())
+        column_names = list(cls.model_fields.keys())
         column_names.remove("camera_logs")
         for camera_id in camera_ids:
             column_names.append(f"camera_{camera_id}_log")
@@ -120,8 +120,21 @@ class MultiFrameTimestampLog(BaseModel):
         """
         document = "# Main Timestamp Log Field Descriptions:\n"
         document += f"The following fields are included in the main timestamp log, as defined in the {cls.__class__.__name__} data model/class:\n"
-        for field_name, field in cls.__fields__.items():
-            document += f"- **{field_name}**:\n\n {field.field_info.description}\n\n"
+        for field_name, field in cls.model_fields.items():
+            document += f"- **{field_name}**:\n\n {field.description}\n\n"
             if field_name.startswith("_"):
                 document += f"    - note, this is a private field and is not included in the CSV output. You can find it in the `recording_start_timestamp.json` file in the recording folder\n"
         return document
+
+
+if __name__ == "__main__":
+    cam_timestamp_logs = {camera_number: CameraTimestampLog(camera_id=CameraId(camera_number)) for camera_number in
+                          range(3)}
+    MultiFrameTimestampLog.from_timestamp_logs(timestamp_logs=cam_timestamp_logs,
+                                               timestamp_mapping=(0, 0),
+                                               first_frame_timestamp_ns=0,
+                                               multi_frame_number=0)
+    print(MultiFrameTimestampLog.to_document())
+    print(CameraTimestampLog.to_document())
+    print(CameraTimestampLog.as_csv_header())
+    print(CameraTimestampLog.as_csv_header())
