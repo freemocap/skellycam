@@ -66,7 +66,7 @@ class MultiFrameMetadata(BaseModel):
         return cls(
             frame_number=multi_frame_payload.multi_frame_number,
             frame_metadata_by_camera={
-                camera_id: FrameMetadata.from_array(frame.metadata)
+                camera_id: FrameMetadata.from_frame_metadata_array(frame.metadata)
                 for camera_id, frame in multi_frame_payload.frames.items()
             }
         )

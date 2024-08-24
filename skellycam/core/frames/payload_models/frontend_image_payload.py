@@ -49,7 +49,6 @@ class FrontendFramePayload(BaseModel):
             raise ValueError("MultiFramePayload must be full to convert to FrontendImagePayload")
 
         jpeg_images = {}
-        frame_metadatas = {}
         for camera_id, frame in multi_frame_payload.frames.items():
             if frame is None:
                 continue
@@ -61,7 +60,6 @@ class FrontendFramePayload(BaseModel):
             frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
             jpeg_images[camera_id] = cls._image_to_jpeg(annotated_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
-            frame_metadatas[camera_id] = FrameMetadata.from_array(frame.metadata)
         lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
         lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
 
@@ -69,7 +67,7 @@ class FrontendFramePayload(BaseModel):
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
-                   metadata=frame_metadatas)
+                   metadata=multi_frame_payload.to_metadata())
 
     def to_msgpack(self) -> bytes:
         return msgpack.packb(self.model_dump(), use_bin_type=True)

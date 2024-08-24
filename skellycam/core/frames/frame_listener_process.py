@@ -88,7 +88,8 @@ class FrameListenerProcess:
             else:
                 wait_1ms()
         except Exception as e:
-            logger.error(f"Frame listener process error: {e}")
+            logger.exception(f"Frame listener process error: {e.__class__} - {e}")
+            raise e
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             camera_group_shm.close()  # close but don't unlink - parent process will unlink
