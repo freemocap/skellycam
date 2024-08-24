@@ -18,7 +18,7 @@ from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
 class RecentMetadata(BaseModel):
     recent_metadata: List[MultiFrameMetadata] = []
-    max_recent_metadata: int = 1000
+    max_recent_metadata: int = 30
 
     def append(self, metadata: MultiFrameMetadata):
         self.recent_metadata.append(metadata)
@@ -135,7 +135,7 @@ class FrontendFramePayload(BaseModel):
             f"Camera ID: {frame.camera_id}",
             f"Frames Read: {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}",
             f"Mean(std) Frame Duration: {recent_metadata.stats.mean * 1000:.1f}({recent_metadata.stats.standard_deviation * 1000:.3f})ms" if recent_metadata.stats else "",
-            f"Mean(std) Frames Per Second: {(recent_metadata.stats.mean * 1000) ** -1:.1f}({(recent_metadata.stats.standard_deviation * 1000) ** -1:.1f})ms" if recent_metadata.stats else "",
+            f"Mean(std) Frames Per Second: {(recent_metadata.stats.mean) ** -1:.1f}({(recent_metadata.stats.standard_deviation) ** -1:.1f})ms" if recent_metadata.stats else "",
         ]
         font_scale = 1
         font_thickness = 2
