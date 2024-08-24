@@ -30,7 +30,9 @@ class RecentMetadata(BaseModel):
         return [metadata.timestamp_unix_seconds for metadata in self.recent_metadata]
 
     @property
-    def stats(self) -> DescriptiveStatistics:
+    def stats(self) -> Optional[DescriptiveStatistics]:
+        if len(self.recent_metadata) < 4:
+            return None
         return DescriptiveStatistics.from_samples(np.diff(self.timestamps_unix_seconds))
 
 class FrontendFramePayload(BaseModel):
@@ -49,9 +51,6 @@ class FrontendFramePayload(BaseModel):
     def timestamp_unix_seconds(self) -> float:
         return self.multi_frame_metadata.timestamp_unix_seconds
 
-    @property
-    def recent_timestamp_stats(self) -> DescriptiveStatistics:
-        return RecentMetadata(recent_metadata=self.recent_metadata).stats
 
     def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayload]:
         if camera_id not in self.jpeg_images:
@@ -135,7 +134,8 @@ class FrontendFramePayload(BaseModel):
         annotation_text = [
             f"Camera ID: {frame.camera_id}",
             f"Frames Read: {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}",
-            f"Mean ± Std Dev: {recent_metadata.stats.mean:.2f} ± {recent_metadata.stats.std_dev:.2f} s",
+            f"Mean(std) Frame Duration: {recent_metadata.stats.mean * 1000:.1f}({recent_metadata.stats.standard_deviation * 1000:.3f})ms" if recent_metadata.stats else "",
+            f"Mean(std) Frames Per Second: {(recent_metadata.stats.mean * 1000) ** -1:.1f}({(recent_metadata.stats.standard_deviation * 1000) ** -1:.1f})ms" if recent_metadata.stats else "",
         ]
         font_scale = 1
         font_thickness = 2

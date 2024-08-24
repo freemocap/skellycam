@@ -79,6 +79,6 @@ class MultiFrameMetadata(BaseModel):
         mean_frame_grab_ns = np.mean([
             frame_metadata.frame_lifespan_timestamps_ns.post_grab_timestamp_ns
             for frame_metadata in self.frame_metadata_by_camera.values()
-        ]) / 1e9
-
-        return self.utc_ns_to_perf_ns.convert_perf_counter_ns_to_unix_ns(mean_frame_grab_ns) / 1e9
+        ])
+        unix_ns = self.utc_ns_to_perf_ns.convert_perf_counter_ns_to_unix_ns(mean_frame_grab_ns)
+        return unix_ns / 1e9

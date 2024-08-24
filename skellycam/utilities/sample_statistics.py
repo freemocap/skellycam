@@ -39,6 +39,9 @@ class SampleData(BaseModel):
 
         if not len(samples.shape) == 1:
             raise ValueError(f"Sample list must be one-dimensional (for now) - received shape: {samples.shape}")
+
+        if samples.shape[0] < 3:
+            raise ValueError(f"Sample list must have at least 3 samples - received shape: {samples.shape}")
         return cls(data=samples)
 
     @property
@@ -61,7 +64,6 @@ class CentralTendencyMeasures(BaseModel):
             median=np.nanmedian(samples.data),
         )
 
-
 class VariabilityMeasures(BaseModel):
     standard_deviation: float
     median_absolute_deviation: float
@@ -71,14 +73,17 @@ class VariabilityMeasures(BaseModel):
 
     @classmethod
     def from_samples(cls, samples: SampleData) -> 'VariabilityMeasures':
+        std_dev = np.nanstd(samples.data)
+        mean = np.nanmean(samples.data)
+        size = np.sqrt(samples.data.size) if samples.data.size > 0 else np.nan
+
         return cls(
-            standard_deviation=np.nanstd(samples.data),
+            standard_deviation=std_dev,
             median_absolute_deviation=np.nanmedian(np.abs(samples.data - np.nanmedian(samples.data))),
             interquartile_range=np.nanpercentile(samples.data, 75) - np.nanpercentile(samples.data, 25),
-            confidence_interval_95=Z_SCORE_95_CI * np.nanstd(samples.data) / np.sqrt(samples.data.size),
-            coefficient_of_variation=np.nanstd(samples.data) / np.nanmean(samples.data),
+            confidence_interval_95=(Z_SCORE_95_CI * std_dev / size) if size > 0 else np.nan,
+            coefficient_of_variation=(std_dev / mean) if mean != 0 else np.nan,
         )
-
 
 class DescriptiveStatistics(BaseModel):
     sample_data: SampleData
