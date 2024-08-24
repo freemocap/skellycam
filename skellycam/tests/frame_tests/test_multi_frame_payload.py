@@ -2,8 +2,8 @@ from typing import List
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.frame_payload import FramePayloadDTO
+from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 
 
@@ -15,7 +15,7 @@ def test_initial_creation(camera_configs_fixture: CameraConfigs) -> None:
     assert all(value is None for value in multi_frame_payload.frames.values())
     assert multi_frame_payload.multi_frame_number == 0
     assert isinstance(multi_frame_payload.utc_ns_to_perf_ns.perf_counter_ns, int)
-    assert isinstance(multi_frame_payload.utc_ns_to_perf_ns.time_ns, int)
+    assert isinstance(multi_frame_payload.utc_ns_to_perf_ns.utc_time_ns, int)
 
 
 def test_from_previous(multi_frame_payload_fixture: MultiFramePayload) -> None:

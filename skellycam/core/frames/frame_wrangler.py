@@ -52,9 +52,9 @@ class FrameWrangler:
         logger.debug(f"Starting frame listener process...")
         self._listener_process.start()
         self._frame_saver_process.start()
-        self.update_process_states()
+        self._update_process_states()
 
-    def update_process_states(self):
+    def _update_process_states(self):
         self._ipc_queue.put(
             SubProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
         self._ipc_queue.put(
@@ -76,5 +76,5 @@ class FrameWrangler:
         if self.is_alive():
             self.join()
         self._video_recorder_queue.close()
-        self.update_process_states()
+        self._update_process_states()
         logger.debug(f"Frame wrangler closed")

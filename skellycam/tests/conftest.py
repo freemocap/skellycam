@@ -18,9 +18,9 @@ from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.controller import Controller, create_controller, get_controller
 from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.core.frames.frame_wrangler import FrameWrangler
-from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_SHAPE, FRAME_METADATA_DTYPE, \
-    FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.frame_payload import FramePayloadDTO
+from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
+    FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory

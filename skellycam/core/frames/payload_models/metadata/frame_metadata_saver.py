@@ -6,8 +6,8 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payload_models.frame_payload import FramePayload
+from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
 
 logger = logging.getLogger(__name__)
 

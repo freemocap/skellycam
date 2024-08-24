@@ -2,55 +2,52 @@ import json
 import logging
 import pprint
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List, Any, Hashable
+from typing import Dict, Tuple, List, Any, Hashable
 
 import polars as pl
+from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
-from skellycam.core.timestamps.timestamp_logger import (
-    CameraTimestampLogger,
-)
 
 logger = logging.getLogger(__name__)
 
 
-class TimestampLoggerManager:
-    def __init__(self, camera_configs: CameraConfigs, video_save_directory: str):
-        self._multi_frame_timestamp_logs: List[MultiFrameTimestampLog] = []
+class MultiframeTimestampLogger(BaseModel):
+    multi_frame_metadatas: List[MultiFrameMetadata] = Field(default_factory=list)
+    csv_save_path: str
 
-        self._start_time_perf_counter_ns_to_unix_mapping: Optional[
-            Tuple[int, int]
-        ] = None
+    @classmethod
+    def from_first_multiframe(cls,
+                              first_multiframe: MultiFramePayload,
+                              video_save_directory: str,
+                              recording_name: str):
+        logger.debug(f"Creating MultiFrameTimestampLogger for video save directory {video_save_directory}...")
+        video_save_path = Path(video_save_directory)
+        if not video_save_path.exists():
+            raise FileNotFoundError(f"Video save directory {video_save_directory} does not exist!")
 
-        self._first_frame_timestamp: Optional[int] = None
+        csv_save_path = str(video_save_path / f"{recording_name}_timestamps.csv")
 
-        self._create_save_paths(video_save_directory)
+        # documentation_path = str(video_save_path / f"{recording_name}_timestamps_README.md")
+        #
+        # timestamp_stats_path = str(video_save_path / f"{recording_name}_timestamp_stats.json")
 
-        self._timestamp_loggers: Dict[CameraId, CameraTimestampLogger] = {
-            camera_id: CameraTimestampLogger(
-                main_timestamps_directory=str(self._main_timestamp_path),
-                camera_id=camera_id,
-            )
-            for camera_id in camera_configs.keys()
-        }
-
-        self._csv_header = MultiFrameTimestampLog.as_csv_header(
-            camera_ids=list(camera_configs.keys())
+        csv_header = MultiFrameTimestampLog.as_csv_header(
+            camera_ids=first_multiframe.camera_ids
+        )
+        return cls(
+            csv_save_path=csv_save_path,
+            multi_frame_metadatas=[first_multiframe.to_metadata()],
         )
 
-    @property
-    def log_counts(self) -> Dict[CameraId, int]:
-        return {
-            camera_id: timestamp_logger.log_count
-            for camera_id, timestamp_logger in self._timestamp_loggers.items()
-        }
+    def log_multiframe(self, multi_frame_payload: MultiFramePayload):
+        self.multi_frame_metadatas.append(multi_frame_payload.to_metadata())
 
     def to_dataframe(self) -> pl.DataFrame:
         df = pl.DataFrame(
@@ -102,7 +99,7 @@ class TimestampLoggerManager:
 
     def close(self):
         logger.debug(
-            f"Closing timestamp logger manager with {len(self._multi_frame_timestamp_logs)} multi-frame logs and {self.log_counts} per-camera logs..."
+            f"Closing timestamp logger manager with {len(self._multi_frame_timestamp_logs)} multi-frame logs"
         )
 
         for timestamp_logger in self._timestamp_loggers.values():
@@ -223,27 +220,4 @@ class TimestampLoggerManager:
 
         logger.info(
             f"Saved multi_frame_timestamp descriptions to {self._documentation_path}"
-        )
-
-    def _create_save_paths(self, video_save_directory):
-        video_path = Path(video_save_directory)
-
-        self._file_name_prefix = video_path.stem
-        self._main_timestamp_path = video_path / "timestamps"
-        self._main_timestamp_path.mkdir(parents=True, exist_ok=True)
-        self._timestamps_csv_path = (
-                self._main_timestamp_path / f"{self._file_name_prefix}_timestamps.csv"
-        )
-
-        self._starting_timestamp_json_path = (
-                self._main_timestamp_path
-                / f"{self._file_name_prefix}_recording_start_timestamp.json"
-        )
-
-        self._documentation_path = (
-                self._main_timestamp_path / f"{self._file_name_prefix}_documentation.txt"
-        )
-
-        self._stats_path = (
-                self._main_timestamp_path / f"{self._file_name_prefix}_timestamp_stats.json"
         )

@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QByteArray, QBuffer
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy
 
-from skellycam.core.frames.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
 
 
 class EfficientQImageUpdater:

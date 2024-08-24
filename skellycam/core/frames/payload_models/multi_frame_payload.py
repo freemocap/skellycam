@@ -1,12 +1,14 @@
 import time
 from typing import Dict, Optional, List
 
+import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.metadata.frame_metadata import FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.frame_payload import FramePayload, FramePayloadDTO
-from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class MultiFramePayload(BaseModel):
@@ -42,9 +44,38 @@ class MultiFramePayload(BaseModel):
         frame = FramePayload.from_dto(dto=frame_dto)
         self.frames[frame.camera_id] = frame
 
+    def to_metadata(self) -> 'MultiFrameMetadata':
+        return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
+
     def __str__(self) -> str:
         print_str = f"["
         for camera_id, frame in self.frames.items():
             print_str += str(frame) + "\n"
         print_str += "]"
         return print_str
+
+
+class MultiFrameMetadata(BaseModel):
+    frame_number: int
+    frame_metadata_by_camera: Dict[CameraId, FrameMetadata]
+    utc_ns_to_perf_ns: UtcToPerfCounterMapping
+    multi_frame_lifespan_timestamps_ns: List[Dict[str, int]]  # TODO - Make a model for this
+
+    @classmethod
+    def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload):
+        return cls(
+            frame_number=multi_frame_payload.multi_frame_number,
+            frame_metadata_by_camera={
+                camera_id: FrameMetadata.from_array(frame.metadata)
+                for camera_id, frame in multi_frame_payload.frames.items()
+            }
+        )
+
+    @property
+    def timestamp_unix_seconds(self) -> float:
+        mean_frame_grab_ns = np.mean([
+            frame_metadata.post_grab_timestamp_ns
+            for frame_metadata in self.frame_metadata_by_camera.values()
+        ]) / 1e9
+
+        return self.utc_ns_to_perf_ns.convert_perf_counter_ns_to_unix_ns(mean_frame_grab_ns) / 1e9

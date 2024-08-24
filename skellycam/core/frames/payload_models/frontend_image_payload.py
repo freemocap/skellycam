@@ -9,10 +9,11 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.frames.metadata.frame_metadata import FrameMetadata, FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.frame_payload import FramePayload
+from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
-from skellycam.utilities.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class FrontendFramePayload(BaseModel):
