@@ -3,6 +3,7 @@ import multiprocessing
 from datetime import datetime
 from typing import Optional, List, Dict
 
+import psutil
 from pydantic import BaseModel
 
 from skellycam.api.routes.websocket.ipc import get_ipc_queue
@@ -18,7 +19,7 @@ class WebSocketStatus(BaseModel):
 class SubProcessStatus(BaseModel):
     process_name: str
     is_alive: bool
-    pid: str
+    pid: int
     parent_pid: str
 
     @classmethod
@@ -27,10 +28,21 @@ class SubProcessStatus(BaseModel):
         return cls(
             process_name=process.name,
             is_alive=process.is_alive(),
-            pid=str(process.pid),
+            pid=process.pid,
             parent_pid=str(parent_pid),
         )
 
+
+class TaskStatus(BaseModel):
+    task_name: str
+    is_running: bool
+
+    @classmethod
+    def from_task(cls, task: multiprocessing.Process):
+        return cls(
+            task_name=task.name,
+            is_running=task.is_alive(),
+        )
 
 class ApiCallLog(BaseModel):
     url_path: str
@@ -58,7 +70,9 @@ class AppState:
         self._available_devices: Optional[AvailableDevices] = None
         self._websocket_status: Optional[WebSocketStatus] = None
         self._api_call_history: List[ApiCallLog] = []
-        self._sub_processes: Optional[Dict[str, SubProcessStatus]] = None
+
+        self._subprocess_statuses: Optional[Dict[int, SubProcessStatus]] = None
+        self._task_statuses: Optional[Dict[str, TaskStatus]] = None
 
         self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
@@ -136,9 +150,13 @@ class AppState:
             return self._api_call_history
 
     @property
-    def sub_processes(self):
+    def subprocess_statuses(self) -> Dict[int, SubProcessStatus]:
         with self._lock:
-            return self._sub_processes
+            for process_status in self._subprocess_statuses.values() if self._subprocess_statuses else []:
+                if not psutil.Process(process_status.pid).is_running():
+                    self._subprocess_statuses.pop(process_status.pid)
+
+            return self._subprocess_statuses
 
     def log_api_call(self, url_path: str, start_time: float, process_time: float, status_code: int):
         with self._lock:
@@ -150,12 +168,29 @@ class AppState:
 
     def update_process_status(self, process_status: SubProcessStatus):
         with self._lock:
-            if self._sub_processes is None:
-                self._sub_processes = {}
+            if self._subprocess_statuses is None:
+                self._subprocess_statuses = {}
             if process_status.is_alive:
-                self._sub_processes[process_status.pid] = process_status
+                self._subprocess_statuses[process_status.pid] = process_status
             else:
-                self._sub_processes.pop(process_status.pid, None)
+                self._subprocess_statuses.pop(process_status.pid, None)
+        self._ipc_queue.put(self.state_dto())
+
+    @property
+    def task_statuses(self):
+        with self._lock:
+            return self._task_statuses
+
+    def update_task_status(self, task_status: Optional[TaskStatus]):
+        if not task_status:
+            return
+        with self._lock:
+            if self._task_statuses is None:
+                self._task_statuses = {}
+            if task_status.is_running:
+                self._task_statuses[task_status.task_name] = task_status
+            else:
+                self._task_statuses.pop(task_status.task_name, None)
         self._ipc_queue.put(self.state_dto())
 
     def state_dto(self) -> 'AppStateDTO':
@@ -172,7 +207,8 @@ class AppStateDTO(BaseModel):
     websocket_status: Optional[WebSocketStatus]
 
     api_call_history: Optional[List[ApiCallLog]]
-    sub_processes: Optional[Dict[str, SubProcessStatus]]
+    subprocess_statuses: Optional[Dict[int, SubProcessStatus]]
+    task_statuses: Optional[Dict[str, TaskStatus]]
 
     record_frames_flag_status: bool
     kill_camera_group_flag_status: bool
@@ -186,7 +222,8 @@ class AppStateDTO(BaseModel):
             record_frames_flag_status=state.record_frames_flag.value,
             kill_camera_group_flag_status=state.kill_camera_group_flag.value,
             api_call_history=state.api_call_history,
-            sub_processes=state.sub_processes,
+            subprocess_statuses=state.subprocess_statuses,
+            task_statuses=state.task_statuses,
         )
 
 

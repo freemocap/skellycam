@@ -143,7 +143,7 @@ class GUIState:
     def sub_process_statuses(self) -> Optional[str]:
         with self._lock:
             return self._latest_app_state_dto.model_dump_json(indent=2, include={
-                'sub_processes'}) if self._latest_app_state_dto else None
+                'subprocess_statuses', 'task_statuses'}) if self._latest_app_state_dto else None
     @property
     def camera_ids(self):
         if self._cameras_configs:

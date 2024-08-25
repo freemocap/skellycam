@@ -5,7 +5,7 @@ import pickle
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from skellycam.api.app.app_state import get_app_state, SubProcessStatus, AppStateDTO
+from skellycam.api.app.app_state import SubProcessStatus, AppStateDTO, get_app_state
 from skellycam.api.routes.websocket.ipc import get_frontend_ws_relay_pipe, get_ipc_queue
 
 logger = logging.getLogger(__name__)

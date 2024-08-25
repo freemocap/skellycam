@@ -11,6 +11,7 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
+from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -45,20 +46,19 @@ class CameraManager:
 
         [camera.start() for camera in self._camera_processes.values()]
 
-        self._update_process_state()
+        self.register_subprocess()
 
         self._group_orchestrator.await_for_cameras_ready()
         logger.success(f"Cameras {self.camera_ids} started successfully!")
 
-    def _update_process_state(self):
+    def register_subprocess(self):
         for camera in self._camera_processes.values():
             self._ipc_queue.put(SubProcessStatus.from_process(camera.process, parent_pid=os.getpid()))
 
     def close(self):
         logger.info(f"Stopping cameras: {self.camera_ids}")
-        self._close_cameras()
         self._kill_camera_group_flag.value = True
-        self._update_process_state()
+        self._close_cameras()
 
     def update_camera_configs(self, update_instructions: UpdateInstructions):
         logger.debug(f"Updating cameras with instructions: {update_instructions}")
@@ -71,12 +71,23 @@ class CameraManager:
             close_these_cameras = self.camera_ids
         logger.debug(f"Closing cameras: {close_these_cameras}")
 
+        camera_processes_to_close = [self._camera_processes[camera_id] for camera_id in close_these_cameras]
+
         camera_close_threads = []
-        for camera_id in close_these_cameras:
-            camera_close_threads.append(threading.Thread(target=self._camera_processes[camera_id].close))
+        for camera_process in camera_processes_to_close:
+            camera_close_threads.append(threading.Thread(target=camera_process.close))
         [thread.start() for thread in camera_close_threads]
         [thread.join() for thread in camera_close_threads]
-        for camera_id in close_these_cameras:
-            del self._camera_processes[camera_id]
 
-        logger.trace(f"Cameras closed: {close_these_cameras}")
+        while any([camera_process.is_alive() for camera_process in camera_processes_to_close]):
+            wait_10ms()
+
+        self.register_subprocess()
+
+        for camera_id in close_these_cameras:
+            self._camera_processes.pop(camera_id)
+            self._camera_configs.pop(camera_id)
+            self._shared_memory_names.pop(camera_id)
+            self._group_orchestrator.camera_triggers.pop(camera_id)
+
+        logger.trace(f"Cameras closed: {close_these_cameras} ")

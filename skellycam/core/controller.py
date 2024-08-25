@@ -3,7 +3,8 @@ import logging
 import multiprocessing
 from typing import Optional
 
-from skellycam.api.app.app_state import get_app_state, AppState
+from skellycam.api.app.app_state import AppState, get_app_state
+from skellycam.api.app.controller_tasks import ControllerTasks
 from skellycam.api.routes.websocket.ipc import get_ipc_queue, get_frame_wrangler_pipe
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
@@ -14,60 +15,15 @@ from skellycam.core.detection.detect_available_devices import detect_available_d
 logger = logging.getLogger(__name__)
 
 
-class ControllerTasks:
-    def __init__(self):
-        self._connect_to_cameras_task: Optional[asyncio.Task] = None
-        self._detect_available_cameras_task: Optional[asyncio.Task] = None
-        self._close_cameras_task: Optional[asyncio.Task] = None
-
-    @property
-    async def connect_to_cameras_task(self) -> Optional[asyncio.Task]:
-        return self._connect_to_cameras_task
-
-    @connect_to_cameras_task.setter
-    def connect_to_cameras_task(self, value: Optional[asyncio.Task]) -> None:
-        if self._connect_to_cameras_task is not None:
-            if self._connect_to_cameras_task.done():
-                self._connect_to_cameras_task = value
-                return
-        else:
-            logger.warning("Camera connection task already running! Ignoring request...")
-
-    @property
-    def detect_available_cameras_task(self) -> Optional[asyncio.Task]:
-        return self._detect_available_cameras_task
-
-    @detect_available_cameras_task.setter
-    def detect_available_cameras_task(self, value: Optional[asyncio.Task]) -> None:
-        if self._detect_available_cameras_task is not None:
-            if self._detect_available_cameras_task.done():
-                self._detect_available_cameras_task = value
-                return
-        else:
-            logger.warning("Camera detection task already running! Ignoring request...")
-
-    @property
-    def close_cameras_task(self) -> Optional[asyncio.Task]:
-        return self._close_cameras_task
-
-    @close_cameras_task.setter
-    def close_cameras_task(self, value: Optional[asyncio.Task]) -> None:
-        if self._close_cameras_task is not None:
-            if self._close_cameras_task.done():
-                self._close_cameras_task = value
-                return
-        else:
-            logger.warning("Camera close task already running! Ignoring request...")
-
 class Controller:
     def __init__(self,
                  ) -> None:
         super().__init__()
         self._camera_group: Optional[CameraGroup] = None
 
-        self._tasks: ControllerTasks = ControllerTasks()
 
         self._app_state: AppState = get_app_state()
+        self._tasks: ControllerTasks = ControllerTasks()
         self._ipc_queue = get_ipc_queue()
         self._frame_wrangler_pipe = get_frame_wrangler_pipe()
 
@@ -78,7 +34,8 @@ class Controller:
 
     async def detect_available_cameras(self):
         logger.info(f"Detecting available cameras...")
-        self._tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices())
+        self._tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(),
+                                                                        name="DetectAvailableCameras")
 
     async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
         if camera_configs is None:
@@ -86,12 +43,13 @@ class Controller:
         else:
             logger.info(f"Connecting to cameras: {camera_configs.keys()}")
 
-        self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(camera_configs))
+        self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(camera_configs),
+                                                                  name="ConnectToCameras")
 
     async def close_cameras(self):
         if self._camera_group is not None:
             logger.debug(f"Closing camera group...")
-            self._tasks.close_cameras_task = asyncio.create_task(self._close_camera_group())
+            self._tasks.close_cameras_task = asyncio.create_task(self._close_camera_group(), name="CloseCameras")
             return
         logger.warning("No camera group to close!")
 

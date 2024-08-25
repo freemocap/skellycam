@@ -4,7 +4,8 @@ import threading
 from multiprocessing import Process
 from typing import Optional
 
-from skellycam.api.app.app_state import get_app_state, AppState
+from skellycam.api.app.app_state import AppState
+from skellycam.api.app.app_state import get_app_state
 from skellycam.core.cameras.camera.camera_manager import CameraManager
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
@@ -102,6 +103,10 @@ class CameraGroupProcess:
                 run_config_queue_listener(camera_manager=camera_manager,
                                           kill_camera_group_flag=kill_camera_group_flag,
                                           config_update_queue=config_update_queue)
+        except Exception as e:
+            logger.error(f"CameraGroupProcess error: {e}")
+            logger.exception(e)
+            raise e
         finally:
             kill_camera_group_flag.value = True
             frame_wrangler.close() if frame_wrangler else None

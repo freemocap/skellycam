@@ -3,7 +3,7 @@ import multiprocessing
 import os
 from typing import Optional
 
-from skellycam.api.app.app_state import AppState, get_app_state, SubProcessStatus
+from skellycam.api.app.app_state import AppState, SubProcessStatus, get_app_state
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
@@ -19,15 +19,18 @@ class CameraGroup:
     ):
         self._update_queue = multiprocessing.Queue()  # Update camera configs
         self._frontend_pipe = frontend_pipe
+        self._ipc_queue = ipc_queue
         self._process = CameraGroupProcess(frontend_pipe=self._frontend_pipe,
                                            config_update_queue=self._update_queue,
-                                           ipc_queue=ipc_queue)
+                                           ipc_queue=self._ipc_queue,
+                                           )
         self._app_state: AppState = get_app_state()
+
 
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")
         await self._process.start()
-        self._app_state.ipc_queue.put(
+        self._ipc_queue.put(
             SubProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
 
     async def close(self):
@@ -35,7 +38,7 @@ class CameraGroup:
         self._app_state.kill_camera_group_flag.value = True
         if self._process:
             await self._process.close()
-        self._app_state.ipc_queue.put(
+        self._ipc_queue.put(
             SubProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
         logger.info("Camera group closed.")
 
