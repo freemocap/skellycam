@@ -5,10 +5,10 @@ import time
 import cv2
 import numpy as np
 from PySide6.QtCore import Qt, QByteArray, QBuffer
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy
 
-from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
+from skellycam.gui.gui_state import GUIState, get_gui_state, CameraFramerateStats
 
 
 class EfficientQImageUpdater:
@@ -35,26 +35,16 @@ class SingleCameraViewWidget(QWidget):
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
-        self._camera_name_string = f"Camera {self._camera_id}"
-        self._title_label_widget = QLabel(self._camera_name_string, parent=self)
-        self._layout.addWidget(self._title_label_widget)
-        self._title_label_widget.setStyleSheet("""
-                           font-size: 12px;
-                           font-weight: bold;
-                           font-family: "Dosis", sans-serif;
-                           color: #000000;
-                           """)
 
-        self._title_label_widget.setAlignment(Qt.AlignCenter)
-
-        self._image_label_widget = QLabel("\U0001F4F8 Connecting... ")
+        self._image_label_widget = QLabel(f"\U0001F4F8 Camera {self._camera_id} Connecting... ")
         self._image_label_widget.setStyleSheet("border: 1px solid;")
         self._image_label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self._image_label_widget.setAlignment(Qt.AlignCenter)
         self._layout.addWidget(self._image_label_widget)
 
-        self.image_updater = EfficientQImageUpdater()
+        self._image_updater = EfficientQImageUpdater()
         self._current_pixmap = QPixmap()
+        self._gui_state: GUIState = get_gui_state()
 
     @property
     def camera_id(self):
@@ -64,14 +54,25 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    def update_image(self, base64_str: str, frame_metadata: FrameMetadata):
-        q_image = self.image_updater.update_image(base64_str)
+    def update_image(self,
+                     base64_str: str,
+                     framerate_stats: CameraFramerateStats):
+        q_image = self._image_updater.update_image(base64_str)
         self._current_pixmap = QPixmap.fromImage(q_image)
+        self._annotate_pixmap(framerate_stats=framerate_stats)
         self.update_pixmap()
-        self.update_title(frame_metadata)
 
-    def update_title(self, frame_metadata: FrameMetadata):
-        self._title_label_widget.setText(f"Camera {self.camera_id} - Frame# {frame_metadata.frame_number}")
+    def _annotate_pixmap(self, framerate_stats: CameraFramerateStats):
+        painter = QPainter(self._current_pixmap)
+        painter.setPen(QColor(255, 0, 0))  # Red color
+        painter.setFont(QFont('Arial', 16))
+        painter.drawText(10, 30, f"CameraId: {self.camera_id}")
+        painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
+        if framerate_stats.duration_stats:
+            painter.drawText(10, 90, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
+            painter.drawText(10, 120, f"Frames Per Second (mean/std): {framerate_stats.fps_mean_std_str}")
+        painter.end()
+
 
     def resizeEvent(self, event):
         self.update_pixmap()

@@ -4,8 +4,7 @@ from typing import Dict, List
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
-from skellycam.gui.gui_state import GUIState, get_gui_state
+from skellycam.gui.gui_state import GUIState, get_gui_state, CameraFramerateStats
 from skellycam.gui.qt.widgets.single_camera_view import SingleCameraViewWidget
 
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
@@ -95,9 +94,10 @@ class CameraViewGrid(QWidget):
             logger.error(f"Error clearing camera layout dictionary: {e}")
             raise e
 
-    def set_image_data(self, frontend_payload: FrontendFramePayload):
-        logger.loop(f"Updating camera views with new frontend payload: {frontend_payload.multi_frame_number}")
+    def set_image_data(self,
+                       jpeg_images: Dict[CameraId, str],
+                       framerate_stats_by_camera: Dict[CameraId, CameraFramerateStats]):
+        logger.loop(f"Updating camera views with new frontend payload")
         for camera_id, single_camera_view in self._single_camera_views.items():
-            single_camera_view.update_image(base64_str=frontend_payload.jpeg_images[camera_id],
-                                            frame_metadata=
-                                            frontend_payload.multi_frame_metadata.frame_metadata_by_camera[camera_id])
+            single_camera_view.update_image(base64_str=jpeg_images[camera_id],
+                                            framerate_stats=framerate_stats_by_camera[camera_id])

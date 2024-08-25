@@ -92,6 +92,10 @@ class FrameMetadata(BaseModel):
     frame_number: int = 0
     frame_lifespan_timestamps_ns: FrameLifespanTimestamps
 
+    @property
+    def timestamp_ns(self) -> int:
+        return self.frame_lifespan_timestamps_ns.post_grab_timestamp_ns
+
     @classmethod
     def from_frame_metadata_array(cls, metadata_array: np.ndarray):
         if metadata_array.shape != FRAME_METADATA_SHAPE:

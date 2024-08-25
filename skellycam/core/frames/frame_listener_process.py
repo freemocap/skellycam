@@ -84,8 +84,7 @@ class FrameListenerProcess:
                         logger.debug(f"FrameListener - Sending STOP signal to video recorder")
                         video_recorder_queue.put(STOP_RECORDING_SIGNAL)
                     # Pickle and send_bytes, to avoid paying the pickle cost twice when relaying through websocket
-                    frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
-                                                                                     previous_frontend_payload=frontend_payload)
+                    frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload)
 
                     frontend_pipe.send_bytes(pickle.dumps(frontend_payload))
             else:

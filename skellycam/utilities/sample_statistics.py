@@ -86,14 +86,15 @@ class VariabilityMeasures(BaseModel):
         )
 
 class DescriptiveStatistics(BaseModel):
+    name: str = ""
     sample_data: SampleData
 
     class Config:
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_samples(cls, samples: SamplesType) -> 'DescriptiveStatistics':
-        return cls(sample_data=SampleData.from_samples(samples))
+    def from_samples(cls, sample_data: SamplesType, name: str) -> 'DescriptiveStatistics':
+        return cls(name=name, sample_data=SampleData.from_samples(sample_data))
 
     @property
     def samples(self) -> SamplesType:
@@ -152,7 +153,7 @@ class DescriptiveStatistics(BaseModel):
 
     def __str__(self) -> str:
         return (
-            f"Descriptive Statistics:\n"
+            f"{self.name} Descriptive Statistics:\n"
             f"\tNumber of Samples: {self.number_of_samples}\n"
             f"\tMean: {self.mean:.3f}\n"
             f"\tMedian: {self.median:.3f}\n"
@@ -165,6 +166,6 @@ class DescriptiveStatistics(BaseModel):
 
 if __name__ == "__main__":
     dummy_data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
-    stats = DescriptiveStatistics.from_samples(samples=dummy_data)
+    stats = DescriptiveStatistics.from_samples(sample_data=dummy_data)
 
     print(stats)

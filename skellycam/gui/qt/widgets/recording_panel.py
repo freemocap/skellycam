@@ -40,7 +40,7 @@ class RecordingPanel(QWidget):
 
     def update(self):
         super().update()
-        self._frontend_framerate_label.setText(f"Frontend {self._gui_state.frontend_framerate_stats.median_std_str}")
+        # self._frontend_framerate_label.setText(f"Frontend {self._gui_state.frontend_framerate_stats.median_std_str}")
         if self._gui_state.record_frames_flag_status:
             self._start_recording_button.setEnabled(False)
             self._stop_recording_button.setEnabled(True)
