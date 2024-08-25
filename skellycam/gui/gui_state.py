@@ -1,7 +1,6 @@
 import multiprocessing
 from typing import Optional, Callable, TYPE_CHECKING, List, Dict
 
-import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
@@ -58,7 +57,7 @@ class CameraFramerateStats(BaseModel):
 
         self.duration_stats = DescriptiveStatistics.from_samples(
             name=f"Camera-{self.camera_id} Frame Duration Statistics",
-            sample_data=np.diff(self.frame_durations_ms))
+            sample_data=self.frame_durations_ms)
 
     @property
     def duration_mean_std_ms_str(self):

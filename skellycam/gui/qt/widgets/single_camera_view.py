@@ -5,8 +5,8 @@ import time
 import cv2
 import numpy as np
 from PySide6.QtCore import Qt, QByteArray, QBuffer
-from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy
+from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
 from skellycam.gui.gui_state import GUIState, get_gui_state, CameraFramerateStats
 
@@ -46,6 +46,13 @@ class SingleCameraViewWidget(QWidget):
         self._current_pixmap = QPixmap()
         self._gui_state: GUIState = get_gui_state()
 
+        self._annotations_enabled = True
+
+        # Enable context menu on QLabel
+        self._image_label_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._image_label_widget.customContextMenuRequested.connect(self._show_context_menu)
+
+
     @property
     def camera_id(self):
         return self._camera_id
@@ -59,7 +66,8 @@ class SingleCameraViewWidget(QWidget):
                      framerate_stats: CameraFramerateStats):
         q_image = self._image_updater.update_image(base64_str)
         self._current_pixmap = QPixmap.fromImage(q_image)
-        self._annotate_pixmap(framerate_stats=framerate_stats)
+        if self._annotations_enabled:
+            self._annotate_pixmap(framerate_stats=framerate_stats)
         self.update_pixmap()
 
     def _annotate_pixmap(self, framerate_stats: CameraFramerateStats):
@@ -87,6 +95,15 @@ class SingleCameraViewWidget(QWidget):
             )
             self._image_label_widget.setPixmap(scaled_pixmap)
 
+    def _toggle_annotations(self):
+        self._annotations_enabled = not self._annotations_enabled
+
+    def _show_context_menu(self, pos):
+        context_menu = QMenu(self)
+        toggle_action = QAction("Toggle Annotations", self)
+        toggle_action.triggered.connect(lambda: self._toggle_annotations())
+        context_menu.addAction(toggle_action)
+        context_menu.exec_(self._image_label_widget.mapToGlobal(pos))
 
 def generate_dummy_data(num_frames: int, width: int, height: int) -> list:
     dummy_data = []
