@@ -4,7 +4,7 @@ import pprint
 from pathlib import Path
 from typing import Dict, Tuple, List, Any, Hashable
 
-import polars as pl
+import pandas as pd
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
@@ -43,7 +43,7 @@ class MultiframeTimestampLogger(BaseModel):
         )
         return cls(
             csv_save_path=csv_save_path,
-            multi_frame_metadatas=[first_multiframe.to_metadata()],
+            multi_frame_metadatas=[],
         )
 
     def log_multiframe(self, multi_frame_payload: MultiFramePayload):
@@ -56,7 +56,7 @@ class MultiframeTimestampLogger(BaseModel):
                 for timestamp_logger in self._timestamp_loggers.values()
             ]
         )
-        timestamp_csv_exists = self._timestamps_csv_path.exists()
+        timestamp_csv_exists = self.csv_save_path.exists()
         timestamp_stats_exists = self._stats_path.exists()
         return all_loggers_finished and timestamp_csv_exists and timestamp_stats_exists
 
@@ -93,19 +93,16 @@ class MultiframeTimestampLogger(BaseModel):
 
     def close(self):
         logger.debug(
-            f"Closing timestamp logger manager with {len(self._multi_frame_timestamp_logs)} multi-frame logs"
+            f"Closing timestamp logger manager... Saving timestamp logs to {self.csv_save_path}"
         )
 
-        for timestamp_logger in self._timestamp_loggers.values():
-            timestamp_logger.close()
-
-        self._save_documentation()
         self._convert_to_dataframe_and_save()
-        self._save_timestamp_stats()
-        if not self.check_if_finished():
-            raise AssertionError(
-                "Failed to save timestamp logs for all cameras to CSV and JSON files!"
-            )
+        # self._save_documentation()
+        # self._save_timestamp_stats()
+        # if not self.check_if_finished():
+        #     raise AssertionError(
+        #         "Failed to save timestamp logs for all cameras to CSV and JSON files!"
+        #     )
 
         logger.success("Timestamp logs saved successfully!")
 
@@ -133,20 +130,17 @@ class MultiframeTimestampLogger(BaseModel):
         )
         self._multi_frame_timestamp_logs.append(multi_frame_timestamp_log)
 
-    def to_dataframe(self) -> pl.DataFrame:
-        df = pl.DataFrame(
-            [timestamp_log.model_dump() for timestamp_log in self._multi_frame_timestamp_logs]
+    def to_dataframe(self) -> pd.DataFrame:
+        df = pd.DataFrame(
+            [mf_metadata.model_dump() for mf_metadata in self.multi_frame_metadatas]
         )
         return df
 
     def _convert_to_dataframe_and_save(self):
         df = self.to_dataframe()
-        df.write_csv(file=self._timestamps_csv_path)
+        df.to_csv(path_or_buf=self.csv_save_path, index=True)
         logger.info(
-            f"Saved multi-frame timestamp logs to {self._timestamps_csv_path} \n\n"
-            f"Total frames: {len(self._multi_frame_timestamp_logs)}\n\n"
-            f"First/last 5 frames:\n\n"
-            f"{df.head()}\n\n...\n\n{df.tail()}"
+            f"Saved multi-frame timestamp logs to {self.csv_save_path}"
         )
 
     def _save_timestamp_stats(self):

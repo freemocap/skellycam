@@ -7,13 +7,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.gui import shutdown_client_server, get_client
-from skellycam.gui.gui_state import get_gui_state
+from skellycam.gui import shutdown_client_server, get_client, FastAPIClient
+from skellycam.gui.gui_state import get_gui_state, GUIState
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )
 from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
+from skellycam.gui.qt.widgets.side_panel_widgets.app_state_viewer_widget import AppStateJsonViewer
 from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
 from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_side_panel import (
     SkellyCamControlPanel,
@@ -68,6 +69,7 @@ class SkellyCamMainWindow(QMainWindow):
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._control_panel_dock
         )
+
         self._directory_view_dock = QDockWidget("Directory View", self)
         self._directory_view_widget = SkellyCamDirectoryViewWidget(
             folder_path=get_default_skellycam_recordings_path()
@@ -81,15 +83,25 @@ class SkellyCamMainWindow(QMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock
         )
 
-        #
-        # self.tabifyDockWidget(
-        #     # self._directory_view_dock,
-        #     self._control_panel_dock,
-        # )
+        self._backend_app_state_json_dock = QDockWidget("App State (JSON)", self)
+        self._app_state_json_widget = AppStateJsonViewer()
+        self._backend_app_state_json_dock.setWidget(self._app_state_json_widget)
+        self._backend_app_state_json_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable,
+        )
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea, self._backend_app_state_json_dock
+        )
+
+        self.tabifyDockWidget(
+            self._directory_view_dock,
+            self._backend_app_state_json_dock
+        )
 
         self._connect_signals_to_slots()
-        self._gui_state = get_gui_state()
-        self._client = get_client()
+        self._gui_state: GUIState = get_gui_state()
+        self._client: FastAPIClient = get_client()
         self._client.connect_websocket()
 
     def update(self):
@@ -97,7 +109,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_widget.update()
         self._skellycam_control_panel.update()
         self._directory_view_dock.update()
-
+        self._app_state_json_widget.update_text(self._gui_state.sub_process_statuses)
 
     def _connect_signals_to_slots(self):
 

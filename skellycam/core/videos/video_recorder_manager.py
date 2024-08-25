@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from typing import Dict, Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, Field
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
@@ -56,7 +56,7 @@ class VideoRecorderManager(BaseModel):
                             camera_configs=camera_configs,
                             recording_folder=recording_folder)
         recording_name = Path(recording_folder).name
-        videos_folder = cls._create_subfolders(recording_folder)
+        videos_folder = cls._create_videos_folder(recording_folder)
         video_recorders = {}
         for camera_id, frame in first_multi_frame_payload.frames.items():
             video_recorders[camera_id] = VideoRecorder.create(recording_name=recording_name,
@@ -89,7 +89,7 @@ class VideoRecorderManager(BaseModel):
         logger.loop(f"Added multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
 
     @classmethod
-    def _create_subfolders(cls, recording_folder: str) -> str:
+    def _create_videos_folder(cls, recording_folder: str) -> str:
         videos_folder = Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME
         videos_folder.mkdir(parents=True, exist_ok=True)
         cls._save_folder_readme(videos_folder)
@@ -130,8 +130,7 @@ class VideoRecorderManager(BaseModel):
         logger.debug("Closing FrameSaver...")
         for video_saver in self.video_recorders.values():
             video_saver.close()
-        for metadata_saver in self.timestamp_loggers.values():
-            metadata_saver.close()
+        self.multi_frame_timestamp_logger.close()
         self.finalize_recording()
 
     def finalize_recording(self):
@@ -142,7 +141,7 @@ class VideoRecorderManager(BaseModel):
         logger.success(f"Recording `{self.recording_name} Successfully recorded to: {self.recording_folder}")
 
     def finalize_timestamps(self):
-        # TODO - combine all the `[camera]_timestamps.csv` into a combined `[recording]_timestamps.csv`
+        # TODO - add clean up and optional tasks... calc stats, save to individual cam timestamp files, etc
         pass
 
     def save_recording_summary(self):
@@ -156,12 +155,12 @@ class VideoRecorderManager(BaseModel):
 
 
 class RecordingInfo(BaseModel):
-    recording_uuid: str = str(uuid.uuid4())
+    recording_uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
     recording_name: str
     recording_folder: str
     camera_configs: Dict[CameraId, Dict[str, Any]]  # CameraConfig model dump
 
-    recording_start_timestamp: FullTimestamp = FullTimestamp.now()
+    recording_start_timestamp: FullTimestamp = Field(default_factory=FullTimestamp.now)
 
     @classmethod
     def from_video_recorder_manager(cls, frame_saver: VideoRecorderManager):

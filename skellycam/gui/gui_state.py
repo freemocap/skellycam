@@ -123,6 +123,8 @@ class GUIState:
         self._recent_metadata: Optional[RecentMultiframeMetadata] = None
         self._frame_number: Optional[int] = None
 
+        self._latest_app_state_dto: Optional['AppStateDTO'] = None
+
         self._lock: multiprocessing.Lock = multiprocessing.Lock()
 
         self._image_update_callable: Optional[Callable] = None
@@ -131,11 +133,17 @@ class GUIState:
         self._image_update_callable: Optional[Callable] = image_update_callable
 
     def update_app_state(self, app_state_dto: 'AppStateDTO') -> None:
+        self._latest_app_state_dto = app_state_dto
         self.camera_configs = app_state_dto.camera_configs
         self.available_devices = app_state_dto.available_devices
         self.record_frames_flag_status = app_state_dto.record_frames_flag_status
         self.kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
 
+    @property
+    def sub_process_statuses(self) -> Optional[str]:
+        with self._lock:
+            return self._latest_app_state_dto.model_dump_json(indent=2, include={
+                'sub_processes'}) if self._latest_app_state_dto else None
     @property
     def camera_ids(self):
         if self._cameras_configs:
@@ -197,7 +205,7 @@ class GUIState:
         with self._lock:
             if self._cameras_configs is None:
                 return None
-            return len(self._latest_frontend_payload.jpeg_images)
+            return len(self._cameras_configs)
 
     @property
     def latest_frontend_payload(self) -> Optional[FrontendFramePayload]:

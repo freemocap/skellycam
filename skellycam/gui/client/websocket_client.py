@@ -90,7 +90,7 @@ class WebSocketClient:
             payload.lifespan_timestamps_ns.append({"unpickled_from_websocket": time.perf_counter_ns()})
             self._gui_state.latest_frontend_payload = payload
         elif isinstance(payload, RecordingInfo):
-            logger.info(f"Received RecordingInfo: {payload}")
+            logger.info(f"Received RecordingInfo for recording: `{payload.recording_name}`")
             self._gui_state.recording_info = payload
         elif isinstance(payload, AppStateDTO):
             logger.info(f"Received AppStateDTO (state_timestamp: {payload.state_timestamp})")

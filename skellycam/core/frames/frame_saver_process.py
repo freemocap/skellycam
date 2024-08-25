@@ -59,8 +59,10 @@ class FrameSaverProcess:
                                 f"FrameExporter - Closing FrameSaver for recording {video_recorder_manager.recording_name}")
                             video_recorder_manager.close()
                             video_recorder_manager = None
+
                     elif isinstance(payload, MultiFramePayload):
                         logger.loop(f"FrameExporter - Received multi-frame payload: {payload}")
+                        payload.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
 
                         if not video_recorder_manager:  # create new video_recorder_manager on first multi-frame payload
                             video_recorder_manager = VideoRecorderManager.create(first_multi_frame_payload=payload,
@@ -70,15 +72,15 @@ class FrameSaverProcess:
                             logger.success(
                                 f"FrameExporter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
                             # send  as bytes so it can use same ws/ relay as the frontend_payload's
-                            frontend_pipe.send_bytes(pickle.dumps(video_recorder_manager.recording_info))
-                        payload.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
+                            recording_info = video_recorder_manager.recording_info
+                            frontend_pipe.send_bytes(pickle.dumps(recording_info))
 
                         video_recorder_manager.add_multi_frame(payload)
                 else:
                     wait_1ms()
         except Exception as e:
             logger.error(f"Frame exporter process error: {e}")
-            logger.traceback(e)
+            logger.exception(e)
             raise e
         finally:
             logger.trace(f"Stopped listening for multi-frames")
