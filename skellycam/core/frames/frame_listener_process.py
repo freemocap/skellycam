@@ -59,7 +59,6 @@ class FrameListenerProcess:
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
         )
-        frontend_payload: Optional[FrontendFramePayload] = None
         try:
 
             group_orchestrator.await_for_cameras_ready()
@@ -83,6 +82,11 @@ class FrameListenerProcess:
                         is_recording = False
                         logger.debug(f"FrameListener - Sending STOP signal to video recorder")
                         video_recorder_queue.put(STOP_RECORDING_SIGNAL)
+
+                    if group_orchestrator.new_frames_available:
+                        # Skip sending to frontend if we have new frames available to avoid blocking the camera group
+                        continue
+
                     # Pickle and send_bytes, to avoid paying the pickle cost twice when relaying through websocket
                     frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload)
 

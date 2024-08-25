@@ -47,7 +47,7 @@ class RecordingPanel(QWidget):
             self._recording_status_label.setText(
                 f"Recording Status: Recording! ({self._gui_state.frame_number} from {self._gui_state.number_of_cameras} cameras)")
             self._recording_folder_label.setText(
-                f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}")
+                f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}") if self._gui_state.recording_info else None
         else:
             self._start_recording_button.setEnabled(True)
             self._stop_recording_button.setEnabled(False)
