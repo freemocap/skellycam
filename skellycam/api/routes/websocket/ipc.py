@@ -1,8 +1,18 @@
 import multiprocessing
 
 IPC_QUEUE = multiprocessing.Queue()
-get_ipc_queue = lambda: IPC_QUEUE
+
+
+def get_ipc_queue() -> multiprocessing.Queue:
+    return IPC_QUEUE
+
 
 FRONTEND_WS_RELAY_PIPE, FRAME_WRANGLER_PIPE = multiprocessing.Pipe()
-get_frontend_ws_relay_pipe = lambda: FRONTEND_WS_RELAY_PIPE
-get_frame_wrangler_pipe = lambda: FRAME_WRANGLER_PIPE
+
+
+def get_frontend_ws_relay_pipe() -> multiprocessing.Pipe:
+    return FRONTEND_WS_RELAY_PIPE
+
+
+def get_frame_wrangler_pipe() -> multiprocessing.Pipe:
+    return FRAME_WRANGLER_PIPE

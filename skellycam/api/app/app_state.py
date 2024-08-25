@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import multiprocessing
 from datetime import datetime
@@ -38,10 +39,10 @@ class TaskStatus(BaseModel):
     is_running: bool
 
     @classmethod
-    def from_task(cls, task: multiprocessing.Process):
+    def from_task(cls, task: asyncio.Task):
         return cls(
-            task_name=task.name,
-            is_running=task.is_alive(),
+            task_name=task.get_name() if task.get_name() else "Unknown Task",
+            is_running=not task.done(),
         )
 
 class ApiCallLog(BaseModel):
@@ -190,7 +191,8 @@ class AppState:
             if task_status.is_running:
                 self._task_statuses[task_status.task_name] = task_status
             else:
-                self._task_statuses.pop(task_status.task_name, None)
+                self._task_statuses[task_status.task_name] = task_status
+                # self._task_statuses.pop(task_status.task_name, None)
         self._ipc_queue.put(self.state_dto())
 
     def state_dto(self) -> 'AppStateDTO':
@@ -202,13 +204,15 @@ class AppStateDTO(BaseModel):
     Serializable Data Transfer Object for the AppState
     """
     state_timestamp: str = datetime.now().isoformat()
+
+    task_statuses: Optional[Dict[str, TaskStatus]]
+    subprocess_statuses: Optional[Dict[int, SubProcessStatus]]
+    api_call_history: Optional[List[ApiCallLog]]
+
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableDevices]
     websocket_status: Optional[WebSocketStatus]
 
-    api_call_history: Optional[List[ApiCallLog]]
-    subprocess_statuses: Optional[Dict[int, SubProcessStatus]]
-    task_statuses: Optional[Dict[str, TaskStatus]]
 
     record_frames_flag_status: bool
     kill_camera_group_flag_status: bool
