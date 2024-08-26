@@ -3,7 +3,7 @@ import multiprocessing
 import numpy as np
 
 from skellycam.core.cameras.group import CameraGroupOrchestrator
-from skellycam.core.frames.frame_wrangler import FrameWrangler
+from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 
 

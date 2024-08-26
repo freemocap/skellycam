@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import time
-from typing import Optional, List
+from typing import List
 
 import numpy as np
 
@@ -16,19 +16,18 @@ def camera_group_trigger_loop(
         camera_configs: CameraConfigs,
         group_orchestrator: CameraGroupOrchestrator,
         kill_camera_group_flag: multiprocessing.Value,
-        number_of_frames: Optional[int] = None,
 ):
     loop_count = 0
     elapsed_per_loop_ns = []
     try:
+        group_orchestrator.await_for_cameras_ready()
+        group_orchestrator.fire_initial_triggers()
+
         logger.debug(f"Starting camera trigger loop for cameras: {group_orchestrator.camera_ids}...")
         while not kill_camera_group_flag.value:
             tik = time.perf_counter_ns()
 
             group_orchestrator.trigger_multi_frame_read()
-
-            if number_of_frames is not None:
-                check_loop_count(number_of_frames, loop_count, exit_event)
 
             if loop_count > 0:
                 elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
@@ -63,8 +62,3 @@ def log_time_stats(camera_configs: CameraConfigs,
     )
 
 
-def check_loop_count(number_of_frames: int, loop_count: int, exit_event: multiprocessing.Event):
-    if number_of_frames is not None:
-        if loop_count + 1 >= number_of_frames:
-            logger.trace(f"Reached number of frames: {number_of_frames} - setting `exit` event")
-            exit_event.set()

@@ -8,8 +8,8 @@ from pydantic import BaseModel, ValidationError, Field
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
-from skellycam.core.frames.payload_models.frame_payload import FramePayload
-from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.videos.video_recorder import VideoRecorder
@@ -127,7 +127,7 @@ class VideoRecorderManager(BaseModel):
 
 
     def close(self):
-        logger.debug("Closing FrameSaver...")
+        logger.debug(f"Closing {self.__class__.__name__} for recording: `{self.recording_name}`")
         for video_saver in self.video_recorders.values():
             video_saver.close()
         self.multi_frame_timestamp_logger.close()

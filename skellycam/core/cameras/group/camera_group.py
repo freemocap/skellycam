@@ -15,12 +15,12 @@ class CameraGroup:
     def __init__(
             self,
             ipc_queue: multiprocessing.Queue,
-            frontend_pipe: multiprocessing.Pipe,
+            frontend_relay_pipe: multiprocessing.Pipe,
     ):
         self._update_queue = multiprocessing.Queue()  # Update camera configs
-        self._frontend_pipe = frontend_pipe
+        self._frontend_relay_pipe = frontend_relay_pipe
         self._ipc_queue = ipc_queue
-        self._process = CameraGroupProcess(frontend_pipe=self._frontend_pipe,
+        self._process = CameraGroupProcess(frontend_relay_pipe=self._frontend_relay_pipe,
                                            config_update_queue=self._update_queue,
                                            ipc_queue=self._ipc_queue,
                                            )

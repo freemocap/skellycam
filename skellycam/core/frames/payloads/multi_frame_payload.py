@@ -5,9 +5,9 @@ import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payload_models.frame_payload import FramePayload, FramePayloadDTO
-from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
-from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+from skellycam.core.frames.payloads.frame_payload import FramePayload, FramePayloadDTO
+from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 

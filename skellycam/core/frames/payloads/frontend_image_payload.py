@@ -9,9 +9,9 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payload_models.frame_payload import FramePayload
-from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
-from skellycam.core.frames.payload_models.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
+from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
@@ -38,7 +38,7 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
-                                 resize_image: float = .25,
+                                 resize_image: float,
                                  jpeg_quality: int = 90):
 
         if not multi_frame_payload.full:

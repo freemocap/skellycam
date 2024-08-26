@@ -5,7 +5,7 @@ from typing import Tuple
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payload_models.frame_payload import FramePayload
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 
 
 class CameraTimestampLog(BaseModel):

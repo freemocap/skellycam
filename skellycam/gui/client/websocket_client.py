@@ -10,7 +10,7 @@ from websocket import WebSocketApp
 
 from skellycam.api.app.app_state import AppStateDTO
 from skellycam.api.routes.websocket.websocket_server import HELLO_CLIENT_BYTES_MESSAGE, CLOSE_WEBSOCKET_MESSAGE
-from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
+from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.gui.gui_state import GUIState, get_gui_state
 

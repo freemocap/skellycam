@@ -11,7 +11,7 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
-from skellycam.core.frames.frame_wrangler import FrameWrangler
+from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1s
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class CameraGroupProcess:
     def __init__(
             self,
-            frontend_pipe: multiprocessing.Pipe,
+            frontend_relay_pipe: multiprocessing.Pipe,
             config_update_queue: multiprocessing.Queue,
             ipc_queue: multiprocessing.Queue,
     ):
@@ -29,7 +29,7 @@ class CameraGroupProcess:
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
-            args=(frontend_pipe,
+            args=(frontend_relay_pipe,
                   config_update_queue,
                   ipc_queue,
                   app_state.camera_configs,
@@ -57,7 +57,7 @@ class CameraGroupProcess:
         logger.debug("CameraGroupProcess closed.")
 
     @staticmethod
-    def _run_process(frontend_pipe: multiprocessing.Pipe,
+    def _run_process(frontend_relay_pipe: multiprocessing.Pipe,
                      config_update_queue: multiprocessing.Queue,
                      ipc_queue: multiprocessing.Queue,
                      camera_configs: CameraConfigs,
@@ -78,7 +78,7 @@ class CameraGroupProcess:
                 frame_wrangler = FrameWrangler(camera_configs=camera_configs,
                                                group_shm_names=group_shm.shared_memory_names,
                                                group_orchestrator=group_orchestrator,
-                                               frontend_pipe=frontend_pipe,
+                                               frontend_relay_pipe=frontend_relay_pipe,
                                                update_queue=config_update_queue,
                                                ipc_queue=ipc_queue,
                                                record_frames_flag=record_frames_flag,
@@ -96,9 +96,8 @@ class CameraGroupProcess:
                                                             kill_camera_group_flag))
 
                 frame_wrangler.start()
-                camera_manager.start_cameras()
-                group_orchestrator.fire_initial_triggers()
                 camera_loop_thread.start()
+                camera_manager.start_cameras()
 
                 run_config_queue_listener(camera_manager=camera_manager,
                                           kill_camera_group_flag=kill_camera_group_flag,

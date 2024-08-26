@@ -6,7 +6,7 @@ import cv2
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
-from skellycam.core.frames.payload_models.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     create_empty_frame_metadata
 from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
 

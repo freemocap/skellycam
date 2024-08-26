@@ -6,9 +6,9 @@ from pydantic import BaseModel
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
-from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
-from skellycam.core.frames.payload_models.metadata.frame_metadata import FrameMetadata
-from skellycam.core.frames.payload_models.multi_frame_payload import MultiFrameMetadata
+from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
+from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFrameMetadata
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.utilities.sample_statistics import DescriptiveStatistics

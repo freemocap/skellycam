@@ -5,7 +5,7 @@ import websockets
 from skellycam.frontend import SimpleViewer
 from tenacity import retry, wait_fixed, stop_after_attempt, before_sleep_log
 
-from skellycam.core.frames.payload_models.frontend_image_payload import FrontendFramePayload
+from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 
 RETRY_DELAY = 1  # seconds
 MAX_RETRIES = 5
