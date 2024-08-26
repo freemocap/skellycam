@@ -108,7 +108,7 @@ class SkellyCamMainWindow(QMainWindow):
         super().update()
         self._skellycam_widget.update()
         self._skellycam_control_panel.update()
-        self._directory_view_dock.update()
+        self._directory_view_widget.update()
         self._app_state_json_widget.update_text(self._gui_state.sub_process_statuses)
 
     def _connect_signals_to_slots(self):

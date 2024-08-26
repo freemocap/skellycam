@@ -31,7 +31,7 @@ class AppStateJsonViewer(QWidget):
         horizontal_scroll_pos = self.text_edit.horizontalScrollBar().value()
 
         # Update the text
-        self.text_edit.setText(new_text)
+        self.text_edit.setText(f"WARNING: MAY NOT BE ACCURATE.\n{new_text}")
 
         # Restore the scroll position
         self.text_edit.verticalScrollBar().setValue(vertical_scroll_pos)

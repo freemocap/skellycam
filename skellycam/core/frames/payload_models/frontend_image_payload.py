@@ -38,6 +38,7 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
+                                 resize_image: float = .25,
                                  jpeg_quality: int = 90):
 
         if not multi_frame_payload.full:
@@ -50,7 +51,7 @@ class FrontendFramePayload(BaseModel):
             if frame is None:
                 continue
             frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
-            jpeg_images[camera_id] = cls._image_to_jpeg(frame.image.copy(), quality=jpeg_quality)
+            jpeg_images[camera_id] = cls._image_to_jpeg(frame.image.copy(), quality=jpeg_quality, resize=resize_image)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
         lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
         lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
@@ -71,7 +72,7 @@ class FrontendFramePayload(BaseModel):
         return instance
 
     @staticmethod
-    def _image_to_jpeg(image: np.ndarray, quality: int = 80, resize: float = .5) -> str:
+    def _image_to_jpeg(image: np.ndarray, quality: int, resize: float) -> str:
         """
         Convert a numpy array image to a JPEG image using OpenCV.
         """
@@ -79,7 +80,7 @@ class FrontendFramePayload(BaseModel):
             raise ValueError("Resize must be between 0 and 1")
         # Encode the image as JPEG
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
-        resized_image = cv2.resize(image, dsize=(image.shape[1] // 2, image.shape[0] // 2))
+        resized_image = cv2.resize(image, dsize=(int(image.shape[1] * resize), int(image.shape[0] * resize)))
         result, jpeg_image = cv2.imencode('.jpg', resized_image, encode_param)
 
         if not result:

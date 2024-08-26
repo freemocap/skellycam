@@ -8,11 +8,13 @@ import PySide6
 from PySide6 import QtGui
 from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
 
+from skellycam.gui.gui_state import GUIState, get_gui_state
+
 logger = logging.getLogger(__name__)
 
 
 class SkellyCamDirectoryViewWidget(QWidget):
-    def __init__(self, folder_path: Union[str, Path] = None):
+    def __init__(self, folder_path: str):
         super().__init__()
         self._minimum_width = 300
         self.setMinimumWidth(self._minimum_width)
@@ -41,6 +43,18 @@ class SkellyCamDirectoryViewWidget(QWidget):
 
         if self._folder_path is not None:
             self.set_folder_as_root(self._folder_path)
+
+        self._gui_state: GUIState = get_gui_state()
+
+    def update(self):
+        super().update()
+        if self._gui_state.recording_info:
+            rec_path = Path(self._gui_state.recording_info.recording_folder)
+            if self._folder_path != str(rec_path):
+                self._folder_path = str(rec_path)
+                videos_path = rec_path / "synchronized_videos"
+                self.expand_directory_to_path(str(videos_path))
+
 
     def expand_directory_to_path(self, directory_path: Union[str, Path], collapse_other_directories: bool = True):
         if collapse_other_directories:

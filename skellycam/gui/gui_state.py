@@ -66,10 +66,10 @@ class CameraFramerateStats(BaseModel):
         return f"{self.duration_stats.mean:.1f}({self.duration_stats.standard_deviation:.1f})ms"
 
     @property
-    def fps_mean_std_str(self):
+    def fps_mean_str(self):
         if self.duration_stats is None:
             return "N/A"
-        return f"{1 / (self.duration_stats.mean * .001):.1f}({1 / (self.duration_stats.standard_deviation * .001):.1f})"
+        return f"{1 / (self.duration_stats.mean * .001):.1f}"
 
 
 class RecentMultiframeMetadata(BaseModel):

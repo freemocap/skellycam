@@ -73,12 +73,12 @@ class SingleCameraViewWidget(QWidget):
     def _annotate_pixmap(self, framerate_stats: CameraFramerateStats):
         painter = QPainter(self._current_pixmap)
         painter.setPen(QColor(255, 0, 0))  # Red color
-        painter.setFont(QFont('Arial', 16))
-        painter.drawText(10, 30, f"CameraId: {self.camera_id}")
-        painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
+        painter.setFont(QFont('Arial', 10))
+        painter.drawText(10, 20, f"CameraId: {self.camera_id}")
+        painter.drawText(10, 40, f"Frame#: {framerate_stats.frame_number}")
         if framerate_stats.duration_stats:
-            painter.drawText(10, 90, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
-            painter.drawText(10, 120, f"Frames Per Second (mean/std): {framerate_stats.fps_mean_std_str}")
+            painter.drawText(10, 60, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
+            painter.drawText(10, 80, f"Mean FPS: {framerate_stats.fps_mean_str}")
         painter.end()
 
 

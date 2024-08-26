@@ -205,8 +205,8 @@ class AppStateDTO(BaseModel):
     """
     state_timestamp: str = datetime.now().isoformat()
 
-    task_statuses: Optional[Dict[str, TaskStatus]]
     subprocess_statuses: Optional[Dict[int, SubProcessStatus]]
+    task_statuses: Optional[Dict[str, TaskStatus]]
     api_call_history: Optional[List[ApiCallLog]]
 
     camera_configs: Optional[CameraConfigs]
