@@ -51,6 +51,10 @@ class VideoRecorderManager(BaseModel):
                first_multi_frame_payload: MultiFramePayload,
                camera_configs: CameraConfigs,
                recording_folder: str):
+        """
+        NOTE - Does not add `first mf payload` to videos - call `add mf payload` after creation
+        """
+
         logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
         cls._validate_input(mf_payload=first_multi_frame_payload,
                             camera_configs=camera_configs,

@@ -27,6 +27,9 @@ class MultiframeTimestampLogger(BaseModel):
                               first_multiframe: MultiFramePayload,
                               video_save_directory: str,
                               recording_name: str):
+        """
+        NOTE - Does not add `first mf payload` timestamps to logsos - call `log multiframe` after creation
+        """
         logger.debug(f"Creating MultiFrameTimestampLogger for video save directory {video_save_directory}...")
         video_save_path = Path(video_save_directory)
         if not video_save_path.exists():

@@ -67,28 +67,31 @@ class FrameRouterProcess:
                     # TODO - Adapatively change the `resize` value based on performance metrics (i.e. shrink frontend-frames pipes/queues start filling up)
                     frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=payload,
                                                                                      resize_image=.25)
+                    # TODO - might/shouild be possible to send straight to GUI websocket client from here without the relay pipe? Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
                     frontend_relay_pipe.send_bytes(pickle.dumps(frontend_payload))
 
                     logger.loop(f"FrameExporter - Received multi-frame payload: {payload}")
 
-                    if record_frames_flag.value and not video_recorder_manager:  # create new video_recorder_manager on first multi-frame payload
-                        video_recorder_manager = VideoRecorderManager.create(first_multi_frame_payload=payload,
-                                                                             camera_configs=camera_configs,
-                                                                             recording_folder=create_recording_folder(
-                                                                                 string_tag=None))
-                        logger.success(
-                            f"FrameExporter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
-                        # send  as bytes so it can use same ws/ relay as the frontend_payload's
-                        recording_info = video_recorder_manager.recording_info
-                        frontend_relay_pipe.send_bytes(pickle.dumps(recording_info))
-                    elif not record_frames_flag.value and video_recorder_manager:
-                        # we just stopped recording, need to finish up the video
-                        video_recorder_manager.close()
-                        video_recorder_manager = None
+                    if record_frames_flag.value:
+                        if not video_recorder_manager:  # create new video_recorder_manager on first multi-frame payload
+                            video_recorder_manager = VideoRecorderManager.create(first_multi_frame_payload=payload,
+                                                                                 camera_configs=camera_configs,
+                                                                                 recording_folder=create_recording_folder(
+                                                                                     string_tag=None))
+                            logger.success(
+                                f"FrameExporter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
+                            # send  as bytes so it can use same ws/ relay as the frontend_payload's
+                            recording_info = video_recorder_manager.recording_info
+                            frontend_relay_pipe.send_bytes(pickle.dumps(recording_info))
 
-                    if not frame_escape_pipe_exit.poll():  # save frames to video if there's no new frames waiting
                         # TODO - Decouple 'add_frame' from 'save_frame' and create a 'save_one_frame' method that saves a single frame from one camera, so we can check for new frames faster. We will need a mechanism to drain the buffers when recording ends
                         video_recorder_manager.add_multi_frame(payload)
+
+                    if not record_frames_flag.value:
+                        if video_recorder_manager:
+                            # we just stopped recording, need to finish up the video
+                            video_recorder_manager.close()
+                            video_recorder_manager = None
                 else:
                     wait_1ms()
         except Exception as e:

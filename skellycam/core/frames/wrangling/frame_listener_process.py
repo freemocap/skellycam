@@ -63,6 +63,7 @@ class FrameListenerProcess:
             # Frame listener loop
             escape_buffer: List[MultiFramePayload] = []
             recording_in_progress: bool = False
+
             while not kill_camera_group_flag.value:
                 if record_frames_flag.value:
                     recording_in_progress = True
@@ -71,24 +72,31 @@ class FrameListenerProcess:
 
                     # TODO - RECEIVE AS BYTES and send to `frame_router` w/ `pipe.send_bytes()` and construct mf_payload after escaping frame loop
                     mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
-
                     # NOTE - Reset the flag to allow new frame loop to begin BEFORE we put the payload in the queue
                     group_orchestrator.set_frames_copied()
+
                     mf_payload.lifespan_timestamps_ns.append(
                         {"before_put_in_escape_buffer": time.perf_counter_ns()})
 
                     escape_buffer.append(mf_payload)
 
+                    # Drain buffer on recording end
                     if recording_in_progress and not record_frames_flag.value:
                         # We just ended a recording - this is the only time we are allowed to freeze the frame-loop so we can drain the buffer and make sure all frames make it to disk
                         while len(escape_buffer) > 0:
                             frame_escape_pipe_entrance.send(escape_buffer.pop(0))
 
-                    if not group_orchestrator.new_frames_available:
+                    # escape a payload from the frame-loop, if  it won't block the loop
+                    # TODO - WARNING - Could result in frontend lag (or even no frames making it to frontend in extreme cases). Prob set a min fps of like 5-10 to make the skellycam tool usable
+                    if not group_orchestrator.new_frames_available and len(escape_buffer) > 0:
                         # Prioritize frame-loop sanctity - hold frame in buffer if new frames available
-                        # TODO - WARNING - Could result in frontend lag (or even no frames making it to frontend in extreme cases). Prob set a min fps of like 5-10 to the tool usable
                         # TODO - send frames one at a time to minimize blocking (and using `send_bytes`, per above)
-                        frame_escape_pipe_entrance.send(escape_buffer.pop(0)) if len(escape_buffer) > 0 else None
+                        escaping_payload = escape_buffer.pop(0)
+                        logger.loop(
+                            f"Sending Frame# {escaping_payload.multi_frame_number} to FrameRouter - `len(escape_buffer)`:{len(escape_buffer)}")
+                        frame_escape_pipe_entrance.send(escaping_payload)
+                    else:
+                        logger.loop('New frame waiting - skipping ahead')
             else:
                 wait_1ms()
         except Exception as e:

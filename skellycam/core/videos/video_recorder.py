@@ -26,6 +26,9 @@ class VideoRecorder(BaseModel):
                frame: FramePayload,
                config: CameraConfig,
                ):
+        """
+        NOTE - Does not add `first frame` to video - call `add frame` after creation
+        """
         video_file_path = str(
             Path(videos_folder) / f"{recording_name}_camera_{frame.camera_id}{config.video_file_extension}")
         writer = cls._initialize_video_writer(frame=frame,

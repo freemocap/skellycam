@@ -12,6 +12,7 @@ from skellycam.utilities.wait_functions import wait_1us, wait_1ms, wait_10ms
 
 class CameraGroupOrchestrator(BaseModel):
     camera_triggers: Dict[CameraId, CameraTriggers]
+    frame_loop_count: int = -1
     _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
 
     def __init__(self, **data):
@@ -57,40 +58,45 @@ class CameraGroupOrchestrator(BaseModel):
 
     ##############################################################################################################
     def trigger_multi_frame_read(self):
+        self.frame_loop_count += 1
         # 0 - Make sure all cameras are ready
-        logger.loop("Step# 0 - Make sure all cameras are ready")
+        logger.loop(f"FRAME LOOP #{self.frame_loop_count} BEGIN")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #0 (start)  - Make sure all cameras are ready")
         self._ensure_cameras_ready()
-        logger.loop("All cameras are ready!")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #0 (finish) - All cameras are ready!")
 
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
-        logger.loop("Step# 1 - Fire grab triggers")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #1 (start) - Fire grab triggers")
         self._fire_grab_trigger()
-        logger.loop("GRAB triggers fired!")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #1 (finish) - GRAB triggers fired!")
 
         # 2 - wait for all cameras to grab a frame
-        logger.loop("Step# 2 - Wait for all cameras to GRAB a frame")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #2 (start) - Wait for all cameras to GRAB a frame")
         self._await_frames_grabbed()
-        logger.loop("All cameras have GRABbed a frame!")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #2 (finish) - All cameras have GRABbed a frame!")
 
         # 3- Trigger each camera to retrieve the frame using `cv2.VideoCapture.retrieve()`, which decodes the frame into an image/numpy array
-        logger.loop("Step# 3 - Fire retrieve triggers")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #3 (start)- Fire retrieve triggers")
         self._fire_retrieve_trigger()
-        logger.loop("RETRIEVE triggers fired!")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #3 (finish) - RETRIEVE triggers fired!")
 
         # 4 - wait for all cameras to retrieve the frame,
-        logger.loop("Step# 4 - Wait for new frames to be available")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #4 (start) - Wait for new frames to be available")
         self.await_new_frames_available()
-        logger.loop("New frames are available!")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #4 (finish) - New frames are available!")
 
         # 5 - wait for the frame to be copied from the `write` buffer to the `read` buffer
-        logger.loop("Step# 5 - Wait for all frames to be copied")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #5 (start) - Wait for all frames to be copied")
         self._await_frames_copied()
-        logger.loop("All frames have been copied!")
+        logger.loop(f"FrameLoop#{self.frame_loop_count} - Step #5 (finish) - All frames have been copied!")
 
         # 6 - Make sure all the triggers are as they should be
-        logger.loop("Step# 6 - Verify that everything is hunky-dory after reading the frames")
+        logger.loop(
+            f"FrameLoop#{self.frame_loop_count} - Step# 6 (start) - Verify that everything is hunky-dory after reading the frames")
         self._verify_hunky_dory_after_read()
-        logger.loop("Everything is hunky-dory after reading the frames!")
+        logger.loop(
+            f"FrameLoop#{self.frame_loop_count} - Step #6 (end) - Everything is hunky-dory after reading the frames!")
+        logger.loop(f"FRAME LOOP #{self.frame_loop_count} Complete!")
 
     ##############################################################################################################
 
@@ -116,6 +122,7 @@ class CameraGroupOrchestrator(BaseModel):
         self._clear_retrieve_frames_triggers()
 
     def set_frames_copied(self):
+        logger.loop(f"Setting `frames_copied` trigger for cameras: {self.camera_ids}")
         for triggers in self.camera_triggers.values():
             triggers.set_frame_copied()
 
