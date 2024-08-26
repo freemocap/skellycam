@@ -93,10 +93,9 @@ class SkellyCamMainWindow(QMainWindow):
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._backend_app_state_json_dock
         )
-
         self.tabifyDockWidget(
+            self._backend_app_state_json_dock,
             self._directory_view_dock,
-            self._backend_app_state_json_dock
         )
 
         self._connect_signals_to_slots()
