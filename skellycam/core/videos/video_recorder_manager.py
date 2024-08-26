@@ -80,6 +80,8 @@ class VideoRecorderManager(BaseModel):
                    ))
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
+        logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
+
         mf_payload.lifespan_timestamps_ns.append({"start_adding_multi_frame_to_video_recorder": time.perf_counter_ns()})
         self._validate_multi_frame(mf_payload=mf_payload, camera_configs=self.camera_configs)
         mf_payload.lifespan_timestamps_ns.append({"before_add_multi_frame_to_video_savers": time.perf_counter_ns()})
@@ -90,7 +92,6 @@ class VideoRecorderManager(BaseModel):
         mf_payload.lifespan_timestamps_ns.append({"before_logging_multi_frame": time.perf_counter_ns()})
         self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
 
-        logger.loop(f"Added multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
 
     @classmethod
     def _create_videos_folder(cls, recording_folder: str) -> str:

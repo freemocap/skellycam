@@ -57,7 +57,7 @@ class FrameRouterProcess:
 
         try:
             while not kill_camera_group_flag.value:
-                if not frame_escape_pipe_exit.poll():
+                if frame_escape_pipe_exit.poll():
 
                     # TODO - receive individual frames as bytes with `...recv_bytes()` and construct MultiFramePayload object here
                     payload: MultiFramePayload = frame_escape_pipe_exit.recv()
@@ -78,7 +78,7 @@ class FrameRouterProcess:
                                                                                  camera_configs=camera_configs,
                                                                                  recording_folder=create_recording_folder(
                                                                                      string_tag=None))
-                            logger.success(
+                            logger.info(
                                 f"FrameExporter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
                             # send  as bytes so it can use same ws/ relay as the frontend_payload's
                             recording_info = video_recorder_manager.recording_info
@@ -89,6 +89,8 @@ class FrameRouterProcess:
 
                     if not record_frames_flag.value:
                         if video_recorder_manager:
+                            logger.debug(
+                                f"`Record frames flag is: `{record_frames_flag.value} and `video_recorder_manager` for recording {video_recorder_manager.recording_name} exists - Recording complete, shutting down recorder! ")
                             # we just stopped recording, need to finish up the video
                             video_recorder_manager.close()
                             video_recorder_manager = None
