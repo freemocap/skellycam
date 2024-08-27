@@ -49,6 +49,7 @@ class SkellyCamDirectoryViewWidget(QWidget):
     def update(self):
         super().update()
         if self._gui_state.recording_info:
+            logger.loop(f"Updating: {self}")
             rec_path = Path(self._gui_state.recording_info.recording_folder)
             if self._folder_path != str(rec_path):
                 self._folder_path = str(rec_path)

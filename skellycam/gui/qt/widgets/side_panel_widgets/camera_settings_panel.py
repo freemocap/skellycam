@@ -45,6 +45,7 @@ class CameraSettingsPanel(QWidget):
         self._layout.addWidget(self._parameter_tree)
 
     def update(self):
+        logger.loop(f"Updating: {self}")
         super().update()
         new_available_devices = self._gui_state.available_devices
         available_devices_changed = not new_available_devices == self._available_devices

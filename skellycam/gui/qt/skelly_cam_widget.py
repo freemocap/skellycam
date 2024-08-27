@@ -43,6 +43,7 @@ class SkellyCamWidget(QWidget):
         self.sizePolicy().setVerticalStretch(1)
 
     def update(self):
+        logger.loop(f"Updating: {self}")
         super().update()
         self.recording_panel.update()
         self.camera_view_grid.update()

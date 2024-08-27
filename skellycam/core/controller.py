@@ -21,7 +21,6 @@ class Controller:
         super().__init__()
         self._camera_group: Optional[CameraGroup] = None
 
-
         self._app_state: AppState = get_app_state()
         self._tasks: ControllerTasks = ControllerTasks()
         self._ipc_queue = get_ipc_queue()
@@ -31,7 +30,6 @@ class Controller:
     def ipc_queue(self) -> multiprocessing.Queue:
         return self._ipc_queue
 
-
     async def detect_available_cameras(self):
         logger.info(f"Detecting available cameras...")
         self._tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(),
@@ -40,11 +38,23 @@ class Controller:
     async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
         if camera_configs is None:
             logger.info(f"Connecting to available cameras...")
-        else:
-            logger.info(f"Connecting to cameras: {camera_configs.keys()}")
+            self._tasks.connect_to_cameras_task = asyncio.create_task(
+                self._create_camera_group(),
+                name="ConnectToCameras")
 
-        self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(camera_configs),
-                                                                  name="ConnectToCameras")
+        else:
+            if self._camera_group:
+                logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
+                self._tasks.update_camera_configs_task = asyncio.create_task(
+                    self._camera_group.update_camera_configs(new_configs=camera_configs,
+                                                             old_configs=self._app_state.camera_configs),
+                    name="UpdateCameraConfigs")
+            else:
+                logger.info(f"Connecting to cameras: {camera_configs}")
+                self._app_state.camera_configs = camera_configs
+                self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(),
+                                                                          name="ConnectToCameras")
+
 
     async def close_cameras(self):
         if self._camera_group is not None:
@@ -52,6 +62,7 @@ class Controller:
             self._tasks.close_cameras_task = asyncio.create_task(self._close_camera_group(), name="CloseCameras")
             return
         logger.warning("No camera group to close!")
+
 
     async def start_recording(self):
         logger.debug("Setting `record_frames_flag` ")
@@ -61,19 +72,14 @@ class Controller:
         logger.debug("Setting `record_frames_flag` to False")
         self._app_state.record_frames_flag.value = False
 
-    async def _create_camera_group(self, camera_configs: Optional[CameraConfigs] = None):
+    async def _create_camera_group(self):
+        if self._app_state.camera_configs is None:
+            await detect_available_devices()
 
-        if camera_configs:
-            self._app_state.camera_configs = camera_configs
-        else:
-            if self._app_state.camera_configs is None:
-                await detect_available_devices()
-
-            if self._camera_group:  # if `connect/` called w/o configs, reset existing connection
-                await self._close_camera_group()
-
-            self._app_state.kill_camera_group_flag.value = False
-            self._app_state.record_frames_flag.value = False
+        if self._camera_group:  # if `connect/` called w/o configs, reset existing connection
+            await self._close_camera_group()
+        self._app_state.kill_camera_group_flag.value = False
+        self._app_state.record_frames_flag.value = False
 
         self._camera_group = CameraGroup(ipc_queue=self._ipc_queue,
                                          frontend_relay_pipe=self._frame_wrangler_pipe, )

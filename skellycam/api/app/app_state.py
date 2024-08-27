@@ -45,6 +45,7 @@ class TaskStatus(BaseModel):
             is_running=not task.done(),
         )
 
+
 class ApiCallLog(BaseModel):
     url_path: str
     log_timestamp: str = datetime.now().isoformat()
@@ -83,13 +84,18 @@ class AppState:
         self._ipc_queue = get_ipc_queue()
 
     @property
-    def camera_configs(self):
+    def camera_configs(self) -> CameraConfigs:
         with self._lock:
             return self._camera_configs
 
     @camera_configs.setter
     def camera_configs(self, value):
         with self._lock:
+            if self._available_devices is None:
+                raise ValueError("Cannot set `camera_configs` if `available_cameras` is None! ")
+            if any([camera_id not in self._available_devices.keys() for camera_id in value.keys()]):
+                raise ValueError(
+                    f"Not all camera config id's [{value.keys()}] present in `available_camera` id's [{self._available_devices.keys()}]")
             self._camera_configs = value
         self._ipc_queue.put(self.state_dto())
 
@@ -212,7 +218,6 @@ class AppStateDTO(BaseModel):
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableDevices]
     websocket_status: Optional[WebSocketStatus]
-
 
     record_frames_flag_status: bool
     kill_camera_group_flag_status: bool

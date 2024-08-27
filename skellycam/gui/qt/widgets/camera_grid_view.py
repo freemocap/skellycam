@@ -44,6 +44,7 @@ class CameraViewGrid(QWidget):
         return []
 
     def update(self):
+        logger.loop(f"Updating: {self}")
         super().update()
 
         if self._gui_state.connected_camera_ids != self.single_camera_view_camera_ids:

@@ -104,11 +104,12 @@ class SkellyCamMainWindow(QMainWindow):
         self._client.connect_websocket()
 
     def update(self):
+        logger.loop(f"Updating: {self}")
         super().update()
         self._skellycam_widget.update()
         self._skellycam_control_panel.update()
         self._directory_view_widget.update()
-        self._app_state_json_widget.update_text(self._gui_state.sub_process_statuses)
+        # self._app_state_json_widget.update_text(self._gui_state.sub_process_statuses)
 
     def _connect_signals_to_slots(self):
 
