@@ -78,6 +78,7 @@ class UpdateInstructions(BaseModel):
                     logger.trace(f"Camera {camera_id} configuration changed, marking for update")
                     cameras_to_update.append(camera_id)
 
-        return cls(new_configs=new_configs,
+        return cls(reset_all=reset_all,
+                   new_configs=new_configs,
                    close_these_cameras=cameras_to_close,
                    update_these_cameras=cameras_to_update)
