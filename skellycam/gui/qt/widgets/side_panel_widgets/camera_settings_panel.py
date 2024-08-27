@@ -139,9 +139,9 @@ class CameraSettingsPanel(QWidget):
 
     def _update_user_selected_camera_settings(self):
         logger.trace("Extracting camera configs from parameter tree")
-        self._user_selected_camera_configs = {}
+        new_user_selected_configs = {}
         for (camera_id, parameter_group,) in self._parameter_groups.items():
-            self._user_selected_camera_configs[camera_id] = CameraConfig(
+            new_user_selected_configs[camera_id] = CameraConfig(
                 camera_id=camera_id,
                 use_this_camera=parameter_group.param(USE_THIS_CAMERA_STRING).value(),
                 resolution=ImageResolution.from_string(parameter_group.param("Resolution").value()),
@@ -151,6 +151,8 @@ class CameraSettingsPanel(QWidget):
                 writer_fourcc=parameter_group.param("Video Writer FourCC").value(),
                 rotation=RotationTypes[parameter_group.param("Rotate").value()],
             )
+        self._user_selected_camera_configs = new_user_selected_configs
+        self._gui_state.user_selected_camera_configs = self._user_selected_camera_configs
 
     def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: CameraId):
         logger.trace(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")

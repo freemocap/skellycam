@@ -134,11 +134,16 @@ class GUIState:
         self._image_update_callable: Optional[Callable] = image_update_callable
 
     def update_app_state(self, app_state_dto: 'AppStateDTO') -> None:
+
         self._latest_app_state_dto = app_state_dto
-        self._connected_camera_configs = app_state_dto.camera_configs
-        self.available_devices = app_state_dto.available_devices
+
         self.record_frames_flag_status = app_state_dto.record_frames_flag_status
         self.kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
+
+        self.available_devices = app_state_dto.available_devices
+        self._connected_camera_configs = app_state_dto.camera_configs
+        if self._user_selected_camera_configs is None:
+            self._user_selected_camera_configs = app_state_dto.camera_configs
 
     @property
     def sub_process_statuses(self) -> Optional[str]:
@@ -158,7 +163,7 @@ class GUIState:
 
     @property
     def user_selected_camera_configs(self) -> Optional[CameraConfigs]:
-        with (self._lock):
+        with self._lock:
             return self._user_selected_camera_configs
 
     @user_selected_camera_configs.setter

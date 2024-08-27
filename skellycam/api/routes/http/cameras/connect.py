@@ -23,7 +23,7 @@ class ConnectCamerasRequest(BaseRequest):
     summary="Connect/Update specified cameras and apply provided configuration settings",
 )
 async def cameras_apply_config_route(
-        request: ConnectCamerasRequest = Body(..., examples=[ConnectCamerasRequest()])
+        request: ConnectCamerasRequest = Body(...)
 ):
     logger.api("Received `/connect/apply` POST request...")
     try:

@@ -38,7 +38,7 @@ class CameraViewGrid(QWidget):
         self._gui_state.set_image_update_callable(self.set_image_data)
 
     @property
-    def camera_ids(self) -> List[CameraId]:
+    def single_camera_view_camera_ids(self) -> List[CameraId]:
         if self._single_camera_views:
             return list(self._single_camera_views.keys())
         return []
@@ -46,7 +46,7 @@ class CameraViewGrid(QWidget):
     def update(self):
         super().update()
 
-        if self._gui_state.connected_camera_ids != self.camera_ids:
+        if self._gui_state.connected_camera_ids != self.single_camera_view_camera_ids:
             self.clear_camera_views()
             self.create_single_camera_views()
 
