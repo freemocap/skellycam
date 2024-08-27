@@ -3,9 +3,8 @@ import logging
 import multiprocessing
 
 from setproctitle import setproctitle
-from tenacity import RetryError
-
 from skellycam.experiments.simple_ws_client.websocket_client import websocket_client
+from tenacity import RetryError
 
 logger = logging.getLogger(__name__)
 
