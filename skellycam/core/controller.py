@@ -62,17 +62,18 @@ class Controller:
         self._app_state.record_frames_flag.value = False
 
     async def _create_camera_group(self, camera_configs: Optional[CameraConfigs] = None):
-        if self._camera_group:
-            await self._close_camera_group()
 
         if camera_configs:
             self._app_state.camera_configs = camera_configs
+        else:
+            if self._app_state.camera_configs is None:
+                await detect_available_devices()
 
-        if self._app_state.camera_configs is None:
-            await detect_available_devices()
+            if self._camera_group:  # if `connect/` called w/o configs, reset existing connection
+                await self._close_camera_group()
 
-        self._app_state.kill_camera_group_flag.value = False
-        self._app_state.record_frames_flag.value = False
+            self._app_state.kill_camera_group_flag.value = False
+            self._app_state.record_frames_flag.value = False
 
         self._camera_group = CameraGroup(ipc_queue=self._ipc_queue,
                                          frontend_relay_pipe=self._frame_wrangler_pipe, )

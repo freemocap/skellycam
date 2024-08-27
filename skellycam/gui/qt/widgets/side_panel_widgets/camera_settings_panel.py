@@ -21,7 +21,8 @@ class CameraSettingsPanel(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent=parent)
 
-        self._camera_configs: Optional[CameraConfigs] = None
+        self._user_selected_camera_configs: Optional[CameraConfigs] = None
+        self._app_state_camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
 
         self._gui_state = get_gui_state()
@@ -46,26 +47,25 @@ class CameraSettingsPanel(QWidget):
     def update(self):
         super().update()
         new_available_devices = self._gui_state.available_devices
-        new_camera_configs = self._gui_state.camera_configs
         available_devices_changed = not new_available_devices == self._available_devices
-        camera_configs_changed = not new_camera_configs == self._camera_configs
-        if available_devices_changed or camera_configs_changed:
-            self._available_devices = new_available_devices
-            self._camera_configs = new_camera_configs
+        # camera_configs_changed = not new_camera_configs == self._user_selected_camera_configs # TODO (or prob not bc we're gonna scrap this ui) - specify when user selection differs from pp state
+        if available_devices_changed:  # camera_configs_changed:
+            self._user_selected_camera_configs = self._gui_state.camera_configs if self._user_selected_camera_configs is None else None
             self._update_parameter_tree()
 
+
     def _update_parameter_tree(self):
-        logger.loop("Updating Camera Parameter Tree")
-        self._camera_configs = self._gui_state.camera_configs
+        logger.trace("Updating Camera Parameter Tree")
         self._available_devices = self._gui_state.available_devices
-        if not self._camera_configs or len(self._camera_configs) == 0:
+        if not self._user_selected_camera_configs or len(self._user_selected_camera_configs) == 0:
             return
         if not self._available_devices or len(self._available_devices) == 0:
             return
         if len(self._parameter_groups) > 0:
             self._parameter_tree.clear()
         self._parameter_groups = {}
-        for camera_config, camera_info in zip(self._camera_configs.values(), self._available_devices.values()):
+        for camera_config, camera_info in zip(self._user_selected_camera_configs.values(),
+                                              self._available_devices.values()):
             self._parameter_groups[camera_config.camera_id] = self._convert_to_parameter(camera_config=camera_config,
                                                                                          camera_info=camera_info)
             self._parameter_tree.addParameters(self._parameter_groups[camera_config.camera_id])
@@ -73,7 +73,7 @@ class CameraSettingsPanel(QWidget):
 
     def _convert_to_parameter(self, camera_config: CameraConfig,
                               camera_info: CameraDeviceInfo) -> Parameter:
-        logger.debug(f"Converting camera config to parameter: {camera_config}")
+        logger.trace(f"Converting camera config to parameter: {camera_config}")
         camera_parameter_group = Parameter.create(
             name="Camera_" + str(camera_config.camera_id),
             type="group",
@@ -138,10 +138,10 @@ class CameraSettingsPanel(QWidget):
         return button
 
     def _extract_camera_configs_from_tree(self):
-        logger.info("Extracting camera configs from parameter tree")
-        self._camera_configs = {}
+        logger.trace("Extracting camera configs from parameter tree")
+        self._user_selected_camera_configs = {}
         for (camera_id, parameter_group,) in self._parameter_groups.items():
-            self._camera_configs[camera_id] = CameraConfig(
+            self._user_selected_camera_configs[camera_id] = CameraConfig(
                 camera_id=camera_id,
                 use_this_camera=parameter_group.param(USE_THIS_CAMERA_STRING).value(),
                 resolution=ImageResolution.from_string(parameter_group.param("Resolution").value()),
@@ -153,13 +153,13 @@ class CameraSettingsPanel(QWidget):
             )
 
     def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: CameraId):
-        logger.info(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
+        logger.trace(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
         camera_configs = self._gui_state.camera_configs
         for camera_id in camera_configs.keys():
             if camera_id == camera_id_to_copy_from:
                 continue
-            original_config = deepcopy(self._camera_configs[camera_id])
-            camera_configs[camera_id] = deepcopy(self._camera_configs[camera_id_to_copy_from])
+            original_config = deepcopy(self._user_selected_camera_configs[camera_id])
+            camera_configs[camera_id] = deepcopy(self._user_selected_camera_configs[camera_id_to_copy_from])
             camera_configs[camera_id].camera_id = camera_id
             camera_configs[camera_id].use_this_camera = original_config.use_this_camera
         self._gui_state.camera_configs = camera_configs
