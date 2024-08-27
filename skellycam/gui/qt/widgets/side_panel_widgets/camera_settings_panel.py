@@ -50,7 +50,7 @@ class CameraSettingsPanel(QWidget):
         available_devices_changed = not new_available_devices == self._available_devices
         # camera_configs_changed = not new_camera_configs == self._user_selected_camera_configs # TODO (or prob not bc we're gonna scrap this ui) - specify when user selection differs from pp state
         if available_devices_changed:  # camera_configs_changed:
-            self._user_selected_camera_configs = self._gui_state.camera_configs if self._user_selected_camera_configs is None else None
+            self._user_selected_camera_configs = self._gui_state.connected_camera_configs if self._user_selected_camera_configs is None else None
             self._update_parameter_tree()
 
 
@@ -124,7 +124,7 @@ class CameraSettingsPanel(QWidget):
         camera_parameter_group.param(self.tr(USE_THIS_CAMERA_STRING)).sigValueChanged.connect(
             lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
         )
-        camera_parameter_group.sigTreeStateChanged.connect(self._extract_camera_configs_from_tree)
+        camera_parameter_group.sigTreeStateChanged.connect(self._update_user_selected_camera_settings)
         return camera_parameter_group
 
     def _create_copy_to_all_cameras_action_parameter(self, camera_id) -> Parameter:
@@ -137,7 +137,7 @@ class CameraSettingsPanel(QWidget):
         )
         return button
 
-    def _extract_camera_configs_from_tree(self):
+    def _update_user_selected_camera_settings(self):
         logger.trace("Extracting camera configs from parameter tree")
         self._user_selected_camera_configs = {}
         for (camera_id, parameter_group,) in self._parameter_groups.items():
@@ -154,7 +154,7 @@ class CameraSettingsPanel(QWidget):
 
     def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: CameraId):
         logger.trace(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
-        camera_configs = self._gui_state.camera_configs
+        camera_configs = self._user_selected_camera_configs
         for camera_id in camera_configs.keys():
             if camera_id == camera_id_to_copy_from:
                 continue
@@ -162,7 +162,7 @@ class CameraSettingsPanel(QWidget):
             camera_configs[camera_id] = deepcopy(self._user_selected_camera_configs[camera_id_to_copy_from])
             camera_configs[camera_id].camera_id = camera_id
             camera_configs[camera_id].use_this_camera = original_config.use_this_camera
-        self._gui_state.camera_configs = camera_configs
+        self._update_user_selected_camera_settings()
 
     def _enable_or_disable_camera_settings(self, camera_config_parameter_group):
         use_this_camera_checked = camera_config_parameter_group.param(

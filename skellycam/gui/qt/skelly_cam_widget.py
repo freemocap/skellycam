@@ -62,7 +62,7 @@ class SkellyCamWidget(QWidget):
 
     def apply_settings_to_cameras(self):
         logger.info("Applying settings to cameras")
-        self._client.apply_settings_to_cameras(camera_configs=self._gui_state.camera_configs)
+        self._client.apply_settings_to_cameras(camera_configs=self._gui_state.user_selected_camera_configs)
 
     def closeEvent(self, event):
         logger.info("Close event detected - closing camera group frame worker")

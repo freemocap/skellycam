@@ -110,7 +110,8 @@ class GUIState:
 
     def __init__(self):
         super().__init__()
-        self._cameras_configs: Optional[CameraConfigs] = None
+        self._user_selected_camera_configs: Optional[CameraConfigs] = None
+        self._connected_camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
         self._kill_camera_group_flag_status: bool = False
         self._record_frames_flag_status: bool = False
@@ -134,7 +135,7 @@ class GUIState:
 
     def update_app_state(self, app_state_dto: 'AppStateDTO') -> None:
         self._latest_app_state_dto = app_state_dto
-        self.camera_configs = app_state_dto.camera_configs
+        self._connected_camera_configs = app_state_dto.camera_configs
         self.available_devices = app_state_dto.available_devices
         self.record_frames_flag_status = app_state_dto.record_frames_flag_status
         self.kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
@@ -145,20 +146,26 @@ class GUIState:
             return self._latest_app_state_dto.model_dump_json(indent=2, include={
                 'subprocess_statuses', 'task_statuses'}) if self._latest_app_state_dto else None
     @property
-    def camera_ids(self):
-        if self._cameras_configs:
-            return list(self._cameras_configs.keys())
+    def connected_camera_ids(self):
+        if self._connected_camera_configs:
+            return list(self._connected_camera_configs.keys())
         return []
 
     @property
-    def camera_configs(self) -> Optional[CameraConfigs]:
+    def connected_camera_configs(self) -> Optional[CameraConfigs]:
         with self._lock:
-            return self._cameras_configs
+            return self._connected_camera_configs
 
-    @camera_configs.setter
-    def camera_configs(self, value: Optional[CameraConfigs]) -> None:
+    @property
+    def user_selected_camera_configs(self) -> Optional[CameraConfigs]:
+        with (self._lock):
+            return self._user_selected_camera_configs
+
+    @user_selected_camera_configs.setter
+    def user_selected_camera_configs(self, value: CameraConfigs):
         with self._lock:
-            self._cameras_configs = value
+            self._user_selected_camera_configs = value
+
 
     @property
     def available_devices(self) -> Optional[AvailableDevices]:
@@ -203,9 +210,9 @@ class GUIState:
     @property
     def number_of_cameras(self) -> Optional[int]:
         with self._lock:
-            if self._cameras_configs is None:
+            if self._user_selected_camera_configs is None:
                 return None
-            return len(self._cameras_configs)
+            return len(self._user_selected_camera_configs)
 
     @property
     def latest_frontend_payload(self) -> Optional[FrontendFramePayload]:

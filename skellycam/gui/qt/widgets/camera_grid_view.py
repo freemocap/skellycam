@@ -46,17 +46,17 @@ class CameraViewGrid(QWidget):
     def update(self):
         super().update()
 
-        if self._gui_state.camera_ids != self.camera_ids:
+        if self._gui_state.connected_camera_ids != self.camera_ids:
             self.clear_camera_views()
             self.create_single_camera_views()
 
     def create_single_camera_views(self):
         logger.debug("Updating camera views")
-        if not self._gui_state.camera_configs:
+        if not self._gui_state.connected_camera_configs:
             return
         landscape_camera_number = -1
         portrait_camera_number = -1
-        for camera_id, camera_config in self._gui_state.camera_configs.items():
+        for camera_id, camera_config in self._gui_state.connected_camera_configs.items():
 
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
                                                         camera_config=camera_config,
