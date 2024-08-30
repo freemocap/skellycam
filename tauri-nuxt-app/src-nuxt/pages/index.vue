@@ -1,7 +1,7 @@
 <template>
   <TresCanvas v-bind="gl">
     <OrbitControls/>
-    <TresPerspectiveCamera :near=.01/ :position="[0, 1, 5]">
+    <TresPerspectiveCamera :near=.01 :position="[0, 1, 5]"/>
     <!--    <TresMesh :rotation="[0, 0, 0]" :scale="[1.0, 1.0, 1.0]">-->
     <TresMesh v-for="(texture, index) in videoTextures" :key="index" :position="cameraPositions[index]"
               :rotation="[0,0,0]">
