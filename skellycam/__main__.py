@@ -4,13 +4,13 @@ import multiprocessing
 from multiprocessing import Process
 
 from skellycam.api.run_skellycam_server import run_server
-from skellycam.gui.gui_main import gui_main
-from skellycam.utilities.clean_path import clean_path
 
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main_two_process():
+    from skellycam.gui.gui_main import gui_main
+    from skellycam.utilities.clean_path import clean_path
     multiprocessing.freeze_support()
     # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
     logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
@@ -33,7 +33,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    run_server()
     print("\n\n--------------------------------------------------\n--------------------------------------------------")
     print("Thank you for using SkellyCam \U0001F480 \U0001F4F8 \U00002728 \U0001F495")
     print("--------------------------------------------------\n--------------------------------------------------\n\n")

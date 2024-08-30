@@ -17,7 +17,7 @@ echo Install Python requirements
 CALL pip install -e .
 
 echo  Build with PyInstaller
-CALL pyinstaller --onefile skellycam/api/run_skellycam_server.py
+CALL pyinstaller --onefile skellycam/__main__.py
 
 echo Installation and setup complete!
 
