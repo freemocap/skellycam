@@ -1,5 +1,4 @@
-import type {FrontendImagePayload} from "~/types/types";
-import {decode} from "@msgpack/msgpack";
+
 
 export default (url: string) => {
     const ws = ref<WebSocket | null>(null);
@@ -72,7 +71,7 @@ export default (url: string) => {
                     console.log(`Processing image for camera ${cameraId}`);
                     const uint8Array = new Uint8Array(imageBytes);
                     console.log(`Image byte length for camera ${cameraId}:`, uint8Array.byteLength);
-                    const blob = new Blob([uint8Array], { type: 'image/jpeg' });
+                    const blob = new Blob([uint8Array], {type: 'image/jpeg'});
                     const url = URL.createObjectURL(blob);
                     processedImages[cameraId] = url;
 

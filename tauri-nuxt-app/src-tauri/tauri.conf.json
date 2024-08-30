@@ -1,0 +1,79 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeDevCommand": "npm run dev --prefix src-nuxt",
+    "beforeBuildCommand": "npm run generate --prefix src-nuxt",
+    "devPath": "http://localhost:3000",
+    "distDir": "../src-nuxt/dist"
+  },
+  "package": {
+    "productName": "nuxt-app",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true,
+      "shell": {
+        "sidecar": true,
+        "scope": [
+          {
+            "name": "../dist/main",
+            "sidecar": true
+          }
+        ]
+      },
+      "fs": {
+        "all": true,
+        "writeFile": true,
+        "readDir": true,
+        "createDir": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "DeveloperTool",
+      "copyright": "",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [
+        "../dist/main"
+      ],
+      "icon": [
+        "../shared/freemocap-skelly-icon.ico"
+      ],
+      "identifier": "com.tauri.dev",
+      "longDescription": "",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "resources": [],
+      "shortDescription": "",
+      "targets": "all",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 720,
+        "width": 1280,
+        "resizable": true,
+        "title": "freemocap"
+      }
+    ]
+  }
+}
