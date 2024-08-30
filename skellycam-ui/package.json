@@ -1,17 +1,9 @@
 {
-  "name": "skellycam-nuxt",
+  "name": "skellycam-ui",
   "version": "1.0.0",
-  "description": "The `nuxt` part of the SkellyCam app",
-  "scripts": {
-    "nuxt": "nuxt",
-    "build": "nuxt build",
-    "start": "nuxt start",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "test": "echo \"Error: testing not yet implemented!!\" && exit 1"
-  },
+  "author": "Skelly FreeMoCap",
+  "license": "AGPL-3.0-or-later",
+  "description": "The user interface for SkellyCam - The camera backend of the FreeMoCap Project",
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.5.2",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
@@ -38,6 +30,14 @@
     "motion-capture",
     "mocap"
   ],
-  "author": "Skelly FreeMoCap",
-  "license": "AGPL-3.0-or-later"
+  "scripts": {
+    "nuxt": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "echo \"Error: testing not yet implemented!!\" && exit 1"
+  }
 }

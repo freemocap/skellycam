@@ -7,7 +7,7 @@ if (process.platform === 'win32') {
 }
 
 async function main() {
-    const baseName = 'dist/main';
+    const baseName = 'dist/__main__';
     const rustInfo = (await execa('rustc', ['-vV'])).stdout
     const targetTriple = /host: (\S+)/g.exec(rustInfo)[1]
     if (!targetTriple) {
@@ -17,7 +17,7 @@ async function main() {
         `${baseName}${extension}`,
         `${baseName}-${targetTriple}${extension}`
     )
-    console.log(`Renamed binary to main-${targetTriple}${extension}`)
+    console.log(`Renamed binary to __main__-${targetTriple}${extension}`)
 }
 
 main().catch((e) => {

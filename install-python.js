@@ -10,6 +10,7 @@ const __dirname = dirname(__filename);
 async function main() {
     const scriptName = process.platform === 'win32' ? 'install-python.bat' : 'install-python.sh';
     const scriptPath = path.join(__dirname, scriptName);
+    console.log(`\n----------------------\n CREATING ||PYTHON|| BINARY FOR ||TAURI|| SIDECAR\n---------------------\n`);
     console.log(`Preparing to run ${scriptName}...`);
 
     if (process.platform !== 'win32') {
@@ -21,8 +22,7 @@ async function main() {
         console.log('Running the install script...');
 
         await execa(scriptPath, {stdio: 'inherit'});
-        console.log(`${scriptName} executed successfully.`);
-        console.log('Python setup complete!');
+        console.log(`${scriptName} executed successfully!!`);
     } catch (error) {
         console.error(`Failed to execute ${scriptName}:`, error);
     }

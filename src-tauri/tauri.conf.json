@@ -1,17 +1,33 @@
 {
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeBuildCommand": "npm run generate --prefix src-ui",
-    "beforeDevCommand": "npm run dev --prefix src-ui",
+    "beforeDevCommand": "npm run dev --prefix skellycam-ui && run-python.bat ",
+    "beforeBuildCommand": "npm run generate --prefix skellycam-ui",
     "devPath": "http://localhost:3000",
-    "distDir": "../src-ui/dist"
+    "distDir": "../dist"
   },
   "package": {
-    "productName": "skellycam-app",
+    "productName": "SkellyCam-UI",
     "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
-      "all": false
+      "all": true,
+      "shell": {
+        "sidecar": true,
+        "scope": [
+          {
+            "name": "../dist/__main__",
+            "sidecar": true
+          }
+        ]
+      },
+      "fs": {
+        "all": true,
+        "writeFile": true,
+        "readDir": true,
+        "createDir": true
+      }
     },
     "bundle": {
       "active": true,
@@ -20,13 +36,11 @@
       "deb": {
         "depends": []
       },
-      "externalBin": [],
+      "externalBin": [
+        "../dist/__main__"
+      ],
       "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
+        "../shared/freemocap-skelly-icon.ico"
       ],
       "identifier": "com.tauri.dev",
       "longDescription": "",
@@ -55,10 +69,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 720,
+        "width": 1280,
         "resizable": true,
-        "title": "SkellyCam 💀📸✨",
-        "width": 800
+        "title": "skellycam"
       }
     ]
   }

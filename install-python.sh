@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#TODO - convert the `...bat` file into `...sh` format
 echo "Creating virtual environment..."
 python3 -m venv venv
 

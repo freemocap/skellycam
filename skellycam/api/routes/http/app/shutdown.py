@@ -4,7 +4,7 @@ import signal
 
 from fastapi import APIRouter
 
-from skellycam.api.run_server import get_server_manager
+from skellycam.api.run_skellycam_server import get_server_manager
 from skellycam.core.controller import get_controller
 
 logger = logging.getLogger(__name__)
