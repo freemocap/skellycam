@@ -1,3 +1,4 @@
+UI_HTML_STRING = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,3 +128,4 @@
 <div id="log-container"></div>
 </body>
 </html>
+"""

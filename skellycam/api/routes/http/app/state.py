@@ -15,4 +15,4 @@ async def app_state_endpoint():
     """
     logger.api("Serving application state from `app/state` endpoint...")
 
-    return get_app_state().state()
+    return get_app_state().state_dto()

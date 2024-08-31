@@ -29,6 +29,7 @@ optional = true
 
 [tool.poetry.group.qt.dependencies]
 pyqtgraph = "^0.13.7"
+websocket-client = "^1.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.6"
@@ -64,7 +65,7 @@ push = true
 
 [tool.poetry.scripts]
 skellycam = "skellycam.__main__:main"
-build = "skellycam.utilities.build_pyinstaller_executable:run_pyinstaller"
+pyinstaller = "skellycam.utilities.build_pyinstaller_executable:run_pyinstaller"
 
 [tool.pytest.ini_options]
 #addopts = "--exitfirst --timeout=5 --numprocesses=10"#--cov=skellycam --cov-report=term-missing

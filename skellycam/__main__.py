@@ -5,38 +5,40 @@ from multiprocessing import Process
 from pathlib import Path
 
 from skellycam.api.run_skellycam_server import run_server
+from skellycam.gui.gui_main import gui_main
+from skellycam.utilities.clean_path import clean_path
 
 logger = logging.getLogger(__name__)
 
 PATH_TO_SKELLYCAM_MAIN = str(Path(__file__).absolute())
 
-def main_two_process():
-    from skellycam.gui.gui_main import gui_main
-    from skellycam.utilities.clean_path import clean_path
-    # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
-    logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
 
-    shutdown_event = multiprocessing.Event()
+def main(qt: bool = True):
+    if qt:
+        # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
+        logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
 
-    frontend_process = multiprocessing.Process(target=gui_main, args=(shutdown_event,))
-    logger.info(f"Starting frontend process")
-    frontend_process.start()
+        shutdown_event = multiprocessing.Event()
 
-    backend_process = Process(target=run_server, args=(shutdown_event,))
-    logger.info(f"Starting backend process")
-    backend_process.start()
+        frontend_process = multiprocessing.Process(target=gui_main, args=(shutdown_event,))
+        logger.info(f"Starting frontend process")
+        frontend_process.start()
 
-    frontend_process.join()
-    logger.info("Frontend process ended - terminating backend process")
-    shutdown_event.set()
-    backend_process.join()
-    logger.info(f"Exiting `main`...")
+        backend_process = Process(target=run_server, args=(shutdown_event,))
+        logger.info(f"Starting backend process")
+        backend_process.start()
 
+        frontend_process.join()
+        logger.info("Frontend process ended - terminating backend process")
+        shutdown_event.set()
+        backend_process.join()
+        logger.info(f"Exiting `main`...")
+    else:
+        run_server()
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    # main_two_processes()
-    run_server()
+    main(qt=False)
     print("\n\n--------------------------------------------------\n--------------------------------------------------")
     print("Thank you for using SkellyCam \U0001F480 \U0001F4F8 \U00002728 \U0001F495")
     print("--------------------------------------------------\n--------------------------------------------------\n\n")
