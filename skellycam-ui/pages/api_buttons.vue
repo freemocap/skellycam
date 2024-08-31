@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 
-const wsUrl = 'ws://localhost:8005/ws/connect';
+const wsUrl = 'ws://localhost:8005/websocket/connect';
 const {
   connectWebSocket,
   sendMessage,
@@ -29,18 +29,18 @@ const {
 
 
 const fetchHello = async () => {
-  const response = await fetch('http://localhost:8003/hello');
+  const response = await fetch('http://localhost:8005/hello');
   const data = await response.json();
   console.log(data);
 }
 
 const testConnectToCameras = async () => {
-  const response = await fetch('http://localhost:8003/connect/test');
+  const response = await fetch('http://localhost:8005/connect/test');
   const data = await response.json();
   console.log(data);
 }
 const connectToCameras = async () => {
-  const response = await fetch('http://localhost:8003/connect');
+  const response = await fetch('http://localhost:8005/connect');
   const data = await response.json();
   console.log(data);
 }

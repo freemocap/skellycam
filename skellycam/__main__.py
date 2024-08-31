@@ -38,7 +38,12 @@ def main(qt: bool = True):
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    main(qt=False)
+    try:
+        main(qt=False)
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt - shutting down!")
+    except Exception:
+        raise Exception
     print("\n\n--------------------------------------------------\n--------------------------------------------------")
     print("Thank you for using SkellyCam \U0001F480 \U0001F4F8 \U00002728 \U0001F495")
     print("--------------------------------------------------\n--------------------------------------------------\n\n")
