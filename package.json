@@ -22,7 +22,7 @@
     "tauri-build": "tauri build",
     "nuxt-dev": "cd src-nuxt && npm run dev",
     "install-nuxt": "cd skellycam-ui && npm install",
-    "install-python": "node install-python.js && node rename-binary.js",
-    "postinstall": "npm run install-nuxt && npm run install-python"
+    "install-python": "poetry run pyinstaller",
+    "postinstall": "npm run install-nuxt"
   }
 }

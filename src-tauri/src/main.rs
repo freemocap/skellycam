@@ -45,7 +45,7 @@ fn build_sidecar_path() -> String {
         ""
     };
 
-    format!("../dist/__main__-{}-{}{}{}", arch, os, env, ext) // Constructs the full sidecar path
+    format!("../dist/skellycam-{}-{}{}{}", arch, os, env, ext) // Constructs the full sidecar path
 }
 
 fn main() {

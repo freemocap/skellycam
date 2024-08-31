@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeDevCommand": "npm run dev --prefix skellycam-ui && run-python.bat ",
+    "beforeDevCommand": "npm run dev --prefix skellycam-ui && poetry run skellycam ",
     "beforeBuildCommand": "npm run generate --prefix skellycam-ui",
     "devPath": "http://localhost:3000",
     "distDir": "../dist"
@@ -17,7 +17,7 @@
         "sidecar": true,
         "scope": [
           {
-            "name": "../dist/__main__",
+            "name": "../dist/skellycam",
             "sidecar": true
           }
         ]
@@ -37,7 +37,7 @@
         "depends": []
       },
       "externalBin": [
-        "../dist/__main__"
+        "../dist/skellycam"
       ],
       "icon": [
         "../shared/freemocap-skelly-icon.ico"
