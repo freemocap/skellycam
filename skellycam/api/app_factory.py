@@ -6,9 +6,6 @@ from fastapi.responses import RedirectResponse
 from starlette.responses import FileResponse
 
 import skellycam
-from skellycam.api.app.lifespan import lifespan
-from skellycam.api.middleware.add_middleware import add_middleware
-from skellycam.api.middleware.cors import cors
 from skellycam.api.routes.routers import enabled_routers
 from skellycam.system.default_paths import FAVICON_PATH
 
@@ -48,13 +45,3 @@ def customize_swagger_ui(app: FastAPI):
     app.openapi = custom_openapi
 
 
-def create_app(*args, **kwargs) -> FastAPI:
-    global FAST_API_APP
-    logger.api("Creating FastAPI app")
-    app = FastAPI(lifespan=lifespan)
-    FAST_API_APP = app
-    cors(app)
-    register_routes(app)
-    add_middleware(app)
-    customize_swagger_ui(app)
-    return app

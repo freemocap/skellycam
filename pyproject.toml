@@ -19,6 +19,8 @@ psutil = "^5.9.8"
 pillow = "^10.3.0"
 setproctitle = "^1.3.3"
 scipy = "^1.13.0"
+pyside6 = "^6.7.2"
+pandas = "^2.2.2"
 
 pyinstaller = "^6.10.0" #This would normally be a `dev` req, but we need it for Tauri
 
@@ -26,7 +28,6 @@ pyinstaller = "^6.10.0" #This would normally be a `dev` req, but we need it for 
 optional = true
 
 [tool.poetry.group.qt.dependencies]
-pyside6 = "^6.7.2"
 pyqtgraph = "^0.13.7"
 
 [tool.poetry.group.dev.dependencies]
@@ -63,7 +64,7 @@ push = true
 
 [tool.poetry.scripts]
 skellycam = "skellycam.__main__:main"
-
+build = "skellycam.utilities.build_pyinstaller_executable:run_pyinstaller"
 
 [tool.pytest.ini_options]
 #addopts = "--exitfirst --timeout=5 --numprocesses=10"#--cov=skellycam --cov-report=term-missing
