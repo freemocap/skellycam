@@ -27,3 +27,12 @@ jobs:
           poetry-version: ${{ matrix.poetry-version }}
       - name: View poetry --help
         run: poetry --help
+      - name: Create poetry shell environment
+        run: poetry shell
+      - name: Update poetry/python environment
+        run: poetry update
+      - name: Install Application dependencies
+        run: npm install
+      - name: Build Executable
+        run: npm run tauri-build
+
