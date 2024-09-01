@@ -59,7 +59,8 @@ async def websocket_relay(websocket: WebSocket):
                     logger.trace(f"Relaying AppStateDTO to frontend")
                     await websocket.send_bytes(pickle.dumps(message))
                 elif isinstance(message, SubProcessStatus):
-                    app_state.update_process_status(message)
+                    pass
+                    # app_state.update_process_status(message)
                 else:
                     raise ValueError(f"Unknown message type: {type(message)}")
             else:
