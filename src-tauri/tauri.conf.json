@@ -40,7 +40,7 @@
         "../dist/skellycam"
       ],
       "icon": [
-        "../shared/freemocap-skelly-icon.ico"
+        "../shared/skellycam-logo/skellycam-favicon.ico"
       ],
       "identifier": "skellycam.tauri.dev",
       "longDescription": "",
