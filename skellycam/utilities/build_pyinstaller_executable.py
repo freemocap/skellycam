@@ -59,6 +59,7 @@ def run_pyinstaller():
         append_build_system_triple('skellycam'),
         '--icon',
         SKELLYCAM_ICON_PATH
+
     ])
 
 

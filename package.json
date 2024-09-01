@@ -18,11 +18,12 @@
     "dev": "npm run tauri dev",
     "tauri": "tauri",
     "tauri-dev": "npm run tauri dev",
+    "build": "tauri build",
     "tauri-build": "tauri build",
     "nuxt-dev": "cd skellycam-ui && npm run dev",
     "install-nuxt": "cd skellycam-ui && npm install",
     "python-dev": "poetry shell && poetry run skellycam",
-    "build-python-sidecar": "poetry run pyinstaller",
+    "build-python-sidecar": "npm run install-python && poetry run pyinstaller",
     "install-python": "poetry shell && poetry update",
 
     "postinstall": "npm run install-nuxt"

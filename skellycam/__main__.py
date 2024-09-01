@@ -1,23 +1,26 @@
 # __main__.py
 import logging
 import multiprocessing
+import sys
 from multiprocessing import Process
 from pathlib import Path
 
 from skellycam.api.server.run_skellycam_server import run_server
-
+from skellycam.utilities.clean_path import clean_path
+from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 
 logger = logging.getLogger(__name__)
 
 PATH_TO_SKELLYCAM_MAIN = str(Path(__file__).absolute())
 
 
-def main(qt: bool = True):
+def main(qt: bool = False):
+    logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
+    if sys.platform == "win32":
+        setup_app_id_for_windows()
     if qt:
         from skellycam.gui.gui_main import gui_main
-        from skellycam.utilities.clean_path import clean_path
         # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
-        logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
 
         shutdown_event = multiprocessing.Event()
 

@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "SkellyCam-UI",
+    "productName": "SkellyCam",
     "version": "0.1.0"
   },
   "tauri": {

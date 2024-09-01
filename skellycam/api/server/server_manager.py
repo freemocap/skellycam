@@ -7,6 +7,7 @@ from uvicorn import Server
 
 from skellycam.api.app.create_app import create_app
 from skellycam.api.server.server_constants import HOSTNAME, PORT
+from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,6 @@ class UvicornServerManager:
         self.server_thread: Optional[threading.Thread] = None
         self.server: Optional[Server] = None
         self.shutdown_event: threading.Event = threading.Event()
-
         self.log_level: str = log_level
 
     @property
@@ -26,15 +26,18 @@ class UvicornServerManager:
         return self.server_thread.is_alive() if self.server_thread else False
 
     def start_server(self):
+
         config = uvicorn.Config(
             create_app,
             host=self.hostname,
             port=self.port,
             log_level=0,  # self.log_level,
             reload=True,
-            factory=False
+            factory=True
         )
+
         logger.info(f"Starting uvicorn server on {self.hostname}:{self.port}")
+        kill_process_on_port(port=self.port)
         self.server = uvicorn.Server(config)
 
         def server_thread():

@@ -5,15 +5,12 @@ from PySide6.QtCore import QTimer
 
 from skellycam.gui.qt.skelly_cam_main_window import SkellyCamMainWindow
 from skellycam.gui.qt.utilities.get_qt_app import get_qt_app
-from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 
 logger = logging.getLogger(__name__)
 
 
 def gui_main(shutdown_event=None):
     logger.info("Starting GUI main...")
-    if sys.platform == "win32":
-        setup_app_id_for_windows()
 
     qt_app = get_qt_app(sys.argv)
     main_window = SkellyCamMainWindow(shutdown_event=shutdown_event)
