@@ -16,13 +16,16 @@
     "vuetify": "^3.5.16"
   },
   "scripts": {
+    "dev": "npm run tauri dev",
     "tauri": "tauri",
     "tauri-dev": "npm run tauri dev",
-    "dev": "npm run tauri dev",
     "tauri-build": "tauri build",
-    "nuxt-dev": "cd src-nuxt && npm run dev",
+    "nuxt-dev": "cd skellycam-ui && npm run dev",
     "install-nuxt": "cd skellycam-ui && npm install",
-    "install-python": "poetry run pyinstaller",
+    "python-dev": "poetry shell && poetry run skellycam",
+    "build-python-sidecar": "poetry run pyinstaller",
+    "install-python": "poetry shell && poetry update",
+
     "postinstall": "npm run install-nuxt"
   }
 }
