@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import time
 
-from skellycam.api.server_manager import get_server_manager
+from skellycam.api.server.server_manager import get_server_manager
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 
 import skellycam
-from skellycam.api.server_constants import APP_URL
+from skellycam.api.server.server_constants import APP_URL
 from skellycam.core.controller import create_controller
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 

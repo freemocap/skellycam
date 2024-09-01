@@ -4,63 +4,23 @@
 use tauri::{Manager};
 // use tauri::WindowEvent;
 // use std::process::Child;
-use std::process::Command;
+use std::sync::{Arc, Mutex};
 
-fn build_sidecar_path() -> String {
-    let arch = if cfg!(target_arch = "x86") {
-        "i686"
-    } else if cfg!(target_arch = "x86_64") {
-        "x86_64"
-    } else if cfg!(target_arch = "arm") {
-        "arm"
-    } else if cfg!(target_arch = "aarch64") {
-        "aarch64"
-    } else {
-        panic!("Unsupported architecture");
-    };
-
-    let os = if cfg!(target_os = "windows") {
-        "pc-windows"
-    } else if cfg!(target_os = "macos") {
-        "apple-darwin"
-    } else if cfg!(target_os = "linux") {
-        "unknown-linux"
-    } else if cfg!(target_os = "android") {
-        "linux-android"
-    } else {
-        panic!("Unsupported OS");
-    };
-
-    let env = if cfg!(target_env = "gnu") {
-        "-gnu"
-    } else if cfg!(target_env = "msvc") {
-        "-msvc"
-    } else {
-        ""
-    };
-
-    let ext = if cfg!(target_os = "windows") {
-        ".exe"
-    } else {
-        ""
-    };
-
-    format!("../dist/skellycam-{}-{}{}{}", arch, os, env, ext) // Constructs the full sidecar path
-}
+mod sidecar;
+use sidecar::manager::SidecarManager;
 
 fn main() {
-  let sidecar_path = build_sidecar_path();
-  println!("Sidecar path: {}", sidecar_path);
+    println!("Running `main.rs`...");
+    let sidecar_base_name: &str = "../dist/skellycam";
 
-  tauri::Builder::default()
-    .setup(|app| {
-        let child = Command::new(sidecar_path)
-            .spawn()
-            .expect("failed to execute child process - main");
-        app.manage(child);
-        Ok(())
-    })
-
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    println!("Setting up Tauri application...");
+    tauri::Builder::default()
+        .setup(|app| {
+            let sidecar_manager = SidecarManager::new(sidecar_base_name);
+            app.manage(Arc::new(Mutex::new(sidecar_manager)));
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+    println!("Tauri application is running...");
 }

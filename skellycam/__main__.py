@@ -4,7 +4,7 @@ import multiprocessing
 from multiprocessing import Process
 from pathlib import Path
 
-from skellycam.api.run_skellycam_server import run_server
+from skellycam.api.server.run_skellycam_server import run_server
 from skellycam.gui.gui_main import gui_main
 from skellycam.utilities.clean_path import clean_path
 

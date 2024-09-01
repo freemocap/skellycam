@@ -5,8 +5,8 @@ from typing import Optional
 import uvicorn
 from uvicorn import Server
 
-from skellycam.api.create_app import create_app
-from skellycam.api.server_constants import HOSTNAME, PORT
+from skellycam.api.app.create_app import create_app
+from skellycam.api.server.server_constants import HOSTNAME, PORT
 
 logger = logging.getLogger(__name__)
 
