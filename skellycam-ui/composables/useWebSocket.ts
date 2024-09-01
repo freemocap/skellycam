@@ -24,18 +24,19 @@ export default (url: string) => {
 
                 try {
                     const arrayBuffer = await event.data.arrayBuffer();
+                    console.log('Received websocketBlob:', arrayBuffer.byteLength);
                     if (arrayBuffer.byteLength < 1000) {
-                        console.log('Received small Blob:', arrayBuffer.byteLength);
-                    } else {
-                        console.log('Received Blob with size:', arrayBuffer.byteLength);
-                        const payload = decode(new Uint8Array(arrayBuffer)) as FrontendImagePayload;
-                        await updateLatestImages(payload);
-                        const logMessage = `Updated latestImages with ${Object.keys(payload.jpeg_images).length} cameras`;
-                        console.log(logMessage);
+                        // console.log('Received Blob with size:', arrayBuffer.byteLength);
+                        // const payload = decode(new Uint8Array(arrayBuffer)) as FrontendImagePayload;
+                        // await updateLatestImages(payload);
+                        // const logMessage = `Updated latestImages with ${Object.keys(payload.jpeg_images).length} cameras`;
+                        // console.log(logMessage);
                     }
                 } catch (error) {
-                    console.error('Error decoding MessagePack:', error);
+                    console.error('Error decoding websocket blob:', error);
                 }
+            } else {
+                console.log(`Received ${event.type}`)
             }
         }
 
@@ -60,37 +61,37 @@ export default (url: string) => {
             ws.value.send(message);
         }
     };
-
-    const updateLatestImages = async (payload: FrontendImagePayload) => {
-        const images = payload.jpeg_images || {};
-        const processedImages: Record<string, string | null> = {};
-
-        for (const [cameraId, imageBytes] of Object.entries(images)) {
-            if (imageBytes) {
-                try {
-                    console.log(`Processing image for camera ${cameraId}`);
-                    const uint8Array = new Uint8Array(imageBytes);
-                    console.log(`Image byte length for camera ${cameraId}:`, uint8Array.byteLength);
-                    const blob = new Blob([uint8Array], {type: 'image/jpeg'});
-                    const url = URL.createObjectURL(blob);
-                    processedImages[cameraId] = url;
-
-                    // Load the image and get its dimensions
-                    const img = new Image();
-                    img.onload = () => {
-                        console.log(`Image dimensions for camera ${cameraId}: width=${img.width}, height=${img.height}`);
-                    };
-                    img.src = url;
-                } catch (error) {
-                    console.error(`Error processing image for camera ${cameraId}:`, error);
-                    processedImages[cameraId] = null;
-                }
-            } else {
-                processedImages[cameraId] = null;
-            }
-        }
-        latestImages.value = processedImages;
-    };
+    //
+    // const updateLatestImages = async (payload: FrontendImagePayload) => {
+    //     const images = payload.jpeg_images || {};
+    //     const processedImages: Record<string, string | null> = {};
+    //
+    //     for (const [cameraId, imageBytes] of Object.entries(images)) {
+    //         if (imageBytes) {
+    //             try {
+    //                 console.log(`Processing image for camera ${cameraId}`);
+    //                 const uint8Array = new Uint8Array(imageBytes);
+    //                 console.log(`Image byte length for camera ${cameraId}:`, uint8Array.byteLength);
+    //                 const blob = new Blob([uint8Array], {type: 'image/jpeg'});
+    //                 const url = URL.createObjectURL(blob);
+    //                 processedImages[cameraId] = url;
+    //
+    //                 // Load the image and get its dimensions
+    //                 const img = new Image();
+    //                 img.onload = () => {
+    //                     console.log(`Image dimensions for camera ${cameraId}: width=${img.width}, height=${img.height}`);
+    //                 };
+    //                 img.src = url;
+    //             } catch (error) {
+    //                 console.error(`Error processing image for camera ${cameraId}:`, error);
+    //                 processedImages[cameraId] = null;
+    //             }
+    //         } else {
+    //             processedImages[cameraId] = null;
+    //         }
+    //     }
+    //     latestImages.value = processedImages;
+    // };
 
 
     return {

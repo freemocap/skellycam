@@ -8,3 +8,7 @@
 </template>
 
 
+<script>
+const websocket = useWebSocket()
+websocket.connectWebSocket()
+</script>

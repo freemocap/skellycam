@@ -6,7 +6,11 @@
           {{ railIcon }}
         </v-icon>
       </v-list-item>
-
+      <NavLink to="/api_buttons">API Buttons</NavLink>
+      <br/>
+      <NavLink to="/camera_status">Camera Status</NavLink>
+      <br/>
+      <NavLink to="/">3d viewport</NavLink>
     </v-list>
   </v-navigation-drawer>
 </template>

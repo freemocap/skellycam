@@ -4,12 +4,14 @@ export default defineNuxtConfig({
     build: {
         transpile: ['@tauri-apps/api', 'vuetify']
     },
+
     devtools: {
         enabled: true,
         timeline: {
             enabled: true,
         },
     },
+
     modules: ['@tresjs/nuxt',
         '@nuxt/devtools',
         '@pinia/nuxt',
@@ -20,11 +22,16 @@ export default defineNuxtConfig({
             })
         }
     ],
+
     tres: {
         devtools: true,
     },
+
     components: true,
-    ssr: false, // Disable Server Side rendering for Tauri
+
+    // Disable Server Side rendering for Tauri
+    ssr: false,
+
     vite: {
         clearScreen: false,
         // Enable environment variables
@@ -52,10 +59,13 @@ export default defineNuxtConfig({
             },
         },
     },
+
     // TailwindCSS
     css: [],
+
     postcss: {
         plugins: {},
     },
 
+    compatibilityDate: '2024-09-01',
 });

@@ -1,12 +1,13 @@
 <template>
   <div>
-    <p> Websocket status: {{ isConnected ? 'Connected' : 'Disconnected' }}</p>
+    <p> Websocket status: {{ isConnected ? 'Connected' : 'Disconnected' }} </p>
     <div>
       <button @click="connectWebSocket">Connect Websocket</button>
       <button @click="sendMessage('Hello from the client')">Send WS Message</button>
       <button @click="fetchHello">Fetch HTTP Hello</button>
-      <button @click="testConnectToCameras">Test Connect to Cameras</button>
+      <button @click="fetchAppState">Fetch App State</button>
       <button @click="connectToCameras">Connect to Cameras</button>
+      <button @click="closeCameras">Close Cameras</button>
 
       <div v-for="(imgSrc, cameraId) in latestImages" :key="cameraId">
         <h3>{{ cameraId }}</h3>
@@ -27,23 +28,28 @@ const {
   latestImages
 } = useWebSocket(wsUrl);
 
-
 const fetchHello = async () => {
-  const response = await fetch('http://localhost:8005/hello');
+  const response = await fetch('http://localhost:8005/app/healthcheck');
+  const data = await response.json();
+  console.log(data);
+}
+const fetchAppState = async () => {
+  const response = await fetch('http://localhost:8005/app/state');
   const data = await response.json();
   console.log(data);
 }
 
-const testConnectToCameras = async () => {
-  const response = await fetch('http://localhost:8005/connect/test');
-  const data = await response.json();
-  console.log(data);
-}
 const connectToCameras = async () => {
-  const response = await fetch('http://localhost:8005/connect');
+  const response = await fetch('http://localhost:8005/cameras/connect');
   const data = await response.json();
   console.log(data);
 }
+const closeCameras = async () => {
+  const response = await fetch('http://localhost:8005/cameras/close');
+  const data = await response.json();
+  console.log(data);
+}
+
 </script>
 
 <style scoped>
