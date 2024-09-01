@@ -6,7 +6,6 @@
     "@mdi/font": "^7.4.47",
     "@tauri-apps/api": "^1.5.3",
     "execa": "^8.0.1",
-    "msgpack": "^1.0.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.5.11",
