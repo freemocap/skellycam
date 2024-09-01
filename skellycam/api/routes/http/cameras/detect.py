@@ -1,5 +1,4 @@
 import logging
-
 from fastapi import APIRouter
 
 from skellycam.core.controller import get_controller
@@ -17,6 +16,7 @@ detect_cameras_router = APIRouter()
                 "along with their available resolutions and framerates",
 )
 async def detect_cameras_route():
+    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
     logger.api("Received `detect/` request")
     try:
         await get_controller().detect_available_cameras()

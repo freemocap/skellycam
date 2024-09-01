@@ -1,8 +1,6 @@
+import cv2
 import logging
 from pprint import pprint
-
-import cv2
-from PySide6.QtMultimedia import QMediaDevices
 
 from skellycam.api.app.app_state import get_app_state
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo
@@ -11,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 async def detect_available_devices(check_if_available: bool = False):
+    from PySide6.QtMultimedia import QMediaDevices
+    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
     logger.info("Detecting available cameras...")
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()

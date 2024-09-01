@@ -31,6 +31,7 @@ class Controller:
         return self._ipc_queue
 
     async def detect_available_cameras(self):
+        # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
         logger.info(f"Detecting available cameras...")
         self._tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(),
                                                                         name="DetectAvailableCameras")
