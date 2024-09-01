@@ -1,6 +1,6 @@
 # based on: https://github.com/marketplace/actions/python-poetry-action
 
-name: CI
+name: Build Executables
 on:
   push:
     branches:
