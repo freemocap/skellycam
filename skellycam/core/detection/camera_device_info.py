@@ -2,7 +2,6 @@ import logging
 import platform
 from typing import List, Any, Dict
 
-from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
@@ -25,6 +24,7 @@ class DeviceVideoFormat(BaseModel):
 class CameraDeviceInfo(BaseModel):
     """
     Selected information pulled out of a QCameraDevice object
+    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
     """
 
     description: str
@@ -58,7 +58,7 @@ class CameraDeviceInfo(BaseModel):
         return unique_framerates
 
     @classmethod
-    def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice):
+    def from_q_camera_device(cls, camera_number: int, camera):
         device_address = camera.id().data().decode("utf-8")
         if platform.system() == 'Windows':
             logger.trace(f"Windows detected, using camera number as cv2 port")
@@ -75,7 +75,7 @@ class CameraDeviceInfo(BaseModel):
         )
 
     @staticmethod
-    def _get_available_video_formats(camera: QCameraDevice) -> List[DeviceVideoFormat]:
+    def _get_available_video_formats(camera) -> List[DeviceVideoFormat]:
         available_video_formats = camera.videoFormats()
         video_formats = [
             DeviceVideoFormat(
