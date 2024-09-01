@@ -24,7 +24,7 @@ class DeviceVideoFormat(BaseModel):
 class CameraDeviceInfo(BaseModel):
     """
     Selected information pulled out of a QCameraDevice object
-    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
+    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client - remove all refrence to QT and Pyside
     """
 
     description: str

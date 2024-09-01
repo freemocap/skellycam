@@ -23,13 +23,6 @@ pandas = "^2.2.2"
 
 pyinstaller = "^6.10.0" #This would normally be a `dev` req, but we need it for Tauri
 
-#[tool.poetry.group.qt]
-#optional = true
-#
-#[tool.poetry.group.qt.dependencies]
-#pyside6 = "^6.7.2"
-#pyqtgraph = "^0.13.7"
-#websocket-client = "^1.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.6"

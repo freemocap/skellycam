@@ -1,32 +1,31 @@
-import cv2
 import logging
 from pprint import pprint
 
-from skellycam.api.app.app_state import get_app_state
-from skellycam.core.detection.camera_device_info import CameraDeviceInfo
+import cv2
 
 logger = logging.getLogger(__name__)
 
 
 async def detect_available_devices(check_if_available: bool = False):
-    from PySide6.QtMultimedia import QMediaDevices
-    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
-    logger.info("Detecting available cameras...")
-    devices = QMediaDevices()
-    detected_cameras = devices.videoInputs()
-
-    camera_devices = {}
-    for camera_number, camera in enumerate(detected_cameras):
-
-        if check_if_available:
-            await _check_camera_available(camera_number)
-
-        camera_device_info = CameraDeviceInfo.from_q_camera_device(
-            camera_number=camera_number, camera=camera
-        )
-        camera_devices[camera_device_info.cv2_port] = camera_device_info
-    logger.debug(f"Detected camera_devices: {list(camera_devices.keys())}")
+    # from PySide6.QtMultimedia import QMediaDevices
+    # # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
+    # logger.info("Detecting available cameras...")
+    # devices = QMediaDevices()
+    # detected_cameras = devices.videoInputs()
+    #
+    # camera_devices = {}
+    # for camera_number, camera in enumerate(detected_cameras):
+    #
+    #     if check_if_available:
+    #         await _check_camera_available(camera_number)
+    #
+    #     camera_device_info = CameraDeviceInfo.from_q_camera_device(
+    #         camera_number=camera_number, camera=camera
+    #     )
+    #     camera_devices[camera_device_info.cv2_port] = camera_device_info
+    # logger.debug(f"Detected camera_devices: {list(camera_devices.keys())}")
     get_app_state().available_devices = {camera_id: device for camera_id, device in camera_devices.items()}
+    pass
 
 
 async def _check_camera_available(port: int) -> bool:
