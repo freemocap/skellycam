@@ -82,7 +82,7 @@ class CameraManager:
         while any([camera_process.is_alive() for camera_process in camera_processes_to_close]):
             wait_10ms()
 
-        self.register_subprocess()
+        # self.register_subprocess()
 
         for camera_id in close_these_cameras:
             self._camera_processes.pop(camera_id)

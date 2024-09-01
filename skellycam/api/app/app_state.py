@@ -8,6 +8,7 @@ import psutil
 from pydantic import BaseModel
 
 from skellycam.api.routes.websocket.ipc import get_ipc_queue
+from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.detection.camera_device_info import AvailableDevices
 
@@ -68,7 +69,7 @@ logger = logging.getLogger(__name__)
 
 class AppState:
     def __init__(self):
-        self._camera_configs: Optional[CameraConfigs] = None
+        self._camera_configs: Optional[CameraConfigs] = {CameraId(0): CameraConfig()}
         self._available_devices: Optional[AvailableDevices] = None
         self._websocket_status: Optional[WebSocketStatus] = None
         self._api_call_history: List[ApiCallLog] = []
