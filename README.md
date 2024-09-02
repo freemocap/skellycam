@@ -3,7 +3,7 @@
 </p>
 
 <h3 align="center">SkellyCam</h3>
-<p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>
+<p align="center"> The camera backend for the FreeMoCap Project 💀📸</p>
 <p align="center">
     <a href="https://github.com/freemocap/fast-camera-capture/releases/latest">
         <img src="https://img.shields.io/github/release/freemocap/fast-camera-capture.svg" alt="Latest Release">
@@ -19,13 +19,6 @@
   </a>
 </p>
 
-
-> **NOTE** - The SkellyCam package is the primary camera backend for the `freemocap` markeless motion capture software
-> 💀✨
->
-> [https:github.com/freemocap/freemocap](https:github.com/freemocap/freemocap)
->
->[https://freemocap.org](https://freemocap.org)
 
 ---
 
