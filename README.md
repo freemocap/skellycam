@@ -22,13 +22,26 @@
 
 ---
 
-# Tauri Nuxt App
+This iteration of SkellyCam operates with an [Tauri](https://tauri.app) application. The frontend UI is built using Nuxt
+and VueJS, and the backend code that connects to cameras, pulls synchronized images, saves videos, etc is build in
+Python hosted behind a Uvicorn/FastAPI server.
+
+Although we *could* run all the camera connections via the `MediaDevices` API exposed in the frontend, those processes
+are primarily optimized for high efficiency video *streams* which abstract away from the actual moments of pulling
+images from the camera devices, which makes it very hard to produce the kind of high-accuracy software based
+synchronization necessary for the `freemocap` software.
+
+Handling the multicamera connections in Python is difficult, and much effort is expended to ensure the images pulled
+from each camera synchronously and at the highest possible framerate (without blocking or bogging from other operations
+in the software). Image data is passed between processes using a complex combination of shared memory, multiprocessing
+PIPEs, and a websocket connection to feed images to a Client frontend.
 
 ## Installation
 
 Run the following commands from the project root directory (i.e the same directory as this `README.md` file)
 
-> [!TIP] tl;dr
+> [!TIP]
+> tl;dr
 > 0. Install pre-reqs
 > 1. Build Python binary: `poetry run pyinstaller`
 > 2. Install Node/Tauri stuff - `npm install`
