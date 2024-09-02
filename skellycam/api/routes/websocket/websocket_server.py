@@ -1,7 +1,7 @@
 import asyncio
 import logging
-import pickle
 
+import msgpack
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
@@ -57,7 +57,7 @@ async def websocket_relay(websocket: WebSocket):
                 message = ipc_queue.get()
                 if isinstance(message, AppStateDTO):
                     logger.trace(f"Relaying AppStateDTO to frontend")
-                    await websocket.send_bytes(pickle.dumps(message))
+                    await websocket.send_bytes(msgpack.dumps(message.model_dump_json()))
                 elif isinstance(message, SubProcessStatus):
                     pass
                     # app_state.update_process_status(message)
@@ -94,7 +94,7 @@ async def websocket_server_connect(websocket: WebSocket):
 
     await websocket.accept()
     await websocket.send_text(HELLO_CLIENT_TEXT_MESSAGE)
-    await websocket.send_bytes(HELLO_CLIENT_BYTES_MESSAGE)
+    await websocket.send_bytes(msgpack.dumps(HELLO_CLIENT_BYTES_MESSAGE))
     await websocket.send_json(HELLO_CLIENT_JSON_MESSAGE)
     logger.success(f"Websocket connection established!")
 

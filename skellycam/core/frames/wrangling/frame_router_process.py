@@ -1,8 +1,9 @@
 import logging
 import multiprocessing
-import pickle
 import time
 from typing import Optional
+
+import msgpack
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
@@ -57,7 +58,7 @@ class FrameRouterProcess:
 
         try:
             while not kill_camera_group_flag.value:
-                if frame_escape_pipe_exit.poll():
+                if frame_escape_pipe_exit.poll():  # TODO - Replace this with a 'new frames' flag from the listener process?
 
                     # TODO - receive individual frames as bytes with `...recv_bytes()` and construct MultiFramePayload object here
                     payload: MultiFramePayload = frame_escape_pipe_exit.recv()
@@ -68,7 +69,7 @@ class FrameRouterProcess:
                     frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=payload,
                                                                                      resize_image=.25)
                     # TODO - might/shouild be possible to send straight to GUI websocket client from here without the relay pipe? Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
-                    frontend_relay_pipe.send_bytes(pickle.dumps(frontend_payload))
+                    frontend_relay_pipe.send_bytes(msgpack.dumps(frontend_payload.model_dump_json()))
 
                     logger.loop(f"FrameExporter - Received multi-frame payload: {payload}")
 
@@ -82,7 +83,7 @@ class FrameRouterProcess:
                                 f"FrameExporter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
                             # send  as bytes so it can use same ws/ relay as the frontend_payload's
                             recording_info = video_recorder_manager.recording_info
-                            frontend_relay_pipe.send_bytes(pickle.dumps(recording_info))
+                            frontend_relay_pipe.send_bytes(msgpack.dumps(recording_info))
 
                         # TODO - Decouple 'add_frame' from 'save_frame' and create a 'save_one_frame' method that saves a single frame from one camera, so we can check for new frames faster. We will need a mechanism to drain the buffers when recording ends
                         video_recorder_manager.add_multi_frame(payload)
