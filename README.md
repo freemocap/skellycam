@@ -1,6 +1,6 @@
 <p align="center">
-    <img src="https://github.com/freemocap/skellycam/blob/main/skellycam/shared/skellycam-logo/skellycam-logo.svg" height="128" alt="Project Logo">
-</p>
+    <img src="https://github.com/freemocap/freemocap/assets/15314521/da1af7fe-f808-43dc-8f59-c579715d6593" height="240" alt="Project Logo">
+</p> 
 <h3 align="center">SkellyCam</h3>
 <p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>
 <p align="center">
