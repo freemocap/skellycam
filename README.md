@@ -25,36 +25,77 @@
 
 ## Installation
 
-- Install Rust on your system - https://www.rust-lang.org/tools/install
-- Install Node.js
-- Run the following commands in this directory (i.e the same directory as this `README.md` file)
+Run the following commands from the project root directory (i.e the same directory as this `README.md` file)
 
+> [!TIP] tl;dr
+> 0. Install pre-reqs
+> 1. Build Python binary: `poetry run pyinstaller`
+> 2. Install Node/Tauri stuff - `npm install`
+> 3. Run in dev mode: `npm run dev`
+> - OR-
+> 4. Build installer: `npm run build`
+
+### 0. Install pre-requisites
+- Install Rust on your system - https://www.rust-lang.org/tools/install
+- Install Node.js - https://nodejs.org/en
+- Install Poetry - https://python-poetry.org/
+
+### 1. Build Python executable for Tauri sidecar
+
+We build the Python backend code (i.e. the uvicorn/fastapi api server) into a binary executable using [
+`pyinstaller`](skellycam/utilities/build_pyinstaller_executable.py). This binary will be loaded and run as
+a ['sidecar'](https://tauri.app/v1/guides/building/sidecar/) in the Tauri app.
+
+The executable will be saved to the `skellycam/dist/` folder, with a 'target triple suffix' appended to the file name
+based on the OS it was built on (see 'sidecar' link above for some terse details).
+
+The path to this binary (minus the target triple and extension) must be specified in a few spots in the
+`src-tauri/tauri.conf.json` file (path relative to that file), as well in the `side_car_base_name` variable specified in
+the `src-tauri/src/main.rs` file.
+
+**To generate the python sidecar executable, run the command (note, it takes a while):**
+
+```
+poetry run pyinstaller
+```
+
+### 2. Install Node/Nuxt/Tauri stuff
+
+> [!NOTE]
+> The `postinstall` script in `package.json` cd's into the `skellycam-ui/` folder an runs `npm install` in there
 ```
 npm install
 ```
 
-## Running the app
+## 3. Running the application in `dev` mode
 
+To build and run the Tauri application in `dev`mode, run this command:
 ```
-npm run tauri-dev
+npm run dev
 ```
+
+This should build the Rust backend, launch the nuxt/vue based frontend from `skellycam-ui` in a new window, and run the
+python server sidecar. Check the terminal for relevant `localhost` urls
+
+> [!TIP]
+> If you are working on the python code and want to see changes without rebuilding the pyinstaller sidecar, simply run
+`skellycam/__main__.py` after the Tauri app has aleady started. It will kill the `sidecar` program and take over serving
+> responses on that port
+> (I don't know if thats, like, the right way to do that, but it works for now ¯\_(ツ)_/¯
 
 whee!
 
-## Motivation
+### 4. Building an installer
 
-Connecting to cameras on multiple platforms in a way that is not slow is a difficult challenge, especially for new
-developers.
+To produce installers and whatnot, run:
 
-There are a bunch of tools out there (e.g. OpenCV) and other open source libraries that give just enough to support
-hardware manipulation,
-but they need to be use in concert in order to be useful.
+```
+npm run build
+```
 
-This library attempts to string those things together, and provide an interface for everyone to use in python with a
-simple `pip install`.
-
-The primary focus is to provide an easy method to connect to one or more cameras and provide methods for
-streaming/recordig synchronized frames from the connected cameras.
+> [!WARNING]
+> This produces installers and stuff, which is cool, but the resulting application crashes immediately, which is less
+> cool.
 
 
 
