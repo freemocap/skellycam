@@ -36,6 +36,10 @@ from each camera synchronously and at the highest possible framerate (without bl
 in the software). Image data is passed between processes using a complex combination of shared memory, multiprocessing
 PIPEs, and a websocket connection to feed images to a Client frontend.
 
+Copious logging (log level set in `skellycam/__init__.py`) and high precision timestamp logs have and will continue to
+allow for deeper debugging and streamlining of the framereading processes that will pour empirical data into he
+`freemocap` light-to-skeleton building pipeline.
+
 ## Installation
 
 Run the following commands from the project root directory (i.e the same directory as this `README.md` file)
