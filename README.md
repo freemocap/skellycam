@@ -1,5 +1,5 @@
-<p align="center">
-    <img src="https://github.com/freemocap/freemocap/assets/15314521/da1af7fe-f808-43dc-8f59-c579715d6593" height="240" alt="Project Logo">
+p align="center">
+    <img src="https://github.com/user-attachments/assets/55dea5bb-6823-4773-b41e-a43a4d84c2ba" height="240" alt="SkellyCam Logo">
 </p> 
 <h3 align="center">SkellyCam</h3>
 <p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>
