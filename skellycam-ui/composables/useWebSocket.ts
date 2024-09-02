@@ -16,26 +16,27 @@ export default (url: string) => {
         };
 
         ws.value.onmessage = async (event) => {
-            if (typeof event.data === 'string') {
-                console.log('Received message:', event.data);
-            } else if (event.data instanceof Blob) {
-
-                try {
-                    const arrayBuffer = await event.data.arrayBuffer();
-                    console.log('Received websocketBlob:', arrayBuffer.byteLength);
-                    if (arrayBuffer.byteLength < 1000) {
-                        // console.log('Received Blob with size:', arrayBuffer.byteLength);
-                        // const payload = decode(new Uint8Array(arrayBuffer)) as FrontendImagePayload;
-                        // await updateLatestImages(payload);
-                        // const logMessage = `Updated latestImages with ${Object.keys(payload.jpeg_images).length} cameras`;
-                        // console.log(logMessage);
-                    }
-                } catch (error) {
-                    console.error('Error decoding websocket blob:', error);
-                }
-            } else {
-                console.log(`Received ${event.type}`)
-            }
+            console.log('Received message:', event.data);
+            // if (typeof event.data === 'string') {
+            // } else if (event.data instanceof Blob) {
+            //
+            //     try {
+            //         const arrayBuffer = await event.data.arrayBuffer();
+            //         console.log('Received websocketBlob:', arrayBuffer.byteLength);
+            //         const payload = decode(new Uint8Array(arrayBuffer));
+            //         console.log(`received  payload - unpacked to: ${JSON.stringify(payload,null,2)}`)
+            //         if (arrayBuffer.byteLength < 1000) {
+            //             // console.log('Received Blob with size:', arrayBuffer.byteLength);
+            //             // await updateLatestImages(payload);
+            //             // const logMessage = `Updated latestImages with ${Object.keys(payload.jpeg_images).length} cameras`;
+            //             // console.log(logMessage);
+            //         }
+            //     } catch (error) {
+            //         console.error('Error decoding websocket blob:', error);
+            //     }
+            // } else {
+            //     console.log(`Received ${event.type}`)
+            // }
         }
 
         ws.value.onclose = () => {
