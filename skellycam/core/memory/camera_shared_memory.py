@@ -82,7 +82,7 @@ class CameraSharedMemory(BaseModel):
         )
 
     def retrieve_frame(self) -> FramePayloadDTO:
-        image = self.image_shm.copy_from_buffer()
+        image = self.image_shm.copy_from_buffer()  # TODO - Could we make this not a `copy`? or would that run the risk of collision with the next loop while we're escaping this frame data?
         metadata = self.metadata_shm.copy_from_buffer()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(

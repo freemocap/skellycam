@@ -8,6 +8,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.5.2",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/vue-fontawesome": "^3.0.6",
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "@pinia/nuxt": "^0.5.1",
     "@tresjs/cientos": "^3.8.0",
     "@tresjs/core": "^3.7.0",
