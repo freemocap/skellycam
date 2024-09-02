@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://github.com/freemocap/skellycam/blob/main/skellycam/assets/logo/skelly-cam-logo.svg" height="128" alt="Project Logo">
+    <img src="https://github.com/freemocap/skellycam/blob/main/skellycam/shared/skellycam-logo/skellycam-logo.svg" height="128" alt="Project Logo">
 </p>
 <h3 align="center">SkellyCam</h3>
 <p align="center"> An easy and efficient way to connect to one or more cameras and record synchronized videos 💀📸</p>
@@ -18,6 +18,13 @@
   </a>
 </p>
 
+
+> **NOTE** - The SkellyCam package is the primary camera backend for the `freemocap` markeless motion capture software
+> 💀✨
+>
+> [https:github.com/freemocap/freemocap](https:github.com/freemocap/freemocap)
+>
+>[https://freemocap.org](https://freemocap.org)
 
 ---
 
@@ -99,116 +106,6 @@ npm run build
 > This produces installers and stuff, which is cool, but the resulting application crashes immediately, which is less
 > cool.
 
-
-
-> **NOTE** - The SkellyCam package is the primary camera backend for the `freemocap` markeless motion capture software
-> 💀✨
->
-> [https:github.com/freemocap/freemocap](https:github.com/freemocap/freemocap)
->
->[https://freemocap.org](https://freemocap.org)
-
----
-
-## Installation and Usage
-
-### 0. Open a terminal (ideally with a `python` virtual environment activate)
-
-### 1. Install from Pip
-
-Enter the command below and press 'Enter'
-
-```bash
-pip install skellycam
-```
-
-### 2. Launch SkellyCam GUI
-
-Enter the command below and press 'Enter'
-
-```bash
-skellycam
-```
-
-### 3. Success! 💀📸✨
-
-Hopefully a bunch of text scrolled by and a GUI popped up!
-
-If not, please [open an issue on the github repo](https://github.com/freemocap/skellycam/issues) and we'll try to help
-you out :)
-
-## Limitation (aka TO DO)  -
-
-- Currently uses `opencv` to connect to cameras, so it won't recognize hardware that can't be connected
-  with `cv2.VideoCapture` - Support for other camera hardware (e.g. FLIR) coming soon
-- Camera streams are not synchronized at run time, but are saved and synchronized after the fact. This is time-consuming
-  process that requres frames be saved in RAM until the recording is done. Both of these weaknesses have solutions in
-  the works.
-
-### New Python developers
-
-1) Install Python 3.10
-2) Create Virtual Environment
-3) Install `skellycam`
-
-#### To install Python 3.10
-
-[Windows Python3 Installation Guide](https://realpython.com/installing-python/#how-to-install-from-the-full-installer)
-
-[MacOSX Python3 Installation Guide](https://realpython.com/installing-python/#step-1-download-the-official-installer)
-
-[Linux Python3 Installation Guide](https://computingforgeeks.com/how-to-install-python-on-ubuntu-linux-system/)
-
-### How to use
-
-#### RECOMMENDED - Use the GUI!
-
-Launch the GUI by running `skellycam` in a terminal.
-
-This is currently the most tested method for interacting with the cameras.
-
-#### Example 1 - Connecting to a single Camera and showing the video feed
-
-[Example 1 Python Fle](skellycam/experiments/examples/example1_single_camera_connection.py)
-
-In this example, we connect a camera at index 0. Calling `show` allows us to view the cameras frames allowing us
-to see video.
-
-> NOTE - Work in progress, no clean way to kill this window yet
-
-```python
-from skellycam.core.cameras.camera.config.camera_config import CameraConfig
-, Camera
-
-if __name__ == "__main__":
-  cam1 = Camera(CameraConfig(cam_id=0))
-  cam1.connect()
-  cam1.show()
-```
-
-#### Example 2 - Connect to all available cameras and record synchronized videos
-
-> NOTE - Experimental and under development, might be unstable
-
-[Example 2 Python Fle](skellycam/experiments/examples/example1_single_camera_connection.py)
-
-```python
-from skellycam.experiments import MultiCameraVideoRecorder
-
-if __name__ == "__main__":
-    synchronized_video_recorder = MultiCameraVideoRecorder()
-    synchronized_video_recorder.run()
-
-```
-
-### Contribution Guidelines
-
-Please read our contribution doc: [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## Maintainers
-
-* [Jon Matthis](https://github.com/jonmatthis)
-* [Endurance Idehen](https://github.com/endurance)
 
 ## License
 
