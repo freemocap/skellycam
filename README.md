@@ -42,6 +42,12 @@ Run the following commands from the project root directory (i.e the same directo
 
 ### 1. Build Python executable for Tauri sidecar
 
+**To generate the python sidecar executable, run the command (note, it takes a while):**
+
+```
+poetry run pyinstaller
+```
+
 We build the Python backend code (i.e. the uvicorn/fastapi api server) into a binary executable using [
 `pyinstaller`](skellycam/utilities/build_pyinstaller_executable.py). This binary will be loaded and run as
 a ['sidecar'](https://tauri.app/v1/guides/building/sidecar/) in the Tauri app.
@@ -53,21 +59,17 @@ The path to this binary (minus the target triple and extension) must be specifie
 `src-tauri/tauri.conf.json` file (path relative to that file), as well in the `side_car_base_name` variable specified in
 the `src-tauri/src/main.rs` file.
 
-**To generate the python sidecar executable, run the command (note, it takes a while):**
 
-```
-poetry run pyinstaller
-```
 
 ### 2. Install Node/Nuxt/Tauri stuff
 
-> [!NOTE]
-> The `postinstall` script in `package.json` cd's into the `skellycam-ui/` folder an runs `npm install` in there
 ```
 npm install
 ```
+> [!NOTE]
+> The `postinstall` script in `package.json` cd's into the `skellycam-ui/` folder an runs `npm install` in there
 
-## 3. Running the application in `dev` mode
+### 3. Running the application in `dev` mode
 
 To build and run the Tauri application in `dev`mode, run this command:
 ```
@@ -81,7 +83,7 @@ python server sidecar. Check the terminal for relevant `localhost` urls
 > If you are working on the python code and want to see changes without rebuilding the pyinstaller sidecar, simply run
 `skellycam/__main__.py` after the Tauri app has aleady started. It will kill the `sidecar` program and take over serving
 > responses on that port
-> (I don't know if thats, like, the right way to do that, but it works for now ¯\_(ツ)_/¯
+> (I don't know if thats, like, the right way to do that, but it works for now ¯\\_(ツ)_/¯
 
 whee!
 
