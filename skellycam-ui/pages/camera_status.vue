@@ -6,7 +6,7 @@
     <h2>Available Cameras:</h2>
     <ul>
       <li v-for="(camera, index) in camerasStore.cameraDevices" :key="index">
-        {{ camera.deviceInfo.label }} - {{ camera.cameraNumber }}
+        {{ camera }}
       </li>
     </ul>
   </div>
