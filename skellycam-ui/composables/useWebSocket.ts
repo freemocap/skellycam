@@ -16,7 +16,17 @@ export default (url: string) => {
         };
 
         ws.value.onmessage = async (event) => {
-            console.log('Received message:', event.data);
+            try {
+                const data = JSON.parse(event.data);
+                // const message = parseMessage(data);
+                if (data.jpeg_images !== undefined) {
+                    latestImages.value = data.jpeg_images
+                }
+                console.log('Received message:', data);
+            } catch (error) {
+                console.log(`Failed to parse message as json: ${event}`)
+            }
+
             // if (typeof event.data === 'string') {
             // } else if (event.data instanceof Blob) {
             //
@@ -38,7 +48,13 @@ export default (url: string) => {
             //     console.log(`Received ${event.type}`)
             // }
         }
+        const parseMessage = (data: any) => {
+            // if (data.jpeg_images !== undefined) {
+            //     return new FrontendFramePayload(data)
+            // }
+            return data
 
+        }
         ws.value.onclose = () => {
             console.log('WebSocket connection closed');
             isConnected.value = false;
@@ -60,6 +76,7 @@ export default (url: string) => {
             ws.value.send(message);
         }
     };
+
 
     return {
         connectWebSocket,
