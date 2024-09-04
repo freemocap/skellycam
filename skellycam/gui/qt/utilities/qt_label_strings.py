@@ -1,4 +1,3 @@
-from typing import Union
 import cv2
 
 import skellycam
@@ -13,7 +12,7 @@ EXPAND_ALL_STRING = "Expand All"
 COLLAPSE_ALL_STRING = "Collapse All"
 
 
-def rotate_image_str_to_cv2_code(rotate_str: str) -> Union[int, None]:
+def rotate_image_str_to_cv2_code(rotate_str: str) -> int:
     if rotate_str == ROTATE_90_CLOCKWISE_STRING:
         return cv2.ROTATE_90_CLOCKWISE
     elif rotate_str == ROTATE_90_COUNTERCLOCKWISE_STRING:
@@ -21,11 +20,11 @@ def rotate_image_str_to_cv2_code(rotate_str: str) -> Union[int, None]:
     elif rotate_str == ROTATE_180_STRING:
         return cv2.ROTATE_180
 
-    return None
+    return 0
 
 
 def rotate_cv2_code_to_str(rotate_video_value):
-    if rotate_video_value is None:
+    if rotate_video_value is None or rotate_video_value == 0:
         return None
     elif rotate_video_value == cv2.ROTATE_90_CLOCKWISE:
         return ROTATE_90_CLOCKWISE_STRING

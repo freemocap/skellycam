@@ -1,4 +1,3 @@
-from typing import Union
 from pydantic import BaseModel
 
 from skellycam.opencv.camera.types.camera_id import CameraId
@@ -12,5 +11,5 @@ class CameraConfig(BaseModel):
     framerate: int = 30
     # fourcc: str = "MP4V"
     fourcc: str = "MJPG"
-    rotate_video_cv2_code: Union[int, None] = None
+    rotate_video_cv2_code: int = 0
     use_this_camera: bool = True
