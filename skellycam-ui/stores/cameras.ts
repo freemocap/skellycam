@@ -58,7 +58,7 @@ export const useCamerasStore = defineStore('cameras', {
             }
             console.log("Initializing pinia `cameras` store...")
             await this.detectDevices();
-            await this.connectToCameras();
+            // await this.connectToCameras();
             navigator.mediaDevices.addEventListener('devicechange', () => this.detectDevices);
             this.camerasReady = true;
             console.log("`Pinia cameras` datastore initialized successfully.")
