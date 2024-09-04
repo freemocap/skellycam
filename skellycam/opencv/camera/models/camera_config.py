@@ -11,5 +11,5 @@ class CameraConfig(BaseModel):
     framerate: int = 30
     # fourcc: str = "MP4V"
     fourcc: str = "MJPG"
-    rotate_video_cv2_code: int = 0
+    rotate_video_cv2_code: int = -1
     use_this_camera: bool = True
