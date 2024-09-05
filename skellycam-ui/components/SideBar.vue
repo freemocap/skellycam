@@ -9,9 +9,7 @@
       <v-list-item>
         <CameraStatus/>
       </v-list-item>
-      <v-list-item>
-        <ApiButtons/>
-      </v-list-item>
+
     </v-list>
   </v-navigation-drawer>
 </template>

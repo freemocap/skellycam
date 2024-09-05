@@ -3,11 +3,11 @@
     <p> Websocket status: {{ isConnected ? 'Connected' : 'Disconnected' }} </p>
     <div>
       <button @click="connectWebSocket">Connect Websocket</button>
-      <button @click="sendMessage('Hello from the client')">Send WS Message</button>
-      <button @click="fetchHello">Fetch HTTP Hello</button>
-      <button @click="fetchAppState">Fetch App State</button>
+      <!--      <button @click="sendMessage('Hello from the client')">Send WS Message</button>-->
+      <!--      <button @click="fetchHello">Fetch HTTP Hello</button>-->
       <button @click="connectToCameras">Connect to Cameras</button>
       <button @click="closeCameras">Close Cameras</button>
+      <button @click="fetchAppState">Fetch App State</button>
 
       <div class="image-container">
         <div v-for="(image, cameraId) in latestImages" :key="cameraId" class="image-wrapper">
@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 
-import {closeCameras, connectToCameras, fetchAppState, fetchHello} from "~/composables/server-client-methods";
+import {closeCameras, connectToCameras, fetchAppState} from "~/composables/server-client-methods";
 
 const {
   connectWebSocket,

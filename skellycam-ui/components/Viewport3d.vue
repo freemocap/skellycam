@@ -16,7 +16,13 @@
 <script lang="ts" setup>
 import * as THREE from 'three';
 
+const {
+  connectWebSocket,
+  latestImages
+} = useWebSocket();
+
 const camerasStore = useCamerasStore();
+const latestFramesStore = useLatestFrames();
 const camerasReady = computed(() => camerasStore.camerasReady);
 const videoTextures = ref<THREE.Texture[]>([]);
 
@@ -43,23 +49,48 @@ const gl = reactive({
 });
 
 
-onMounted(async () => {
-  while (!camerasReady.value) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
+onMounted(() => {
+  const solidColorTexture = new THREE.Texture();
+
+  // Create a canvas element
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (context) {
+    canvas.width = 1;
+    canvas.height = 1;
+    context.fillStyle = '#ff0000'; // Set the desired solid color
+    context.fillRect(0, 0, 1, 1);
+
+    solidColorTexture.image = canvas;
+    solidColorTexture.needsUpdate = true;
+
+    videoTextures.value.push(solidColorTexture);
   }
-  for (let i = 0; i < camerasStore.cameraDevices.length; i++) {
-    const video = document.createElement('video');
-    video.autoplay = true;
-    video.style.display = 'none';
-    document.body.appendChild(video);
-
-    video.srcObject = await camerasStore.cameraDevices[i].getStream();
-    video.play();
-
-    const texture = new THREE.VideoTexture(video);
+  // Create initial textures for each camera
+  for (let i = 0; i < Object.keys(latestImages.value).length; i++) {
+    const texture = new THREE.Texture();
     videoTextures.value.push(texture);
   }
 
+  // Connect to WebSocket and update textures when new images arrive
+  connectWebSocket();
+
+  watch(latestImages, (newImages) => {
+    Object.keys(newImages).forEach((cameraId, index) => {
+      const image = newImages[cameraId];
+      const img = new Image();
+      img.src = `data:image/jpeg;base64,${image}`;
+      img.onload = () => {
+        if (context) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          context.drawImage(img, 0, 0);
+          videoTextures.value[index].image = canvas;
+          videoTextures.value[index].needsUpdate = true;
+        }
+      };
+    });
+  }, {deep: true});
 });
 </script>
 

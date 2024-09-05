@@ -13,6 +13,8 @@
 
 <script lang="ts" setup>
 const camerasStore = useCamerasStore();
+await camerasStore.detectDevices()
+console.log(`Detected devices: ${JSON.stringify(camerasStore.cameraDevices)}`)
 </script>
 
 

@@ -1,4 +1,4 @@
 <template>
-  <ApiButtons/>
+  <Viewport3d/>
 </template>
 

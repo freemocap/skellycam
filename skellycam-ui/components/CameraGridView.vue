@@ -24,8 +24,8 @@ const {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center; /* Centers the images */
-  width: 100%; /* Takes full width of the parent */
-  height: 100vh; /* Takes the full viewport height */
+  width: 80%; /* Takes full width of the parent */
+  height: 80vh; /* Takes the full viewport height */
   overflow: auto; /* Adds scroll if content overflows */
 }
 

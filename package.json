@@ -5,7 +5,10 @@
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "@tauri-apps/api": "^1.5.3",
-    "execa": "^8.0.1"
+    "execa": "^8.0.1",
+    "fluent-ffmpeg": "^2.1.3",
+    "node-webcam": "^0.8.2",
+    "usb": "^2.13.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.5.11",
@@ -25,7 +28,6 @@
     "python-dev": "poetry shell && poetry run skellycam",
     "build-python-sidecar": "npm run install-python && poetry run pyinstaller",
     "install-python": "poetry shell && poetry update",
-
     "postinstall": "npm run install-nuxt"
   }
 }
