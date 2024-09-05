@@ -1,8 +1,8 @@
 <template>
   <div>
-    <h1>Camera Status</h1>
+    <h3>Camera Status</h3>
 
-    <h2>Available Cameras:</h2>
+    <h5>Available Cameras:</h5>
     <ul>
       <li v-for="(camera, index) in camerasStore.cameraDevices" :key="index">
         {{ camera }}

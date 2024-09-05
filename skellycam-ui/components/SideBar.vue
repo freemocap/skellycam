@@ -6,17 +6,20 @@
           {{ railIcon }}
         </v-icon>
       </v-list-item>
-      <NavLink to="/api_buttons">API Buttons</NavLink>
-      <br/>
-      <NavLink to="/camera_status">Camera Status</NavLink>
-      <br/>
-      <NavLink to="/">3d viewport</NavLink>
+      <v-list-item>
+        <CameraStatus/>
+      </v-list-item>
+      <v-list-item>
+        <ApiButtons/>
+      </v-list-item>
     </v-list>
   </v-navigation-drawer>
 </template>
 
 
 <script setup>
+
+import CameraStatus from "~/components/CameraStatus.vue";
 
 const drawer = ref(true);
 const rail = ref(true);

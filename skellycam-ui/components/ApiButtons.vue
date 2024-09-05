@@ -22,6 +22,8 @@
 
 <script setup lang="ts">
 
+import {closeCameras, connectToCameras, fetchAppState, fetchHello} from "~/composables/server-client-methods";
+
 const {
   connectWebSocket,
   sendMessage,
@@ -29,28 +31,6 @@ const {
   latestImages
 } = useWebSocket();
 
-
-const fetchHello = async () => {
-  const response = await fetch('http://localhost:8005/app/healthcheck');
-  const data = await response.json();
-  console.log(data);
-}
-const fetchAppState = async () => {
-  const response = await fetch('http://localhost:8005/app/state');
-  const data = await response.json();
-  console.log(data);
-}
-
-const connectToCameras = async () => {
-  const response = await fetch('http://localhost:8005/cameras/connect');
-  const data = await response.json();
-  console.log(data);
-}
-const closeCameras = async () => {
-  const response = await fetch('http://localhost:8005/cameras/close');
-  const data = await response.json();
-  console.log(data);
-}
 
 </script>
 
