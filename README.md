@@ -45,7 +45,8 @@ allow for deeper debugging and streamlining of the framereading processes that w
 Run the following commands from the project root directory (i.e the same directory as this `README.md` file)
 
 > [!TIP]
-> tl;dr
+> tl;dr Quick start steps
+> 
 > 0. Install pre-reqs
 > 1. Build Python binary: `poetry run pyinstaller`
 > 2. Install Node/Tauri stuff - `npm install`
@@ -53,12 +54,13 @@ Run the following commands from the project root directory (i.e the same directo
 > - OR-
 > 4. Build installer: `npm run build`
 
-### 0. Install pre-requisites
+### Detailed install instructions
+#### 0. Install pre-requisites
 - Install Rust on your system - https://www.rust-lang.org/tools/install
 - Install Node.js - https://nodejs.org/en
 - Install Poetry - https://python-poetry.org/
 
-### 1. Build Python executable for Tauri sidecar
+#### 1. Build Python executable for Tauri sidecar
 
 **To generate the python sidecar executable, run the command (note, it takes a while):**
 
@@ -79,7 +81,7 @@ the `src-tauri/src/main.rs` file.
 
 
 
-### 2. Install Node/Nuxt/Tauri stuff
+#### 2. Install Node/Nuxt/Tauri stuff
 
 ```
 npm install
@@ -105,7 +107,7 @@ python server sidecar. Check the terminal for relevant `localhost` urls
 
 whee!
 
-### 4. Building an installer
+#### 4. Building an installer
 
 To produce installers and whatnot, run:
 
