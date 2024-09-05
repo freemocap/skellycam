@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 PATH_TO_SKELLYCAM_MAIN = str(Path(__file__).absolute())
 
 
-def main(qt: bool = False):
+def main(qt_gui: bool = False):
     logger.info(f"Running from __main__: {__name__} - {clean_path(__file__)}")
     if sys.platform == "win32":
         setup_app_id_for_windows()
-    if qt:
+    if qt_gui:
         from skellycam.gui.gui_main import gui_main
         # multiprocessing.set_start_method("fork") # might be needed for MacOS or Linux?
 
@@ -43,7 +43,7 @@ def main(qt: bool = False):
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     try:
-        main(qt=False)
+        main(qt_gui=True)
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt - shutting down!")
     except Exception:
