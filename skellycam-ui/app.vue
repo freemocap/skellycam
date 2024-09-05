@@ -8,13 +8,3 @@
 </template>
 
 
-<script>
-const websocket = useWebSocket()
-await websocket.connectWebSocket()
-
-onUnmounted(() => {
-  if (websocket) {
-    websocket.closeWebsocket();
-  }
-});
-</script>
