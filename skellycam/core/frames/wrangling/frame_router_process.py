@@ -69,9 +69,9 @@ class FrameRouterProcess:
                     frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=payload,
                                                                                      resize_image=.25)
                     # TODO - might/shouild be possible to send straight to GUI websocket client from here without the relay pipe? Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
-                    # frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
-                    frontend_relay_pipe.send(
-                        frontend_payload.model_dump())  # faster if sending bytes? pickle cost of regular pipe send vs encode to utf-8 bytes and use `send_bytes`?
+                    frontend_relay_pipe.send_bytes(msgpack.dumps(frontend_payload.model_dump_json()))
+                    # frontend_relay_pipe.send(
+                    #     frontend_payload.model_dump())  # faster if sending bytes? pickle cost of regular pipe send vs encode to utf-8 bytes and use `send_bytes`?
 
                     logger.loop(f"FrameExporter - Received multi-frame payload: {payload}")
 

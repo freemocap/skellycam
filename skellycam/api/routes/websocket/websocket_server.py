@@ -46,21 +46,21 @@ async def websocket_relay(websocket: WebSocket):
     try:
         while True:
             if frontend_frame_pipe.poll():
-                # payload: bytes = frontend_frame_pipe.recv_bytes()
-                payload = frontend_frame_pipe.recv()
+                payload: bytes = frontend_frame_pipe.recv_bytes()
+                # payload = frontend_frame_pipe.recv()
 
                 logger.loop(
                     f"Relay bytes payload through websocket, size:  {len(payload) * .001:.3f}kB")
 
-                # await websocket.send_bytes(payload)
-                await websocket.send_json(payload)
+                await websocket.send_bytes(payload)
+                # await websocket.send_json(payload)
 
             if not ipc_queue.empty():
                 message = ipc_queue.get()
                 if isinstance(message, AppStateDTO):
                     logger.trace(f"Relaying AppStateDTO to frontend")
-                    # await websocket.send_bytes(msgpack.dumps(message.model_dump_json()))
                     await websocket.send_json(message.model_dump_json())
+                    # await websocket.send_json(message.model_dump_json())
                 elif isinstance(message, SubProcessStatus):
                     pass
                     # app_state.update_process_status(message)

@@ -83,27 +83,37 @@ class WebSocketClient:
         if message == HELLO_CLIENT_BYTES_MESSAGE:
             logger.info("Received HELLO_CLIENT_BYTES_MESSAGE")
             return
-        payload = msgpack.loads(message)
-        if isinstance(payload, FrontendFramePayload):
+        payload = json.loads(msgpack.loads(message))
+
+        if 'jpeg_images' in payload.keys():
+            fe_payload = FrontendFramePayload(**payload)
             logger.loop(
-                f"Received FrontendFramePayload with {len(payload.camera_ids)} cameras - size: {len(message)} bytes")
-            payload.lifespan_timestamps_ns.append({"unpickled_from_websocket": time.perf_counter_ns()})
-            self._gui_state.latest_frontend_payload = payload
-        elif isinstance(payload, RecordingInfo):
-            logger.info(f"Received RecordingInfo for recording: `{payload.recording_name}`")
-            self._gui_state.recording_info = payload
-        elif isinstance(payload, AppStateDTO):
-            logger.info(f"Received AppStateDTO (state_timestamp: {payload.state_timestamp})")
-            self._gui_state.update_app_state(app_state_dto=payload)
+                f"Received FrontendFramePayload with {len(fe_payload.camera_ids)} cameras - size: {len(message)} bytes")
+            fe_payload.lifespan_timestamps_ns.append({"unpickled_from_websocket": time.perf_counter_ns()})
+            self._gui_state.latest_frontend_payload = fe_payload
+
         else:
             logger.info(f"Received binary message: {len(payload) * .001:.3f}kB")
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
-        if "message" in message:
-            logger.info(f"Received message: {message['message']}")
-        else:
-            logger.info(f"Received JSON message, size: {len(json.dumps(message))} bytes")
-
+        if isinstance(message, str):
+            message = json.loads(message)
+        try:
+            if "message" in message.keys():
+                logger.info(f"Received message: {message['message']}")
+            elif 'recording_name' in message.keys():
+                recording_info = RecordingInfo(**message)
+                logger.info(f"Received RecordingInfo for recording: `{recording_info.recording_name}`")
+                self._gui_state.recording_info = message
+            elif 'camera_configs' in message.keys():
+                app_state = AppStateDTO(**message)
+                logger.info(f"Received AppStateDTO (state_timestamp: {app_state.state_timestamp})")
+                self._gui_state.update_app_state(app_state_dto=app_state)
+            else:
+                logger.info(f"Received JSON message, size: {len(json.dumps(message))} bytes")
+        except Exception as e:
+            logger.exception(e)
+            raise e
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:
             if isinstance(message, dict):

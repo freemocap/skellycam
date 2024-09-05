@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Literal, Optional
+from typing import Tuple, Dict, Optional
 
 import cv2
 from pydantic import BaseModel, Field, field_validator
@@ -71,8 +71,8 @@ class CameraConfig(BaseModel):
     )
 
     # TODO - Handle options other than RGB
-    pixel_format: Literal["RGB", "BGR", "MONO", "GREY", "GRAY"] = Field(default="RGB",
-                                                                        description="How to interpret the color channels")
+    pixel_format: str = Field(default="RGB",
+                              description="How to interpret the color channels")
 
     exposure: int = Field(
         default=DefaultCameraConfig.EXPOSURE.value,
