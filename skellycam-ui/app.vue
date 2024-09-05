@@ -10,5 +10,11 @@
 
 <script>
 const websocket = useWebSocket()
-websocket.connectWebSocket()
+await websocket.connectWebSocket()
+
+onUnmounted(() => {
+  if (websocket) {
+    websocket.closeWebsocket();
+  }
+});
 </script>

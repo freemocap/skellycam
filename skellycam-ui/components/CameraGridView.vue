@@ -8,6 +8,14 @@
 </template>
 
 
+<script setup>
+const {
+  connectWebSocket,
+  sendMessage,
+  isConnected,
+  latestImages
+} = useWebSocket();
+
 </script>
 
 <style scoped>
@@ -15,16 +23,21 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  justify-content: center; /* Centers the images */
+  width: 100%; /* Takes full width of the parent */
+  height: 100vh; /* Takes the full viewport height */
+  overflow: auto; /* Adds scroll if content overflows */
 }
 
 .image-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1 1 200px; /* Allows flexibility and ensures a minimum width */
 }
 
 img {
-  max-width: 100px;
-  max-height: 100px;
+  width: 100%; /* Makes the image take full width of the wrapper */
+  height: auto; /* Maintains the aspect ratio */
 }
 </style>

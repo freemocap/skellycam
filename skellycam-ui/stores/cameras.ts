@@ -5,7 +5,7 @@ const defaultConstraints: MediaStreamConstraints = {
     }
 };
 
-export class CameraDevice {
+class CameraDevice {
     cameraNumber: string;
     deviceInfo: MediaDeviceInfo;
     stream: MediaStream | null = null;

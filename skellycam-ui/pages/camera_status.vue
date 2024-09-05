@@ -1,7 +1,6 @@
 <template>
   <div>
     <h1>Camera Status</h1>
-    <p>Cameras Ready: {{ camerasReady }}</p>
 
     <h2>Available Cameras:</h2>
     <ul>
@@ -13,16 +12,7 @@
 </template>
 
 <script lang="ts" setup>
-import {onMounted, ref} from 'vue';
-
 const camerasStore = useCamerasStore();
-const camerasReady = ref(false);
-const cameraDevices = ref([]);
-
-onMounted(async () => {
-  await camerasStore.initialize();
-  camerasReady.value = camerasStore.camerasReady;
-});
 </script>
 
 
