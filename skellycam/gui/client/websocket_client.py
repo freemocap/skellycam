@@ -91,7 +91,9 @@ class WebSocketClient:
                 f"Received FrontendFramePayload with {len(fe_payload.camera_ids)} cameras - size: {len(message)} bytes")
             fe_payload.lifespan_timestamps_ns.append({"unpickled_from_websocket": time.perf_counter_ns()})
             self._gui_state.latest_frontend_payload = fe_payload
-
+        elif 'recording_name' in payload.keys():
+            logger.debug(f"Received RecordingInfo object  - {payload}")
+            self._gui_state.recording_info = RecordingInfo(**payload)
         else:
             logger.info(f"Received binary message: {len(payload) * .001:.3f}kB")
 
@@ -114,6 +116,7 @@ class WebSocketClient:
         except Exception as e:
             logger.exception(e)
             raise e
+
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:
             if isinstance(message, dict):
