@@ -93,7 +93,7 @@ class CameraViewGrid(QWidget):
                 self._camera_landscape_grid_layout.removeWidget(single_camera_view)
         except Exception as e:
             logger.error(f"Error clearing camera layout dictionary: {e}")
-            raise e
+            raise
 
     def set_image_data(self,
                        jpeg_images: Dict[CameraId, str],

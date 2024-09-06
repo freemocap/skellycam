@@ -46,7 +46,7 @@ class UvicornServerManager:
             except Exception as e:
                 logger.error(f"A fatal error occurred in the uvicorn server: {e}")
                 logger.exception(e)
-                raise e
+                raise
             finally:
                 logger.info(f"Shutting down uvicorn server")
 

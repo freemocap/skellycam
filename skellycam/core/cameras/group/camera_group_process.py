@@ -105,7 +105,7 @@ class CameraGroupProcess:
         except Exception as e:
             logger.error(f"CameraGroupProcess error: {e}")
             logger.exception(e)
-            raise e
+            raise
         finally:
             kill_camera_group_flag.value = True
             frame_wrangler.close() if frame_wrangler else None

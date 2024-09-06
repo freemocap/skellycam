@@ -72,7 +72,7 @@ async def websocket_relay(websocket: WebSocket):
         logger.api("Client disconnected, ending listener task...")
     except Exception as e:
         logger.exception(f"Error in websocket relay: {e.__class__}: {e}")
-        raise e
+        raise
     finally:
         logger.info("Ending listener for frontend payload messages in queue...")
 

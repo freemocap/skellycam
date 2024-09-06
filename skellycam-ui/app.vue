@@ -4,7 +4,6 @@
       <NuxtPage/>
     </v-app>
   </NuxtLayout>
-
 </template>
 
 

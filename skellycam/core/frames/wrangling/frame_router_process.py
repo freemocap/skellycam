@@ -102,7 +102,7 @@ class FrameRouterProcess:
         except Exception as e:
             logger.error(f"Frame exporter process error: {e}")
             logger.exception(e)
-            raise e
+            raise
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             if video_recorder_manager:

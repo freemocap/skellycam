@@ -19,4 +19,4 @@ def find_available_port(start_port: int) -> int:
                 port += 1
                 if port > 65535:  # No more ports available
                     logger.error("No ports available!")
-                    raise e
+                    raise

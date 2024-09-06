@@ -58,7 +58,7 @@ class WebSocketClient:
 
     def _on_error(self, ws: WebSocketApp, exception: Exception) -> None:
         logger.exception(f"WebSocket exception: {exception.__class__.__name__}: {exception}")
-        raise exception
+        raise
 
     def _on_close(self, ws: WebSocketApp, close_status_code, close_msg) -> None:
         logger.info(f"WebSocket connection closed: Close status code: {close_status_code}, Close message: {close_msg}")
@@ -115,7 +115,7 @@ class WebSocketClient:
                 logger.info(f"Received JSON message, size: {len(json.dumps(message))} bytes")
         except Exception as e:
             logger.exception(e)
-            raise e
+            raise
 
     def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
         if self.websocket:

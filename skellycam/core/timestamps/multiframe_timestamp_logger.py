@@ -171,7 +171,7 @@ class MultiframeTimestampLogger(BaseModel):
 
         except Exception as e:
             logger.error(f"Error saving timestamp stats: {e}")
-            raise e
+            raise
         return camera_stats_by_id
 
     def _get_timestamp_stats(self) -> Dict[Hashable, Any]:
