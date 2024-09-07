@@ -1,5 +1,3 @@
-import * as msgpack from '@msgpack/msgpack';
-
 const wsUrl = 'ws://localhost:8005/websocket/connect';
 
 class FrontendFramePayload {
@@ -49,8 +47,7 @@ const _handleWebsocketMessage = (message: string | Buffer): void => {
     } else {
         console.info(`Received binary message: size: ${(message.length * 0.001).toFixed(3)}kB`);
         try {
-            const decodedData = msgpack.decode(new Uint8Array(message));
-            console.log('Decoded binary message:', decodedData);
+
             _handleBinaryMessage(message);
         } catch (error) {
             console.error(`Failed to decode binary message: ${error}`);
@@ -65,27 +62,21 @@ const _handleTextMessage = (message: string): void => {
 };
 
 const _handleBinaryMessage = (message: Buffer): void => {
-    const HELLO_CLIENT_BYTES_MESSAGE = Buffer.from('Hello, Client'); // Replace with actual value
+    const decoder = new TextDecoder('utf-8');
+    const decodedBytes = decoder.decode(new Uint8Array(message));
+    const jsonData = JSON.parse(decodedBytes);
 
-    if (message.equals(HELLO_CLIENT_BYTES_MESSAGE)) {
-        console.info('Received HELLO_CLIENT_BYTES_MESSAGE');
-        return;
-    }
-
-    const payload: any = msgpack.decode(message);
-
-    if ('jpeg_images' in payload) {
-        const fePayload = new FrontendFramePayload(payload);
+    if ('jpeg_images' in jsonData) {
+        const fePayload = new FrontendFramePayload(jsonData);
         console.info(
-            `Received FrontendFramePayload with ${fePayload.cameraIds.length} cameras - size: ${message.length} bytes`
+            `Received FrontendFramePayload with ${fePayload.cameraIds.length} cameras - size: ${decodedBytes.length} bytes`
         );
-        fePayload.lifespanTimestampsNs.push({unpickled_from_websocket: process.hrtime.bigint()});
         _appState.latest_frontend_payload = fePayload;
-    } else if ('recording_name' in payload) {
-        console.debug(`Received RecordingInfo object  - ${JSON.stringify(payload)}`);
-        _appState.recording_info = new RecordingInfo(payload);
+    } else if ('recording_name' in jsonData) {
+        console.debug(`Received RecordingInfo object  - ${JSON.stringify(decodedBytes)}`);
+        _appState.recording_info = new RecordingInfo(decodedBytes);
     } else {
-        console.info(`Received binary message: ${(JSON.stringify(payload).length * 0.001).toFixed(3)}kB`);
+        console.info(`Received binary message: ${(JSON.stringify(jsonData).length * 0.001).toFixed(3)}kB`);
     }
 };
 
@@ -114,18 +105,7 @@ export default (url: string = wsUrl) => {
             try {
                 const data = typeof event.data === 'string' ? event.data : await event.data.arrayBuffer();
                 _handleWebsocketMessage(data);
-
-                console.log('Received raw data:', data);
-                if (typeof data !== 'string') {
-                    const decodedData = msgpack.decode(new Uint8Array(data));
-                    console.log('Decoded binary message:', decodedData);
-                } else {
-                    _handleWebsocketMessage(data);
-                    const jsonData = JSON.parse(data);
-                    if (jsonData.jpeg_images !== undefined) {
-                        latestImages.value = jsonData.jpeg_images;
-                    }
-                }
+                latestImages.value = _appState.latest_frontend_payload?.jpegImages || {};
             } catch (error) {
                 console.error(`Failed to parse message: ${JSON.stringify(event, null, 2)}`);
                 console.error('Error details:', error);
