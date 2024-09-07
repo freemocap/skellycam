@@ -2,8 +2,8 @@ import logging
 
 from fastapi import FastAPI
 
-from skellycam.api.app.lifespan import lifespan
 from skellycam.api.app.app_factory import register_routes, customize_swagger_ui
+from skellycam.api.app.lifespan import lifespan
 from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
 

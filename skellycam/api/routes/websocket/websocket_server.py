@@ -1,19 +1,18 @@
 import asyncio
 import logging
 
-import msgpack
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from skellycam.api.app.app_state import SubProcessStatus, AppStateDTO, get_app_state
 from skellycam.api.routes.websocket.ipc import get_frontend_ws_relay_pipe, get_ipc_queue
+from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 
 logger = logging.getLogger(__name__)
 
 websocket_router = APIRouter()
 
 HELLO_CLIENT_TEXT_MESSAGE = "👋Hello, websocket client!"
-HELLO_CLIENT_BYTES_MESSAGE = b'{"message": "hey wow im msgpacked  json!"}'
 HELLO_CLIENT_JSON_MESSAGE = {"message": "hey wow im json!"}
 
 FRONTEND_READY_FOR_NEXT_PAYLOAD_TEXT = "frontend_ready_for_next_payload"
@@ -46,14 +45,8 @@ async def websocket_relay(websocket: WebSocket):
     try:
         while True:
             if frontend_frame_pipe.poll():
-                payload: bytes = frontend_frame_pipe.recv_bytes()
-                # payload = frontend_frame_pipe.recv()
-
-                logger.loop(
-                    f"Relay bytes payload through websocket, size:  {len(payload) * .001:.3f}kB")
-
-                await websocket.send_bytes(payload)
-                # await websocket.send_json(payload)
+                payload: FrontendFramePayload = frontend_frame_pipe.recv()
+                await websocket.send_json(payload.model_dump_json())
 
             if not ipc_queue.empty():
                 message = ipc_queue.get()
@@ -98,7 +91,6 @@ async def websocket_server_connect(websocket: WebSocket):
     await websocket.accept()
     await websocket.send_text(HELLO_CLIENT_TEXT_MESSAGE)
     await websocket.send_json(HELLO_CLIENT_JSON_MESSAGE)
-    await websocket.send_bytes(msgpack.dumps(HELLO_CLIENT_BYTES_MESSAGE))
     logger.success(f"Websocket connection established!")
 
     async with WebsocketRunner():

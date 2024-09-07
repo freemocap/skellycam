@@ -1,4 +1,5 @@
 import logging
+
 from fastapi import APIRouter
 
 from skellycam.core.controller import get_controller

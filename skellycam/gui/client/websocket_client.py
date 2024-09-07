@@ -4,12 +4,11 @@ import threading
 import time
 from typing import Union, Dict, Any, Optional, Callable
 
-import msgpack
 import websocket
 from websocket import WebSocketApp
 
 from skellycam.api.app.app_state import AppStateDTO
-from skellycam.api.routes.websocket.websocket_server import HELLO_CLIENT_BYTES_MESSAGE, CLOSE_WEBSOCKET_MESSAGE
+from skellycam.api.routes.websocket.websocket_server import CLOSE_WEBSOCKET_MESSAGE
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.gui.gui_state import GUIState, get_gui_state
@@ -80,10 +79,8 @@ class WebSocketClient:
         pass
 
     def _handle_binary_message(self, message: bytes) -> None:
-        if message == HELLO_CLIENT_BYTES_MESSAGE:
-            logger.info("Received HELLO_CLIENT_BYTES_MESSAGE")
-            return
-        payload = json.loads(msgpack.loads(message))
+
+        payload = json.loads(message)
 
         if 'jpeg_images' in payload.keys():
             fe_payload = FrontendFramePayload(**payload)
@@ -103,6 +100,9 @@ class WebSocketClient:
         try:
             if "message" in message.keys():
                 logger.info(f"Received message: {message['message']}")
+            elif 'jpeg_images' in message.keys():
+                fe_payload = FrontendFramePayload(**message)
+                self._gui_state.latest_frontend_payload = fe_payload
             elif 'recording_name' in message.keys():
                 recording_info = RecordingInfo(**message)
                 logger.info(f"Received RecordingInfo for recording: `{recording_info.recording_name}`")

@@ -3,8 +3,6 @@ import multiprocessing
 import time
 from typing import Optional
 
-import msgpack
-
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
@@ -69,7 +67,7 @@ class FrameRouterProcess:
                     frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=payload,
                                                                                      resize_image=.25)
                     # TODO - might/shouild be possible to send straight to GUI websocket client from here without the relay pipe? Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
-                    frontend_relay_pipe.send_bytes(msgpack.dumps(frontend_payload.model_dump_json()))
+                    frontend_relay_pipe.send(frontend_payload)
                     # frontend_relay_pipe.send(
                     #     frontend_payload.model_dump())  # faster if sending bytes? pickle cost of regular pipe send vs encode to utf-8 bytes and use `send_bytes`?
 
@@ -85,7 +83,7 @@ class FrameRouterProcess:
                                 f"FrameExporter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
                             # send  as bytes so it can use same ws/ relay as the frontend_payload's
                             recording_info = video_recorder_manager.recording_info
-                            frontend_relay_pipe.send_bytes(msgpack.dumps(recording_info.model_dump_json()))
+                            frontend_relay_pipe.send_bytes(recording_info.model_dump_json())
 
                         # TODO - Decouple 'add_frame' from 'save_frame' and create a 'save_one_frame' method that saves a single frame from one camera, so we can check for new frames faster. We will need a mechanism to drain the buffers when recording ends
                         video_recorder_manager.add_multi_frame(payload)
