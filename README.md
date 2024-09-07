@@ -40,12 +40,51 @@ Copious logging (log level set in `skellycam/__init__.py`) and high precision ti
 allow for deeper debugging and streamlining of the framereading processes that will pour empirical data into he
 `freemocap` light-to-skeleton building pipeline.
 
-## Installation
-
-Run the following commands from the project root directory (i.e the same directory as this `README.md` file)
+## Running Skellycam Installation
 
 > [!TIP]
-> tl;dr Quick start steps
+> Run the following commands from the project root directory (i.e the same directory as this `README.md` file)
+
+You have two options to run two separate and variously broken version of this software:
+
+### Option 1. Run the pure Python code with a QT GUI:
+
+This method will pop up a mostly functional QT GUI that can detect, connect to, and record videos from the FastAPI
+server. Mostly functional, but I think might occasionally crash (I think) due to some concurrency problem updating
+something in the QT code?
+
+It runs pretty well, but there's FPS drop on `record`, which I suspect is fixable by fiddling with things in the
+`FrameWrangler` class (see #TODO comments in there).
+
+To run the pure python skellycam:
+
+0 . ensure you have [Poetry](https://python-poetry.org/) installed and run: the following command:
+
+1. Create python virtual environment and install dependencies:
+
+```
+poetry shell
+```
+
+2. Run `skellycam/__main__.py` with the `--qt` flag, or just:
+
+```
+poetry run skellycam --qt
+```
+
+A big friendly skeleton should pop up and offer various camera based services. Click around the big friendly buttons and
+keep an eye on the terminal for useful output. Videos are saved to a `~/skellycam/recordings/` folder in your Home
+directory (i.e. wheteever returns from `pathlib.Path.home()`)
+
+### Option 2: Build a Python executable and run the Tauri/Nuxt/Vue app:
+
+This options will create a Tauri application that runs the Python backend as a sidecar, and the Nuxt/Vue frontend in a
+Tauri wrangled browser window. With any luck, this currently barely functional version will be the basis of the
+`freemocap v2.0` architecture.
+
+
+> [!TIP]
+> tl;dr Tauri/Nuxt - Quickstart
 > 
 > 0. Install pre-reqs
 > 1. Build Python binary: `poetry run pyinstaller`
@@ -54,11 +93,10 @@ Run the following commands from the project root directory (i.e the same directo
 > - OR-
 > 4. Build installer: `npm run build`
 
-### Detailed install instructions
+### Detailed Tauri/Nuxt install instructions
 #### 0. Install pre-requisites
 - Install Rust on your system - https://www.rust-lang.org/tools/install
 - Install Node.js - https://nodejs.org/en
-- Install Poetry - https://python-poetry.org/
 
 #### 1. Build Python executable for Tauri sidecar
 
@@ -105,9 +143,14 @@ python server sidecar. Check the terminal for relevant `localhost` urls
 > responses on that port
 > (I don't know if thats, like, the right way to do that, but it works for now ¯\\_(ツ)_/¯
 
-whee!
+whee! It doesn't do much, but if you click the `Connect to Websocket` button followed by the `Connect to Cameras`
+button, it should detect and connect to all available cameras, and show a the images from each window in a sloppy grid.
 
-#### 4. Building an installer
+#### BONUS - Building an installer
+
+> [!WARNING]
+> This produces installers and stuff, which is cool, but the resulting application crashes immediately, which is notably
+> less cool.
 
 To produce installers and whatnot, run:
 
@@ -115,9 +158,8 @@ To produce installers and whatnot, run:
 npm run build
 ```
 
-> [!WARNING]
-> This produces installers and stuff, which is cool, but the resulting application crashes immediately, which is less
-> cool.
+This process is triggered automatically on commit based on the Github Actions workflow defined in
+`.github/workflows/build_executables` Those don't work either, but whatreya gonna do ¯\\\_(ツ)_/¯
 
 
 ## License
