@@ -50,6 +50,11 @@ button {
   font-size: small;
 }
 
+.image-container {
+  display: flex;
+  flex-wrap: wrap; /* Allows images to wrap to the next line */
+  justify-content: space-around; /* Distributes images evenly */
+}
 
 .image-wrapper {
   display: flex;

@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeDevCommand": "npm run dev --prefix skellycam-ui && poetry run skellycam ",
+    "beforeDevCommand": "npm run dev --prefix skellycam-ui",
     "beforeBuildCommand": "npm run generate --prefix skellycam-ui && poetry run pyinstaller",
     "devPath": "http://localhost:3000",
     "distDir": "../dist"
