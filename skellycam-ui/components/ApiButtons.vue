@@ -47,20 +47,24 @@ h1 {
 button {
   margin-right: 10px;
   padding: 10px;
-  font-size: small;
+  background-color: #33aa88;
+  font-size: medium;
+  font-weight: bold;
+  color: black;
 }
 
 .image-container {
-  display: flex;
-  flex-wrap: wrap; /* Allows images to wrap to the next line */
-  justify-content: space-around; /* Distributes images evenly */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Creates a responsive grid */
+  gap: 10px; /* Adds space between grid items */
+
 }
 
 .image-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1 1 200px; /* Allows flexibility and ensures a minimum width */
+  flex: 1 1 400px; /* Allows flexibility and ensures a minimum width */
 }
 
 img {
