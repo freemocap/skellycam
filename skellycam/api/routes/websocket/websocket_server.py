@@ -6,7 +6,6 @@ from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from skellycam.api.app.app_state import SubProcessStatus, AppStateDTO, get_app_state
 from skellycam.api.routes.websocket.ipc import get_frontend_ws_relay_pipe, get_ipc_queue
-from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +44,9 @@ async def websocket_relay(websocket: WebSocket):
     try:
         while True:
             if frontend_frame_pipe.poll():
-                payload: FrontendFramePayload = frontend_frame_pipe.recv()
-                await websocket.send_json(payload.model_dump_json())
+                payload: bytes = frontend_frame_pipe.recv_bytes()
+                logger.loop(f"Relaying payload to frontend: {len(payload)} bytes")
+                await websocket.send_bytes(payload)
 
             if not ipc_queue.empty():
                 message = ipc_queue.get()
