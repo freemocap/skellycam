@@ -81,7 +81,7 @@ class FrameRouterProcess:
                                 f"FrameExporter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
                             # send  as bytes so it can use same ws/ relay as the frontend_payload's
                             recording_info = video_recorder_manager.recording_info
-                            frontend_relay_pipe.send_bytes(recording_info.model_dump_json())
+                            frontend_relay_pipe.send_bytes(recording_info.model_dump_json().encode('utf-8'))
 
                         # TODO - Decouple 'add_frame' from 'save_frame' and create a 'save_one_frame' method that saves a single frame from one camera, so we can check for new frames faster. We will need a mechanism to drain the buffers when recording ends
                         video_recorder_manager.add_multi_frame(payload)
