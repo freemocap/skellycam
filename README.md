@@ -36,8 +36,8 @@ from each camera synchronously and at the highest possible framerate (without bl
 in the software). Image data is passed between processes using a complex combination of shared memory, multiprocessing
 PIPEs, and a websocket connection to feed images to a Client frontend.
 
-Copious logging (log level set in `skellycam/__init__.py`) and high precision timestamp logs have and will continue to
-allow for deeper debugging and streamlining of the framereading processes that will pour empirical data into he
+Copious logging (log level set in `skellycam/__init__.py`) and high precision timestamp logs will 
+allow for deeper debugging, real-time observability, and streamlining of the framereading processes that will pour empirical data into the
 `freemocap` light-to-skeleton building pipeline.
 
 ## Running Skellycam Installation
@@ -45,20 +45,20 @@ allow for deeper debugging and streamlining of the framereading processes that w
 > [!TIP]
 > Run the following commands from the project root directory (i.e the same directory as this `README.md` file)
 
-You have two options to run two separate and variously broken version of this software:
+You have **two options to run** two separate and variously broken version of this software:
 
-### Option 1. Run the pure Python code with a QT GUI:
+### Option 1. Pure Python with a QT GUI:
 
 This method will pop up a mostly functional QT GUI that can detect, connect to, and record videos from the FastAPI
-server. Mostly functional, but I think might occasionally crash (I think) due to some concurrency problem updating
-something in the QT code?
+server. Mostly functional, but slightly crashy due (I think) to some concurrency problem updating
+something in the QT code (like, updating something in a widget w/o properly protecting) 
 
 It runs pretty well, but there's FPS drop on `record`, which I suspect is fixable by fiddling with things in the
 `FrameWrangler` class (see #TODO comments in there).
 
-To run the pure python skellycam:
+#### To run the pure python skellycam:
 
-0 . ensure you have [Poetry](https://python-poetry.org/) installed and run: the following command:
+0 . ensure you have [Poetry](https://python-poetry.org/) installed 
 
 1. Create python virtual environment and install dependencies:
 
@@ -66,19 +66,29 @@ To run the pure python skellycam:
 poetry shell
 ```
 
-2. Run `skellycam/__main__.py` with the `--qt` flag, or just:
+1. Install dependencies:
 
+```
+poetry update
+```
+
+2. Run `skellycam/__main__.py` with the `--qt` flag with:
+```
+python skellycam/__main__.py --qt
+```
+- OR EQUIVALENTLY -
 ```
 poetry run skellycam --qt
 ```
 
-A big friendly skeleton should pop up and offer various camera based services. Click around the big friendly buttons and
-keep an eye on the terminal for useful output. Videos are saved to a `~/skellycam/recordings/` folder in your Home
+A big friendly skeleton should pop up and offer various camera based services 
+
+Click around the big friendly buttons and keep an eye on the terminal for useful output. Videos are saved to a `~/skellycam/recordings/` folder in your Home
 directory (i.e. wheteever returns from `pathlib.Path.home()`)
 
-### Option 2: Build a Python executable and run the Tauri/Nuxt/Vue app:
+### Option 2: Tauri app running a Nuxt/Vue frontend with Python server
 
-This options will create a Tauri application that runs the Python backend as a sidecar, and the Nuxt/Vue frontend in a
+This option will create a Tauri application that runs the Python backend as a sidecar, and the Nuxt/Vue frontend in a
 Tauri wrangled browser window. With any luck, this currently barely functional version will be the basis of the
 `freemocap v2.0` architecture.
 
@@ -95,6 +105,7 @@ Tauri wrangled browser window. With any luck, this currently barely functional v
 
 ### Detailed Tauri/Nuxt install instructions
 #### 0. Install pre-requisites
+- Install Poetry - https://python-poetry.org/
 - Install Rust on your system - https://www.rust-lang.org/tools/install
 - Install Node.js - https://nodejs.org/en
 
@@ -127,21 +138,20 @@ npm install
 > [!NOTE]
 > The `postinstall` script in `package.json` cd's into the `skellycam-ui/` folder an runs `npm install` in there
 
-### 3. Running the application in `dev` mode
+### 3. Running the application in Develeopment mode
 
-To build and run the Tauri application in `dev`mode, run this command:
+To build and run the Tauri application in `dev` mode, run this command:
 ```
 npm run dev
 ```
 
-This should build the Rust backend, launch the nuxt/vue based frontend from `skellycam-ui` in a new window, and run the
-python server sidecar. Check the terminal for relevant `localhost` urls
+This should build the Rust backend, launch the Nuxt/Vue frontend from `skellycam-ui/` in a new window, and run the
+python server sidecar from `dist/[sidecar-binary-w-target-triple-and-extenstion]`. Check the terminal for relevant `localhost` urls
 
 > [!TIP]
 > If you are working on the python code and want to see changes without rebuilding the pyinstaller sidecar, simply run
-`skellycam/__main__.py` after the Tauri app has aleady started. It will kill the `sidecar` program and take over serving
-> responses on that port
-> (I don't know if thats, like, the right way to do that, but it works for now ¯\\_(ツ)_/¯
+`skellycam/__main__.py` **AFTER** the Tauri app has aleady started. It will kill the `sidecar` program and take over serving
+> responses on that port (I don't know if thats, like, the right way to do that, but it works for now ¯\\_(ツ)_/¯ ) 
 
 whee! It doesn't do much, but if you click the `Connect to Websocket` button followed by the `Connect to Cameras`
 button, it should detect and connect to all available cameras, and show a the images from each window in a sloppy grid.
@@ -149,8 +159,7 @@ button, it should detect and connect to all available cameras, and show a the im
 #### BONUS - Building an installer
 
 > [!WARNING]
-> This produces installers and stuff, which is cool, but the resulting application crashes immediately, which is notably
-> less cool.
+> This produces installers and stuff, which is cool, but the resulting application crashes immediately, which is less cool.
 
 To produce installers and whatnot, run:
 
