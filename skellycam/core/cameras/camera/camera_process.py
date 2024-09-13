@@ -102,7 +102,7 @@ def run_trigger_listening_loop(
         # Trigger listening loop
         while not kill_camera_group_flag.value and not close_self_flag.value:
 
-            if config_update_queue.qsize() > 0:
+            if not config_update_queue.empty():
                 new_config = config_update_queue.get()
                 apply_camera_configuration(cv2_video_capture, new_config)
                 logger.debug(f"Camera {config.camera_id} updated with new config: {new_config}")

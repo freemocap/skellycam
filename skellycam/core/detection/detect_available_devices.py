@@ -2,6 +2,7 @@ import logging
 from pprint import pprint
 
 import cv2
+from PySide6.QtCore import QCoreApplication
 
 from skellycam.api.app.app_state import get_app_state
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo
@@ -12,6 +13,10 @@ logger = logging.getLogger(__name__)
 async def detect_available_devices(check_if_available: bool = False):
     from PySide6.QtMultimedia import QMediaDevices
     # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
+    if not QCoreApplication.instance():
+        app = QCoreApplication([])
+    else:
+        app = QCoreApplication.instance()
     logger.info("Detecting available cameras...")
     devices = QMediaDevices()
     detected_cameras = devices.videoInputs()
@@ -43,5 +48,6 @@ async def _check_camera_available(port: int) -> bool:
 
 
 if __name__ == "__main__":
-    cameras_out = detect_available_devices()
+    import asyncio
+    cameras_out = asyncio.run(detect_available_devices())
     pprint(cameras_out, indent=4)

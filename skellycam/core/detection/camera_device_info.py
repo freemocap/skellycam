@@ -61,13 +61,17 @@ class CameraDeviceInfo(BaseModel):
     @classmethod
     def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice):
         device_address = camera.id().data().decode("utf-8")
-        if platform.system() == 'Windows':
-            logger.trace(f"Windows detected, using camera number as cv2 port")
+        try:
+            if platform.system() == 'Windows':
+                logger.trace(f"Windows detected, using camera number as cv2 port")
+                cv2_port = camera_number
+            else:
+                logger.trace(f"Non-Windows detected, using camera address as cv2 port")
+                # TODO: this doesn't work on mac, device address looks like "obs-virtual-cam-device" or "47B4B64B70674B9CAD2BAE273A71F4B5"
+                cv2_port = device_address.split("video")[1]
+        except Exception as e:
             cv2_port = camera_number
-        else:
-            logger.trace(f"Non-Windows detected, using camera address as cv2 port")
-            # TODO: this doesn't work on mac, device address looks like "obs-virtual-cam-device" or "47B4B64B70674B9CAD2BAE273A71F4B5"
-            cv2_port = device_address.split("video")[1]
+
         return cls(
             description=f"{device_address} - {camera.description()}",
             available_video_formats=cls._get_available_video_formats(camera=camera),
