@@ -36,6 +36,7 @@ def apply_configuration(cv2_vid_cap: cv2.VideoCapture, config: CameraConfig):
             try:
                 # Attempt to set the exposure as an integer
                 exposure_value = int(config.exposure)
+                cv2_vid_cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 enables manual exposure
                 cv2_vid_cap.set(cv2.CAP_PROP_EXPOSURE, exposure_value)
             except ValueError:
                 logger.error(
