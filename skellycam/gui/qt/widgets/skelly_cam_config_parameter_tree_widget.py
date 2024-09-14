@@ -160,7 +160,11 @@ class SkellyCamParameterTreeWidget(QWidget):
                     ],
                     value=rotate_cv2_code_to_str(camera_config.rotate_video_cv2_code),
                 ),
-                dict(name="Exposure", type="int", value=camera_config.exposure),
+                dict(
+                    name="Exposure", 
+                    type="str", 
+                    value=camera_config.exposure
+                ),
                 dict(
                     name="Resolution Width",
                     type="int",
