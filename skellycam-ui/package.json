@@ -1,44 +1,72 @@
 {
-  "name": "skellycam-ui",
-  "version": "1.0.0",
-  "author": "Skelly FreeMoCap",
-  "license": "AGPL-3.0-or-later",
-  "description": "The user interface for SkellyCam - The camera backend of the FreeMoCap Project",
+  "name": "freemocap-ui",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "=16.13.2"
+  },
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^6.5.2",
-    "@fortawesome/free-solid-svg-icons": "^6.5.2",
-    "@fortawesome/vue-fontawesome": "^3.0.6",
+    "@emotion/react": "^11.7.1",
+    "@emotion/styled": "^11.6.0",
     "@msgpack/msgpack": "^3.0.0-beta2",
-    "@pinia/nuxt": "^0.5.1",
-    "@tresjs/cientos": "^3.8.0",
-    "@tresjs/core": "^3.7.0",
-    "@tresjs/nuxt": "^2.1.1",
-    "nuxt": "^3.11.1",
-    "pinia": "^2.1.7",
-    "three": "^0.162.0",
-    "vue": "^3.4.21",
-    "vue-router": "^4.3.0"
+    "@mui/icons-material": "^5.2.5",
+    "@mui/material": "^5.2.8",
+    "@mui/styled-engine": "^5.2.6",
+    "@mui/system": "^5.2.8",
+    "@reduxjs/toolkit": "^1.7.1",
+    "@types/dom-mediacapture-record": "^1.0.11",
+    "axios": "^0.25.0",
+    "class-transformer": "0.5.1",
+    "loglevel": "^1.9.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-redux": "^7.2.6",
+    "react-router": "^6.2.1",
+    "react-router-dom": "^6.2.1",
+    "react-scripts": "5.0.0",
+    "react-use": "^17.3.2",
+    "react-use-websocket": "^2.9.1",
+    "react-webcam": "^6.0.0",
+    "reflect-metadata": "^0.1.13",
+    "typescript": "4.5.5",
+    "winston": "^3.13.0"
   },
   "devDependencies": {
-    "@types/three": "^0.162.0"
+    "@testing-library/jest-dom": "^5.16.1",
+    "@testing-library/react": "^12.1.2",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/axios": "^0.14.0",
+    "@types/debounce": "^1.2.1",
+    "@types/jest": "^27.4.0",
+    "@types/lodash": "^4.14.165",
+    "@types/node": "^16.11.21",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "@types/react-redux": "^7.1.11",
+    "@types/react-router-dom": "^5.1.6",
+    "@types/winston": "^2.4.4"
   },
-  "keywords": [
-    "freemocap",
-    "skellycam",
-    "cameras",
-    "multi-camera",
-    "synchronized",
-    "motion-capture",
-    "mocap"
-  ],
   "scripts": {
-    "nuxt": "nuxt",
-    "build": "nuxt build",
-    "start": "nuxt start",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "test": "echo \"Error: testing not yet implemented!!\" && exit 1"
+    "start": "react-scripts start",
+    "start:https": "HTTPS=true SSL_CRT_FILE=./localhost.pem SSL_KEY_FILE=./localhost-key.pem react-scripts start",
+    "certs": "./scripts/cert.sh",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
