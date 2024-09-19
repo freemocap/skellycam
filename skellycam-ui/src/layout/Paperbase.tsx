@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import {Sidebar} from './Sidebar';
 import {Copyright} from "./Copyright";
 import {BaseContent} from "./content/BaseContent";
-import {BrowserRouter} from 'react-router-dom';
+import {HashRouter} from 'react-router-dom';
 import {CssBaseline} from "@mui/material";
 
 let theme = createTheme({
@@ -164,7 +164,7 @@ export const Paperbase = function () {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
+      <HashRouter>
         <Box sx={{display: 'flex', minHeight: '100vh'}}>
           <Box
             component="nav"
@@ -192,7 +192,7 @@ export const Paperbase = function () {
             </Box>
           </Box>
         </Box>
-      </BrowserRouter>
+      </HashRouter>
     </ThemeProvider>
   );
 }
