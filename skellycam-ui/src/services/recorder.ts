@@ -11,7 +11,7 @@ export class RecorderManager {
     private readonly _deviceIds: Array<DeviceId>;
     private readonly _timesliceInMs: number;
 
-    constructor(streams: StreamByDeviceId, timesliceInMS: number = 500) {
+    constructor(streams: StreamByDeviceId, timesliceInMS = 500) {
         this._timesliceInMs = timesliceInMS;
         this._deviceIds = (Object.keys(streams) as Array<DeviceId>);
         this._recorders = this._deviceIds.reduce((prev, curDeviceId) => {
@@ -21,6 +21,13 @@ export class RecorderManager {
             }
         }, {});
         this._init_recorded_data();
+    }
+
+    private _init_recorded_data() {
+        const deviceIds = this._deviceIds;
+        deviceIds.forEach(deviceId => {
+            this._recordedData[deviceId] = [];
+        });
     }
 
     public registerDataHandler = () => {
@@ -56,13 +63,6 @@ export class RecorderManager {
             const combinedBlob = new Blob(blobChunks, {type: "video/webm"});
             await axios.post('http://localhost:8080/camera/upload', combinedBlob);
         }
-    }
-
-    private _init_recorded_data() {
-        const deviceIds = this._deviceIds;
-        deviceIds.forEach(deviceId => {
-            this._recordedData[deviceId] = [];
-        });
     }
 }
 

@@ -1,9 +1,11 @@
 import {decode} from "@msgpack/msgpack";
 
-export type OnMessageHandler = (ev: MessageEvent<Blob>, data_urls: object) => Promise<void>;
+export type OnMessageHandler = (ev: MessageEvent<Blob>, data_urls: { [key: string]: string }) => Promise<void>;
 
 export enum CaptureType {
-    BoardDetection = "board_detection", SkeletonDetection = "skeleton_detection", ConnectCameras = "connect"
+    BoardDetection = "board_detection",
+    SkeletonDetection = "skeleton_detection",
+    ConnectCameras = "connect"
 }
 
 export class FrameCapture {
@@ -11,11 +13,13 @@ export class FrameCapture {
     private readonly _host: string;
     private readonly _base_host: string;
 
-    constructor(private readonly _captureType: CaptureType = CaptureType.BoardDetection,
-                private readonly _port: number = 8000) {
+    constructor(
+        private readonly _captureType: CaptureType = CaptureType.BoardDetection,
+        private readonly _port: number = 8000
+    ) {
         this._base_host = `ws://localhost:${_port}/ws`;
-        this._host = `${this._base_host}/${this._captureType}`
-        console.log(`FrameCapture: ${this._host}`)
+        this._host = `${this._base_host}/${this._captureType}`;
+        console.log(`FrameCapture: ${this._host}`);
     }
 
     private _current_data_url!: string;
@@ -25,11 +29,11 @@ export class FrameCapture {
     }
 
     public get isConnectionClosed(): boolean {
-        return this._ws_connection ? this._ws_connection.readyState === this._ws_connection.CLOSED : true;
+        return this._ws_connection ? this._ws_connection.readyState === WebSocket.CLOSED : true;
     }
 
     public start_frame_capture(onMessageHandler: OnMessageHandler) {
-        console.log(`FrameCapture: start_frame_capture: ${this._host}`)
+        console.log(`FrameCapture: start_frame_capture: ${this._host}`);
         this._ws_connection = new WebSocket(this._host);
 
         this._ws_connection.onmessage = async (ev: MessageEvent<Blob>) => {
@@ -38,26 +42,30 @@ export class FrameCapture {
             // Read the Blob as an ArrayBuffer
             const arrayBuffer = await ev.data.arrayBuffer();
 
-
             // Decode the MessagePack data into a JavaScript object
-            const payload: any = decode(new Uint8Array(arrayBuffer));
-            const jpegImagesByCamera = payload.jpegImagesByCamera;
+            const decodedData = decode(new Uint8Array(arrayBuffer)) as any;
+            if (!decodedData.jpegImagesByCamera) {
+                console.error("Invalid payload structure", decodedData);
+                return;
+            }
+
+            const jpegImagesByCamera = decodedData.jpegImagesByCamera as { [key: string]: Uint8Array };
 
             // Iterate over the framesObject to create a data URL for each image
-            const dataUrls = {};
+            const dataUrls: { [key: string]: string } = {};
             for (const [cameraId, jpegImage] of Object.entries(jpegImagesByCamera)) {
-                // @ts-ignore
                 const blob = new Blob([jpegImage], {type: 'image/jpeg'});
                 dataUrls[cameraId] = URL.createObjectURL(blob);
             }
 
             // Call the onMessageHandler with the dataUrls object
             await onMessageHandler(ev, dataUrls);
-        }
+        };
     }
 
     public cleanup() {
-        this._ws_connection.close();
+        if (this._ws_connection) {
+            this._ws_connection.close();
+        }
     }
 }
-

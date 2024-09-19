@@ -1,5 +1,5 @@
 export class BrowserCam {
-    public async findAllCameras(filterVirtual: boolean = false) {
+    public async findAllCameras(filterVirtual = false) {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const cameras = devices.filter(({kind, label}) => kind === "videoinput");
         console.log(`Found ${cameras.length} cameras - ${cameras.map(({label}) => label).join("\n")}`);
