@@ -5,6 +5,7 @@ from typing import Tuple, Union, List
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 
 
@@ -26,6 +27,15 @@ class SharedMemoryIndexedArray(BaseModel):
     shm_elements: List[SharedMemoryElement]
     last_written_index: Synchronized  # NOTE - represents APPARENT index of last written element from the User's perspective, we will internally handle wrapping around the array
     last_read_index: Synchronized  # NOTE - represents APPARENT index of last read element from the User's perspective, we will internally handle wrapping around the array
+
+    @classmethod
+    def from_camera_configs(cls,
+                            camera_configs: CameraConfigs):
+        return cls.create(
+            shm_element_shape=(camera_configs.keys(), *camera_configs.image_shape),
+            dtype=np.uint8,
+            array_size=100
+        )
 
     @classmethod
     def create(cls,
