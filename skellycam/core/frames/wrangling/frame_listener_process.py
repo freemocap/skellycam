@@ -86,7 +86,7 @@ class FrameListenerProcess:
                         while len(escape_buffer) > 0:
                             frame_escape_pipe_entrance.send(escape_buffer.pop(0))
 
-                    # escape a payload from the frame-loop, if  it won't block the loop
+                    # escape a payload from the frame-loop, if it won't block the loop
                     # TODO - WARNING - Could result in frontend lag (or even no frames making it to frontend in extreme cases). Prob set a min fps of like 5-10 to make the skellycam tool usable
                     if not group_orchestrator.new_frames_available and len(escape_buffer) > 0:
                         # Prioritize frame-loop sanctity - hold frame in buffer if new frames available

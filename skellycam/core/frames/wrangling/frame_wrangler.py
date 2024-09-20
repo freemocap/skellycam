@@ -57,13 +57,12 @@ class FrameWrangler:
         self._update_process_states()
 
     def _update_process_states(self):
+        logger.debug(f"Sending process states through IPC queue...")
         self._ipc_queue.put(SubProcessStatus.from_process(self._listener_process.process, parent_pid=os.getpid()))
         self._ipc_queue.put(
             SubProcessStatus.from_process(self._frame_router_process.process, parent_pid=os.getpid()))
 
     def is_alive(self) -> bool:
-        if self._listener_process is None or self._frame_router_process is None:
-            return False
         return self._listener_process.is_alive() and self._frame_router_process.is_alive()
 
     def join(self):

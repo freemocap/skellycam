@@ -95,7 +95,7 @@ def run_trigger_listening_loop(
         close_self_flag: multiprocessing.Value,
         kill_camera_group_flag: multiprocessing.Value,
 ):
-    triggers.await_initial_trigger()
+    triggers.await_initial_trigger(close_self_flag=close_self_flag)
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
     frame_number = 0
     try:
@@ -118,6 +118,7 @@ def run_trigger_listening_loop(
                 frame_number=frame_number,
                 close_self_flag=close_self_flag,
             )
+            logger.debug(f"Camera {config.camera_id} got frame# {frame_number} successfully")
 
     finally:
         logger.debug(f"Camera {config.camera_id} trigger listening loop ended")

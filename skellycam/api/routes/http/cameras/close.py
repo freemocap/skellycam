@@ -7,9 +7,7 @@ from skellycam.core.controller import get_controller
 
 logger = logging.getLogger(__name__)
 
-close_cameras_router = APIRouter(
-
-)
+close_cameras_router = APIRouter()
 
 
 class CamerasClosedResponse(BaseResponse):

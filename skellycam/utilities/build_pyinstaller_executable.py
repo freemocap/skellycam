@@ -1,8 +1,8 @@
+import platform
+import PyInstaller.__main__
 import logging
 import subprocess
 from pathlib import Path
-
-import PyInstaller.__main__
 
 from skellycam.__main__ import PATH_TO_SKELLYCAM_MAIN
 
@@ -17,17 +17,18 @@ if not Path(SKELLYCAM_ICON_PATH).exists():
 logger = logging.getLogger(__name__)
 
 
+
 def append_build_system_triple(base_name: str) -> str:
-    logging.basicConfig(level=logging.INFO)
 
     try:
-        logging.info('Running rustc to get the target triple.')
-        rust_info = subprocess.run(['rustc', '-vV'], check=True, stdout=subprocess.PIPE, text=True).stdout
-        target_triple = next(line.split()[1] for line in rust_info.splitlines() if line.startswith('host:'))
+        logging.info('Getting platform information.')
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+        target_triple = f"{system}-{machine}"
 
         if not target_triple:
             logging.error(
-                'Failed to determine platform target triple - is `rust` installed? (https://www.rust-lang.org/tools/install)')
+                'Failed to determine platform target triple.')
             return
 
         new_name = f'{base_name}-{target_triple}'
@@ -35,14 +36,8 @@ def append_build_system_triple(base_name: str) -> str:
         logging.info(f'File name with build system triple - {new_name}')
         return new_name
 
-    except FileNotFoundError:
-        logger.exception(
-            "The rustc command was not found. Please ensure that Rust is installed and rustc is in your PATH (https://www.rust-lang.org/tools/install).")
-    except subprocess.CalledProcessError as e:
-        logging.error(f'Error occurred while running rustc: {e}')
     except Exception as e:
         logging.error(f'An unexpected error occurred: {e}')
-
 
 def run_pyinstaller():
     PyInstaller.__main__.run([
@@ -54,7 +49,7 @@ def run_pyinstaller():
         '--hidden-import',
         'numpy',
         '--onefile',
-        # '--clean', #clear pyinstaller cache before building
+        # '--clean', #clear pyinstaller cache before building if things weird out
         '--name',
         append_build_system_triple('skellycam'),
         '--icon',

@@ -6,7 +6,7 @@ UI_HTML_STRING = """
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>SkellyCam API Tester with WebSocket</title>
     <style>
-        .smol-image {
+        .image {
             width: 640px;
             height: auto;
         }
@@ -29,13 +29,14 @@ UI_HTML_STRING = """
         let ws;
         let isConnected = false;
         const latestImages = {};
+        const imageElements = {};
 
         function updateStatus() {
             document.getElementById('ws-status').innerText = isConnected ? 'Connected' : 'Disconnected';
         }
 
         function connectWebSocket() {
-            ws = new WebSocket('ws://localhost:8000/ws/connect');
+            ws = new WebSocket('ws://localhost:8005/websocket/connect');
             ws.onopen = () => {
                 isConnected = true;
                 updateStatus();
@@ -46,8 +47,7 @@ UI_HTML_STRING = """
             };
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                latestImages[data.cameraId] = data.image;
-                updateImages();
+                updateImages(data.jpeg_images);
             };
         }
 
@@ -59,19 +59,21 @@ UI_HTML_STRING = """
             }
         }
 
-        function updateImages() {
-            const container = document.getElementById('images-container');
-            container.innerHTML = '';
-            for (const [cameraId, imgSrc] of Object.entries(latestImages)) {
-                const div = document.createElement('div');
-                const h3 = document.createElement('h3');
-                h3.innerText = cameraId;
-                const img = document.createElement('img');
-                img.className = 'smol-image';
-                img.src = imgSrc || '';
-                div.appendChild(h3);
-                div.appendChild(imgSrc ? img : document.createTextNode('No image available'));
-                container.appendChild(div);
+        function updateImages(images) {
+            const container = document.getElementById('image-container');
+            for (const cameraId in images) {
+                if (!imageElements[cameraId]) {
+                    const imgBox = document.createElement('div');
+                    imgBox.className = 'image-box';
+                    const img = document.createElement('img');
+                    img.className = 'image';
+                    imgBox.appendChild(img);
+                    container.appendChild(imgBox);
+                    imageElements[cameraId] = img;
+                }
+                if (images[cameraId]) {
+                    imageElements[cameraId].src = 'data:image/jpeg;base64,' + images[cameraId];
+                }
             }
         }
 

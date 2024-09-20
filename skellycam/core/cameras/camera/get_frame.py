@@ -38,9 +38,9 @@ def get_frame(camera_id: CameraId,
     get as tight of a synchronization as possible between the cameras
     # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
     """
+    logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `grab` trigger...")
     frame_metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=frame_number)
     triggers.await_grab_trigger(close_self_flag=close_self_flag)
-    logger.loop(f"Camera {camera_id} received `grab` trigger - calling `cv2.VideoCapture.grab()`")
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
     grab_success = cap.grab()  # grab the frame from the camera, but don't decode it yet
