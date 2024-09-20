@@ -68,10 +68,11 @@ class FrameListenerProcess:
                 if record_frames_flag.value:
                     recording_in_progress = True
                 if group_orchestrator.new_frames_available:
-                    logger.loop(f"Frame wrangler sees new frames available!")
+                    logger.info(f"Frame wrangler sees new frames available!")
 
                     # TODO - RECEIVE AS BYTES and send to `frame_router` w/ `pipe.send_bytes()` and construct mf_payload after escaping frame loop
                     mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
+                    logger.info(f"Frame wrangler copied multi-frame payload from shared memory")
                     # NOTE - Reset the flag to allow new frame loop to begin BEFORE we put the payload in the queue
                     group_orchestrator.set_frames_copied()
 
@@ -82,6 +83,7 @@ class FrameListenerProcess:
 
                     # Drain buffer on recording end
                     if recording_in_progress and not record_frames_flag.value:
+                        logger.info(f"Frame wrangler sees recording end - draining frame buffer...")
                         # We just ended a recording - this is the only time we are allowed to freeze the frame-loop so we can drain the buffer and make sure all frames make it to disk
                         while len(escape_buffer) > 0:
                             frame_escape_pipe_entrance.send(escape_buffer.pop(0))
@@ -92,11 +94,13 @@ class FrameListenerProcess:
                         # Prioritize frame-loop sanctity - hold frame in buffer if new frames available
                         # TODO - send frames one at a time to minimize blocking (and using `send_bytes`, per above)
                         escaping_payload = escape_buffer.pop(0)
-                        logger.loop(
-                            f"Sending Frame# {escaping_payload.multi_frame_number} to FrameRouter - `len(escape_buffer)`:{len(escape_buffer)}")
+                        logger.info(
+                            f"Sending MultiFrame# {escaping_payload.multi_frame_number} to FrameRouter - `len(escape_buffer)`: {len(escape_buffer)}")
                         frame_escape_pipe_entrance.send(escaping_payload)
+                        logger.success(f"Sent MultiFrame# {escaping_payload.multi_frame_number} to FrameRouter successfully")
+
                     else:
-                        logger.loop('New frame waiting - skipping ahead')
+                        logger.info('New multi-frame waiting - skipping ahead')
             else:
                 wait_1ms()
         except Exception as e:

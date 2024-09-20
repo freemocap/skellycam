@@ -44,7 +44,7 @@ class CameraProcess:
         self._process.start()
 
     def close(self):
-        logger.debug(f"Closing camera {self._config.camera_id}")
+        logger.info(f"Closing camera {self._config.camera_id}")
         self._close_self_flag.value = True
         self._process.join()
         self._config_update_queue.close()
@@ -109,7 +109,8 @@ def run_trigger_listening_loop(
             else:
                 wait_1ms()
 
-            logger.loop(f"Camera {config.camera_id} ready to get next frame")
+            logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
+
             frame_number = get_frame(
                 camera_id=config.camera_id,
                 cap=cv2_video_capture,
@@ -119,6 +120,9 @@ def run_trigger_listening_loop(
                 close_self_flag=close_self_flag,
             )
             logger.debug(f"Camera {config.camera_id} got frame# {frame_number} successfully")
-
+    except Exception as e:
+        logger.error(f"Camera {config.camera_id} trigger listening loop ended with exception: {e}")
+        raise
     finally:
-        logger.debug(f"Camera {config.camera_id} trigger listening loop ended")
+        logger.debug(f"Camera {config.camera_id} trigger listening loop ended: close_self_flag={close_self_flag.value}, "
+                     f"kill_camera_group_flag={kill_camera_group_flag.value}")

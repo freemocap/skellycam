@@ -57,10 +57,11 @@ class FrameRouterProcess:
         try:
             while not kill_camera_group_flag.value:
                 if frame_escape_pipe_exit.poll():  # TODO - Replace this with a 'new frames' flag from the listener process?
-
+                    logger.info(f"FrameExporter - New multi-frame payload available in pipe!")
                     # TODO - receive individual frames as bytes with `...recv_bytes()` and construct MultiFramePayload object here
                     payload: MultiFramePayload = frame_escape_pipe_exit.recv()
                     payload.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
+                    logger.info(f"FrameExporter - Received multi-frame payload# {payload.multi_frame_number} from pipe!")
 
                     # send to frontend relay immediately to keep GUI images from lagging
                     # TODO - Adapatively change the `resize` value based on performance metrics (i.e. shrink frontend-frames pipes/queues start filling up)

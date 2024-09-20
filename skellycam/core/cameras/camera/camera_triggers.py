@@ -49,26 +49,45 @@ class CameraTriggers(BaseModel):
         while not self.initial_trigger.is_set() and self.should_continue and not close_self_flag.value:
             wait_10ms()
             if (time.perf_counter_ns() - start_wait_ns) > max_wait_time_s * 1e9:
-                raise TimeoutError(f"Camera {self.camera_id} process timed out waiting for `initial_trigger` for {max_wait_time_s} seconds")
+                raise TimeoutError(
+                    f"Camera {self.camera_id} process timed out waiting for `initial_trigger` for {max_wait_time_s} seconds:"
+                    f" self.initial_trigger.is_set()={self.initial_trigger.is_set()}, "
+                    f"self.should_continue={self.should_continue}, "
+                    f"close_self_flag.value={close_self_flag.value}")
 
         logger.trace(f"Camera {self.camera_id} process received `initial_trigger`")
         self.initial_trigger.clear()
 
-    def await_retrieve_trigger(self, close_self_flag: multiprocessing.Value, max_wait_time_s: float = 1.0):
+    def await_retrieve_trigger(self, close_self_flag: multiprocessing.Value, max_wait_time_s: float = 5.0):
         start_wait_ns = time.perf_counter_ns()
         while not self.retrieve_frame_trigger.is_set() and self.should_continue and not close_self_flag.value:
             wait_1us()
             if (time.perf_counter_ns() - start_wait_ns) > max_wait_time_s * 1e9:
-                raise TimeoutError(f"Camera {self.camera_id} process timed out waiting for `retrieve_frame_trigger` for {max_wait_time_s} seconds")
+                raise TimeoutError(
+                    f"Camera {self.camera_id} process timed out waiting for `retrieve_frame_trigger` for {max_wait_time_s} seconds:"
+                    f"self.retrieve_frame_trigger.is_set()={self.retrieve_frame_trigger.is_set()}, "
+                    f"self.should_continue={self.should_continue}, "
+                    f"close_self_flag.value={close_self_flag.value}")
         logger.loop(f"Camera {self.camera_id} process received `retrieve_frame_trigger`")
 
-    def await_grab_trigger(self, close_self_flag: multiprocessing.Value, max_wait_time_s: float = 1.0):
+    def await_grab_trigger(self, close_self_flag: multiprocessing.Value, max_wait_time_s: float = 5.0):
         start_wait_ns = time.perf_counter_ns()
+        been_warned = False
         while not self.grab_frame_trigger.is_set() and self.should_continue and not close_self_flag.value:
             wait_1us()
-            if (time.perf_counter_ns() - start_wait_ns) > max_wait_time_s * 1e9:
-                raise TimeoutError(f"Camera {self.camera_id} process timed out waiting for `grab_frame_trigger` for {max_wait_time_s} seconds")
+            if (time.perf_counter_ns() - start_wait_ns) > (max_wait_time_s * 1e9)*.5 and not been_warned:
+                been_warned = True
+                logger.warning(f"Camera {self.camera_id} process hit half-way point waiting for `grab_frame_trigger` for {max_wait_time_s} seconds:"
+                               f" self.grab_frame_trigger.is_set()={self.grab_frame_trigger.is_set()}, "
+                               f"self.should_continue={self.should_continue}, "
+                               f"close_self_flag.value={close_self_flag.value}")
 
+            if (time.perf_counter_ns() - start_wait_ns) > max_wait_time_s * 1e9:
+                raise TimeoutError(
+                    f"Camera {self.camera_id} process timed out waiting for `grab_frame_trigger` for {max_wait_time_s} seconds:"
+                    f" self.grab_frame_trigger.is_set()={self.grab_frame_trigger.is_set()}, "
+                    f"self.should_continue={self.should_continue}, "
+                    f"close_self_flag.value={close_self_flag.value}")
 
     def set_ready(self):
         self.camera_ready_event.set()
@@ -77,6 +96,7 @@ class CameraTriggers(BaseModel):
         self.grab_frame_trigger.clear()
 
     def set_frame_retrieved(self):
+        logger.info(f"Camera {self.camera_id} process setting `retrieve_frame_trigger`")
         self.retrieve_frame_trigger.clear()
         self.new_frame_available_trigger.set()
 
