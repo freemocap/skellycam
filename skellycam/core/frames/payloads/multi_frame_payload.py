@@ -14,7 +14,7 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
-class MultiFramePayloadDTO(BaseModel):
+class MultiFramePayload(BaseModel):
     """
     Lightweight data transfer object for MultiFramePayload
     """
@@ -28,11 +28,11 @@ class MultiFramePayloadDTO(BaseModel):
 
 
     @classmethod
-    def create_initial(cls, camera_ids: List[CameraId], ) -> 'MultiFramePayloadDTO':
+    def create_initial(cls, camera_ids: List[CameraId], ) -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in camera_ids})
 
     @classmethod
-    def from_previous(cls, previous: 'MultiFramePayloadDTO') -> 'MultiFramePayloadDTO':
+    def from_previous(cls, previous: 'MultiFramePayload') -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    multi_frame_number=previous.multi_frame_number + 1,
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
@@ -60,7 +60,7 @@ class MultiFramePayloadDTO(BaseModel):
         self.frames[camera_id] = frame_dto
 
     @classmethod
-    def from_list(cls, data: List[Any]) -> 'MultiFramePayloadDTO':
+    def from_list(cls, data: List[Any]) -> 'MultiFramePayload':
         metadata = json.loads(data.pop(0).decode("utf-8"))
         frames = {}
         while data[0] != b"END":
@@ -68,27 +68,6 @@ class MultiFramePayloadDTO(BaseModel):
             frames[frame.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]] = frame
 
         return cls(frames=frames, **metadata)
-
-class MultiFramePayload(BaseModel):
-    frames: Dict[CameraId, Optional[FramePayload]] = Field(default_factory=dict,
-                                                           description="Synchronously captured frames from each camera")
-    utc_ns_to_perf_ns: UtcToPerfCounterMapping
-    multi_frame_number: int
-    lifespan_timestamps_ns: List[Dict[str, int]]
-
-    @property
-    def camera_ids(self) -> List[CameraId]:
-        return list(self.frames.keys())
-
-    @classmethod
-    def from_dto_list(cls, dto: MultiFramePayloadDTO) -> 'MultiFramePayload':
-        return cls(
-            frames={CameraId(camera_id): FramePayload.from_dto(frame_dto)
-                    for camera_id, frame_dto in dto.frames.items()},
-            multi_frame_number=dto.multi_frame_number,
-            utc_ns_to_perf_ns=dto.utc_ns_to_perf_ns,
-            lifespan_timestamps_ns=dto.lifespan_timestamps_ns
-        )
 
     def to_metadata(self) -> 'MultiFrameMetadata':
         return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
@@ -99,6 +78,37 @@ class MultiFramePayload(BaseModel):
             print_str += str(frame) + "\n"
         print_str += "]"
         return print_str
+
+# class MultiFramePayload(BaseModel):
+#     frames: Dict[CameraId, Optional[FramePayload]] = Field(default_factory=dict,
+#                                                            description="Synchronously captured frames from each camera")
+#     utc_ns_to_perf_ns: UtcToPerfCounterMapping
+#     multi_frame_number: int
+#     lifespan_timestamps_ns: List[Dict[str, int]]
+#
+#     @property
+#     def camera_ids(self) -> List[CameraId]:
+#         return list(self.frames.keys())
+#
+#     @classmethod
+#     def from_dto_list(cls, dto: MultiFramePayloadDTO) -> 'MultiFramePayload':
+#         return cls(
+#             frames={CameraId(camera_id): FramePayload.from_dto(frame_dto)
+#                     for camera_id, frame_dto in dto.frames.items()},
+#             multi_frame_number=dto.multi_frame_number,
+#             utc_ns_to_perf_ns=dto.utc_ns_to_perf_ns,
+#             lifespan_timestamps_ns=dto.lifespan_timestamps_ns
+#         )
+#
+#     def to_metadata(self) -> 'MultiFrameMetadata':
+#         return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
+#
+#     def __str__(self) -> str:
+#         print_str = f"["
+#         for camera_id, frame in self.frames.items():
+#             print_str += str(frame) + "\n"
+#         print_str += "]"
+#         return print_str
 
 
 

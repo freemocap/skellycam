@@ -48,8 +48,6 @@ class FrontendFramePayload(BaseModel):
 
         jpeg_images = {}
         for camera_id, frame in multi_frame_payload.frames.items():
-            if frame is None:
-                continue
             frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
             jpeg_images[camera_id] = cls._image_to_jpeg(frame.image.copy(), quality=jpeg_quality, resize=resize_image)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()

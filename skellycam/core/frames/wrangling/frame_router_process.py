@@ -5,7 +5,7 @@ from typing import Optional
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFramePayloadDTO
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import create_recording_folder
 from skellycam.utilities.wait_functions import wait_1ms
@@ -59,35 +59,34 @@ class FrameRouterProcess:
                 if frame_escape_pipe_exit.poll():  # TODO - Replace this with a 'new frames' flag from the listener process?
                     logger.info(f"FrameExporter - New multi-frame payload available in pipe!")
                     # TODO - receive individual frames as bytes with `...recv_bytes()` and construct MultiFramePayload object here
-                    payload = frame_escape_pipe_exit.recv_bytes()
+                    bytes_payload: bytes = frame_escape_pipe_exit.recv_bytes()
                     logger.success(f"FrameExporter - Received multi-frame payload from pipe!")
-                    mf_payload_dto: Optional[MultiFramePayloadDTO] = None
-                    if payload == b"START":
+
+                    if bytes_payload == b"START":
                         mf_payload_bytes_list = []
-                        while payload != b"END":
-                            payload = frame_escape_pipe_exit.recv_bytes()
-                            mf_payload_bytes_list.append(payload)
+                        while bytes_payload != b"END":
+                            bytes_payload = frame_escape_pipe_exit.recv_bytes()
+                            mf_payload_bytes_list.append(bytes_payload)
                             logger.success(f"FrameExporter - Received multi-frame payload from pipe!")
-                            if payload == b"END":
+                            if bytes_payload == b"END":
                                 break
-                        mf_payload_dto = MultiFramePayloadDTO.from_list(mf_payload_bytes_list)
+                        mf_payload = MultiFramePayload.from_list(mf_payload_bytes_list)
                     else:
-                        raise ValueError(f"FrameExporter - Received unexpected payload from pipe: {payload}")
-                    mf_payload_dto.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
-                    logger.info(f"FrameExporter - Received multi-frame payload# {mf_payload_dto.multi_frame_number} from pipe!")
+                        raise ValueError(f"FrameExporter - Received unexpected payload from pipe: {bytes_payload}")
+                    mf_payload.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
+                    logger.info(
+                        f"FrameExporter - Received multi-frame payload# {mf_payload.multi_frame_number} from pipe!")
 
                     # send to frontend relay immediately to keep GUI images from lagging
                     # TODO - Adapatively change the `resize` value based on performance metrics (i.e. shrink frontend-frames pipes/queues start filling up)
-                    frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=payload,
-                                                                                     resize_image=.25)
-                    # TODO - might/shouild be possible to send straight to GUI websocket client from here without the relay pipe? Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
+                    frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
+                                                                                     resize_image=.5)
+                    # TODO - might/should be possible to send straight to GUI websocket client from here without the relay pipe? Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
                     frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
-
-                    logger.loop(f"FrameExporter - Received multi-frame payload: {payload}")
 
                     if record_frames_flag.value:
                         if not video_recorder_manager:  # create new video_recorder_manager on first multi-frame payload
-                            video_recorder_manager = VideoRecorderManager.create(first_multi_frame_payload=payload,
+                            video_recorder_manager = VideoRecorderManager.create(first_multi_frame_payload=mf_payload,
                                                                                  camera_configs=camera_configs,
                                                                                  recording_folder=create_recording_folder(
                                                                                      string_tag=None))
@@ -98,7 +97,7 @@ class FrameRouterProcess:
                             frontend_relay_pipe.send_bytes(recording_info.model_dump_json().encode('utf-8'))
 
                         # TODO - Decouple 'add_frame' from 'save_frame' and create a 'save_one_frame' method that saves a single frame from one camera, so we can check for new frames faster. We will need a mechanism to drain the buffers when recording ends
-                        video_recorder_manager.add_multi_frame(payload)
+                        video_recorder_manager.add_multi_frame(mf_payload)
 
                     if not record_frames_flag.value:
                         if video_recorder_manager:

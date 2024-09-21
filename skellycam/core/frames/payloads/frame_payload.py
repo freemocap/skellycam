@@ -14,31 +14,29 @@ class FramePayloadDTO(BaseModel):
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    image_data: np.ndarray
-    image_shape: Tuple[int, int, int]
-
+    image: np.ndarray
     metadata: np.ndarray
 
 
     def to_bytes_list(self) -> List[Any]:
-        return [self._shape_to_bytes(self.image_shape),
-                self.image_data.tobytes(),
+        return [self._shape_to_bytes(self.image.shape),
+                self.image.tobytes(),
                 self.metadata.tobytes()]
 
     @classmethod
     def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayloadDTO':
         image_shape = cls._bytes_to_shape(bytes_list[0], 3)
-        image_data = np.frombuffer(bytes_list[1], dtype=DEFAULT_IMAGE_DTYPE).reshape(image_shape)
+        image = np.frombuffer(bytes_list[1], dtype=DEFAULT_IMAGE_DTYPE).reshape(image_shape)
 
-        metadata = np.frombuffer(bytes_list[2], dtype=FRAME_METADATA_DTYPE).reshape(FRAME_METADATA_SHAPE)
+        metadata = np.frombuffer(bytes_list[2], dtype=FRAME_METADATA_DTYPE).reshape(FRAME_METADATA_SHAPE).copy()
 
-        return cls(image_data=image_data,
+        return cls(image=image,
                    metadata=metadata,
                    image_shape=image_shape)
 
     @classmethod
     def create(cls, image: np.ndarray, metadata: np.ndarray):
-        return cls(image_data=image,
+        return cls(image=image,
                    image_shape=image.shape,
                    metadata=metadata,
                    metadata_shape=metadata.shape)
