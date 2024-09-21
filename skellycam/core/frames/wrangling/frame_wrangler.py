@@ -32,21 +32,24 @@ class FrameWrangler:
         camera_configs: CameraConfigs = camera_configs
         group_orchestrator: CameraGroupOrchestrator = group_orchestrator
 
-        self._frame_escape_pipe_entrance, self._frame_escape_pipe_exit = multiprocessing.Pipe()
+        frame_escape_pipe_entrance, frame_escape_pipe_exit = multiprocessing.Pipe()
 
+        new_multi_frame_in_pipe_flag = multiprocessing.Value('b', False)
         self._listener_process = FrameListenerProcess(
             camera_configs=camera_configs,
             group_orchestrator=group_orchestrator,
             group_shm_names=group_shm_names,
-            frame_escape_pipe_entrance=self._frame_escape_pipe_entrance,
-            record_frames_flag=self._record_frames_flag,
+            frame_escape_pipe_entrance=frame_escape_pipe_entrance,
+            new_multi_frame_payload_in_pipe_flag=new_multi_frame_in_pipe_flag,
             kill_camera_group_flag=self._kill_camera_group_flag,
         )
+
         self._frame_router_process = FrameRouterProcess(
             camera_configs=camera_configs,
-            frame_escape_pipe_exit=self._frame_escape_pipe_exit,
+            frame_escape_pipe_exit=frame_escape_pipe_exit,
             frontend_relay_pipe=frontend_relay_pipe,
             record_frames_flag=self._record_frames_flag,
+            new_multi_frame_payload_in_pipe_flag=new_multi_frame_in_pipe_flag,
             kill_camera_group_flag=self._kill_camera_group_flag,
         )
 

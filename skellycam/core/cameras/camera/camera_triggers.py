@@ -96,7 +96,6 @@ class CameraTriggers(BaseModel):
         self.grab_frame_trigger.clear()
 
     def set_frame_retrieved(self):
-        logger.info(f"Camera {self.camera_id} process setting `retrieve_frame_trigger`")
         self.retrieve_frame_trigger.clear()
         self.new_frame_available_trigger.set()
 

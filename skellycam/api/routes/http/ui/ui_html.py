@@ -4,7 +4,7 @@ UI_HTML_STRING = """
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>SkellyCam API Tester with WebSocket</title>
+    <title>SkellyCam API UI Tester</title>
     <style>
         .image {
             width: 640px;
@@ -37,6 +37,11 @@ UI_HTML_STRING = """
 
         function connectWebSocket() {
             ws = new WebSocket('ws://localhost:8005/websocket/connect');
+            
+            // websocket helpers
+            const decoder = new TextDecoder('utf-8');
+
+            
             ws.onopen = () => {
                 isConnected = true;
                 updateStatus();
@@ -45,8 +50,19 @@ UI_HTML_STRING = """
                 isConnected = false;
                 updateStatus();
             };
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
+            ws.onmessage = async (event) => {
+                // Convert the incoming data to an ArrayBuffer
+                const arrayBuffer = await event.data.arrayBuffer();
+                
+                // Convert ArrayBuffer to a string
+                const jsonString = decoder.decode(arrayBuffer);
+                console.log(`Received message with length: ${jsonString.length}`);
+                addLogEntry(`Received message with length: ${jsonString.length}`);
+                // Parse the JSON string to a JavaScript object
+                const data = JSON.parse(jsonString);                
+                addLogEntry(`Received message with length: ${jsonString.length}`);
+            
+                // Now you can use the data object to update your UI
                 updateImages(data.jpeg_images);
             };
         }
@@ -60,7 +76,7 @@ UI_HTML_STRING = """
         }
 
         function updateImages(images) {
-            const container = document.getElementById('image-container');
+            const container = document.getElementById('images-container');
             for (const cameraId in images) {
                 if (!imageElements[cameraId]) {
                     const imgBox = document.createElement('div');
@@ -126,7 +142,10 @@ UI_HTML_STRING = """
 
 <!-- Results and Logs Section -->
 <pre id="result"></pre>
+<h2>Images</h2>
 <div id="images-container"></div>
+
+<h3>Loggs</h2>
 <div id="log-container"></div>
 </body>
 </html>

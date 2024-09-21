@@ -49,7 +49,9 @@ class MultiFramePayload(BaseModel):
         metadata_bytes = self.model_dump_json(exclude={"frames"}).encode("utf-8")
         ret.append(metadata_bytes)
         for frame in self.frames.values():
+            ret.append(b"FRAME-START")
             ret.extend(frame.to_bytes_list())
+            ret.append(b"FRAME-END")
         ret.append(b"END")
         return ret
 
@@ -64,7 +66,15 @@ class MultiFramePayload(BaseModel):
         metadata = json.loads(data.pop(0).decode("utf-8"))
         frames = {}
         while data[0] != b"END":
-            frame = FramePayloadDTO.from_bytes_list([data.pop(0), data.pop(0), data.pop(0)]) #pop pop lol
+            popped = data.pop(0)
+            if popped != b"FRAME-START":
+                raise ValueError(f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-START', got {popped}")
+            frame_list = []
+            while data[0] != b"FRAME-END":
+                frame_list.append(data.pop(0))
+            if data.pop(0) != b"FRAME-END":
+                raise ValueError(f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-END', got {popped}")
+            frame = FramePayloadDTO.from_bytes_list(frame_list)
             frames[frame.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]] = frame
 
         return cls(frames=frames, **metadata)

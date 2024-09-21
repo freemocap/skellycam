@@ -45,8 +45,9 @@ async def websocket_relay(websocket: WebSocket):
         while True:
             if frontend_frame_pipe.poll():
                 payload: bytes = frontend_frame_pipe.recv_bytes()
-                logger.loop(f"Relaying payload to frontend: {len(payload)} bytes")
+                logger.api(f"Relaying payload to frontend: {len(payload)} bytes")
                 await websocket.send_bytes(payload)
+                logger.success(f"Relayed payload to frontend: {len(payload)} bytes")
 
             if not ipc_queue.empty():
                 message = ipc_queue.get()

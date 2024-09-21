@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE
 
+IMAGE_CHUNK_SIZE = 1024*100   # 100 KB #TODO - optimize this bad boi
+
 
 class FramePayloadDTO(BaseModel):
     """
@@ -17,19 +19,34 @@ class FramePayloadDTO(BaseModel):
     image: np.ndarray
     metadata: np.ndarray
 
-
     def to_bytes_list(self) -> List[Any]:
-        return [self._shape_to_bytes(self.image.shape),
-                self.image.tobytes(),
-                self.metadata.tobytes()]
+        ret = [self._shape_to_bytes(self.image.shape),
+               b"IMAGE-START", ]
+        ret.extend(self._split_bytestring_by_size(self.image.tobytes()))
+        return ret + [
+            b"IMAGE-END",
+            self.metadata.tobytes()]
 
     @classmethod
     def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayloadDTO':
-        image_shape = cls._bytes_to_shape(bytes_list[0], 3)
-        image = np.frombuffer(bytes_list[1], dtype=DEFAULT_IMAGE_DTYPE).reshape(image_shape)
+        image_shape = cls._bytes_to_shape(bytes_list.pop(0), 3)
+        popped = bytes_list.pop(0)
+        if popped != b"IMAGE-START":
+            raise ValueError(f"Unexpected element in FramePayloadDTO bytes list, expected 'IMAGE-START', got {popped}")
+        image_bytes_list = []
+        while True:
+            popped = bytes_list.pop(0)
+            if popped != b"IMAGE-END":
+                image_bytes_list.append(popped)
+            else:
+                break
+        image_bytes = cls._reconstruct_bytestring(image_bytes_list)
+        image = np.frombuffer(image_bytes, dtype=DEFAULT_IMAGE_DTYPE).reshape(image_shape)
 
-        metadata = np.frombuffer(bytes_list[2], dtype=FRAME_METADATA_DTYPE).reshape(FRAME_METADATA_SHAPE).copy()
+        metadata = np.frombuffer(bytes_list.pop(0), dtype=FRAME_METADATA_DTYPE).reshape(FRAME_METADATA_SHAPE).copy()
 
+        if len(bytes_list) != 0:
+            raise ValueError(f"Unexpected elements left-over in FramePayloadDTO bytes list: {bytes_list}")
         return cls(image=image,
                    metadata=metadata,
                    image_shape=image_shape)
@@ -48,6 +65,15 @@ class FramePayloadDTO(BaseModel):
     @staticmethod
     def _bytes_to_shape(shape_bytes: bytes, ndim: int) -> Tuple[int, ...]:
         return struct.unpack(f'{ndim}i', shape_bytes)
+
+    @staticmethod
+    def _split_bytestring_by_size(bs: bytes, chunk_size: int = IMAGE_CHUNK_SIZE) -> list[bytes]:
+        return [bs[i:i + chunk_size] for i in range(0, len(bs), chunk_size)]
+
+    @staticmethod
+    def _reconstruct_bytestring(chunks: list[bytes]) -> bytes:
+        return b''.join(chunks)
+
 
 class FramePayload(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)

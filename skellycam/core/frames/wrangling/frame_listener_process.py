@@ -22,7 +22,7 @@ class FrameListenerProcess:
             group_shm_names: GroupSharedMemoryNames,
             group_orchestrator: CameraGroupOrchestrator,
             frame_escape_pipe_entrance: multiprocessing.Pipe,
-            record_frames_flag: multiprocessing.Value,
+            new_multi_frame_payload_in_pipe_flag: multiprocessing.Value,
             kill_camera_group_flag: multiprocessing.Value,
     ):
         super().__init__()
@@ -33,7 +33,7 @@ class FrameListenerProcess:
                                                      group_shm_names,
                                                      group_orchestrator,
                                                      frame_escape_pipe_entrance,
-                                                     record_frames_flag,
+                                                        new_multi_frame_payload_in_pipe_flag,
                                                      kill_camera_group_flag,
                                                      )
                                                )
@@ -47,10 +47,10 @@ class FrameListenerProcess:
                      group_shm_names: GroupSharedMemoryNames,
                      group_orchestrator: CameraGroupOrchestrator,
                      frame_escape_pipe_entrance: multiprocessing.Pipe,
-                     record_frames_flag: multiprocessing.Value,
+                        new_multi_frame_payload_in_pipe_flag: multiprocessing.Value,
                      kill_camera_group_flag: multiprocessing.Value,
                      ):
-        logger.trace(f"Frame listener process started!")
+        logger.success(f"Frame listener process started!")
         camera_group_shm = CameraGroupSharedMemory.recreate(
             camera_configs=camera_configs,
             group_shm_names=group_shm_names,
@@ -61,7 +61,7 @@ class FrameListenerProcess:
             mf_payload: Optional[MultiFramePayload] = None
             logger.loop(f"Starting FrameListener loop...")
             # Frame listener loop
-            escape_buffer: List[MultiFramePayload] = []
+
 
             while not kill_camera_group_flag.value:
                 if group_orchestrator.new_frames_available:
@@ -73,11 +73,11 @@ class FrameListenerProcess:
                     group_orchestrator.set_frames_copied()
 
                     logger.info(
-                        f"Sending MultiFrame# {mf_payload.multi_frame_number} to FrameRouter - `len(escape_buffer)`: {len(escape_buffer)}")
+                        f"Sending MultiFrame# {mf_payload.multi_frame_number} to FrameRouter")
                     for dto_item in mf_payload.to_list():
                         frame_escape_pipe_entrance.send_bytes(dto_item)
-                    logger.success(f"Sent MultiFrame# {mf_payload.multi_frame_number} to FrameRouter successfully")
-
+                        new_multi_frame_payload_in_pipe_flag.value = True
+                    logger.info(f"Sent MultiFrame# {mf_payload.multi_frame_number} to FrameRouter successfully")
             else:
                 wait_1ms()
         except Exception as e:
