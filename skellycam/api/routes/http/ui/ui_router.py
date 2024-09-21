@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import APIRouter
 from starlette.responses import HTMLResponse
@@ -11,13 +12,13 @@ ui_router = APIRouter()
 
 
 
-
 @ui_router.get("/", response_class=HTMLResponse)
 async def serve_ui():
-    logger.api("Serving UI HTML to `/ui``")
-    return HTMLResponse(content=UI_HTML_STRING, status_code=200)
-
-
+    logger.info("Serving UI HTML to `/ui`")
+    file_path = os.path.join(os.path.dirname(__file__), 'ui.html')
+    with open(file_path, 'r') as file:
+        ui_html_string = file.read()
+    return HTMLResponse(content=ui_html_string, status_code=200)
 if __name__ == "__main__":
     import uvicorn
 
