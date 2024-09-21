@@ -6,6 +6,7 @@ from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from skellycam.api.app.app_state import SubProcessStatus, AppStateDTO, get_app_state
 from skellycam.api.routes.websocket.ipc import get_frontend_ws_relay_pipe, get_ipc_queue
+from skellycam.utilities.wait_functions import async_wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +45,14 @@ async def websocket_relay(websocket: WebSocket):
     try:
         while True:
             if frontend_frame_pipe.poll():
+                logger.loop(f"Receiving payload from frontend relay pipe...")
                 payload: bytes = frontend_frame_pipe.recv_bytes()
-                logger.api(f"Relaying payload to frontend: {len(payload)} bytes")
+                logger.loop(f"Relaying payload to frontend: {len(payload)} bytes...")
+                if not websocket.client_state == WebSocketState.CONNECTED:
+                    logger.warning("Websocket not connected, skipping relay...")
+                    continue
                 await websocket.send_bytes(payload)
-                logger.success(f"Relayed payload to frontend: {len(payload)} bytes")
+                logger.loop(f"Relayed payload to frontend: {len(payload)} bytes")
 
             if not ipc_queue.empty():
                 message = ipc_queue.get()
@@ -61,7 +66,7 @@ async def websocket_relay(websocket: WebSocket):
                 else:
                     raise ValueError(f"Unknown message type: {type(message)}")
             else:
-                await asyncio.sleep(0.001)
+                await async_wait_1ms()
     except WebSocketDisconnect:
         logger.api("Client disconnected, ending listener task...")
     except Exception as e:

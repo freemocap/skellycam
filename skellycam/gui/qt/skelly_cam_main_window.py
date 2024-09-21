@@ -104,7 +104,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._client.connect_websocket()
 
     def update(self):
-        logger.loop(f"Updating: {self}")
+        
         super().update()
         self._skellycam_widget.update()
         self._skellycam_control_panel.update()

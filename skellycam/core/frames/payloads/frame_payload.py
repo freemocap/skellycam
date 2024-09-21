@@ -10,7 +10,7 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
 IMAGE_CHUNK_SIZE = 1024*100   # 100 KB #TODO - optimize this bad boi
 
 
-class FramePayloadDTO(BaseModel):
+class FramePayload(BaseModel):
     """
     Lightweight data transfer object for FramePayload
     """
@@ -28,7 +28,7 @@ class FramePayloadDTO(BaseModel):
             self.metadata.tobytes()]
 
     @classmethod
-    def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayloadDTO':
+    def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayload':
         image_shape = cls._bytes_to_shape(bytes_list.pop(0), 3)
         popped = bytes_list.pop(0)
         if popped != b"IMAGE-START":
@@ -73,23 +73,6 @@ class FramePayloadDTO(BaseModel):
     @staticmethod
     def _reconstruct_bytestring(chunks: list[bytes]) -> bytes:
         return b''.join(chunks)
-
-
-class FramePayload(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    image: np.ndarray
-    metadata: np.ndarray
-
-    @classmethod
-    def from_dto(cls, dto: FramePayloadDTO):
-        image = dto.image
-        metadata = dto.metadata
-        instance = cls(image=image, metadata=metadata)
-        if instance.metadata.shape != FRAME_METADATA_SHAPE:
-            raise ValueError(f"Metadata shape mismatch - "
-                             f"Expected: {FRAME_METADATA_SHAPE}, "
-                             f"Actual: {metadata.shape}")
-        return instance
 
     @property
     def camera_id(self):

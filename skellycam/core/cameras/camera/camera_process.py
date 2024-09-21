@@ -119,7 +119,7 @@ def run_trigger_listening_loop(
                 frame_number=frame_number,
                 close_self_flag=close_self_flag,
             )
-            logger.debug(f"Camera {config.camera_id} got frame# {frame_number} successfully")
+            logger.loop(f"Camera {config.camera_id} got frame# {frame_number} successfully")
     except Exception as e:
         logger.error(f"Camera {config.camera_id} trigger listening loop ended with exception: {e}")
         raise

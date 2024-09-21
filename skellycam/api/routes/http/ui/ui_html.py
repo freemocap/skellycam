@@ -51,19 +51,24 @@ UI_HTML_STRING = """
                 updateStatus();
             };
             ws.onmessage = async (event) => {
-                // Convert the incoming data to an ArrayBuffer
-                const arrayBuffer = await event.data.arrayBuffer();
-                
-                // Convert ArrayBuffer to a string
-                const jsonString = decoder.decode(arrayBuffer);
-                console.log(`Received message with length: ${jsonString.length}`);
-                addLogEntry(`Received message with length: ${jsonString.length}`);
-                // Parse the JSON string to a JavaScript object
-                const data = JSON.parse(jsonString);                
-                addLogEntry(`Received message with length: ${jsonString.length}`);
+                // Ensure the event.data is a Blob
+                if (event.data instanceof Blob) {
+                    // Convert the incoming data to an ArrayBuffer
+                    const arrayBuffer = await event.data.arrayBuffer();
             
-                // Now you can use the data object to update your UI
-                updateImages(data.jpeg_images);
+                    // Convert ArrayBuffer to a string
+                    const jsonString = decoder.decode(arrayBuffer);
+            
+                    // Parse the JSON string to a JavaScript object
+                    const data = JSON.parse(jsonString);
+                    addLogEntry(`Received message with length: ${jsonString.length} from mf_payload# ${data.multi_frame_number}`);
+                    console.log(`Received message with length: ${jsonString.length} from mf_payload# ${data.multi_frame_number}`);
+            
+                    // Now you can use the data object to update your UI
+                    updateImages(data.jpeg_images);
+                } else {
+                    console.error("Received data is not a Blob.");
+                }
             };
         }
 

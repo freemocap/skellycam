@@ -17,7 +17,7 @@ from skellycam.core.cameras.camera.config.image_resolution import ImageResolutio
 from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.controller import Controller, create_controller, get_controller
 from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
-from skellycam.core.frames.payloads.frame_payload import FramePayloadDTO
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
@@ -146,8 +146,8 @@ def frame_metadata_fixture(request: pytest.fixture,
 
 @pytest.fixture()
 def frame_payload_dto_fixture(image_fixture: np.ndarray,
-                              frame_metadata_fixture: np.ndarray) -> FramePayloadDTO:
-    dto = FramePayloadDTO(image=image_fixture, metadata=frame_metadata_fixture)
+                              frame_metadata_fixture: np.ndarray) -> FramePayload:
+    dto = FramePayload(image=image_fixture, metadata=frame_metadata_fixture)
     assert dto
     assert dto.image.shape == image_fixture.shape
     assert np.array_equal(dto.image, image_fixture)
@@ -191,7 +191,7 @@ def camera_configs_fixture(camera_ids_fixture: List[CameraId],
 
 @pytest.fixture()
 def multi_frame_payload_fixture(camera_configs_fixture: CameraConfigs,
-                                frame_payload_dto_fixture: FramePayloadDTO) -> MultiFramePayload:
+                                frame_payload_dto_fixture: FramePayload) -> MultiFramePayload:
     multi_frame_payload = MultiFramePayload.create_initial(camera_ids=list(camera_configs_fixture.keys()))
     for camera_id in camera_configs_fixture.keys():
         frame_payload_dto_fixture.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_id

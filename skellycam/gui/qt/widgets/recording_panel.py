@@ -39,7 +39,7 @@ class RecordingPanel(QWidget):
         self._client: FastAPIClient = get_client()
 
     def update(self):
-        logger.loop(f"Updating: {self}")
+        
         super().update()
         # self._frontend_framerate_label.setText(f"Frontend {self._gui_state.frontend_framerate_stats.median_std_str}")
         if self._gui_state.record_frames_flag_status:
