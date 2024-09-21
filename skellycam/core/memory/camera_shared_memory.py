@@ -9,7 +9,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payloads.frame_payload import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
-    FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
+    FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ class SharedMemoryNames(BaseModel):
 
 
 GroupSharedMemoryNames = Dict[CameraId, SharedMemoryNames]
+
 
 
 class CameraSharedMemory(BaseModel):
@@ -36,7 +37,7 @@ class CameraSharedMemory(BaseModel):
     ):
         image_shm = SharedMemoryElement.create(
             shape=camera_config.image_shape,
-            dtype=np.uint8,
+            dtype=DEFAULT_IMAGE_DTYPE,
         )
         metadata_shm = SharedMemoryElement.create(
             shape=FRAME_METADATA_SHAPE,
@@ -88,7 +89,7 @@ class CameraSharedMemory(BaseModel):
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
-        return FramePayloadDTO(image=image, metadata=metadata)
+        return FramePayloadDTO.create(image=image, metadata=metadata)
 
     def close(self):
         self.image_shm.close()

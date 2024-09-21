@@ -1,19 +1,55 @@
-from dataclasses import dataclass
+import struct
+from typing import Tuple, Any, List
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
+    FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE
 
 
-@dataclass
-class FramePayloadDTO:
+class FramePayloadDTO(BaseModel):
     """
     Lightweight data transfer object for FramePayload
     """
-    image: np.ndarray
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    image_data: np.ndarray
+    image_shape: Tuple[int, int, int]
+
     metadata: np.ndarray
 
+
+    def to_bytes_list(self) -> List[Any]:
+        return [self._shape_to_bytes(self.image_shape),
+                self.image_data.tobytes(),
+                self.metadata.tobytes()]
+
+    @classmethod
+    def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayloadDTO':
+        image_shape = cls._bytes_to_shape(bytes_list[0], 3)
+        image_data = np.frombuffer(bytes_list[1], dtype=DEFAULT_IMAGE_DTYPE).reshape(image_shape)
+
+        metadata = np.frombuffer(bytes_list[2], dtype=FRAME_METADATA_DTYPE).reshape(FRAME_METADATA_SHAPE)
+
+        return cls(image_data=image_data,
+                   metadata=metadata,
+                   image_shape=image_shape)
+
+    @classmethod
+    def create(cls, image: np.ndarray, metadata: np.ndarray):
+        return cls(image_data=image,
+                   image_shape=image.shape,
+                   metadata=metadata,
+                   metadata_shape=metadata.shape)
+
+    @staticmethod
+    def _shape_to_bytes(shape: Tuple[int, ...]) -> bytes:
+        return struct.pack(f'{len(shape)}i', *shape)
+
+    @staticmethod
+    def _bytes_to_shape(shape_bytes: bytes, ndim: int) -> Tuple[int, ...]:
+        return struct.unpack(f'{ndim}i', shape_bytes)
 
 class FramePayload(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)

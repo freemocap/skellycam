@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFramePayloadDTO
 from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1ms
@@ -58,49 +58,26 @@ class FrameListenerProcess:
         try:
 
             # group_orchestrator.await_for_cameras_ready() # I don't think i need to wait here?
-            mf_payload: Optional[MultiFramePayload] = None
+            mf_payload_dto: Optional[MultiFramePayloadDTO] = None
             logger.loop(f"Starting FrameListener loop...")
             # Frame listener loop
             escape_buffer: List[MultiFramePayload] = []
-            recording_in_progress: bool = False
 
             while not kill_camera_group_flag.value:
-                if record_frames_flag.value:
-                    recording_in_progress = True
                 if group_orchestrator.new_frames_available:
                     logger.info(f"Frame wrangler sees new frames available!")
 
-                    # TODO - RECEIVE AS BYTES and send to `frame_router` w/ `pipe.send_bytes()` and construct mf_payload after escaping frame loop
-                    mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
+                    mf_payload_dto = camera_group_shm.get_multi_frame_payload_dto(previous_payload_dto=mf_payload_dto)
                     logger.info(f"Frame wrangler copied multi-frame payload from shared memory")
                     # NOTE - Reset the flag to allow new frame loop to begin BEFORE we put the payload in the queue
                     group_orchestrator.set_frames_copied()
 
-                    mf_payload.lifespan_timestamps_ns.append(
-                        {"before_put_in_escape_buffer": time.perf_counter_ns()})
+                    logger.info(
+                        f"Sending MultiFrame# {mf_payload_dto.multi_frame_number} to FrameRouter - `len(escape_buffer)`: {len(escape_buffer)}")
+                    for dto_item in mf_payload_dto.to_list():
+                        frame_escape_pipe_entrance.send_bytes(dto_item)
+                    logger.success(f"Sent MultiFrame# {mf_payload_dto.multi_frame_number} to FrameRouter successfully")
 
-                    escape_buffer.append(mf_payload)
-
-                    # Drain buffer on recording end
-                    if recording_in_progress and not record_frames_flag.value:
-                        logger.info(f"Frame wrangler sees recording end - draining frame buffer...")
-                        # We just ended a recording - this is the only time we are allowed to freeze the frame-loop so we can drain the buffer and make sure all frames make it to disk
-                        while len(escape_buffer) > 0:
-                            frame_escape_pipe_entrance.send(escape_buffer.pop(0))
-
-                    # escape a payload from the frame-loop, if it won't block the loop
-                    # TODO - WARNING - Could result in frontend lag (or even no frames making it to frontend in extreme cases). Prob set a min fps of like 5-10 to make the skellycam tool usable
-                    if not group_orchestrator.new_frames_available and len(escape_buffer) > 0:
-                        # Prioritize frame-loop sanctity - hold frame in buffer if new frames available
-                        # TODO - send frames one at a time to minimize blocking (and using `send_bytes`, per above)
-                        escaping_payload = escape_buffer.pop(0)
-                        logger.info(
-                            f"Sending MultiFrame# {escaping_payload.multi_frame_number} to FrameRouter - `len(escape_buffer)`: {len(escape_buffer)}")
-                        frame_escape_pipe_entrance.send(escaping_payload)
-                        logger.success(f"Sent MultiFrame# {escaping_payload.multi_frame_number} to FrameRouter successfully")
-
-                    else:
-                        logger.info('New multi-frame waiting - skipping ahead')
             else:
                 wait_1ms()
         except Exception as e:
