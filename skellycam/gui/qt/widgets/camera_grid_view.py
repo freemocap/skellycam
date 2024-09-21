@@ -52,7 +52,6 @@ class CameraViewGrid(QWidget):
             self.create_single_camera_views()
 
     def create_single_camera_views(self):
-        logger.debug("Updating camera views")
         if not self._gui_state.connected_camera_configs:
             return
         landscape_camera_number = -1
@@ -98,7 +97,6 @@ class CameraViewGrid(QWidget):
     def set_image_data(self,
                        jpeg_images: Dict[CameraId, str],
                        framerate_stats_by_camera: Dict[CameraId, CameraFramerateStats]):
-        logger.loop(f"Updating camera views with new frontend payload")
         for camera_id, single_camera_view in self._single_camera_views.items():
             single_camera_view.update_image(base64_str=jpeg_images[camera_id],
                                             framerate_stats=framerate_stats_by_camera[camera_id])
