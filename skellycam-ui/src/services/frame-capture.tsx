@@ -12,10 +12,10 @@ export class FrameCapture {
     private readonly _base_host: string;
 
     constructor(private readonly _captureType: CaptureType = CaptureType.BoardDetection,
-                private readonly _port: number = 8000) {
-        this._base_host = `ws://localhost:${_port}/ws`;
+                private readonly _port: number = 8005) {
+        this._base_host = `ws://localhost:${_port}/websocket`;
         this._host = `${this._base_host}/${this._captureType}`
-        console.log(`FrameCapture: ${this._host}`)
+        console.log(`FrameCapture : ${this._host}`)
     }
 
     private _current_data_url!: string;
@@ -34,13 +34,19 @@ export class FrameCapture {
         this._ws_connection.onmessage = async (ev: MessageEvent<Blob>) => {
             console.debug(`FrameCapture: onmessage - received data: ${ev.data.size} bytes`);
 
+            // Handle string messages
+            if (typeof ev.data === 'string') {
+                console.debug(`FrameCapture: onmessage - received string message: ${ev.data}`);
+                return;
+            }
+
             // Read the Blob as an ArrayBuffer
             const arrayBuffer = await ev.data.arrayBuffer();
 
 
             // Decode the MessagePack data into a JavaScript object
             const payload:any = decode(new Uint8Array(arrayBuffer));
-            const jpegImagesByCamera = payload.jpegImagesByCamera;
+            const jpegImagesByCamera = payload.jpeg_images;
 
             // Iterate over the framesObject to create a data URL for each image
             const dataUrls: { [key: string]: string } = {};

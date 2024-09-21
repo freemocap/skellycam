@@ -20,7 +20,7 @@ def run_client(uri: str):
 
 def start_websocket_client():
     logger.info("Starting websocket client...")
-    server_uri = "ws://localhost:8003/ws/connect"
+    server_uri = "ws://localhost:8005/ws/connect"
     client_process = multiprocessing.Process(target=run_client, args=(server_uri,))
     client_process.start()
     client_process.join()

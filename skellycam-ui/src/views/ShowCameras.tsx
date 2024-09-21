@@ -5,7 +5,7 @@ import React from "react";
 
 export const ShowCameras = () => {
 
-  const [frameCapture, data] = useFrameCapture(CaptureType.ConnectCameras, 8003);
+  const [frameCapture, data] = useFrameCapture(CaptureType.ConnectCameras, 8005);
   if (!data) {
     return null;
   }
