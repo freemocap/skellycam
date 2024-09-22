@@ -57,27 +57,8 @@ class FrameRouterProcess:
         try:
             while not kill_camera_group_flag.value:
                 if frame_escape_pipe_exit.poll():
-                    logger.loop(f"FrameRouter - Receiving multi-frame bytes from pipe...")
-                    bytes_payload: bytes = frame_escape_pipe_exit.recv_bytes()
+                    mf_payload = FrameRouterProcess._receive_multiframe(frame_escape_pipe_exit)
 
-                    if bytes_payload == b"START":
-                        mf_payload_bytes_list = []
-                        while True:
-                            if frame_escape_pipe_exit.poll():
-                                bytes_payload = frame_escape_pipe_exit.recv_bytes()
-                                mf_payload_bytes_list.append(bytes_payload)
-                                if bytes_payload == b"END":
-                                    break
-                            else:
-                                wait_1ms()
-                        mf_payload = MultiFramePayload.from_list(mf_payload_bytes_list)
-                    else:
-                        raise ValueError(f"FrameRouter - Received unexpected payload from pipe: {bytes_payload}")
-                    mf_payload.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
-                    logger.loop(
-                        f"FrameRouter - Reconstructed multi-frame payload# {mf_payload.multi_frame_number} from pipe bytes!")
-
-                    # send to frontend relay immediately to keep GUI images from lagging
                     # TODO - Adapatively change the `resize` value based on performance metrics (i.e. shrink frontend-frames pipes/queues start filling up)
                     frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
                                                                                      resize_image=.5)
@@ -86,7 +67,7 @@ class FrameRouterProcess:
 
                     # TODO - might/should be possible to send straight to GUI websocket client from here without the relay pipe? Maybe with ZeroMQ or SocketIO Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
                     logger.loop(f"FrameRouter - Sending FrontendFramePayload through frontend relay pipe...")
-                    # frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
+                    frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
                     logger.loop(f"FrameRouter - Sent FrontendFramePayload through frontend relay pipe!")
 
                     if record_frames_flag.value:
@@ -104,16 +85,19 @@ class FrameRouterProcess:
                         # TODO - Decouple 'add_frame' from 'save_frame' and create a 'save_one_frame' method that saves a single frame from one camera, so we can check for new frames faster. We will need a mechanism to drain the buffers when recording ends
                         video_recorder_manager.add_multi_frame(mf_payload)
 
-                    if not record_frames_flag.value:
-                        if video_recorder_manager:
-                            logger.debug(
-                                f"`Record frames flag is: `{record_frames_flag.value} and `video_recorder_manager` for recording {video_recorder_manager.recording_name} exists - Recording complete, shutting down recorder! ")
-                            # we just stopped recording, need to finish up the video
-                            video_recorder_manager.close()
-                            video_recorder_manager = None
-                    logger.loop(f"FrameRouter - Finished processing multi-frame payload# {mf_payload.multi_frame_number}")
+                    logger.loop(
+                        f"FrameRouter - Finished processing multi-frame payload# {mf_payload.multi_frame_number}")
                 else:
-                    wait_1ms()
+                    if video_recorder_manager:
+                        if record_frames_flag.value:
+                            video_recorder_manager.save_one_frame()
+                        else:
+                            logger.loop(
+                                f"`Record frames flag is: `{record_frames_flag.value} and `video_recorder_manager` for recording {video_recorder_manager.recording_name} exists - Recording complete, shutting down recorder! ")
+                            video_recorder_manager.finish_and_close()
+                            video_recorder_manager = None
+                    else:
+                        wait_1ms()
         except Exception as e:
             logger.error(f"Frame exporter process error: {e}")
             logger.exception(e)
@@ -123,3 +107,25 @@ class FrameRouterProcess:
             if video_recorder_manager:
                 video_recorder_manager.close()
             kill_camera_group_flag.value = True
+
+    @staticmethod
+    def _receive_multiframe(frame_escape_pipe_exit:multiprocessing.Pipe) -> MultiFramePayload:
+        logger.loop(f"FrameRouter - Receiving multi-frame bytes from pipe...")
+        bytes_payload: bytes = frame_escape_pipe_exit.recv_bytes()
+        if bytes_payload == b"START":
+            mf_payload_bytes_list = []
+            while True:
+                if frame_escape_pipe_exit.poll():
+                    bytes_payload = frame_escape_pipe_exit.recv_bytes()
+                    mf_payload_bytes_list.append(bytes_payload)
+                    if bytes_payload == b"END":
+                        break
+                else:
+                    wait_1ms()
+            mf_payload = MultiFramePayload.from_list(mf_payload_bytes_list)
+        else:
+            raise ValueError(f"FrameRouter - Received unexpected payload from pipe: {bytes_payload}")
+        mf_payload.lifespan_timestamps_ns.append({"pulled_from_mf_queue": time.perf_counter_ns()})
+        logger.loop(
+            f"FrameRouter - Reconstructed multi-frame payload# {mf_payload.multi_frame_number} from pipe bytes!")
+        return mf_payload

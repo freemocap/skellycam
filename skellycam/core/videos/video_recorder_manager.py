@@ -2,7 +2,7 @@ import logging
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from pydantic import BaseModel, ValidationError, Field
 
@@ -92,6 +92,20 @@ class VideoRecorderManager(BaseModel):
         mf_payload.lifespan_timestamps_ns.append({"before_logging_multi_frame": time.perf_counter_ns()})
         self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
 
+    def save_one_frame(self) -> Optional[bool]:
+        """
+        saves one frame from one video recorder
+        """
+        if not any([video_recorder.number_of_frames_to_write > 0 for video_recorder in self.video_recorders.values()]):
+            logger.loop(f"No frames to write for any camera - skipping")
+            return
+
+        # get the camera with the most frames to write (of the first one with the max number of frames to write, if there is a tie)
+        frame_write_lengths = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in self.video_recorders.items()}
+        camera_id = max(self.video_recorders, key=lambda x: self.video_recorders[x].number_of_frames_to_write)
+        logger.debug(f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
+        self.video_recorders[camera_id].write_one_frame()
+        return True
 
     @classmethod
     def _create_videos_folder(cls, recording_folder: str) -> str:
@@ -130,6 +144,13 @@ class VideoRecorderManager(BaseModel):
             raise ValidationError(f"Frame shape {frame.image.shape} does not match config shape "
                                   f"({config.resolution.height}, {config.resolution.width}, {config.color_channels})")
 
+
+    def finish_and_close(self):
+        logger.debug(f"Finishing up...")
+        save_one_result = self.save_one_frame()
+        while save_one_result:
+            save_one_result = self.save_one_frame()
+        self.close()
 
     def close(self):
         logger.debug(f"Closing {self.__class__.__name__} for recording: `{self.recording_name}`")

@@ -1,12 +1,13 @@
 import logging
 from pathlib import Path
+from typing import List
 
 import cv2
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfig
-from skellycam.core.frames.payloads.frame_payload import FramePayload, FramePayload
+from skellycam.core.frames.payloads.frame_payload import  FramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +16,14 @@ class VideoRecorder(BaseModel):
     camera_id: CameraId
     video_path: str
     video_writer: cv2.VideoWriter
+    _frames_to_write: List[FramePayload] = []
 
     class Config:
         arbitrary_types_allowed = True
+
+    @property
+    def number_of_frames_to_write(self) -> int:
+        return len(self._frames_to_write)
 
     @classmethod
     def create(cls,
@@ -40,14 +46,26 @@ class VideoRecorder(BaseModel):
                    video_writer=writer)
 
     def add_frame(self, frame: FramePayload):
+        self._frames_to_write.append(frame)
 
+    def write_one_frame(self):
         if not self.video_writer.isOpened():
             raise ValidationError(f"VideoWriter not open (before adding frame)!")
+        if len(self._frames_to_write) == 0:
+            logger.loop(f"No frames to write for camera {self.camera_id} - skipping")
+            return
+        frame = self._frames_to_write.pop(0)
         self.video_writer.write(frame.image)
         logger.loop(f"Added frame# {frame.frame_number} to VideoSaver for camera {self.camera_id}")
 
         if not self.video_writer.isOpened():
             raise ValidationError(f"VideoWriter not open (after adding frame)!")
+
+    def finish_and_close(self):
+        logger.debug(f"Finishing and closing VideoSaver for camera {self.camera_id}")
+        while len(self._frames_to_write) > 0:
+            self.write_one_frame()
+        self.close()
 
     @classmethod
     def _initialize_video_writer(cls,
