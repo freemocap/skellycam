@@ -18,7 +18,7 @@ def gui_main(shutdown_event=None):
 
     timer = QTimer()
     timer.start(500)
-    timer.timeout.connect(lambda: main_window.update())  # Update the main window once per second
+    timer.timeout.connect(lambda: main_window.update_widget())  # Update the main window once per second
 
     logger.success("GUI main window presumably opened")
     error_code = qt_app.exec()  # Will block until the GUI window is closed

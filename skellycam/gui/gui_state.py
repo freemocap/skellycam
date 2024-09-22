@@ -124,6 +124,8 @@ class GUIState:
         self._recent_metadata: Optional[RecentMultiframeMetadata] = None
         self._frame_number: Optional[int] = None
 
+        self._camera_view_sizes: Dict[CameraId, Dict[str, int]] = {}
+
         self._latest_app_state_dto: Optional['AppStateDTO'] = None
 
         self._lock: multiprocessing.Lock = multiprocessing.Lock()
@@ -246,6 +248,15 @@ class GUIState:
                 return None
             return self._latest_frontend_payload.multi_frame_number
 
+    @property
+    def camera_view_sizes(self) -> Dict[CameraId, Dict[str, int]]:
+        with self._lock:
+            return self._camera_view_sizes
+
+    @camera_view_sizes.setter
+    def camera_view_sizes(self, value: Dict[CameraId, Dict[str, int]]) -> None:
+        with self._lock:
+            self._camera_view_sizes = value
 
 GUI_STATE = None
 

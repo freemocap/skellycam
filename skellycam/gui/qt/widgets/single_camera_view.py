@@ -4,7 +4,7 @@ import time
 
 import cv2
 import numpy as np
-from PySide6.QtCore import Qt, QByteArray, QBuffer
+from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
@@ -59,6 +59,18 @@ class SingleCameraViewWidget(QWidget):
     @property
     def image_label_widget(self):
         return self._image_label_widget
+
+    @property
+    def image_size(self) -> QSize:
+        """
+        Get the current onscreen pixel size of the image element.
+
+        Returns
+        -------
+        QSize
+            The current size of the image element in pixels.
+        """
+        return self._image_label_widget.size()
 
     def update_image(self,
                      base64_str: str,

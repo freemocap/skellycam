@@ -190,5 +190,5 @@ class CameraGroupOrchestrator(BaseModel):
                 [triggers.new_frame_available_trigger.is_set() for triggers in self.camera_triggers.values()]
             )
             if self.new_frames_available or any_new:
-                raise AssertionError("New frames available trigger not reset!")
+                raise AssertionError(f"New frames available trigger not reset properly? `new_frame_available_trigger`: {self.new_frames_available}, `any_new`: {any_new}")
 

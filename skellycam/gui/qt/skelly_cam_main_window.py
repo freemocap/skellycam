@@ -103,12 +103,12 @@ class SkellyCamMainWindow(QMainWindow):
         self._client: FastAPIClient = get_client()
         self._client.connect_websocket()
 
-    def update(self):
+    def update_widget(self):
         
-        super().update()
-        self._skellycam_widget.update()
-        self._skellycam_control_panel.update()
-        self._directory_view_widget.update()
+        logger.trace(f"Updating {self.__class__.__name__}")
+        self._skellycam_widget.update_widget()
+        self._skellycam_control_panel.update_widget()
+        self._directory_view_widget.update_widget()
         # self._app_state_json_widget.update_text(self._gui_state.sub_process_statuses)
 
     def _connect_signals_to_slots(self):

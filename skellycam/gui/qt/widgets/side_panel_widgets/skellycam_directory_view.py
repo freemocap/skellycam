@@ -10,7 +10,8 @@ from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QF
 
 from skellycam.gui.gui_state import GUIState, get_gui_state
 
-
+import logging
+logger = logging.getLogger(__name__)
 
 class SkellyCamDirectoryViewWidget(QWidget):
     def __init__(self, folder_path: str):
@@ -45,8 +46,8 @@ class SkellyCamDirectoryViewWidget(QWidget):
 
         self._gui_state: GUIState = get_gui_state()
 
-    def update(self):
-        super().update()
+    def update_widget(self):
+        logger.trace(f"Updating {self.__class__.__name__}")
         if self._gui_state.recording_info:
             
             rec_path = Path(self._gui_state.recording_info.recording_folder)

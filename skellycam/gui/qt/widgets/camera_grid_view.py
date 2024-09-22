@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List
 
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
@@ -37,16 +38,30 @@ class CameraViewGrid(QWidget):
         self._gui_state: GUIState = get_gui_state()
         self._gui_state.set_image_update_callable(self.set_image_data)
 
+        self._resize_debounce_timer = QTimer(self)
+        self._resize_debounce_timer.setSingleShot(True)
+
     @property
     def single_camera_view_camera_ids(self) -> List[CameraId]:
         if self._single_camera_views:
             return list(self._single_camera_views.keys())
         return []
 
-    def update(self):
-        
-        super().update()
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._resize_debounce_timer.isActive():
+            pass
+        else:
+            self._resize_debounce_timer.start()
+            self.update_camera_view_sizes()
 
+    def update_camera_view_sizes(self):
+       sizes = {camera_id: {"width": view.image_size.width(), "height":view.image_size.height()}
+                for camera_id, view in self._single_camera_views.items()}
+       self._gui_state.camera_view_sizes = sizes
+
+    def update_widget(self):
+        
         if self._gui_state.connected_camera_ids != self.single_camera_view_camera_ids:
             self.clear_camera_views()
             self.create_single_camera_views()

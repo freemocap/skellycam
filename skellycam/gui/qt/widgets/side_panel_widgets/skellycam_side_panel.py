@@ -60,7 +60,7 @@ class SkellyCamControlPanel(QWidget):
         self._parameter_tree_widget = CameraSettingsPanel(parent=self)
         self._layout.addWidget(self._parameter_tree_widget)
 
-    def update(self):
+    def update_widget(self):
         
-        super().update()
-        self._parameter_tree_widget.update()
+        logger.trace(f"Updating {self.__class__.__name__}")
+        self._parameter_tree_widget.update_widget()
