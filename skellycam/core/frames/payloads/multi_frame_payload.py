@@ -46,7 +46,7 @@ class MultiFramePayload(BaseModel):
     def camera_ids(self) -> List[CameraId]:
         return list(self.frames.keys())
 
-    def to_list(self) -> List[Any]:
+    def to_bytes_list(self) -> List[Any]:
         if not self.full:
             raise ValueError("Cannot serialize MultiFramePayloadDTO to list without all frames present")
         ret = [b"START"]

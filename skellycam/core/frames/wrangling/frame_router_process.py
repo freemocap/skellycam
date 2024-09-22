@@ -69,7 +69,7 @@ class FrameRouterProcess:
 
                     FrameRouterProcess._send_frontend_payload(frontend_relay_pipe=frontend_relay_pipe,
                                                               mf_payload=mf_payload,
-                                                              backend_frame_rate=frame_rate_tracker.to_dict())
+                                                              backend_frame_rate=frame_rate_tracker.current())
 
                     if record_frames_flag.value:
                         if not video_recorder_manager:  # create new video_recorder_manager on first multi-frame payload
