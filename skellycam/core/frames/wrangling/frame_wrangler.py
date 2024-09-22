@@ -3,11 +3,10 @@ import multiprocessing
 import os
 
 from skellycam.api.app.app_state import SubProcessStatus
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.wrangling.frame_listener_process import FrameListenerProcess
 from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProcess
-from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
+from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +14,8 @@ logger = logging.getLogger(__name__)
 class FrameWrangler:
 
     def __init__(self,
-                 camera_configs: CameraConfigs,
-                 group_shm_names: GroupSharedMemoryNames,
+                 group_shm_dto: CameraGroupSharedMemoryDTO,
                  group_orchestrator: CameraGroupOrchestrator,
-                 frontend_relay_pipe: multiprocessing.Pipe,
                  update_queue: multiprocessing.Queue,
                  ipc_queue: multiprocessing.Queue,
                  record_frames_flag: multiprocessing.Value,
@@ -29,23 +26,23 @@ class FrameWrangler:
         self._record_frames_flag = record_frames_flag
         self._kill_camera_group_flag = kill_camera_group_flag
 
-        camera_configs: CameraConfigs = camera_configs
         group_orchestrator: CameraGroupOrchestrator = group_orchestrator
 
         frame_escape_pipe_entrance, frame_escape_pipe_exit = multiprocessing.Pipe()
 
         self._listener_process = FrameListenerProcess(
-            camera_configs=camera_configs,
+            camera_configs=group_shm_dto.camera_configs,
             group_orchestrator=group_orchestrator,
-            group_shm_names=group_shm_names,
+            group_shm_dto=group_shm_dto,
             frame_escape_pipe_entrance=frame_escape_pipe_entrance,
+            ipc_queue=ipc_queue,
             kill_camera_group_flag=self._kill_camera_group_flag,
         )
 
         self._frame_router_process = FrameRouterProcess(
-            camera_configs=camera_configs,
+            camera_configs=group_shm_dto.camera_configs,
             frame_escape_pipe_exit=frame_escape_pipe_exit,
-            frontend_relay_pipe=frontend_relay_pipe,
+            ipc_queue=ipc_queue,
             record_frames_flag=self._record_frames_flag,
             kill_camera_group_flag=self._kill_camera_group_flag,
         )

@@ -1,11 +1,13 @@
 import base64
 import time
 from copy import deepcopy
+from io import BytesIO
 from typing import Dict, Optional, List
 
 import cv2
 import msgpack
 import numpy as np
+from PIL import Image
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
@@ -22,7 +24,6 @@ class FrontendFramePayload(BaseModel):
     lifespan_timestamps_ns: List[Dict[str, int]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
-    backend_frame_rate: CurrentFrameRate
 
     @property
     def camera_ids(self):
@@ -40,7 +41,6 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
-                                 backend_frame_rate: CurrentFrameRate,
                                  resize_image: float,
                                  jpeg_quality: int = 90):
 
@@ -52,7 +52,7 @@ class FrontendFramePayload(BaseModel):
         jpeg_images = {}
         for camera_id, frame in multi_frame_payload.frames.items():
             frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
-            jpeg_images[camera_id] = cls._image_to_jpeg(frame.image.copy(), quality=jpeg_quality, resize=resize_image)
+            jpeg_images[camera_id] = cls._image_to_jpeg_cv2(frame.image.copy(), quality=jpeg_quality, resize=resize_image)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
         lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
         lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
@@ -61,7 +61,6 @@ class FrontendFramePayload(BaseModel):
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
-                   backend_frame_rate=backend_frame_rate,
                    multi_frame_metadata=mf_metadata)
 
     def to_msgpack(self) -> bytes:
@@ -74,9 +73,11 @@ class FrontendFramePayload(BaseModel):
         return instance
 
     @staticmethod
-    def _image_to_jpeg(image: np.ndarray, quality: int, resize: float) -> str:
+    def _image_to_jpeg_cv2(image: np.ndarray, quality: int, resize: float) -> str:
         """
         Convert a numpy array image to a JPEG image using OpenCV.
+
+        NOTE - Diagnostics in `/skellycam/skellycam/system/diagnostics/jpeg_compression_duration_by_settings.py` suggest that PIL is way faster than CV2 for this operation.
         """
         if resize < 0 or resize > 1:
             raise ValueError("Resize must be between 0 and 1")
@@ -87,6 +88,30 @@ class FrontendFramePayload(BaseModel):
 
         if not result:
             raise ValueError("Could not encode image to JPEG")
+        base64_image = base64.b64encode(jpeg_image).decode('utf-8')
+        return base64_image
+
+    @staticmethod
+    def _image_to_jpeg_pil(image: np.ndarray, quality: int, resize: float) -> str:
+        """
+        Convert a numpy array image to a JPEG image using PIL.
+        """
+        if resize < 0 or resize > 1:
+            raise ValueError("Resize must be between 0 and 1")
+
+        # Convert numpy array to PIL image
+        pil_image = Image.fromarray(image)
+
+        # Resize the image
+        new_size = (int(pil_image.width * resize), int(pil_image.height * resize))
+        resized_image = pil_image.resize(new_size)
+
+        # Encode the image as JPEG
+        buffer = BytesIO()
+        resized_image.save(buffer, format='JPEG', quality=quality)
+        jpeg_image = buffer.getvalue()
+
+        # Convert to base64
         base64_image = base64.b64encode(jpeg_image).decode('utf-8')
         return base64_image
 

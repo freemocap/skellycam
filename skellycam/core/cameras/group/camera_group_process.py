@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 class CameraGroupProcess:
     def __init__(
             self,
-            frontend_relay_pipe: multiprocessing.Pipe,
             config_update_queue: multiprocessing.Queue,
             ipc_queue: multiprocessing.Queue,
     ):
@@ -29,8 +28,7 @@ class CameraGroupProcess:
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
-            args=(frontend_relay_pipe,
-                  config_update_queue,
+            args=(config_update_queue,
                   ipc_queue,
                   app_state.camera_configs,
                   app_state.record_frames_flag,
@@ -57,8 +55,7 @@ class CameraGroupProcess:
         logger.debug("CameraGroupProcess closed.")
 
     @staticmethod
-    def _run_process(frontend_relay_pipe: multiprocessing.Pipe,
-                     config_update_queue: multiprocessing.Queue,
+    def _run_process(config_update_queue: multiprocessing.Queue,
                      ipc_queue: multiprocessing.Queue,
                      camera_configs: CameraConfigs,
                      record_frames_flag: multiprocessing.Value,
@@ -74,18 +71,18 @@ class CameraGroupProcess:
                                                                                  kill_camera_group_flag=kill_camera_group_flag)
 
                 group_shm = CameraGroupSharedMemory.create(camera_configs=camera_configs)
+                group_shm_dto = group_shm.to_dto()
 
-                frame_wrangler = FrameWrangler(camera_configs=camera_configs,
-                                               group_shm_names=group_shm.shared_memory_names,
+                ipc_queue.put(group_shm_dto)
+
+                frame_wrangler = FrameWrangler(group_shm_dto = group_shm_dto,
                                                group_orchestrator=group_orchestrator,
-                                               frontend_relay_pipe=frontend_relay_pipe,
                                                update_queue=config_update_queue,
                                                ipc_queue=ipc_queue,
                                                record_frames_flag=record_frames_flag,
                                                kill_camera_group_flag=kill_camera_group_flag,
                                                )
-                camera_manager = CameraManager(camera_configs=camera_configs,
-                                               shared_memory_names=group_shm.shared_memory_names,
+                camera_manager = CameraManager(group_shm_dto=group_shm_dto,
                                                group_orchestrator=group_orchestrator,
                                                ipc_queue=ipc_queue,
                                                kill_camera_group_flag=kill_camera_group_flag,

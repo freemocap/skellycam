@@ -24,7 +24,6 @@ class Controller:
         self._app_state: AppState = get_app_state()
         self._tasks: ControllerTasks = ControllerTasks()
         self._ipc_queue = get_ipc_queue()
-        self._frame_wrangler_pipe = get_frame_wrangler_pipe()
 
     @property
     def ipc_queue(self) -> multiprocessing.Queue:
@@ -82,8 +81,7 @@ class Controller:
         self._app_state.kill_camera_group_flag.value = False
         self._app_state.record_frames_flag.value = False
 
-        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue,
-                                         frontend_relay_pipe=self._frame_wrangler_pipe, )
+        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue)
         await self._camera_group.start()
         logger.success("Camera group started successfully")
 

@@ -1,14 +1,12 @@
 import json
 import time
-from ast import Bytes
-from dataclasses import dataclass
 from typing import Dict, Optional, List, Any
 
 import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payloads.frame_payload import FramePayload, FramePayload
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
@@ -93,36 +91,6 @@ class MultiFramePayload(BaseModel):
         print_str += "]"
         return print_str
 
-# class MultiFramePayload(BaseModel):
-#     frames: Dict[CameraId, Optional[FramePayload]] = Field(default_factory=dict,
-#                                                            description="Synchronously captured frames from each camera")
-#     utc_ns_to_perf_ns: UtcToPerfCounterMapping
-#     multi_frame_number: int
-#     lifespan_timestamps_ns: List[Dict[str, int]]
-#
-#     @property
-#     def camera_ids(self) -> List[CameraId]:
-#         return list(self.frames.keys())
-#
-#     @classmethod
-#     def from_dto_list(cls, dto: MultiFramePayloadDTO) -> 'MultiFramePayload':
-#         return cls(
-#             frames={CameraId(camera_id): FramePayload.from_dto(frame_dto)
-#                     for camera_id, frame_dto in dto.frames.items()},
-#             multi_frame_number=dto.multi_frame_number,
-#             utc_ns_to_perf_ns=dto.utc_ns_to_perf_ns,
-#             lifespan_timestamps_ns=dto.lifespan_timestamps_ns
-#         )
-#
-#     def to_metadata(self) -> 'MultiFrameMetadata':
-#         return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
-#
-#     def __str__(self) -> str:
-#         print_str = f"["
-#         for camera_id, frame in self.frames.items():
-#             print_str += str(frame) + "\n"
-#         print_str += "]"
-#         return print_str
 
 
 

@@ -15,17 +15,13 @@ class CameraGroup:
     def __init__(
             self,
             ipc_queue: multiprocessing.Queue,
-            frontend_relay_pipe: multiprocessing.Pipe,
     ):
         self._update_queue = multiprocessing.Queue()  # Update camera configs
-        self._frontend_relay_pipe = frontend_relay_pipe
         self._ipc_queue = ipc_queue
-        self._process = CameraGroupProcess(frontend_relay_pipe=self._frontend_relay_pipe,
-                                           config_update_queue=self._update_queue,
+        self._process = CameraGroupProcess(config_update_queue=self._update_queue,
                                            ipc_queue=self._ipc_queue,
                                            )
         self._app_state: AppState = get_app_state()
-
 
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")
