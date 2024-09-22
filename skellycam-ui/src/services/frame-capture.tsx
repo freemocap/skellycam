@@ -1,5 +1,3 @@
-import {decode} from "@msgpack/msgpack";
-
 export type OnMessageHandler = (ev: MessageEvent<Blob>, data_urls: { [key: string]: string }) => Promise<void>;
 
 export enum CaptureType {

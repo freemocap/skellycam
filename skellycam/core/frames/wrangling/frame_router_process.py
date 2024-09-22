@@ -1,12 +1,10 @@
 import logging
 import multiprocessing
 import time
-from typing import Optional, Dict
+from typing import Optional
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker, CurrentFrameRate
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import create_recording_folder
 from skellycam.utilities.wait_functions import wait_1ms
@@ -73,7 +71,7 @@ class FrameRouterProcess:
                                 f"FrameRouter - Created FrameSaver for recording {video_recorder_manager.recording_name}")
                             # send  as bytes so it can use same ws/ relay as the frontend_payload's
                             recording_info = video_recorder_manager.recording_info
-                            ipc_queue.put(recording_info.model_dump_json())
+                            ipc_queue.put(recording_info)
 
                         # TODO - Decouple 'add_frame' from 'save_frame' and create a 'save_one_frame' method that saves a single frame from one camera, so we can check for new frames faster. We will need a mechanism to drain the buffers when recording ends
                         video_recorder_manager.add_multi_frame(mf_payload)

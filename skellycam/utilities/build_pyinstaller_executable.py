@@ -1,8 +1,8 @@
-import platform
-import PyInstaller.__main__
 import logging
-import subprocess
+import platform
 from pathlib import Path
+
+import PyInstaller.__main__
 
 from skellycam.__main__ import PATH_TO_SKELLYCAM_MAIN
 

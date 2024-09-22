@@ -2,6 +2,7 @@ from typing import List
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class CurrentFrameRate(BaseModel):
     mean_frame_duration_ms: float
     mean_frames_per_second: float

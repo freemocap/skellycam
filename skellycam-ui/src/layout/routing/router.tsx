@@ -1,6 +1,5 @@
 import React from 'react';
 import {Route, Routes} from "react-router-dom";
-import {WebcamStreamCapture} from "@/views/Capture";
 import {ConfigView} from "@/views/Config";
 import {WebcamJonTest} from "@/views/WebcamJonTest";
 import {PythonToJsTest} from "@/views/PythonToJsTest";

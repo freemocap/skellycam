@@ -7,7 +7,6 @@ import numpy as np
 from skellycam.core.memory.shared_memory_indexed_array import SharedMemoryIndexedArrayDTO, SharedMemoryIndexedArray
 
 
-
 def producer(shared_dto: SharedMemoryIndexedArrayDTO, data: List[np.ndarray]):
     shm_array = SharedMemoryIndexedArray.recreate_from_dto(shared_dto)
     data_length = len(data)

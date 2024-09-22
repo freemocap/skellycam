@@ -14,7 +14,6 @@ from skellycam.core import CameraId
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
-from skellycam.core.timestamps.frame_rate_tracker import CurrentFrameRate
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 

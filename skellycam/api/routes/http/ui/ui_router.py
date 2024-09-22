@@ -4,8 +4,6 @@ import os
 from fastapi import APIRouter
 from starlette.responses import HTMLResponse
 
-from skellycam.api.routes.http.ui.ui_html import UI_HTML_STRING
-
 logger = logging.getLogger(__name__)
 
 ui_router = APIRouter()

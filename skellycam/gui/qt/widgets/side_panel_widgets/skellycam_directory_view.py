@@ -10,7 +10,6 @@ from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QF
 
 from skellycam.gui.gui_state import GUIState, get_gui_state
 
-logger = logging.getLogger(__name__)
 
 
 class SkellyCamDirectoryViewWidget(QWidget):
@@ -58,7 +57,6 @@ class SkellyCamDirectoryViewWidget(QWidget):
 
     def expand_directory_to_path(self, directory_path: Union[str, Path], collapse_other_directories: bool = True):
         if collapse_other_directories:
-            logger.info("Collapsing other directories")
             self._tree_view_widget.collapseAll()
         og_index = self._file_system_model.index(str(directory_path))
         self._tree_view_widget.expand(og_index)

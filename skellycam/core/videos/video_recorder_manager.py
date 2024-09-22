@@ -102,7 +102,7 @@ class VideoRecorderManager(BaseModel):
         # get the camera with the most frames to write (of the first one with the max number of frames to write, if there is a tie)
         frame_write_lengths = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in self.video_recorders.items()}
         camera_id = max(self.video_recorders, key=lambda x: self.video_recorders[x].number_of_frames_to_write)
-        logger.debug(f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
+        logger.loop(f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
         self.video_recorders[camera_id].write_one_frame()
         return True
 

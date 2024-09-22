@@ -8,7 +8,6 @@ import websocket
 from websocket import WebSocketApp
 
 from skellycam.api.app.app_state import AppStateDTO
-from skellycam.api.routes.websocket.websocket_server import CLOSE_WEBSOCKET_MESSAGE
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.gui.gui_state import GUIState, get_gui_state
@@ -99,20 +98,20 @@ class WebSocketClient:
             message = json.loads(message)
         try:
             if "message" in message.keys():
-                logger.info(f"Received message: {message['message']}")
+                logger.loop(f"Received message: {message['message']}")
             elif 'jpeg_images' in message.keys():
                 fe_payload = FrontendFramePayload(**message)
                 self._gui_state.latest_frontend_payload = fe_payload
             elif 'recording_name' in message.keys():
                 recording_info = RecordingInfo(**message)
                 logger.info(f"Received RecordingInfo for recording: `{recording_info.recording_name}`")
-                self._gui_state.recording_info = message
+                self._gui_state.recording_info = recording_info
             elif 'camera_configs' in message.keys():
                 app_state = AppStateDTO(**message)
                 logger.info(f"Received AppStateDTO (state_timestamp: {app_state.state_timestamp})")
                 self._gui_state.update_app_state(app_state_dto=app_state)
             else:
-                logger.info(f"Received JSON message, size: {len(json.dumps(message))} bytes")
+                logger.loop(f"Received JSON message, size: {len(json.dumps(message))} bytes")
         except Exception as e:
             logger.exception(e)
             raise
@@ -133,7 +132,7 @@ class WebSocketClient:
 
         if self.websocket:
             try:
-                self.websocket.send(CLOSE_WEBSOCKET_MESSAGE)
+                self.websocket.send("")
                 self.websocket.close()
             except websocket.WebSocketConnectionClosedException:
                 pass

@@ -31,7 +31,6 @@ class FrameWrangler:
         frame_escape_pipe_entrance, frame_escape_pipe_exit = multiprocessing.Pipe()
 
         self._listener_process = FrameListenerProcess(
-            camera_configs=group_shm_dto.camera_configs,
             group_orchestrator=group_orchestrator,
             group_shm_dto=group_shm_dto,
             frame_escape_pipe_entrance=frame_escape_pipe_entrance,

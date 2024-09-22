@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.memory.shared_memory_element import SharedMemoryElement
 
+
 # NOTE - As of 2024-09-22, this class is not used in the codebase. It's kinda neat and should work though
 # and might be useful at some point, so we'll keep it around ^_^
 

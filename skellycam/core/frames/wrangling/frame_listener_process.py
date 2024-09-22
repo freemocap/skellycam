@@ -6,7 +6,6 @@ from typing import Optional, List
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory, CameraGroupSharedMemoryDTO
 from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_1ms
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 class FrameListenerProcess:
     def __init__(
             self,
-            camera_configs: CameraConfigs,
             group_shm_dto: CameraGroupSharedMemoryDTO,
             group_orchestrator: CameraGroupOrchestrator,
             frame_escape_pipe_entrance: multiprocessing.Pipe,
@@ -47,14 +45,14 @@ class FrameListenerProcess:
                      ipc_queue: multiprocessing.Queue,
                      kill_camera_group_flag: multiprocessing.Value,
                      ):
-        logger.loop(f"Frame listener process started!")
+        logger.debug(f"Frame listener process started!")
         camera_group_shm = CameraGroupSharedMemory.recreate(dto=group_shm_dto)
         frame_rate_tracker = FrameRateTracker()
 
 
         try:
             mf_payload: Optional[MultiFramePayload] = None
-            logger.loop(f"Starting FrameListener loop...")
+            logger.trace(f"Starting FrameListener loop...")
 
             # Frame listener loop
             byte_payloads_to_send: List[bytes] = []

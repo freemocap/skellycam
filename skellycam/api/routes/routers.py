@@ -6,7 +6,7 @@ from skellycam.api.routes.http.cameras.connect import connect_cameras_router
 from skellycam.api.routes.http.cameras.detect import detect_cameras_router
 from skellycam.api.routes.http.cameras.record import record_cameras_router
 from skellycam.api.routes.http.ui.ui_router import ui_router
-from skellycam.api.routes.websocket.websocket_server import websocket_router
+from skellycam.api.routes.websocket.websocket_connect import websocket_router
 
 enabled_routers = {
     "/ui": {

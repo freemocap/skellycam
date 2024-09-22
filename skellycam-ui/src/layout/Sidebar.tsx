@@ -9,8 +9,6 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import HomeIcon from '@mui/icons-material/Home';
 import {useNavigate} from "react-router";
-import {Route} from "react-router-dom";
-import {WebcamJonTest} from "../views/WebcamJonTest";
 
 const categories = [
   {

@@ -1,12 +1,13 @@
 import io
 import time
+from io import BytesIO
+from typing import Tuple, List, Dict
+
+import cv2
 import numpy as np
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont
-from typing import Tuple, List, Dict
-import cv2
 import requests
-from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 
 def generate_dummy_image(width: int, height: int) -> np.ndarray:

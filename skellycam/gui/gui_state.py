@@ -52,7 +52,7 @@ class CameraFramerateStats(BaseModel):
         if len(self.frame_durations_ms) > self.max_length:
             self.frame_durations_ms.pop(0)
 
-        if len(self.frame_durations_ms) < 4:
+        if len(self.frame_durations_ms) < 30:
             return None
 
         self.duration_stats = DescriptiveStatistics.from_samples(
@@ -131,19 +131,20 @@ class GUIState:
         self._image_update_callable: Optional[Callable] = None
 
     def set_image_update_callable(self, image_update_callable: Callable) -> None:
-        self._image_update_callable: Optional[Callable] = image_update_callable
+        with self._lock:
+            self._image_update_callable: Optional[Callable] = image_update_callable
 
     def update_app_state(self, app_state_dto: 'AppStateDTO') -> None:
+        with self._lock:
+            self._latest_app_state_dto = app_state_dto
 
-        self._latest_app_state_dto = app_state_dto
+            self._record_frames_flag_status = app_state_dto.record_frames_flag_status
+            self._kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
 
-        self.record_frames_flag_status = app_state_dto.record_frames_flag_status
-        self.kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
-
-        self.available_devices = app_state_dto.available_devices
-        self._connected_camera_configs = app_state_dto.camera_configs
-        if self._user_selected_camera_configs is None:
-            self._user_selected_camera_configs = app_state_dto.camera_configs
+            self._available_devices = app_state_dto.available_devices
+            self._connected_camera_configs = app_state_dto.camera_configs
+            if self._user_selected_camera_configs is None:
+                self._user_selected_camera_configs = app_state_dto.camera_configs
 
     @property
     def sub_process_statuses(self) -> Optional[str]:
@@ -153,8 +154,9 @@ class GUIState:
 
     @property
     def connected_camera_ids(self):
-        if self._connected_camera_configs:
-            return list(self._connected_camera_configs.keys())
+        with self._lock:
+            if self._connected_camera_configs:
+                return list(self._connected_camera_configs.keys())
         return []
 
     @property
