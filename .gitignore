@@ -206,3 +206,11 @@ typings/
 
 # Electron-Forge
 out/
+
+*.avi
+*.mp4
+*.mov
+*.flv
+*.wmv
+*.mkv
+*.webm

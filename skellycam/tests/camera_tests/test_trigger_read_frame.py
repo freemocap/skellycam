@@ -90,7 +90,7 @@ def test_trigger_get_frame_deconstructed(
 
         # 5
         [triggers.set_frame_copied() for triggers in camera_group_orchestrator_fixture.camera_triggers.values()]
-        camera_group_orchestrator_fixture._await_multiframe_pulled_from_shm()
+        camera_group_orchestrator_fixture._await_mf_copied_from_shm()
         assert not camera_group_orchestrator_fixture.new_frames_available
 
         # 6

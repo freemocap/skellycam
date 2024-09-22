@@ -12,7 +12,7 @@ from skellycam.utilities.wait_functions import wait_1us, wait_1ms, wait_10ms
 
 class CameraGroupOrchestrator(BaseModel):
     camera_triggers: Dict[CameraId, CameraTriggers]
-    get_multiframe_from_shm_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
+    new_multi_frame_put_in_shm: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     frame_loop_count: int = -1
     _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
 
@@ -88,12 +88,12 @@ class CameraGroupOrchestrator(BaseModel):
 
         # 5 - Trigger FrameListener to send a multi-frame payload to the FrameRouter
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (start) - Fire escape multi-frame trigger")
-        self.get_multiframe_from_shm_trigger.set()
+        self.new_multi_frame_put_in_shm.set()
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (finish) - Escape multi-frame trigger fired!")
 
         # 6 - wait for the frame to be copied from the `write` buffer to the `read` buffer
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
-        self._await_multiframe_pulled_from_shm()
+        self._await_mf_copied_from_shm()
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
 
         # 7 - Make sure all the triggers are as they should be
@@ -128,7 +128,7 @@ class CameraGroupOrchestrator(BaseModel):
         self._clear_retrieve_frames_triggers()
 
     def set_multi_frame_pulled_from_shm(self):
-        self.get_multiframe_from_shm_trigger.clear()
+        self.new_multi_frame_put_in_shm.clear()
         for triggers in self.camera_triggers.values():
             triggers.new_frame_available_trigger.clear()
 
@@ -147,8 +147,8 @@ class CameraGroupOrchestrator(BaseModel):
         for triggers in self.camera_triggers.values():
             triggers.retrieve_frame_trigger.clear()
 
-    def _await_multiframe_pulled_from_shm(self):
-        while self.get_multiframe_from_shm_trigger.is_set() and self.should_continue:
+    def _await_mf_copied_from_shm(self):
+        while self.new_multi_frame_put_in_shm.is_set() and self.should_continue:
             wait_1us()
         self._clear_retrieve_frames_triggers()
 

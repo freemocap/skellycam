@@ -28,7 +28,7 @@ def test_frame_wrangler(camera_group_shared_memory_fixture: CameraGroupSharedMem
 
         assert camera_group_orchestrator_fixture.new_frames_available
         camera_group_orchestrator_fixture.set_frames_copied()
-        camera_group_orchestrator_fixture._await_multiframe_pulled_from_shm()
+        camera_group_orchestrator_fixture._await_mf_copied_from_shm()
         assert not camera_group_orchestrator_fixture.new_frames_available
 
     frame_wrangler_fixture.close()

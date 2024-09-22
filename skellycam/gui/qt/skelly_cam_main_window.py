@@ -105,7 +105,7 @@ class SkellyCamMainWindow(QMainWindow):
 
     def update_widget(self):
         
-        logger.trace(f"Updating {self.__class__.__name__}")
+        logger.loop(f"Updating {self.__class__.__name__}")
         self._skellycam_widget.update_widget()
         self._skellycam_control_panel.update_widget()
         self._directory_view_widget.update_widget()

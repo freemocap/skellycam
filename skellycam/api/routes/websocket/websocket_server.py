@@ -135,7 +135,7 @@ class WebsocketServer:
     async def _send_frontend_payload(self,
                                      mf_payload: MultiFramePayload):
         frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
-                                                                         resize_image=.5)
+                                                                         resize_image=.2)
         logger.loop(f"Sending frontend payload through websocket...")
         if not self.websocket.client_state == WebSocketState.CONNECTED:
             logger.error("Websocket is not connected, cannot send payload!")

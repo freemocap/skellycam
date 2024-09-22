@@ -46,7 +46,7 @@ class CameraSettingsPanel(QWidget):
 
     def update_widget(self):
         
-        logger.trace(f"Updating {self.__class__.__name__}")
+        logger.loop(f"Updating {self.__class__.__name__}")
         new_available_devices = self._gui_state.available_devices
         available_devices_changed = not new_available_devices == self._available_devices
         # camera_configs_changed = not new_camera_configs == self._user_selected_camera_configs # TODO (or prob not bc we're gonna scrap this ui) - specify when user selection differs from pp state

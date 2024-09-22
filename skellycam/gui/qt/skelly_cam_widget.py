@@ -45,7 +45,7 @@ class SkellyCamWidget(QWidget):
         self._backend_image_sizes = self._gui_state.camera_view_sizes
 
     def update_widget(self):
-        logger.trace(f"Updating {self.__class__.__name__}")
+        logger.loop(f"Updating {self.__class__.__name__}")
         self.recording_panel.update_widget()
         self.camera_view_grid.update_widget()
         view_sizes = self._gui_state.camera_view_sizes
