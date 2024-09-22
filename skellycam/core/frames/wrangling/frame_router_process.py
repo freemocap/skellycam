@@ -1,11 +1,12 @@
 import logging
 import multiprocessing
 import time
-from typing import Optional
+from typing import Optional, Dict
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker, CurrentFrameRate
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import create_recording_folder
 from skellycam.utilities.wait_functions import wait_1ms
@@ -48,27 +49,27 @@ class FrameRouterProcess:
                      ):
         """
         This process is not coupled to the frame loop, and the `escape pipe` is elastic, so blocking is not as big a sin here.
+        Frame chunks will be sent through the `frame_escape_pipe_exit` and will be gathered, reconstructed into a framepayload, and handled here.
         Mostly need to ensure that the all frames are saved (Priority #1) and that the frontend updates are frequent enough to avoid lag (Priority #2).
         We can drop frontend framerate if we need to
         """
         logger.debug(f"FrameRouter  process started!")
         video_recorder_manager: Optional[VideoRecorderManager] = None
 
+        frame_rate_tracker = FrameRateTracker()
         try:
             while not kill_camera_group_flag.value:
                 if frame_escape_pipe_exit.poll():
                     mf_payload = FrameRouterProcess._receive_multiframe(frame_escape_pipe_exit)
+                    pulled_from_pipe_timestamp = time.perf_counter_ns()
+                    mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
+                    frame_rate_tracker.update(time.perf_counter_ns())
 
                     # TODO - Adapatively change the `resize` value based on performance metrics (i.e. shrink frontend-frames pipes/queues start filling up)
-                    frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
-                                                                                     resize_image=.5)
-                    logger.loop(
-                        f"FrameRouter - Created FrontendFramePayload from multi-frame payload# {mf_payload.multi_frame_number}")
 
-                    # TODO - might/should be possible to send straight to GUI websocket client from here without the relay pipe? Maybe with ZeroMQ or SocketIO Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
-                    logger.loop(f"FrameRouter - Sending FrontendFramePayload through frontend relay pipe...")
-                    frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
-                    logger.loop(f"FrameRouter - Sent FrontendFramePayload through frontend relay pipe!")
+                    FrameRouterProcess._send_frontend_payload(frontend_relay_pipe=frontend_relay_pipe,
+                                                              mf_payload=mf_payload,
+                                                              backend_frame_rate=frame_rate_tracker.to_dict())
 
                     if record_frames_flag.value:
                         if not video_recorder_manager:  # create new video_recorder_manager on first multi-frame payload
@@ -109,7 +110,21 @@ class FrameRouterProcess:
             kill_camera_group_flag.value = True
 
     @staticmethod
-    def _receive_multiframe(frame_escape_pipe_exit:multiprocessing.Pipe) -> MultiFramePayload:
+    def _send_frontend_payload(frontend_relay_pipe: multiprocessing.Pipe,
+                               mf_payload: MultiFramePayload,
+                               backend_frame_rate:CurrentFrameRate):
+        frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
+                                                                         resize_image=.25,
+                                                                         backend_frame_rate=backend_frame_rate)
+        logger.loop(
+            f"FrameRouter - Created FrontendFramePayload from multi-frame payload# {mf_payload.multi_frame_number}")
+        # TODO - might/should be possible to send straight to GUI websocket client from here without the relay pipe? Maybe with ZeroMQ or SocketIO Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
+        logger.loop(f"FrameRouter - Sending FrontendFramePayload through frontend relay pipe...")
+        frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
+        logger.loop(f"FrameRouter - Sent FrontendFramePayload through frontend relay pipe!")
+
+    @staticmethod
+    def _receive_multiframe(frame_escape_pipe_exit: multiprocessing.Pipe) -> MultiFramePayload:
         logger.loop(f"FrameRouter - Receiving multi-frame bytes from pipe...")
         bytes_payload: bytes = frame_escape_pipe_exit.recv_bytes()
         if bytes_payload == b"START":

@@ -12,6 +12,7 @@ from skellycam.core import CameraId
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
+from skellycam.core.timestamps.frame_rate_tracker import CurrentFrameRate
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
@@ -21,6 +22,7 @@ class FrontendFramePayload(BaseModel):
     lifespan_timestamps_ns: List[Dict[str, int]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
+    backend_frame_rate: CurrentFrameRate
 
     @property
     def camera_ids(self):
@@ -38,6 +40,7 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
+                                 backend_frame_rate: CurrentFrameRate,
                                  resize_image: float,
                                  jpeg_quality: int = 90):
 
@@ -58,6 +61,7 @@ class FrontendFramePayload(BaseModel):
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
+                   backend_frame_rate=backend_frame_rate,
                    multi_frame_metadata=mf_metadata)
 
     def to_msgpack(self) -> bytes:

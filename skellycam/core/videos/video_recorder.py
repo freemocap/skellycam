@@ -52,7 +52,6 @@ class VideoRecorder(BaseModel):
         if not self.video_writer.isOpened():
             raise ValidationError(f"VideoWriter not open (before adding frame)!")
         if len(self._frames_to_write) == 0:
-            logger.loop(f"No frames to write for camera {self.camera_id} - skipping")
             return
         frame = self._frames_to_write.pop(0)
         self.video_writer.write(frame.image)

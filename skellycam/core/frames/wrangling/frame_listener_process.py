@@ -54,10 +54,11 @@ class FrameListenerProcess:
         )
         try:
 
-            # group_orchestrator.await_for_cameras_ready() # I don't think i need to wait here?
             mf_payload: Optional[MultiFramePayload] = None
             logger.loop(f"Starting FrameListener loop...")
+
             # Frame listener loop
+            byte_payloads_to_send: List[bytes] = []
             while not kill_camera_group_flag.value:
                 if group_orchestrator.get_multiframe_from_shm_trigger.is_set():
                     logger.loop(f"FrameListener -  sees new frames available!")
@@ -68,13 +69,19 @@ class FrameListenerProcess:
                     group_orchestrator.set_multi_frame_pulled_from_shm()
 
                     logger.loop(f"FrameListener -  cleared escape_multi_frame_trigger")
-                    mf_bytes_list = mf_payload.to_list()
-                    logger.loop(f"FrameListener -  Sending multi-frame payload to FrameRouter in `{len(mf_bytes_list)}` parts")
-                    for dto_item in mf_bytes_list:
-                        frame_escape_pipe_entrance.send_bytes(dto_item)
-                    logger.loop(f"Sent MultiFrame# {mf_payload.multi_frame_number} to FrameRouter successfully")
+                    mf_bytes_list = mf_payload.to_bytes_list()
+                    byte_payloads_to_send.extend(mf_bytes_list)
+                    logger.loop(f"FrameListener -  Sending multi-frame payload `bytes_to_send_list` "
+                                f"(size: #frames {len(byte_payloads_to_send)/len(mf_bytes_list)},"
+                                f" chunklets: {len(byte_payloads_to_send)}) to FrameRouter")
+
                 else:
-                    wait_1ms()
+
+                    if len(byte_payloads_to_send) > 0:
+                        # Opportunistically send byte chunks one-at-a-time whenever there isn't frame-loop work to do
+                        frame_escape_pipe_entrance.send_bytes(byte_payloads_to_send.pop(0))
+                    else:
+                        wait_1ms()
         except Exception as e:
             logger.exception(f"Frame listener process error: {e.__class__} - {e}")
             raise

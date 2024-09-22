@@ -97,7 +97,6 @@ class VideoRecorderManager(BaseModel):
         saves one frame from one video recorder
         """
         if not any([video_recorder.number_of_frames_to_write > 0 for video_recorder in self.video_recorders.values()]):
-            logger.loop(f"No frames to write for any camera - skipping")
             return
 
         # get the camera with the most frames to write (of the first one with the max number of frames to write, if there is a tie)
