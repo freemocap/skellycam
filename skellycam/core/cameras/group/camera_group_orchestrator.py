@@ -61,48 +61,48 @@ class CameraGroupOrchestrator(BaseModel):
     def trigger_multi_frame_read(self):
         self.frame_loop_count += 1
         # 0 - Make sure all cameras are ready
-        logger.trace(f"FRAME LOOP #{self.frame_loop_count} BEGIN")
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #0 (start)  - Make sure all cameras are ready")
+        logger.loop(f"FRAME LOOP #{self.frame_loop_count} BEGIN")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #0 (start)  - Make sure all cameras are ready")
         self._ensure_cameras_ready()
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #0 (finish) - All cameras are ready!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #0 (finish) - All cameras are ready!")
 
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #1 (start) - Fire grab triggers")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #1 (start) - Fire grab triggers")
         self._fire_grab_trigger()
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #1 (finish) - GRAB triggers fired!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #1 (finish) - GRAB triggers fired!")
 
         # 2 - wait for all cameras to grab a frame
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #2 (start) - Wait for all cameras to GRAB a frame")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #2 (start) - Wait for all cameras to GRAB a frame")
         self._await_frames_grabbed()
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #2 (finish) - All cameras have GRABbed a frame!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #2 (finish) - All cameras have GRABbed a frame!")
 
         # 3- Trigger each camera to retrieve the frame using `cv2.VideoCapture.retrieve()`, which decodes the frame into an image/numpy array
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #3 (start)- Fire retrieve triggers")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #3 (start)- Fire retrieve triggers")
         self._fire_retrieve_trigger()
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #3 (finish) - RETRIEVE triggers fired!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #3 (finish) - RETRIEVE triggers fired!")
 
         # 4 - wait for all cameras to retrieve the frame and put it in shared memory
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (start) - Wait for new frames to be available")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (start) - Wait for new frames to be available")
         self.await_new_frames_available()
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (finish) - New frames are available in shared memory!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (finish) - New frames are available in shared memory!")
 
         # 5 - Trigger FrameListener to send a multi-frame payload to the FrameRouter
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (start) - Fire escape multi-frame trigger")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (start) - Fire escape multi-frame trigger")
         self.get_multiframe_from_shm_trigger.set()
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (finish) - Escape multi-frame trigger fired!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (finish) - Escape multi-frame trigger fired!")
 
         # 6 - wait for the frame to be copied from the `write` buffer to the `read` buffer
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
         self._await_multiframe_pulled_from_shm()
-        logger.trace(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
 
         # 7 - Make sure all the triggers are as they should be
-        logger.trace(
+        logger.loop(
             f"**Frame Loop #{self.frame_loop_count}** - Step# 7 (start) - Verify that everything is hunky-dory after reading the frames")
         self._verify_hunky_dory_after_read()
-        logger.trace(
+        logger.loop(
             f"**Frame Loop #{self.frame_loop_count}** - Step #7 (end) - Everything is hunky-dory after reading the frames!")
-        logger.trace(f"FRAME LOOP #{self.frame_loop_count} Complete!")
+        logger.loop(f"FRAME LOOP #{self.frame_loop_count} Complete!")
 
     ##############################################################################################################
 
