@@ -53,7 +53,8 @@ async def websocket_relay(websocket: WebSocket):
                     continue
                 await websocket.send_bytes(payload)
                 logger.loop(f"Relayed payload to frontend: {len(payload)} bytes")
-
+                if not websocket.client_state == WebSocketState.CONNECTED:
+                    logger.warning("Websocket not connected after sending payload!")
             if not ipc_queue.empty():
                 message = ipc_queue.get()
                 if isinstance(message, AppStateDTO):

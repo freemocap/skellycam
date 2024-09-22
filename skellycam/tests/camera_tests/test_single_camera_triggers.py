@@ -44,7 +44,7 @@ def test_frame_retrieve_trigger(single_camera_triggers_fixture: CameraTriggers):
     single_camera_triggers_fixture.retrieve_frame_trigger.set()
     assert single_camera_triggers_fixture.retrieve_frame_trigger.is_set()
     await_thread.join()
-    single_camera_triggers_fixture.set_frame_retrieved()
+    single_camera_triggers_fixture.set_new_frame_available()
     assert not single_camera_triggers_fixture.retrieve_frame_trigger.is_set()
 
 

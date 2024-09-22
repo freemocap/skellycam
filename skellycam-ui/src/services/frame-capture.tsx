@@ -29,35 +29,43 @@ export class FrameCapture {
     }
     public start_frame_capture(onMessageHandler: OnMessageHandler) {
         console.log(`FrameCapture: start_frame_capture: ${this._host}`)
+        const decoder = new TextDecoder('utf-8');
         this._ws_connection = new WebSocket(this._host);
 
         this._ws_connection.onmessage = async (ev: MessageEvent<Blob>) => {
-            console.debug(`FrameCapture: onmessage - received data: ${ev.data.size} bytes`);
+            // Ensure the event.data is a Blob
+            if (ev.data instanceof Blob) {
+                // Convert the incoming data to an ArrayBuffer
+                const arrayBuffer = await ev.data.arrayBuffer();
 
-            // Handle string messages
-            if (typeof ev.data === 'string') {
-                console.debug(`FrameCapture: onmessage - received string message: ${ev.data}`);
-                return;
+                // Convert ArrayBuffer to a string
+                const jsonString = decoder.decode(arrayBuffer);
+
+                // Parse the JSON string to a JavaScript object
+                const data = JSON.parse(jsonString);
+                console.log(`Received message with length: ${jsonString.length} from mf_payload# ${data.multi_frame_number}`);
+                const jpegImagesByCamera = data.jpeg_images;
+
+                // Iterate over the framesObject to create a data URL for each image
+                const dataUrls: { [key: string]: string } = {};
+                for (const [cameraId, jpegImage] of Object.entries(jpegImagesByCamera) as [string, Uint8Array][]) {
+                    const blob = new Blob([jpegImage], { type: 'image/jpeg' });
+                    dataUrls[cameraId] = URL.createObjectURL(blob);
+                }
+
+                // Call the onMessageHandler with the dataUrls object
+                await onMessageHandler(ev, dataUrls);
+
+
+            } else {
+                console.log(`Received message with length: ${JSON.stringify(ev.data)}`);
             }
-
-            // Read the Blob as an ArrayBuffer
-            const arrayBuffer = await ev.data.arrayBuffer();
+        };
 
 
-            // Decode the MessagePack data into a JavaScript object
-            const payload:any = decode(new Uint8Array(arrayBuffer));
-            const jpegImagesByCamera = payload.jpeg_images;
 
-            // Iterate over the framesObject to create a data URL for each image
-            const dataUrls: { [key: string]: string } = {};
-            for (const [cameraId, jpegImage] of Object.entries(jpegImagesByCamera) as [string, Uint8Array][]) {
-                const blob = new Blob([jpegImage], { type: 'image/jpeg' });
-                dataUrls[cameraId] = URL.createObjectURL(blob);
-            }
 
-            // Call the onMessageHandler with the dataUrls object
-            await onMessageHandler(ev, dataUrls);
-        }
+
     }
 
     public cleanup() {

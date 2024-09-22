@@ -1,7 +1,7 @@
 import multiprocessing
 from typing import Dict
 
-from pydantic import BaseModel, SkipValidation, PrivateAttr
+from pydantic import BaseModel, SkipValidation, PrivateAttr, Field
 from typing_extensions import Annotated
 
 from skellycam.core import CameraId
@@ -12,6 +12,7 @@ from skellycam.utilities.wait_functions import wait_1us, wait_1ms, wait_10ms
 
 class CameraGroupOrchestrator(BaseModel):
     camera_triggers: Dict[CameraId, CameraTriggers]
+    get_multiframe_from_shm_trigger: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     frame_loop_count: int = -1
     _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
 
@@ -80,22 +81,27 @@ class CameraGroupOrchestrator(BaseModel):
         self._fire_retrieve_trigger()
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #3 (finish) - RETRIEVE triggers fired!")
 
-        # 4 - wait for all cameras to retrieve the frame,
+        # 4 - wait for all cameras to retrieve the frame and put it in shared memory
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (start) - Wait for new frames to be available")
         self.await_new_frames_available()
-        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (finish) - New frames are available!")
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (finish) - New frames are available in shared memory!")
 
-        # 5 - wait for the frame to be copied from the `write` buffer to the `read` buffer
-        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (start) - Wait for all frames to be copied")
-        self._await_frames_copied()
-        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (finish) - All frames have been copied!")
+        # 5 - Trigger FrameListener to send a multi-frame payload to the FrameRouter
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (start) - Fire escape multi-frame trigger")
+        self.get_multiframe_from_shm_trigger.set()
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (finish) - Escape multi-frame trigger fired!")
 
-        # 6 - Make sure all the triggers are as they should be
+        # 6 - wait for the frame to be copied from the `write` buffer to the `read` buffer
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
+        self._await_multiframe_pulled_from_shm()
+        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
+
+        # 7 - Make sure all the triggers are as they should be
         logger.loop(
-            f"**Frame Loop #{self.frame_loop_count}** - Step# 6 (start) - Verify that everything is hunky-dory after reading the frames")
+            f"**Frame Loop #{self.frame_loop_count}** - Step# 7 (start) - Verify that everything is hunky-dory after reading the frames")
         self._verify_hunky_dory_after_read()
         logger.loop(
-            f"**Frame Loop #{self.frame_loop_count}** - Step #6 (end) - Everything is hunky-dory after reading the frames!")
+            f"**Frame Loop #{self.frame_loop_count}** - Step #7 (end) - Everything is hunky-dory after reading the frames!")
         logger.loop(f"FRAME LOOP #{self.frame_loop_count} Complete!")
 
     ##############################################################################################################
@@ -121,11 +127,10 @@ class CameraGroupOrchestrator(BaseModel):
             wait_1us()
         self._clear_retrieve_frames_triggers()
 
-    def set_frames_copied(self):
+    def set_multi_frame_pulled_from_shm(self):
+        self.get_multiframe_from_shm_trigger.clear()
         for triggers in self.camera_triggers.values():
-            triggers.set_frame_copied()
-        if self.new_frames_available:
-            raise AssertionError("New frames available trigger not reset!")
+            triggers.new_frame_available_trigger.clear()
 
     def _await_initial_triggers_reset(self):
         logger.trace("Initial triggers set - waiting for all triggers to reset...")
@@ -142,8 +147,8 @@ class CameraGroupOrchestrator(BaseModel):
         for triggers in self.camera_triggers.values():
             triggers.retrieve_frame_trigger.clear()
 
-    def _await_frames_copied(self):
-        while self.new_frames_available and self.should_continue:
+    def _await_multiframe_pulled_from_shm(self):
+        while self.get_multiframe_from_shm_trigger.is_set() and self.should_continue:
             wait_1us()
         self._clear_retrieve_frames_triggers()
 
@@ -187,5 +192,3 @@ class CameraGroupOrchestrator(BaseModel):
             if self.new_frames_available or any_new:
                 raise AssertionError("New frames available trigger not reset!")
 
-    def clear_triggers(self):
-        [triggers.clear_all() for triggers in self.camera_triggers.values()]

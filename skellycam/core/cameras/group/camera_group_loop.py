@@ -40,7 +40,6 @@ def camera_group_trigger_loop(
             elapsed_per_loop_ns=elapsed_per_loop_ns,
         )
     finally:
-        group_orchestrator.clear_triggers()
         logger.debug(f"Multi-camera trigger loop for cameras: {group_orchestrator.camera_ids}  exited")
 
 

@@ -65,10 +65,8 @@ class FrameRouterProcess:
                         while True:
                             if frame_escape_pipe_exit.poll():
                                 bytes_payload = frame_escape_pipe_exit.recv_bytes()
-                                logger.loop(f"FrameRouter - Receiving multi-frame bytes from pipe with length {len(bytes_payload)}")
                                 mf_payload_bytes_list.append(bytes_payload)
                                 if bytes_payload == b"END":
-                                    logger.loop(f"FrameRouter - Received {bytes_payload} from pipe, breaking loop for this multi-frame")
                                     break
                             else:
                                 wait_1ms()
@@ -88,7 +86,7 @@ class FrameRouterProcess:
 
                     # TODO - might/should be possible to send straight to GUI websocket client from here without the relay pipe? Maybe with ZeroMQ or SocketIO Assuming the relay pipe isn't faster (and that the GUI can unpack the bytes)
                     logger.loop(f"FrameRouter - Sending FrontendFramePayload through frontend relay pipe...")
-                    frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
+                    # frontend_relay_pipe.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
                     logger.loop(f"FrameRouter - Sent FrontendFramePayload through frontend relay pipe!")
 
                     if record_frames_flag.value:
@@ -113,6 +111,7 @@ class FrameRouterProcess:
                             # we just stopped recording, need to finish up the video
                             video_recorder_manager.close()
                             video_recorder_manager = None
+                    logger.loop(f"FrameRouter - Finished processing multi-frame payload# {mf_payload.multi_frame_number}")
                 else:
                     wait_1ms()
         except Exception as e:

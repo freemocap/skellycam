@@ -58,25 +58,23 @@ class FrameListenerProcess:
             mf_payload: Optional[MultiFramePayload] = None
             logger.loop(f"Starting FrameListener loop...")
             # Frame listener loop
-
-
             while not kill_camera_group_flag.value:
-                if group_orchestrator.new_frames_available:
+                if group_orchestrator.get_multiframe_from_shm_trigger.is_set():
                     logger.loop(f"FrameListener -  sees new frames available!")
 
-                    mf_payload = camera_group_shm.get_multi_frame_payload_dto(previous_payload_dto=mf_payload)
+                    # mf_payload = camera_group_shm.get_multi_frame_payload_dto(previous_payload_dto=mf_payload)
                     logger.loop(f"FrameListener -  copied multi-frame payload from shared memory")
                     # NOTE - Reset the flag BEFORE we put the payload in the queue to allow new frame loop to begin
-
-                    group_orchestrator.set_frames_copied()
-                    logger.loop(f"FrameListener -  Set `frames copied` flag to True")
+                    group_orchestrator.set_multi_frame_pulled_from_shm()
+                    continue
+                    logger.loop(f"FrameListener -  cleared escape_multi_frame_trigger")
                     mf_bytes_list = mf_payload.to_list()
                     logger.loop(f"FrameListener -  Sending multi-frame payload to FrameRouter in `{len(mf_bytes_list)}` parts")
                     for dto_item in mf_bytes_list:
                         frame_escape_pipe_entrance.send_bytes(dto_item)
                     logger.loop(f"Sent MultiFrame# {mf_payload.multi_frame_number} to FrameRouter successfully")
-            else:
-                wait_1ms()
+                else:
+                    wait_1ms()
         except Exception as e:
             logger.exception(f"Frame listener process error: {e.__class__} - {e}")
             raise
