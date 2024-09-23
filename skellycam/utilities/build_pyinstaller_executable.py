@@ -63,7 +63,7 @@ def run_pyinstaller(qt: bool = False):
         '--add-data',
         f"{SKELLYCAM_SVG_PATH};shared/skellycam-logo",
         '--add-data',
-        f"skellycam/api/http/ui/ui.html;skellycam/api/http/ui" 
+        f"skellycam/api/http/ui/ui.html;skellycam/api/http/ui" ,
         '--add-data',
         f"skellycam/shared/skellycam-logo/skellycam-favicon.ico:shared/skellycam-logo",
     ]
