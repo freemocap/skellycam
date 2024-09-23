@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
 from skellycam.gui.gui_state import GUIState, get_gui_state, CameraFramerateStats, CameraViewSizes
-from skellycam.gui.qt.widgets.single_camera_view import SingleCameraViewWidget
+from skellycam.gui.qt.widgets.camera_views.single_camera_view import SingleCameraViewWidget
 
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
 MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
@@ -102,7 +102,9 @@ class CameraViewGrid(QWidget):
 
     def set_image_data(self,
                        jpeg_images: Dict[CameraId, str],
-                       framerate_stats_by_camera: Dict[CameraId, CameraFramerateStats]):
+                       framerate_stats_by_camera: Dict[CameraId, CameraFramerateStats],
+                       recording_in_progress:bool=False):
         for camera_id, single_camera_view in self._single_camera_views.items():
             single_camera_view.update_image(base64_str=jpeg_images[camera_id],
-                                            framerate_stats=framerate_stats_by_camera[camera_id])
+                                            framerate_stats=framerate_stats_by_camera[camera_id],
+                                            recording=recording_in_progress)

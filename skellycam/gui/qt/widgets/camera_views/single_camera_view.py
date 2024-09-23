@@ -74,12 +74,17 @@ class SingleCameraViewWidget(QWidget):
 
     def update_image(self,
                      base64_str: str,
-                     framerate_stats: CameraFramerateStats):
+                     framerate_stats: CameraFramerateStats,
+                     recording:bool=False):
         q_image = self._image_updater.update_image(base64_str)
         self._current_pixmap = QPixmap.fromImage(q_image)
         if self._annotations_enabled:
             self._annotate_pixmap(framerate_stats=framerate_stats)
         self.update_pixmap()
+        if recording:
+            self._image_label_widget.setStyleSheet("border: 3px solid red;")
+        else:
+            self._image_label_widget.setStyleSheet("border: 1px solid;")
 
     def _annotate_pixmap(self, framerate_stats: CameraFramerateStats):
         painter = QPainter(self._current_pixmap)

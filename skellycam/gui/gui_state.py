@@ -259,7 +259,8 @@ class GUIState:
                 self._recent_metadata.add_multiframe_metadata(value.multi_frame_metadata)
             if self._image_update_callable:
                 self._image_update_callable(jpeg_images=value.jpeg_images,
-                                            framerate_stats_by_camera=self._recent_metadata.framerate_stats_by_camera)
+                                            framerate_stats_by_camera=self._recent_metadata.framerate_stats_by_camera,
+                                            recording_in_progress=self._record_frames_flag_status)
 
     @property
     def frame_number(self) -> Optional[int]:
