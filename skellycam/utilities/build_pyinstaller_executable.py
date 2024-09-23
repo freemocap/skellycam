@@ -5,6 +5,7 @@ from pathlib import Path
 import PyInstaller.__main__
 
 from skellycam.__main__ import PATH_TO_SKELLYCAM_MAIN
+from skellycam.system.default_paths import SKELLYCAM_SVG_PATH
 
 OUTPUT_DIST_PATH = str(Path(PATH_TO_SKELLYCAM_MAIN).parent.parent / 'dist')
 WORK_BUILD_PATH = str(Path(PATH_TO_SKELLYCAM_MAIN).parent.parent / 'build')
@@ -56,7 +57,10 @@ def run_pyinstaller():
         SKELLYCAM_ICON_PATH,
         '--log-level',
         'INFO'
-
+        '--add-data',
+        f"{SKELLYCAM_SVG_PATH };shared/skellycam-logo",
+        '--',
+        '--qt', #compile binary to use the qt gui, disable for server-only
     ])
 
 

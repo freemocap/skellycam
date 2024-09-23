@@ -1,0 +1,118 @@
+import logging
+from typing import Dict, List
+
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
+
+from skellycam.core import CameraId
+from skellycam.gui.gui_state import GUIState, get_gui_state, CameraFramerateStats
+from skellycam.gui.qt.widgets.single_camera_view import SingleCameraViewWidget
+
+MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 2
+MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5
+
+logger = logging.getLogger(__name__)
+
+
+class CameraViewGrid(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self._layout = QVBoxLayout()
+        self.setLayout(self._layout)
+
+        self._camera_grids_layout = QHBoxLayout()
+        self._layout.addLayout(self._camera_grids_layout)
+
+        self._camera_landscape_grid_layout = QGridLayout()
+        self._camera_grids_layout.addLayout(self._camera_landscape_grid_layout)
+
+        self._camera_portrait_grid_layout = QGridLayout()
+        self._camera_grids_layout.addLayout(self._camera_portrait_grid_layout)
+
+        self.setStyleSheet("""
+                            font-size: 12px;
+                            font-weight: bold;
+                            font-family: "Dosis", sans-serif;
+        """)
+        self._single_camera_views: Dict[CameraId, SingleCameraViewWidget] = {}
+        self._gui_state: GUIState = get_gui_state()
+        self._gui_state.set_image_update_callable(self.set_image_data)
+
+        self._resize_debounce_timer = QTimer(self)
+        self._resize_debounce_timer.setSingleShot(True)
+
+    @property
+    def single_camera_view_camera_ids(self) -> List[CameraId]:
+        if self._single_camera_views:
+            return list(self._single_camera_views.keys())
+        return []
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # TODO - Flesh out and fix this method for sending current display view sizes to the backend, so we can resize the images before putting them in the ws. (Currently causes freezing of GUI?)
+        # if self._resize_debounce_timer.isActive():
+        #     pass
+        # else:
+        #     self._resize_debounce_timer.start()
+        #     self.update_camera_view_sizes()
+
+    def update_camera_view_sizes(self):
+       sizes = {camera_id: {"width": view.image_size.width(), "height":view.image_size.height()}
+                for camera_id, view in self._single_camera_views.items()}
+       self._gui_state.camera_view_sizes = sizes
+
+    def update_widget(self):
+        
+        if self._gui_state.connected_camera_ids != self.single_camera_view_camera_ids:
+            self.clear_camera_views()
+            self.create_single_camera_views()
+
+    def create_single_camera_views(self):
+        if not self._gui_state.connected_camera_configs:
+            return
+        landscape_camera_number = -1
+        portrait_camera_number = -1
+        for camera_id, camera_config in self._gui_state.connected_camera_configs.items():
+
+            single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
+                                                        camera_config=camera_config,
+                                                        parent=self)
+
+            if camera_config.orientation == "landscape" or "square":
+                landscape_camera_number += 1
+                divmod_whole, divmod_remainder = divmod(int(landscape_camera_number),
+                                                        MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS)
+                grid_row = divmod_whole
+                grid_column = divmod_remainder
+                self._camera_landscape_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
+
+            elif camera_config.orientation == "portrait":
+                portrait_camera_number += 1
+                divmod_whole, divmod_remainder = divmod(int(portrait_camera_number),
+                                                        MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS)
+                grid_row = divmod_whole
+                grid_column = divmod_remainder
+                self._camera_portrait_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
+
+            self._single_camera_views[camera_id] = single_camera_view
+
+    def clear_camera_views(self):
+        if len(self._single_camera_views) == 0:
+            return
+
+        logger.debug("Clearing camera layout dictionary")
+        try:
+            for camera_id, single_camera_view in self._single_camera_views.items():
+                single_camera_view.close()
+                self._camera_portrait_grid_layout.removeWidget(single_camera_view)
+                self._camera_landscape_grid_layout.removeWidget(single_camera_view)
+        except Exception as e:
+            logger.error(f"Error clearing camera layout dictionary: {e}")
+            raise
+
+    def set_image_data(self,
+                       jpeg_images: Dict[CameraId, str],
+                       framerate_stats_by_camera: Dict[CameraId, CameraFramerateStats]):
+        for camera_id, single_camera_view in self._single_camera_views.items():
+            single_camera_view.update_image(base64_str=jpeg_images[camera_id],
+                                            framerate_stats=framerate_stats_by_camera[camera_id])

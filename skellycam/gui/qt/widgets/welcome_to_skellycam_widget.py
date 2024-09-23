@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
-from skellycam.system.default_paths import PATH_TO_SKELLY_CAM_LOGO_SVG
+from skellycam.system.default_paths import SKELLYCAM_SVG_PATH
 
 
 class WelcomeToSkellyCamWidget(QWidget):
@@ -14,7 +14,7 @@ class WelcomeToSkellyCamWidget(QWidget):
         skellycam_logo_label = QLabel(self)
         self._layout.addWidget(skellycam_logo_label)
 
-        skellycam_logo_pixmap = QPixmap(PATH_TO_SKELLY_CAM_LOGO_SVG)
+        skellycam_logo_pixmap = QPixmap(SKELLYCAM_SVG_PATH)
         skellycam_logo_pixmap = skellycam_logo_pixmap.scaledToWidth(300)
         skellycam_logo_label.setPixmap(skellycam_logo_pixmap)
         skellycam_logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
