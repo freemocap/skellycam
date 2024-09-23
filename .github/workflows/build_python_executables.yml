@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-11, macos-10.15, ubuntu-latest]
-        build_type: [GUI]#, SERVER-ONLY]
+        build_type: [GUI, SERVER-ONLY]
 
     continue-on-error: true
 
@@ -26,6 +26,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+
       - name: Set up cache
         uses: actions/cache@v3
         id: cache
@@ -34,6 +35,11 @@ jobs:
           key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             venv-${{ runner.os }}-
+
+      - name: Install dependencies on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libpulse0
+
       - name: Set up virtual environment
         run: python -m venv .venv
 
@@ -54,9 +60,9 @@ jobs:
         if: matrix.build_type == 'GUI'
         run: python skellycam/utilities/build_pyinstaller_executable.py --qt
 
-#      - name: Build the project (Server)
-#        if: matrix.build_type == 'SERVER-ONLY'
-#        run: python skellycam/utilities/build_pyinstaller_executable.py
+      - name: Build the project (Server)
+        if: matrix.build_type == 'SERVER-ONLY'
+        run: python skellycam/utilities/build_pyinstaller_executable.py
 
       - name: Upload artifact (GUI)
         if: matrix.build_type == 'GUI'
@@ -65,9 +71,9 @@ jobs:
           name: skellycam-GUI-${{ matrix.os }}
           path: dist/
 
-#      - name: Upload artifact (Server)
-#        if: matrix.build_type == 'SERVER-ONLY'
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: skellycam-SERVER-ONLY-${{ matrix.os }}
-#          path: dist/
+      - name: Upload artifact (Server)
+        if: matrix.build_type == 'SERVER-ONLY'
+        uses: actions/upload-artifact@v3
+        with:
+          name: skellycam-SERVER-ONLY-${{ matrix.os }}
+          path: dist/

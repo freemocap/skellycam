@@ -41,6 +41,9 @@ def append_build_system_triple(base_name: str) -> str:
 
 
 def run_pyinstaller(qt: bool = False):
+    executable_base_name = 'skellycam-GUI' if qt else 'skellycam-SERVER-ONLY'
+    executable_base_name = append_build_system_triple(executable_base_name)
+    print(f"Running PyInstaller for {executable_base_name}...")
     installer_parameters = [
         PATH_TO_SKELLYCAM_MAIN,
         '--dist',
@@ -52,7 +55,7 @@ def run_pyinstaller(qt: bool = False):
         '--onefile',
         # '--clean', #clear pyinstaller cache before building if things weird out
         '--name',
-        append_build_system_triple('skellycam'),
+        executable_base_name,
         '--icon',
         SKELLYCAM_ICON_PATH,
         '--log-level',
