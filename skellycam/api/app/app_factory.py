@@ -7,7 +7,7 @@ from starlette.responses import FileResponse
 
 import skellycam
 from skellycam.api.routers import enabled_routers
-from skellycam.system.default_paths import FAVICON_PATH
+from skellycam.system.default_paths import SKELLYCAM_FAVICON_ICO_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def register_routes(app: FastAPI):
 
     @app.get('/favicon.ico', include_in_schema=False)
     async def favicon():
-        return FileResponse(FAVICON_PATH)
+        return FileResponse(SKELLYCAM_FAVICON_ICO_PATH)
 
     for prefix, routers in enabled_routers.items():
         for name, router in routers.items():

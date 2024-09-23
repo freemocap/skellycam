@@ -22,8 +22,8 @@ from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_side_panel import (
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
-from skellycam.system.default_paths import get_default_skellycam_base_folder_path, SKELLYCAM_SVG_PATH, \
-    get_default_skellycam_recordings_path
+from skellycam.system.default_paths import get_default_skellycam_base_folder_path, \
+    get_default_skellycam_recordings_path, SKELLYCAM_FAVICON_ICO_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._shutdown_event = shutdown_event
 
         self.setGeometry(100, 100, 1600, 900)
-        self.setWindowIcon(QIcon(SKELLYCAM_SVG_PATH))
+        self.setWindowIcon(QIcon(SKELLYCAM_FAVICON_ICO_PATH))
         self.setStyleSheet(QT_CSS_STYLE_SHEET_STRING)
         self.setWindowTitle("Skelly Cam \U0001F480 \U0001F4F8")
         self._central_widget = QWidget()

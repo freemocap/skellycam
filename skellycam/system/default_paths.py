@@ -21,7 +21,7 @@ SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in 
 
 SKELLYCAM_SVG_PATH = str(
     Path(__file__).parent.parent.parent / "shared" / "skellycam-logo" / "skellycam-logo.svg")
-FAVICON_PATH = str(Path(__file__).parent.parent.parent / "shared" / "skellycam-logo" / "skellycam-favicon.ico")
+SKELLYCAM_FAVICON_ICO_PATH = str(Path(__file__).parent.parent.parent / "shared" / "skellycam-logo" / "skellycam-favicon.ico")
 
 
 def os_independent_home_dir() -> str:
