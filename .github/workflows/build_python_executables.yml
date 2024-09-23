@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest, macos-11, macos-10.15, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
         build_type: [GUI, SERVER-ONLY]
 
     continue-on-error: true
