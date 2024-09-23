@@ -57,10 +57,10 @@ def run_pyinstaller():
         SKELLYCAM_ICON_PATH,
         '--log-level',
         'INFO'
-        '--add-data',
-        f"{SKELLYCAM_SVG_PATH };shared/skellycam-logo",
-        '--',
-        '--qt', #compile binary to use the qt gui, disable for server-only
+        # '--add-data',
+        # f"{SKELLYCAM_SVG_PATH };shared/skellycam-logo",
+        # '--',
+        # '--qt', #compile binary to use the qt gui, disable for server-only
     ])
 
 

@@ -7,8 +7,6 @@ on:
       - "skellycam/**"
       - ".github/workflows/build_python_executables.yml"
       - "pyproject.toml"
-      - "poetry.lock"
-      - "poetry.toml"
   workflow_dispatch:
 
 jobs:
@@ -17,22 +15,38 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, macos-11, macos-10.15, ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
       - name: Install Python
         uses: actions/setup-python@v4
-        # see details (matrix, python-version, python-version-file, etc.)
-        # https://github.com/actions/setup-python
-      - name: Install poetry
-        uses: abatilo/actions-poetry@v2
-#      - uses: actions/cache@v3
-#        name: Define a cache for the virtual environment based on the dependencies lock file
-#        with:
-#          path: ./.venv
-#          key: venv-${{ hashFiles('poetry.lock') }}
+        with:
+          python-version: '3.11'
+      - name: Set up cache
+        uses: actions/cache@v3
+        id: cache
+        with:
+          path: ./.venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+      - name: Set up virtual environment
+        run: python -m venv .venv
+      - name: Activate virtual environment (Windows)
+        if: runner.os == 'Windows'
+        run: .\.venv\Scripts\activate
+      - name: Activate virtual environment (macOS/Linux)
+        if: runner.os != 'Windows'
+        run: source .venv/bin/activate
+      - name: Upgrade pip
+        run: pip install --upgrade pip
       - name: Install the project dependencies
-        run: poetry shell && poetry update
+        run: pip install -e .
       - name: Build the project
-        run: poetry run pyinstaller
+        run: pyinstaller --name skellycam
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: skellycam-${{ matrix.os }}
+          path: dist/

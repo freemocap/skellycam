@@ -70,7 +70,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        main(qt=args.qt)
+        main(qt=True)#args.qt)
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt - shutting down!")
     except Exception as e:
