@@ -67,7 +67,7 @@ class VideoRecorderManager(BaseModel):
         logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
 
         recording_name = Path(recording_folder).name
-        videos_folder = cls._get_videos_folder_path(recording_folder)
+        videos_folder = str(Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
         video_recorders = {}
         for camera_id, config in camera_configs.items():
             video_recorders[camera_id] = VideoRecorder.create(recording_name=recording_name,
@@ -87,7 +87,7 @@ class VideoRecorderManager(BaseModel):
         self.fresh = False
         logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
         mf_payload.lifespan_timestamps_ns.append({"start_adding_multi_frame_to_video_recorder": time.perf_counter_ns()})
-        self._validate_multi_frame(mf_payload=mf_payload, camera_configs=self.camera_configs)
+        self._validate_multi_frame(mf_payload=mf_payload)
         mf_payload.lifespan_timestamps_ns.append({"before_add_multi_frame_to_video_savers": time.perf_counter_ns()})
         for camera_id, frame in mf_payload.frames.items():
             self.video_recorders[camera_id].add_frame(frame=frame)
@@ -101,7 +101,7 @@ class VideoRecorderManager(BaseModel):
         """
         if not self.frames_to_save:
             return
-        if not Path(self.videos_folder).exists():
+        if not Path(self.recording_folder).exists():
             self._create_video_recording_folder()
 
         self._choose_and_save_one()
@@ -116,15 +116,10 @@ class VideoRecorderManager(BaseModel):
             f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
         self.video_recorders[camera_id].write_one_frame()
 
-    @classmethod
-    def _get_videos_folder_path(cls, recording_folder: str) -> str:
-        videos_folder = Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME
-        return str(videos_folder)
 
 
     def _save_folder_readme(self):
-        # save the readme
-        with open(f"{self.videos_folder}/{SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME}", "w") as f:
+        with open(str(Path(self.recording_folder)/SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
 
 
@@ -136,12 +131,12 @@ class VideoRecorderManager(BaseModel):
 
     def _create_video_recording_folder(self):
         Path(self.videos_folder).mkdir(parents=True, exist_ok=True)
-        self._save_folder_readme()
 
     def finish_and_close(self):
         logger.debug(f"Finishing up...")
         while self.save_one_frame():
             pass
+        self._save_folder_readme()
         self.close()
 
     def close(self):

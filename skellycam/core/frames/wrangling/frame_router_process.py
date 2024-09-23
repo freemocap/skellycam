@@ -84,8 +84,7 @@ class FrameRouterProcess:
                         if video_recorder_manager.fresh:
                             recording_info = video_recorder_manager.recording_info
                             ipc_queue.put(recording_info)
-                        if len(mf_payloads_to_process) > 0:
-                            video_recorder_manager.add_multi_frame(mf_payload)
+                        video_recorder_manager.add_multi_frame(mf_payload)
                     else:
                         if not video_recorder_manager.fresh:
                             logger.info('Recording complete, finishing and closing recorder')
