@@ -6,82 +6,86 @@ import PyInstaller.__main__
 from skellycam.__main__ import PATH_TO_SKELLYCAM_MAIN
 from skellycam.system.default_paths import SKELLYCAM_SVG_PATH
 
-OUTPUT_DIST_PATH = str(Path(PATH_TO_SKELLYCAM_MAIN).parent.parent / 'dist')
-WORK_BUILD_PATH = str(Path(PATH_TO_SKELLYCAM_MAIN).parent.parent / 'build')
-
-SKELLYCAM_ICON_PATH = str(
-    Path(PATH_TO_SKELLYCAM_MAIN).parent.parent / "shared" / "skellycam-logo" / "skellycam-favicon.ico")
-if not Path(SKELLYCAM_ICON_PATH).exists():
-    raise FileNotFoundError(f"No icon file found at location - {SKELLYCAM_ICON_PATH}")
-
 logger = logging.getLogger(__name__)
 
 
-def append_build_system_triple(base_name: str) -> str:
-    try:
-        logging.info('Getting platform information.')
-        system = platform.system().lower()
-        machine = platform.machine().lower()
-        target_triple = f"{system}-{machine}"
+class PyInstallerSetup:
+    def __init__(self, qt: bool = False):
+        self.qt = qt
+        self.PATH_TO_SKELLYCAM_MAIN = Path(PATH_TO_SKELLYCAM_MAIN)
+        self.SKELLYCAM_SVG_PATH = Path(SKELLYCAM_SVG_PATH)
+        self.OUTPUT_DIST_PATH = self.PATH_TO_SKELLYCAM_MAIN.parent.parent / 'dist'
+        self.WORK_BUILD_PATH = self.PATH_TO_SKELLYCAM_MAIN.parent.parent / 'build'
+        self.SKELLYCAM_ICON_PATH = self.PATH_TO_SKELLYCAM_MAIN.parent.parent / "shared" / "skellycam-logo" / "skellycam-favicon.ico"
+        self.ui_html_path = self.PATH_TO_SKELLYCAM_MAIN.parent / "api" / "http" / "ui" / "ui.html"
 
-        if not target_triple:
-            logging.error(
-                'Failed to determine platform target triple.')
-            return
+        self.check_paths()
 
-        new_name = f'{base_name}-{target_triple}'
+    def check_paths(self):
+        print(f"Checking paths...")
+        print(f"PATH_TO_SKELLYCAM_MAIN: {self.PATH_TO_SKELLYCAM_MAIN}")
+        print(f"OUTPUT_DIST_PATH: {self.OUTPUT_DIST_PATH}")
+        print(f"WORK_BUILD_PATH: {self.WORK_BUILD_PATH}")
+        print(f"SKELLYCAM_SVG_PATH: {self.SKELLYCAM_SVG_PATH}")
+        print(f"SKELLYCAM_ICON_PATH: {self.SKELLYCAM_ICON_PATH}")
+        print(f"ui_html_path: {self.ui_html_path}")
 
-        logging.info(f'File name with build system triple - {new_name}')
-        return new_name
+        if not self.SKELLYCAM_SVG_PATH.exists():
+            raise FileNotFoundError(f"SVG file not found at location - {self.SKELLYCAM_SVG_PATH}")
+        if not self.ui_html_path.exists():
+            raise FileNotFoundError(f"HTML file not found at location - {self.ui_html_path}")
+        if not self.SKELLYCAM_ICON_PATH.exists():
+            raise FileNotFoundError(f"ICO file not found at location - {self.SKELLYCAM_ICON_PATH}")
 
-    except Exception as e:
-        logging.error(f'An unexpected error occurred: {e}')
+    def append_build_system_triple(self, base_name: str) -> str:
+        try:
+            logging.info('Getting platform information.')
+            system = platform.system().lower()
+            machine = platform.machine().lower()
+            target_triple = f"{system}-{machine}"
 
+            if not target_triple:
+                logging.error('Failed to determine platform target triple.')
+                return
 
-def run_pyinstaller(qt: bool = False):
-    executable_base_name = 'skellycam-GUI' if qt else 'skellycam-SERVER-ONLY'
-    executable_base_name = append_build_system_triple(executable_base_name)
-    print(f"Running PyInstaller for {executable_base_name}...")
+            new_name = f'{base_name}-{target_triple}'
+            logging.info(f'File name with build system triple - {new_name}')
+            return new_name
 
-    # Define paths
-    svg_path = Path(SKELLYCAM_SVG_PATH)
-    ui_html_path = Path(PATH_TO_SKELLYCAM_MAIN).parent / "api" / "http" / "ui" / "ui.html"
-    ico_path = Path(PATH_TO_SKELLYCAM_MAIN).parent.parent / "shared" / "skellycam-logo" / "skellycam-favicon.ico"
+        except Exception as e:
+            logging.error(f'An unexpected error occurred: {e}')
 
-    # Check if the necessary files exist
-    if not svg_path.exists():
-        raise FileNotFoundError(f"SVG file not found at location - {svg_path}")
-    if not ui_html_path.exists():
-        raise FileNotFoundError(f"HTML file not found at location - {ui_html_path}")
-    if not ico_path.exists():
-        raise FileNotFoundError(f"ICO file not found at location - {ico_path}")
+    def run_pyinstaller(self):
+        executable_base_name = 'skellycam-GUI' if self.qt else 'skellycam-SERVER-ONLY'
+        executable_base_name = self.append_build_system_triple(executable_base_name)
+        print(f"Running PyInstaller for {executable_base_name}...")
 
-    installer_parameters = [
-        PATH_TO_SKELLYCAM_MAIN,
-        '--dist',
-        OUTPUT_DIST_PATH,
-        '--workpath',
-        WORK_BUILD_PATH,
-        '--hidden-import',
-        'numpy',
-        '--onefile',
-        '--name',
-        executable_base_name,
-        '--icon',
-        str(ico_path),
-        '--log-level',
-        'INFO',
-        '--add-data',
-        f"{svg_path};shared/skellycam-logo",
-        '--add-data',
-        f"{ui_html_path};skellycam/api/http/ui",
-        '--add-data',
-        f"{ico_path};shared/skellycam-logo",
-    ]
-    if qt:
-        installer_parameters.extend(['--', '--qt'])
+        installer_parameters = [
+            str(self.PATH_TO_SKELLYCAM_MAIN),
+            '--dist',
+            str(self.OUTPUT_DIST_PATH),
+            '--workpath',
+            str(self.WORK_BUILD_PATH),
+            '--hidden-import',
+            'numpy',
+            '--onefile',
+            '--name',
+            executable_base_name,
+            '--icon',
+            str(self.SKELLYCAM_ICON_PATH),
+            '--log-level',
+            'INFO',
+            '--add-data',
+            f"{self.SKELLYCAM_SVG_PATH};shared/skellycam-logo",
+            '--add-data',
+            f"{self.ui_html_path};skellycam/api/http/ui",
+            '--add-data',
+            f"{self.SKELLYCAM_ICON_PATH};shared/skellycam-logo",
+        ]
+        if self.qt:
+            installer_parameters.extend(['--', '--qt'])
 
-    PyInstaller.__main__.run(installer_parameters)
+        PyInstaller.__main__.run(installer_parameters)
 
 
 if __name__ == "__main__":
@@ -89,9 +93,11 @@ if __name__ == "__main__":
     parser.add_argument('--qt', action='store_true', default=False, help="Build the application with a Qt GUI.")
     args = parser.parse_args()
 
-    run_pyinstaller(qt=args.qt)
+    setup = PyInstallerSetup(qt=args.qt)
+    setup.run_pyinstaller()
     # for qt_bool in [True, False]:
-    #     run_pyinstaller(qt=qt_bool)
-    #
+    #   setup = PyInstallerSetup(qt=args.qt)
+    #   setup.run_pyinstaller()
+
 
 
