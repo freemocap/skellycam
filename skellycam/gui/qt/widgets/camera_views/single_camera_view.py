@@ -4,8 +4,8 @@ import time
 
 import cv2
 import numpy as np
-from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize
-from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction
+from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize, QRect
+from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QPen, QBrush
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
 from skellycam.gui.gui_state import GUIState, get_gui_state, CameraFramerateStats
@@ -36,6 +36,7 @@ class SingleCameraViewWidget(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
+
         self._image_label_widget = QLabel(f"\U0001F4F8 Camera {self._camera_id} Connecting... ")
         self._image_label_widget.setStyleSheet("border: 1px solid;")
         self._image_label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -62,14 +63,6 @@ class SingleCameraViewWidget(QWidget):
 
     @property
     def image_size(self) -> QSize:
-        """
-        Get the current onscreen pixel size of the image element.
-
-        Returns
-        -------
-        QSize
-            The current size of the image element in pixels.
-        """
         return self._image_label_widget.size()
 
     def update_image(self,
@@ -79,24 +72,46 @@ class SingleCameraViewWidget(QWidget):
         q_image = self._image_updater.update_image(base64_str)
         self._current_pixmap = QPixmap.fromImage(q_image)
         if self._annotations_enabled:
-            self._annotate_pixmap(framerate_stats=framerate_stats)
+            self._annotate_pixmap(framerate_stats=framerate_stats, recording=recording)
         self.update_pixmap()
-        if recording:
-            self._image_label_widget.setStyleSheet("border: 3px solid red;")
-        else:
-            self._image_label_widget.setStyleSheet("border: 1px solid;")
+        # if recording:
+        #     self._image_label_widget.setStyleSheet("border: 3px solid red;")
+        # else:
+        #     self._image_label_widget.setStyleSheet("border: 1px solid;")
 
-    def _annotate_pixmap(self, framerate_stats: CameraFramerateStats):
+
+    def _annotate_pixmap(self, framerate_stats: CameraFramerateStats, recording: bool = False):
         painter = QPainter(self._current_pixmap)
-        painter.setPen(QColor(255, 0, 0))  # Red color
-        painter.setFont(QFont('Arial', 10))
-        painter.drawText(10, 20, f"CameraId: {self.camera_id}")
-        painter.drawText(10, 40, f"Frame#: {framerate_stats.frame_number}")
-        if framerate_stats.duration_stats:
-            painter.drawText(10, 60, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
-            painter.drawText(10, 80, f"Mean FPS: {framerate_stats.fps_mean_str}")
-        painter.end()
+        pixmap_width = self._current_pixmap.width()
+        pixmap_height = self._current_pixmap.height()
+        font_size = min(pixmap_width, pixmap_height) // 30  # Adjust the divisor for preferred size
 
+
+        painter.setFont(QFont('Arial', font_size))
+
+
+
+        # Draw semi-transparent background without a border
+        painter.setPen(Qt.NoPen)
+
+        background_rect = QRect(5, 5, int(pixmap_width*.55), 100)
+        painter.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Semi-transparent white background
+        painter.drawRect(background_rect)
+
+        # Draw text
+        # Restore painter state for drawing text
+        if recording:
+            painter.setPen(QColor(255, 0, 0))  # Red color
+        else:
+            painter.setPen(QColor(0, 0, 255))  # Blue color
+        painter.drawText(10, 20, f"Recording Frames? {recording}")
+        painter.drawText(10, 40, f"CameraId: {self.camera_id}")
+        painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
+        if framerate_stats.duration_stats:
+            painter.drawText(10, 80, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
+            painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
+
+        painter.end()
     def resizeEvent(self, event):
         self.update_pixmap()
         super().resizeEvent(event)
