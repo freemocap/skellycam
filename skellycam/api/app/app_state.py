@@ -7,7 +7,7 @@ from typing import Optional, List, Dict
 import psutil
 from pydantic import BaseModel
 
-from skellycam.api.routes.websocket.ipc import get_ipc_queue
+from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.detection.camera_device_info import AvailableDevices
 

@@ -40,7 +40,8 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
-                                 resize_image: float,
+                                 image_sizes: Optional[Dict[CameraId, Dict[str, int]]] = None,
+                                 resize_image: float = .5,
                                  jpeg_quality: int = 90):
 
         if not multi_frame_payload.full:
@@ -51,7 +52,10 @@ class FrontendFramePayload(BaseModel):
         jpeg_images = {}
         for camera_id, frame in multi_frame_payload.frames.items():
             frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
-            jpeg_images[camera_id] = cls._image_to_jpeg_cv2(frame.image.copy(), quality=jpeg_quality, resize=resize_image)
+            resized_image = cls._resize_image(frame=frame,
+                                              image_sizes=image_sizes,
+                                              fallback_resize_ratio=resize_image)
+            jpeg_images[camera_id] = cls._image_to_jpeg_cv2(resized_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
         lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
         lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
@@ -72,18 +76,33 @@ class FrontendFramePayload(BaseModel):
         return instance
 
     @staticmethod
-    def _image_to_jpeg_cv2(image: np.ndarray, quality: int, resize: float) -> str:
+    def _resize_image(frame: FramePayload, image_sizes: Dict[CameraId, Dict[str, int]],
+                      fallback_resize_ratio: float) -> np.ndarray:\
+        # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
+        image = frame.image
+        camera_id = frame.camera_id
+        if image_sizes is None or str(camera_id) not in image_sizes.keys():
+            og_height, og_width, _ = image.shape
+            new_width = int(og_width * fallback_resize_ratio)
+            new_height = int(og_height * fallback_resize_ratio)
+        else:
+            new_width = image_sizes[str(camera_id)]["width"]
+            new_height = image_sizes[str(camera_id)]["height"]
+
+        return cv2.resize(image, dsize=(new_width, new_height ))
+
+    @staticmethod
+    def _image_to_jpeg_cv2(image: np.ndarray, quality: int) -> str:
         """
         Convert a numpy array image to a JPEG image using OpenCV.
 
-        NOTE - Diagnostics in `/skellycam/skellycam/system/diagnostics/jpeg_compression_duration_by_settings.py` suggest that PIL is way faster than CV2 for this operation.
+        NOTE - Diagnostics in `/skellycam/skellycam/system/diagnostics/jpeg_compression_duration_by_settings.py` suggest that PIL is way faster than CV2 for this operation, but in practice it didn't seem so?
         """
-        if resize < 0 or resize > 1:
-            raise ValueError("Resize must be between 0 and 1")
+
         # Encode the image as JPEG
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
-        resized_image = cv2.resize(image, dsize=(int(image.shape[1] * resize), int(image.shape[0] * resize)))
-        result, jpeg_image = cv2.imencode('.jpg', resized_image, encode_param)
+
+        result, jpeg_image = cv2.imencode('.jpg', image, encode_param)
 
         if not result:
             raise ValueError("Could not encode image to JPEG")

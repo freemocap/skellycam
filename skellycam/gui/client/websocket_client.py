@@ -5,6 +5,7 @@ import time
 from typing import Union, Dict, Any, Optional, Callable
 
 import websocket
+from pydantic import BaseModel
 from websocket import WebSocketApp
 
 from skellycam.api.app.app_state import AppStateDTO
@@ -49,7 +50,8 @@ class WebSocketClient:
         self._websocket_thread.start()
 
     def _on_open(self, ws) -> None:
-        logger.info(f"Connected to WebSocket at {self.websocket_url}")
+        logger.info(f"Connected to WebSocket at {self.websocket_url}, sending test messages...")
+        self.send_message('{"message": "Hello, WebSocket Server!"}')
 
     def _on_message(self, ws: WebSocketApp, message: Union[str, bytes]) -> None:
         self._handle_websocket_message(message)
@@ -116,17 +118,17 @@ class WebSocketClient:
             logger.exception(e)
             raise
 
-    def send_message(self, message: Union[str, bytes, Dict[str, Any]]) -> None:
+    def send_message(self, message: str) -> None:
         if self.websocket:
-            if isinstance(message, dict):
-                self.websocket.send(json.dumps(message))
-                logger.info(f"Sent JSON message: {message}")
-            elif isinstance(message, str):
-                self.websocket.send(message)
-                logger.info(f"Sent text message: {message}")
-            elif isinstance(message, bytes):
-                self.websocket.send(message)
-                logger.info(f"Sent binary message of length {len(message)}")
+            try:
+                json.loads(message)
+            except json.JSONDecodeError:
+                logger.error("For simplicity, we only send JSON messages from client to server")
+                raise ValueError("Message must be a JSON string")
+
+            self.websocket.send(json.dumps(message))
+            logger.debug(f"Sent JSON message: {message}")
+
 
     def close(self) -> None:
 

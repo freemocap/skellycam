@@ -74,15 +74,20 @@ class FrameListenerProcess:
                 else:
                     wait_1us()
 
-
-
-
         except Exception as e:
             logger.exception(f"Frame listener process error: {e.__class__} - {e}")
             raise
+        except BrokenPipeError as e:
+            logger.error(f"Frame exporter process error: {e} - Broken pipe error, problem in FrameRouterProcess?")
+            logger.exception(e)
+            raise
+        except KeyboardInterrupt:
+            logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
-            kill_camera_group_flag.value = True
+            if not kill_camera_group_flag.value:
+                kill_camera_group_flag.value = True
+                raise RuntimeError("FrameListenerProcess stopped without kill flag set!")
 
     def is_alive(self) -> bool:
         return self.process.is_alive()

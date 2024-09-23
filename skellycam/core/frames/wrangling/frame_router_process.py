@@ -101,6 +101,12 @@ class FrameRouterProcess:
             logger.error(f"Frame exporter process error: {e}")
             logger.exception(e)
             raise
+        except BrokenPipeError as e:
+            logger.error(f"Frame exporter process error: {e} - Broken pipe error, problem in FrameListenerProcess?")
+            logger.exception(e)
+            raise
+        except KeyboardInterrupt:
+            logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             video_recorder_manager.finish_and_close()

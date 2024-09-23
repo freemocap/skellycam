@@ -1,11 +1,13 @@
 import asyncio
+import json
 import logging
-from typing import Optional
+from json import JSONDecodeError
+from typing import Optional, Dict
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
 from skellycam.api.app.app_state import AppStateDTO, SubProcessStatus
-from skellycam.api.routes.websocket.ipc import get_ipc_queue
+from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
@@ -25,6 +27,7 @@ class WebsocketServer:
         self.ipc_queue = get_ipc_queue()  # Receives messages the sub-processes
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
         self.shutdown_relay_flag = asyncio.Event()
+        self._frontend_image_sizes: Optional[Dict[str, int]]
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -135,7 +138,7 @@ class WebsocketServer:
     async def _send_frontend_payload(self,
                                      mf_payload: MultiFramePayload):
         frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload,
-                                                                         resize_image=.2)
+                                                                         image_sizes = self._frontend_image_sizes)
         logger.loop(f"Sending frontend payload through websocket...")
         if not self.websocket.client_state == WebSocketState.CONNECTED:
             logger.error("Websocket is not connected, cannot send payload!")
@@ -156,11 +159,18 @@ class WebsocketServer:
         logger.info("Starting listener for client messages...")
         while True:
             try:
-                message = await self.websocket.receive_text()
-                logger.loop(f"Message from client: '{message}'")
+                message = await self.websocket.receive_json()
+                logger.trace(f"Message from client: '{message}'")
                 if not message:
-                    logger.api("Client requested to close websocket...")
+                    logger.api("Client send empty message, closing websocket...")
                     await self.websocket.close()
+                try:
+                    data = json.loads(message)
+                except JSONDecodeError:
+                    raise RuntimeError("For simplicity, the websocket server only accepts JSON formatted messages")
+
+                if "sizes" in data.keys():
+                    self._frontend_image_sizes = data["sizes"] #CameraViewSizes object
 
             except WebSocketDisconnect:
                 logger.api("Client disconnected, ending listener task...")

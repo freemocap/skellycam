@@ -69,8 +69,8 @@ def get_iso6201_time_string(timespec: str = "milliseconds", make_filename_friend
     return iso6201_timestamp_w_gmt
 
 
-def default_recording_name(string_tag: str = None) -> str:
-    if string_tag is not None:
+def default_recording_name(string_tag: str = "") -> str:
+    if len(string_tag) > 0:
         string_tag = f"_{string_tag}"
     else:
         string_tag = ""

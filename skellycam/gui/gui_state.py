@@ -106,6 +106,26 @@ class RecentMultiframeMetadata(BaseModel):
             self.framerate_stats_by_camera[camera_id].add_frame_metadata(frame_metadata)
 
 
+class CameraViewSizes(BaseModel):
+    sizes: Dict[CameraId, Dict[str, int]] = {}
+    epsilon: int = 50 # pixels differences less than this are considered equal
+
+    def __eq__(self, other):
+        if not isinstance(other, CameraViewSizes):
+            return False
+        if len(self.sizes) != len(other.sizes):
+            return False
+        for camera_id, view_size in self.sizes.items():
+            if camera_id not in other.sizes:
+                return False
+            for key, value in view_size.items():
+                if key not in other.sizes[camera_id]:
+                    return False
+                if abs(value - other.sizes[camera_id][key]) > self.epsilon:
+                    return False
+        return True
+
+
 class GUIState:
 
     def __init__(self):
@@ -124,7 +144,7 @@ class GUIState:
         self._recent_metadata: Optional[RecentMultiframeMetadata] = None
         self._frame_number: Optional[int] = None
 
-        self._camera_view_sizes: Dict[CameraId, Dict[str, int]] = {}
+        self._camera_view_sizes: Optional[CameraViewSizes] = CameraViewSizes()
 
         self._latest_app_state_dto: Optional['AppStateDTO'] = None
 
@@ -249,12 +269,12 @@ class GUIState:
             return self._latest_frontend_payload.multi_frame_number
 
     @property
-    def camera_view_sizes(self) -> Dict[CameraId, Dict[str, int]]:
+    def camera_view_sizes(self) -> CameraViewSizes:
         with self._lock:
             return self._camera_view_sizes
 
     @camera_view_sizes.setter
-    def camera_view_sizes(self, value: Dict[CameraId, Dict[str, int]]) -> None:
+    def camera_view_sizes(self, value: CameraViewSizes) -> None:
         with self._lock:
             self._camera_view_sizes = value
 

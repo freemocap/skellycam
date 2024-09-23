@@ -5,7 +5,7 @@ from typing import Optional
 
 from skellycam.api.app.app_state import AppState, get_app_state
 from skellycam.api.app.controller_tasks import ControllerTasks
-from skellycam.api.routes.websocket.ipc import get_ipc_queue
+from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,

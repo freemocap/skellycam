@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from skellycam.gui import get_client
 from skellycam.gui.client.fastapi_client import FastAPIClient
 from skellycam.gui.gui_state import GUIState, get_gui_state
-from skellycam.gui.qt.widgets.camera_grid_view import CameraViewGrid
+from skellycam.gui.qt.widgets.camera_views.camera_grid_view import CameraViewGrid
 from skellycam.gui.qt.widgets.recording_panel import RecordingPanel
 
 logger = logging.getLogger(__name__)
@@ -42,17 +42,15 @@ class SkellyCamWidget(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-        self._backend_image_sizes = self._gui_state.camera_view_sizes
 
     def update_widget(self):
         logger.loop(f"Updating {self.__class__.__name__}")
         self.recording_panel.update_widget()
         self.camera_view_grid.update_widget()
-        # view_sizes = self._gui_state.camera_view_sizes
-        # if view_sizes != self._backend_image_sizes:
-        #     logger.trace(f"Sending updated view sizes to backend: {view_sizes}")
-        #     self._backend_image_sizes = view_sizes
-        #     self._client.ws_client.send_message(view_sizes)
+        if self.camera_view_grid.camera_view_sizes != self._gui_state.camera_view_sizes:
+            logger.trace(f"Sending updated view sizes to backend: {self.camera_view_grid.camera_view_sizes}")
+            self._gui_state.camera_view_sizes = self.camera_view_grid.camera_view_sizes
+            self._client.send_message(self.camera_view_grid.camera_view_sizes.model_dump_json())
 
 
     def detect_available_cameras(self):

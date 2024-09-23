@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from starlette.responses import FileResponse
 
 import skellycam
-from skellycam.api.routes.routers import enabled_routers
+from skellycam.api.routers import enabled_routers
 from skellycam.system.default_paths import FAVICON_PATH
 
 logger = logging.getLogger(__name__)
