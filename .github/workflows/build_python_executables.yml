@@ -1,4 +1,4 @@
-name: Build
+name: Build python executables
 
 on:
   push:
@@ -16,6 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-11, macos-10.15, ubuntu-latest]
+        build_type: [GUI, SERVER-ONLY]
 
     steps:
       - uses: actions/checkout@v4
@@ -33,20 +34,38 @@ jobs:
             venv-${{ runner.os }}-
       - name: Set up virtual environment
         run: python -m venv .venv
+
       - name: Activate virtual environment (Windows)
         if: runner.os == 'Windows'
         run: .\.venv\Scripts\activate
       - name: Activate virtual environment (macOS/Linux)
         if: runner.os != 'Windows'
         run: source .venv/bin/activate
+
       - name: Upgrade pip
         run: pip install --upgrade pip
+
       - name: Install the project dependencies
         run: pip install -e .
-      - name: Build the project
-        run: pyinstaller --name skellycam
-      - name: Upload artifact
+
+      - name: Build the project (GUI)
+        if: matrix.build_type == 'GUI'
+        run: python skellycam/utilities/build_pyinstaller_executable.py --qt
+
+      - name: Build the project (Server)
+        if: matrix.build_type == 'SERVER-ONLY'
+        run: python skellycam/utilities/build_pyinstaller_executable.py
+
+      - name: Upload artifact (GUI)
+        if: matrix.build_type == 'GUI'
         uses: actions/upload-artifact@v3
         with:
-          name: skellycam-${{ matrix.os }}
+          name: skellycam-GUI-${{ matrix.os }}
+          path: dist/
+
+      - name: Upload artifact (Server)
+        if: matrix.build_type == 'SERVER-ONLY'
+        uses: actions/upload-artifact@v3
+        with:
+          name: skellycam-SERVER-ONLY-${{ matrix.os }}
           path: dist/

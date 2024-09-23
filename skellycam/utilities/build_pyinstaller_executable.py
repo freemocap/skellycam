@@ -1,3 +1,4 @@
+import argparse
 import logging
 import platform
 from pathlib import Path
@@ -18,9 +19,7 @@ if not Path(SKELLYCAM_ICON_PATH).exists():
 logger = logging.getLogger(__name__)
 
 
-
 def append_build_system_triple(base_name: str) -> str:
-
     try:
         logging.info('Getting platform information.')
         system = platform.system().lower()
@@ -40,8 +39,9 @@ def append_build_system_triple(base_name: str) -> str:
     except Exception as e:
         logging.error(f'An unexpected error occurred: {e}')
 
-def run_pyinstaller():
-    PyInstaller.__main__.run([
+
+def run_pyinstaller(qt: bool = False):
+    installer_parameters = [
         PATH_TO_SKELLYCAM_MAIN,
         '--dist',
         OUTPUT_DIST_PATH,
@@ -56,13 +56,22 @@ def run_pyinstaller():
         '--icon',
         SKELLYCAM_ICON_PATH,
         '--log-level',
-        'INFO'
-        # '--add-data',
-        # f"{SKELLYCAM_SVG_PATH };shared/skellycam-logo",
-        # '--',
-        # '--qt', #compile binary to use the qt gui, disable for server-only
-    ])
+        'INFO',
+        '--add-data',
+        f"{SKELLYCAM_SVG_PATH};shared/skellycam-logo",
+    ]
+    if qt:
+        installer_parameters.extend(['--', '--qt',] )
+    PyInstaller.__main__.run(installer_parameters)
 
 
 if __name__ == "__main__":
-    run_pyinstaller()
+    parser = argparse.ArgumentParser(description="Build the SkellyCam executable.")
+    parser.add_argument('--qt', action='store_true', default=False, help="Build the application with a Qt GUI.")
+    args = parser.parse_args()
+
+
+    run_pyinstaller(qt=args.qt)
+
+
+
