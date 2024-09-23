@@ -38,7 +38,7 @@ jobs:
 
       - name: Install dependencies on Linux
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libpulse0
+        run: sudo apt-get update && sudo apt-get install -y libpulse0 libegl1
 
       - name: Set up virtual environment
         run: python -m venv .venv
