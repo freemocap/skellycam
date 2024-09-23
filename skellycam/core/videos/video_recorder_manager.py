@@ -1,14 +1,14 @@
 import logging
+import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Optional, Any
 
 from pydantic import BaseModel, ValidationError, Field
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
@@ -134,9 +134,13 @@ class VideoRecorderManager(BaseModel):
 
     def finish_and_close(self):
         logger.debug(f"Finishing up...")
-        while self.save_one_frame():
-            pass
-        self._save_folder_readme()
+        finish_threads = []
+        for recorder in self.video_recorders.values():
+            finish_threads.append(threading.Thread(target=recorder.finish_and_close))
+        for thread in finish_threads:
+            thread.start()
+        for thread in finish_threads:
+            thread.join()
         self.close()
 
     def close(self):
@@ -154,6 +158,7 @@ class VideoRecorderManager(BaseModel):
         self.finalize_timestamps()
         self.save_recording_summary()
         self.validate_recording()
+        # self._save_folder_readme() # TODO - uncomment this when ready, only save if recording is successful
         logger.success(f"Recording `{self.recording_name} Successfully recorded to: {self.recording_folder}")
 
     def finalize_timestamps(self):
@@ -168,6 +173,7 @@ class VideoRecorderManager(BaseModel):
     def validate_recording(self):
         # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
         pass
+
 
 
 class RecordingInfo(BaseModel):
