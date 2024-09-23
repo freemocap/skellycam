@@ -23,10 +23,9 @@ class MultiframeTimestampLogger(BaseModel):
     csv_save_path: str
 
     @classmethod
-    def from_first_multiframe(cls,
-                              first_multiframe: MultiFramePayload,
-                              video_save_directory: str,
-                              recording_name: str):
+    def create(cls,
+               video_save_directory: str,
+               recording_name: str):
         """
         NOTE - Does not add `first mf payload` timestamps to logsos - call `log multiframe` after creation
         """
@@ -37,13 +36,6 @@ class MultiframeTimestampLogger(BaseModel):
 
         csv_save_path = str(video_save_path / f"{recording_name}_timestamps.csv")
 
-        # documentation_path = str(video_save_path / f"{recording_name}_timestamps_README.md")
-        #
-        # timestamp_stats_path = str(video_save_path / f"{recording_name}_timestamp_stats.json")
-
-        csv_header = MultiFrameTimestampLog.as_csv_header(
-            camera_ids=first_multiframe.camera_ids
-        )
         return cls(
             csv_save_path=csv_save_path,
             multi_frame_metadatas=[],
@@ -59,7 +51,7 @@ class MultiframeTimestampLogger(BaseModel):
                 for timestamp_logger in self._timestamp_loggers.values()
             ]
         )
-        timestamp_csv_exists = self.csv_save_path.exists()
+        timestamp_csv_exists = Path(self.csv_save_path).exists()
         timestamp_stats_exists = self._stats_path.exists()
         return all_loggers_finished and timestamp_csv_exists and timestamp_stats_exists
 

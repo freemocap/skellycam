@@ -16,6 +16,7 @@ class VideoRecorder(BaseModel):
     camera_id: CameraId
     video_path: str
     video_writer: cv2.VideoWriter
+    camera_config: CameraConfig
     _frames_to_write: List[FramePayload] = []
 
     class Config:
@@ -29,31 +30,32 @@ class VideoRecorder(BaseModel):
     def create(cls,
                recording_name: str,
                videos_folder: str,
-               frame: FramePayload,
                config: CameraConfig,
                ):
-        """
-        NOTE - Does not add `first frame` to video - call `add frame` after creation
-        """
+        Path(videos_folder).mkdir(parents=True, exist_ok=True)
         video_file_path = str(
-            Path(videos_folder) / f"{recording_name}_camera_{frame.camera_id}{config.video_file_extension}")
-        writer = cls._initialize_video_writer(frame=frame,
-                                              config=config,
+            Path(videos_folder) / f"{recording_name}_camera_{config.camera_id}{config.video_file_extension}")
+        writer = cls._initialize_video_writer(config=config,
                                               video_file_path=video_file_path)
-        logger.debug(f"Created VideoSaver for camera {frame.camera_id} with video file path: {video_file_path}")
-        return cls(camera_id=frame.camera_id,
+        logger.debug(f"Created VideoSaver for camera {config.camera_id} with video file path: {video_file_path}")
+        return cls(camera_id=config.camera_id,
                    video_path=video_file_path,
-                   video_writer=writer)
+                   video_writer=writer,
+                   camera_config=config,
+                   )
 
     def add_frame(self, frame: FramePayload):
         self._frames_to_write.append(frame)
 
     def write_one_frame(self):
-        if not self.video_writer.isOpened():
-            raise ValidationError(f"VideoWriter not open (before adding frame)!")
         if len(self._frames_to_write) == 0:
             return
+
+        if not self.video_writer.isOpened():
+            raise ValidationError(f"VideoWriter not open (before adding frame)!")
+
         frame = self._frames_to_write.pop(0)
+        self._validate_frame(frame)
         self.video_writer.write(frame.image)
         logger.loop(f"Added frame# {frame.frame_number} to VideoSaver for camera {self.camera_id}")
 
@@ -68,20 +70,30 @@ class VideoRecorder(BaseModel):
 
     @classmethod
     def _initialize_video_writer(cls,
-                                 frame: FramePayload,
                                  config: CameraConfig,
                                  video_file_path: str):
         writer = cv2.VideoWriter(
             video_file_path,  # full path to video file
             cv2.VideoWriter_fourcc(*config.writer_fourcc),  # fourcc
             config.framerate,  # fps
-            (frame.width, frame.height),  # frameSize
+            (config.resolution.width, config.resolution.height),  # frameSize
         )
         if not writer.isOpened():
-            raise ValidationError(f"Failed to open video writer for camera {frame.camera_id}")
+            raise ValidationError(f"Failed to open video writer for camera {config.camera_id}")
         logger.debug(
-            f"Initialized VideoWriter for camera {frame.camera_id} - Video file will be saved to {video_file_path}")
+            f"Initialized VideoWriter for camera {config.camera_id} - Video file will be saved to {video_file_path}")
         return writer
+
+    def _validate_frame(self, frame: FramePayload):
+        if not Path(self.video_path).parent.exists():
+            Path(self.video_path).parent.mkdir(parents=True, exist_ok=True)
+        if frame.camera_id != self.camera_config.camera_id:
+            raise ValidationError(
+                f"Frame camera_id {frame.camera_id} does not match self.camera_config camera_id {self.camera_config.camera_id}")
+        if frame.image.shape != (
+        self.camera_config.resolution.height, self.camera_config.resolution.width, self.camera_config.color_channels):
+            raise ValidationError(f"Frame shape {frame.image.shape} does not match self.camera_config shape "
+                                  f"({self.camera_config.resolution.height}, {self.camera_config.resolution.width}, {self.camera_config.color_channels})")
 
     def close(self):
         self.video_writer.release()

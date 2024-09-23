@@ -23,7 +23,6 @@ class CameraManager:
                  kill_camera_group_flag: multiprocessing.Value, ):
         self._kill_camera_group_flag = kill_camera_group_flag
         self._camera_configs = group_shm_dto.camera_configs
-        self.group_shm_dto = group_shm_dto
         self._group_orchestrator = group_orchestrator
         self._ipc_queue = ipc_queue
         self._camera_processes: Dict[CameraId, CameraProcess] = {}
@@ -85,8 +84,6 @@ class CameraManager:
         for camera_id in close_these_cameras:
             self._camera_processes.pop(camera_id)
             self._camera_configs.pop(camera_id)
-            self.group_shm_dto.camera_configs.pop(camera_id)
-            self.group_shm_dto.group_shm_names.pop(camera_id)
             self._group_orchestrator.camera_triggers.pop(camera_id)
 
         logger.trace(f"Cameras closed: {close_these_cameras} ")

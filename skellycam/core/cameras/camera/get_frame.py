@@ -54,7 +54,8 @@ def get_frame(camera_id: CameraId,
     triggers.await_retrieve_trigger(close_self_flag=close_self_flag)
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
-    retrieve_success, image = cap.retrieve()  # decode the frame into an image
+    # decode the frame buffer into an image! Wow, magic!
+    retrieve_success, image = cap.retrieve()  # This is how the light gets in ✨
     frame_metadata[FRAME_METADATA_MODEL.POST_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
     if not retrieve_success:

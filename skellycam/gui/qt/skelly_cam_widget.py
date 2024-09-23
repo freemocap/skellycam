@@ -48,11 +48,11 @@ class SkellyCamWidget(QWidget):
         logger.loop(f"Updating {self.__class__.__name__}")
         self.recording_panel.update_widget()
         self.camera_view_grid.update_widget()
-        view_sizes = self._gui_state.camera_view_sizes
-        if view_sizes != self._backend_image_sizes:
-            logger.trace(f"Sending updated view sizes to backend: {view_sizes}")
-            self._backend_image_sizes = view_sizes
-            self._client.ws_client.send_message(view_sizes)
+        # view_sizes = self._gui_state.camera_view_sizes
+        # if view_sizes != self._backend_image_sizes:
+        #     logger.trace(f"Sending updated view sizes to backend: {view_sizes}")
+        #     self._backend_image_sizes = view_sizes
+        #     self._client.ws_client.send_message(view_sizes)
 
 
     def detect_available_cameras(self):

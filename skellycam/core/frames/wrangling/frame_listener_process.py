@@ -1,10 +1,12 @@
 import logging
 import multiprocessing
+import time
 from typing import Optional
 
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO
+from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
+from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_1us
 
 logger = logging.getLogger(__name__)
@@ -13,16 +15,20 @@ logger = logging.getLogger(__name__)
 class FrameListenerProcess:
     def __init__(
             self,
+            group_shm_dto: CameraGroupSharedMemoryDTO,
             group_orchestrator: CameraGroupOrchestrator,
-            new_mf_ready_flag: multiprocessing.Value,
+            frame_escape_pipe: multiprocessing.Pipe,
+            ipc_queue: multiprocessing.Queue,
             kill_camera_group_flag: multiprocessing.Value,
     ):
         super().__init__()
 
         self.process = multiprocessing.Process(target=self._run_process,
                                                name=self.__class__.__name__,
-                                               args=( group_orchestrator,
-                                                     new_mf_ready_flag,
+                                               args=(group_shm_dto,
+                                                     group_orchestrator,
+                                                     frame_escape_pipe,
+                                                     ipc_queue,
                                                      kill_camera_group_flag,
                                                      )
                                                )
@@ -32,21 +38,39 @@ class FrameListenerProcess:
         self.process.start()
 
     @staticmethod
-    def _run_process(group_orchestrator: CameraGroupOrchestrator,
-                     new_mf_ready_flag: multiprocessing.Value,
+    def _run_process(group_shm_dto: CameraGroupSharedMemoryDTO,
+                     group_orchestrator: CameraGroupOrchestrator,
+                     frame_escape_pipe: multiprocessing.Pipe,
+                     ipc_queue: multiprocessing.Queue,
                      kill_camera_group_flag: multiprocessing.Value,
                      ):
         logger.debug(f"Frame listener process started!")
 
         try:
             logger.trace(f"Starting FrameListener loop...")
-
+            camera_group_shm = CameraGroupSharedMemory.recreate(dto=group_shm_dto)
+            frame_rate_tracker = FrameRateTracker()
+            mf_payload: Optional[MultiFramePayload] = None
+            byte_chunklets_to_send = []
             while not kill_camera_group_flag.value:
                 if group_orchestrator.new_multi_frame_put_in_shm.is_set():
-                    new_mf_ready_flag.value = True
-                    while new_mf_ready_flag.value:
-                        wait_1us()
-                    group_orchestrator.set_multi_frame_pulled_from_shm()
+                    mf_payload: MultiFramePayload = camera_group_shm.get_multi_frame_payload(
+                        previous_payload=mf_payload,
+                        read_only=False) # will increment mf_number so the FrontendFrameRelay will notice the new data
+                    group_orchestrator.set_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
+                    logger.loop(
+                        f"FrameListener -  copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
+                    pulled_from_pipe_timestamp = time.perf_counter_ns()
+                    mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
+                    frame_rate_tracker.update(pulled_from_pipe_timestamp)
+                    ipc_queue.put(frame_rate_tracker.current())
+                    mf_bytes_list = mf_payload.to_bytes_list()
+                    byte_chunklets_to_send.extend(mf_bytes_list)
+
+                elif len(byte_chunklets_to_send) > 0 and not group_orchestrator.new_multi_frame_put_in_shm.is_set():
+                    # Opportunistically let byte chunks escape one-at-a-time,
+                    # whenever there isn't frame-loop work to do
+                    frame_escape_pipe.send_bytes(byte_chunklets_to_send.pop(0))
                 else:
                     wait_1us()
 
@@ -76,14 +100,9 @@ class FrameListenerProcess:
 #     ipc_queue.put(frame_rate_tracker.current())
 #
 #     logger.loop(f"FrameListener -  cleared escape_multi_frame_trigger")
-#     mf_bytes_list = mf_payload.to_bytes_list()
-#     byte_payloads_to_send.extend(mf_bytes_list)
+
 #     logger.loop(f"FrameListener -  Sending multi-frame payload `bytes_to_send_list` "
 #                 f"(size: #frames {len(byte_payloads_to_send) / len(mf_bytes_list)},"
 #                 f" chunklets: {len(byte_payloads_to_send)}) to FrameRouter")
 #
 # else:
-# if len(byte_payloads_to_send) > 0:
-#     # Opportunistically let byte chunks escape one-at-a-time,
-#     # whenever there isn't frame-loop work to do
-#     frame_escape_pipe_entrance.send_bytes(byte_payloads_to_send.pop(0))

@@ -13,6 +13,7 @@ from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.videos.video_recorder import VideoRecorder
+from skellycam.utilities.clean_up_empty_directories import recursively_remove_empty_directories
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
@@ -35,6 +36,7 @@ class VideoRecorderManager(BaseModel):
     recording_folder: str
     recording_name: str
     camera_configs: CameraConfigs
+    fresh: bool = True
 
     video_recorders: Dict[CameraId, VideoRecorder]
     multi_frame_timestamp_logger: MultiframeTimestampLogger
@@ -46,9 +48,16 @@ class VideoRecorderManager(BaseModel):
     def recording_info(self) -> "RecordingInfo":
         return RecordingInfo.from_video_recorder_manager(self)
 
+    @property
+    def number_of_frames_to_save(self) -> int:
+        return sum([video_recorder.number_of_frames_to_write for video_recorder in self.video_recorders.values()])
+
+    @property
+    def frames_to_save(self) -> bool:
+        return self.number_of_frames_to_save > 0
+
     @classmethod
     def create(cls,
-               first_multi_frame_payload: MultiFramePayload,
                camera_configs: CameraConfigs,
                recording_folder: str):
         """
@@ -56,16 +65,13 @@ class VideoRecorderManager(BaseModel):
         """
 
         logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
-        cls._validate_input(mf_payload=first_multi_frame_payload,
-                            camera_configs=camera_configs,
-                            recording_folder=recording_folder)
+
         recording_name = Path(recording_folder).name
-        videos_folder = cls._create_videos_folder(recording_folder)
+        videos_folder = cls._get_videos_folder_path(recording_folder)
         video_recorders = {}
-        for camera_id, frame in first_multi_frame_payload.frames.items():
+        for camera_id, config in camera_configs.items():
             video_recorders[camera_id] = VideoRecorder.create(recording_name=recording_name,
                                                               videos_folder=videos_folder,
-                                                              frame=frame,
                                                               config=camera_configs[camera_id],
                                                               )
 
@@ -73,20 +79,17 @@ class VideoRecorderManager(BaseModel):
                    recording_name=recording_name,
                    camera_configs=camera_configs,
                    video_recorders=video_recorders,
-                   multi_frame_timestamp_logger=MultiframeTimestampLogger.from_first_multiframe(
-                       first_multiframe=first_multi_frame_payload,
-                       video_save_directory=videos_folder,
-                       recording_name=recording_name,
-                   ))
+                     multi_frame_timestamp_logger=MultiframeTimestampLogger.create(video_save_directory=videos_folder,
+                                                                                  recording_name=recording_name)
+                   )
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
+        self.fresh = False
         logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
-
         mf_payload.lifespan_timestamps_ns.append({"start_adding_multi_frame_to_video_recorder": time.perf_counter_ns()})
         self._validate_multi_frame(mf_payload=mf_payload, camera_configs=self.camera_configs)
         mf_payload.lifespan_timestamps_ns.append({"before_add_multi_frame_to_video_savers": time.perf_counter_ns()})
         for camera_id, frame in mf_payload.frames.items():
-            self._validate_frame(frame=frame, config=self.camera_configs[camera_id])
             self.video_recorders[camera_id].add_frame(frame=frame)
 
         mf_payload.lifespan_timestamps_ns.append({"before_logging_multi_frame": time.perf_counter_ns()})
@@ -96,59 +99,49 @@ class VideoRecorderManager(BaseModel):
         """
         saves one frame from one video recorder
         """
-        if not any([video_recorder.number_of_frames_to_write > 0 for video_recorder in self.video_recorders.values()]):
+        if not self.frames_to_save:
             return
+        if not Path(self.videos_folder).exists():
+            self._create_video_recording_folder()
 
-        # get the camera with the most frames to write (of the first one with the max number of frames to write, if there is a tie)
-        frame_write_lengths = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in self.video_recorders.items()}
-        camera_id = max(self.video_recorders, key=lambda x: self.video_recorders[x].number_of_frames_to_write)
-        logger.loop(f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
-        self.video_recorders[camera_id].write_one_frame()
+        self._choose_and_save_one()
         return True
 
+    def _choose_and_save_one(self):
+        # get the camera with the most frames to write (of the first one with the max number of frames to write, if there is a tie)
+        frame_write_lengths = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in
+                               self.video_recorders.items()}
+        camera_id = max(self.video_recorders, key=lambda x: self.video_recorders[x].number_of_frames_to_write)
+        logger.loop(
+            f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
+        self.video_recorders[camera_id].write_one_frame()
+
     @classmethod
-    def _create_videos_folder(cls, recording_folder: str) -> str:
+    def _get_videos_folder_path(cls, recording_folder: str) -> str:
         videos_folder = Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME
-        videos_folder.mkdir(parents=True, exist_ok=True)
-        cls._save_folder_readme(videos_folder)
         return str(videos_folder)
 
-    @classmethod
-    def _save_folder_readme(cls, videos_folder):
+
+    def _save_folder_readme(self):
         # save the readme
-        with open(f"{videos_folder}/{SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME}", "w") as f:
+        with open(f"{self.videos_folder}/{SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME}", "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
 
-    @classmethod
-    def _validate_input(cls,
-                        mf_payload: MultiFramePayload,
-                        camera_configs: CameraConfigs,
-                        recording_folder: str):
-        if not Path(recording_folder).exists():
-            raise ValidationError(f"Recording folder path does not exist")
 
-        cls._validate_multi_frame(mf_payload=mf_payload, camera_configs=camera_configs)
 
-    @classmethod
-    def _validate_multi_frame(cls, mf_payload: MultiFramePayload, camera_configs: CameraConfigs):
-        if not camera_configs.keys() == mf_payload.frames.keys():
+    def _validate_multi_frame(self, mf_payload: MultiFramePayload):
+        # Note - individual VideoRecorders will validate the frames' resolutions and whatnot
+        if not self.camera_configs.keys() == mf_payload.frames.keys():
             raise ValidationError(f"CameraConfigs and MultiFramePayload frames do not match")
 
-    @classmethod
-    def _validate_frame(cls, frame: FramePayload, config: CameraConfig):
-        if frame.camera_id != config.camera_id:
-            raise ValidationError(
-                f"Frame camera_id {frame.camera_id} does not match config camera_id {config.camera_id}")
-        if frame.image.shape != (config.resolution.height, config.resolution.width, config.color_channels):
-            raise ValidationError(f"Frame shape {frame.image.shape} does not match config shape "
-                                  f"({config.resolution.height}, {config.resolution.width}, {config.color_channels})")
-
+    def _create_video_recording_folder(self):
+        Path(self.videos_folder).mkdir(parents=True, exist_ok=True)
+        self._save_folder_readme()
 
     def finish_and_close(self):
         logger.debug(f"Finishing up...")
-        save_one_result = self.save_one_frame()
-        while save_one_result:
-            save_one_result = self.save_one_frame()
+        while self.save_one_frame():
+            pass
         self.close()
 
     def close(self):
@@ -157,6 +150,9 @@ class VideoRecorderManager(BaseModel):
             video_saver.close()
         self.multi_frame_timestamp_logger.close()
         self.finalize_recording()
+        # remove directories if empty
+        recursively_remove_empty_directories(self.recording_folder)
+
 
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_name}`...")

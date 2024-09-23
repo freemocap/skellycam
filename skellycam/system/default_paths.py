@@ -36,14 +36,8 @@ def get_default_skellycam_recordings_path() -> str:
     return str(Path(get_default_skellycam_base_folder_path()) / "recordings")
 
 
-def create_recording_folder(create_folder: bool = True, string_tag: str = None) -> str:
-    folder_path = (
-            Path(get_default_skellycam_base_folder_path()) / "recordings" / default_recording_name(
-        string_tag=string_tag)
-    )
-    if create_folder:
-        folder_path.mkdir(parents=True, exist_ok=True)
-    return str(folder_path)
+def get_default_recording_folder_path(tag:str="") -> str:
+    return str(Path(get_default_skellycam_base_folder_path()) / "recordings" / default_recording_name(string_tag=tag))
 
 
 def get_log_file_path() -> str:

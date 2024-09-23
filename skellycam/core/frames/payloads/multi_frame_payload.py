@@ -67,7 +67,7 @@ class MultiFramePayload(BaseModel):
     def from_list(cls, data: List[Any]) -> 'MultiFramePayload':
         metadata = json.loads(data.pop(0).decode("utf-8"))
         frames = {}
-        while data[0] != b"END":
+        while len(data) > 0:
             popped = data.pop(0)
             if popped != b"FRAME-START":
                 raise ValueError(f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-START', got {popped}")
