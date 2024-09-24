@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 PATH_TO_SKELLYCAM_MAIN = str(Path(__file__).absolute())
 
 
-def main(qt: bool = False) -> None:
+def main(qt: bool = True) -> None:
     """
     Main function to start the SkellyCam application.
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     """
     multiprocessing.freeze_support()
     parser = argparse.ArgumentParser(description="Start the SkellyCam application.")
-    parser.add_argument('--qt', action='store_true', default=False, help="Start the application with a Qt GUI.")
+    parser.add_argument('--qt', action='store_true', default=True, help="Start the application with a Qt GUI.")
     args = parser.parse_args()
 
     try:

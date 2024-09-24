@@ -7,6 +7,8 @@ on:
       - "skellycam/**"
       - ".github/workflows/build_python_executables.yml"
       - "pyproject.toml"
+      - "binaries/build_pyinstaller_executable.py"
+      - "binaries/skellycam.spec"
   workflow_dispatch:
 
 jobs:
@@ -16,7 +18,6 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
-        build_type: [GUI, SERVER-ONLY]
 
     continue-on-error: true
 
@@ -56,24 +57,11 @@ jobs:
       - name: Install the project dependencies
         run: pip install -e .
 
-      - name: Build the project (GUI)
-        if: matrix.build_type == 'GUI'
-        run: python skellycam/utilities/build_pyinstaller_executable.py --qt
-
-      - name: Build the project (Server)
-        if: matrix.build_type == 'SERVER-ONLY'
-        run: python skellycam/utilities/build_pyinstaller_executable.py
+      - name: Build the project
+        run: python /build_pyinstaller_executable.py
 
       - name: Upload artifact (GUI)
-        if: matrix.build_type == 'GUI'
         uses: actions/upload-artifact@v3
         with:
-          name: skellycam-GUI-${{ matrix.os }}
-          path: dist/
-
-      - name: Upload artifact (Server)
-        if: matrix.build_type == 'SERVER-ONLY'
-        uses: actions/upload-artifact@v3
-        with:
-          name: skellycam-SERVER-ONLY-${{ matrix.os }}
+          name: skellycam-${{ matrix.os }}
           path: dist/

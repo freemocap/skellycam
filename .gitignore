@@ -214,3 +214,6 @@ out/
 *.wmv
 *.mkv
 *.webm
+
+# Don't ignore `skellycam.spec` file
+!skellycam.spec
