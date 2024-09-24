@@ -58,7 +58,7 @@ jobs:
         run: pip install -e .
 
       - name: Build the project
-        run: python /build_pyinstaller_executable.py
+        run: python ./binaries/build_pyinstaller_executable.py
 
       - name: Upload artifact (GUI)
         uses: actions/upload-artifact@v3
