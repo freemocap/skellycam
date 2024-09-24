@@ -49,6 +49,8 @@ class SkellyCamWidget(QWidget):
         self.camera_view_grid.update_widget()
         if self.camera_view_grid.camera_view_sizes != self._gui_state.camera_view_sizes:
             logger.trace(f"Sending updated view sizes to backend: {self.camera_view_grid.camera_view_sizes}")
+            if self.camera_view_grid.camera_view_sizes.too_small():
+                return
             self._gui_state.camera_view_sizes = self.camera_view_grid.camera_view_sizes
             self._client.send_message(self.camera_view_grid.camera_view_sizes.model_dump_json())
 

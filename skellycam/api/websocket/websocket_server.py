@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class WebsocketServer:
     def __init__(self, websocket: WebSocket):
+        self._first_frontend_images_sent = False
         self.websocket = websocket
 
         self.listen_for_client_messages_task: Optional[asyncio.Task] = None
@@ -27,7 +28,7 @@ class WebsocketServer:
         self.ipc_queue = get_ipc_queue()  # Receives messages the sub-processes
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
         self.shutdown_relay_flag = asyncio.Event()
-        self._frontend_image_sizes: Optional[Dict[str, int]]
+        self._frontend_image_sizes: Optional[Dict[str, int]]  = None
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -150,6 +151,8 @@ class WebsocketServer:
             logger.error("Websocket shut down while sending payload!")
             raise RuntimeError("Websocket shut down while sending payload!")
 
+        self._first_frontend_images_sent = True
+
     async def _shutdown_image_relay_task(self):
         self.shutdown_relay_flag.set()
         await self.frontend_image_relay_task
@@ -169,7 +172,7 @@ class WebsocketServer:
                 except JSONDecodeError:
                     raise RuntimeError("For simplicity, the websocket server only accepts JSON formatted messages")
 
-                if "sizes" in data.keys():
+                if "sizes" in data.keys() and  self._first_frontend_images_sent:
                     self._frontend_image_sizes = data["sizes"] #CameraViewSizes object
 
             except WebSocketDisconnect:
