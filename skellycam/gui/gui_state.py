@@ -125,6 +125,11 @@ class CameraViewSizes(BaseModel):
                     return False
         return True
 
+    def too_small(self) -> bool:
+        # returns True if any view size is less than threshold
+        for camera_id, view_size in self.sizes.items():
+            if view_size["width"] < self.epsilon or view_size["height"] < self.epsilon:
+                return True
 
 class GUIState:
 
