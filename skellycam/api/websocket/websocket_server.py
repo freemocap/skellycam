@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import multiprocessing
 from json import JSONDecodeError
 from typing import Optional, Dict
 
@@ -60,7 +61,10 @@ class WebsocketServer:
         try:
             while True:
                 if self.ipc_queue.qsize() > 0:
-                    await self._handle_ipc_queue_message(message=self.ipc_queue.get())
+                    try:
+                        await self._handle_ipc_queue_message(message=self.ipc_queue.get())
+                    except multiprocessing.queues.Empty:
+                        continue
                 else:
                     await async_wait_1ms()
 
