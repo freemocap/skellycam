@@ -1,8 +1,8 @@
+import platform
 from typing import Union
 
 import cv2
 import numpy as np
-
 
 MIN_EXPOSURE = -13
 MAX_EXPOSURE = -3
@@ -32,6 +32,9 @@ def run_frame_loop(cap: cv2.VideoCapture, exposure_setting: int, auto_manual_set
     r = np.random.randint(0, 99999)# big number to keep window name unique
     for fr in range(frames):
         success, image = cap.read()
+        if not success:
+            print("Failed to capture frame, breaking frame loop")
+            break
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = .5
         color = (255, 0, 255)  # FFOOFF!
@@ -63,7 +66,11 @@ def run_frame_loop(cap: cv2.VideoCapture, exposure_setting: int, auto_manual_set
 HYPOTHETICAL_AUTO_EXPOSURE_SETTINGS = [0.75, 3]
 HYPOTHETICAL_MANUAL_EXPOSURE_SETTINGS = [0.25, 1]
 def main():
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    if platform.system() == "Windows":
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    else:
+        cap = cv2.VideoCapture(0, cv2.CAP_ANY)
+
     print(f"Exposure on init: {cap.get(cv2.CAP_PROP_EXPOSURE)}")
     cap.set(cv2.CAP_PROP_EXPOSURE, -6)
 
