@@ -59,7 +59,7 @@ class WebsocketServer:
 
         try:
             while True:
-                if not self.ipc_queue.empty():
+                if self.ipc_queue.qsize() > 0:
                     await self._handle_ipc_queue_message(message=self.ipc_queue.get())
                 else:
                     await async_wait_1ms()
