@@ -22,7 +22,7 @@
 
 ---
 
-This iteration of SkellyCam operates with an [Tauri](https://tauri.app) application. The frontend UI is built using Nuxt
+This iteration of SkellyCam operates with an [Tauri](https://tauri.app) application (or react electron? lol). The frontend UI is built using Nuxt
 and VueJS, and the backend code that connects to cameras, pulls synchronized images, saves videos, etc is build in
 Python hosted behind a Uvicorn/FastAPI server.
 
