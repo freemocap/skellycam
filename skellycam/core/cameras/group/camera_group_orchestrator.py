@@ -125,12 +125,11 @@ class CameraGroupOrchestrator(BaseModel):
     def await_new_frames_available(self):
         while (not self.frames_retrieved or not self.new_frames_available) and self.should_continue:
             wait_1us()
-        self._clear_retrieve_frames_triggers()
 
     def set_multi_frame_pulled_from_shm(self):
-        self.new_multi_frame_put_in_shm.clear()
         for triggers in self.camera_triggers.values():
             triggers.new_frame_available_trigger.clear()
+        self.new_multi_frame_put_in_shm.clear()
 
     def _await_initial_triggers_reset(self):
         logger.trace("Initial triggers set - waiting for all triggers to reset...")
@@ -143,14 +142,9 @@ class CameraGroupOrchestrator(BaseModel):
         while not self.frames_grabbed and self.should_continue:
             wait_1us()
 
-    def _clear_retrieve_frames_triggers(self):
-        for triggers in self.camera_triggers.values():
-            triggers.retrieve_frame_trigger.clear()
-
     def _await_mf_copied_from_shm(self):
         while self.new_multi_frame_put_in_shm.is_set() and self.should_continue:
             wait_1us()
-        self._clear_retrieve_frames_triggers()
 
     def _fire_grab_trigger(self):
         logger.loop("Triggering all cameras to `grab` a frame...")

@@ -68,8 +68,7 @@ class FrameListenerProcess:
                     byte_chunklets_to_send.extend(mf_bytes_list)
 
                 elif len(byte_chunklets_to_send) > 0 and not group_orchestrator.new_multi_frame_put_in_shm.is_set():
-                    # Opportunistically let byte chunks escape one-at-a-time,
-                    # whenever there isn't frame-loop work to do
+                    # Opportunistically let byte chunks escape one-at-a-time, whenever there isn't frame-loop work to do
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.pop(0))
                 else:
                     wait_1us()

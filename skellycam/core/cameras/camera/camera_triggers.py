@@ -36,9 +36,6 @@ class CameraTriggers(BaseModel):
         super().__init__(**data)
         self._kill_camera_group_flag = data.get('_kill_camera_group_flag')
 
-    @property
-    def new_frame_available(self):
-        return self.new_frame_available_trigger.is_set()
 
     @property
     def should_continue(self):
@@ -95,9 +92,10 @@ class CameraTriggers(BaseModel):
     def set_frame_grabbed(self):
         self.grab_frame_trigger.clear()
 
-    def set_new_frame_available(self):
+    def set_frame_retrieved(self):
         self.retrieve_frame_trigger.clear()
-        self.new_frame_available_trigger.set()
 
+    def set_new_frame_available(self):
+        self.new_frame_available_trigger.set()
 
 

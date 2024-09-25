@@ -6,6 +6,7 @@
 import platform
 import sys
 from pathlib import Path
+import numpy as np
 
 from PyInstaller.utils.hooks import collect_submodules
 
@@ -50,7 +51,9 @@ executable_base_name = f'skellycam-GUI-{target_triple}'
 a = Analysis(
     [SKELLYCAM_MAIN_PATH],  # Entry point of the application
     pathex=[PACKAGE_ROOT_PATH],  # Paths to search for imports
-    binaries=[],  # List of binary files to include
+    binaries=[
+        (str(Path(np.__path__[0]) / 'core' / '*.dll'), 'numpy/core')  # Include NumPy DLLs
+    ],  # List of binary files to include
     datas=[
         (SKELLYCAM_SVG_PATH, 'shared/skellycam-logo'),  # Include SVG logo
         (UI_HTML_PATH, 'skellycam/api/http/ui'),  # Include HTML UI file
@@ -83,7 +86,8 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,  # Set to False if you don't want a console window
-    icon=SKELLYCAM_ICO_PATH  # Icon for the executable
+    icon=SKELLYCAM_ICO_PATH,  # Icon for the executable
+    onefile=True
 )
 
 # COLLECT step: Collect all files into the final distribution directory
