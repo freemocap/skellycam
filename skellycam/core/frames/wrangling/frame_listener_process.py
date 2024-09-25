@@ -7,7 +7,7 @@ from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOr
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
 from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker
-from skellycam.utilities.wait_functions import wait_1us
+from skellycam.utilities.wait_functions import wait_10us
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class FrameListenerProcess:
                     # Opportunistically let byte chunks escape one-at-a-time, whenever there isn't frame-loop work to do
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.pop(0))
                 else:
-                    wait_1us()
+                    wait_10us()
 
         except Exception as e:
             logger.exception(f"Frame listener process error: {e.__class__} - {e}")

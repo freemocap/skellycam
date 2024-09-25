@@ -38,7 +38,6 @@ def configure_logging(level: LogLevels = LogLevels.DEBUG):
 
     builder = LoggerBuilder(level)
     builder.configure()
-    logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":

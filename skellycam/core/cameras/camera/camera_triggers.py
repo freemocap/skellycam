@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, ConfigDict, PrivateAttr, SkipValidation
 from typing_extensions import Annotated
 
 from skellycam.core import CameraId
-from skellycam.utilities.wait_functions import wait_1us, wait_10ms
+from skellycam.utilities.wait_functions import wait_10us, wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class CameraTriggers(BaseModel):
     def await_retrieve_trigger(self, close_self_flag: multiprocessing.Value, max_wait_time_s: float = 5000.0):
         start_wait_ns = time.perf_counter_ns()
         while not self.retrieve_frame_trigger.is_set() and self.should_continue and not close_self_flag.value:
-            wait_1us()
+            wait_10us()
             if (time.perf_counter_ns() - start_wait_ns) > max_wait_time_s * 1e9:
                 raise TimeoutError(
                     f"Camera {self.camera_id} process timed out waiting for `retrieve_frame_trigger` for {max_wait_time_s} seconds:"
@@ -71,7 +71,7 @@ class CameraTriggers(BaseModel):
         start_wait_ns = time.perf_counter_ns()
         been_warned = False
         while not self.grab_frame_trigger.is_set() and self.should_continue and not close_self_flag.value:
-            wait_1us()
+            wait_10us()
             if (time.perf_counter_ns() - start_wait_ns) > (max_wait_time_s * 1e9)*.5 and not been_warned:
                 been_warned = True
                 logger.warning(f"Camera {self.camera_id} process hit half-way point waiting for `grab_frame_trigger` for {max_wait_time_s} seconds:"

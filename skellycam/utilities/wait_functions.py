@@ -14,9 +14,13 @@ def wait_1ms():
     time.sleep(1e-3)
 
 
+def wait_10us():
+    # microseconds (the `u` is a stand in for the Greek letter μ (mu), which is the symbol for micro)
+    time.sleep(1e-5)
+
 def wait_1us():
     # microseconds (the `u` is a stand in for the Greek letter μ (mu), which is the symbol for micro)
-    time.sleep(1e-6)
+    time.sleep(1e-5)
 
 
 async def async_wait_1_sec():
@@ -30,6 +34,9 @@ async def async_wait_10ms():
 async def async_wait_1ms():
     await asyncio.sleep(1e-3)
 
+
+async def async_wait_10us():
+    await asyncio.sleep(1e-5)
 
 async def async_wait_1us():
     await asyncio.sleep(1e-6)
