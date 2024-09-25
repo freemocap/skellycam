@@ -9,10 +9,10 @@ build-backend = "flit_core.buildapi"
 name = "skellycam"
 readme = "README.md"
 authors = [
-    {name = "Skelly FreeMoCap", email = "info@freemocap.org"},
-    {name = "Endurance Idehen"},
-    {name = "Jonathan Samir Matthis"},
-    ]
+    { name = "Skelly FreeMoCap", email = "info@freemocap.org" },
+    { name = "Endurance Idehen" },
+    { name = "Jonathan Samir Matthis" },
+]
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -42,7 +42,7 @@ classifiers = [
     "Topic :: System :: Hardware",
     "Topic :: System :: Hardware :: Universal Serial Bus (USB)",
     "Topic :: System :: Hardware :: Universal Serial Bus (USB) :: Video (UVC)",
-    ]
+]
 keywords = [
     "camera",
     "stream",
@@ -58,23 +58,29 @@ keywords = [
 
 #dynamic = ["dependencies"]
 dependencies = [
-"numpy==1.26.2",
-"opencv-contrib-python==4.8.*",
-"pydantic==2.*",
-"Pillow==10.0.1",
-"psutil==5.9.6",
-"setproctitle==1.3.3",
-"pyside6==6.6.*",
-"matplotlib==3.8.2",
-"scipy==1.11.4",
-"rich==13.7.0",
-"pandas==2.1.4",
-"pyqtgraph==0.13.3",
-"qtpy==2.4.1",
-"toml==0.10.2",
-"tqdm==4.66.1",
+    "numpy==1.26.2",
+    "opencv-contrib-python==4.8.*",
+    "pydantic==2.*",
+    "Pillow==10.0.1",
+    "psutil==5.9.6",
+    "setproctitle==1.3.3",
+    "pyside6==6.6.*",
+    "matplotlib==3.8.2",
+    "scipy==1.11.4",
+    "rich==13.7.0",
+    "pandas==2.1.4",
+    "pyqtgraph==0.13.3",
+    "qtpy==2.4.1",
+    "toml==0.10.2",
+    "tqdm==4.66.1",
+    "uvicorn>=0.30.6",
+    "fastapi>=0.115.0",
+    "tzlocal>=5.2",
+    "httpx>=0.27.2",
+    "websocket-client==1.8.*",
+    "websockets>=13.1",
 ]
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.10,<3.13"
 
 dynamic = ["version", "description"]
 
@@ -88,13 +94,12 @@ Homepage = "https://github.com/freemocap/skellycam"
 current_version = "v2024.09.1094"
 
 version_pattern = "vYYYY.0M.BUILD[-TAG]"
-commit_message  = "Bump version {old_version} -> {new_version}"
-commit          = true
-tag             = true
-push            = true
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
 
 [tool.bumpver.file_patterns]
-#"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
 "skellycam/__init__.py" = ["{version}"]
 
 #[tool.setuptools.dynamic]

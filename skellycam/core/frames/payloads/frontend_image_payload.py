@@ -5,7 +5,6 @@ from io import BytesIO
 from typing import Dict, Optional, List
 
 import cv2
-import msgpack
 import numpy as np
 from PIL import Image
 from pydantic import BaseModel
@@ -66,14 +65,7 @@ class FrontendFramePayload(BaseModel):
                    jpeg_images=jpeg_images,
                    multi_frame_metadata=mf_metadata)
 
-    def to_msgpack(self) -> bytes:
-        return msgpack.packb(self.model_dump(), use_bin_type=True)
 
-    @classmethod
-    def from_msgpack(cls, msgpack_bytes: bytes):
-        unpacked = msgpack.unpackb(msgpack_bytes, raw=False, use_list=False)
-        instance = cls(**unpacked)
-        return instance
 
     @staticmethod
     def _resize_image(frame: FramePayload, image_sizes: Dict[CameraId, Dict[str, int]],
