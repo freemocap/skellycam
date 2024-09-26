@@ -80,36 +80,35 @@ class SingleCameraViewWidget(QWidget):
         self.update_pixmap()
 
     def _annotate_pixmap(self, framerate_stats: CameraFramerateStats, recording: bool = False):
-        with QMutexLocker(self._mutex):
-            painter = QPainter(self._current_pixmap)
-            pixmap_width = self._current_pixmap.width()
-            pixmap_height = self._current_pixmap.height()
-            font_size = min(pixmap_width, pixmap_height) // 30  # Adjust the divisor for preferred size
+        painter = QPainter(self._current_pixmap)
+        pixmap_width = self._current_pixmap.width()
+        pixmap_height = self._current_pixmap.height()
+        font_size = min(pixmap_width, pixmap_height) // 30  # Adjust the divisor for preferred size
 
 
-            painter.setFont(QFont('Arial', font_size))
+        painter.setFont(QFont('Arial', font_size))
 
 
 
-            # Draw semi-transparent background without a border
-            painter.setPen(Qt.NoPen)
+        # Draw semi-transparent background without a border
+        painter.setPen(Qt.NoPen)
 
-            background_rect = QRect(5, 5, int(pixmap_width*.55), 100)
-            painter.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Semi-transparent white background
-            painter.drawRect(background_rect)
+        background_rect = QRect(5, 5, int(pixmap_width*.55), 100)
+        painter.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Semi-transparent white background
+        painter.drawRect(background_rect)
 
-            # Draw text
-            # Restore painter state for drawing text
-            if recording:
-                painter.setPen(QColor(255, 0, 0))  # Red color
-            else:
-                painter.setPen(QColor(0, 0, 255))  # Blue color
-            painter.drawText(10, 20, f"Recording Frames? {recording}")
-            painter.drawText(10, 40, f"CameraId: {self.camera_id}")
-            painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
-            if framerate_stats.duration_stats:
-                painter.drawText(10, 80, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
-                painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
+        # Draw text
+        # Restore painter state for drawing text
+        if recording:
+            painter.setPen(QColor(255, 0, 0))  # Red color
+        else:
+            painter.setPen(QColor(0, 0, 255))  # Blue color
+        painter.drawText(10, 20, f"Recording Frames? {recording}")
+        painter.drawText(10, 40, f"CameraId: {self.camera_id}")
+        painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
+        if framerate_stats.duration_stats:
+            painter.drawText(10, 80, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
+            painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
         painter.end()
 
     def resizeEvent(self, event):
