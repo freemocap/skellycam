@@ -38,13 +38,7 @@ class CameraGroup:
             SubProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
         logger.info("Camera group closed.")
 
-    async def update_camera_configs(self, new_configs: CameraConfigs, old_configs: CameraConfigs):
-        if not self._process or not self._process.is_running:
-            logger.warning("Cannot update camera configs - Camera group is not running")
-            return
-
-        update_instructions = UpdateInstructions.from_configs(new_configs=new_configs,
-                                                              old_configs=old_configs)
+    async def update_camera_configs(self, update_instructions: UpdateInstructions):
         logger.debug(
-            f"Sending new camera configs to camera group process: {new_configs}, update_instructions: {update_instructions}")
+            f"Updating Camera Configs with instructions: {update_instructions}")
         self._update_queue.put(update_instructions)

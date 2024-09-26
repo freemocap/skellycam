@@ -16,12 +16,10 @@ class FrameWrangler:
     def __init__(self,
                  group_shm_dto: CameraGroupSharedMemoryDTO,
                  group_orchestrator: CameraGroupOrchestrator,
-                 update_queue: multiprocessing.Queue,
                  ipc_queue: multiprocessing.Queue,
                  record_frames_flag: multiprocessing.Value,
                  kill_camera_group_flag: multiprocessing.Value, ):
         super().__init__()
-        self._config_update_queue = update_queue
         self._ipc_queue = ipc_queue
         self._record_frames_flag = record_frames_flag
         self._kill_camera_group_flag = kill_camera_group_flag

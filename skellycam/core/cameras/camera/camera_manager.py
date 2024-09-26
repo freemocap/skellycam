@@ -59,31 +59,27 @@ class CameraManager:
 
     def update_camera_configs(self, update_instructions: UpdateInstructions):
         logger.debug(f"Updating cameras with instructions: {update_instructions}")
-        self._close_cameras(update_instructions.close_these_cameras)
         for camera_id in update_instructions.update_these_cameras:
             self._camera_processes[camera_id].update_config(update_instructions.new_configs[camera_id])
 
-    def _close_cameras(self, close_these_cameras: Optional[List[CameraId]] = None):
-        if not close_these_cameras:
-            close_these_cameras = self.camera_ids
-        logger.debug(f"Closing cameras: {close_these_cameras}")
+    def _close_cameras(self):
+        logger.debug(f"Closing cameras: {self.camera_ids}")
 
-        camera_processes_to_close = [self._camera_processes[camera_id] for camera_id in close_these_cameras]
 
         camera_close_threads = []
-        for camera_process in camera_processes_to_close:
+        for camera_process in self._camera_processes.values():
             camera_close_threads.append(threading.Thread(target=camera_process.close))
         [thread.start() for thread in camera_close_threads]
         [thread.join() for thread in camera_close_threads]
 
-        while any([camera_process.is_alive() for camera_process in camera_processes_to_close]):
+        while any([camera_process.is_alive() for camera_process in self._camera_processes.values()]):
             wait_10ms()
 
         # self.register_subprocess()
 
-        for camera_id in close_these_cameras:
+        for camera_id in self.camera_ids:
             self._camera_processes.pop(camera_id)
             self._camera_configs.pop(camera_id)
             self._group_orchestrator.camera_triggers.pop(camera_id)
 
-        logger.trace(f"Cameras closed: {close_these_cameras} ")
+        logger.trace(f"Cameras closed: {self.camera_ids}")

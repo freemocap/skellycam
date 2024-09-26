@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers, logger
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.utilities.wait_functions import wait_10us, wait_1ms, wait_10ms
+from skellycam.utilities.wait_functions import wait_10us, wait_1ms, wait_10ms, wait_1s, wait_100ms
 
 
 class CameraGroupOrchestrator(BaseModel):
@@ -16,10 +16,12 @@ class CameraGroupOrchestrator(BaseModel):
     frame_loop_count: int = -1
     _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
 
+    pause_when_able: bool = False
+    frame_loop_paused: bool = False
+
     def __init__(self, **data):
         super().__init__(**data)
         self._kill_camera_group_flag = data.get('_kill_camera_group_flag')
-
     @classmethod
     def from_camera_configs(cls,
                             camera_configs: CameraConfigs,
@@ -57,9 +59,26 @@ class CameraGroupOrchestrator(BaseModel):
     def frames_retrieved(self):
         return not any([triggers.retrieve_frame_trigger.is_set() for triggers in self.camera_triggers.values()])
 
+    def pause_loop(self):
+        self.pause_when_able = True
+
+    def unpause_loop(self):
+        self.pause_when_able = False
+
     ##############################################################################################################
     def trigger_multi_frame_read(self):
         self.frame_loop_count += 1
+
+        if self.pause_when_able:
+            logger.trace("Pause requested, pausing frame loop...")
+            self.frame_loop_paused = True
+            while self.pause_when_able and self.should_continue:
+                wait_100ms()
+            if self.should_continue:
+                logger.trace("Loop unpaused, awaiting cameras ready...")
+                self.frame_loop_paused = False
+                self.await_for_cameras_ready()
+
         # 0 - Make sure all cameras are ready
         logger.loop(f"FRAME LOOP #{self.frame_loop_count} BEGIN")
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #0 (start)  - Make sure all cameras are ready")

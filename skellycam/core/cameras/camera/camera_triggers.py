@@ -86,6 +86,8 @@ class CameraTriggers(BaseModel):
                     f"self.should_continue={self.should_continue}, "
                     f"close_self_flag.value={close_self_flag.value}")
 
+    def set_not_ready(self):
+        self.camera_ready_event.set()
     def set_ready(self):
         self.camera_ready_event.set()
 

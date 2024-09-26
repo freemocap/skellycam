@@ -102,12 +102,13 @@ def run_trigger_listening_loop(
         # Trigger listening loop
         while not kill_camera_group_flag.value and not close_self_flag.value:
 
-            if not config_update_queue.empty():
+            if config_update_queue.qsize() > 0:
+                logger.debug(f"Camera {config.camera_id} received new config update - setting `not ready`")
+                triggers.set_not_ready()
                 new_config = config_update_queue.get()
                 apply_camera_configuration(cv2_video_capture, new_config)
-                logger.debug(f"Camera {config.camera_id} updated with new config: {new_config}")
-            else:
-                wait_1ms()
+                logger.debug(f"Camera {config.camera_id} updated with new config: {new_config} - setting `ready`")
+                triggers.set_ready()
 
             logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
 

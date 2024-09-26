@@ -10,6 +10,7 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
 )
+from skellycam.core.cameras.group.update_instructions import UpdateInstructions
 from skellycam.core.detection.detect_available_devices import detect_available_devices
 
 logger = logging.getLogger(__name__)
@@ -36,24 +37,21 @@ class Controller:
                                                                         name="DetectAvailableCameras")
 
     async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
-        if camera_configs is None:
-            logger.info(f"Connecting to available cameras...")
-            self._tasks.connect_to_cameras_task = asyncio.create_task(
-                self._create_camera_group(),
-                name="ConnectToCameras")
-
-        else:
-            if self._camera_group:
+        if camera_configs and self._camera_group and self._app_state.camera_configs:
+            update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
+                                                                  old_configs=self._app_state.camera_configs)
+            if not update_instructions.reset_all:
                 logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
-                self._tasks.update_camera_configs_task = asyncio.create_task(
-                    self._camera_group.update_camera_configs(new_configs=camera_configs,
-                                                             old_configs=self._app_state.camera_configs),
-                    name="UpdateCameraConfigs")
-            else:
-                logger.info(f"Connecting to cameras: {camera_configs}")
-                self._app_state.camera_configs = camera_configs
-                self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(),
-                                                                          name="ConnectToCameras")
+                await self._camera_group.update_camera_configs(update_instructions)
+                return
+            logger.debug(f"Updating CameraGroup requires reset - closing existing group...")
+            await self._close_camera_group()
+
+        logger.info(f"Connecting to cameras....")
+        if camera_configs:
+            self._app_state.camera_configs = camera_configs
+        self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(),
+                                                                      name="ConnectToCameras")
 
 
     async def close_cameras(self):

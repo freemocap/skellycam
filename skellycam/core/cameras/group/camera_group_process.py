@@ -13,7 +13,7 @@ from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOr
 from skellycam.core.cameras.group.update_instructions import UpdateInstructions
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
 from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
-from skellycam.utilities.wait_functions import wait_1s
+from skellycam.utilities.wait_functions import wait_1s, wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,6 @@ class CameraGroupProcess:
 
                 frame_wrangler = FrameWrangler(group_shm_dto = group_shm_dto,
                                                group_orchestrator=group_orchestrator,
-                                               update_queue=config_update_queue,
                                                ipc_queue=ipc_queue,
                                                record_frames_flag=record_frames_flag,
                                                kill_camera_group_flag=kill_camera_group_flag,
@@ -97,6 +96,7 @@ class CameraGroupProcess:
                 camera_manager.start_cameras()
 
                 run_config_queue_listener(camera_manager=camera_manager,
+                                            camera_group_orchestrator=group_orchestrator,
                                           kill_camera_group_flag=kill_camera_group_flag,
                                           config_update_queue=config_update_queue)
         except Exception as e:
@@ -112,18 +112,18 @@ class CameraGroupProcess:
 
 
 def run_config_queue_listener(camera_manager: CameraManager,
+                              camera_group_orchestrator: CameraGroupOrchestrator,
                               kill_camera_group_flag: multiprocessing.Value,
                               config_update_queue: multiprocessing.Queue):
     logger.trace(f"Starting config queue listener")
     while not kill_camera_group_flag.value:
         wait_1s()
-        if not config_update_queue.empty():
+        if config_update_queue.qsize() > 0:
+            camera_group_orchestrator.pause_loop()
+            while not camera_group_orchestrator.frame_loop_paused: # Wait for the frame loop to pause before updating configs
+                wait_100ms()
+
             update_instructions = config_update_queue.get()
-            if not isinstance(update_instructions, UpdateInstructions):
-                raise ValueError(
-                    f"Expected type: `UpdateInstructions`, got type: `{type(update_instructions)}`")
-            logger.debug(f"Received update instructions: {update_instructions}")
-            if update_instructions.reset_all:
-                raise ValueError("Config update requires a reset - this should have happened in the parent process")
-            else:
-                camera_manager.update_camera_configs(update_instructions)
+
+            camera_manager.update_camera_configs(update_instructions)
+            camera_group_orchestrator.unpause_loop()

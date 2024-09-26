@@ -13,23 +13,21 @@ class UpdateInstructions(BaseModel):
     """
     Update instructions for CameraGroupProcess
 
-    - NOTE - If any existing camera's resolution changed or any new cameras added, we reset the whole thing
+    - NOTE - If any existing camera's resolution changed or cameras added/removed, we reset the whole thing
 
     Will need to update:
-    - CameraGroupOrchestrator: delete unused cameras
-    - CameraGroupSharedMemory: delete unused cameras
-    - CameraManager: delete unused, update existing if config changed
+    - CameraManager: update existing if config changed
 
     """
     new_configs: CameraConfigs
     reset_all: bool  # If True, reset all cameras (e.g. if resolution changed, new cameras added, or user requested `reset`)
-    close_these_cameras: List[CameraId] = Field(
-        default_factory=list)  # close these cameras and remove from orchestrator and shared memory
+    # close_these_cameras: List[CameraId] = Field(
+    #     default_factory=list)  # TODO - support closing cameras w/o reset (requires handling shm deletion and camera process deletion)
     # create: List[CameraId] = Field(default_factory=list) #TODO - support creating new cams w/o reset (requires handling shm recreation)
     update_these_cameras: List[CameraId] = Field(default_factory=list)
 
     @classmethod
-    def reset_all(cls, configs: CameraConfigs):
+    def reset_camera_group(cls, configs: CameraConfigs):
         # Reset all cameras using specified configs
         return cls(new_configs=configs, reset_all=True)
 
@@ -46,32 +44,27 @@ class UpdateInstructions(BaseModel):
                 if new_configs[camera_id].resolution != old_configs[camera_id].resolution:
                     logger.trace(f"Camera {camera_id} resolution changed - Setting `reset_all` to True")
                     reset_all = True
-        ### Step 1b - if any new cameras added, reset all
+        ### Step 1b - if any new cameras added or disabled, reset all
         for camera_id, config in new_configs.items():
             if camera_id not in old_configs.keys():
                 logger.trace(f"Camera: {camera_id} is new - Setting `reset_all` to True")
                 reset_all = True
             else:
-                if new_configs[camera_id].use_this_camera:
+                if not new_configs[camera_id].use_this_camera:
                     logger.trace(f"Camera {camera_id} needs to be created - Setting `reset_all` to True")
                     reset_all = True
-        if reset_all:
-            return cls.reset_all(new_configs)
+        ### Step 1c - if any cameras removed, reset all
+        for camera_id, config in old_configs.items():
+            if camera_id not in new_configs.keys():
+                logger.trace(f"Camera {camera_id} removed - Setting `reset_all` to True")
+                reset_all = True
 
-        ## Step 2 (if not resetting everything) - Determine which cameras to close
-        cameras_to_close = []
-        cameras_to_update = []
-        for camera_id in old_configs.keys():
-            if camera_id not in new_configs:
-                logger.trace(f"Camera {camera_id} not specified in new configs, marking for closure")
-                cameras_to_close.append(camera_id)
-            else:
-                ### Case2 - if a camera exists in `new_configs`, but `use_this_camera` is False, stop the camera
-                if not new_configs[camera_id].use_this_camera:
-                    logger.trace(f"Camera {camera_id} marked as not to be used in new configs, marking for closure")
-                    cameras_to_close.append(camera_id)
+        if reset_all:
+            return cls.reset_camera_group(new_configs)
 
         ## Step 3 -  Determine which cameras to update
+        cameras_to_update = []
+
         for camera_id, config in old_configs.items():
             if camera_id in new_configs:
                 if new_configs[camera_id] != config:
@@ -80,5 +73,4 @@ class UpdateInstructions(BaseModel):
 
         return cls(reset_all=reset_all,
                    new_configs=new_configs,
-                   close_these_cameras=cameras_to_close,
                    update_these_cameras=cameras_to_update)

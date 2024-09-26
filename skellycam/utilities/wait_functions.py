@@ -5,6 +5,9 @@ import time
 def wait_1s():
     time.sleep(1.0)
 
+def wait_100ms():
+    time.sleep(0.1)
+
 
 def wait_10ms():
     time.sleep(1e-2)
