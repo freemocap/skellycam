@@ -52,6 +52,9 @@ jobs:
         if : runner.os == 'macOS'
         run: source venv/bin/activate
 
+      - name: Install dependencies
+        run: uv sync
+
       - name: Build the project
         run: skellycam-build
 
