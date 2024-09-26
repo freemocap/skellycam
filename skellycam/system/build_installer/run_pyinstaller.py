@@ -1,9 +1,13 @@
 import argparse
 import logging
+import os
 from pathlib import Path
 import PyInstaller.__main__
 
 logger = logging.getLogger(__name__)
+
+
+os.environ['PYINSTALLER_NO_CONDA'] = '1'
 
 SPEC_FILE_PATH =   str(Path(__file__).parent / 'skellycam.spec')
 if not Path(SPEC_FILE_PATH).exists():
