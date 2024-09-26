@@ -50,7 +50,6 @@ keywords = [
     "computer vision"
 ]
 
-#dynamic = ["dependencies"]
 dependencies = [
     "numpy==1.26.2",
     "opencv-contrib-python==4.8.*",
@@ -93,8 +92,6 @@ push = true
 [tool.bumpver.file_patterns]
 "skellycam/__init__.py" = ["{version}"]
 
-#[tool.setuptools.dynamic]
-#dependencies = {file = "requirements.txt"}
 
 [project.scripts]
 skellycam = "skellycam.__main__:main"
