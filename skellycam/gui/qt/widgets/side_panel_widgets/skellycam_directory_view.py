@@ -8,7 +8,7 @@ import PySide6
 from PySide6 import QtGui
 from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
 
-from skellycam.gui.gui_state import GUIState, get_gui_state
+from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
 
 import logging
 logger = logging.getLogger(__name__)

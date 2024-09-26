@@ -3,7 +3,7 @@ import logging
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
-from skellycam.gui.gui_state import get_gui_state
+from skellycam.gui.qt.gui_state.gui_state import get_gui_state
 from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_settings_panel import CameraSettingsPanel
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X_EMOJI_STRING, \

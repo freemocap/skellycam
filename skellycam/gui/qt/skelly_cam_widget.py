@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 
 from skellycam.gui import get_client
 from skellycam.gui.client.fastapi_client import FastAPIClient
-from skellycam.gui.gui_state import GUIState, get_gui_state
+from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
 from skellycam.gui.qt.widgets.camera_views.camera_grid_view import CameraViewGrid
 from skellycam.gui.qt.widgets.recording_panel import RecordingPanel
 

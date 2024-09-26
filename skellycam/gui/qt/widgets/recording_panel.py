@@ -3,7 +3,7 @@ import logging
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout
 
 from skellycam.gui import get_client, FastAPIClient
-from skellycam.gui.gui_state import get_gui_state, GUIState
+from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
 
 logger = logging.getLogger(__name__)
 

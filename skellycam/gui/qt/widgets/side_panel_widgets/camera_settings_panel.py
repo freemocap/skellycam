@@ -10,7 +10,7 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfig, Cam
 from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
 from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo, AvailableDevices
-from skellycam.gui.gui_state import get_gui_state
+from skellycam.gui.qt.gui_state.gui_state import get_gui_state
 from skellycam.gui.qt.utilities.qt_label_strings import USE_THIS_CAMERA_STRING, COPY_SETTINGS_TO_CAMERAS_STRING
 
 logger = logging.getLogger(__name__)

@@ -4,11 +4,12 @@ import time
 
 import cv2
 import numpy as np
-from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize, QRect
+from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize, QRect, QMutex, QMutexLocker
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QPen, QBrush
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
-from skellycam.gui.gui_state import GUIState, get_gui_state, CameraFramerateStats
+from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
+from skellycam.gui.qt.gui_state.models.camera_framerate_stats import CameraFramerateStats
 
 
 class EfficientQImageUpdater:
@@ -48,6 +49,7 @@ class SingleCameraViewWidget(QWidget):
         self._gui_state: GUIState = get_gui_state()
 
         self._annotations_enabled = True
+        self._mutex = QMutex()
 
         # Enable context menu on QLabel
         self._image_label_widget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -63,67 +65,66 @@ class SingleCameraViewWidget(QWidget):
 
     @property
     def image_size(self) -> QSize:
-        return self._image_label_widget.size()
+        with QMutexLocker(self._mutex):
+            return self._current_pixmap.size()
 
     def update_image(self,
                      base64_str: str,
                      framerate_stats: CameraFramerateStats,
-                     recording:bool=False):
+                     recording: bool = False):
         q_image = self._image_updater.update_image(base64_str)
-        self._current_pixmap = QPixmap.fromImage(q_image)
-        if self._annotations_enabled:
-            self._annotate_pixmap(framerate_stats=framerate_stats, recording=recording)
+        with QMutexLocker(self._mutex):
+            self._current_pixmap = QPixmap.fromImage(q_image)
+            if self._annotations_enabled:
+                self._annotate_pixmap(framerate_stats=framerate_stats, recording=recording)
         self.update_pixmap()
-        # if recording:
-        #     self._image_label_widget.setStyleSheet("border: 3px solid red;")
-        # else:
-        #     self._image_label_widget.setStyleSheet("border: 1px solid;")
-
 
     def _annotate_pixmap(self, framerate_stats: CameraFramerateStats, recording: bool = False):
-        painter = QPainter(self._current_pixmap)
-        pixmap_width = self._current_pixmap.width()
-        pixmap_height = self._current_pixmap.height()
-        font_size = min(pixmap_width, pixmap_height) // 30  # Adjust the divisor for preferred size
+        with QMutexLocker(self._mutex):
+            painter = QPainter(self._current_pixmap)
+            pixmap_width = self._current_pixmap.width()
+            pixmap_height = self._current_pixmap.height()
+            font_size = min(pixmap_width, pixmap_height) // 30  # Adjust the divisor for preferred size
 
 
-        painter.setFont(QFont('Arial', font_size))
+            painter.setFont(QFont('Arial', font_size))
 
 
 
-        # Draw semi-transparent background without a border
-        painter.setPen(Qt.NoPen)
+            # Draw semi-transparent background without a border
+            painter.setPen(Qt.NoPen)
 
-        background_rect = QRect(5, 5, int(pixmap_width*.55), 100)
-        painter.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Semi-transparent white background
-        painter.drawRect(background_rect)
+            background_rect = QRect(5, 5, int(pixmap_width*.55), 100)
+            painter.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Semi-transparent white background
+            painter.drawRect(background_rect)
 
-        # Draw text
-        # Restore painter state for drawing text
-        if recording:
-            painter.setPen(QColor(255, 0, 0))  # Red color
-        else:
-            painter.setPen(QColor(0, 0, 255))  # Blue color
-        painter.drawText(10, 20, f"Recording Frames? {recording}")
-        painter.drawText(10, 40, f"CameraId: {self.camera_id}")
-        painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
-        if framerate_stats.duration_stats:
-            painter.drawText(10, 80, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
-            painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
-
+            # Draw text
+            # Restore painter state for drawing text
+            if recording:
+                painter.setPen(QColor(255, 0, 0))  # Red color
+            else:
+                painter.setPen(QColor(0, 0, 255))  # Blue color
+            painter.drawText(10, 20, f"Recording Frames? {recording}")
+            painter.drawText(10, 40, f"CameraId: {self.camera_id}")
+            painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
+            if framerate_stats.duration_stats:
+                painter.drawText(10, 80, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
+                painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
         painter.end()
+
     def resizeEvent(self, event):
         self.update_pixmap()
         super().resizeEvent(event)
 
     def update_pixmap(self):
-        if not self._current_pixmap.isNull():
-            scaled_pixmap = self._current_pixmap.scaled(
-                self._image_label_widget.size() * 0.95,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
-            self._image_label_widget.setPixmap(scaled_pixmap)
+        with QMutexLocker(self._mutex):
+            if not self._current_pixmap.isNull():
+                scaled_pixmap = self._current_pixmap.scaled(
+                    self._image_label_widget.size() * 0.95,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+                self._image_label_widget.setPixmap(scaled_pixmap)
 
     def _toggle_annotations(self):
         self._annotations_enabled = not self._annotations_enabled
