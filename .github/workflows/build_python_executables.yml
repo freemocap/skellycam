@@ -42,7 +42,10 @@ jobs:
 
       - name: Activate virtual environment
         if : runner.os == 'Windows'
-        run: .\.venv\Scripts\activate
+        run: |
+          .\.venv\Scripts\activate
+          python -c "import sys; print(sys.executable)"
+
 
       - name: Activate virtual environment
         if : runner.os == 'Linux'
