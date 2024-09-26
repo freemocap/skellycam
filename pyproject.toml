@@ -15,7 +15,6 @@ authors = [
 ]
 license = { file = "LICENSE" }
 classifiers = [
-    "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
@@ -108,6 +107,7 @@ push = true
 
 [project.scripts]
 skellycam = "skellycam.__main__:main"
+skellycam-build = "skellycam.system.build_installer.run_pyinstaller:run_pyinstaller"
 
 [tool.setuptools]
 py-modules = ["skellycam"]
