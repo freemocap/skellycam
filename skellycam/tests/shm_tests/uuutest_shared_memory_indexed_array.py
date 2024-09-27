@@ -4,7 +4,7 @@ from typing import List
 
 import numpy as np
 
-from skellycam.core.memory.shared_memory_indexed_array import SharedMemoryIndexedArrayDTO, SharedMemoryIndexedArray
+from skellycam.core.shmemory.shared_memory_indexed_array import SharedMemoryIndexedArrayDTO, SharedMemoryIndexedArray
 
 
 def producer(shared_dto: SharedMemoryIndexedArrayDTO, data: List[np.ndarray]):

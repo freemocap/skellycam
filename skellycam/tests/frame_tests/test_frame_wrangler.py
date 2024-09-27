@@ -4,7 +4,7 @@ import numpy as np
 
 from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
 
 
 def test_frame_wrangler(camera_group_shared_memory_fixture: CameraGroupSharedMemory,

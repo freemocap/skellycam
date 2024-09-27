@@ -8,7 +8,7 @@ from skellycam.core import CameraId
 from skellycam.core.cameras.camera.get_frame import get_frame
 from skellycam.core.cameras.camera.opencv import create_cv2_video_capture
 from skellycam.core.cameras.group import CameraGroupOrchestrator
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1ms
 
 

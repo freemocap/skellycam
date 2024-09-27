@@ -1,19 +1,18 @@
 import struct
 from typing import Tuple, Any, List
 
+import cv2
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE
 
 IMAGE_CHUNK_SIZE = 5*1024*1024   # 5MB #TODO - optimize this bad boi
 
 
-class FramePayload(BaseModel):
-    """
-    Lightweight data transfer object for FramePayload
-    """
+class FramePayloadDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     image: np.ndarray
@@ -28,7 +27,7 @@ class FramePayload(BaseModel):
             self.metadata.tobytes()]
 
     @classmethod
-    def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayload':
+    def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayloadDTO':
         image_shape = cls._bytes_to_shape(bytes_list.pop(0), 3)
         popped = bytes_list.pop(0)
         if popped != b"IMAGE-START":
@@ -90,7 +89,9 @@ class FramePayload(BaseModel):
     def width(self):
         return self.image.shape[1]
 
-    def __eq__(self, other: "FramePayload"):
+
+
+    def __eq__(self, other: "FramePayloadDTO"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
 
     def __str__(self):

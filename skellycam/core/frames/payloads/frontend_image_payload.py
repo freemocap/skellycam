@@ -10,7 +10,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
@@ -27,14 +27,14 @@ class FrontendFramePayload(BaseModel):
     def camera_ids(self):
         return list(self.jpeg_images.keys())
 
-    def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayload]:
+    def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayloadDTO]:
         if camera_id not in self.jpeg_images:
             return None
         jpeg_image = self.jpeg_images[camera_id]
         if jpeg_image is None:
             return None
         metadata = self.metadata[camera_id]
-        return FramePayload.from_jpeg_image(jpeg_image=jpeg_image, metadata=metadata)
+        return FramePayloadDTO.from_jpeg_image(jpeg_image=jpeg_image, metadata=metadata)
 
     @classmethod
     def from_multi_frame_payload(cls,
@@ -49,7 +49,8 @@ class FrontendFramePayload(BaseModel):
         mf_metadata = multi_frame_payload.to_metadata()
 
         jpeg_images = {}
-        for camera_id, frame in multi_frame_payload.frames.items():
+        for camera_id in multi_frame_payload.frames.keys():
+            frame = multi_frame_payload.get_frame(camera_id)
             frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
             resized_image = cls._resize_image(frame=frame,
                                               image_sizes=image_sizes,
@@ -68,7 +69,7 @@ class FrontendFramePayload(BaseModel):
 
 
     @staticmethod
-    def _resize_image(frame: FramePayload, image_sizes: Dict[CameraId, Dict[str, int]],
+    def _resize_image(frame: FramePayloadDTO, image_sizes: Dict[CameraId, Dict[str, int]],
                       fallback_resize_ratio: float) -> np.ndarray:\
         # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
         image = frame.image
@@ -139,7 +140,7 @@ class FrontendFramePayload(BaseModel):
         return out_str
 
 
-def annotate_image(frame: FramePayload,
+def annotate_image(frame: FramePayloadDTO,
                    image: np.ndarray) -> np.ndarray:
     annotation_text = [
         f"Camera ID: {frame.camera_id}",

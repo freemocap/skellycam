@@ -5,8 +5,8 @@ import pytest
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.shmemory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
 
 
 @pytest.fixture

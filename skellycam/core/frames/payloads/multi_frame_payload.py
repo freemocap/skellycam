@@ -6,34 +6,35 @@ import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
+from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.utilities.rotate_image import rotate_image
 
 
 class MultiFramePayload(BaseModel):
-    """
-    Lightweight data transfer object for MultiFramePayload
-    """
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    frames: Dict[CameraId, Optional[FramePayload]]
+    frames: Dict[CameraId, Optional[FramePayloadDTO]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
     multi_frame_number: int = 0
     lifespan_timestamps_ns: List[Dict[str, int]] = Field(default_factory=lambda: [{"created": time.perf_counter_ns()}])
 
-
+    camera_configs: CameraConfigs
 
     @classmethod
-    def create_initial(cls, camera_ids: List[CameraId], ) -> 'MultiFramePayload':
-        return cls(frames={CameraId(camera_id): None for camera_id in camera_ids})
+    def create_initial(cls, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+        return cls(frames={CameraId(camera_id): None for camera_id in camera_configs.keys()},
+                   camera_configs=camera_configs, )
 
     @classmethod
     def from_previous(cls, previous: 'MultiFramePayload') -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    multi_frame_number=previous.multi_frame_number + 1,
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
+                   camera_configs=previous.camera_configs,
                    )
 
     @property
@@ -57,11 +58,23 @@ class MultiFramePayload(BaseModel):
         ret.append(b"END")
         return ret
 
-    def add_frame(self, frame_dto: FramePayload) -> None:
+    def add_frame(self, frame_dto: FramePayloadDTO) -> None:
         camera_id = frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
         self.lifespan_timestamps_ns.append({
             f"add_camera_{camera_id}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}": time.perf_counter_ns()})
         self.frames[camera_id] = frame_dto
+
+    def get_frame(self, camera_id: CameraId, rotate:bool=True) -> Optional[FramePayloadDTO]:
+        frame = self.frames[camera_id]
+        if frame is None:
+            return
+
+        if rotate:
+            frame.image = rotate_image(frame.image, self.camera_configs[camera_id].rotation)
+
+        return frame
+
+
 
     @classmethod
     def from_list(cls, data: List[Any]) -> 'MultiFramePayload':
@@ -70,13 +83,15 @@ class MultiFramePayload(BaseModel):
         while len(data) > 0:
             popped = data.pop(0)
             if popped != b"FRAME-START":
-                raise ValueError(f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-START', got {popped}")
+                raise ValueError(
+                    f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-START', got {popped}")
             frame_list = []
             while data[0] != b"FRAME-END":
                 frame_list.append(data.pop(0))
             if data.pop(0) != b"FRAME-END":
-                raise ValueError(f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-END', got {popped}")
-            frame = FramePayload.from_bytes_list(frame_list)
+                raise ValueError(
+                    f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-END', got {popped}")
+            frame = FramePayloadDTO.from_bytes_list(frame_list)
             frames[frame.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]] = frame
 
         return cls(frames=frames, **metadata)
@@ -90,8 +105,6 @@ class MultiFramePayload(BaseModel):
             print_str += str(frame) + "\n"
         print_str += "]"
         return print_str
-
-
 
 
 class MultiFrameMetadata(BaseModel):

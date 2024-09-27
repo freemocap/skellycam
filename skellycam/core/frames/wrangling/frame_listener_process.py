@@ -5,7 +5,7 @@ from typing import Optional
 
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
 from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_10us
 

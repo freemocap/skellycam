@@ -6,8 +6,8 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory import CameraSharedMemory, GroupSharedMemoryNames
-from skellycam.core.memory.shared_memory_number import SharedMemoryNumber
+from skellycam.core.shmemory.camera_shared_memory import CameraSharedMemory, GroupSharedMemoryNames
+from skellycam.core.shmemory.shared_memory_number import SharedMemoryNumber
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class CameraGroupSharedMemory(BaseModel):
                                 read_only: bool = True,
                                 ) -> MultiFramePayload:
         if previous_payload is None:
-            payload = MultiFramePayload.create_initial(camera_ids=self.camera_ids)
+            payload = MultiFramePayload.create_initial(camera_configs=self.camera_configs)
         else:
             payload = MultiFramePayload.from_previous(previous=previous_payload)
         for camera_id, camera_shared_memory in self.camera_shms.items():

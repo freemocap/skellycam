@@ -43,6 +43,25 @@ async def detect_available_devices(check_if_available: bool = False):
     get_app_state().available_devices = {camera_id: device for camera_id, device in camera_devices.items()}
 
 
+
+
+async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
+    """
+    Reorder QMultiMediaDevices to match order of OpenCV ports on macOS. 
+
+    Removes virtual cameras, and assumes virtual cameras are always last. 
+    Also assumes that once virtual cameras are removed, the order of the cameras from Qt will match the order of OpenCV.
+    """
+    camera_ports = await detect_opencv_ports()
+    for camera in detected_cameras:
+        if "virtual" in camera.description().lower():
+            detected_cameras.remove(camera)
+            camera_ports.pop()  # assumes virtual camera is always last # TODO - not this
+    if len(camera_ports) != len(detected_cameras):
+        raise ValueError(f"OpenCV and Qt did not detect same number of cameras: OpenCV: {len(camera_ports)} !=  Qt: {len(detected_cameras)}")
+
+    return detected_cameras, camera_ports
+
 async def _check_camera_available(port: int) -> bool:
     logger.debug(f"Checking if camera on port: {port} is available...")
     cap = cv2.VideoCapture(port)
@@ -54,34 +73,13 @@ async def _check_camera_available(port: int) -> bool:
     cap.release()
     return True
 
-async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
-    """
-    Reorder QMultiMediaDevices to match order of OpenCV ports on macOS. 
-
-    Removes virtual cameras, and assumes virtual cameras are always last. 
-    Also assumes that once virtual cameras are removed, the order of the cameras from Qt will match the order of OpenCV.
-    """
-    camera_ports = await detect_opencv_ports()
-    for camera in detected_cameras:
-        if "Virtual" in camera.description():
-            detected_cameras.remove(camera)
-            camera_ports.pop()  # assumes virtual camera is always last
-    if len(camera_ports) != len(detected_cameras):
-        raise ValueError(f"OpenCV and Qt did not detect same number of cameras: OpenCV: {len(camera_ports)} !=  Qt: {len(detected_cameras)}")
-
-    return detected_cameras, camera_ports
-
-
-async def detect_opencv_ports(max_ports: int = 20, max_unused_ports: int = 5) -> List[int]:
-    unused = 0
+async def detect_opencv_ports(max_ports: int = 20) -> List[int]:
     port = 0
     ports = []
-    while port < max_ports and unused < max_unused_ports:
+    while port < max_ports:
         camera_available = await _check_camera_available(port)
         if camera_available:
             ports.append(port)
-        else:
-            unused += 1
         port += 1
 
     return ports

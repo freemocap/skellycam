@@ -3,7 +3,7 @@ from typing import Tuple
 
 import numpy as np
 
-from skellycam.core.memory.shared_memory_element import SharedMemoryElement
+from skellycam.core.shmemory.shared_memory_element import SharedMemoryElement
 
 
 def test_create(numpy_array_definition_fixture: Tuple[Tuple[int], np.dtype]):

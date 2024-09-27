@@ -54,7 +54,7 @@ def get_video_file_type(fourcc_code: int) -> Optional[str]:
 class CameraConfig(BaseModel):
     camera_id: CameraId = Field(
         default=DefaultCameraConfig.CAMERA_ID.value,
-        description="The id of the camera to use, " "e.g. cv2.VideoCapture uses `0` for the first camera",
+        description="The id of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera",
     )
 
     use_this_camera: bool = Field(
@@ -85,7 +85,7 @@ class CameraConfig(BaseModel):
 
     rotation: RotationTypes = Field(
         default=DefaultCameraConfig.ROTATION.value,
-        description="The rotation to apply to the images " "of this camera (after they are captured)",
+        description="The rotation to apply to the images of this camera (after they are captured)",
     )
     capture_fourcc: str = Field(
         default=DefaultCameraConfig.CAPTURE_FOURCC.value,
@@ -125,6 +125,23 @@ class CameraConfig(BaseModel):
     def video_file_extension(self) -> str:
         return get_video_file_type(cv2.VideoWriter_fourcc(*self.writer_fourcc))
 
+    @property
+    def video_frame_shape(self) -> Tuple[int, int]:
+        """
+        Returns the shape of the video frame after applying rotation.
+
+        Returns
+        -------
+        Tuple[int, int, int]
+            The shape of the video frame (height, width) after rotation.
+        """
+        if self.rotation in {RotationTypes.CLOCKWISE_90, RotationTypes.COUNTERCLOCKWISE_90}:
+            height, width = self.resolution.width, self.resolution.height
+        else:
+            height, width = self.resolution.height, self.resolution.width
+
+        return height, width
+
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
 
@@ -136,9 +153,9 @@ class CameraConfig(BaseModel):
         out_str += f"\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
         out_str += f"\torientation: {self.orientation}\n"
         out_str += f"\timage_shape: {self.image_shape}\n"
-        out_str += f"\timage_size: {self.image_size_bytes / 1024:.3f}KB"
+        out_str += f"\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
+        out_str += f"\tvideo_frame_shape: {self.video_frame_shape}"
         return out_str
-
 
 CameraConfigs = Dict[CameraId, CameraConfig]
 

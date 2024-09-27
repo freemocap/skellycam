@@ -7,7 +7,7 @@ from pydantic import BaseModel, ValidationError
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfig
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class VideoRecorder(BaseModel):
     video_path: str
     video_writer: cv2.VideoWriter
     camera_config: CameraConfig
-    _frames_to_write: List[FramePayload] = []
+    _frames_to_write: List[FramePayloadDTO] = []
 
     class Config:
         arbitrary_types_allowed = True
@@ -44,7 +44,7 @@ class VideoRecorder(BaseModel):
                    camera_config=config,
                    )
 
-    def add_frame(self, frame: FramePayload):
+    def add_frame(self, frame: FramePayloadDTO):
         self._frames_to_write.append(frame)
 
     def write_one_frame(self):
@@ -76,7 +76,7 @@ class VideoRecorder(BaseModel):
             video_file_path,  # full path to video file
             cv2.VideoWriter_fourcc(*config.writer_fourcc),  # fourcc
             config.framerate,  # fps
-            (config.resolution.width, config.resolution.height),  # frameSize
+            config.video_frame_shape,  # image resolution after rotation applied
         )
         if not writer.isOpened():
             raise ValidationError(f"Failed to open video writer for camera {config.camera_id}")
@@ -84,7 +84,7 @@ class VideoRecorder(BaseModel):
             f"Initialized VideoWriter for camera {config.camera_id} - Video file will be saved to {video_file_path}")
         return writer
 
-    def _validate_frame(self, frame: FramePayload):
+    def _validate_frame(self, frame: FramePayloadDTO):
         if not Path(self.video_path).parent.exists():
             Path(self.video_path).parent.mkdir(parents=True, exist_ok=True)
         if frame.camera_id != self.camera_config.camera_id:

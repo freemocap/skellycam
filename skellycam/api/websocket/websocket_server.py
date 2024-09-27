@@ -11,7 +11,7 @@ from skellycam.api.app.app_state import AppStateDTO, SubProcessStatus
 from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
 from skellycam.core.timestamps.frame_rate_tracker import CurrentFrameRate
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.utilities.wait_functions import async_wait_1ms

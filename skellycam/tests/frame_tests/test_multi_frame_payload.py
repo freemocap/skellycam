@@ -2,7 +2,7 @@ from typing import List
 
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
@@ -29,24 +29,24 @@ def test_from_previous(multi_frame_payload_fixture: MultiFramePayload) -> None:
 
 
 def test_add_frame(camera_configs_fixture: CameraConfigs,
-                   frame_payload_dto_fixture: FramePayload) -> None:
+                   frame_payload_dto_fixture: FramePayloadDTO) -> None:
     camera_ids: List[CameraId] = list(camera_configs_fixture.keys())
     multi_frame_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_ids)
 
-    frame_dto: FramePayload = frame_payload_dto_fixture
+    frame_dto: FramePayloadDTO = frame_payload_dto_fixture
     frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_ids[0]  # Ensure the camera ID matches
     multi_frame_payload.add_frame(frame_dto)
 
     assert multi_frame_payload.frames[camera_ids[0]] is not None
 
 
-def test_full_property(frame_payload_dto_fixture: FramePayload,
+def test_full_property(frame_payload_dto_fixture: FramePayloadDTO,
                        camera_ids_fixture: List[CameraId]) -> None:
     multi_frame_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_ids_fixture)
 
     for loop, camera_id in enumerate(camera_ids_fixture):
         assert not multi_frame_payload.full
-        frame_dto: FramePayload = frame_payload_dto_fixture
+        frame_dto: FramePayloadDTO = frame_payload_dto_fixture
         frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_id
         multi_frame_payload.add_frame(frame_dto)
     assert multi_frame_payload.full

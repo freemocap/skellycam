@@ -7,7 +7,7 @@ import pytest
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_10ms
 
 

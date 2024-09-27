@@ -17,3 +17,4 @@ class RotationTypes(str, Enum):
             RotationTypes.ROTATE_180: cv2.ROTATE_180,
         }
         return rotation_mapping[self]
+

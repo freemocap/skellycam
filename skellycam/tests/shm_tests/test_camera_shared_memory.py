@@ -4,11 +4,11 @@ import numpy as np
 
 from skellycam.core import IMAGE_DATA_DTYPE
 from skellycam.core.cameras.camera.config.camera_config import CameraConfig
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
-from skellycam.core.memory.camera_shared_memory import CameraSharedMemory
-from skellycam.core.memory.shared_memory_element import SharedMemoryElement
+from skellycam.core.shmemory.camera_shared_memory import CameraSharedMemory
+from skellycam.core.shmemory.shared_memory_element import SharedMemoryElement
 
 
 def make_dummy_image_from_shape(shape: Tuple[int, ...]) -> np.ndarray:
@@ -47,7 +47,7 @@ def test_put_and_retrieve_frame(camera_config_fixture: CameraConfig,
     frame_metadata_fixture[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_config_fixture.camera_id
     camera_shm.put_new_frame(image=image, metadata=frame_metadata_fixture)
     frame_dto = camera_shm.retrieve_frame()
-    assert isinstance(frame_dto, FramePayload)
+    assert isinstance(frame_dto, FramePayloadDTO)
     assert np.array_equal(frame_dto.image, image)
     assert frame_dto.metadata.shape == FRAME_METADATA_SHAPE
     assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE
@@ -97,7 +97,7 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
                                                        shared_memory_names=shm_names)
     frame_dto = recreated_camera_shm.retrieve_frame()
 
-    assert isinstance(frame_dto, FramePayload)
+    assert isinstance(frame_dto, FramePayloadDTO)
     assert np.array_equal(frame_dto.image, image)
     assert frame_dto.metadata.shape == FRAME_METADATA_SHAPE
     assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE

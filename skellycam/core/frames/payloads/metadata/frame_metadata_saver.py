@@ -6,7 +6,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class FrameMetadataSaver(BaseModel):
         if not Path(save_path).exists():
             raise ValueError(f"Save path {save_path} does not exist")
 
-    def add_frame(self, frame: FramePayload):
+    def add_frame(self, frame: FramePayloadDTO):
         frame_metadata = FrameMetadata.from_array(metadata_array=frame.metadata)
         self._validate(frame_metadata)
         self.frame_metadata_list.append(frame_metadata)

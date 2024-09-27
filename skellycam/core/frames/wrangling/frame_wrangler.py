@@ -6,7 +6,7 @@ from skellycam.api.app.app_state import SubProcessStatus
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.wrangling.frame_listener_process import FrameListenerProcess
 from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProcess
-from skellycam.core.memory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO
 
 logger = logging.getLogger(__name__)
 

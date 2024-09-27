@@ -5,7 +5,7 @@ import polars as pl
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.timestamps.old.camera_timestamp_log import CameraTimestampLog
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class CameraTimestampLogger(BaseModel):
 
 
     def log_timestamp(
-            self, multi_frame_number: int, frame: FramePayload
+            self, multi_frame_number: int, frame: FramePayloadDTO
     ) -> CameraTimestampLog:
         log = CameraTimestampLog.from_frame_payload(
             frame_payload=frame,
