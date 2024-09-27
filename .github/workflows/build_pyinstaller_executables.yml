@@ -3,13 +3,14 @@ name: Build python executables
 on:
   push:
     branches: [jon/react-electron]
-    paths:
+    paths-ignore:
+      - '**/**' # Ignore all paths, i.e. disable this workflow
       - "skellycam/**"
-      - ".github/workflows/build_python_executables.yml"
+      - "build_pyinstaller_executables.yml"
       - "pyproject.toml"
       - "../../build_executable/build_pyinstaller_executable.py"
       - "../../build_executable/skellycam.spec"
-  workflow_dispatch:
+#  workflow_dispatch:
 
 jobs:
 

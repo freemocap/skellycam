@@ -217,3 +217,7 @@ out/
 
 # Don't ignore `skellycam.spec` file
 !skellycam.spec
+
+pyapp-source.zip
+pyapp-latest/*
+.crates*
