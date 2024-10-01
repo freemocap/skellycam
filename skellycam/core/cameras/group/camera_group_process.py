@@ -23,6 +23,7 @@ class CameraGroupProcess:
             self,
             config_update_queue: multiprocessing.Queue,
             ipc_queue: multiprocessing.Queue,
+            process_kill_event: multiprocessing.Event,
     ):
         app_state: AppState = get_app_state()
         self._process = Process(
@@ -32,7 +33,8 @@ class CameraGroupProcess:
                   ipc_queue,
                   app_state.camera_configs,
                   app_state.record_frames_flag,
-                  app_state.kill_camera_group_flag
+                  app_state.kill_camera_group_flag,
+                  process_kill_event,
                   )
         )
 
@@ -60,15 +62,17 @@ class CameraGroupProcess:
                      camera_configs: CameraConfigs,
                      record_frames_flag: multiprocessing.Value,
                      kill_camera_group_flag: multiprocessing.Value,
+                     process_kill_event: multiprocessing.Event
                      ):
         logger.debug(f"CameraGroupProcess started")
         camera_manager: Optional[CameraManager] = None
         group_shm: Optional[CameraGroupSharedMemory] = None
         frame_wrangler: Optional[FrameWrangler] = None
         try:
-            while not kill_camera_group_flag.value:
+            while not kill_camera_group_flag.value and not process_kill_event.is_set():
                 group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs,
-                                                                                 kill_camera_group_flag=kill_camera_group_flag)
+                                                                                 kill_camera_group_flag=kill_camera_group_flag,
+                                                                                    process_kill_event=process_kill_event)
 
                 group_shm = CameraGroupSharedMemory.create(camera_configs=camera_configs)
                 group_shm_dto = group_shm.to_dto()
@@ -80,16 +84,20 @@ class CameraGroupProcess:
                                                ipc_queue=ipc_queue,
                                                record_frames_flag=record_frames_flag,
                                                kill_camera_group_flag=kill_camera_group_flag,
+                                               process_kill_event=process_kill_event,
                                                )
                 camera_manager = CameraManager(group_shm_dto=group_shm_dto,
                                                group_orchestrator=group_orchestrator,
                                                ipc_queue=ipc_queue,
                                                kill_camera_group_flag=kill_camera_group_flag,
+                                                  process_kill_event=process_kill_event,
                                                )
                 camera_loop_thread = threading.Thread(target=camera_group_trigger_loop,
                                                       args=(camera_configs,
                                                             group_orchestrator,
-                                                            kill_camera_group_flag))
+                                                            kill_camera_group_flag,
+                                                            process_kill_event,
+                                                            ))
 
                 frame_wrangler.start()
                 camera_loop_thread.start()
@@ -98,6 +106,7 @@ class CameraGroupProcess:
                 run_config_queue_listener(camera_manager=camera_manager,
                                             camera_group_orchestrator=group_orchestrator,
                                           kill_camera_group_flag=kill_camera_group_flag,
+                                          process_kill_event=process_kill_event,
                                           config_update_queue=config_update_queue)
         except Exception as e:
             logger.error(f"CameraGroupProcess error: {e}")
@@ -114,9 +123,10 @@ class CameraGroupProcess:
 def run_config_queue_listener(camera_manager: CameraManager,
                               camera_group_orchestrator: CameraGroupOrchestrator,
                               kill_camera_group_flag: multiprocessing.Value,
+                                process_kill_event: multiprocessing.Event,
                               config_update_queue: multiprocessing.Queue):
     logger.trace(f"Starting config queue listener")
-    while not kill_camera_group_flag.value:
+    while not kill_camera_group_flag.value and not process_kill_event.is_set():
         wait_1s()
         if config_update_queue.qsize() > 0:
             camera_group_orchestrator.pause_loop()

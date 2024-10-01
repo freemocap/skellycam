@@ -31,8 +31,7 @@ class MultiframeTimestampLogger(BaseModel):
         """
         logger.debug(f"Creating MultiFrameTimestampLogger for video save directory {video_save_directory}...")
         video_save_path = Path(video_save_directory)
-        if not video_save_path.exists():
-            raise FileNotFoundError(f"Video save directory {video_save_directory} does not exist!")
+        video_save_path.mkdir(parents=True, exist_ok=True)
 
         csv_save_path = str(video_save_path / f"{recording_name}_timestamps.csv")
 

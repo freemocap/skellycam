@@ -15,6 +15,7 @@ class CameraGroupOrchestrator(BaseModel):
     new_multi_frame_put_in_shm: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     frame_loop_count: int = -1
     _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
+    _process_kill_event: Annotated[multiprocessing.Event, SkipValidation] = PrivateAttr()
 
     pause_when_able: bool = False
     frame_loop_paused: bool = False
@@ -22,17 +23,22 @@ class CameraGroupOrchestrator(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         self._kill_camera_group_flag = data.get('_kill_camera_group_flag')
+        self._process_kill_event = data.get('_process_kill_event')
+
+
     @classmethod
     def from_camera_configs(cls,
                             camera_configs: CameraConfigs,
-                            kill_camera_group_flag: multiprocessing.Value):
+                            kill_camera_group_flag: multiprocessing.Value,
+                            process_kill_event: multiprocessing.Event):
         return cls(
             camera_triggers={
                 camera_id: CameraTriggers.from_camera_id(camera_id=camera_id,
                                                          kill_camera_group_flag=kill_camera_group_flag)
                 for camera_id, camera_config in camera_configs.items()
             },
-            _kill_camera_group_flag=kill_camera_group_flag
+            _kill_camera_group_flag=kill_camera_group_flag,
+            _process_kill_event=process_kill_event
         )
 
     @property
@@ -41,7 +47,7 @@ class CameraGroupOrchestrator(BaseModel):
 
     @property
     def should_continue(self):
-        return not self._kill_camera_group_flag.value
+        return not self._kill_camera_group_flag.value and not self._process_kill_event.is_set()
 
     @property
     def cameras_ready(self):

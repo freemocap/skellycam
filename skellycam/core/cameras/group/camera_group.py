@@ -15,11 +15,13 @@ class CameraGroup:
     def __init__(
             self,
             ipc_queue: multiprocessing.Queue,
+            process_kill_event: multiprocessing.Event,
     ):
         self._update_queue = multiprocessing.Queue()  # Update camera configs
         self._ipc_queue = ipc_queue
         self._process = CameraGroupProcess(config_update_queue=self._update_queue,
                                            ipc_queue=self._ipc_queue,
+                                           process_kill_event=process_kill_event,
                                            )
         self._app_state: AppState = get_app_state()
 

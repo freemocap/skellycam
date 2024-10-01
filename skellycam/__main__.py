@@ -2,12 +2,12 @@ import argparse
 import logging
 import multiprocessing
 import sys
-from multiprocessing import Process
 from pathlib import Path
 
-from skellycam.api.server.run_skellycam_server import run_server
+from skellycam.api.run_skellycam_server import run_server
 from skellycam.utilities.clean_path import clean_path
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,26 +27,29 @@ def main(qt: bool = True) -> None:
     if sys.platform == "win32":
         setup_app_id_for_windows()
 
+    kill_event = multiprocessing.Event()
     if qt:
         from skellycam.gui.gui_main import gui_main
 
-        shutdown_event = multiprocessing.Event()
 
-        frontend_process = multiprocessing.Process(target=gui_main, args=(shutdown_event,))
+        frontend_process = multiprocessing.Process(target=gui_main, args=(kill_event,))
         logger.info("Starting frontend process")
         frontend_process.start()
 
-        backend_process = Process(target=run_server, args=(shutdown_event,))
+        backend_process = multiprocessing.Process(target=run_server, args=(kill_event,))
         logger.info("Starting backend process")
         backend_process.start()
 
-        frontend_process.join()
-        logger.info("Frontend process ended - terminating backend process")
-        shutdown_event.set()
+        while frontend_process.is_alive() and backend_process.is_alive():
+            frontend_process.join(timeout=1)
+            backend_process.join(timeout=1)
+        logger.info(f"Frontend process status: {frontend_process.is_alive()}, Backend process status: {backend_process.is_alive()} - Shutting down...")
+        kill_event.set()
         backend_process.join()
+        frontend_process.join()
         logger.info("Exiting `main`...")
     else:
-        run_server()
+        run_server(kill_event=kill_event)
 
 
 if __name__ == "__main__":

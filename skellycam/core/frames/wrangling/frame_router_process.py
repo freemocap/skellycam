@@ -17,7 +17,9 @@ class FrameRouterProcess:
                  frame_escape_pipe: multiprocessing.Pipe,
                  ipc_queue: multiprocessing.Queue,
                  record_frames_flag: multiprocessing.Value,
-                 kill_camera_group_flag: multiprocessing.Value, ):
+                 kill_camera_group_flag: multiprocessing.Value,
+                 process_kill_event: multiprocessing.Event
+                 ):
 
         self.process = multiprocessing.Process(target=self._run_process,
                                                name=self.__class__.__name__,
@@ -25,7 +27,8 @@ class FrameRouterProcess:
                                                      frame_escape_pipe,
                                                      ipc_queue,
                                                      record_frames_flag,
-                                                     kill_camera_group_flag))
+                                                     kill_camera_group_flag,
+                                                     process_kill_event))
 
     def start(self):
         logger.trace(f"Starting frame listener process")
@@ -43,6 +46,7 @@ class FrameRouterProcess:
                      ipc_queue: multiprocessing.Queue,
                      record_frames_flag: multiprocessing.Value,
                      kill_camera_group_flag: multiprocessing.Value,
+                        process_kill_event: multiprocessing.Event
                      ):
         """
         This process is not coupled to the frame loop, and the `escape pipe` is elastic, so blocking is not as big a sin here.
@@ -54,7 +58,7 @@ class FrameRouterProcess:
         video_recorder_manager = VideoRecorderManager.create(camera_configs=camera_configs,
                                                              recording_folder=get_default_recording_folder_path(tag=""))
         try:
-            while not kill_camera_group_flag.value:
+            while not kill_camera_group_flag.value and not process_kill_event.is_set():
                 wait_10us()
 
                 # Check for incoming data

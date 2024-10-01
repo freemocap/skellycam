@@ -20,7 +20,9 @@ class CameraManager:
                  group_shm_dto: CameraGroupSharedMemoryDTO,
                  group_orchestrator: CameraGroupOrchestrator,
                  ipc_queue: multiprocessing.Queue,
-                 kill_camera_group_flag: multiprocessing.Value, ):
+                 kill_camera_group_flag: multiprocessing.Value,
+                 process_kill_event: multiprocessing.Event
+                 ):
         self._kill_camera_group_flag = kill_camera_group_flag
         self._camera_configs = group_shm_dto.camera_configs
         self._group_orchestrator = group_orchestrator
@@ -32,6 +34,7 @@ class CameraManager:
                                                               triggers=group_orchestrator.camera_triggers[camera_id],
                                                               shared_memory_names=group_shm_dto.group_shm_names[camera_id],
                                                               kill_camera_group_flag=kill_camera_group_flag,
+                                                                process_kill_event=process_kill_event,
                                                               )
 
     @property

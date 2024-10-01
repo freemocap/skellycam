@@ -20,6 +20,7 @@ class FrameListenerProcess:
             frame_escape_pipe: multiprocessing.Pipe,
             ipc_queue: multiprocessing.Queue,
             kill_camera_group_flag: multiprocessing.Value,
+            process_kill_event: multiprocessing.Event,
     ):
         super().__init__()
 
@@ -30,6 +31,7 @@ class FrameListenerProcess:
                                                      frame_escape_pipe,
                                                      ipc_queue,
                                                      kill_camera_group_flag,
+                                                        process_kill_event,
                                                      )
                                                )
 
@@ -43,6 +45,7 @@ class FrameListenerProcess:
                      frame_escape_pipe: multiprocessing.Pipe,
                      ipc_queue: multiprocessing.Queue,
                      kill_camera_group_flag: multiprocessing.Value,
+                        process_kill_event: multiprocessing.Event
                      ):
         logger.debug(f"Frame listener process started!")
 
@@ -52,7 +55,7 @@ class FrameListenerProcess:
             frame_rate_tracker = FrameRateTracker()
             mf_payload: Optional[MultiFramePayload] = None
             byte_chunklets_to_send = []
-            while not kill_camera_group_flag.value:
+            while not kill_camera_group_flag.value and not process_kill_event.is_set():
                 if group_orchestrator.new_multi_frame_put_in_shm.is_set():
                     mf_payload: MultiFramePayload = camera_group_shm.get_multi_frame_payload(
                         previous_payload=mf_payload,

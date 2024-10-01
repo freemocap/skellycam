@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 
 class Controller:
     def __init__(self,
-                 ) -> None:
+                    kill_event: multiprocessing.Event) -> None:
         super().__init__()
+
+        self._kill_event: multiprocessing.Event = kill_event
         self._camera_group: Optional[CameraGroup] = None
 
         self._app_state: AppState = get_app_state()
@@ -53,6 +55,9 @@ class Controller:
         self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(),
                                                                       name="ConnectToCameras")
 
+    async def close(self):
+        self._kill_event.set()
+        await self.close_cameras()
 
     async def close_cameras(self):
         if self._camera_group is not None:
@@ -79,7 +84,7 @@ class Controller:
         self._app_state.kill_camera_group_flag.value = False
         self._app_state.record_frames_flag.value = False
 
-        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue)
+        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue, process_kill_event=self._kill_event)
         await self._camera_group.start()
         logger.success("Camera group started successfully")
 
@@ -94,10 +99,10 @@ class Controller:
 CONTROLLER = None
 
 
-def create_controller() -> Controller:
+def create_controller(kill_event:multiprocessing.Event) -> Controller:
     global CONTROLLER
     if not CONTROLLER:
-        CONTROLLER = Controller()
+        CONTROLLER = Controller(kill_event=kill_event)
     return CONTROLLER
 
 

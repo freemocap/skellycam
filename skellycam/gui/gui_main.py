@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import sys
 
 from PySide6.QtCore import QTimer
@@ -9,11 +10,12 @@ from skellycam.gui.qt.utilities.get_qt_app import get_qt_app
 logger = logging.getLogger(__name__)
 
 
-def gui_main(shutdown_event=None):
+def gui_main(kill_event:multiprocessing.Event) -> None:
+
     logger.info("Starting GUI main...")
 
     qt_app = get_qt_app(sys.argv)
-    main_window = SkellyCamMainWindow(shutdown_event=shutdown_event)
+    main_window = SkellyCamMainWindow(kill_event=kill_event)
     main_window.show()
 
     timer = QTimer()
@@ -29,4 +31,5 @@ def gui_main(shutdown_event=None):
 
 
 if __name__ == "__main__":
-    gui_main()
+    gui_main(multiprocessing.Event())
+

@@ -221,3 +221,5 @@ out/
 pyapp-source.zip
 pyapp-latest/*
 .crates*
+*.dist
+*.build

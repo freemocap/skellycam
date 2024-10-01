@@ -38,7 +38,6 @@ class WebsocketServer:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         logger.debug("WebsocketRunner context manager exiting...")
         if not self.websocket.client_state == WebSocketState.DISCONNECTED:
-            await self.websocket.send_text("Goodbye, client👋")
             await self.websocket.close()
 
     async def run(self):

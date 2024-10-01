@@ -20,6 +20,7 @@ class CameraProcess:
                  shared_memory_names: SharedMemoryNames,
                  triggers: CameraTriggers,
                  kill_camera_group_flag: multiprocessing.Value,
+                 process_kill_event: multiprocessing.Event
                  ):
         self._config = config
         self._config_update_queue = multiprocessing.Queue()  # Queue for updating camera configuration
@@ -33,6 +34,7 @@ class CameraProcess:
                                                       self._config_update_queue,
                                                       self._close_self_flag,
                                                       self._kill_camera_group_flag,
+                                                      process_kill_event,
                                                       )
                                                 )
 
@@ -63,6 +65,7 @@ class CameraProcess:
                      config_update_queue: multiprocessing.Queue,
                      close_self_flag: multiprocessing.Value,
                      kill_camera_group_flag: multiprocessing.Value,
+                        process_kill_event: multiprocessing.Event
                      ):
         camera_shared_memory = CameraSharedMemory.recreate(camera_config=config,
                                                            shared_memory_names=shared_memory_names)
@@ -79,7 +82,9 @@ class CameraProcess:
                                        triggers=triggers,
                                        config_update_queue=config_update_queue,
                                        close_self_flag=close_self_flag,
-                                       kill_camera_group_flag=kill_camera_group_flag, )
+                                       kill_camera_group_flag=kill_camera_group_flag,
+                                       process_kill_event=process_kill_event,
+                                       )
             logger.debug(f"Camera {config.camera_id} process completed")
         finally:
             logger.debug(f"Releasing camera {config.camera_id} `cv2.VideoCapture` and shutting down CameraProcess")
@@ -94,13 +99,14 @@ def run_trigger_listening_loop(
         config_update_queue: multiprocessing.Queue,
         close_self_flag: multiprocessing.Value,
         kill_camera_group_flag: multiprocessing.Value,
+        process_kill_event: multiprocessing.Event
 ):
     triggers.await_initial_trigger(close_self_flag=close_self_flag)
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
     frame_number = 0
     try:
         # Trigger listening loop
-        while not kill_camera_group_flag.value and not close_self_flag.value:
+        while not kill_camera_group_flag.value and not close_self_flag.value and not process_kill_event.is_set():
 
             if config_update_queue.qsize() > 0:
                 logger.debug(f"Camera {config.camera_id} received new config update - setting `not ready`")

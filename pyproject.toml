@@ -69,6 +69,7 @@ dependencies = [
     "websocket-client==1.8.*",
     "websockets>=13.1",
     "pyinstaller>=6.10.0",
+    "pip>=24.2",
 ]
 requires-python = ">=3.10,<3.13"
 

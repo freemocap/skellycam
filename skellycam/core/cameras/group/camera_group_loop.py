@@ -16,6 +16,7 @@ def camera_group_trigger_loop(
         camera_configs: CameraConfigs,
         group_orchestrator: CameraGroupOrchestrator,
         kill_camera_group_flag: multiprocessing.Value,
+        process_kill_event: multiprocessing.Event
 ):
     loop_count = 0
     elapsed_per_loop_ns = []
@@ -24,7 +25,7 @@ def camera_group_trigger_loop(
         group_orchestrator.fire_initial_triggers()
 
         logger.debug(f"Starting camera trigger loop for cameras: {group_orchestrator.camera_ids}...")
-        while not kill_camera_group_flag.value:
+        while not kill_camera_group_flag.value and not process_kill_event.is_set():
             tik = time.perf_counter_ns()
 
             group_orchestrator.trigger_multi_frame_read()

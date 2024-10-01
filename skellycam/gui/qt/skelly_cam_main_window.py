@@ -31,10 +31,10 @@ logger = logging.getLogger(__name__)
 class SkellyCamMainWindow(QMainWindow):
 
     def __init__(self,
-                 shutdown_event: multiprocessing.Event = None,
+                 kill_event: multiprocessing.Event,
                  parent=None):
         super().__init__(parent=parent)
-        self._shutdown_event = shutdown_event
+        self._kill_event = kill_event
 
         self.setGeometry(100, 100, 1600, 900)
         self.setWindowIcon(QIcon(SKELLYCAM_FAVICON_ICO_PATH))
@@ -104,8 +104,10 @@ class SkellyCamMainWindow(QMainWindow):
         self._client.connect_websocket()
 
     def update_widget(self):
-        
         logger.loop(f"Updating {self.__class__.__name__}")
+        if self._kill_event.is_set():
+            self.close()
+            return
         self._skellycam_widget.update_widget()
         self._skellycam_control_panel.update_widget()
         self._directory_view_widget.update_widget()
@@ -137,8 +139,7 @@ class SkellyCamMainWindow(QMainWindow):
         super().closeEvent(a0)
 
         logger.info("Shutting down client server...")
-        shutdown_client_server()
-        self._shutdown_event.set()
+        self._kill_event.set()
         remove_empty_directories(get_default_skellycam_base_folder_path())
 
 

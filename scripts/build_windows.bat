@@ -36,6 +36,22 @@ if exist .venv (
     uv sync
 )
 
+:: Get SkellyCam version
+echo Getting SkellyCam version...
+setlocal
+set "PYTHONPATH=..\skellycam"
+for /f "delims=" %%i in ('python -c "import skellycam; print(skellycam.__version__)"') do set "VERSION=%%i"
+endlocal & set "VERSION=%VERSION%"
+
+:: Get Path to skellycam.__main__.py
+echo Getting path to skellycam.__main__.py...
+setlocal
+set "PYTHONPATH=..\skellycam"
+for /f "delims=" %%i in ('python -c "import os; import skellycam.__main__; print(os.path.abspath(skellycam.__main__.__file__))"') do set "SKELLYCAM_MAIN_PATH=%%i"
+endlocal & set "SKELLYCAM_MAIN_PATH=%SKELLYCAM_MAIN_PATH%"
+echo Using SkellyCam version %VERSION% at %SKELLYCAM_MAIN_PATH% as the executable script.
+
+
 :: Download PyApp
 echo Downloading PyApp...
 powershell -command "Invoke-WebRequest https://github.com/ofek/pyapp/releases/latest/download/source.zip -OutFile pyapp-source.zip"
@@ -49,21 +65,19 @@ for /d %%i in (pyapp-v*) do set pyapp_dir=%%i
 move %pyapp_dir% pyapp-latest
 cd pyapp-latest
 
-:: Get SkellyCam version
-echo Getting SkellyCam version...
-setlocal
-set "PYTHONPATH=..\skellycam"
-for /f "delims=" %%i in ('python -c "import skellycam; print(skellycam.__version__)"') do set "VERSION=%%i"
-endlocal & set "VERSION=%VERSION%"
+:: Export a requirements.txt file
+echo Exporting requirements file to: %cd%\requirements.txt
+uv pip freeze > "%cd%\requirements.txt"
 
 :: Set environment variables for PyApp
 set PYAPP_PROJECT_NAME=skellycam
 set PYAPP_PROJECT_VERSION=%VERSION%
+set PYAPP_PROJECT_DEPENDENCY_FILE="%cd%\requirements.txt"
 set PYAPP_PYTHON_VERSION=3.11
-set PYAPP_PROJECT_DEPENDENCY_FILE=..\requirements.txt
-set PYAPP_EXEC_SCRIPT=..\skellycam\__main__.py
-set PYAPP_PIP_EXTRA_ARGS=--no-deps
+set PYAPP_UV_ENABLED = true
+set PYAPP_EXEC_SCRIPT=%SKELLYCAM_PATH%
 set PYAPP_EXPOSE_ALL_COMMANDS=true
+set RUST_BACKTRACE=full
 
 :: Build the project
 echo Building the project...
@@ -74,7 +88,7 @@ cargo install pyapp --force --root ..
 
 :: Rename the executable
 cd ..
-move bin\pyapp.exe skellycam_windows_exe_x86_64-pc-windows-msvc.exe
+move bin\pyapp.exe bin\skellycam_windows_exe_x86_64-pc-windows-msvc.exe
 
 :: Check if rcedit is installed
 where rcedit >nul 2>&1
@@ -85,6 +99,6 @@ if %ERRORLEVEL% neq 0 (
 
 :: Set the executable icon
 echo Setting the executable icon...
-rcedit "skellycam_windows_exe_x86_64-pc-windows-msvc.exe" --set-icon "skellycam\assets\logo\skellycam_skelly_logo.ico"
+rcedit "skellycam_windows_exe_x86_64-pc-windows-msvc.exe" --set-icon "shared\skellycam-logo\skellycam-favicon.ico"
 
-echo Build completed successfully. Executable is skellycam_windows_exe_x86_64-pc-windows-msvc.exe
+echo Build completed successfully. Executable is %cd%\bin\skellycam_windows_exe_x86_64-pc-windows-msvc.exe
