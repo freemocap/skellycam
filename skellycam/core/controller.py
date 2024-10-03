@@ -5,7 +5,6 @@ from typing import Optional
 
 from skellycam.api.app.app_state import AppState, get_app_state
 from skellycam.api.app.controller_tasks import ControllerTasks
-
 from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
@@ -18,9 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class Controller:
-    def __init__(self) -> None:
+    def __init__(self,
+                 global_kill_event: multiprocessing.Event) -> None:
         super().__init__()
-
+        self._global_kill_event = global_kill_event
         self._camera_group: Optional[CameraGroup] = None
 
         self._app_state: AppState = get_app_state()
@@ -52,7 +52,7 @@ class Controller:
         if camera_configs:
             self._app_state.camera_configs = camera_configs
         self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(),
-                                                                      name="ConnectToCameras")
+                                                                  name="ConnectToCameras")
 
     async def close(self):
         logger.info("Closing controller...")
@@ -65,7 +65,6 @@ class Controller:
             await self._close_camera_group()
             return
         logger.warning("No camera group to close!")
-
 
     async def start_recording(self):
         logger.debug("Setting `record_frames_flag` ")
@@ -81,16 +80,17 @@ class Controller:
 
         if self._camera_group:  # if `connect/` called w/o configs, reset existing connection
             await self._close_camera_group()
-        self._app_state.kill_camera_group_flag.value = False
         self._app_state.record_frames_flag.value = False
 
-        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue, global_kill_event=self._kill_event)
+        self._camera_group = CameraGroup(camera_configs=self._app_state.camera_configs,
+                                         ipc_queue=self._ipc_queue,
+                                         global_kill_event=self._global_kill_event,
+                                         record_frames_flag=self._app_state.record_frames_flag)
         await self._camera_group.start()
         logger.success("Camera group started successfully")
 
     async def _close_camera_group(self):
         logger.debug("Closing existing camera group...")
-        self._app_state.kill_camera_group_flag.value = True
         await self._camera_group.close()
         self._camera_group = None
         logger.success("Camera group closed successfully")
@@ -99,10 +99,10 @@ class Controller:
 CONTROLLER = None
 
 
-def create_controller() -> Controller:
+def create_controller(global_kill_event: multiprocessing.Event) -> Controller:
     global CONTROLLER
     if not CONTROLLER:
-        CONTROLLER = Controller()
+        CONTROLLER = Controller(global_kill_event=global_kill_event)
     return CONTROLLER
 
 

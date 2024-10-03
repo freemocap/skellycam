@@ -10,6 +10,7 @@ from uvicorn import Server
 
 from skellycam.api.app.create_app import create_app
 from skellycam.api.server.server_constants import HOSTNAME, PORT
+from skellycam.core.controller import create_controller
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ class UvicornServerManager:
                  port: int = PORT,
                  log_level: str = "info"):
         self._kill_event = kill_event
+        create_controller(global_kill_event=kill_event)
         self.hostname: str = hostname
         self.port: int = port
         self.server_thread: Optional[threading.Thread] = None

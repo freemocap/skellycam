@@ -42,14 +42,14 @@ class WebSocketClient:
         return self.websocket.sock and self.websocket.sock.connected
 
     def connect_websocket(self) -> None:
-        logger.info(f"Connecting to WebSocket at {self.websocket_url}...")
+        logger.gui(f"Connecting to WebSocket at {self.websocket_url}...")
         self._websocket_thread = threading.Thread(
             target=lambda: self.websocket.run_forever(reconnect=True, ping_interval=5),
             daemon=True)
         self._websocket_thread.start()
 
     def _on_open(self, ws) -> None:
-        logger.info(f"Connected to WebSocket at {self.websocket_url}, sending test messages...")
+        logger.gui(f"Connected to WebSocket at {self.websocket_url}, sending test messages...")
         self.send_message('{"message": "Hello, WebSocket Server!"}')
 
     def _on_message(self, ws: WebSocketApp, message: Union[str, bytes]) -> None:
@@ -60,7 +60,7 @@ class WebSocketClient:
         raise
 
     def _on_close(self, ws: WebSocketApp, close_status_code, close_msg) -> None:
-        logger.info(f"WebSocket connection closed: Close status code: {close_status_code}, Close message: {close_msg}")
+        logger.gui(f"WebSocket connection closed: Close status code: {close_status_code}, Close message: {close_msg}")
 
     def _handle_websocket_message(self, message: Union[str, bytes]) -> None:
         if isinstance(message, str):
@@ -68,14 +68,14 @@ class WebSocketClient:
                 json_data = json.loads(message)
                 self._handle_json_message(json_data)
             except json.JSONDecodeError:
-                logger.info(f"Received text message: {message}")
+                logger.gui(f"Received text message: {message}")
                 self._handle_text_message(message)
         elif isinstance(message, bytes):
-            logger.loop(f"Received binary message: size: {len(message) * .001:.3f}kB")
+            logger.gui(f"Received binary message: size: {len(message) * .001:.3f}kB")
             self._handle_binary_message(message)
 
     def _handle_text_message(self, message: str) -> None:
-        logger.info(f"Received text message: {message}")
+        logger.gui(f"Received text message: {message}")
         pass
 
     def _handle_binary_message(self, message: bytes) -> None:
@@ -84,35 +84,35 @@ class WebSocketClient:
 
         if 'jpeg_images' in payload.keys():
             fe_payload = FrontendFramePayload(**payload)
-            logger.loop(
+            logger.gui(
                 f"Received FrontendFramePayload with {len(fe_payload.camera_ids)} cameras - size: {len(message)} bytes")
             fe_payload.lifespan_timestamps_ns.append({"unpickled_from_websocket": time.perf_counter_ns()})
             self._gui_state.latest_frontend_payload = fe_payload
         elif 'recording_name' in payload.keys():
-            logger.debug(f"Received RecordingInfo object  - {payload}")
+            logger.gui(f"Received RecordingInfo object  - {payload}")
             self._gui_state.recording_info = RecordingInfo(**payload)
         else:
-            logger.info(f"Received binary message: {len(payload) * .001:.3f}kB")
+            logger.gui(f"Received binary message: {len(payload) * .001:.3f}kB")
 
     def _handle_json_message(self, message: Dict[str, Any]) -> None:
         if isinstance(message, str):
             message = json.loads(message)
         try:
             if "message" in message.keys():
-                logger.loop(f"Received message: {message['message']}")
+                logger.gui(f"Received message: {message['message']}")
             elif 'jpeg_images' in message.keys():
                 fe_payload = FrontendFramePayload(**message)
                 self._gui_state.latest_frontend_payload = fe_payload
             elif 'recording_name' in message.keys():
                 recording_info = RecordingInfo(**message)
-                logger.info(f"Received RecordingInfo for recording: `{recording_info.recording_name}`")
+                logger.gui(f"Received RecordingInfo for recording: `{recording_info.recording_name}`")
                 self._gui_state.recording_info = recording_info
             elif 'camera_configs' in message.keys():
                 app_state = AppStateDTO(**message)
-                logger.info(f"Received AppStateDTO (state_timestamp: {app_state.state_timestamp})")
+                logger.gui(f"Received AppStateDTO (state_timestamp: {app_state.state_timestamp})")
                 self._gui_state.update_app_state(app_state_dto=app_state)
             else:
-                logger.loop(f"Received JSON message, size: {len(json.dumps(message))} bytes")
+                logger.gui(f"Received JSON message, size: {len(json.dumps(message))} bytes")
         except Exception as e:
             logger.exception(e)
             raise
@@ -137,6 +137,6 @@ class WebSocketClient:
             except websocket.WebSocketConnectionClosedException:
                 pass
         self.websocket = self._create_websocket()
-        logger.info("Closing WebSocket client")
+        logger.gui("Closing WebSocket client")
         if self._websocket_thread:
             self._websocket_thread.join()

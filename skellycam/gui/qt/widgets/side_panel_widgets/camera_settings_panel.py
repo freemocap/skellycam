@@ -72,7 +72,7 @@ class CameraSettingsPanel(QWidget):
 
     def _convert_to_parameter(self, camera_config: CameraConfig,
                               camera_info: CameraDeviceInfo) -> Parameter:
-        logger.trace(f"Converting camera config to parameter: {camera_config}")
+        logger.gui(f"Converting camera config to parameter: {camera_config}")
         camera_parameter_group = Parameter.create(
             name="Camera_" + str(camera_config.camera_id),
             type="group",
@@ -137,7 +137,7 @@ class CameraSettingsPanel(QWidget):
         return button
 
     def _update_user_selected_camera_settings(self):
-        logger.trace("Extracting camera configs from parameter tree")
+        logger.gui("Extracting camera configs from parameter tree")
         new_user_selected_configs = {}
         for (camera_id, parameter_group,) in self._parameter_groups.items():
             new_user_selected_configs[camera_id] = CameraConfig(
@@ -154,7 +154,7 @@ class CameraSettingsPanel(QWidget):
         self._gui_state.user_selected_camera_configs = self._user_selected_camera_configs
 
     def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: CameraId):
-        logger.trace(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
+        logger.gui(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
         camera_configs = self._user_selected_camera_configs
         for camera_id in camera_configs.keys():
             if camera_id == camera_id_to_copy_from:
