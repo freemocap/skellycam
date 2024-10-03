@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers, logger
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.utilities.wait_functions import wait_10us, wait_1ms, wait_10ms, wait_1s, wait_100ms
+from skellycam.utilities.wait_functions import wait_10us, wait_1ms, wait_10ms, wait_100ms
 
 
 class CameraGroupOrchestrator(BaseModel):

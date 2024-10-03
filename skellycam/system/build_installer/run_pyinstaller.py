@@ -1,7 +1,7 @@
-import argparse
 import logging
 import os
 from pathlib import Path
+
 import PyInstaller.__main__
 
 logger = logging.getLogger(__name__)

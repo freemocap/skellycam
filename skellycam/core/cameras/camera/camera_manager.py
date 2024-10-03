@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import os
 import threading
-from typing import Optional, List, Dict
+from typing import Dict
 
 from skellycam.api.app.app_state import SubProcessStatus
 from skellycam.core import CameraId

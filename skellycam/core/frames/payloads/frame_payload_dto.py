@@ -1,11 +1,9 @@
 import struct
 from typing import Tuple, Any, List
 
-import cv2
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE
 

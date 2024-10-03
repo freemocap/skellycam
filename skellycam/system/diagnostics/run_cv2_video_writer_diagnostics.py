@@ -1,8 +1,10 @@
-import cv2
 import time
+from typing import List, Tuple
+
+import cv2
 import numpy as np
-from typing import List, Tuple, Dict
 import pandas as pd
+
 
 def get_file_extension(fourcc: str) -> str:
     if fourcc in ['XVID', 'MJPG']:

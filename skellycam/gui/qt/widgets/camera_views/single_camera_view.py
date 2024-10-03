@@ -5,7 +5,7 @@ import time
 import cv2
 import numpy as np
 from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize, QRect, QMutex, QMutexLocker
-from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QPen, QBrush
+from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QBrush
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
 from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state

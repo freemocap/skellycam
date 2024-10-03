@@ -7,9 +7,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.gui import shutdown_client_server, get_client, FastAPIClient
-from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
+from skellycam.gui import get_client, FastAPIClient
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
+from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
 from skellycam.gui.qt.skelly_cam_widget import (
     SkellyCamWidget,
 )

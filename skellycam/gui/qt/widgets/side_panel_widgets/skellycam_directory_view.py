@@ -10,7 +10,6 @@ from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QF
 
 from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
 
-import logging
 logger = logging.getLogger(__name__)
 
 class SkellyCamDirectoryViewWidget(QWidget):

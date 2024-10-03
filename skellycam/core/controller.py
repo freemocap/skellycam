@@ -5,6 +5,7 @@ from typing import Optional
 
 from skellycam.api.app.app_state import AppState, get_app_state
 from skellycam.api.app.controller_tasks import ControllerTasks
+
 from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
@@ -17,11 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class Controller:
-    def __init__(self,
-                    kill_event: multiprocessing.Event) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
-        self._kill_event: multiprocessing.Event = kill_event
         self._camera_group: Optional[CameraGroup] = None
 
         self._app_state: AppState = get_app_state()
@@ -56,13 +55,16 @@ class Controller:
                                                                       name="ConnectToCameras")
 
     async def close(self):
-        self._kill_event.set()
+        logger.info("Closing controller...")
+        from skellycam.api.server.server_singleton import get_server_manager
+        get_server_manager().shutdown_server()
         await self.close_cameras()
 
     async def close_cameras(self):
         if self._camera_group is not None:
             logger.debug(f"Closing camera group...")
-            self._tasks.close_cameras_task = asyncio.create_task(self._close_camera_group(), name="CloseCameras")
+            # self._tasks.close_cameras_task = asyncio.create_task(self._close_camera_group(), name="CloseCameras")
+            await self._close_camera_group()
             return
         logger.warning("No camera group to close!")
 

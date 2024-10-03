@@ -8,7 +8,6 @@ from skellycam.api.run_skellycam_server import run_server
 from skellycam.utilities.clean_path import clean_path
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 
-
 logger = logging.getLogger(__name__)
 
 PATH_TO_SKELLYCAM_MAIN = str(Path(__file__).absolute())

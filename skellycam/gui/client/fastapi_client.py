@@ -1,4 +1,3 @@
-import json
 import logging
 
 from skellycam.api.server.server_constants import APP_URL

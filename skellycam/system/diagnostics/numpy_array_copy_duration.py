@@ -1,5 +1,6 @@
-import numpy as np
 import time
+
+import numpy as np
 
 # Create a fake 1080p image with random values
 fake_image = np.random.randint(0, 256, (1080, 1920, 3), dtype=np.uint8)

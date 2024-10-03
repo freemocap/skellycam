@@ -5,7 +5,6 @@ import time
 from typing import Union, Dict, Any, Optional, Callable
 
 import websocket
-from pydantic import BaseModel
 from websocket import WebSocketApp
 
 from skellycam.api.app.app_state import AppStateDTO
@@ -134,7 +133,6 @@ class WebSocketClient:
 
         if self.websocket:
             try:
-                self.websocket.send("")
                 self.websocket.close()
             except websocket.WebSocketConnectionClosedException:
                 pass

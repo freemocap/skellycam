@@ -2,13 +2,13 @@ import logging
 import multiprocessing
 import time
 
-from skellycam.api.server.server_manager import get_server_manager
+from skellycam.api.server.server_singleton import create_server_manager
 
 logger = logging.getLogger(__name__)
 
 
 def run_server(kill_event: multiprocessing.Event):
-    server_manager = get_server_manager(kill_event=kill_event)
+    server_manager = create_server_manager(kill_event=kill_event)
     server_manager.start_server()
     while server_manager.is_running:
         time.sleep(1)

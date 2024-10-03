@@ -9,7 +9,6 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfig
 from skellycam.core.cameras.camera.get_frame import get_frame
 from skellycam.core.cameras.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.shmemory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
-from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 

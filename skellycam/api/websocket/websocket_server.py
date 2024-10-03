@@ -183,4 +183,4 @@ class WebsocketServer:
                 break
             except Exception as e:
                 logger.error(f"Error while receiving message: {type(e).__name__} - {e}")
-                break
+                raise

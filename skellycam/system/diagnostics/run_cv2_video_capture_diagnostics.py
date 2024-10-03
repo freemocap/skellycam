@@ -1,8 +1,10 @@
-import cv2
 import time
-import numpy as np
 from typing import List, Tuple, Dict
+
+import cv2
+import numpy as np
 import pandas as pd
+
 
 def check_resolution(video_capture: cv2.VideoCapture, width: int, height: int) -> bool:
     return int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)) == width and int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) == height

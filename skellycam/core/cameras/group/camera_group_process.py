@@ -10,7 +10,6 @@ from skellycam.core.cameras.camera.camera_manager import CameraManager
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.cameras.group.update_instructions import UpdateInstructions
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1s, wait_100ms
