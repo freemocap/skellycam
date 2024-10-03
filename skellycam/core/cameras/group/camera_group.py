@@ -14,29 +14,30 @@ class CameraGroup:
     def __init__(
             self,
             ipc_queue: multiprocessing.Queue,
-            process_kill_event: multiprocessing.Event,
+            global_kill_event: multiprocessing.Event,
     ):
+        self._kill_camera_group_flag = multiprocessing.Value('b', False)
         self._update_queue = multiprocessing.Queue()  # Update camera configs
         self._ipc_queue = ipc_queue
-        self._process = CameraGroupProcess(config_update_queue=self._update_queue,
-                                           ipc_queue=self._ipc_queue,
-                                           process_kill_event=process_kill_event,
-                                           )
-        self._app_state: AppState = get_app_state()
+        self._camera_group_process = CameraGroupProcess(config_update_queue=self._update_queue,
+                                                        ipc_queue=self._ipc_queue,
+                                                        kill_camera_group_flag=self._kill_camera_group_flag,
+                                                        global_kill_event=global_kill_event,
+                                                        )
 
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")
-        await self._process.start()
+        await self._camera_group_process.start()
         self._ipc_queue.put(
-            SubProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
+            SubProcessStatus.from_process(self._camera_group_process.process, parent_pid=os.getpid()))
 
     async def close(self):
         logger.debug("Closing camera group")
-        self._app_state.kill_camera_group_flag.value = True
-        if self._process:
-            await self._process.close()
+        self._kill_camera_group_flag.value = True
+        if self._camera_group_process:
+            await self._camera_group_process.close()
         self._ipc_queue.put(
-            SubProcessStatus.from_process(self._process.process, parent_pid=os.getpid()))
+            SubProcessStatus.from_process(self._camera_group_process.process, parent_pid=os.getpid()))
         logger.info("Camera group closed.")
 
     async def update_camera_configs(self, update_instructions: UpdateInstructions):

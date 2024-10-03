@@ -15,7 +15,7 @@ class CameraGroupOrchestrator(BaseModel):
     new_multi_frame_put_in_shm: multiprocessing.Event = Field(default_factory=multiprocessing.Event)
     frame_loop_count: int = -1
     _kill_camera_group_flag: Annotated[multiprocessing.Value, SkipValidation] = PrivateAttr()
-    _process_kill_event: Annotated[multiprocessing.Event, SkipValidation] = PrivateAttr()
+    _global_kill_event: Annotated[multiprocessing.Event, SkipValidation] = PrivateAttr()
 
     pause_when_able: bool = False
     frame_loop_paused: bool = False
@@ -23,22 +23,22 @@ class CameraGroupOrchestrator(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         self._kill_camera_group_flag = data.get('_kill_camera_group_flag')
-        self._process_kill_event = data.get('_process_kill_event')
-
+        self._global_kill_event = data.get('_global_kill_event')
 
     @classmethod
     def from_camera_configs(cls,
                             camera_configs: CameraConfigs,
                             kill_camera_group_flag: multiprocessing.Value,
-                            process_kill_event: multiprocessing.Event):
+                            global_kill_event: multiprocessing.Event):
         return cls(
             camera_triggers={
                 camera_id: CameraTriggers.from_camera_id(camera_id=camera_id,
-                                                         kill_camera_group_flag=kill_camera_group_flag)
+                                                         kill_camera_group_flag=kill_camera_group_flag,
+                                                         global_kill_event=global_kill_event)
                 for camera_id, camera_config in camera_configs.items()
             },
             _kill_camera_group_flag=kill_camera_group_flag,
-            _process_kill_event=process_kill_event
+            _global_kill_event=global_kill_event
         )
 
     @property
@@ -47,7 +47,7 @@ class CameraGroupOrchestrator(BaseModel):
 
     @property
     def should_continue(self):
-        return not self._kill_camera_group_flag.value and not self._process_kill_event.is_set()
+        return not self._kill_camera_group_flag.value and not self._global_kill_event.is_set()
 
     @property
     def cameras_ready(self):
@@ -109,7 +109,8 @@ class CameraGroupOrchestrator(BaseModel):
         # 4 - wait for all cameras to retrieve the frame and put it in shared memory
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (start) - Wait for new frames to be available")
         self.await_new_frames_available()
-        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #4 (finish) - New frames are available in shared memory!")
+        logger.loop(
+            f"**Frame Loop #{self.frame_loop_count}** - Step #4 (finish) - New frames are available in shared memory!")
 
         # 5 - Trigger FrameListener to send a multi-frame payload to the FrameRouter
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (start) - Fire escape multi-frame trigger")
@@ -117,9 +118,11 @@ class CameraGroupOrchestrator(BaseModel):
         logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #5 (finish) - Escape multi-frame trigger fired!")
 
         # 6 - wait for the frame to be copied from the `write` buffer to the `read` buffer
-        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
+        logger.loop(
+            f"**Frame Loop #{self.frame_loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
         self._await_mf_copied_from_shm()
-        logger.loop(f"**Frame Loop #{self.frame_loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
+        logger.loop(
+            f"**Frame Loop #{self.frame_loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
 
         # 7 - Make sure all the triggers are as they should be
         logger.loop(
@@ -209,5 +212,5 @@ class CameraGroupOrchestrator(BaseModel):
                 [triggers.new_frame_available_trigger.is_set() for triggers in self.camera_triggers.values()]
             )
             if self.new_frames_available or any_new:
-                raise AssertionError(f"New frames available trigger not reset properly? `new_frame_available_trigger`: {self.new_frames_available}, `any_new`: {any_new}")
-
+                raise AssertionError(
+                    f"New frames available trigger not reset properly? `new_frame_available_trigger`: {self.new_frames_available}, `any_new`: {any_new}")

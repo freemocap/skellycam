@@ -49,7 +49,6 @@ class GUIState(QWidget):
             self._latest_app_state_dto = app_state_dto
 
             self._record_frames_flag_status = app_state_dto.record_frames_flag_status
-            self._kill_camera_group_flag_status = app_state_dto.kill_camera_group_flag_status
 
             self._available_devices = app_state_dto.available_devices
             self._connected_camera_configs = app_state_dto.camera_configs
@@ -104,15 +103,6 @@ class GUIState(QWidget):
         with QMutexLocker(self._mutex_lock):
             self._record_frames_flag_status = value
 
-    @property
-    def kill_camera_group_flag_status(self) -> bool:
-        with QMutexLocker(self._mutex_lock):
-            return self._kill_camera_group_flag_status
-
-    @kill_camera_group_flag_status.setter
-    def kill_camera_group_flag_status(self, value: bool) -> None:
-        with QMutexLocker(self._mutex_lock):
-            self._kill_camera_group_flag_status = value
 
     @property
     def recording_info(self) -> Optional[RecordingInfo]:

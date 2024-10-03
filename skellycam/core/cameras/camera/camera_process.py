@@ -17,23 +17,22 @@ class CameraProcess:
     def __init__(self,
                  config: CameraConfig,
                  shared_memory_names: SharedMemoryNames,
-                 triggers: CameraTriggers,
+                 camera_triggers: CameraTriggers,
                  kill_camera_group_flag: multiprocessing.Value,
-                 process_kill_event: multiprocessing.Event
+                 global_kill_event: multiprocessing.Event
                  ):
         self._config = config
         self._config_update_queue = multiprocessing.Queue()  # Queue for updating camera configuration
-        self._kill_camera_group_flag = kill_camera_group_flag
-        self._close_self_flag = multiprocessing.Value("b", False)  # Shut down ONLY THIS camera process
+        self._camera_triggers = camera_triggers
+
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=f"Camera{self._config.camera_id}",
                                                 args=(self._config,
                                                       shared_memory_names,
-                                                      triggers,
+                                                      self._camera_triggers,
                                                       self._config_update_queue,
-                                                      self._close_self_flag,
-                                                      self._kill_camera_group_flag,
-                                                      process_kill_event,
+                                                      kill_camera_group_flag,
+                                                      global_kill_event,
                                                       )
                                                 )
 
@@ -46,9 +45,9 @@ class CameraProcess:
 
     def close(self):
         logger.info(f"Closing camera {self._config.camera_id}")
-        self._close_self_flag.value = True
+        self._camera_triggers.close_self_event.set()
         self._process.join()
-        self._config_update_queue.close()
+        logger.info(f"Camera {self._config.camera_id} closed!")
 
     def is_alive(self) -> bool:
         return self._process.is_alive()
@@ -60,60 +59,59 @@ class CameraProcess:
     @staticmethod
     def _run_process(config: CameraConfig,
                      shared_memory_names: SharedMemoryNames,
-                     triggers: CameraTriggers,
+                     camera_triggers: CameraTriggers,
                      config_update_queue: multiprocessing.Queue,
-                     close_self_flag: multiprocessing.Value,
                      kill_camera_group_flag: multiprocessing.Value,
-                        process_kill_event: multiprocessing.Event
+                     global_kill_event: multiprocessing.Event
                      ):
-        camera_shared_memory = CameraSharedMemory.recreate(camera_config=config,
-                                                           shared_memory_names=shared_memory_names)
-
-        cv2_video_capture = create_cv2_video_capture(config)
+        cv2_video_capture = None
         try:
+            camera_shared_memory = CameraSharedMemory.recreate(camera_config=config,
+                                                               shared_memory_names=shared_memory_names)
+
+            cv2_video_capture = create_cv2_video_capture(config)
             logger.debug(f"Camera {config.camera_id} process started")
             apply_camera_configuration(cv2_video_capture, config)
-            triggers.set_ready()
+            camera_triggers.set_ready()
 
             run_trigger_listening_loop(config=config,
                                        cv2_video_capture=cv2_video_capture,
                                        camera_shared_memory=camera_shared_memory,
-                                       triggers=triggers,
+                                       camera_triggers=camera_triggers,
                                        config_update_queue=config_update_queue,
-                                       close_self_flag=close_self_flag,
                                        kill_camera_group_flag=kill_camera_group_flag,
-                                       process_kill_event=process_kill_event,
+                                       global_kill_event=global_kill_event,
                                        )
             logger.debug(f"Camera {config.camera_id} process completed")
         finally:
             logger.debug(f"Releasing camera {config.camera_id} `cv2.VideoCapture` and shutting down CameraProcess")
-            cv2_video_capture.release()
+            if cv2_video_capture:
+                cv2_video_capture.release()
 
 
 def run_trigger_listening_loop(
         config: CameraConfig,
         cv2_video_capture: cv2.VideoCapture,
         camera_shared_memory: CameraSharedMemory,
-        triggers: CameraTriggers,
+        camera_triggers: CameraTriggers,
         config_update_queue: multiprocessing.Queue,
-        close_self_flag: multiprocessing.Value,
         kill_camera_group_flag: multiprocessing.Value,
-        process_kill_event: multiprocessing.Event
+        global_kill_event: multiprocessing.Event
 ):
-    triggers.await_initial_trigger(close_self_flag=close_self_flag)
+    camera_triggers.await_initial_trigger()
     logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
     frame_number = 0
     try:
         # Trigger listening loop
-        while not kill_camera_group_flag.value and not close_self_flag.value and not process_kill_event.is_set():
+        while not kill_camera_group_flag.value and not camera_triggers.close_self_event.is_set() and not global_kill_event.is_set():
 
             if config_update_queue.qsize() > 0:
                 logger.debug(f"Camera {config.camera_id} received new config update - setting `not ready`")
-                triggers.set_not_ready()
+                camera_triggers.set_not_ready()
                 new_config = config_update_queue.get()
                 apply_camera_configuration(cv2_video_capture, new_config)
                 logger.debug(f"Camera {config.camera_id} updated with new config: {new_config} - setting `ready`")
-                triggers.set_ready()
+                camera_triggers.set_ready()
 
             logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
 
@@ -121,14 +119,14 @@ def run_trigger_listening_loop(
                 camera_id=config.camera_id,
                 cap=cv2_video_capture,
                 camera_shared_memory=camera_shared_memory,
-                triggers=triggers,
+                triggers=camera_triggers,
                 frame_number=frame_number,
-                close_self_flag=close_self_flag,
             )
             logger.loop(f"Camera {config.camera_id} got frame# {frame_number} successfully")
     except Exception as e:
         logger.error(f"Camera {config.camera_id} trigger listening loop ended with exception: {e}")
         raise
     finally:
-        logger.debug(f"Camera {config.camera_id} trigger listening loop ended: close_self_flag={close_self_flag.value}, "
-                     f"kill_camera_group_flag={kill_camera_group_flag.value}")
+        logger.debug(
+            f"Camera {config.camera_id} trigger listening loop ended: close_self_event.is_set()={camera_triggers.close_self_event.is_set()}, "
+            f"kill_camera_group_flag={kill_camera_group_flag.value}")

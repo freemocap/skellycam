@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import multiprocessing
 import threading
@@ -64,7 +65,6 @@ class UvicornServerManager:
         self._kill_event.set()
         if self.server:
             self.server.should_exit = True
-            self.server.shutdown()
             waiting_time = 0
             while self.server_thread.is_alive():
                 waiting_time += 1

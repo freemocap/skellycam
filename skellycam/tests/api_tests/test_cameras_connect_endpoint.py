@@ -15,4 +15,4 @@ async def test_camera_connect(controller_fixture: Controller,
 
     assert camera_group.camera_ids is not None
     assert camera_group.camera_ids == list(camera_configs_fixture.keys())
-    assert camera_group._process is None
+    assert camera_group._camera_group_process is None

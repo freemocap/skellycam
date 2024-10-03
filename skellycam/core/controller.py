@@ -56,8 +56,6 @@ class Controller:
 
     async def close(self):
         logger.info("Closing controller...")
-        from skellycam.api.server.server_singleton import get_server_manager
-        get_server_manager().shutdown_server()
         await self.close_cameras()
 
     async def close_cameras(self):
@@ -86,7 +84,7 @@ class Controller:
         self._app_state.kill_camera_group_flag.value = False
         self._app_state.record_frames_flag.value = False
 
-        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue, process_kill_event=self._kill_event)
+        self._camera_group = CameraGroup(ipc_queue=self._ipc_queue, global_kill_event=self._kill_event)
         await self._camera_group.start()
         logger.success("Camera group started successfully")
 
@@ -101,10 +99,10 @@ class Controller:
 CONTROLLER = None
 
 
-def create_controller(kill_event:multiprocessing.Event) -> Controller:
+def create_controller() -> Controller:
     global CONTROLLER
     if not CONTROLLER:
-        CONTROLLER = Controller(kill_event=kill_event)
+        CONTROLLER = Controller()
     return CONTROLLER
 
 

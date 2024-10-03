@@ -138,18 +138,6 @@ class AppState:
             self._record_frames_flag = value
         self._ipc_queue.put(self.state_dto())
 
-    @property
-    def kill_camera_group_flag(self):
-        if self._kill_camera_group_flag is None:
-            return False
-        with self._lock:
-            return self._kill_camera_group_flag
-
-    @kill_camera_group_flag.setter
-    def kill_camera_group_flag(self, value: multiprocessing.Value):
-        with self._lock:
-            self._kill_camera_group_flag = value
-        self._ipc_queue.put(self.state_dto())
 
     @property
     def api_call_history(self):
@@ -220,7 +208,6 @@ class AppStateDTO(BaseModel):
     websocket_status: Optional[WebSocketStatus]
 
     record_frames_flag_status: bool
-    kill_camera_group_flag_status: bool
 
     @classmethod
     def from_state(cls, state: AppState):
@@ -229,7 +216,6 @@ class AppStateDTO(BaseModel):
             available_devices=state.available_devices,
             websocket_status=state.websocket_status,
             record_frames_flag_status=state.record_frames_flag.value,
-            kill_camera_group_flag_status=state.kill_camera_group_flag.value,
             api_call_history=state.api_call_history,
             subprocess_statuses=state.subprocess_statuses,
             task_statuses=state.task_statuses,

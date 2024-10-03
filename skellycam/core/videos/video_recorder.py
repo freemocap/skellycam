@@ -1,6 +1,6 @@
 import logging
+from collections import deque
 from pathlib import Path
-from typing import List
 
 import cv2
 from pydantic import BaseModel, ValidationError
@@ -17,7 +17,7 @@ class VideoRecorder(BaseModel):
     video_path: str
     video_writer: cv2.VideoWriter
     camera_config: CameraConfig
-    _frames_to_write: List[FramePayloadDTO] = []
+    _frames_to_write: deque[FramePayloadDTO] = deque()
 
     class Config:
         arbitrary_types_allowed = True
@@ -54,7 +54,7 @@ class VideoRecorder(BaseModel):
         if not self.video_writer.isOpened():
             raise ValidationError(f"VideoWriter not open (before adding frame)!")
 
-        frame = self._frames_to_write.pop(0)
+        frame = self._frames_to_write.popleft()
         self._validate_frame(frame)
         self.video_writer.write(frame.image)
         logger.loop(f"Added frame# {frame.frame_number} to VideoSaver for camera {self.camera_id}")
@@ -91,14 +91,17 @@ class VideoRecorder(BaseModel):
             raise ValidationError(
                 f"Frame camera_id {frame.camera_id} does not match self.camera_config camera_id {self.camera_config.camera_id}")
         if frame.image.shape != (
-        self.camera_config.resolution.height, self.camera_config.resolution.width, self.camera_config.color_channels):
+                self.camera_config.resolution.height, self.camera_config.resolution.width,
+                self.camera_config.color_channels):
             raise ValidationError(f"Frame shape {frame.image.shape} does not match self.camera_config shape "
                                   f"({self.camera_config.resolution.height}, {self.camera_config.resolution.width}, {self.camera_config.color_channels})")
 
     def _clean_up_empty_video_file(self, min_size_bytes=10_000):
+
         if Path(self.video_path).exists() and Path(self.video_path).stat().st_size < min_size_bytes:
             Path(self.video_path).unlink()
             logger.trace(f"Deleted empty video file at {self.video_path}")
+
     def close(self):
         self.video_writer.release()
         self._clean_up_empty_video_file()

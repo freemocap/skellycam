@@ -18,7 +18,6 @@ def get_frame(camera_id: CameraId,
               camera_shared_memory: CameraSharedMemory,
               triggers: CameraTriggers,
               frame_number: int,
-              close_self_flag: multiprocessing.Value,
               ) -> int:
     """
     THIS IS WHERE THE MAGIC HAPPENS
@@ -40,7 +39,7 @@ def get_frame(camera_id: CameraId,
     """
     logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `grab` trigger...")
     frame_metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=frame_number)
-    triggers.await_grab_trigger(close_self_flag=close_self_flag)
+    triggers.await_grab_trigger()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
     grab_success = cap.grab()  # grab the frame from the camera, but don't decode it yet
@@ -51,7 +50,7 @@ def get_frame(camera_id: CameraId,
     else:
         raise ValueError(f"Failed to grab frame from camera {camera_id}")
 
-    triggers.await_retrieve_trigger(close_self_flag=close_self_flag)
+    triggers.await_retrieve_trigger()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
     # decode the frame buffer into an image! Wow, magic!
