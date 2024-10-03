@@ -40,7 +40,7 @@ class RecordingPanel(QWidget):
 
     def update_widget(self):
         
-        logger.loop(f"Updating {self.__class__.__name__}")
+        logger.gui(f"Updating {self.__class__.__name__}")
         # self._frontend_framerate_label.setText(f"Frontend {self._gui_state.frontend_framerate_stats.median_std_str}")
         if self._gui_state.record_frames_flag_status:
             self._start_recording_button.setEnabled(False)
@@ -58,7 +58,7 @@ class RecordingPanel(QWidget):
                     f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
 
     def _start_recording(self):
-        logger.debug("Starting Recording...")
+        logger.gui("Starting Recording...")
         if self._gui_state.record_frames_flag_status:
             raise ValueError("Recording is already in progress! Button should be disabled.")
         self._start_recording_button.setEnabled(False)
@@ -69,7 +69,7 @@ class RecordingPanel(QWidget):
         # self._start_recording_button.setStyleSheet("background-color: #AA0111 ")
 
     def _stop_recording(self):
-        logger.debug("Stopping Recording.")
+        logger.gui("Stopping Recording.")
         if not self._gui_state.is_recording:
             raise ValueError("No recording in progress! Button should be disabled.")
         self._client.stop_recording()

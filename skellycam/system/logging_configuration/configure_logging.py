@@ -16,6 +16,7 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # Add custom log levels
+logging.addLevelName(LogLevels.GUI.value, "GUI")
 logging.addLevelName(LogLevels.LOOP.value, "LOOP")
 logging.addLevelName(LogLevels.TRACE.value, "TRACE")
 logging.addLevelName(LogLevels.SUCCESS.value, "SUCCESS")
@@ -31,6 +32,7 @@ def add_log_method(level: LogLevels, name: str):
 
 
 def configure_logging(level: LogLevels = LogLevels.DEBUG):
+    add_log_method(LogLevels.GUI, 'gui')
     add_log_method(LogLevels.LOOP, 'loop')
     add_log_method(LogLevels.TRACE, 'trace')
     add_log_method(LogLevels.API, 'api')

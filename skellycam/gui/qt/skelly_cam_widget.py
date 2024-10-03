@@ -44,34 +44,34 @@ class SkellyCamWidget(QWidget):
 
 
     def update_widget(self):
-        logger.loop(f"Updating {self.__class__.__name__}")
+        logger.gui(f"Updating {self.__class__.__name__}")
         self.recording_panel.update_widget()
         self.camera_view_grid.update_widget()
         if self.camera_view_grid.camera_view_sizes != self._gui_state.camera_view_sizes:
-            logger.trace(f"Sending updated view sizes to backend: {self.camera_view_grid.camera_view_sizes}")
             if self.camera_view_grid.camera_view_sizes.too_small():
                 return
+            logger.gui(f"Sending updated view sizes to backend: {self.camera_view_grid.camera_view_sizes}")
             self._gui_state.camera_view_sizes = self.camera_view_grid.camera_view_sizes
             self._client.send_message(self.camera_view_grid.camera_view_sizes.model_dump_json())
 
 
     def detect_available_cameras(self):
-        logger.info("Connecting to cameras")
+        logger.gui("Connecting to cameras")
         self._client.detect_cameras()
 
     def connect_to_cameras(self):
-        logger.info("Connecting to cameras")
+        logger.gui("Connecting to cameras")
         self._client.connect_to_cameras()
 
     def close_cameras(self):
-        logger.info("Closing cameras")
+        logger.gui("Closing cameras")
         self._client.close_cameras()
         self.camera_view_grid.clear_camera_views()
 
     def apply_settings_to_cameras(self):
-        logger.info("Applying settings to cameras")
+        logger.gui("Applying settings to cameras")
         self._client.apply_settings_to_cameras(camera_configs=self._gui_state.user_selected_camera_configs)
 
     def closeEvent(self, event):
-        logger.info("Close event detected - closing camera group frame worker")
+        logger.gui("Close event detected - closing camera group frame worker")
         self.close()

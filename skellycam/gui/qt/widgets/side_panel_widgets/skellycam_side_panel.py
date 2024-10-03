@@ -62,5 +62,5 @@ class SkellyCamControlPanel(QWidget):
 
     def update_widget(self):
         
-        logger.loop(f"Updating {self.__class__.__name__}")
+        logger.gui(f"Updating {self.__class__.__name__}")
         self._parameter_tree_widget.update_widget()

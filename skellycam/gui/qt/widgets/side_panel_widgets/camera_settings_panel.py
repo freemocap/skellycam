@@ -46,7 +46,7 @@ class CameraSettingsPanel(QWidget):
 
     def update_widget(self):
         
-        logger.loop(f"Updating {self.__class__.__name__}")
+        logger.gui(f"Updating {self.__class__.__name__}")
         new_available_devices = self._gui_state.available_devices
         available_devices_changed = not new_available_devices == self._available_devices
         # camera_configs_changed = not new_camera_configs == self._user_selected_camera_configs # TODO (or prob not bc we're gonna scrap this ui) - specify when user selection differs from pp state
@@ -55,7 +55,7 @@ class CameraSettingsPanel(QWidget):
             self._update_parameter_tree()
 
     def _update_parameter_tree(self):
-        logger.trace("Updating Camera Parameter Tree")
+        logger.gui("Updating Camera Parameter Tree")
         self._available_devices = self._gui_state.available_devices
         if not self._user_selected_camera_configs or len(self._user_selected_camera_configs) == 0:
             return

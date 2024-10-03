@@ -69,6 +69,8 @@ class WebsocketServer:
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending listener task...")
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
             logger.exception(f"Error in websocket relay: {e.__class__}: {e}")
             raise
@@ -128,6 +130,8 @@ class WebsocketServer:
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending listener task...")
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
             raise

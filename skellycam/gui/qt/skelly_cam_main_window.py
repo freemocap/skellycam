@@ -104,7 +104,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._client.connect_websocket()
 
     def update_widget(self):
-        logger.loop(f"Updating {self.__class__.__name__}")
+        logger.gui(f"Updating {self.__class__.__name__}")
         if self._kill_event.is_set():
             self.close()
             return
@@ -138,7 +138,7 @@ class SkellyCamMainWindow(QMainWindow):
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
 
-        logger.info("Shutting down client server...")
+        logger.gui("Shutting down client server...")
         self._kill_event.set()
         remove_empty_directories(get_default_skellycam_base_folder_path())
 
@@ -150,7 +150,7 @@ def remove_empty_directories(root_dir: Union[str, Path]):
     """
     for path in Path(root_dir).rglob("*"):
         if path.is_dir() and not any(path.iterdir()):
-            logger.info(f"Removing empty directory: {path}")
+            logger.gui(f"Removing empty directory: {path}")
             path.rmdir()
         elif path.is_dir() and any(path.iterdir()):
             remove_empty_directories(path)
@@ -168,6 +168,6 @@ if __name__ == "__main__":
     main_window.show()
     app.exec()
     for process in multiprocessing.active_children():
-        logger.info(f"Terminating process: {process}")
+        logger.gui(f"Terminating process: {process}")
         process.terminate()
     sys.exit()
