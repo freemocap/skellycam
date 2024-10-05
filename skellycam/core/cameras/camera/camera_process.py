@@ -11,6 +11,8 @@ from skellycam.core.cameras.camera.opencv.create_cv2_video_capture import create
 from skellycam.core.shmemory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
 
 logger = logging.getLogger(__name__)
+AUTO_EXPOSURE_SETTING = 3 # 0.75
+MANUAL_EXPOSURE_SETTING = 1 #0.25
 
 
 class CameraProcess:
@@ -70,6 +72,7 @@ class CameraProcess:
                                                                shared_memory_names=shared_memory_names)
 
             cv2_video_capture = create_cv2_video_capture(config)
+            # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... Linux appears to be always set to AUTO by default and gets weird results when set to MANUAL? And sometimes you have to unplug/replug the camera to fix it?
             logger.debug(f"Camera {config.camera_id} process started")
             apply_camera_configuration(cv2_video_capture, config)
             camera_triggers.set_ready()
@@ -86,6 +89,7 @@ class CameraProcess:
         finally:
             logger.debug(f"Releasing camera {config.camera_id} `cv2.VideoCapture` and shutting down CameraProcess")
             if cv2_video_capture:
+                # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... See above note
                 cv2_video_capture.release()
 
 

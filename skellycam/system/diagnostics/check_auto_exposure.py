@@ -4,13 +4,15 @@ from typing import Union
 import cv2
 import numpy as np
 
-MIN_EXPOSURE = -13
-MAX_EXPOSURE = -3
+MIN_EXPOSURE = -9
+MAX_EXPOSURE = -5
 DEFAULT_EXPOSURE = -6
 
 EXPOSURE_SETTINGS = [DEFAULT_EXPOSURE, 'AUTO']
 EXPOSURE_SETTINGS.extend(list(range(MIN_EXPOSURE, MAX_EXPOSURE + 1)))
 
+HYPOTHETICAL_AUTO_EXPOSURE_SETTINGS = [0.75, 3]
+HYPOTHETICAL_MANUAL_EXPOSURE_SETTINGS = [0.25, 1]
 
 def run_frame_loop(cap: cv2.VideoCapture, exposure_setting: int, auto_manual_setting:str, frames: int = 10) -> dict:
     """Capture the mean brightness of frames from the video capture device.
@@ -63,8 +65,7 @@ def run_frame_loop(cap: cv2.VideoCapture, exposure_setting: int, auto_manual_set
     }
 
 
-HYPOTHETICAL_AUTO_EXPOSURE_SETTINGS = [0.75, 3]
-HYPOTHETICAL_MANUAL_EXPOSURE_SETTINGS = [0.25, 1]
+
 def main():
     if platform.system() == "Windows":
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
