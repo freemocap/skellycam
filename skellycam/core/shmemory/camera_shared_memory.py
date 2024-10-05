@@ -26,7 +26,6 @@ GroupSharedMemoryNames = Dict[CameraId, SharedMemoryNames]
 
 class CameraSharedMemory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    camera_config: CameraConfig
     image_shm: SharedMemoryElement
     metadata_shm: SharedMemoryElement
 
@@ -45,7 +44,6 @@ class CameraSharedMemory(BaseModel):
         )
 
         return cls(
-            camera_config=camera_config,
             image_shm=image_shm,
             metadata_shm=metadata_shm,
         )
@@ -65,7 +63,6 @@ class CameraSharedMemory(BaseModel):
             dtype=FRAME_METADATA_DTYPE,
         )
         return cls(
-            camera_config=camera_config,
             image_shm=image_shm,
             metadata_shm=metadata_shm,
         )

@@ -43,7 +43,7 @@ class Controller:
                                                                   old_configs=self._app_state.camera_configs)
             if not update_instructions.reset_all:
                 logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
-                await self._camera_group.update_camera_configs(update_instructions)
+                await self._camera_group.update_camera_configs(camera_configs=camera_configs, update_instructions=update_instructions)
                 return
             logger.debug(f"Updating CameraGroup requires reset - closing existing group...")
             await self._close_camera_group()

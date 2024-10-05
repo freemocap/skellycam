@@ -7,8 +7,9 @@ from typing import Optional, Dict
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.api.app.app_state import AppStateDTO, SubProcessStatus
+from skellycam.api.app.app_state import AppStateDTO, SubProcessStatus, get_app_state
 from skellycam.api.websocket.ipc import get_ipc_queue
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
@@ -30,6 +31,7 @@ class WebsocketServer:
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
         self.shutdown_relay_flag = asyncio.Event()
         self._frontend_image_sizes: Optional[Dict[str, int]]  = None
+        self._app_state = get_app_state()
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -101,6 +103,7 @@ class WebsocketServer:
         elif isinstance(message, CurrentFrameRate):
             logger.loop(f"Relaying CurrentFrameRate to frontend")
             await self.websocket.send_json(message.model_dump_json())
+
         else:
             raise ValueError(f"Unknown message type: {type(message)}")
 

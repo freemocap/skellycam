@@ -59,6 +59,8 @@ class CameraGroupSharedMemory(BaseModel):
     def multi_frame_number(self) -> int:
         return self.multi_frame_number_shm.get()
 
+
+
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
                                           group_shm_names=self.shared_memory_names,
@@ -71,7 +73,7 @@ class CameraGroupSharedMemory(BaseModel):
         if previous_payload is None:
             payload = MultiFramePayload.create_initial(camera_configs=self.camera_configs)
         else:
-            payload = MultiFramePayload.from_previous(previous=previous_payload)
+            payload = MultiFramePayload.from_previous(previous=previous_payload, camera_configs=self.camera_configs)
         for camera_id, camera_shared_memory in self.camera_shms.items():
             frame = camera_shared_memory.retrieve_frame()
             payload.add_frame(frame)

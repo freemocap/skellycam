@@ -33,19 +33,19 @@ class CameraGroup:
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")
         await self._camera_group_process.start()
-        self._ipc_queue.put(
-            SubProcessStatus.from_process(self._camera_group_process.process, parent_pid=os.getpid()))
 
     async def close(self):
         logger.debug("Closing camera group")
         self._kill_camera_group_flag.value = True
         if self._camera_group_process:
             await self._camera_group_process.close()
-        self._ipc_queue.put(
-            SubProcessStatus.from_process(self._camera_group_process.process, parent_pid=os.getpid()))
         logger.info("Camera group closed.")
 
-    async def update_camera_configs(self, update_instructions: UpdateInstructions):
+    async def update_camera_configs(self,
+                                    camera_configs: CameraConfigs,
+                                    update_instructions: UpdateInstructions):
         logger.debug(
             f"Updating Camera Configs with instructions: {update_instructions}")
         self._update_queue.put(update_instructions)
+        self._ipc_queue.put(camera_configs)
+
