@@ -2,6 +2,7 @@ import argparse
 import logging
 import multiprocessing
 import sys
+import time
 from pathlib import Path
 
 from skellycam.api.run_skellycam_server import run_server
@@ -30,14 +31,14 @@ def main(qt: bool = True) -> None:
     if qt:
         from skellycam.gui.gui_main import gui_main
 
-
+        backend_process = multiprocessing.Process(target=run_server, args=(kill_event,))
+        logger.info("Starting backend process")
+        backend_process.start()
+        time.sleep(1) # Give the backend time to startup
         frontend_process = multiprocessing.Process(target=gui_main, args=(kill_event,))
         logger.info("Starting frontend process")
         frontend_process.start()
 
-        backend_process = multiprocessing.Process(target=run_server, args=(kill_event,))
-        logger.info("Starting backend process")
-        backend_process.start()
 
         while frontend_process.is_alive() and backend_process.is_alive():
             frontend_process.join(timeout=1)
