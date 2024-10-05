@@ -9,6 +9,7 @@ from PySide6 import QtGui
 from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
 
 from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
+from skellycam.utilities.cross_platform_start_file import open_file
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,6 @@ class SkellyCamDirectoryViewWidget(QWidget):
         open = menu.addAction("Open file")
         open.triggered.connect(self.open_file)
         load_session = menu.addAction("Load session folder")
-        load_session.triggered.connect(self.load_session_folder)
 
         cursor = QtGui.QCursor()
         menu.exec_(cursor.pos())
@@ -90,7 +90,7 @@ class SkellyCamDirectoryViewWidget(QWidget):
     def open_file(self):
         index = self._tree_view_widget.currentIndex()
         file_path = self._file_system_model.filePath(index)
-        os.startfile(file_path)
+        open_file(file_path)
 
 
 if __name__ == "__main__":
