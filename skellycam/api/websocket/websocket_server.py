@@ -162,7 +162,7 @@ class WebsocketServer:
 
     async def _shutdown_image_relay_task(self):
         self.shutdown_relay_flag.set()
-        await self.frontend_image_relay_task
+        await asyncio.gather(self.frontend_image_relay_task)
         self.shutdown_relay_flag.clear()
 
     async def _listen_for_client_messages(self):
