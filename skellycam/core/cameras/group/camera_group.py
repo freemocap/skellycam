@@ -4,7 +4,7 @@ from typing import Optional
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_process import CameraGroupProcess
-from skellycam.core.cameras.group.update_instructions import UpdateInstructions
+from skellycam.core.cameras.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO
 
 logger = logging.getLogger(__name__)

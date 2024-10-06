@@ -10,7 +10,7 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group import (
     CameraGroup,
 )
-from skellycam.core.cameras.group.update_instructions import UpdateInstructions
+from skellycam.core.cameras.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.detection.detect_available_devices import detect_available_devices
 
 logger = logging.getLogger(__name__)
