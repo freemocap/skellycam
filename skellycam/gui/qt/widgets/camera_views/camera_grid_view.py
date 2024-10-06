@@ -109,6 +109,8 @@ class CameraViewGrid(QWidget):
                 single_camera_view.close()
                 self._camera_portrait_grid_layout.removeWidget(single_camera_view)
                 self._camera_landscape_grid_layout.removeWidget(single_camera_view)
+                single_camera_view.deleteLater()
+            self._single_camera_views = {}
         except Exception as e:
             logger.exception(f"Error clearing camera layout dictionary: {e}")
             raise

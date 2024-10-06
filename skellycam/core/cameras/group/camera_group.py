@@ -48,10 +48,9 @@ class CameraGroup:
         logger.info("Camera group closed.")
 
     async def update_camera_configs(self,
-                                    camera_configs: CameraConfigs,
                                     update_instructions: UpdateInstructions):
         logger.debug(
             f"Updating Camera Configs with instructions: {update_instructions}")
         self._update_queue.put(update_instructions)
-        self._ipc_queue.put(camera_configs)
+
 

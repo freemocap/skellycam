@@ -9,6 +9,7 @@ from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
 from skellycam.api.app.app_state import AppStateDTO, get_app_state
 from skellycam.api.websocket.ipc import get_ipc_queue
+from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory, CameraGroupSharedMemoryDTO
@@ -74,9 +75,6 @@ class WebsocketServer:
             logger.api("Client disconnected, ending listener task...")
         except asyncio.CancelledError:
             pass
-        except Exception as e:
-            logger.exception(f"Error in websocket relay: {e.__class__}: {e}")
-            raise
         finally:
             logger.info("Ending listener for frontend payload messages in queue...")
 
@@ -105,6 +103,7 @@ class WebsocketServer:
             f"Starting frontend image payload relay...")
         camera_group_shm_dto: Optional[CameraGroupSharedMemoryDTO] = None
         camera_group_shm: Optional[CameraGroupSharedMemory] = None
+        camera_configs: Optional[CameraConfigs] = None
         last_mf_number_read = -1
         mf_payload: Optional[MultiFramePayload] = None
         try:
@@ -113,6 +112,10 @@ class WebsocketServer:
                 if camera_group_shm_dto != self._app_state.camera_group_shm_dto:
                     camera_group_shm_dto = self._app_state.camera_group_shm_dto
                     camera_group_shm = CameraGroupSharedMemory.recreate(dto=camera_group_shm_dto)
+
+                if camera_configs != self._app_state.connected_camera_configs:
+                    camera_configs = self._app_state.connected_camera_configs
+                    camera_group_shm.camera_configs = camera_configs
 
                 if camera_group_shm is None:
                     await async_wait_1ms()
