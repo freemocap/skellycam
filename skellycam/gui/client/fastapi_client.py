@@ -21,9 +21,7 @@ class FastAPIClient:
         logger.gui("Client sending request to connect to WebSocket")
         self._ws_client.connect_websocket()
 
-    def connect_to_cameras(self):
-        logger.gui("Calling `cameras/connect` endpoint")
-        self._http_client.get("/cameras/connect")
+
 
     def detect_cameras(self):
         logger.gui("Calling `cameras/detect` endpoint")
@@ -46,6 +44,10 @@ class FastAPIClient:
     def stop_recording(self):
         logger.gui("Calling `/cameras/record/stop` endpoint")
         self._http_client.get("/cameras/record/stop")
+
+    def detect_and_connect_to_cameras(self):
+        logger.gui("Calling `cameras/connect` endpoint")
+        self._http_client.get("/cameras/connect/detect")
 
     def apply_settings_to_cameras(self, camera_configs: CameraConfigs):
         logger.gui("Calling `/cameras/connect/apply` endpoint")

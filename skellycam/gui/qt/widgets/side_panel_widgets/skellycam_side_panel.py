@@ -47,20 +47,33 @@ class SkellyCamControlPanel(QWidget):
         self._layout.addWidget(self.connect_cameras_button)
         self.connect_cameras_button.clicked.connect(self._skellycam_widget.connect_to_cameras)
 
-        self.apply_settings_to_cameras_button = QPushButton(
+        self._apply_settings_to_cameras_button = QPushButton(
             f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
         )
-        self.apply_settings_to_cameras_button.clicked.connect(self._skellycam_widget.apply_settings_to_cameras)
-        self._layout.addWidget(self.apply_settings_to_cameras_button)
+        self._apply_settings_to_cameras_button.clicked.connect(self._skellycam_widget.apply_settings_to_cameras)
+        self._apply_settings_to_cameras_button.setEnabled(False)
+        self._layout.addWidget(self._apply_settings_to_cameras_button)
 
         self._close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
+        self._close_cameras_button.setEnabled(False)
         self._layout.addWidget(self._close_cameras_button)
         self._close_cameras_button.clicked.connect(self._skellycam_widget.close_cameras)
 
+        # Camera Settings Panel
         self._parameter_tree_widget = CameraSettingsPanel(parent=self)
         self._layout.addWidget(self._parameter_tree_widget)
 
     def update_widget(self):
         
         logger.gui(f"Updating {self.__class__.__name__}")
+        if self.gui_state.available_devices:
+            self._apply_settings_to_cameras_button.setEnabled(True)
+        else:
+            self._apply_settings_to_cameras_button.setEnabled(False)
+
+        if self.gui_state.connected_camera_configs:
+            self._close_cameras_button.setEnabled(True)
+        else:
+            self._close_cameras_button.setEnabled(False)
+
         self._parameter_tree_widget.update_widget()

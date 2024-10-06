@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class AppState:
     def __init__(self):
-        self._camera_configs: Optional[CameraConfigs] = None
+        self._connected_camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
         self._websocket_status: Optional[WebSocketStatus] = None
 
@@ -41,19 +41,22 @@ class AppState:
 
 
     @property
-    def camera_configs(self) -> CameraConfigs:
+    def connected_camera_configs(self) -> CameraConfigs:
         with self._lock:
-            return self._camera_configs
+            return self._connected_camera_configs
 
-    @camera_configs.setter
-    def camera_configs(self, value):
+    @connected_camera_configs.setter
+    def connected_camera_configs(self, value):
         with self._lock:
-            if self._available_devices is None:
-                raise ValueError("Cannot set `camera_configs` if `available_cameras` is None! ")
-            if any([camera_id not in self._available_devices.keys() for camera_id in value.keys()]):
-                raise ValueError(
-                    f"Not all camera config id's [{value.keys()}] present in `available_camera` id's [{self._available_devices.keys()}]")
-            self._camera_configs = value
+            if value is None:
+                self._connected_camera_configs = None
+            else:
+                if self._available_devices is None:
+                    raise ValueError("Cannot set `camera_configs` if `available_cameras` is None! ")
+                if any([camera_id not in self._available_devices.keys() for camera_id in value.keys()]):
+                    raise ValueError(
+                        f"Not all camera config id's [{value.keys()}] present in `available_camera` id's [{self._available_devices.keys()}]")
+                self._connected_camera_configs = value
         self._ipc_queue.put(self.state_dto())
 
     @property
@@ -66,8 +69,8 @@ class AppState:
         with self._lock:
             self._available_devices = value
 
-            if self._camera_configs is None:
-                self._camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
+            if self._connected_camera_configs is None:
+                self._connected_camera_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
                                         self._available_devices.keys()}
         self._ipc_queue.put(self.state_dto())
 
@@ -104,13 +107,13 @@ class AppState:
         return AppStateDTO.from_state(self)
 
     def create_camera_group_shm(self):
-        if self._camera_configs is None:
+        if self._connected_camera_configs is None:
             raise ValueError("Cannot create camera group shared memory without camera configs!")
 
         if self._camera_group_shm is not None:
             self.close_camera_group_shm()
 
-        self._camera_group_shm = CameraGroupSharedMemory.create(camera_configs=self._camera_configs)
+        self._camera_group_shm = CameraGroupSharedMemory.create(camera_configs=self._connected_camera_configs)
         self._camera_group_shm_dto = self._camera_group_shm.to_dto()
         self._camera_group_shm_valid_flag.value = True
 
@@ -141,7 +144,7 @@ class AppStateDTO(BaseModel):
     @classmethod
     def from_state(cls, state: AppState):
         return cls(
-            camera_configs=state.camera_configs,
+            camera_configs=state.connected_camera_configs,
             available_devices=state.available_devices,
             websocket_status=state.websocket_status,
             record_frames_flag_status=state.record_frames_flag.value,

@@ -28,10 +28,10 @@ async def cameras_apply_config_route(
 
 
 @connect_cameras_router.get(
-    "/connect",
-    summary="Connect to all available cameras with default settings",
+    "/connect/detect",
+    summary="Detect and connect to all available cameras with default settings",
 )
-async def cameras_connect_route():
+async def detect_and_connect_to_cameras_route():
     logger.api("Received `/connect` GET request...")
     try:
         await get_controller().connect_to_cameras()

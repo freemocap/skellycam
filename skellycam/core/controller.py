@@ -32,25 +32,26 @@ class Controller:
         return self._ipc_queue
 
     async def detect_available_cameras(self):
-        # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
+        # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
         logger.info(f"Detecting available cameras...")
         self._tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(),
                                                                         name="DetectAvailableCameras")
 
     async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
-        if camera_configs and self._camera_group and self._app_state.camera_configs:
+        if camera_configs and self._camera_group and self._app_state.connected_camera_configs:
             update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
-                                                                  old_configs=self._app_state.camera_configs)
+                                                                  old_configs=self._app_state.connected_camera_configs)
             if not update_instructions.reset_all:
                 logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
-                await self._camera_group.update_camera_configs(camera_configs=camera_configs, update_instructions=update_instructions)
+                await self._camera_group.update_camera_configs(camera_configs=camera_configs,
+                                                               update_instructions=update_instructions)
                 return
             logger.debug(f"Updating CameraGroup requires reset - closing existing group...")
             await self._close_camera_group()
 
         logger.info(f"Connecting to cameras....")
         if camera_configs:
-            self._app_state.camera_configs = camera_configs
+            self._app_state.connected_camera_configs = camera_configs
         self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(),
                                                                   name="ConnectToCameras")
 
@@ -75,8 +76,11 @@ class Controller:
         self._app_state.record_frames_flag.value = False
 
     async def _create_camera_group(self):
-        if self._app_state.camera_configs is None:
+        if self._app_state.connected_camera_configs is None:
             await detect_available_devices()
+
+        if self._app_state.connected_camera_configs is None:
+            raise ValueError("No camera configurations detected!")
 
         self._app_state.create_camera_group_shm()
 
@@ -87,10 +91,10 @@ class Controller:
         self._camera_group = CameraGroup(
             cgp_group_shm_dto=self._app_state.camera_group_shm_dto,
             shm_valid_flag=self._app_state.shm_valid_flag,
-            camera_configs=self._app_state.camera_configs,
-                                         ipc_queue=self._ipc_queue,
-                                         global_kill_event=self._global_kill_event,
-                                         record_frames_flag=self._app_state.record_frames_flag)
+            camera_configs=self._app_state.connected_camera_configs,
+            ipc_queue=self._ipc_queue,
+            global_kill_event=self._global_kill_event,
+            record_frames_flag=self._app_state.record_frames_flag)
         await self._camera_group.start()
         logger.success("Camera group started successfully")
 
@@ -99,7 +103,7 @@ class Controller:
         self._app_state.close_camera_group_shm()
         await self._camera_group.close()
         self._camera_group = None
-        self._app_state.camera_configs = None
+        self._app_state.connected_camera_configs = None
         logger.success("Camera group closed successfully")
 
 

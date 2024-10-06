@@ -13,9 +13,9 @@ from skellycam.core.detection.camera_device_info import CameraDeviceInfo
 logger = logging.getLogger(__name__)
 
 
-async def detect_available_devices(check_if_available: bool = False):
+async def detect_available_devices(check_if_available: bool = True):
     from PySide6.QtMultimedia import QMediaDevices
-    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
+    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
     if not QCoreApplication.instance():
         app = QCoreApplication([])
     else:
@@ -32,7 +32,7 @@ async def detect_available_devices(check_if_available: bool = False):
     camera_devices = {}
     for camera_number, camera in zip(camera_ports, detected_cameras):
 
-        if check_if_available:
+        if check_if_available and not platform.system() == "Darwin": # macOS cameras get checked in order_darwin_cameras
             await _check_camera_available(camera_number)
 
         camera_device_info = CameraDeviceInfo.from_q_camera_device(

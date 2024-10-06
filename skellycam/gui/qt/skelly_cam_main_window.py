@@ -111,18 +111,26 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_widget.update_widget()
         self._skellycam_control_panel.update_widget()
         self._directory_view_widget.update_widget()
-        # self._app_state_json_widget.update_text(self._gui_state.sub_process_statuses)
 
     def _connect_signals_to_slots(self):
 
         self._connect_to_cameras_button.button.clicked.connect(
-            self._welcome_to_skellycam_widget.hide
+            self._hide_welcome_view
         )
-        self._connect_to_cameras_button.button.clicked.connect(
-            self._connect_to_cameras_button.hide
-        )
-        self._connect_to_cameras_button.button.clicked.connect(self._skellycam_widget.show)
+
         self._connect_to_cameras_button.button.clicked.connect(self._skellycam_widget.connect_to_cameras)
+
+        self._skellycam_control_panel.connect_cameras_button.clicked.connect(
+            self._hide_welcome_view)
+
+        self._skellycam_control_panel.detect_available_cameras_button.clicked.connect(
+            self._hide_welcome_view)
+
+    def _hide_welcome_view(self):
+        self._welcome_to_skellycam_widget.hide()
+        self._connect_to_cameras_button.hide()
+        self._skellycam_widget.show()
+
 
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")
