@@ -132,14 +132,12 @@ class WebsocketServer:
                     await self._send_frontend_payload(mf_payload)
 
         except WebSocketDisconnect:
-            logger.api("Client disconnected, ending listener task...")
+            logger.api("Client disconnected, ending Frontend Image relay task...")
         except asyncio.CancelledError:
             pass
         except Exception as e:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
             raise
-        finally:
-            logger.info("Ending listener for frontend image payloads...")
 
         logger.info("Ending listener for client messages...")
 

@@ -31,7 +31,6 @@ class FastAPIClient:
 
     def close_cameras(self):
         logger.gui("Calling `cameras/close` endpoint")
-        self._ws_client.close()
         self._http_client.get("/cameras/close")
 
     def shutdown_server(self) -> None:
