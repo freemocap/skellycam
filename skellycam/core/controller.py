@@ -99,6 +99,7 @@ class Controller:
         self._app_state.close_camera_group_shm()
         await self._camera_group.close()
         self._camera_group = None
+        self._app_state.camera_configs = None
         logger.success("Camera group closed successfully")
 
 

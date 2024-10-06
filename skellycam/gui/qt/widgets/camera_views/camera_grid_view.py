@@ -52,6 +52,9 @@ class CameraViewGrid(QWidget):
         return CameraViewSizes(sizes = {camera_id: {"width": view.image_size.width(), "height": view.image_size.height()}
                  for camera_id, view in self._single_camera_views.items()})
 
+    @property
+    def grid_empty(self) -> bool:
+        return len(self._single_camera_views) == 0
 
     def update_widget(self):
         if self._gui_state.connected_camera_ids != self.single_camera_view_camera_ids:
@@ -97,7 +100,7 @@ class CameraViewGrid(QWidget):
             self._single_camera_views[camera_id] = single_camera_view
 
     def clear_camera_views(self):
-        if len(self._single_camera_views) == 0:
+        if self.grid_empty:
             return
 
         logger.gui("Clearing camera layout dictionary")
