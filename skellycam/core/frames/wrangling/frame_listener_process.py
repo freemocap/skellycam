@@ -4,7 +4,6 @@ import time
 from collections import deque
 from typing import Optional
 
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
@@ -18,6 +17,7 @@ class FrameListenerProcess:
     def __init__(
             self,
             group_shm_dto: CameraGroupSharedMemoryDTO,
+            shm_valid_flag: multiprocessing.Value,
             group_orchestrator: CameraGroupOrchestrator,
             frame_escape_pipe: multiprocessing.Pipe,
             ipc_queue: multiprocessing.Queue,
@@ -27,12 +27,13 @@ class FrameListenerProcess:
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
                                                 args=(group_shm_dto,
-                                                     group_orchestrator,
-                                                     frame_escape_pipe,
-                                                     ipc_queue,
-                                                     kill_camera_group_flag,
-                                                     global_kill_event,
-                                                     )
+                                                      shm_valid_flag,
+                                                      group_orchestrator,
+                                                      frame_escape_pipe,
+                                                      ipc_queue,
+                                                      kill_camera_group_flag,
+                                                      global_kill_event,
+                                                      )
                                                 )
 
     def start(self):
@@ -41,6 +42,7 @@ class FrameListenerProcess:
 
     @staticmethod
     def _run_process(group_shm_dto: CameraGroupSharedMemoryDTO,
+                     shm_valid_flag: multiprocessing.Value,
                      group_orchestrator: CameraGroupOrchestrator,
                      frame_escape_pipe: multiprocessing.Pipe,
                      ipc_queue: multiprocessing.Queue,
@@ -56,7 +58,7 @@ class FrameListenerProcess:
             mf_payload: Optional[MultiFramePayload] = None
             byte_chunklets_to_send = deque()
             while not kill_camera_group_flag.value and not global_kill_event.is_set():
-                if group_orchestrator.new_multi_frame_put_in_shm.is_set():
+                if group_orchestrator.new_multi_frame_put_in_shm.is_set() and shm_valid_flag.value:
                     mf_payload: Optional[MultiFramePayload] = camera_group_shm.get_multi_frame_payload(
                         previous_payload=mf_payload,
                         read_only=False)  # will increment mf_number so the FrontendFrameRelay will notice the new data
@@ -101,4 +103,3 @@ class FrameListenerProcess:
 
     def join(self):
         self._process.join()
-

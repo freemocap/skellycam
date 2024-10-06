@@ -78,11 +78,16 @@ class Controller:
         if self._app_state.camera_configs is None:
             await detect_available_devices()
 
+        self._app_state.create_camera_group_shm()
+
         if self._camera_group:  # if `connect/` called w/o configs, reset existing connection
             await self._close_camera_group()
         self._app_state.record_frames_flag.value = False
 
-        self._camera_group = CameraGroup(camera_configs=self._app_state.camera_configs,
+        self._camera_group = CameraGroup(
+            cgp_group_shm_dto=self._app_state.get_camera_group_shm_dto(),
+            shm_valid_flag=self._app_state.shm_valid_flag,
+            camera_configs=self._app_state.camera_configs,
                                          ipc_queue=self._ipc_queue,
                                          global_kill_event=self._global_kill_event,
                                          record_frames_flag=self._app_state.record_frames_flag)
@@ -91,6 +96,7 @@ class Controller:
 
     async def _close_camera_group(self):
         logger.debug("Closing existing camera group...")
+        self._app_state.close_camera_group_shm()
         await self._camera_group.close()
         self._camera_group = None
         logger.success("Camera group closed successfully")

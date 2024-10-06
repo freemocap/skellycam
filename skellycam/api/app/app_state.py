@@ -1,15 +1,14 @@
-import asyncio
 import logging
 import multiprocessing
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional
 
-import psutil
 from pydantic import BaseModel
 
 from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
 
 
 class WebSocketStatus(BaseModel):
@@ -17,50 +16,7 @@ class WebSocketStatus(BaseModel):
     ping_interval_ns: Optional[int] = None
 
 
-class SubProcessStatus(BaseModel):
-    process_name: str
-    is_alive: bool
-    pid: int
-    parent_pid: str
 
-    @classmethod
-    def from_process(cls, process: multiprocessing.Process,
-                     parent_pid: int):
-        return cls(
-            process_name=process.name,
-            is_alive=process.is_alive(),
-            pid=process.pid,
-            parent_pid=str(parent_pid),
-        )
-
-
-class TaskStatus(BaseModel):
-    task_name: str
-    is_running: bool
-
-    @classmethod
-    def from_task(cls, task: asyncio.Task):
-        return cls(
-            task_name=task.get_name() if task.get_name() else "Unknown Task",
-            is_running=not task.done(),
-        )
-
-
-class ApiCallLog(BaseModel):
-    url_path: str
-    log_timestamp: str = datetime.now().isoformat()
-    start_time: float
-    process_time: float
-    status_code: int
-
-    @classmethod
-    def create(cls, url_path: str, timestamp: float, process_time: float, status_code: int):
-        return cls(
-            url_path=url_path,
-            start_time=timestamp,
-            process_time=process_time,
-            status_code=status_code,
-        )
 
 
 logger = logging.getLogger(__name__)
@@ -71,10 +27,6 @@ class AppState:
         self._camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
         self._websocket_status: Optional[WebSocketStatus] = None
-        self._api_call_history: List[ApiCallLog] = []
-
-        self._subprocess_statuses: Optional[Dict[int, SubProcessStatus]] = None
-        self._task_statuses: Optional[Dict[str, TaskStatus]] = None
 
         self._record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self._kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
@@ -82,6 +34,10 @@ class AppState:
         self._lock = multiprocessing.Lock()
 
         self._ipc_queue = get_ipc_queue()
+
+        self._camera_group_shm: Optional[CameraGroupSharedMemory]= None
+        self._camera_group_shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+
 
     @property
     def camera_configs(self) -> CameraConfigs:
@@ -138,60 +94,35 @@ class AppState:
             self._record_frames_flag = value
         self._ipc_queue.put(self.state_dto())
 
-
     @property
-    def api_call_history(self):
+    def shm_valid_flag(self):
         with self._lock:
-            return self._api_call_history
-
-    @property
-    def subprocess_statuses(self) -> Dict[int, SubProcessStatus]:
-        with self._lock:
-            for process_status in self._subprocess_statuses.values() if self._subprocess_statuses else []:
-                if not psutil.Process(process_status.pid).is_running():
-                    self._subprocess_statuses.pop(process_status.pid)
-
-            return self._subprocess_statuses
-
-    def log_api_call(self, url_path: str, start_time: float, process_time: float, status_code: int):
-        with self._lock:
-            self._api_call_history.append(ApiCallLog.create(url_path=url_path,
-                                                            timestamp=start_time,
-                                                            process_time=process_time,
-                                                            status_code=status_code))
-        self._ipc_queue.put(self.state_dto())
-
-    def update_process_status(self, process_status: SubProcessStatus):
-        with self._lock:
-            if self._subprocess_statuses is None:
-                self._subprocess_statuses = {}
-            if process_status.is_alive:
-                self._subprocess_statuses[process_status.pid] = process_status
-            else:
-                self._subprocess_statuses.pop(process_status.pid, None)
-        self._ipc_queue.put(self.state_dto())
-
-    @property
-    def task_statuses(self):
-        with self._lock:
-            return self._task_statuses
-
-    def update_task_status(self, task_status: Optional[TaskStatus]):
-        if not task_status:
-            return
-        with self._lock:
-            if self._task_statuses is None:
-                self._task_statuses = {}
-            if task_status.is_running:
-                self._task_statuses[task_status.task_name] = task_status
-            else:
-                self._task_statuses[task_status.task_name] = task_status
-                # self._task_statuses.pop(task_status.task_name, None)
-        self._ipc_queue.put(self.state_dto())
+            return self._camera_group_shm_valid_flag
 
     def state_dto(self) -> 'AppStateDTO':
         return AppStateDTO.from_state(self)
 
+    def create_camera_group_shm(self):
+        if self._camera_configs is None:
+            raise ValueError("Cannot create camera group shared memory without camera configs!")
+
+        if self._camera_group_shm is not None:
+            self.close_camera_group_shm()
+
+        self._camera_group_shm = CameraGroupSharedMemory.create(camera_configs=self._camera_configs)
+        self._camera_group_shm_valid_flag.value = True
+
+    def get_camera_group_shm_dto(self) -> CameraGroupSharedMemoryDTO:
+        if self._camera_group_shm is None:
+            raise ValueError("Cannot get camera group shared memory DTO without camera group shared memory!")
+        with self._lock:
+            return self._camera_group_shm.to_dto()
+
+    def close_camera_group_shm(self):
+        if self._camera_group_shm is not None:
+            self._camera_group_shm_valid_flag.value = False
+            self._camera_group_shm.close_and_unlink()
+            self._camera_group_shm = None
 
 class AppStateDTO(BaseModel):
     """
@@ -199,9 +130,6 @@ class AppStateDTO(BaseModel):
     """
     state_timestamp: str = datetime.now().isoformat()
 
-    subprocess_statuses: Optional[Dict[int, SubProcessStatus]]
-    task_statuses: Optional[Dict[str, TaskStatus]]
-    api_call_history: Optional[List[ApiCallLog]]
 
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableDevices]
@@ -216,9 +144,6 @@ class AppStateDTO(BaseModel):
             available_devices=state.available_devices,
             websocket_status=state.websocket_status,
             record_frames_flag_status=state.record_frames_flag.value,
-            api_call_history=state.api_call_history,
-            subprocess_statuses=state.subprocess_statuses,
-            task_statuses=state.task_statuses,
         )
 
 

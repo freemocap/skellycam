@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class CameraManager:
     def __init__(self,
                  group_shm_dto: CameraGroupSharedMemoryDTO,
+                 shm_valid_flag: multiprocessing.Value,
                  group_orchestrator: CameraGroupOrchestrator,
                  kill_camera_group_flag: multiprocessing.Value,
                  global_kill_event: multiprocessing.Event
@@ -31,6 +32,7 @@ class CameraManager:
                                                                   camera_id],
                                                               shared_memory_names=group_shm_dto.group_shm_names[
                                                                   camera_id],
+                                                              shm_valid_flag=shm_valid_flag,
                                                               kill_camera_group_flag=kill_camera_group_flag,
                                                               global_kill_event=global_kill_event,
                                                               )

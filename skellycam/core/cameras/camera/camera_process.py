@@ -9,16 +9,18 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfig
 from skellycam.core.cameras.camera.get_frame import get_frame
 from skellycam.core.cameras.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.shmemory.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
+from skellycam.utilities.wait_functions import wait_100us
 
 logger = logging.getLogger(__name__)
-AUTO_EXPOSURE_SETTING = 3 # 0.75
-MANUAL_EXPOSURE_SETTING = 1 #0.25
+AUTO_EXPOSURE_SETTING = 3  # 0.75
+MANUAL_EXPOSURE_SETTING = 1  # 0.25
 
 
 class CameraProcess:
     def __init__(self,
                  config: CameraConfig,
                  shared_memory_names: SharedMemoryNames,
+                 shm_valid_flag: multiprocessing.Value,
                  camera_triggers: CameraTriggers,
                  kill_camera_group_flag: multiprocessing.Value,
                  global_kill_event: multiprocessing.Event
@@ -31,6 +33,7 @@ class CameraProcess:
                                                 name=f"Camera{self._config.camera_id}",
                                                 args=(self._config,
                                                       shared_memory_names,
+                                                      shm_valid_flag,
                                                       self._camera_triggers,
                                                       self._config_update_queue,
                                                       kill_camera_group_flag,
@@ -61,6 +64,7 @@ class CameraProcess:
     @staticmethod
     def _run_process(config: CameraConfig,
                      shared_memory_names: SharedMemoryNames,
+                     shm_valid_flag: multiprocessing.Value,
                      camera_triggers: CameraTriggers,
                      config_update_queue: multiprocessing.Queue,
                      kill_camera_group_flag: multiprocessing.Value,
@@ -80,6 +84,7 @@ class CameraProcess:
             run_trigger_listening_loop(config=config,
                                        cv2_video_capture=cv2_video_capture,
                                        camera_shared_memory=camera_shared_memory,
+                                       shm_valid_flag=shm_valid_flag,
                                        camera_triggers=camera_triggers,
                                        config_update_queue=config_update_queue,
                                        kill_camera_group_flag=kill_camera_group_flag,
@@ -97,6 +102,7 @@ def run_trigger_listening_loop(
         config: CameraConfig,
         cv2_video_capture: cv2.VideoCapture,
         camera_shared_memory: CameraSharedMemory,
+        shm_valid_flag: multiprocessing.Value,
         camera_triggers: CameraTriggers,
         config_update_queue: multiprocessing.Queue,
         kill_camera_group_flag: multiprocessing.Value,
@@ -118,6 +124,10 @@ def run_trigger_listening_loop(
                 camera_triggers.set_ready()
 
             logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
+
+            if not shm_valid_flag.value:
+                wait_100us()
+                continue
 
             frame_number = get_frame(
                 camera_id=config.camera_id,

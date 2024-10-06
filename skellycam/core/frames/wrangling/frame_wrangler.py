@@ -1,8 +1,6 @@
 import logging
 import multiprocessing
-import os
 
-from skellycam.api.app.app_state import SubProcessStatus
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.frames.wrangling.frame_listener_process import FrameListenerProcess
 from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProcess
@@ -15,6 +13,7 @@ class FrameWrangler:
 
     def __init__(self,
                  group_shm_dto: CameraGroupSharedMemoryDTO,
+                 shm_valid_flag: multiprocessing.Value,
                  group_orchestrator: CameraGroupOrchestrator,
                  ipc_queue: multiprocessing.Queue,
                  record_frames_flag: multiprocessing.Value,
@@ -28,6 +27,7 @@ class FrameWrangler:
 
         self._listener_process = FrameListenerProcess(
             group_shm_dto=group_shm_dto,
+            shm_valid_flag=shm_valid_flag,
             group_orchestrator=group_orchestrator,
             frame_escape_pipe=frame_escape_pipe_entrance,
             ipc_queue=ipc_queue,

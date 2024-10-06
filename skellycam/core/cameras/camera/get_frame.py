@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import time
 
 import cv2
