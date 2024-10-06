@@ -129,18 +129,12 @@ class CameraConfig(BaseModel):
     def video_frame_shape(self) -> Tuple[int, int]:
         """
         Returns the shape of the video frame after applying rotation.
-
-        Returns
-        -------
-        Tuple[int, int, int]
-            The shape of the video frame (height, width) after rotation.
         """
         if self.rotation in {RotationTypes.CLOCKWISE_90, RotationTypes.COUNTERCLOCKWISE_90}:
-            height, width = self.resolution.width, self.resolution.height
+            return self.resolution.height, self.resolution.width
         else:
-            height, width = self.resolution.height, self.resolution.width
+            return self.resolution.width, self.resolution.height
 
-        return height, width
 
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
