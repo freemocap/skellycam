@@ -50,7 +50,6 @@ class WebSocketClient:
 
     def _on_open(self, ws) -> None:
         logger.gui(f"Connected to WebSocket at {self.websocket_url}, sending test messages...")
-        self.send_message('{"message": "Hello, WebSocket Server!"}')
 
     def _on_message(self, ws: WebSocketApp, message: Union[str, bytes]) -> None:
         self._handle_websocket_message(message)
@@ -116,17 +115,6 @@ class WebSocketClient:
         except Exception as e:
             logger.exception(e)
             raise
-
-    def send_message(self, message: str) -> None:
-        if self.websocket:
-            try:
-                json.loads(message)
-            except json.JSONDecodeError:
-                logger.error("For simplicity, we only send JSON messages from client to server")
-                raise ValueError("Message must be a JSON string")
-
-            self.websocket.send(json.dumps(message))
-            logger.debug(f"Sent JSON message: {message}")
 
 
     def close(self) -> None:

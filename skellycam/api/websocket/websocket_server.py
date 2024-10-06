@@ -25,8 +25,6 @@ class WebsocketServer:
         self._first_frontend_images_sent = False
         self.websocket = websocket
 
-        self.listen_for_client_messages_task: Optional[asyncio.Task] = None
-
         self.ipc_queue = get_ipc_queue()  # Receives messages the sub-processes
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
         self.shutdown_relay_flag = asyncio.Event()
@@ -47,7 +45,7 @@ class WebsocketServer:
         logger.info("Starting websocket runner...")
         try:
             await asyncio.gather(
-                asyncio.create_task(self._listen_for_client_messages()),
+
                 asyncio.create_task(self._frontend_image_relay()),
                 asyncio.create_task(self._ipc_queue_relay()),
             )
@@ -161,27 +159,3 @@ class WebsocketServer:
 
         self._first_frontend_images_sent = True
 
-
-    async def _listen_for_client_messages(self):
-        logger.info("Starting listener for client messages...")
-        while True:
-            try:
-                message = await self.websocket.receive_json()
-                logger.trace(f"Message from client: '{message}'")
-                if not message:
-                    logger.api("Client send empty message, closing websocket...")
-                    await self.websocket.close()
-                try:
-                    data = json.loads(message)
-                except JSONDecodeError:
-                    raise RuntimeError("For simplicity, the websocket server only accepts JSON formatted messages")
-
-                if "sizes" in data.keys() and  self._first_frontend_images_sent:
-                    self._frontend_image_sizes = data["sizes"] #CameraViewSizes object
-
-            except WebSocketDisconnect:
-                logger.api("Client disconnected, ending listener task...")
-                break
-            except Exception as e:
-                logger.error(f"Error while receiving message: {type(e).__name__} - {e}")
-                raise

@@ -54,7 +54,6 @@ class SkellyCamWidget(QWidget):
                 return
             logger.gui(f"Sending updated view sizes to backend: {self.camera_view_grid.camera_view_sizes}")
             self._gui_state.camera_view_sizes = self.camera_view_grid.camera_view_sizes
-            self._client.send_message(self.camera_view_grid.camera_view_sizes.model_dump_json())
 
 
     def detect_available_cameras(self):

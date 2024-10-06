@@ -13,10 +13,7 @@ class FastAPIClient:
         self._http_client = HTTPClient(base_url)
         self._ws_client = WebSocketClient(base_url)
 
-    def send_message(self, message: str):
-        logger.gui(f"Sending message to WebSocket: {message}")
 
-        self._ws_client.send_message(message)
     def connect_websocket(self):
         logger.gui("Client sending request to connect to WebSocket")
         self._ws_client.connect_websocket()
