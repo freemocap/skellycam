@@ -36,6 +36,7 @@ class AppState:
         self._ipc_queue = get_ipc_queue()
 
         self._camera_group_shm: Optional[CameraGroupSharedMemory]= None
+        self._camera_group_shm_dto: Optional[CameraGroupSharedMemoryDTO] = None
         self._camera_group_shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", False)
 
 
@@ -110,13 +111,13 @@ class AppState:
             self.close_camera_group_shm()
 
         self._camera_group_shm = CameraGroupSharedMemory.create(camera_configs=self._camera_configs)
+        self._camera_group_shm_dto = self._camera_group_shm.to_dto()
         self._camera_group_shm_valid_flag.value = True
 
-    def get_camera_group_shm_dto(self) -> CameraGroupSharedMemoryDTO:
-        if self._camera_group_shm is None:
-            raise ValueError("Cannot get camera group shared memory DTO without camera group shared memory!")
+    @property
+    def camera_group_shm_dto(self) -> CameraGroupSharedMemoryDTO:
         with self._lock:
-            return self._camera_group_shm.to_dto()
+            return self._camera_group_shm_dto
 
     def close_camera_group_shm(self):
         if self._camera_group_shm is not None:

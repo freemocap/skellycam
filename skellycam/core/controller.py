@@ -85,7 +85,7 @@ class Controller:
         self._app_state.record_frames_flag.value = False
 
         self._camera_group = CameraGroup(
-            cgp_group_shm_dto=self._app_state.get_camera_group_shm_dto(),
+            cgp_group_shm_dto=self._app_state.camera_group_shm_dto,
             shm_valid_flag=self._app_state.shm_valid_flag,
             camera_configs=self._app_state.camera_configs,
                                          ipc_queue=self._ipc_queue,

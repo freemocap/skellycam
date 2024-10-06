@@ -11,7 +11,7 @@ from skellycam.api.app.app_state import AppStateDTO, get_app_state
 from skellycam.api.websocket.ipc import get_ipc_queue
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory, CameraGroupSharedMemoryDTO
 from skellycam.core.timestamps.frame_rate_tracker import CurrentFrameRate
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.utilities.wait_functions import async_wait_1ms
@@ -47,6 +47,7 @@ class WebsocketServer:
         try:
             await asyncio.gather(
                 asyncio.create_task(self._listen_for_client_messages()),
+                asyncio.create_task(self._frontend_image_relay()),
                 asyncio.create_task(self._ipc_queue_relay()),
             )
         except Exception as e:
@@ -102,9 +103,9 @@ class WebsocketServer:
         """
         logger.info(
             f"Starting frontend image payload relay...")
-        camera_group_shm_dto = self._app_state.camera_group_shm_dto
-        camera_group_shm = CameraGroupSharedMemory.recreate(dto=camera_group_shm_dto)
-        last_mf_number_read = camera_group_shm.multi_frame_number
+        camera_group_shm_dto: Optional[CameraGroupSharedMemoryDTO] = None
+        camera_group_shm: Optional[CameraGroupSharedMemory] = None
+        last_mf_number_read = -1
         mf_payload: Optional[MultiFramePayload] = None
         try:
             while True:
@@ -112,6 +113,10 @@ class WebsocketServer:
                 if camera_group_shm_dto != self._app_state.camera_group_shm_dto:
                     camera_group_shm_dto = self._app_state.camera_group_shm_dto
                     camera_group_shm = CameraGroupSharedMemory.recreate(dto=camera_group_shm_dto)
+
+                if camera_group_shm is None:
+                    await async_wait_1ms()
+                    continue
 
                 shm_mf_number = camera_group_shm.multi_frame_number
                 if shm_mf_number == last_mf_number_read or not self._shm_valid_flag.value:
