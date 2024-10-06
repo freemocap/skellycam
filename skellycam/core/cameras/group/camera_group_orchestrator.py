@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_triggers import CameraTriggers, logger
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.utilities.wait_functions import wait_10us, wait_1ms, wait_10ms, wait_100ms
+from skellycam.utilities.wait_functions import wait_100us, wait_1ms, wait_10ms, wait_100ms
 
 
 class CameraGroupOrchestrator(BaseModel):
@@ -152,7 +152,7 @@ class CameraGroupOrchestrator(BaseModel):
 
     def await_new_frames_available(self):
         while (not self.frames_retrieved or not self.new_frames_available) and self.should_continue:
-            wait_10us()
+            wait_100us()
 
     def set_multi_frame_pulled_from_shm(self):
         for triggers in self.camera_triggers.values():
@@ -168,11 +168,11 @@ class CameraGroupOrchestrator(BaseModel):
 
     def _await_frames_grabbed(self):
         while not self.frames_grabbed and self.should_continue:
-            wait_10us()
+            wait_100us()
 
     def _await_mf_copied_from_shm(self):
         while self.new_multi_frame_put_in_shm.is_set() and self.should_continue:
-            wait_10us()
+            wait_100us()
 
     def _fire_grab_trigger(self):
         logger.loop("Triggering all cameras to `grab` a frame...")
@@ -187,11 +187,11 @@ class CameraGroupOrchestrator(BaseModel):
 
     def _wait_for_frames_grabbed_triggers_reset(self):
         while self.frames_grabbed and self.should_continue:
-            wait_10us()
+            wait_100us()
 
     def _wait_for_retrieve_triggers_reset(self):
         while self.frames_retrieved and self.should_continue:
-            wait_10us()
+            wait_100us()
 
     def _ensure_cameras_ready(self):
         if not self.cameras_ready:

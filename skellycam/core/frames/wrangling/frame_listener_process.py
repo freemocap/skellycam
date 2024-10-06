@@ -9,7 +9,7 @@ from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOr
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
 from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker
-from skellycam.utilities.wait_functions import wait_10us
+from skellycam.utilities.wait_functions import wait_100us
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +57,16 @@ class FrameListenerProcess:
             byte_chunklets_to_send = deque()
             while not kill_camera_group_flag.value and not global_kill_event.is_set():
                 if group_orchestrator.new_multi_frame_put_in_shm.is_set():
-                    mf_payload: MultiFramePayload = camera_group_shm.get_multi_frame_payload(
+                    mf_payload: Optional[MultiFramePayload] = camera_group_shm.get_multi_frame_payload(
                         previous_payload=mf_payload,
                         read_only=False)  # will increment mf_number so the FrontendFrameRelay will notice the new data
+                    if mf_payload is None:
+                        logger.error(f"FrameListener -  failed to get multi-frame payload from shared memory")
+                        continue
                     group_orchestrator.set_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
                     logger.loop(
                         f"FrameListener -  copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
+
                     pulled_from_pipe_timestamp = time.perf_counter_ns()
                     mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
                     frame_rate_tracker.update(pulled_from_pipe_timestamp)
@@ -75,7 +79,7 @@ class FrameListenerProcess:
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.popleft())
 
                 else:
-                    wait_10us()
+                    wait_100us()
 
         except Exception as e:
             logger.exception(f"Frame listener process error: {e.__class__} - {e}")

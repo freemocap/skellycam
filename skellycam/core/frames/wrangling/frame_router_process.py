@@ -7,7 +7,7 @@ from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
-from skellycam.utilities.wait_functions import wait_10us
+from skellycam.utilities.wait_functions import wait_100us
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class FrameRouterProcess:
                                                              recording_folder=get_default_recording_folder_path(tag=""))
         try:
             while not kill_camera_group_flag.value and not global_kill_event.is_set():
-                wait_10us()
+                wait_100us()
 
                 # Check for incoming data
                 if frame_escape_pipe.poll():

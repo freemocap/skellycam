@@ -129,7 +129,8 @@ class WebsocketServer:
 
                 mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload,
                                                                       read_only=True)  # read-only so we don't increment the counter, that's the FrameListener's job
-                await self._send_frontend_payload(mf_payload)
+                if mf_payload:
+                    await self._send_frontend_payload(mf_payload)
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending listener task...")

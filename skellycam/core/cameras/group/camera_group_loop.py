@@ -5,6 +5,7 @@ from typing import List
 
 import numpy as np
 
+from skellycam.core.cameras.camera.camera_manager import CameraManager
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.utilities.wait_functions import wait_10ms
@@ -15,9 +16,13 @@ logger = logging.getLogger(__name__)
 def camera_group_trigger_loop(
         camera_configs: CameraConfigs,
         group_orchestrator: CameraGroupOrchestrator,
+        camera_manager: CameraManager,
+        config_update_queue: multiprocessing.Queue,
         kill_camera_group_flag: multiprocessing.Value,
         global_kill_event: multiprocessing.Event
 ):
+    camera_manager.start_cameras()
+
     loop_count = 0
     elapsed_per_loop_ns = []
     try:
@@ -25,14 +30,28 @@ def camera_group_trigger_loop(
         group_orchestrator.fire_initial_triggers()
 
         logger.debug(f"Starting camera trigger loop for cameras: {group_orchestrator.camera_ids}...")
+
         while not kill_camera_group_flag.value and not global_kill_event.is_set():
             tik = time.perf_counter_ns()
 
+            # Trigger all cameras to read a frame
             group_orchestrator.trigger_multi_frame_read()
+
+            # Check for new camera configs
+            if config_update_queue.qsize() > 0:
+                logger.trace(
+                    f"Config update queue has {config_update_queue.qsize()} items, pausing frame loop to update configs")
+                group_orchestrator.pause_loop()
+
+                update_instructions = config_update_queue.get()
+
+                camera_manager.update_camera_configs(update_instructions)
+                group_orchestrator.unpause_loop()
 
             if loop_count > 0:
                 elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
             loop_count += 1
+
 
         logger.debug(f"Multi-camera trigger loop for cameras: {group_orchestrator.camera_ids}  ended")
         wait_10ms()
@@ -42,6 +61,8 @@ def camera_group_trigger_loop(
         )
     finally:
         logger.debug(f"Multi-camera trigger loop for cameras: {group_orchestrator.camera_ids}  exited")
+
+
 
 
 def log_time_stats(camera_configs: CameraConfigs,

@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 from typing import Dict, Optional, List
 
 from pydantic import BaseModel, ConfigDict
@@ -15,13 +16,17 @@ logger = logging.getLogger(__name__)
 class CameraGroupSharedMemoryDTO(BaseModel):
     camera_configs: CameraConfigs
     group_shm_names: GroupSharedMemoryNames
+    shm_valid_flag: multiprocessing.Value
     mf_counter_shm_name: str
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class CameraGroupSharedMemory(BaseModel):
     camera_configs: CameraConfigs
     camera_shms: Dict[CameraId, CameraSharedMemory]
     multi_frame_number_shm: SharedMemoryNumber
+    shm_valid_flag: multiprocessing.Value = multiprocessing.Value('b', True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -44,7 +49,8 @@ class CameraGroupSharedMemory(BaseModel):
 
         return cls(camera_configs=dto.camera_configs,
                    camera_shms=camera_shms,
-                   multi_frame_number_shm=SharedMemoryNumber.recreate(dto.mf_counter_shm_name))
+                   multi_frame_number_shm=SharedMemoryNumber.recreate(dto.mf_counter_shm_name),
+                   shm_valid_flag=dto.shm_valid_flag)
 
     @property
     def shared_memory_names(self) -> GroupSharedMemoryNames:
@@ -59,17 +65,21 @@ class CameraGroupSharedMemory(BaseModel):
     def multi_frame_number(self) -> int:
         return self.multi_frame_number_shm.get()
 
-
-
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
                                           group_shm_names=self.shared_memory_names,
-                                            mf_counter_shm_name=self.multi_frame_number_shm.name)
+                                          mf_counter_shm_name=self.multi_frame_number_shm.name,
+                                          shm_valid_flag=self.shm_valid_flag)
+
 
     def get_multi_frame_payload(self,
                                 previous_payload: Optional[MultiFramePayload],
                                 read_only: bool = True,
-                                ) -> MultiFramePayload:
+                                ) -> Optional[MultiFramePayload]:
+        if not self.shm_valid_flag.value:
+            logger.warning("Shared memory is invalid, returning None")
+            return
+
         if previous_payload is None:
             payload = MultiFramePayload.create_initial(camera_configs=self.camera_configs)
         else:
@@ -94,9 +104,10 @@ class CameraGroupSharedMemory(BaseModel):
 
     def unlink(self):
         # Unlink the shared memory so that it is removed from the system, memory becomes invalid for all processes
+        self.shm_valid_flag.value = False
         for camera_shared_memory in self.camera_shms.values():
             camera_shared_memory.unlink()
-        self.multi_frame_number.unlink()
+        self.multi_frame_number_shm.unlink()
 
     def close_and_unlink(self):
         self.close()
