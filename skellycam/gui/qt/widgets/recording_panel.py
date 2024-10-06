@@ -41,40 +41,42 @@ class RecordingPanel(QWidget):
     def update_widget(self):
         
         logger.gui(f"Updating {self.__class__.__name__}")
-        # self._frontend_framerate_label.setText(f"Frontend {self._gui_state.frontend_framerate_stats.median_std_str}")
         if self._gui_state.record_frames_flag_status:
-            self._start_recording_button.setEnabled(False)
-            self._stop_recording_button.setEnabled(True)
-            self._recording_status_label.setText(
-                f"Recording Status: Recording! ({self._gui_state.frame_number} from {self._gui_state.number_of_cameras} cameras)")
-            self._recording_folder_label.setText(
-                f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}") if self._gui_state.recording_info else None
+            self._handle_recording_in_progress()
         else:
-            self._start_recording_button.setEnabled(True)
-            self._stop_recording_button.setEnabled(False)
-            self._recording_status_label.setText("Recording Status:  - Not Recording -")
-            if self._gui_state.recording_info:
-                self._recording_folder_label.setText(
-                    f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
+            self._handle_no_recording_in_progress()
+
+    def _handle_no_recording_in_progress(self):
+        self._start_recording_button.setEnabled(True)
+        self._stop_recording_button.setEnabled(False)
+        self._start_recording_button.setText("\U0001F534 Start Recording")
+        self._recording_status_label.setText("Recording Status:  - Not Recording -")
+        if self._gui_state.recording_info:
+            self._recording_folder_label.setText(
+                f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
+
+    def _handle_recording_in_progress(self):
+        self._start_recording_button.setEnabled(False)
+        self._stop_recording_button.setEnabled(True)
+        self._start_recording_button.setText("\U0001F534 Recording...")
+        self._recording_status_label.setText(
+            f"Recording Status: Recording! ({self._gui_state.frame_number} from {self._gui_state.number_of_cameras} cameras)")
+        self._recording_folder_label.setText(
+            f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}") if self._gui_state.recording_info else None
 
     def _start_recording(self):
         logger.gui("Starting Recording...")
         if self._gui_state.record_frames_flag_status:
             raise ValueError("Recording is already in progress! Button should be disabled.")
-        self._start_recording_button.setEnabled(False)
-        self._stop_recording_button.setEnabled(True)
-        self._gui_state.is_recording = True
         self._client.start_recording()
-        self._start_recording_button.setText("\U0001F534 Recording...")
-        # self._start_recording_button.setStyleSheet("background-color: #AA0111 ")
+
 
     def _stop_recording(self):
         logger.gui("Stopping Recording.")
-        if not self._gui_state.is_recording:
-            raise ValueError("No recording in progress! Button should be disabled.")
+        if not self._gui_state.record_frames_flag_status:
+            raise ValueError("Recording is not in progress! Button should be disabled.")
         self._client.stop_recording()
-        self._gui_state.is_recording = False
-        self._start_recording_button.setText("\U0001F534 Start Recording")
+
         self._start_recording_button.setEnabled(True)
         self._stop_recording_button.setEnabled(False)
 

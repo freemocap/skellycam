@@ -25,16 +25,16 @@ class CameraGroup:
         self._ipc_queue = ipc_queue
 
 
-
         self._camera_group_process = CameraGroupProcess(group_shm_dto=cgp_group_shm_dto,
                                                         shm_valid_flag=shm_valid_flag,
                                                         camera_configs=camera_configs,
                                                         config_update_queue=self._update_queue,
                                                         ipc_queue=self._ipc_queue,
+                                                        record_frames_flag=record_frames_flag,
                                                         kill_camera_group_flag=self._kill_camera_group_flag,
                                                         global_kill_event=global_kill_event,
-                                                        record_frames_flag=record_frames_flag,
                                                         )
+
 
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")

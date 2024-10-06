@@ -61,7 +61,7 @@ class CameraTriggers(BaseModel):
         logger.trace(f"Camera {self.camera_id} process received `initial_trigger`")
         self.initial_trigger.clear()
 
-    def await_retrieve_trigger(self, max_wait_time_s: float = 5.0):
+    def await_retrieve_trigger(self, max_wait_time_s: float = 300.0):
         start_wait_ns = time.perf_counter_ns()
         while not self.retrieve_frame_trigger.is_set() and self.should_continue:
             wait_100us()
@@ -73,7 +73,7 @@ class CameraTriggers(BaseModel):
                     f"self.should_continue={self.should_continue}")
         logger.loop(f"Camera {self.camera_id} process received `retrieve_frame_trigger`")
 
-    def await_grab_trigger(self, max_wait_time_s: float = 5.0):
+    def await_grab_trigger(self, max_wait_time_s: float = 300.0):
         start_wait_ns = time.perf_counter_ns()
         been_warned = False
         while not self.grab_frame_trigger.is_set() and self.should_continue:

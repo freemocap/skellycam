@@ -150,8 +150,6 @@ class VideoRecorderManager(BaseModel):
             video_saver.close()
         self.multi_frame_timestamp_logger.close()
         self.finalize_recording()
-        # remove directories if empty
-        recursively_remove_empty_directories(self.recording_folder)
 
 
     def finalize_recording(self):

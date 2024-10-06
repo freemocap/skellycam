@@ -92,10 +92,14 @@ class AppState:
         with self._lock:
             return self._record_frames_flag
 
-    @record_frames_flag.setter
-    def record_frames_flag(self, value: multiprocessing.Value):
+    def start_recording(self):
         with self._lock:
-            self._record_frames_flag = value
+            self._record_frames_flag.value = True
+        self._ipc_queue.put(self.state_dto())
+
+    def stop_recording(self):
+        with self._lock:
+            self._record_frames_flag.value = False
         self._ipc_queue.put(self.state_dto())
 
     @property

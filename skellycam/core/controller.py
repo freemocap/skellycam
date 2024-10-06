@@ -67,13 +67,6 @@ class Controller:
             return
         logger.warning("No camera group to close!")
 
-    async def start_recording(self):
-        logger.debug("Setting `record_frames_flag` ")
-        self._app_state.record_frames_flag.value = True
-
-    async def stop_recording(self):
-        logger.debug("Setting `record_frames_flag` to False")
-        self._app_state.record_frames_flag.value = False
 
     async def _create_camera_group(self):
         if self._app_state.connected_camera_configs is None:

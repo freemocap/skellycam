@@ -79,6 +79,7 @@ class VideoRecorder(BaseModel):
             config.video_frame_shape,  # image resolution after rotation applied
         )
         if not writer.isOpened():
+            logger.error(f"Failed to open video writer for camera {config.camera_id}")
             raise ValidationError(f"Failed to open video writer for camera {config.camera_id}")
         logger.debug(
             f"Initialized VideoWriter for camera {config.camera_id} - Video file will be saved to {video_file_path}")
@@ -96,13 +97,7 @@ class VideoRecorder(BaseModel):
             raise ValidationError(f"Frame shape {frame.image.shape} does not match self.camera_config shape "
                                   f"({self.camera_config.resolution.height}, {self.camera_config.resolution.width}, {self.camera_config.color_channels})")
 
-    def _clean_up_empty_video_file(self, min_size_bytes=10_000):
-
-        if Path(self.video_path).exists() and Path(self.video_path).stat().st_size < min_size_bytes:
-            Path(self.video_path).unlink()
-            logger.trace(f"Deleted empty video file at {self.video_path}")
 
     def close(self):
         self.video_writer.release()
-        self._clean_up_empty_video_file()
         logger.debug(f"Closed VideoSaver for camera {self.camera_id} - Video file saved to {self.video_path}")

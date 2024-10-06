@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 import time
 from collections import deque
+from typing import Optional
 
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
@@ -56,8 +57,7 @@ class FrameRouterProcess:
         logger.debug(f"FrameRouter  process started!")
         incoming_mf_byte_chunklets = []
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
-        video_recorder_manager = VideoRecorderManager.create(camera_configs=camera_configs,
-                                                             recording_folder=get_default_recording_folder_path(tag=""))
+        video_recorder_manager: Optional[VideoRecorderManager] = None
         try:
             while not kill_camera_group_flag.value and not global_kill_event.is_set():
                 wait_100us()
@@ -79,27 +79,26 @@ class FrameRouterProcess:
                     else:
                         incoming_mf_byte_chunklets.append(bytes_payload)
                 else:
-                    if video_recorder_manager.frames_to_save and not frame_escape_pipe.poll():  # prioritize other work before saving a frame
+                    if video_recorder_manager and video_recorder_manager.frames_to_save and not frame_escape_pipe.poll():  # prioritize other work before saving a frame
                         video_recorder_manager.save_one_frame()  # passes if empty
 
                 # Handle multi-frame payloads
                 if len(mf_payloads_to_process) > 0:
                     mf_payload = mf_payloads_to_process.popleft()
                     if record_frames_flag.value:
-                        if video_recorder_manager.fresh:
-                            recording_info = video_recorder_manager.recording_info
-                            ipc_queue.put(recording_info)
-                        video_recorder_manager.add_multi_frame(mf_payload)
-                    else:
-                        if not video_recorder_manager.fresh:
-                            logger.info('Recording complete, finishing and closing recorder')
-                            while len(mf_payloads_to_process) > 0:
-                                video_recorder_manager.add_multi_frame(mf_payloads_to_process.pop(0))
-                            video_recorder_manager.finish_and_close()  # Note, this will block this process until all frames are written
+                        if not video_recorder_manager:
                             video_recorder_manager = VideoRecorderManager.create(camera_configs=camera_configs,
                                                                                  recording_folder=get_default_recording_folder_path(
                                                                                      tag=""))
-
+                            ipc_queue.put(video_recorder_manager.recording_info)
+                        video_recorder_manager.add_multi_frame(mf_payload)
+                    else:
+                        if video_recorder_manager:
+                            logger.info('Recording complete, finishing and closing recorder...')
+                            while len(mf_payloads_to_process) > 0:
+                                video_recorder_manager.add_multi_frame(mf_payloads_to_process.popleft())
+                            video_recorder_manager.finish_and_close()  # Note, this will block this process until all frames are written
+                            video_recorder_manager = None
                     # TODO - send mf_payload along to the processing pipeline, somehow (maybe via another pipe? or the SharedMemoryIndexedArray thing i made?)
 
 
@@ -116,4 +115,5 @@ class FrameRouterProcess:
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             kill_camera_group_flag.value = True
-            video_recorder_manager.finish_and_close()
+            if video_recorder_manager:
+                video_recorder_manager.finish_and_close()
