@@ -70,7 +70,7 @@ class CameraGroupSharedMemory(BaseModel):
     def get_multi_frame_payload(self,
                                 previous_payload: Optional[MultiFramePayload],
                                 read_only: bool = True,
-                                ) -> Optional[MultiFramePayload]:
+                                ) -> MultiFramePayload:
 
 
         if previous_payload is None:

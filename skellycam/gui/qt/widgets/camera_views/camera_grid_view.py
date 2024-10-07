@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List
 
+from PySide6.QtCore import QMutex, QMutexLocker
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
@@ -39,6 +40,8 @@ class CameraViewGrid(QWidget):
         self._gui_state: GUIState = get_gui_state()
         self._gui_state.set_image_update_callable(self.set_image_data)
 
+        self._mutex_lock = QMutex()
+
 
 
     @property
@@ -49,8 +52,9 @@ class CameraViewGrid(QWidget):
 
     @property
     def camera_view_sizes(self) -> CameraViewSizes:
-        return CameraViewSizes(sizes = {camera_id: {"width": view.image_size.width(), "height": view.image_size.height()}
-                 for camera_id, view in self._single_camera_views.items()})
+        with QMutexLocker(self._mutex_lock):
+            return CameraViewSizes(sizes = {camera_id: {"width": view.image_size.width(), "height": view.image_size.height()}
+                     for camera_id, view in self._single_camera_views.items()})
 
     @property
     def grid_empty(self) -> bool:
@@ -65,10 +69,11 @@ class CameraViewGrid(QWidget):
                        jpeg_images: Dict[CameraId, str],
                        framerate_stats_by_camera: Dict[CameraId, CameraFramerateStats],
                        recording_in_progress:bool=False):
-        for camera_id, single_camera_view in self._single_camera_views.items():
-            single_camera_view.update_image(base64_str=jpeg_images[camera_id],
-                                            framerate_stats=framerate_stats_by_camera[camera_id],
-                                            recording=recording_in_progress)
+        with QMutexLocker(self._mutex_lock):
+            for camera_id, single_camera_view in self._single_camera_views.items():
+                single_camera_view.update_image(base64_str=jpeg_images[camera_id],
+                                                framerate_stats=framerate_stats_by_camera[camera_id],
+                                                recording=recording_in_progress)
 
     def create_single_camera_views(self):
         if not self._gui_state.connected_camera_configs:
@@ -102,16 +107,16 @@ class CameraViewGrid(QWidget):
     def clear_camera_views(self):
         if self.grid_empty:
             return
-
-        logger.gui("Clearing camera layout dictionary")
-        try:
-            for camera_id, single_camera_view in self._single_camera_views.items():
-                single_camera_view.close()
-                self._camera_portrait_grid_layout.removeWidget(single_camera_view)
-                self._camera_landscape_grid_layout.removeWidget(single_camera_view)
-                single_camera_view.deleteLater()
-            self._single_camera_views = {}
-        except Exception as e:
-            logger.exception(f"Error clearing camera layout dictionary: {e}")
-            raise
+        with QMutexLocker(self._mutex_lock):
+            logger.gui("Clearing camera layout dictionary")
+            try:
+                for camera_id, single_camera_view in self._single_camera_views.items():
+                    single_camera_view.close()
+                    self._camera_portrait_grid_layout.removeWidget(single_camera_view)
+                    self._camera_landscape_grid_layout.removeWidget(single_camera_view)
+                    single_camera_view.deleteLater()
+                self._single_camera_views = {}
+            except Exception as e:
+                logger.exception(f"Error clearing camera layout dictionary: {e}")
+                raise
 

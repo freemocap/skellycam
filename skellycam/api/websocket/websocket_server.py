@@ -106,6 +106,16 @@ class WebsocketServer:
         mf_payload: Optional[MultiFramePayload] = None
         try:
             while True:
+                if not self._shm_valid_flag.value:
+                    await async_wait_1ms()
+                    last_mf_number_read = -1
+                    continue
+
+                if self._app_state.camera_group_shm_dto is None:
+                    camera_group_shm_dto = None
+                    camera_group_shm = None
+                    await async_wait_1ms()
+                    continue
 
                 if camera_group_shm_dto != self._app_state.camera_group_shm_dto:
                     camera_group_shm_dto = self._app_state.camera_group_shm_dto
@@ -115,22 +125,18 @@ class WebsocketServer:
                     camera_configs = self._app_state.connected_camera_configs
                     camera_group_shm.camera_configs = camera_configs
 
-                if camera_group_shm is None:
-                    await async_wait_1ms()
-                    continue
 
                 shm_mf_number = camera_group_shm.multi_frame_number
                 if shm_mf_number == last_mf_number_read or not self._shm_valid_flag.value:
                     await async_wait_1ms()
                     continue
                 logger.loop(f"New multi-frame number detected! last_mf_number_read: {last_mf_number_read}, shm_mf_number: {shm_mf_number}")
-                last_mf_number_read = shm_mf_number
 
 
                 mf_payload = camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload,
                                                                       read_only=True)  # read-only so we don't increment the counter, that's the FrameListener's job
-                if mf_payload:
-                    await self._send_frontend_payload(mf_payload)
+                last_mf_number_read =mf_payload.multi_frame_number
+                await self._send_frontend_payload(mf_payload)
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")

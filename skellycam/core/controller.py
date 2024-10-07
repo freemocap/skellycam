@@ -93,8 +93,8 @@ class Controller:
 
     async def _close_camera_group(self):
         logger.debug("Closing existing camera group...")
-        self._app_state.close_camera_group_shm()
         await self._camera_group.close()
+        self._app_state.close_camera_group_shm()
         self._camera_group = None
         self._app_state.connected_camera_configs = None
         logger.success("Camera group closed successfully")

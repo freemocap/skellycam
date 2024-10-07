@@ -127,10 +127,12 @@ class AppState:
             return self._camera_group_shm_dto
 
     def close_camera_group_shm(self):
-        if self._camera_group_shm is not None:
-            self._camera_group_shm_valid_flag.value = False
-            self._camera_group_shm.close_and_unlink()
-            self._camera_group_shm = None
+        with self._lock:
+            if self._camera_group_shm is not None:
+                self._camera_group_shm_valid_flag.value = False
+                self._camera_group_shm.close_and_unlink()
+                self._camera_group_shm = None
+                self._camera_group_shm_dto = None
 
 class AppStateDTO(BaseModel):
     """
