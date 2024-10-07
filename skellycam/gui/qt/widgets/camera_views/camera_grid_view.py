@@ -72,7 +72,7 @@ class CameraViewGrid(QWidget):
         with QMutexLocker(self._mutex_lock):
             for camera_id, single_camera_view in self._single_camera_views.items():
                 single_camera_view.update_image(base64_str=jpeg_images[camera_id],
-                                                framerate_stats=framerate_stats_by_camera[camera_id],
+                                                framerate_stats=None,
                                                 recording=recording_in_progress)
 
     def create_single_camera_views(self):

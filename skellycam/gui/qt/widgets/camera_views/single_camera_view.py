@@ -1,6 +1,7 @@
 import base64
 import sys
 import time
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -70,7 +71,7 @@ class SingleCameraViewWidget(QWidget):
 
     def update_image(self,
                      base64_str: str,
-                     framerate_stats: CameraFramerateStats,
+                     framerate_stats: Optional[CameraFramerateStats],
                      recording: bool = False):
         q_image = self._image_updater.update_image(base64_str)
         with QMutexLocker(self._mutex):
@@ -105,10 +106,11 @@ class SingleCameraViewWidget(QWidget):
             painter.setPen(QColor(0, 0, 255))  # Blue color
         painter.drawText(10, 20, f"Recording Frames? {recording}")
         painter.drawText(10, 40, f"CameraId: {self.camera_id}")
-        painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
-        if framerate_stats.duration_stats:
-            painter.drawText(10, 80, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
-            painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
+        if framerate_stats:
+            painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
+            if framerate_stats.duration_stats:
+                painter.drawText(10, 80, f"Frame Duration (mean/std): {framerate_stats.duration_mean_std_ms_str}")
+                painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
         painter.end()
 
     def resizeEvent(self, event):

@@ -8,7 +8,6 @@ from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.gui.qt.gui_state.models.camera_view_sizes import CameraViewSizes
-from skellycam.gui.qt.gui_state.models.recent_multiframe_metadata import RecentMultiframeMetadata
 
 if TYPE_CHECKING:
     from skellycam.api.app.app_state import AppStateDTO
@@ -28,8 +27,6 @@ class GUIState(QWidget):
         self._new_frontend_payload_available: bool = False
 
         self._latest_frontend_payload: Optional[FrontendFramePayload] = None
-        self._mean_frontend_framerate = 0.0
-        self._recent_metadata: Optional[RecentMultiframeMetadata] = None
         self._frame_number: Optional[int] = None
 
         self._camera_view_sizes: Optional[CameraViewSizes] = CameraViewSizes()
@@ -131,13 +128,9 @@ class GUIState(QWidget):
         with QMutexLocker(self._mutex_lock):
             self._latest_frontend_payload = value
             self._frame_number = value.multi_frame_number
-            if not self._recent_metadata or self._recent_metadata.camera_ids != value.camera_ids:
-                self._recent_metadata = RecentMultiframeMetadata.from_multi_frame_metadata(value.multi_frame_metadata)
-            else:  # don't log the first frame
-                self._recent_metadata.add_multiframe_metadata(value.multi_frame_metadata)
             if self._image_update_callable:
                 self._image_update_callable(jpeg_images=value.jpeg_images,
-                                            framerate_stats_by_camera=self._recent_metadata.framerate_stats_by_camera,
+                                            framerate_stats_by_camera=None,
                                             recording_in_progress=self._record_frames_flag_status)
 
     @property
@@ -156,6 +149,13 @@ class GUIState(QWidget):
     def camera_view_sizes(self, value: CameraViewSizes) -> None:
         with QMutexLocker(self._mutex_lock):
             self._camera_view_sizes = value
+
+    def _handle_cameras_close(self):
+        with QMutexLocker(self._mutex_lock):
+            self._recent_metadata = None
+            self._latest_frontend_payload = None
+            self._camera_view_sizes = CameraViewSizes()
+            self._connected_camera_configs = None
 
 GUI_STATE = None
 
