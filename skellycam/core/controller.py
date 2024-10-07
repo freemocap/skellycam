@@ -39,11 +39,11 @@ class Controller:
 
     async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
         if camera_configs and self._camera_group and self._app_state.connected_camera_configs:
-            self._app_state.connected_camera_configs = camera_configs
             update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
                                                                   old_configs=self._app_state.connected_camera_configs)
             if not update_instructions.reset_all:
                 logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
+                self._app_state.connected_camera_configs = camera_configs
                 await self._camera_group.update_camera_configs(update_instructions=update_instructions)
                 return
             logger.debug(f"Updating CameraGroup requires reset - closing existing group...")

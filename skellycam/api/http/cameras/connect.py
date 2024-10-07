@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter, Body
 
+from skellycam.api.app.app_state import get_app_state
 from skellycam.core.cameras.camera.config.camera_config import CameraConfigs, default_camera_configs_factory
 from skellycam.core.controller import get_controller
 

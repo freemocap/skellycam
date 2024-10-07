@@ -69,6 +69,7 @@ class CameraGroupProcess:
                      ):
         logger.debug(f"CameraGroupProcess started")
 
+        # TODO - Move up and make DTO's to build these whacky sub-processes
         group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs,
                                                                          kill_camera_group_flag=kill_camera_group_flag,
                                                                          global_kill_event=global_kill_event)

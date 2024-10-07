@@ -120,9 +120,9 @@ class CameraSettingsPanel(QWidget):
             ],
         )
 
-        camera_parameter_group.param(self.tr(USE_THIS_CAMERA_STRING)).sigValueChanged.connect(
-            lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
-        )
+        # camera_parameter_group.param(self.tr(USE_THIS_CAMERA_STRING)).sigValueChanged.connect(
+        #     lambda: self._enable_or_disable_camera_settings(camera_parameter_group)
+        # )
         camera_parameter_group.sigTreeStateChanged.connect(self._update_user_selected_camera_settings)
         return camera_parameter_group
 
@@ -140,6 +140,8 @@ class CameraSettingsPanel(QWidget):
         logger.gui("Extracting camera configs from parameter tree")
         new_user_selected_configs = {}
         for (camera_id, parameter_group,) in self._parameter_groups.items():
+            if not parameter_group.param(USE_THIS_CAMERA_STRING).value():
+                continue
             new_user_selected_configs[camera_id] = CameraConfig(
                 camera_id=camera_id,
                 use_this_camera=parameter_group.param(USE_THIS_CAMERA_STRING).value(),
