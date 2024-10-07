@@ -6,7 +6,7 @@ from typing import Dict
 from skellycam.core import CameraId
 from skellycam.core.cameras.camera.camera_process import CameraProcess
 from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.cameras.group.update_instructions import UpdateInstructions
+from skellycam.core.cameras.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO
 from skellycam.utilities.wait_functions import wait_10ms
 

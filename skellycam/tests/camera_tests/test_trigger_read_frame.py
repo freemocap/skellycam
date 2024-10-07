@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import cv2
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.get_frame import get_frame
+from skellycam.core.cameras.camera.opencv.get_frame import get_frame
 from skellycam.core.cameras.camera.opencv import create_cv2_video_capture
 from skellycam.core.cameras.group import CameraGroupOrchestrator
 from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
