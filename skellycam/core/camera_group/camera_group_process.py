@@ -17,7 +17,7 @@ class CameraGroupProcess:
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
-            args=dto
+            args=(dto,)
         )
 
     @property
@@ -42,8 +42,8 @@ class CameraGroupProcess:
     def _run_process(dto: CameraGroupDTO):
         logger.debug(f"CameraGroupProcess started")
 
-        frame_wrangler = FrameWrangler.from_camera_group_dto(dto)
-        camera_manager = CameraManager.from_camera_group_dto(dto)
+        frame_wrangler = FrameWrangler.create(dto)
+        camera_manager = CameraManager.create(dto)
 
         try:
             frame_wrangler.start()

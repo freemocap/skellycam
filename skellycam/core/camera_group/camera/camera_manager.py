@@ -30,10 +30,10 @@ class CameraManager(BaseModel):
 
         return cls(camera_group_dto=camera_group_dto,
                    orchestrator=camera_group_dto.shmorc_dto.camera_group_orchestrator,
-                   camera_processes={camera_id: CameraProcess(camera_id=camera_id,
-                                                              dto=camera_group_dto,
-                                                              ) for camera_id in
-                                     camera_group_dto.camera_ids()},
+                   camera_processes={camera_id: CameraProcess.create(camera_id=camera_id,
+                                                                     dto=camera_group_dto,
+                                                                     ) for camera_id in
+                                     camera_group_dto.camera_ids},
                    )
 
     @property

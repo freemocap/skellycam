@@ -3,7 +3,7 @@ import multiprocessing
 from typing import Optional
 
 import cv2
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
@@ -24,20 +24,20 @@ MANUAL_EXPOSURE_SETTING = 1  # 0.25
 class CameraProcess(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     process: multiprocessing.Process
-    camera_group_dto: CameraGroupDTO
-    should_close_self_flag: multiprocessing.Value
+    dto: CameraGroupDTO
+    should_close_self: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
 
     @classmethod
     def create(cls,
                camera_id: CameraId,
-               camera_group_dto: CameraGroupDTO):
+               dto: CameraGroupDTO):
         should_close_self_flag = multiprocessing.Value('b', False)
-        return cls(camera_group_dto=camera_group_dto,
+        return cls(dto=dto,
                    should_close_self_flag=should_close_self_flag,
                    process=multiprocessing.Process(target=cls._run_process,
                                                    name=f"Camera{camera_id}",
                                                    args=(camera_id,
-                                                         camera_group_dto,
+                                                         dto,
                                                          should_close_self_flag)
                                                    ),
 
@@ -57,18 +57,18 @@ class CameraProcess(BaseModel):
 
     def update_config(self, new_config: CameraConfig):
         logger.debug(f"Updating camera {self._config.camera_id} with new config: {new_config}")
-        self.camera_group_dto.config_update_queue.put(new_config)
+        self.dto.config_update_queue.put(new_config)
 
     @staticmethod
     def _run_process(camera_id: CameraId,
-                     camera_group_dto: CameraGroupDTO,
+                     dto: CameraGroupDTO,
                      should_close_self_flag: multiprocessing.Value
                      ):
-        config = camera_group_dto.camera_configs[camera_id]
-        shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=camera_group_dto.shmorc_dto,
+        config = dto.camera_configs[camera_id]
+        shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=dto.shmorc_dto,
                                                                        read_only=False)
         frame_loop_flags = CameraFrameLoopFlags.create(camera_id=camera_id,
-                                                       ipc_flags=camera_group_dto.ipc_flags)
+                                                       ipc_flags=dto.ipc_flags)
         cv2_video_capture: Optional[cv2.VideoCapture] = None
         try:
             cv2_video_capture = create_cv2_video_capture(config)
@@ -81,11 +81,11 @@ class CameraProcess(BaseModel):
             logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
             frame_number = 0
             # Trigger listening loop
-            while not camera_group_dto.ipc_flags.global_kill_flag.value and not camera_group_dto.ipc_flags.kill_camera_group_flag and not should_close_self_flag.value:
+            while not dto.ipc_flags.global_kill_flag.value and not dto.ipc_flags.kill_camera_group_flag and not should_close_self_flag.value:
 
                 config = CameraProcess.check_for_config_update(config=config,
                                                                cv2_video_capture=cv2_video_capture,
-                                                               config_update_queue=camera_group_dto.config_update_queue,
+                                                               config_update_queue=dto.config_update_queue,
                                                                frame_loop_flags=frame_loop_flags
                                                                )
 
@@ -113,7 +113,7 @@ class CameraProcess(BaseModel):
                 cv2_video_capture.release()
 
             # Shut down the whole camera group if one camera goes down
-            camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
+            dto.ipc_flags.kill_camera_group_flag.value = True
 
     @staticmethod
     def check_for_config_update(config: CameraConfig,

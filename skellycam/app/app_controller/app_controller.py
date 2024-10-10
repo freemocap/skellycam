@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import multiprocessing
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,35 +26,51 @@ class AppController(BaseModel):
     async def detect_available_cameras(self):
         # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
         logger.info(f"Detecting available cameras...")
+
         self.tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(),
                                                                         name="DetectAvailableCameras")
-    async def detect_and_connect_to_cameras(self):
-        logger.info("Detecting and connecting to cameras...")
-        await self.detect_available_cameras()
-        await self.cameras_apply_configs(camera_configs=self.app_state.camera_group_configs)
 
-    async def cameras_apply_configs(self, camera_configs: CameraConfigs):
+    async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs]=None):
+        try:
+            if camera_configs and self.app_state.camera_group:
+                # if CameraGroup already exists, check if new configs require reset
+                update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
+                                                                      old_configs=self.app_state.camera_group_configs)
+                if not update_instructions.reset_all:
+                    # Update instructions do not require reset - update existing camera group
+                    logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
+                    await self.app_state.update_camera_group(camera_configs=camera_configs,
+                                                              update_instructions=update_instructions)
+                    return
 
-        if self.app_state.camera_group:
-            # if CameraGroup already exists, check if new configs require reset
-            update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
-                                                                  old_configs=self.app_state.camera_group_configs)
-            if not update_instructions.reset_all:
-                # Update instructions do not require reset - update existing camera group
-                logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
-                await self.app_state.update_camera_group(camera_configs=camera_configs,
-                                                          update_instructions=update_instructions)
-                return
+                # Update instructions require reset - close existing group (will be re-created below)
+                logger.debug(f"Updating CameraGroup requires reset - closing existing group and reconnecting...")
 
-            # Update instructions require reset - close existing group (will be re-created below)
-            logger.debug(f"Updating CameraGroup requires reset - closing existing group...")
-            await self.app_state.close_camera_group()
+            logger.info(f"Connecting to cameras....")
+            self.tasks.connect_to_cameras_task = asyncio.create_task(
+                self._create_camera_group(camera_configs=self.app_state.camera_group_configs),
+                name="ConnectToCameras")
+        except Exception as e:
+            logger.exception(f"Error connecting to cameras: {e}")
+            raise
 
-        logger.info(f"Connecting to cameras....")
-        self.tasks.connect_to_cameras_task = asyncio.create_task(
-            self._create_camera_group(camera_configs=camera_configs),
-            name="ConnectToCameras")
+    async def _create_camera_group(self, camera_configs: CameraConfigs):
+        try:
+            if self.app_state.camera_group_configs is None:
+                await detect_available_devices()
 
+            if self.app_state.camera_group_configs is None:
+                raise ValueError("No camera configurations detected!")
+
+            if self.app_state.camera_group:  # if `connect/` called w/o configs, reset existing connection
+                await self.app_state.close_camera_group()
+
+            self.app_state.create_camera_group()
+            await self.app_state.camera_group.start()
+            logger.success("Camera group started successfully!")
+        except Exception as e:
+            logger.exception(f"Error creating camera group:  {e}")
+            raise
 
     async def close(self):
         logger.info("Closing controller...")
@@ -62,25 +79,6 @@ class AppController(BaseModel):
 
     async def close_camera_group(self):
         await self.app_state.close_camera_group()
-
-
-    async def _create_camera_group(self, camera_configs: CameraConfigs):
-        if self.app_state.camera_group_configs is None:
-            await detect_available_devices()
-
-        if self.app_state.camera_group_configs is None:
-            raise ValueError("No camera configurations detected!")
-
-        self.app_state.create_camera_group_shm()
-
-        if self.app_state.camera_group:  # if `connect/` called w/o configs, reset existing connection
-            await self.app_state.close_camera_group()
-
-        self.app_state.app_state.create_camera_group(camera_configs=camera_configs)
-        await self.app_state.camera_group.start()
-        logger.success("Camera group started successfully")
-
-
 APP_CONTROLLER = None
 
 

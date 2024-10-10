@@ -41,7 +41,7 @@ class CameraFrameLoopFlags(BaseModel):
 
     @property
     def should_continue(self):
-        return not self.ipc_flags.global_kill_flag.value and not self.ipc_flags.kill_camera_group_flag.is_set() and not self.close_self_flag.is_set()
+        return not self.ipc_flags.global_kill_flag.value and not self.ipc_flags.kill_camera_group_flag.value and not self.close_self_flag.value
 
     def await_frame_loop_initialization(self, max_wait_time_s: float = MAX_WAIT_TIME_S):
         start_wait_ns = time.perf_counter_ns()
@@ -88,11 +88,11 @@ class CameraFrameLoopFlags(BaseModel):
         if time_waited_s > (max_wait_time_s * 1e9) * .5 and not been_warned:
             logger.warning(
                 f"Camera {self.camera_id} process hit half-way point waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
-                f" self.grab_frame_trigger.is_set()={self.should_grab_frame_flag.is_set()}, "
+                f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
                 f"self.should_continue={self.should_continue}")
 
         if time_waited_s > max_wait_time_s * 1e9:
             raise TimeoutError(
                 f"Camera {self.camera_id} process timed out waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
-                f" self.grab_frame_trigger.is_set()={self.should_grab_frame_flag.is_set()}, "
+                f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
                 f"self.should_continue={self.should_continue}")

@@ -5,6 +5,8 @@ from collections import deque
 from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.timestamps.frame_rate_tracker import FrameRateTracker
@@ -39,18 +41,20 @@ class FrameListenerProcess:
 
         try:
             logger.trace(f"Starting FrameListener loop...")
-            camera_group_shm = CameraGroupSharedMemory.recreate(dto=dto.group_shm_dto,
-                                                                read_only=False)
+            shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=dto.shmorc_dto, read_only=False)
+            camera_group_shm = shmorchestrator.camera_group_shm
+            orchestrator = shmorchestrator.camera_group_orchestrator
+
             frame_rate_tracker = FrameRateTracker()
             mf_payload: Optional[MultiFramePayload] = None
             byte_chunklets_to_send = deque()
 
-            while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.is_set():
-                if dto.group_orchestrator.new_multi_frame_available_flag.value:
+            while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
+                if orchestrator.new_multi_frame_available_flag.value:
                     mf_payload: Optional[MultiFramePayload] = camera_group_shm.get_multi_frame_payload(
                         previous_payload=mf_payload)
 
-                    dto.group_orchestrator.set_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
+                    orchestrator.set_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
                     logger.loop(
                         f"FrameListener -  copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
 
@@ -62,7 +66,7 @@ class FrameListenerProcess:
                     byte_chunklets_to_send.extend(mf_bytes_list)
 
                 elif len(
-                        byte_chunklets_to_send) > 0 and not dto.group_orchestrator.new_multi_frame_available_flag.value:
+                        byte_chunklets_to_send) > 0 and not orchestrator.new_multi_frame_available_flag.value:
                     # Opportunistically let byte chunks escape one-at-a-time, whenever there isn't frame-loop work to do
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.popleft())
 

@@ -16,33 +16,43 @@ logger = logging.getLogger(__name__)
 async def detect_available_devices(check_if_available: bool = True):
     from PySide6.QtMultimedia import QMediaDevices
     # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
+    close_app = False
     if not QCoreApplication.instance():
+        logger.debug("No QCoreApplication instance found - creating new instance so we can use QMediaDevices to detect cameras...")
         app = QCoreApplication([])
+        close_app = True
     else:
         app = QCoreApplication.instance()
-    logger.info("Detecting available cameras...")
-    devices = QMediaDevices()
-    detected_cameras = devices.videoInputs()
 
-    if platform.system() == "Darwin":
-        detected_cameras, camera_ports = await order_darwin_cameras(detected_cameras=detected_cameras)
-    else:
-        camera_ports = range(len(detected_cameras))
+    try:
+        logger.info("Detecting available cameras...")
+        devices = QMediaDevices()
+        detected_cameras = devices.videoInputs()
 
-    camera_devices = {}
-    for camera_number, camera in zip(camera_ports, detected_cameras):
+        if platform.system() == "Darwin":
+            detected_cameras, camera_ports = await order_darwin_cameras(detected_cameras=detected_cameras)
+        else:
+            camera_ports = range(len(detected_cameras))
 
-        if check_if_available and not platform.system() == "Darwin":  # macOS cameras get checked in order_darwin_cameras
-            await _check_camera_available(camera_number)
+        camera_devices = {}
+        for camera_number, camera in zip(camera_ports, detected_cameras):
 
-        camera_device_info = CameraDeviceInfo.from_q_camera_device(
-            camera_number=camera_number, camera=camera
-        )
-        camera_devices[camera_device_info.cv2_port] = camera_device_info
-    logger.debug(f"Detected camera_devices: {list(camera_devices.keys())}")
-    get_app_state().set_available_devices({camera_id: device
-                                           for camera_id, device in camera_devices.items()})
+            if check_if_available and not platform.system() == "Darwin":  # macOS cameras get checked in order_darwin_cameras
+                await _check_camera_available(camera_number)
 
+            camera_device_info = CameraDeviceInfo.from_q_camera_device(
+                camera_number=camera_number, camera=camera
+            )
+            camera_devices[camera_device_info.cv2_port] = camera_device_info
+        logger.debug(f"Detected camera_devices: {list(camera_devices.keys())}")
+        get_app_state().set_available_devices({camera_id: device
+                                               for camera_id, device in camera_devices.items()})
+    except Exception as e:
+        logger.exception(f"Error detecting available cameras: {e}")
+        raise
+    finally:
+        if close_app:
+            app.quit()
 
 async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
     """

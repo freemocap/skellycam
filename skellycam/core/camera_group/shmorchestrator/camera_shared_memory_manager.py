@@ -1,33 +1,30 @@
 import logging
 import multiprocessing
+from dataclasses import dataclass
 from typing import Dict, Optional, List
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory, GroupSharedMemoryNames
-from skellycam.core.camera_group.shmorchestrator.shared_memory_number import SharedMemoryNumber
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)
 
 
-class CameraGroupSharedMemoryDTO(BaseModel):
+@dataclass
+class CameraGroupSharedMemoryDTO:
     camera_configs: CameraConfigs
     group_shm_names: GroupSharedMemoryNames
-    mf_counter_shm_name: str
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class CameraGroupSharedMemory(BaseModel):
-    camera_configs: CameraConfigs
-    camera_shms: Dict[CameraId, CameraSharedMemory]
-    multi_frame_number_shm: SharedMemoryNumber
     shm_valid_flag: multiprocessing.Value
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+@dataclass
+class CameraGroupSharedMemory:
+    camera_configs: CameraConfigs
+    camera_shms: Dict[CameraId, CameraSharedMemory]
+    shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", True)
 
     @classmethod
     def create(cls, camera_configs: CameraConfigs, read_only: bool = False):
@@ -35,9 +32,7 @@ class CameraGroupSharedMemory(BaseModel):
                        for camera_id, config in camera_configs.items()}
 
         return cls(camera_configs=camera_configs,
-                   camera_shms=camera_shms,
-                   multi_frame_number_shm=SharedMemoryNumber.create(),
-                   shm_valid_flag=multiprocessing.Value("b", True))
+                   camera_shms=camera_shms)
 
     @classmethod
     def recreate(cls,
@@ -51,7 +46,6 @@ class CameraGroupSharedMemory(BaseModel):
 
         return cls(camera_configs=dto.camera_configs,
                    camera_shms=camera_shms,
-                   multi_frame_number_shm=SharedMemoryNumber.recreate(dto.mf_counter_shm_name),
                    shm_valid_flag=dto.shm_valid_flag)
 
     @property
@@ -64,17 +58,13 @@ class CameraGroupSharedMemory(BaseModel):
         return list(self.camera_shms.keys())
 
     @property
-    def multi_frame_number(self) -> int:
-        return self.multi_frame_number_shm.get()
-
-    @property
     def valid(self) -> bool:
         return self.shm_valid_flag.value
 
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
                                           group_shm_names=self.shared_memory_names,
-                                          mf_counter_shm_name=self.multi_frame_number_shm.name)
+                                          shm_valid_flag=self.shm_valid_flag)
 
     def get_multi_frame_payload(self,
                                 previous_payload: Optional[MultiFramePayload]
@@ -93,9 +83,7 @@ class CameraGroupSharedMemory(BaseModel):
             payload.add_frame(frame)
         if not payload.full:
             raise ValueError("Did not read full multi-frame payload!")
-        if not self.read_only:
-            # Only increment the multi-frame number if this is not a read-only instance of the shared memory
-            self.multi_frame_number_shm.set(payload.multi_frame_number)
+
         return payload
 
     def close(self):

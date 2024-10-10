@@ -20,9 +20,9 @@ class CameraGroupOrchestrator:
     frame_loop_paused: multiprocessing.Value = multiprocessing.Value("b", False)
 
     @classmethod
-    def from_camera_configs(cls,
-                            camera_configs: CameraConfigs,
-                            ipc_flags: IPCFlags):
+    def create(cls,
+               camera_configs: CameraConfigs,
+               ipc_flags: IPCFlags):
         return cls(
             camera_triggers={
                 camera_id: CameraFrameLoopFlags.create(camera_id=camera_id,
@@ -45,7 +45,7 @@ class CameraGroupOrchestrator:
         return all([triggers.camera_ready_flag.value for triggers in self.camera_triggers.values()])
 
     @property
-    def new_frames_available(self):
+    def new_multi_frame_available(self):
         return all([triggers.new_frame_available_flag.value for triggers in self.camera_triggers.values()])
 
     @property
@@ -97,29 +97,24 @@ class CameraGroupOrchestrator:
         logger.loop(f"**Frame Loop** - Step #3 (finish) - RETRIEVE triggers fired!")
 
         # 4 - wait for all cameras to retrieve the frame and put it in shared memory
-        logger.loop(f"**Frame Loop** - Step #4 (start) - Wait for new frames to be available")
-        self.await_new_frames_available()
+        logger.loop(f"**Frame Loop** - Step #4 (start) - Wait for new multi-frame to be available")
+        self.await_new_multi_frame_available()
         logger.loop(
-            f"**Frame Loop** - Step #4 (finish) - New frames are available in shared memory!")
-
-        # 5 - Trigger FrameListener to send a multi-frame payload to the FrameRouter
-        logger.loop(f"**Frame Loop** - Step #5 (start) - Fire escape multi-frame trigger")
-        self.new_multi_frame_available_flag.set()
-        logger.loop(f"**Frame Loop** - Step #5 (finish) - Escape multi-frame trigger fired!")
+            f"**Frame Loop** - Step #4 (finish) - New multi-frame available in shared memory!")
 
         # 6 - wait for the frame to be copied from the `write` buffer to the `read` buffer
         logger.loop(
-            f"**Frame Loop** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
+            f"**Frame Loop** - Step #7 (start) - Wait for multi-frame to be copied from shared memory")
         self._await_mf_copied_from_shm()
         logger.loop(
-            f"**Frame Loop** - Step #6 (finish) - Multi-frame copied from shared memory!")
+            f"**Frame Loop** - Step #7 (finish) - Multi-frame copied from shared memory!")
 
         # 7 - Make sure all the triggers are as they should be
         logger.loop(
-            f"**Frame Loop** - Step# 7 (start) - Verify that everything is hunky-dory after reading the frames")
+            f"**Frame Loop** - Step# 8 (start) - Verify that everything is hunky-dory after reading the frames")
         self._verify_hunky_dory_after_read()
         logger.loop(
-            f"**Frame Loop** - Step #7 (end) - Everything is hunky-dory after reading the frames!")
+            f"**Frame Loop** - Step #8 (end) - Everything is hunky-dory after reading the frames!")
         logger.loop(f"FRAME LOOP Complete!")
 
     ##############################################################################################################
@@ -140,9 +135,10 @@ class CameraGroupOrchestrator:
             wait_10ms()
         logger.debug("All cameras are ready!")
 
-    def await_new_frames_available(self):
-        while (not self.frames_retrieved or not self.new_frames_available) and self.should_continue:
+    def await_new_multi_frame_available(self):
+        while (not self.frames_retrieved or not self.new_multi_frame_available) and self.should_continue:
             wait_100us()
+        self.new_multi_frame_available_flag.value = True
 
     def set_multi_frame_pulled_from_shm(self):
         for triggers in self.camera_triggers.values():
@@ -201,6 +197,6 @@ class CameraGroupOrchestrator:
             any_new = any(
                 [triggers.new_frame_available_flag.value for triggers in self.camera_triggers.values()]
             )
-            if self.new_frames_available or any_new:
+            if self.new_multi_frame_available or any_new:
                 raise AssertionError(
-                    f"New frames available trigger not reset properly? `new_frame_available_trigger`: {self.new_frames_available}, `any_new`: {any_new}")
+                    f"New frames available trigger not reset properly? `new_frame_available_trigger`: {self.new_multi_frame_available}, `any_new`: {any_new}")

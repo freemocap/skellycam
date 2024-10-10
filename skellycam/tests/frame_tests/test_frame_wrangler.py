@@ -26,10 +26,10 @@ def test_frame_wrangler(camera_group_shared_memory_fixture: CameraGroupSharedMem
             cam_triggers.set_new_frame_available()
             assert cam_triggers.new_frame_available
 
-        assert camera_group_orchestrator_fixture.new_frames_available
+        assert camera_group_orchestrator_fixture.new_multi_frame_available
         camera_group_orchestrator_fixture.set_frames_copied()
         camera_group_orchestrator_fixture._await_mf_copied_from_shm()
-        assert not camera_group_orchestrator_fixture.new_frames_available
+        assert not camera_group_orchestrator_fixture.new_multi_frame_available
 
     frame_wrangler_fixture.close()
     assert not frame_wrangler_fixture.is_alive()

@@ -83,15 +83,15 @@ def test_trigger_get_frame_deconstructed(
             assert cap.retrieve_called_count == 1
 
         # 4
-        camera_group_orchestrator_fixture.await_new_frames_available()
+        camera_group_orchestrator_fixture.await_new_multi_frame_available()
         assert camera_group_orchestrator_fixture.frames_retrieved
         wait_1ms()
-        assert camera_group_orchestrator_fixture.new_frames_available
+        assert camera_group_orchestrator_fixture.new_multi_frame_available
 
         # 5
         [triggers.set_frame_copied() for triggers in camera_group_orchestrator_fixture.camera_triggers.values()]
         camera_group_orchestrator_fixture._await_mf_copied_from_shm()
-        assert not camera_group_orchestrator_fixture.new_frames_available
+        assert not camera_group_orchestrator_fixture.new_multi_frame_available
 
         # 6
         camera_group_orchestrator_fixture._verify_hunky_dory_after_read()

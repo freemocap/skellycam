@@ -21,6 +21,10 @@ class CameraGroup(BaseModel):
     def create(cls, dto: CameraGroupDTO):
         return cls(dto=dto, camera_group_process=CameraGroupProcess(dto=dto))
 
+    @property
+    def camera_ids(self):
+        return list(self.dto.camera_configs.keys())
+
     async def start(self, number_of_frames: Optional[int] = None):
         logger.info("Starting camera group")
         await self.camera_group_process.start()
@@ -37,5 +41,5 @@ class CameraGroup(BaseModel):
                                     update_instructions: UpdateInstructions):
         logger.debug(
             f"Updating Camera Configs with instructions: {update_instructions}")
-        self._dto.camera_configs = camera_configs
-        self._dto.config_update_que.put(update_instructions)
+        self.dto.update_camera_configs(camera_configs)
+        self.dto.config_update_queue.put(update_instructions)

@@ -57,15 +57,16 @@ class AppState(BaseModel):
         self.available_devices = value
         self.ipc_queue.put(self.state_dto())
 
-    def create_camera_group(self, camera_configs: CameraConfigs):
-        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=camera_configs,
+    def create_camera_group(self):
+        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=self.camera_group_configs,
                                                                            ipc_flags=self.ipc_flags,
                                                                            read_only=True)
         self.camera_group = CameraGroup.create(dto=CameraGroupDTO(shmorc_dto=self.shmorchestrator.to_dto(),
-                                                                   camera_configs=camera_configs,
+                                                                   camera_configs=self.camera_group_configs,
                                                                    ipc_queue=self.ipc_queue,
                                                                    ipc_flags=self.ipc_flags)
                                                 )
+        logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 
     async def update_camera_group(self,
                                   camera_configs: CameraConfigs,

@@ -44,7 +44,7 @@ class FrameRouterProcess:
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         video_recorder_manager: Optional[VideoRecorderManager] = None
         try:
-            while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.is_set():
+            while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
                 wait_100us()
 
                 # Check for incoming data
@@ -99,6 +99,6 @@ class FrameRouterProcess:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
-            dto.kill_camera_group_flag.value = True
+            dto.ipc_flags.kill_camera_group_flag.value = True
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()

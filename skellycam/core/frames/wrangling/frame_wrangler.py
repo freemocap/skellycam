@@ -18,7 +18,7 @@ class FrameWrangler(BaseModel):
     frame_router_process: FrameRouterProcess
 
     @classmethod
-    def from_camera_group_dto(cls, dto: CameraGroupDTO):
+    def create(cls, dto: CameraGroupDTO):
         frame_escape_publisher, frame_escape_subscriber = multiprocessing.Pipe()
 
         return cls(listener_process=FrameListenerProcess(dto=dto,
@@ -30,15 +30,15 @@ class FrameWrangler(BaseModel):
 
     def start(self):
         logger.debug(f"Starting frame listener process...")
-        self._listener_process.start()
-        self._frame_router_process.start()
+        self.listener_process.start()
+        self.frame_router_process.start()
 
     def is_alive(self) -> bool:
-        return self._listener_process.is_alive() and self._frame_router_process.is_alive()
+        return self.listener_process.is_alive() and self.frame_router_process.is_alive()
 
     def join(self):
-        self._listener_process.join()
-        self._frame_router_process.join()
+        self.listener_process.join()
+        self.frame_router_process.join()
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")

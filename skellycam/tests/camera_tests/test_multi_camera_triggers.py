@@ -19,7 +19,7 @@ def test_multi_camera_triggers_exit_event(camera_configs_fixture: CameraConfigs,
                                                                             exit_event=exit_event_fixture)
 
     assert camera_group_orchestrator.should_continue is True
-    wait_threads = [threading.Thread(target=camera_group_orchestrator.await_new_frames_available),
+    wait_threads = [threading.Thread(target=camera_group_orchestrator.await_new_multi_frame_available),
                     threading.Thread(target=camera_group_orchestrator.await_for_cameras_ready),
                     threading.Thread(target=camera_group_orchestrator._await_frames_grabbed),
                     threading.Thread(target=camera_group_orchestrator._wait_for_frames_grabbed_triggers_reset),
