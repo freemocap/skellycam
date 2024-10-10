@@ -6,6 +6,7 @@ from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 
 logger = logging.getLogger(__name__)
@@ -98,3 +99,8 @@ class CameraDeviceInfo(BaseModel):
 
 
 AvailableDevices = Dict[CameraId, CameraDeviceInfo]
+
+
+def available_devices_to_default_camera_configs(available_devices: AvailableDevices) -> CameraConfigs:
+    return {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
+            available_devices.keys()}

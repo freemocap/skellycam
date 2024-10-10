@@ -21,7 +21,8 @@ SESSION_START_TIME_FORMAT_STRING = "ISO6201 format timestamp with GMT offset in 
 
 SKELLYCAM_SVG_PATH = str(
     Path(__file__).parent.parent.parent / "shared" / "skellycam-logo" / "skellycam-logo.svg")
-SKELLYCAM_FAVICON_ICO_PATH = str(Path(__file__).parent.parent.parent / "shared" / "skellycam-logo" / "skellycam-favicon.ico")
+SKELLYCAM_FAVICON_ICO_PATH = str(
+    Path(__file__).parent.parent.parent / "shared" / "skellycam-logo" / "skellycam-favicon.ico")
 
 
 def os_independent_home_dir() -> str:
@@ -36,7 +37,7 @@ def get_default_skellycam_recordings_path() -> str:
     return str(Path(get_default_skellycam_base_folder_path()) / "recordings")
 
 
-def get_default_recording_folder_path(tag:str="") -> str:
+def get_default_recording_folder_path(tag: str = "") -> str:
     return str(Path(get_default_skellycam_base_folder_path()) / "recordings" / default_recording_name(string_tag=tag))
 
 

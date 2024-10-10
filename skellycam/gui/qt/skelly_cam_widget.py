@@ -42,7 +42,6 @@ class SkellyCamWidget(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-
     def update_widget(self):
         logger.gui(f"Updating {self.__class__.__name__}")
         self.recording_panel.update_widget()
@@ -52,7 +51,6 @@ class SkellyCamWidget(QWidget):
                 return
             logger.gui(f"Sending updated view sizes to backend: {self.camera_view_grid.camera_view_sizes}")
             self._gui_state.camera_view_sizes = self.camera_view_grid.camera_view_sizes
-
 
     def detect_available_cameras(self):
         logger.gui("Connecting to cameras")

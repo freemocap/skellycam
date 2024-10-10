@@ -24,6 +24,7 @@ class FRAME_METADATA_MODEL(Enum):
     START_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 11  # (timestamp before annotating image)
     END_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 12  # (timestamp after annotating image)
 
+
 DEFAULT_IMAGE_DTYPE = np.uint8
 FRAME_METADATA_DTYPE = np.uint64
 FRAME_METADATA_SHAPE = (len(FRAME_METADATA_MODEL),)

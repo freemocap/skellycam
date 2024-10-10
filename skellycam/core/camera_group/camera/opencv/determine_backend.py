@@ -20,7 +20,7 @@ def determine_backend() -> BackendSelection:
     if platform.system() == "Windows":
         return BackendSelection.CAP_DSHOW
     else:
-        return BackendSelection.CAP_ANY #TODO - Figure out how to do this better for non-Windows systems, this works on Linux but seems to max at 25fps (for 30fps camera)
+        return BackendSelection.CAP_ANY  # TODO - Figure out how to do this better for non-Windows systems, this works on Linux but seems to max at 25fps (for 30fps camera)
 
 
 if __name__ == "__main__":

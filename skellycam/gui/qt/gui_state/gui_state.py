@@ -100,7 +100,6 @@ class GUIState(QWidget):
         with QMutexLocker(self._mutex_lock):
             self._record_frames_flag_status = value
 
-
     @property
     def recording_info(self) -> Optional[RecordingInfo]:
         with QMutexLocker(self._mutex_lock):
@@ -156,6 +155,7 @@ class GUIState(QWidget):
             self._latest_frontend_payload = None
             self._camera_view_sizes = CameraViewSizes()
             self._connected_camera_configs = None
+
 
 GUI_STATE = None
 

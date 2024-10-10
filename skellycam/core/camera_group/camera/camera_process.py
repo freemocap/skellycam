@@ -11,7 +11,7 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.camera.opencv.apply_config import apply_camera_configuration
 from skellycam.core.camera_group.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.camera_group.camera.opencv.get_frame import get_frame
-from skellycam.core.camera_group.camera_group import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator
 from skellycam.utilities.wait_functions import wait_100us
@@ -62,7 +62,7 @@ class CameraProcess(BaseModel):
     @staticmethod
     def _run_process(camera_id: CameraId,
                      camera_group_dto: CameraGroupDTO,
-                     should_close_self_flag:multiprocessing.Value
+                     should_close_self_flag: multiprocessing.Value
                      ):
         config = camera_group_dto.camera_configs[camera_id]
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=camera_group_dto.shmorc_dto,
@@ -71,7 +71,7 @@ class CameraProcess(BaseModel):
                                                        ipc_flags=camera_group_dto.ipc_flags)
         cv2_video_capture: Optional[cv2.VideoCapture] = None
         try:
-            cv2_video_capture =  create_cv2_video_capture(config)
+            cv2_video_capture = create_cv2_video_capture(config)
             # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... Linux appears to be always set to AUTO by default and gets weird results when set to MANUAL? And sometimes you have to unplug/replug the camera to fix it?
             logger.debug(f"Camera {config.camera_id} process started")
             apply_camera_configuration(cv2_video_capture, config)

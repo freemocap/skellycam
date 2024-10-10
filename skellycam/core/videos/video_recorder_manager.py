@@ -10,10 +10,9 @@ from pydantic import BaseModel, ValidationError, Field
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
+from skellycam.core.frames.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.frames.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.videos.video_recorder import VideoRecorder
-from skellycam.utilities.clean_up_empty_directories import recursively_remove_empty_directories
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
@@ -76,8 +75,8 @@ class VideoRecorderManager(BaseModel):
                    recording_name=recording_name,
                    camera_configs=camera_configs,
                    video_recorders=video_recorders,
-                     multi_frame_timestamp_logger=MultiframeTimestampLogger.create(video_save_directory=videos_folder,
-                                                                                  recording_name=recording_name)
+                   multi_frame_timestamp_logger=MultiframeTimestampLogger.create(video_save_directory=videos_folder,
+                                                                                 recording_name=recording_name)
                    )
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
@@ -114,13 +113,9 @@ class VideoRecorderManager(BaseModel):
             f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
         self.video_recorders[camera_id].write_one_frame()
 
-
-
     def _save_folder_readme(self):
-        with open(str(Path(self.recording_folder)/SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
+        with open(str(Path(self.recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
-
-
 
     def _validate_multi_frame(self, mf_payload: MultiFramePayload):
         # Note - individual VideoRecorders will validate the frames' resolutions and whatnot
@@ -148,7 +143,6 @@ class VideoRecorderManager(BaseModel):
         self.multi_frame_timestamp_logger.close()
         self.finalize_recording()
 
-
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_name}`...")
         self.finalize_timestamps()
@@ -169,7 +163,6 @@ class VideoRecorderManager(BaseModel):
     def validate_recording(self):
         # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
         pass
-
 
 
 class RecordingInfo(BaseModel):

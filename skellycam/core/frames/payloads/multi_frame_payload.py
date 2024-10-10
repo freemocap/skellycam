@@ -11,7 +11,7 @@ from skellycam.core.camera_group.camera.config.image_rotation_types import Rotat
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
-from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 from skellycam.utilities.rotate_image import rotate_image
 
 
@@ -33,7 +33,7 @@ class MultiFramePayload(BaseModel):
     @classmethod
     def from_previous(cls,
                       previous: 'MultiFramePayload',
-                      camera_configs:CameraConfigs) -> 'MultiFramePayload':
+                      camera_configs: CameraConfigs) -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    multi_frame_number=previous.multi_frame_number + 1,
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
@@ -67,7 +67,7 @@ class MultiFramePayload(BaseModel):
             f"add_camera_{camera_id}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}": time.perf_counter_ns()})
         self.frames[camera_id] = frame_dto
 
-    def get_frame(self, camera_id: CameraId, rotate:bool=True) -> Optional[FramePayloadDTO]:
+    def get_frame(self, camera_id: CameraId, rotate: bool = True) -> Optional[FramePayloadDTO]:
         frame = self.frames[camera_id]
         if frame is None:
             return
@@ -76,8 +76,6 @@ class MultiFramePayload(BaseModel):
             frame.image = rotate_image(frame.image, self.camera_configs[camera_id].rotation)
 
         return frame
-
-
 
     @classmethod
     def from_list(cls, data: List[Any]) -> 'MultiFramePayload':

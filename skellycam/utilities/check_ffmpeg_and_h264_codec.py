@@ -1,5 +1,6 @@
 import subprocess
 
+
 def check_ffmpeg():
     try:
         output = subprocess.check_output(['ffmpeg', '-version'], stderr=subprocess.STDOUT)
@@ -8,6 +9,7 @@ def check_ffmpeg():
         print("FFmpeg is not installed or not accessible.")
         return False
     return True
+
 
 def check_h264_support():
     try:
@@ -21,6 +23,7 @@ def check_h264_support():
     except subprocess.CalledProcessError as e:
         print("Error checking FFmpeg codecs:", e.output.decode())
         return False
+
 
 if __name__ == "__main__":
     if check_ffmpeg() and check_h264_support():

@@ -8,4 +8,3 @@ def get_client() -> FastAPIClient:
     if FASTAPI_CLIENT is None:
         FASTAPI_CLIENT = FastAPIClient()
     return FASTAPI_CLIENT
-

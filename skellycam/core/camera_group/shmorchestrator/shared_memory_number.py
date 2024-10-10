@@ -5,7 +5,6 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory_element import Sh
 
 
 class SharedMemoryNumber(BaseModel):
-
     shm_element: SharedMemoryElement
 
     @classmethod
@@ -22,6 +21,7 @@ class SharedMemoryNumber(BaseModel):
     @property
     def name(self) -> str:
         return self.shm_element.name
+
     def set(self, value: int) -> None:
         """Set the value of the counter."""
         self.shm_element.buffer[0] = value

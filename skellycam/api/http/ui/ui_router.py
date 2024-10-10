@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 ui_router = APIRouter()
 
 
-
 @ui_router.get("/", response_class=HTMLResponse)
 async def serve_ui():
     logger.info("Serving UI HTML to `/ui`")
@@ -17,6 +16,8 @@ async def serve_ui():
     with open(file_path, 'r') as file:
         ui_html_string = file.read()
     return HTMLResponse(content=ui_html_string, status_code=200)
+
+
 if __name__ == "__main__":
     import uvicorn
 

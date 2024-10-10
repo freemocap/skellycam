@@ -38,7 +38,6 @@ class SingleCameraViewWidget(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-
         self._image_label_widget = QLabel(f"\U0001F4F8 Camera {self._camera_id} Connecting... ")
         self._image_label_widget.setStyleSheet("border: 1px solid;")
         self._image_label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -86,15 +85,12 @@ class SingleCameraViewWidget(QWidget):
         pixmap_height = self._current_pixmap.height()
         font_size = min(pixmap_width, pixmap_height) // 30  # Adjust the divisor for preferred size
 
-
         painter.setFont(QFont('Arial', font_size))
-
-
 
         # Draw semi-transparent background without a border
         painter.setPen(Qt.NoPen)
 
-        background_rect = QRect(5, 5, int(pixmap_width*.55), 100)
+        background_rect = QRect(5, 5, int(pixmap_width * .55), 100)
         painter.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Semi-transparent white background
         painter.drawRect(background_rect)
 

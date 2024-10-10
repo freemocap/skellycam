@@ -42,8 +42,6 @@ class CameraViewGrid(QWidget):
 
         self._mutex_lock = QMutex()
 
-
-
     @property
     def single_camera_view_camera_ids(self) -> List[CameraId]:
         if self._single_camera_views:
@@ -53,8 +51,9 @@ class CameraViewGrid(QWidget):
     @property
     def camera_view_sizes(self) -> CameraViewSizes:
         with QMutexLocker(self._mutex_lock):
-            return CameraViewSizes(sizes = {camera_id: {"width": view.image_size.width(), "height": view.image_size.height()}
-                     for camera_id, view in self._single_camera_views.items()})
+            return CameraViewSizes(
+                sizes={camera_id: {"width": view.image_size.width(), "height": view.image_size.height()}
+                       for camera_id, view in self._single_camera_views.items()})
 
     @property
     def grid_empty(self) -> bool:
@@ -68,7 +67,7 @@ class CameraViewGrid(QWidget):
     def set_image_data(self,
                        jpeg_images: Dict[CameraId, str],
                        framerate_stats_by_camera: Dict[CameraId, CameraFramerateStats],
-                       recording_in_progress:bool=False):
+                       recording_in_progress: bool = False):
         with QMutexLocker(self._mutex_lock):
             for camera_id, single_camera_view in self._single_camera_views.items():
                 single_camera_view.update_image(base64_str=jpeg_images[camera_id],
@@ -119,4 +118,3 @@ class CameraViewGrid(QWidget):
             except Exception as e:
                 logger.exception(f"Error clearing camera layout dictionary: {e}")
                 raise
-

@@ -4,10 +4,10 @@ import time
 from collections import deque
 from typing import Optional
 
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.camera_group.camera_group import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
-from skellycam.core.timestamps.frame_rate_tracker import FrameRateTracker
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.timestamps.frame_rate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_100us
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,8 @@ class FrameListenerProcess:
                     mf_bytes_list = mf_payload.to_bytes_list()
                     byte_chunklets_to_send.extend(mf_bytes_list)
 
-                elif len(byte_chunklets_to_send) > 0 and not dto.group_orchestrator.new_multi_frame_available_flag.value:
+                elif len(
+                        byte_chunklets_to_send) > 0 and not dto.group_orchestrator.new_multi_frame_available_flag.value:
                     # Opportunistically let byte chunks escape one-at-a-time, whenever there isn't frame-loop work to do
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.popleft())
 

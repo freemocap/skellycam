@@ -64,7 +64,7 @@ class SkellyCamControlPanel(QWidget):
         self._layout.addWidget(self._parameter_tree_widget)
 
     def update_widget(self):
-        
+
         logger.gui(f"Updating {self.__class__.__name__}")
         if self.gui_state.available_devices:
             self._apply_settings_to_cameras_button.setEnabled(True)

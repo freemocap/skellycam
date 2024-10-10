@@ -1,8 +1,8 @@
 import multiprocessing
 import threading
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group import CameraGroupOrchestrator
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.utilities.wait_functions import wait_1ms
 
 

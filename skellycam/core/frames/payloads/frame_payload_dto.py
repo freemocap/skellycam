@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE
 
-IMAGE_CHUNK_SIZE = 5*1024*1024   # 5MB #TODO - optimize this bad boi
+IMAGE_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB #TODO - optimize this bad boi
 
 
 class FramePayloadDTO(BaseModel):
@@ -86,8 +86,6 @@ class FramePayloadDTO(BaseModel):
     @property
     def width(self):
         return self.image.shape[1]
-
-
 
     def __eq__(self, other: "FramePayloadDTO"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)

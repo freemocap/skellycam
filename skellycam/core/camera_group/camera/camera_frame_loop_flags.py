@@ -4,7 +4,7 @@ import time
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from skellycam.app.app_state import IPCFlags
+from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.utilities.wait_functions import wait_100us, wait_10ms
 
@@ -18,7 +18,8 @@ class CameraFrameLoopFlags(BaseModel):
 
     camera_id: CameraId
     camera_ready_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    frame_loop_initialization_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    frame_loop_initialization_flag: multiprocessing.Value = Field(
+        default_factory=lambda: multiprocessing.Value("b", False))
     should_grab_frame_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
     should_retrieve_frame_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
     new_frame_available_flag: multiprocessing.Value = Field(

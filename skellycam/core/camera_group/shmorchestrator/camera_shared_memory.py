@@ -7,10 +7,10 @@ from pydantic import BaseModel, ConfigDict
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
-from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,6 @@ class SharedMemoryNames(BaseModel):
 
 
 GroupSharedMemoryNames = Dict[CameraId, SharedMemoryNames]
-
 
 
 class CameraSharedMemory(BaseModel):
@@ -55,7 +54,7 @@ class CameraSharedMemory(BaseModel):
     def recreate(cls,
                  camera_config: CameraConfig,
                  shared_memory_names: SharedMemoryNames,
-                 read_only: bool,):
+                 read_only: bool, ):
         image_shm = SharedMemoryElement.recreate(
             shared_memory_names.image_shm_name,
             shape=camera_config.image_shape,

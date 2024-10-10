@@ -32,7 +32,7 @@ async def detect_available_devices(check_if_available: bool = True):
     camera_devices = {}
     for camera_number, camera in zip(camera_ports, detected_cameras):
 
-        if check_if_available and not platform.system() == "Darwin": # macOS cameras get checked in order_darwin_cameras
+        if check_if_available and not platform.system() == "Darwin":  # macOS cameras get checked in order_darwin_cameras
             await _check_camera_available(camera_number)
 
         camera_device_info = CameraDeviceInfo.from_q_camera_device(
@@ -41,8 +41,6 @@ async def detect_available_devices(check_if_available: bool = True):
         camera_devices[camera_device_info.cv2_port] = camera_device_info
     logger.debug(f"Detected camera_devices: {list(camera_devices.keys())}")
     get_app_state().available_devices = {camera_id: device for camera_id, device in camera_devices.items()}
-
-
 
 
 async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
@@ -58,9 +56,11 @@ async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[L
             detected_cameras.remove(camera)
             camera_ports.pop()  # assumes virtual camera is always last # TODO - not this
     if len(camera_ports) != len(detected_cameras):
-        raise ValueError(f"OpenCV and Qt did not detect same number of cameras: OpenCV: {len(camera_ports)} !=  Qt: {len(detected_cameras)}")
+        raise ValueError(
+            f"OpenCV and Qt did not detect same number of cameras: OpenCV: {len(camera_ports)} !=  Qt: {len(detected_cameras)}")
 
     return detected_cameras, camera_ports
+
 
 async def _check_camera_available(port: int) -> bool:
     logger.debug(f"Checking if camera on port: {port} is available...")
@@ -72,6 +72,7 @@ async def _check_camera_available(port: int) -> bool:
     logger.debug(f"Camera on port: {port} is available!")
     cap.release()
     return True
+
 
 async def detect_opencv_ports(max_ports: int = 20) -> List[int]:
     port = 0
@@ -87,5 +88,6 @@ async def detect_opencv_ports(max_ports: int = 20) -> List[int]:
 
 if __name__ == "__main__":
     import asyncio
+
     cameras_out = asyncio.run(detect_available_devices())
     pprint(cameras_out, indent=4)

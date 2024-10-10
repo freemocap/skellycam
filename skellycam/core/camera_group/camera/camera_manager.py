@@ -10,7 +10,7 @@ from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_process import CameraProcess
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.camera_group.camera_group import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.utilities.wait_functions import wait_10ms
 
@@ -112,6 +112,7 @@ class CameraManager(BaseModel):
             )
         finally:
             logger.debug(f"Multi-camera trigger loop for cameras: {self.shmorchestrator.camera_ids}  exited")
+
 
 def log_time_stats(camera_configs: CameraConfigs,
                    elapsed_per_loop_ns: List[int]):

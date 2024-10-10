@@ -3,10 +3,10 @@ import threading
 
 import cv2
 import pytest
-
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group import CameraGroupOrchestrator
 from skellycam.core.camera_group.camera_group_loop import camera_group_trigger_loop
+
+from skellycam.core.camera_group import CameraGroupOrchestrator
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_10ms
 

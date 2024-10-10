@@ -20,4 +20,3 @@ def add_middleware(app: FastAPI):
     #                                  process_time=process_time,
     #                                  status_code=response.status_code)
     #     return response
-

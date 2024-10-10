@@ -7,7 +7,7 @@ from skellycam.core import CameraId
 
 class CameraViewSizes(BaseModel):
     sizes: Dict[CameraId, Dict[str, int]] = {}
-    epsilon: int = 50 # pixels differences less than this are considered equal
+    epsilon: int = 50  # pixels differences less than this are considered equal
 
     def __eq__(self, other):
         if not isinstance(other, CameraViewSizes):

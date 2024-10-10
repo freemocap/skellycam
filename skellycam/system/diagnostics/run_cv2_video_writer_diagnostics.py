@@ -28,6 +28,7 @@ def get_file_extension(fourcc: str) -> str:
     else:
         return 'avi'
 
+
 def measure_write_time(image_size: Tuple[int, int],
                        fourcc: str,
                        num_frames: int = 30,
@@ -52,7 +53,7 @@ def measure_write_time(image_size: Tuple[int, int],
         start_time = time.perf_counter_ns()
         video_writer.write(frame)
         end_time = time.perf_counter_ns()
-        times.append((end_time - start_time)/1e6)  # Convert to milliseconds
+        times.append((end_time - start_time) / 1e6)  # Convert to milliseconds
 
     video_writer.release()
     cv2.destroyAllWindows()
@@ -104,6 +105,7 @@ def run_cv2_video_writer_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_
     summary_df = pd.DataFrame(summary_results)
     print("\nSummary of Mean and Std Dev Write Times by FourCC")
     print(summary_df.to_string(index=False))
+
 
 if __name__ == "__main__":
     image_sizes = [(640, 480), (1280, 720), (1920, 1080)]

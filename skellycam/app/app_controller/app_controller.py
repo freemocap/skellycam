@@ -6,9 +6,6 @@ from typing import Optional
 from skellycam.app.app_controller.controller_tasks import ControllerTasks
 from skellycam.app.app_state import create_app_state, AppState
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.camera_group import (
-    CameraGroup, CameraGroupDTO,
-)
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.detection.detect_available_devices import detect_available_devices
 
@@ -21,7 +18,6 @@ class AppController:
         super().__init__()
         self._app_state: AppState = create_app_state(global_kill_flag=global_kill_flag)
         self._tasks: ControllerTasks = ControllerTasks()
-
 
     async def detect_available_cameras(self):
         # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
@@ -47,8 +43,9 @@ class AppController:
 
         logger.info(f"Connecting to cameras....")
         # C
-        self._tasks.connect_to_cameras_task = asyncio.create_task(self._create_camera_group(camera_configs=camera_configs),
-                                                                  name="ConnectToCameras")
+        self._tasks.connect_to_cameras_task = asyncio.create_task(
+            self._create_camera_group(camera_configs=camera_configs),
+            name="ConnectToCameras")
 
     async def close(self):
         logger.info("Closing controller...")
@@ -61,7 +58,6 @@ class AppController:
             await self._close_camera_group()
             return
         logger.warning("No camera group to close!")
-
 
     async def _create_camera_group(self, camera_configs: CameraConfigs):
         if self._app_state.connected_camera_configs is None:
@@ -78,6 +74,7 @@ class AppController:
         self._app_state.create_camera_group(camera_configs=camera_configs)
         await self._app_state.camera_group.start()
         logger.success("Camera group started successfully")
+
 
 APP_CONTROLLER = None
 

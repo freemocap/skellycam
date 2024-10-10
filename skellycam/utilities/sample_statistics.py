@@ -64,6 +64,7 @@ class CentralTendencyMeasures(BaseModel):
             median=np.nanmedian(samples.data),
         )
 
+
 class VariabilityMeasures(BaseModel):
     standard_deviation: float
     median_absolute_deviation: float
@@ -84,6 +85,7 @@ class VariabilityMeasures(BaseModel):
             confidence_interval_95=(Z_SCORE_95_CI * std_dev / size) if size > 0 else np.nan,
             coefficient_of_variation=(std_dev / mean) if mean != 0 else np.nan,
         )
+
 
 class DescriptiveStatistics(BaseModel):
     name: str = ""

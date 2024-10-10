@@ -4,7 +4,8 @@ from typing import List
 
 import numpy as np
 
-from skellycam.core.camera_group.shmorchestrator.shared_memory_indexed_array import SharedMemoryIndexedArrayDTO, SharedMemoryIndexedArray
+from skellycam.core.camera_group.shmorchestrator.shared_memory_indexed_array import SharedMemoryIndexedArrayDTO, \
+    SharedMemoryIndexedArray
 
 
 def producer(shared_dto: SharedMemoryIndexedArrayDTO, data: List[np.ndarray]):
@@ -12,7 +13,8 @@ def producer(shared_dto: SharedMemoryIndexedArrayDTO, data: List[np.ndarray]):
     data_length = len(data)
     for _ in range(10):
         for array in data:
-            print(f"Producer - Putting array into shared memory index: {shm_array.last_written_index.value + 1} (wrapped index: {(shm_array.last_written_index.value+1)%data_length})")
+            print(
+                f"Producer - Putting array into shared memory index: {shm_array.last_written_index.value + 1} (wrapped index: {(shm_array.last_written_index.value + 1) % data_length})")
 
             shm_array.put_payload(array)
             time.sleep(0.001)
@@ -30,7 +32,7 @@ def fast_consumer(shared_dto: SharedMemoryIndexedArrayDTO,
             print(
                 f"Fast Consumer - Received array from shared memory index: {shm_array.last_read_index.value} (wrapped index: {shm_array.last_read_index.value % data_length})")
 
-            assert np.array_equal(received_array, data[index%data_length]), f"Data mismatch at index {index}"
+            assert np.array_equal(received_array, data[index % data_length]), f"Data mismatch at index {index}"
             index += 1
         time.sleep(0.0001)
 
@@ -45,8 +47,9 @@ def slow_consumer(shared_dto: SharedMemoryIndexedArrayDTO,
     while not shutdown_flag.value:
         if shm_array.new_data_available:
             received_array = shm_array.get_next_payload()
-            print(f"Slow Consumer - Received array from shared memory index: {shm_array.last_read_index.value} (wrapped index: {shm_array.last_read_index.value%data_length})")
-            assert np.array_equal(received_array, data[index%data_length]), f"Data mismatch at index {index}"
+            print(
+                f"Slow Consumer - Received array from shared memory index: {shm_array.last_read_index.value} (wrapped index: {shm_array.last_read_index.value % data_length})")
+            assert np.array_equal(received_array, data[index % data_length]), f"Data mismatch at index {index}"
             index += 1
         time.sleep(1)  # should cause the producer to overwrite the data, so the consumer will fail
 
@@ -98,4 +101,4 @@ def oootest_shared_memory_indexed_array_overwrite_protection():
 if __name__ == "__main__":
     ppptest_shared_memory_indexed_array()
     print("-------------------------------------------------\n-------------------------------------------------")
-    oootest_shared_memory_indexed_array_overwrite_protection() #should fail
+    oootest_shared_memory_indexed_array_overwrite_protection()  # should fail

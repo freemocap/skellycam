@@ -12,7 +12,6 @@ HELLO_CLIENT_TEXT_MESSAGE = "👋Hello, websocket client!"
 HELLO_CLIENT_JSON_MESSAGE = {"message": "hey wow im json!"}
 
 
-
 @websocket_router.websocket("/connect")
 async def websocket_server_connect(websocket: WebSocket):
     """

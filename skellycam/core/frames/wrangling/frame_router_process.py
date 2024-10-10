@@ -4,9 +4,8 @@ import time
 from collections import deque
 from typing import Optional
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.camera_group.camera_group import CameraGroupDTO
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
 from skellycam.utilities.wait_functions import wait_100us
@@ -17,11 +16,11 @@ logger = logging.getLogger(__name__)
 class FrameRouterProcess:
     def __init__(self,
                  dto: CameraGroupDTO,
-                 frame_escape_pipe: multiprocessing.Pipe,):
+                 frame_escape_pipe: multiprocessing.Pipe, ):
 
         self._process = multiprocessing.Process(target=self._run_process,
-                                               name=self.__class__.__name__,
-                                               args=(dto, frame_escape_pipe,))
+                                                name=self.__class__.__name__,
+                                                args=(dto, frame_escape_pipe,))
 
     def start(self):
         logger.trace(f"Starting frame listener process")
@@ -35,7 +34,7 @@ class FrameRouterProcess:
 
     @staticmethod
     def _run_process(dto: CameraGroupDTO,
-                     frame_escape_pipe: multiprocessing.Pipe,):
+                     frame_escape_pipe: multiprocessing.Pipe, ):
         """
         This process is not coupled to the frame loop, and the `escape pipe` is elastic, so blocking is not as big a sin here.
         MultiFrame chunks will be sent through the `frame_escape_pipe` and will be gathered, reconstructed into a framepayload, and handled here.

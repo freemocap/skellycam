@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter
 
-from skellycam.core.app_controller import get_app_controller
+from skellycam.app.app_controller.app_controller import get_app_controller
 
 logger = logging.getLogger(__name__)
 

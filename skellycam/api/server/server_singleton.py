@@ -10,7 +10,7 @@ def create_server_manager(global_kill_flag: multiprocessing.Value, *args, **kwar
     global UVICORN_SERVER_MANAGER
     if UVICORN_SERVER_MANAGER is not None:
         raise Exception("Server manager already created, but you tried to create it again!")
-    UVICORN_SERVER_MANAGER = UvicornServerManager(kill_event, *args, **kwargs)
+    UVICORN_SERVER_MANAGER = UvicornServerManager(global_kill_flag, *args, **kwargs)
     return UVICORN_SERVER_MANAGER
 
 

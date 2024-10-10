@@ -39,7 +39,7 @@ class RecordingPanel(QWidget):
         self._client: FastAPIClient = get_client()
 
     def update_widget(self):
-        
+
         logger.gui(f"Updating {self.__class__.__name__}")
         if self._gui_state.record_frames_flag_status:
             self._handle_recording_in_progress()
@@ -69,7 +69,6 @@ class RecordingPanel(QWidget):
         if self._gui_state.record_frames_flag_status:
             raise ValueError("Recording is already in progress! Button should be disabled.")
         self._client.start_recording()
-
 
     def _stop_recording(self):
         logger.gui("Stopping Recording.")

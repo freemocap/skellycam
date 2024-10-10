@@ -63,7 +63,7 @@ class UvicornServerManager:
 
     def shutdown_server(self):
         logger.info("Shutting down Uvicorn Server...")
-        self._kill_event.set()
+        self._global_kill_flag.value = True
         if self.server:
             self.server.should_exit = True
             waiting_time = 0
@@ -75,5 +75,3 @@ class UvicornServerManager:
                     self.server.force_exit = True
 
             logger.info("Uvicorn Server shutdown successfully")
-
-

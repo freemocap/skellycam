@@ -1,16 +1,16 @@
 import multiprocessing
+from dataclasses import dataclass
 from typing import Dict
 
-from pydantic import BaseModel
-
-from skellycam.app.app_state import IPCFlags
+from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags, logger
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.utilities.wait_functions import wait_100us, wait_1ms, wait_10ms, wait_100ms
 
 
-class CameraGroupOrchestrator(BaseModel):
+@dataclass
+class CameraGroupOrchestrator:
     camera_triggers: Dict[CameraId, CameraFrameLoopFlags]
     ipc_flags: IPCFlags
 
@@ -18,7 +18,6 @@ class CameraGroupOrchestrator(BaseModel):
 
     pause_when_able: multiprocessing.Value = multiprocessing.Value("b", False)
     frame_loop_paused: multiprocessing.Value = multiprocessing.Value("b", False)
-
 
     @classmethod
     def from_camera_configs(cls,
@@ -39,7 +38,7 @@ class CameraGroupOrchestrator(BaseModel):
 
     @property
     def should_continue(self):
-        return not self.kill_camera_group_flag.value and not self.global_kill_flag.value
+        return not self.ipc_flags.kill_camera_group_flag.value and not self.ipc_flags.global_kill_flag.value
 
     @property
     def cameras_ready(self):
@@ -65,7 +64,6 @@ class CameraGroupOrchestrator(BaseModel):
 
     ##############################################################################################################
     def trigger_multi_frame_read(self):
-        self.frame_loop_count += 1
 
         if self.pause_when_able.value:
             logger.trace("Pause requested, pausing frame loop...")

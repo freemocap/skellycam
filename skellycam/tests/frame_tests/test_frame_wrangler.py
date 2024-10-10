@@ -3,8 +3,8 @@ import multiprocessing
 import numpy as np
 
 from skellycam.core.camera_group import CameraGroupOrchestrator
-from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
 
 
 def test_frame_wrangler(camera_group_shared_memory_fixture: CameraGroupSharedMemory,

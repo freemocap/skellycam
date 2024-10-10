@@ -105,7 +105,7 @@ class SkellyCamMainWindow(QMainWindow):
 
     def update_widget(self):
         logger.gui(f"Updating {self.__class__.__name__}")
-        if self._kill_event.is_set():
+        if self._global_kill_flag.value:
             self.close()
             return
         self._skellycam_widget.update_widget()
@@ -131,7 +131,6 @@ class SkellyCamMainWindow(QMainWindow):
         self._connect_to_cameras_button.hide()
         self._skellycam_widget.show()
 
-
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")
         self._directory_view_widget.expand_directory_to_path(folder_path)
@@ -147,7 +146,7 @@ class SkellyCamMainWindow(QMainWindow):
         super().closeEvent(a0)
 
         logger.gui("Shutting down client server...")
-        self._kill_event.set()
+        self._global_kill_flag.value = True
         remove_empty_directories(get_default_skellycam_base_folder_path())
 
 

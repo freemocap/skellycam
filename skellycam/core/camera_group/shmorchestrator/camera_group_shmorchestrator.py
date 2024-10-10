@@ -1,21 +1,24 @@
 import logging
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from skellycam.app.app_state import IPCFlags
+from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory, CameraGroupSharedMemoryDTO
+from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory, \
+    CameraGroupSharedMemoryDTO
 
 logger = logging.getLogger(__name__)
 
 
 class CameraGroupSharedMemoryOrchestratorDTO(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     camera_group_shm_dto: CameraGroupSharedMemoryDTO
     camera_group_orchestrator: CameraGroupOrchestrator
 
 
 class CameraGroupSharedMemoryOrchestrator(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     camera_group_shm: CameraGroupSharedMemory
     camera_group_orchestrator: CameraGroupOrchestrator
     read_only: bool  # whether this instance of the schmorestrator is read only

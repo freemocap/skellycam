@@ -9,7 +9,7 @@ app_shutdown_router = APIRouter()
 @app_shutdown_router.get("/shutdown", summary="goodbye👋")
 async def shutdown_server():
     from skellycam.api.server.server_singleton import get_server_manager
-    from skellycam.core.app_controller import get_app_controller
+    from skellycam.app.app_controller.app_controller import get_app_controller
     logger.api("Shutdown requested - Closing camera connections and shutting down server...")
     await get_app_controller().close_cameras()
 

@@ -5,19 +5,18 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.app.app_controller.ipc_flags import IPCFlags
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.detection.camera_device_info import AvailableDevices
-from skellycam.core.camera_group.camera_group import CameraGroup, CameraGroupDTO
-from skellycam.core.camera_group.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
+from skellycam.core.camera_group.camera_group import CameraGroup
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.detection.camera_device_info import AvailableDevices, available_devices_to_default_camera_configs
+from skellycam.core.frames.timestamps.frame_rate_tracker import CurrentFrameRate
 
 logger = logging.getLogger(__name__)
-
-
-class IPCFlags(BaseModel):
-    global_kill_flag: multiprocessing.Value
-    record_frames_flag = multiprocessing.Value("b", False)
-    kill_camera_group_flag = multiprocessing.Value("b", False)
 
 
 class AppState:
@@ -25,35 +24,71 @@ class AppState:
 
         self._global_kill_flag = global_kill_flag
 
-        self._ipc_publish_queue = multiprocessing.Queue()
+        self._ipc_queue = multiprocessing.Queue()
 
-        self._ipc_flags: Optional[IPCFlags] = None
+        self._ipc_flags: Optional[IPCFlags] = IPCFlags(global_kill_flag=self._global_kill_flag)
+
         self._shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
         self._camera_group: Optional[CameraGroup] = None
         self._available_devices: Optional[AvailableDevices] = None
-
-        self._lock = multiprocessing.Lock()
+        self._current_frame_rate: Optional[CurrentFrameRate] = None
 
     @property
     def ipc_flags(self) -> IPCFlags:
         return self._ipc_flags
 
     @property
+    def ipc_queue(self) -> multiprocessing.Queue:
+        return self._ipc_queue
+
+    @property
     def camera_group(self) -> CameraGroup:
         return self._camera_group
 
+    @property
+    def current_frame_rate(self) -> CurrentFrameRate:
+        return self._current_frame_rate
+
+    @property
+    def orchestrator(self) -> CameraGroupOrchestrator:
+        return self._shmorchestrator.camera_group_orchestrator
+
+    @property
+    def camera_group_shm(self) -> CameraGroupSharedMemory:
+        return self._shmorchestrator.camera_group_shm
+
+    @property
+    def shmorchestrator(self) -> Optional[CameraGroupSharedMemoryOrchestrator]:
+        return self._shmorchestrator
+
+    @property
+    def camera_group_configs(self) -> Optional[CameraConfigs]:
+        if self._camera_group is None:
+            if self._available_devices is None:
+                return None
+            return available_devices_to_default_camera_configs(self._available_devices)
+        return self._camera_group.camera_configs
+
+    @property
+    def available_devices(self) -> Optional[AvailableDevices]:
+        return self._available_devices
+
+    @available_devices.setter
+    def available_devices(self, value):
+        self._available_devices = value
+
+        self._ipc_queue.put(self.state_dto())
+
     def create_camera_group(self, camera_configs: CameraConfigs):
+        # NOTE top-level shmorchestrator is read-only
         self._shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=camera_configs,
                                                                            ipc_flags=self._ipc_flags,
-                                                                           read_only=True
-                                                                           # NOTE top-level shmorchestrator is read-only
-                                                                           )
-        self._camera_group = CameraGroup.create(dto=CameraGroupDTO(
-            shmorc_dto=self._shmorchestrator.to_dto(),
-            camera_configs=camera_configs,
-            ipc_publish_queue=self._ipc_publish_queue,
-            ipc_flags=self._ipc_flags)
-        )
+                                                                           read_only=True)
+        self._camera_group = CameraGroup.create(dto=CameraGroupDTO(shmorc_dto=self._shmorchestrator.to_dto(),
+                                                                   camera_configs=camera_configs,
+                                                                   ipc_queue=self._ipc_queue,
+                                                                   ipc_flags=self._ipc_flags)
+                                                )
 
     async def update_camera_group(self,
                                   camera_configs: CameraConfigs,
@@ -69,52 +104,17 @@ class AppState:
         await self._camera_group.close()
         self._camera_group = None
         self._shmorchestrator = None
-        self._ipc_flags = None
+        self._ipc_flags = IPCFlags(global_kill_flag=self._global_kill_flag)
+        self._current_frame_rate = None
         logger.success("Camera group closed successfully")
 
-    @property
-    def shmorchestrator(self) -> CameraGroupSharedMemoryOrchestrator:
-        if self._shmorchestrator is None:
-            raise ValueError("CameraGroupSharedMemoryOrchestrator not created!")
-        return self._shmorchestrator
-
-    def camera_group_configs(self, value):
-        with self._lock:
-            if value is None:
-                self._camera_group_configs = None
-            else:
-                if self._available_devices is None:
-                    raise ValueError("Cannot set `camera_configs` if `available_cameras` is None! ")
-                if any([camera_id not in self._available_devices.keys() for camera_id in value.keys()]):
-                    raise ValueError(
-                        f"Not all camera config id's [{value.keys()}] present in `available_camera` id's [{self._available_devices.keys()}]")
-                self._camera_group_configs = value
-        self._ipc_publish_queue.put(self.state_dto())
-
-    @property
-    def available_devices(self):
-        with self._lock:
-            return self._available_devices
-
-    @available_devices.setter
-    def available_devices(self, value):
-        with self._lock:
-            self._available_devices = value
-
-            if self._camera_group_configs is None:
-                self._camera_group_configs = {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
-                                              self._available_devices.keys()}
-        self._ipc_publish_queue.put(self.state_dto())
-
     def start_recording(self):
-        with self._lock:
-            self._ipc_flags.record_frames_flag.value = True
-        self._ipc_publish_queue.put(self.state_dto())
+        self._ipc_flags.record_frames_flag.value = True
+        self._ipc_queue.put(self.state_dto())
 
     def stop_recording(self):
-        with self._lock:
-            self._ipc_flags.record_frames_flag.value = False
-        self._ipc_publish_queue.put(self.state_dto())
+        self._ipc_flags.record_frames_flag.value = False
+        self._ipc_queue.put(self.state_dto())
 
     def state_dto(self) -> 'AppStateDTO':
         return AppStateDTO.from_state(self)
@@ -128,7 +128,7 @@ class AppStateDTO(BaseModel):
 
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableDevices]
-
+    current_frame_rate: Optional[CurrentFrameRate]
     record_frames_flag_status: bool
 
     @classmethod
@@ -136,6 +136,7 @@ class AppStateDTO(BaseModel):
         return cls(
             camera_configs=state.camera_group_configs,
             available_devices=state.available_devices,
+            current_frame_rate=state.current_frame_rate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
         )
 

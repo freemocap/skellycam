@@ -5,9 +5,9 @@ import cv2
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     create_empty_frame_metadata
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
 

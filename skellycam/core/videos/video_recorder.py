@@ -97,7 +97,6 @@ class VideoRecorder(BaseModel):
             raise ValidationError(f"Frame shape {frame.image.shape} does not match self.camera_config shape "
                                   f"({self.camera_config.resolution.height}, {self.camera_config.resolution.width}, {self.camera_config.color_channels})")
 
-
     def close(self):
         self.video_writer.release()
         logger.debug(f"Closed VideoSaver for camera {self.camera_id} - Video file saved to {self.video_path}")

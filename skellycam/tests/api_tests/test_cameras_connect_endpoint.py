@@ -1,7 +1,7 @@
 import pytest
 
+from skellycam.app.app_controller.app_controller import AppController
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.app_controller import AppController
 
 
 @pytest.mark.skip(reason="This test is not implemented yet.")

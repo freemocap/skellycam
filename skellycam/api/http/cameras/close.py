@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter
 
 from skellycam.api.models.base_models import BaseResponse
-from skellycam.core.app_controller import get_app_controller
+from skellycam.app.app_controller.app_controller import get_app_controller
 
 logger = logging.getLogger(__name__)
 
@@ -25,4 +25,3 @@ async def close_camera_connections():
     except Exception as e:
         logger.error(f"Failed to close cameras: {type(e).__name__} - {e}")
         logger.exception(e)
-

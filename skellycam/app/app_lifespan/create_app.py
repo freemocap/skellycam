@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 
 from fastapi import FastAPI
 

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
-from skellycam.core.timestamps.old.camera_timestamp_log import CameraTimestampLog
+from skellycam.core.frames.timestamps.old.camera_timestamp_log import CameraTimestampLog
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,6 @@ class CameraTimestampLogger(BaseModel):
     timestamp_logs: List[CameraTimestampLog] = Field(default_factory=list)
 
     # self._csv_header = CameraTimestampLog.as_csv_header()
-
 
     @property
     def stats(self):
@@ -32,7 +31,6 @@ class CameraTimestampLogger(BaseModel):
             [timestamp_log.model_dump() for timestamp_log in self._timestamp_logs]
         )
         return df
-
 
     def log_timestamp(
             self, multi_frame_number: int, frame: FramePayloadDTO

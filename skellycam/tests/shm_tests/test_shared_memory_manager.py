@@ -3,10 +3,10 @@ from typing import Dict
 import pytest
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory, SharedMemoryNames
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
 
 @pytest.fixture

@@ -3,9 +3,9 @@ import multiprocessing
 
 from pydantic import BaseModel, ConfigDict
 
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.frames.wrangling.frame_listener_process import FrameListenerProcess
 from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProcess
-from skellycam.core.camera_group.camera_group import CameraGroupDTO
 
 logger = logging.getLogger(__name__)
 

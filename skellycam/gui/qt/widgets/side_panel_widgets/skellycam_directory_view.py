@@ -12,6 +12,7 @@ from skellycam.utilities.cross_platform_start_file import open_file
 
 logger = logging.getLogger(__name__)
 
+
 class SkellyCamDirectoryViewWidget(QWidget):
     def __init__(self, folder_path: str):
         super().__init__()
@@ -48,7 +49,7 @@ class SkellyCamDirectoryViewWidget(QWidget):
     def update_widget(self):
         logger.gui(f"Updating {self.__class__.__name__}")
         if self._gui_state.recording_info:
-            
+
             rec_path = Path(self._gui_state.recording_info.recording_folder)
             if self._folder_path != str(rec_path):
                 self._folder_path = str(rec_path)

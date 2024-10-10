@@ -13,7 +13,7 @@ from skellycam.core import CameraId
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
-from skellycam.core.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class FrontendFramePayload(BaseModel):
@@ -66,12 +66,10 @@ class FrontendFramePayload(BaseModel):
                    jpeg_images=jpeg_images,
                    multi_frame_metadata=mf_metadata)
 
-
-
     @staticmethod
     def _resize_image(frame: FramePayloadDTO, image_sizes: Dict[CameraId, Dict[str, int]],
-                      fallback_resize_ratio: float) -> np.ndarray:\
-        # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
+                      fallback_resize_ratio: float) -> np.ndarray: \
+            # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
         image = frame.image
         camera_id = frame.camera_id
         if image_sizes is None or str(camera_id) not in image_sizes.keys():
@@ -82,7 +80,7 @@ class FrontendFramePayload(BaseModel):
             new_width = image_sizes[str(camera_id)]["width"]
             new_height = image_sizes[str(camera_id)]["height"]
 
-        return cv2.resize(image, dsize=(new_width, new_height ))
+        return cv2.resize(image, dsize=(new_width, new_height))
 
     @staticmethod
     def _image_to_jpeg_cv2(image: np.ndarray, quality: int) -> str:

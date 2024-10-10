@@ -35,7 +35,8 @@ mad_loop_duration_us = np.median(np.abs(loop_durations - np.median(loop_duration
 mean_loop_minus_copy_duration_us = np.mean(loop_minus_copy_durations) / 1e3
 median_loop_minus_copy_duration_us = np.median(loop_minus_copy_durations) / 1e3
 std_loop_minus_copy_duration_us = np.std(loop_minus_copy_durations) / 1e3
-mad_loop_minus_copy_duration_us = np.median(np.abs(loop_minus_copy_durations - np.median(loop_minus_copy_durations))) / 1e3
+mad_loop_minus_copy_duration_us = np.median(
+    np.abs(loop_minus_copy_durations - np.median(loop_minus_copy_durations))) / 1e3
 
 # Print the results
 print(f"Copy duration statistics (us):")
@@ -55,4 +56,3 @@ print(f"Mean: {mean_loop_minus_copy_duration_us:.3f}us")
 print(f"Median: {median_loop_minus_copy_duration_us:.3f}us")
 print(f"Standard Deviation: {std_loop_minus_copy_duration_us:.3f}us")
 print(f"Mean Absolute Deviation: {mad_loop_minus_copy_duration_us:.3f}us")
-

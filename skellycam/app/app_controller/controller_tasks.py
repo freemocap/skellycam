@@ -59,5 +59,3 @@ class ControllerTasks:
             return
         else:
             logger.warning("Camera close task already running! Ignoring request...")
-
-

@@ -116,7 +116,6 @@ class WebSocketClient:
             logger.exception(e)
             raise
 
-
     def close(self) -> None:
 
         if self.websocket:

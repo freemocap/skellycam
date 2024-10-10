@@ -135,7 +135,6 @@ class CameraConfig(BaseModel):
         else:
             return self.resolution.width, self.resolution.height
 
-
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
 
@@ -150,6 +149,7 @@ class CameraConfig(BaseModel):
         out_str += f"\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
         out_str += f"\tvideo_frame_shape: {self.video_frame_shape}"
         return out_str
+
 
 CameraConfigs = Dict[CameraId, CameraConfig]
 

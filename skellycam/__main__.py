@@ -27,29 +27,29 @@ def main(qt: bool = True) -> None:
     if sys.platform == "win32":
         setup_app_id_for_windows()
 
-    kill_event = multiprocessing.Event()
+    global_kill_flag = multiprocessing.Value('b', False)
     if qt:
         from skellycam.gui.gui_main import gui_main
 
-        backend_process = multiprocessing.Process(target=run_server, args=(kill_event,))
+        backend_process = multiprocessing.Process(target=run_server, args=(global_kill_flag,))
         logger.info("Starting backend process")
         backend_process.start()
-        time.sleep(1) # Give the backend time to startup
-        frontend_process = multiprocessing.Process(target=gui_main, args=(kill_event,))
+        time.sleep(1)  # Give the backend time to startup
+        frontend_process = multiprocessing.Process(target=gui_main, args=(global_kill_flag,))
         logger.info("Starting frontend process")
         frontend_process.start()
-
 
         while frontend_process.is_alive() and backend_process.is_alive():
             frontend_process.join(timeout=1)
             backend_process.join(timeout=1)
-        logger.info(f"Frontend process status: {frontend_process.is_alive()}, Backend process status: {backend_process.is_alive()} - Shutting down...")
-        kill_event.set()
+        logger.info(
+            f"Frontend process status: {frontend_process.is_alive()}, Backend process status: {backend_process.is_alive()} - Shutting down...")
+        global_kill_flag.value = True
         backend_process.join()
         frontend_process.join()
         logger.info("Exiting `main`...")
     else:
-        run_server(kill_event=kill_event)
+        run_server(global_kill_flag=global_kill_flag)
 
 
 if __name__ == "__main__":

@@ -9,12 +9,15 @@ from skellycam.core.camera_group.camera.opencv.determine_backend import BackendS
 
 
 def check_resolution(video_capture: cv2.VideoCapture, width: int, height: int) -> bool:
-    return int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)) == width and int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) == height
+    return int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)) == width and int(
+        video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) == height
+
 
 def check_fourcc(video_capture: cv2.VideoCapture, fourcc: str) -> bool:
     return cv2.VideoWriter_fourcc(*fourcc) == int(video_capture.get(cv2.CAP_PROP_FOURCC))
 
-def measure_latency(video_capture: cv2.VideoCapture, max_frame_count:int=30) -> Dict[str, float]:
+
+def measure_latency(video_capture: cv2.VideoCapture, max_frame_count: int = 30) -> Dict[str, float]:
     grab_times = []
     retrieve_times = []
     frame_counts = 0
@@ -31,11 +34,11 @@ def measure_latency(video_capture: cv2.VideoCapture, max_frame_count:int=30) -> 
 
         if ret:
             grab_times.append((post_grab_ns - pre_grab_ns) / 1e6)  # Convert to milliseconds
-            retrieve_times.append((post_retrieve_ns - pre_retrieve_ns) / 1e6) # Convert to milliseconds
+            retrieve_times.append((post_retrieve_ns - pre_retrieve_ns) / 1e6)  # Convert to milliseconds
             frame_counts += 1
         else:
             grab_times.append(np.nan)  # Convert to milliseconds
-            retrieve_times.append(np.nan) # Convert to milliseconds
+            retrieve_times.append(np.nan)  # Convert to milliseconds
             frame_counts += 1
 
     return {
@@ -45,6 +48,7 @@ def measure_latency(video_capture: cv2.VideoCapture, max_frame_count:int=30) -> 
         'Mean Retrieve Duration (ms)': np.nanmean(retrieve_times),
         'Std Dev Retrieve Duration (ms)': np.nanstd(retrieve_times),
     }
+
 
 def run_camera_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_codes: List[str]):
     results = []
@@ -64,7 +68,8 @@ def run_camera_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_codes: Lis
 
                 success, image = video_capture.read()
                 if not success:
-                    print(f"Failed to read frame from camera using backend: {backend.name},  FourCC: {code} at resolution: {size[0]}x{size[1]}...")
+                    print(
+                        f"Failed to read frame from camera using backend: {backend.name},  FourCC: {code} at resolution: {size[0]}x{size[1]}...")
                 #     continue
                 #
                 # if not image.shape == (size[1], size[0], 3):
@@ -86,8 +91,9 @@ def run_camera_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_codes: Lis
     df = pd.DataFrame(results)
     print(df.to_string(index=False))
 
+
 if __name__ == "__main__":
-    image_sizes = [(640, 480)]#, (1280, 720), (1920, 1080)]
-    fourcc_codes = ['XVID', 'MJPG']#, 'X264', 'MP4V', 'H264',]
+    image_sizes = [(640, 480)]  # , (1280, 720), (1920, 1080)]
+    fourcc_codes = ['XVID', 'MJPG']  # , 'X264', 'MP4V', 'H264',]
 
     run_camera_diagnostics(image_sizes, fourcc_codes)

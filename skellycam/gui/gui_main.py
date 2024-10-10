@@ -10,12 +10,11 @@ from skellycam.gui.qt.utilities.get_qt_app import get_qt_app
 logger = logging.getLogger(__name__)
 
 
-def gui_main(kill_event:multiprocessing.Event) -> None:
-
+def gui_main(global_kill_flag: multiprocessing.Value) -> None:
     logger.info("Starting GUI main...")
 
     qt_app = get_qt_app(sys.argv)
-    main_window = SkellyCamMainWindow(kill_event=kill_event)
+    main_window = SkellyCamMainWindow(global_kill_flag=global_kill_flag)
     main_window.show()
 
     timer = QTimer()
@@ -32,4 +31,3 @@ def gui_main(kill_event:multiprocessing.Event) -> None:
 
 if __name__ == "__main__":
     gui_main(multiprocessing.Event())
-
