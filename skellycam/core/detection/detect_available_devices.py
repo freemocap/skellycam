@@ -40,7 +40,8 @@ async def detect_available_devices(check_if_available: bool = True):
         )
         camera_devices[camera_device_info.cv2_port] = camera_device_info
     logger.debug(f"Detected camera_devices: {list(camera_devices.keys())}")
-    get_app_state().available_devices = {camera_id: device for camera_id, device in camera_devices.items()}
+    get_app_state().set_available_devices({camera_id: device
+                                           for camera_id, device in camera_devices.items()})
 
 
 async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
@@ -54,7 +55,7 @@ async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[L
     for camera in detected_cameras:
         if "virtual" in camera.description().lower():
             detected_cameras.remove(camera)
-            camera_ports.pop()  # assumes virtual camera is always last # TODO - not this
+            camera_ports.pop()  # assumes virtual camera is always last # TODO - not this lol
     if len(camera_ports) != len(detected_cameras):
         raise ValueError(
             f"OpenCV and Qt did not detect same number of cameras: OpenCV: {len(camera_ports)} !=  Qt: {len(detected_cameras)}")

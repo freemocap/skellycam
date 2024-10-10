@@ -3,7 +3,7 @@ import multiprocessing
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
@@ -19,105 +19,89 @@ from skellycam.core.frames.timestamps.frame_rate_tracker import CurrentFrameRate
 logger = logging.getLogger(__name__)
 
 
-class AppState:
-    def __init__(self, global_kill_flag: multiprocessing.Value):
+class AppState(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        self._global_kill_flag = global_kill_flag
+    ipc_flags: IPCFlags
+    ipc_queue: multiprocessing.Queue = Field(default_factory=lambda: multiprocessing.Queue())
 
-        self._ipc_queue = multiprocessing.Queue()
+    shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
+    camera_group: Optional[CameraGroup] = None
+    available_devices: Optional[AvailableDevices] = None
+    current_frame_rate: Optional[CurrentFrameRate] = None
 
-        self._ipc_flags: Optional[IPCFlags] = IPCFlags(global_kill_flag=self._global_kill_flag)
+    @classmethod
+    def create(cls, global_kill_flag: multiprocessing.Value):
+        return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag))
 
-        self._shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
-        self._camera_group: Optional[CameraGroup] = None
-        self._available_devices: Optional[AvailableDevices] = None
-        self._current_frame_rate: Optional[CurrentFrameRate] = None
-
-    @property
-    def ipc_flags(self) -> IPCFlags:
-        return self._ipc_flags
-
-    @property
-    def ipc_queue(self) -> multiprocessing.Queue:
-        return self._ipc_queue
-
-    @property
-    def camera_group(self) -> CameraGroup:
-        return self._camera_group
-
-    @property
-    def current_frame_rate(self) -> CurrentFrameRate:
-        return self._current_frame_rate
 
     @property
     def orchestrator(self) -> CameraGroupOrchestrator:
-        return self._shmorchestrator.camera_group_orchestrator
+        return self.shmorchestrator.camera_group_orchestrator
 
     @property
     def camera_group_shm(self) -> CameraGroupSharedMemory:
-        return self._shmorchestrator.camera_group_shm
+        return self.shmorchestrator.camera_group_shm
 
-    @property
-    def shmorchestrator(self) -> Optional[CameraGroupSharedMemoryOrchestrator]:
-        return self._shmorchestrator
 
     @property
     def camera_group_configs(self) -> Optional[CameraConfigs]:
-        if self._camera_group is None:
-            if self._available_devices is None:
+        if self.camera_group is None:
+            if self.available_devices is None:
                 return None
-            return available_devices_to_default_camera_configs(self._available_devices)
-        return self._camera_group.camera_configs
+            return available_devices_to_default_camera_configs(self.available_devices)
+        return self.camera_group.camera_configs
 
-    @property
-    def available_devices(self) -> Optional[AvailableDevices]:
-        return self._available_devices
 
-    @available_devices.setter
-    def available_devices(self, value):
-        self._available_devices = value
-
-        self._ipc_queue.put(self.state_dto())
+    def set_available_devices(self, value:AvailableDevices):
+        self.available_devices = value
+        self.ipc_queue.put(self.state_dto())
 
     def create_camera_group(self, camera_configs: CameraConfigs):
-        # NOTE top-level shmorchestrator is read-only
-        self._shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=camera_configs,
-                                                                           ipc_flags=self._ipc_flags,
+        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=camera_configs,
+                                                                           ipc_flags=self.ipc_flags,
                                                                            read_only=True)
-        self._camera_group = CameraGroup.create(dto=CameraGroupDTO(shmorc_dto=self._shmorchestrator.to_dto(),
+        self.camera_group = CameraGroup.create(dto=CameraGroupDTO(shmorc_dto=self.shmorchestrator.to_dto(),
                                                                    camera_configs=camera_configs,
-                                                                   ipc_queue=self._ipc_queue,
-                                                                   ipc_flags=self._ipc_flags)
+                                                                   ipc_queue=self.ipc_queue,
+                                                                   ipc_flags=self.ipc_flags)
                                                 )
 
     async def update_camera_group(self,
                                   camera_configs: CameraConfigs,
                                   update_instructions: UpdateInstructions):
-        if self._camera_group is None:
+        if self.camera_group is None:
             raise ValueError("Cannot update CameraGroup if it does not exist!")
-        await self._camera_group.update_camera_configs(camera_configs=camera_configs,
+        await self.camera_group.update_camera_configs(camera_configs=camera_configs,
                                                        update_instructions=update_instructions)
 
     async def close_camera_group(self):
+        if self.camera_group is None:
+            logger.warning("Camera group does not exist, so it cannot be closed!")
+            return
         logger.debug("Closing existing camera group...")
-        self._ipc_flags.kill_camera_group_flag.value = True
-        await self._camera_group.close()
-        self._camera_group = None
-        self._shmorchestrator = None
-        self._ipc_flags = IPCFlags(global_kill_flag=self._global_kill_flag)
-        self._current_frame_rate = None
+        self.ipc_flags.kill_camera_group_flag.value = True
+        await self.camera_group.close()
+        self.reset()
         logger.success("Camera group closed successfully")
 
     def start_recording(self):
-        self._ipc_flags.record_frames_flag.value = True
-        self._ipc_queue.put(self.state_dto())
+        self.ipc_flags.record_frames_flag.value = True
+        self.ipc_queue.put(self.state_dto())
 
     def stop_recording(self):
-        self._ipc_flags.record_frames_flag.value = False
-        self._ipc_queue.put(self.state_dto())
+        self.ipc_flags.record_frames_flag.value = False
+        self.ipc_queue.put(self.state_dto())
 
     def state_dto(self) -> 'AppStateDTO':
         return AppStateDTO.from_state(self)
+
+    def _reset(self):
+        self.camera_group = None
+        self.shmorchestrator = None
+        self.available_devices = None
+        self.current_frame_rate = None
+        self.ipc_flags = IPCFlags(global_kill_flag=self.global_kill_flag)
 
 
 class AppStateDTO(BaseModel):
@@ -147,7 +131,7 @@ APP_STATE = None
 def create_app_state(global_kill_flag: multiprocessing.Event) -> AppState:
     global APP_STATE
     if APP_STATE is None:
-        APP_STATE = AppState(global_kill_flag=global_kill_flag)
+        APP_STATE = AppState.create(global_kill_flag=global_kill_flag)
     return APP_STATE
 
 
