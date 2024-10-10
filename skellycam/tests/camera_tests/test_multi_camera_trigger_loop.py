@@ -4,10 +4,10 @@ import threading
 import cv2
 import pytest
 
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.cameras.group import CameraGroupOrchestrator
-from skellycam.core.cameras.group.camera_group_loop import camera_group_trigger_loop
-from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group import CameraGroupOrchestrator
+from skellycam.core.camera_group.camera_group_loop import camera_group_trigger_loop
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_10ms
 
 
@@ -22,7 +22,7 @@ def test_multi_camera_trigger_loop(
     shm_names = shm_manager.shared_memory_names
     exit_event = multiprocessing.Event()
     camera_group_orchestrator = CameraGroupOrchestrator.from_camera_configs(shm_manager.camera_configs)
-    [camera_group_orchestrator.camera_triggers[camera_id].camera_ready_event.set() for camera_id in
+    [camera_group_orchestrator.camera_triggers[camera_id].camera_ready_flag.set() for camera_id in
      camera_configs_fixture.keys()]
     loop_thread = threading.Thread(
         target=camera_group_trigger_loop, args=(camera_configs_fixture,

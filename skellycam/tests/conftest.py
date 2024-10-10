@@ -11,19 +11,19 @@ from starlette.testclient import TestClient
 
 from skellycam.api import create_app
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
-from skellycam.core.cameras.camera.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
-from skellycam.core.cameras.group import CameraGroupOrchestrator
-from skellycam.core.controller import Controller, create_controller, get_controller
+from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera_group import CameraGroupOrchestrator
+from skellycam.core.app_controller import AppController, create_app_controller, get_app_controller
 from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
-from skellycam.core.shmemory.camera_shared_memory import GroupSharedMemoryNames
-from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import GroupSharedMemoryNames
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.tests.mocks import MockVideoCapture
 
 
@@ -203,8 +203,8 @@ def multi_frame_payload_fixture(camera_configs_fixture: CameraConfigs,
 @pytest.fixture
 def single_camera_triggers_fixture(camera_id_fixture: CameraId,
                                    exit_event_fixture: multiprocessing.Event
-                                   ) -> CameraTriggers:
-    return CameraTriggers.from_camera_id(camera_id=camera_id_fixture, exit_event=exit_event_fixture)
+                                   ) -> CameraFrameLoopFlags:
+    return CameraFrameLoopFlags.create(camera_id=camera_id_fixture, exit_event=exit_event_fixture)
 
 
 @pytest.fixture
@@ -290,10 +290,10 @@ def client_fixture(app_fixture: FastAPI) -> TestClient:
 
 
 @pytest.fixture
-def controller_fixture() -> Controller:
-    create_controller()
-    controller = get_controller()
-    assert isinstance(controller, Controller)
+def controller_fixture() -> AppController:
+    create_app_controller()
+    controller = get_app_controller()
+    assert isinstance(controller, AppController)
     yield controller
     controller.close()
 

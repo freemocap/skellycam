@@ -1,6 +1,6 @@
 import cv2
 
-from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
+from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 
 
 def rotate_image(image, rotation: RotationTypes):

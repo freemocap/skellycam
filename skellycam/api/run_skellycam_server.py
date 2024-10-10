@@ -7,7 +7,7 @@ from skellycam.api.server.server_singleton import create_server_manager
 logger = logging.getLogger(__name__)
 
 
-def run_server(kill_event: multiprocessing.Event):
+def run_server(global_kill_flag: multiprocessing.Value):
     server_manager = create_server_manager(kill_event=kill_event)
     server_manager.start_server()
     while server_manager.is_running:

@@ -1,6 +1,6 @@
 import cv2
 
-from skellycam.core.cameras.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 
 
 def test_cv2_video_capture_mock(camera_config_fixture: CameraConfig,

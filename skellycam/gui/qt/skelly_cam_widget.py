@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget, )
 
-from skellycam.api.app.app_state import get_app_state
 from skellycam.gui import get_client
 from skellycam.gui.client.fastapi_client import FastAPIClient
 from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
@@ -43,7 +42,6 @@ class SkellyCamWidget(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-        self._app_state = get_app_state()
 
     def update_widget(self):
         logger.gui(f"Updating {self.__class__.__name__}")

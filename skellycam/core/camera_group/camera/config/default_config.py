@@ -1,8 +1,8 @@
 from enum import Enum
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
-from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
+from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 
 DEFAULT_EXPOSURE = -7
 

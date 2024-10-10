@@ -8,7 +8,7 @@ from typing import Dict, Optional, Any
 from pydantic import BaseModel, ValidationError, Field
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger

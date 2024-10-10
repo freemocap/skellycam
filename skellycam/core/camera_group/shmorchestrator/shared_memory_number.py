@@ -1,7 +1,7 @@
 import numpy as np
 from pydantic import BaseModel
 
-from skellycam.core.shmemory.shared_memory_element import SharedMemoryElement
+from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
 
 
 class SharedMemoryNumber(BaseModel):

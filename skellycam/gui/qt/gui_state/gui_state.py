@@ -3,14 +3,14 @@ from typing import Optional, Callable, TYPE_CHECKING
 from PySide6.QtCore import QMutex, QMutexLocker
 from PySide6.QtWidgets import QWidget
 
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.gui.qt.gui_state.models.camera_view_sizes import CameraViewSizes
 
 if TYPE_CHECKING:
-    from skellycam.api.app.app_state import AppStateDTO
+    from skellycam.app.app_state import AppStateDTO
 
 
 class GUIState(QWidget):

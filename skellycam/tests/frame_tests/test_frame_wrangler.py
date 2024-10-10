@@ -2,9 +2,9 @@ import multiprocessing
 
 import numpy as np
 
-from skellycam.core.cameras.group import CameraGroupOrchestrator
+from skellycam.core.camera_group import CameraGroupOrchestrator
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
-from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 
 
 def test_frame_wrangler(camera_group_shared_memory_fixture: CameraGroupSharedMemory,
@@ -16,7 +16,7 @@ def test_frame_wrangler(camera_group_shared_memory_fixture: CameraGroupSharedMem
     exit_event = multiprocessing.Event()
     camera_configs = og_shm_manager.camera_configs
     frame_wrangler_fixture.start()
-    [triggers.set_ready() for triggers in camera_group_orchestrator_fixture.camera_triggers.values()]
+    [triggers.set_camera_ready() for triggers in camera_group_orchestrator_fixture.camera_triggers.values()]
     number_of_frames_to_test = 4
     for frame_number in range(number_of_frames_to_test):
         for camera_id, config in camera_configs.items():

@@ -1,7 +1,7 @@
 import logging
 
 from skellycam.api.server.server_constants import APP_URL
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.gui.client.http_client import HTTPClient
 from skellycam.gui.client.websocket_client import WebSocketClient
 

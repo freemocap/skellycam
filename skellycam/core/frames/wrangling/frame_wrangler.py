@@ -1,48 +1,32 @@
 import logging
 import multiprocessing
 
-from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+from pydantic import BaseModel, ConfigDict
+
 from skellycam.core.frames.wrangling.frame_listener_process import FrameListenerProcess
 from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProcess
-from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemoryDTO
+from skellycam.core.camera_group.camera_group import CameraGroupDTO
 
 logger = logging.getLogger(__name__)
 
 
-class FrameWrangler:
+class FrameWrangler(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self,
-                 group_shm_dto: CameraGroupSharedMemoryDTO,
-                 shm_valid_flag: multiprocessing.Value,
-                 group_orchestrator: CameraGroupOrchestrator,
-                 ipc_queue: multiprocessing.Queue,
-                 record_frames_flag: multiprocessing.Value,
-                 kill_camera_group_flag: multiprocessing.Value,
-                 global_kill_event: multiprocessing.Event):
-        self._ipc_queue = ipc_queue
-        self._record_frames_flag = record_frames_flag
-        self._kill_camera_group_flag = kill_camera_group_flag
+    camera_group_dto: CameraGroupDTO
+    listener_process: FrameListenerProcess
+    frame_router_process: FrameRouterProcess
 
-        frame_escape_pipe_entrance, frame_escape_pipe_exit = multiprocessing.Pipe()
+    @classmethod
+    def from_camera_group_dto(cls, dto: CameraGroupDTO):
+        frame_escape_publisher, frame_escape_subscriber = multiprocessing.Pipe()
 
-        self._listener_process = FrameListenerProcess(
-            group_shm_dto=group_shm_dto,
-            shm_valid_flag=shm_valid_flag,
-            group_orchestrator=group_orchestrator,
-            frame_escape_pipe=frame_escape_pipe_entrance,
-            ipc_queue=ipc_queue,
-            kill_camera_group_flag=self._kill_camera_group_flag,
-            global_kill_event=global_kill_event,
-        )
+        return cls(listener_process=FrameListenerProcess(dto=dto,
+                                                         frame_escape_pipe=frame_escape_publisher),
 
-        self._frame_router_process = FrameRouterProcess(
-            camera_configs=group_shm_dto.camera_configs,
-            frame_escape_pipe=frame_escape_pipe_exit,
-            ipc_queue=ipc_queue,
-            record_frames_flag=self._record_frames_flag,
-            kill_camera_group_flag=self._kill_camera_group_flag,
-            global_kill_event=global_kill_event,
-        )
+                   frame_router_process=FrameRouterProcess(dto=dto,
+                                                           frame_escape_pipe=frame_escape_subscriber),
+                   camera_group_dto=dto)
 
     def start(self):
         logger.debug(f"Starting frame listener process...")
@@ -58,8 +42,7 @@ class FrameWrangler:
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
-        self._record_frames_flag.value = False
-        self._kill_camera_group_flag.value = True
+        self.camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
         if self.is_alive():
             self.join()
         logger.debug(f"Frame wrangler closed")

@@ -31,10 +31,10 @@ logger = logging.getLogger(__name__)
 class SkellyCamMainWindow(QMainWindow):
 
     def __init__(self,
-                 kill_event: multiprocessing.Event,
+                 global_kill_flag: multiprocessing.Value,
                  parent=None):
         super().__init__(parent=parent)
-        self._kill_event = kill_event
+        self._global_kill_flag = global_kill_flag
 
         self.setGeometry(100, 100, 1600, 900)
         self.setWindowIcon(QIcon(SKELLYCAM_FAVICON_ICO_PATH))

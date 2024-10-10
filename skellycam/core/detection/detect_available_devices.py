@@ -7,7 +7,7 @@ import cv2
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtMultimedia import QCameraDevice
 
-from skellycam.api.app.app_state import get_app_state
+from skellycam.app.app_state import get_app_state
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo
 
 logger = logging.getLogger(__name__)

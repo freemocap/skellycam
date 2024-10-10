@@ -5,10 +5,10 @@ from unittest.mock import Mock
 import cv2
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.opencv.get_frame import get_frame
-from skellycam.core.cameras.camera.opencv import create_cv2_video_capture
-from skellycam.core.cameras.group import CameraGroupOrchestrator
-from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.camera_group.camera.opencv.get_frame import get_frame
+from skellycam.core.camera_group.camera.opencv import create_cv2_video_capture
+from skellycam.core.camera_group import CameraGroupOrchestrator
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.utilities.wait_functions import wait_1ms
 
 
@@ -25,7 +25,7 @@ def test_trigger_get_frame_deconstructed(
     wait_camera_ready_thread = threading.Thread(target=camera_group_orchestrator_fixture.await_for_cameras_ready)
     wait_camera_ready_thread.start()
     for single_camera_triggers in camera_group_orchestrator_fixture.camera_triggers.values():
-        single_camera_triggers.camera_ready_event.set()
+        single_camera_triggers.camera_ready_flag.set()
     wait_camera_ready_thread.join()
     assert camera_group_orchestrator_fixture.cameras_ready
 

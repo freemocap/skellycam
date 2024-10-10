@@ -1,8 +1,8 @@
 import multiprocessing
 import threading
 
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
-from skellycam.core.cameras.group import CameraGroupOrchestrator
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group import CameraGroupOrchestrator
 from skellycam.utilities.wait_functions import wait_1ms
 
 
@@ -25,7 +25,7 @@ def test_multi_camera_triggers_exit_event(camera_configs_fixture: CameraConfigs,
                     threading.Thread(target=camera_group_orchestrator._wait_for_frames_grabbed_triggers_reset),
                     threading.Thread(target=camera_group_orchestrator._wait_for_retrieve_triggers_reset),
                     threading.Thread(target=camera_group_orchestrator._await_mf_copied_from_shm),
-                    threading.Thread(target=camera_group_orchestrator.fire_initial_triggers)]
+                    threading.Thread(target=camera_group_orchestrator.signal_frame_loop_started)]
     [thread.start() for thread in wait_threads]
     wait_1ms()
     thread_statuses = [thread.is_alive() for thread in wait_threads]
@@ -39,7 +39,7 @@ def test_multi_camera_triggers_exit_event(camera_configs_fixture: CameraConfigs,
 def test_multi_camera_triggers_cameras_ready(camera_group_orchestrator_fixture: CameraGroupOrchestrator):
     assert not camera_group_orchestrator_fixture.cameras_ready
     for single_camera_triggers in camera_group_orchestrator_fixture.camera_triggers.values():
-        single_camera_triggers.camera_ready_event.set()
+        single_camera_triggers.camera_ready_flag.set()
     assert camera_group_orchestrator_fixture.cameras_ready
 
 
@@ -47,6 +47,6 @@ def test_multi_camera_triggers_wait_for_cameras_ready(camera_group_orchestrator_
     wait_thread = threading.Thread(target=camera_group_orchestrator_fixture.await_for_cameras_ready)
     wait_thread.start()
     for single_camera_triggers in camera_group_orchestrator_fixture.camera_triggers.values():
-        single_camera_triggers.camera_ready_event.set()
+        single_camera_triggers.camera_ready_flag.set()
     wait_thread.join()
     assert camera_group_orchestrator_fixture.cameras_ready

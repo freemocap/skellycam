@@ -3,9 +3,9 @@ import logging
 import cv2
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.camera_config import CameraConfig
-from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
-from skellycam.core.cameras.camera.config.image_rotation_types import RotationTypes
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 
 logger = logging.getLogger(__name__)
 

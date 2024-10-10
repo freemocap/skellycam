@@ -7,12 +7,12 @@ from typing import Optional, Dict
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.api.app.app_state import AppStateDTO, get_app_state
+from skellycam.app.app_state import AppStateDTO, get_app_state
 from skellycam.api.websocket.ipc import get_ipc_queue
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.shmemory.camera_shared_memory_manager import CameraGroupSharedMemory, CameraGroupSharedMemoryDTO
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory, CameraGroupSharedMemoryDTO
 from skellycam.core.timestamps.frame_rate_tracker import CurrentFrameRate
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.utilities.wait_functions import async_wait_1ms

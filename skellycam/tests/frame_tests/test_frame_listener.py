@@ -5,8 +5,8 @@
 # import numpy as np
 # import pytest
 #
-# from skellycam.core.cameras.config.camera_config import CameraConfigs
-# from skellycam.core.cameras.group.camera_group_orchestrator import CameraGroupOrchestrator
+# from skellycam.core.config.camera_config import CameraConfigs
+# from skellycam.core.group.camera_group_orchestrator import CameraGroupOrchestrator
 # from skellycam.core.frames.frame_payload import FramePayload
 # from skellycam.core.frames.frame_wrangler import FrameListenerProcess
 # from skellycam.core.frames.multi_frame_payload import MultiFramePayload

@@ -6,7 +6,7 @@ import cv2
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 
 logger = logging.getLogger(__name__)

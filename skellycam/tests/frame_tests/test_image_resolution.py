@@ -1,4 +1,4 @@
-from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 
 
 def test_image_resolution_from_string(image_resolution_fixture: ImageResolution):

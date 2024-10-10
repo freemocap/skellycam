@@ -6,11 +6,11 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
-from skellycam.core.shmemory.shared_memory_element import SharedMemoryElement
+from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,13 @@ class CameraSharedMemory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     image_shm: SharedMemoryElement
     metadata_shm: SharedMemoryElement
+    read_only: bool
 
     @classmethod
     def create(
             cls,
             camera_config: CameraConfig,
+            read_only: bool,
     ):
         image_shm = SharedMemoryElement.create(
             shape=camera_config.image_shape,
@@ -46,12 +48,14 @@ class CameraSharedMemory(BaseModel):
         return cls(
             image_shm=image_shm,
             metadata_shm=metadata_shm,
+            read_only=read_only,
         )
 
     @classmethod
     def recreate(cls,
                  camera_config: CameraConfig,
-                 shared_memory_names: SharedMemoryNames):
+                 shared_memory_names: SharedMemoryNames,
+                 read_only: bool,):
         image_shm = SharedMemoryElement.recreate(
             shared_memory_names.image_shm_name,
             shape=camera_config.image_shape,
@@ -65,6 +69,7 @@ class CameraSharedMemory(BaseModel):
         return cls(
             image_shm=image_shm,
             metadata_shm=metadata_shm,
+            read_only=read_only,
         )
 
     @property
@@ -72,6 +77,8 @@ class CameraSharedMemory(BaseModel):
         return SharedMemoryNames(image_shm_name=self.image_shm.name, metadata_shm_name=self.metadata_shm.name)
 
     def put_new_frame(self, image: np.ndarray, metadata: np.ndarray):
+        if self.read_only:
+            raise ValueError("Cannot put new frame into read-only instance of shared memory!")
         metadata[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         self.image_shm.copy_into_buffer(image)
         self.metadata_shm.copy_into_buffer(metadata)

@@ -4,10 +4,10 @@ import time
 import cv2
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.camera_triggers import CameraTriggers
+from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     create_empty_frame_metadata
-from skellycam.core.shmemory.camera_shared_memory import CameraSharedMemory
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def get_frame(camera_id: CameraId,
               cap: cv2.VideoCapture,
               camera_shared_memory: CameraSharedMemory,
-              triggers: CameraTriggers,
+              triggers: CameraFrameLoopFlags,
               frame_number: int,
               ) -> int:
     """
@@ -38,7 +38,7 @@ def get_frame(camera_id: CameraId,
     """
     logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `grab` trigger...")
     frame_metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=frame_number)
-    triggers.await_grab_trigger()
+    triggers.await_should_grab()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
     grab_success = cap.grab()  # grab the frame from the camera, but don't decode it yet
@@ -49,7 +49,7 @@ def get_frame(camera_id: CameraId,
     else:
         raise ValueError(f"Failed to grab frame from camera {camera_id}")
 
-    triggers.await_retrieve_trigger()
+    triggers.await_should_retrieve()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
     # decode the frame buffer into an image! Wow, magic!

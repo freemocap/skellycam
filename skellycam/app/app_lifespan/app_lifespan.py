@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 import skellycam
 from skellycam.api.server.server_constants import APP_URL
-from skellycam.core.controller import get_controller
+from skellycam.app.app_controller.app_controller import get_app_controller
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     logger.info("Adding middleware...")
 
     logger.info(f"Creating `Controller` instance...")
-    controller = get_controller()
+    controller = get_app_controller()
     logger.success(f"Skellycam API (version:{skellycam.__version__}) started successfully 💀📸✨")
     logger.api(f"Skellycam API  running on: {APP_URL}  👈[click to open backend UI in your browser]\n")
     logger.api(f"Skellycam API  test ui: {APP_URL}/ui  👈[click to open backend UI in your browser]\n")

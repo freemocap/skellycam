@@ -7,7 +7,7 @@ from typing import Union, Dict, Any, Optional, Callable
 import websocket
 from websocket import WebSocketApp
 
-from skellycam.api.app.app_state import AppStateDTO
+from skellycam.app.app_state import AppStateDTO
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state

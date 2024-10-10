@@ -4,8 +4,9 @@ import time
 from collections import deque
 from typing import Optional
 
-from skellycam.core.cameras.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.camera_group.camera_group import CameraGroupDTO
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
 from skellycam.utilities.wait_functions import wait_100us
@@ -15,22 +16,12 @@ logger = logging.getLogger(__name__)
 
 class FrameRouterProcess:
     def __init__(self,
-                 camera_configs: CameraConfigs,
-                 frame_escape_pipe: multiprocessing.Pipe,
-                 ipc_queue: multiprocessing.Queue,
-                 record_frames_flag: multiprocessing.Value,
-                 kill_camera_group_flag: multiprocessing.Value,
-                 global_kill_event: multiprocessing.Event
-                 ):
+                 dto: CameraGroupDTO,
+                 frame_escape_pipe: multiprocessing.Pipe,):
 
         self._process = multiprocessing.Process(target=self._run_process,
                                                name=self.__class__.__name__,
-                                               args=(camera_configs,
-                                                     frame_escape_pipe,
-                                                     ipc_queue,
-                                                     record_frames_flag,
-                                                     kill_camera_group_flag,
-                                                     global_kill_event))
+                                               args=(dto, frame_escape_pipe,))
 
     def start(self):
         logger.trace(f"Starting frame listener process")
@@ -43,13 +34,8 @@ class FrameRouterProcess:
         self._process.join()
 
     @staticmethod
-    def _run_process(camera_configs: CameraConfigs,
-                     frame_escape_pipe: multiprocessing.Pipe,
-                     ipc_queue: multiprocessing.Queue,
-                     record_frames_flag: multiprocessing.Value,
-                     kill_camera_group_flag: multiprocessing.Value,
-                     global_kill_event: multiprocessing.Event
-                     ):
+    def _run_process(dto: CameraGroupDTO,
+                     frame_escape_pipe: multiprocessing.Pipe,):
         """
         This process is not coupled to the frame loop, and the `escape pipe` is elastic, so blocking is not as big a sin here.
         MultiFrame chunks will be sent through the `frame_escape_pipe` and will be gathered, reconstructed into a framepayload, and handled here.
@@ -59,7 +45,7 @@ class FrameRouterProcess:
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         video_recorder_manager: Optional[VideoRecorderManager] = None
         try:
-            while not kill_camera_group_flag.value and not global_kill_event.is_set():
+            while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.is_set():
                 wait_100us()
 
                 # Check for incoming data
@@ -85,12 +71,12 @@ class FrameRouterProcess:
                 # Handle multi-frame payloads
                 if len(mf_payloads_to_process) > 0:
                     mf_payload = mf_payloads_to_process.popleft()
-                    if record_frames_flag.value:
+                    if dto.ipc_flags.record_frames_flag.value:
                         if not video_recorder_manager:
-                            video_recorder_manager = VideoRecorderManager.create(camera_configs=camera_configs,
+                            video_recorder_manager = VideoRecorderManager.create(camera_configs=dto.camera_configs,
                                                                                  recording_folder=get_default_recording_folder_path(
                                                                                      tag=""))
-                            ipc_queue.put(video_recorder_manager.recording_info)
+                            dto.ipc_queue.put(video_recorder_manager.recording_info)
                         video_recorder_manager.add_multi_frame(mf_payload)
                     else:
                         if video_recorder_manager:
@@ -114,6 +100,6 @@ class FrameRouterProcess:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
-            kill_camera_group_flag.value = True
+            dto.kill_camera_group_flag.value = True
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()

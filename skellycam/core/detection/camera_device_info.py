@@ -6,7 +6,7 @@ from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
-from skellycam.core.cameras.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 
 logger = logging.getLogger(__name__)
 
