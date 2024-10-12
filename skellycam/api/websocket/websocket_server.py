@@ -99,8 +99,7 @@ class WebsocketServer:
                     await async_wait_1ms()
                     continue
 
-                # NOTE - this top-level group shared memory is read-only, so this won't bork up the frame loop
-                mf_payload = self._app_state.shm.get_multi_frame_payload(previous_payload=mf_payload)
+                mf_payload = self._app_state.camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
                 await self._send_frontend_payload(mf_payload)
 
         except WebSocketDisconnect:
