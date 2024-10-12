@@ -84,15 +84,15 @@ class CameraFrameLoopFlags(BaseModel):
         self.new_frame_available_flag.value = True
 
     def _check_wait_time(self, max_wait_time_s: float, start_wait_ns: float, been_warned: bool) -> bool:
-        time_waited_s = (time.perf_counter_ns() - start_wait_ns)
-        if time_waited_s > (max_wait_time_s * 1e9) * .5 and not been_warned:
+        time_waited_s = (time.perf_counter_ns() - start_wait_ns) / 1e9
+        if time_waited_s > max_wait_time_s*.5 and not been_warned:
             been_warned = True
             logger.warning(
                 f"Camera {self.camera_id} process hit half-way point waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
                 f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
                 f"self.should_continue={self.should_continue}")
 
-        if time_waited_s > max_wait_time_s * 1e9:
+        if time_waited_s > max_wait_time_s:
             raise TimeoutError(
                 f"Camera {self.camera_id} process timed out waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
                 f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "

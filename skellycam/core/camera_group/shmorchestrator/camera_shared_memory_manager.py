@@ -3,8 +3,6 @@ import multiprocessing
 from dataclasses import dataclass
 from typing import Dict, Optional, List
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory, GroupSharedMemoryNames
@@ -18,6 +16,7 @@ class CameraGroupSharedMemoryDTO:
     camera_configs: CameraConfigs
     group_shm_names: GroupSharedMemoryNames
     shm_valid_flag: multiprocessing.Value
+    latest_mf_number: multiprocessing.Value
 
 
 @dataclass
@@ -25,6 +24,7 @@ class CameraGroupSharedMemory:
     camera_configs: CameraConfigs
     camera_shms: Dict[CameraId, CameraSharedMemory]
     shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", True)
+    latest_mf_number: multiprocessing.Value = multiprocessing.Value("l", -1)
 
     @classmethod
     def create(cls, camera_configs: CameraConfigs, read_only: bool = False):
@@ -46,7 +46,8 @@ class CameraGroupSharedMemory:
 
         return cls(camera_configs=dto.camera_configs,
                    camera_shms=camera_shms,
-                   shm_valid_flag=dto.shm_valid_flag)
+                   shm_valid_flag=dto.shm_valid_flag,
+                   latest_mf_number=dto.latest_mf_number)
 
     @property
     def shared_memory_names(self) -> GroupSharedMemoryNames:
@@ -64,16 +65,18 @@ class CameraGroupSharedMemory:
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
                                           group_shm_names=self.shared_memory_names,
-                                          shm_valid_flag=self.shm_valid_flag)
+                                          shm_valid_flag=self.shm_valid_flag,
+                                          latest_mf_number=self.latest_mf_number)
 
     def get_multi_frame_payload(self,
                                 previous_payload: Optional[MultiFramePayload]
                                 ) -> MultiFramePayload:
 
         if previous_payload is None:
-            payload = MultiFramePayload.create_initial(camera_configs=self.camera_configs)
+            payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=self.camera_configs)
         else:
-            payload = MultiFramePayload.from_previous(previous=previous_payload, camera_configs=self.camera_configs)
+            payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
+                                                                         camera_configs=self.camera_configs)
 
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
@@ -83,7 +86,7 @@ class CameraGroupSharedMemory:
             payload.add_frame(frame)
         if not payload.full:
             raise ValueError("Did not read full multi-frame payload!")
-
+        self.latest_mf_number.value = payload.multi_frame_number
         return payload
 
     def close(self):
