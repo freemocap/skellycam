@@ -8,7 +8,7 @@ from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from skellycam.app.app_state import AppStateDTO, get_app_state
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frames.timestamps.frame_rate_tracker import CurrentFrameRate
+from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.utilities.wait_functions import async_wait_1ms
 
@@ -100,7 +100,7 @@ class WebsocketServer:
                     continue
 
                 # NOTE - this top-level group shared memory is read-only, so this won't bork up the frame loop
-                mf_payload = self._app_state.camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
+                mf_payload = self._app_state.shm.get_multi_frame_payload(previous_payload=mf_payload)
                 await self._send_frontend_payload(mf_payload)
 
         except WebSocketDisconnect:

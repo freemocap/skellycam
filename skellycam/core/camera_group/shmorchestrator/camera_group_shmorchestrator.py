@@ -19,8 +19,8 @@ class CameraGroupSharedMemoryOrchestratorDTO(BaseModel):
 
 class CameraGroupSharedMemoryOrchestrator(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    camera_group_shm: CameraGroupSharedMemory
-    camera_group_orchestrator: CameraGroupOrchestrator
+    shm: CameraGroupSharedMemory
+    orchestrator: CameraGroupOrchestrator
 
     @classmethod
     def create(cls,
@@ -28,9 +28,9 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
                ipc_flags: IPCFlags,
                read_only: bool):
 
-        return cls(camera_group_shm = CameraGroupSharedMemory.create(camera_configs=camera_configs,
+        return cls(shm = CameraGroupSharedMemory.create(camera_configs=camera_configs,
                                                                      read_only=read_only),
-                   camera_group_orchestrator=CameraGroupOrchestrator.create(camera_configs=camera_configs,
+                   orchestrator=CameraGroupOrchestrator.create(camera_configs=camera_configs,
                                                                             ipc_flags=ipc_flags)
                    )
 
@@ -39,19 +39,19 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
                  dto: CameraGroupSharedMemoryOrchestratorDTO,
                  read_only: bool):
         return cls(
-            camera_group_shm=CameraGroupSharedMemory.recreate(dto=dto.camera_group_shm_dto,
+            shm=CameraGroupSharedMemory.recreate(dto=dto.camera_group_shm_dto,
                                                               read_only=read_only),
-            camera_group_orchestrator=dto.camera_group_orchestrator,
+            orchestrator=dto.camera_group_orchestrator,
         )
 
     @property
     def valid(self):
-        return self.camera_group_shm.shm_valid_flag.value
+        return self.shm.valid
 
     def to_dto(self) -> CameraGroupSharedMemoryOrchestratorDTO:
-        return CameraGroupSharedMemoryOrchestratorDTO(camera_group_shm_dto=self.camera_group_shm.to_dto(),
-                                                      camera_group_orchestrator=self.camera_group_orchestrator)
+        return CameraGroupSharedMemoryOrchestratorDTO(camera_group_shm_dto=self.shm.to_dto(),
+                                                      camera_group_orchestrator=self.orchestrator)
 
     def close(self):
         logger.debug("Closing CameraGroupSharedMemoryOrchestrator...")
-        self.camera_group_shm.close_and_unlink()
+        self.shm.close_and_unlink()

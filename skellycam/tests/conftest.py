@@ -89,11 +89,11 @@ def available_devices_fixture(camera_configs_fixture: CameraConfigs) -> Availabl
         d1 = DeviceVideoFormat(width=config.resolution.width,
                                height=config.resolution.height,
                                pixel_format=config.pixel_format,
-                               frame_rate=config.framerate)
+                               framerate=config.framerate)
         d2 = DeviceVideoFormat(width=config.resolution.width // 2,
                                height=config.resolution.height // 2,
                                pixel_format=config.pixel_format,
-                               frame_rate=config.framerate * 2)
+                               framerate=config.framerate * 2)
         assert isinstance(d1, DeviceVideoFormat)
         assert isinstance(d2, DeviceVideoFormat)
         device_info = CameraDeviceInfo(device_address=f"device_{camera_id}/video{camera_id}/wheee!",

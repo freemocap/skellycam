@@ -22,7 +22,7 @@ def test_multi_camera_trigger_loop(
     shm_names = shm_manager.shared_memory_names
     exit_event = multiprocessing.Event()
     camera_group_orchestrator = CameraGroupOrchestrator.from_camera_configs(shm_manager.camera_configs)
-    [camera_group_orchestrator.camera_triggers[camera_id].camera_ready_flag.set() for camera_id in
+    [camera_group_orchestrator.frame_loop_flags[camera_id].camera_ready_flag.set() for camera_id in
      camera_configs_fixture.keys()]
     loop_thread = threading.Thread(
         target=camera_group_trigger_loop, args=(camera_configs_fixture,

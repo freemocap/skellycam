@@ -14,7 +14,7 @@ from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator impor
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.core.detection.camera_device_info import AvailableDevices, available_devices_to_default_camera_configs
-from skellycam.core.frames.timestamps.frame_rate_tracker import CurrentFrameRate
+from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class AppState(BaseModel):
     shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
     camera_group: Optional[CameraGroup] = None
     available_devices: Optional[AvailableDevices] = None
-    current_frame_rate: Optional[CurrentFrameRate] = None
+    current_framerate: Optional[CurrentFrameRate] = None
 
     @classmethod
     def create(cls, global_kill_flag: multiprocessing.Value):
@@ -37,11 +37,11 @@ class AppState(BaseModel):
 
     @property
     def orchestrator(self) -> CameraGroupOrchestrator:
-        return self.shmorchestrator.camera_group_orchestrator
+        return self.shmorchestrator.orchestrator
 
     @property
     def camera_group_shm(self) -> CameraGroupSharedMemory:
-        return self.shmorchestrator.camera_group_shm
+        return self.shmorchestrator.shm
 
 
     @property
@@ -101,7 +101,7 @@ class AppState(BaseModel):
         self.camera_group = None
         self.shmorchestrator = None
         self.available_devices = None
-        self.current_frame_rate = None
+        self.current_framerate = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.global_kill_flag)
 
 
@@ -113,7 +113,7 @@ class AppStateDTO(BaseModel):
 
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableDevices]
-    current_frame_rate: Optional[CurrentFrameRate]
+    current_framerate: Optional[CurrentFrameRate]
     record_frames_flag_status: bool
 
     @classmethod
@@ -121,7 +121,7 @@ class AppStateDTO(BaseModel):
         return cls(
             camera_configs=state.camera_group_configs,
             available_devices=state.available_devices,
-            current_frame_rate=state.current_frame_rate,
+            current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
         )
 

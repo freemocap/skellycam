@@ -23,7 +23,7 @@ def extract_config_from_cv2_capture(camera_id: CameraId,
                 height=cv2_capture.get(cv2.CAP_PROP_FRAME_HEIGHT),
             ),
             exposure=cv2_capture.get(cv2.CAP_PROP_EXPOSURE),
-            frame_rate=cv2_capture.get(cv2.CAP_PROP_FPS),
+            framerate=cv2_capture.get(cv2.CAP_PROP_FPS),
             rotation=rotation,
         )
     except Exception as e:

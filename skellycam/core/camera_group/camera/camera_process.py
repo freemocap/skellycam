@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from dataclasses import dataclass
 from typing import Optional
 
 import cv2
@@ -20,19 +21,21 @@ logger = logging.getLogger(__name__)
 AUTO_EXPOSURE_SETTING = 3  # 0.75
 MANUAL_EXPOSURE_SETTING = 1  # 0.25
 
-
-class CameraProcess(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+@dataclass
+class CameraProcess:
+    camera_id: CameraId
     process: multiprocessing.Process
     dto: CameraGroupDTO
-    should_close_self: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_close_self_flag: multiprocessing.Value
 
     @classmethod
     def create(cls,
                camera_id: CameraId,
                dto: CameraGroupDTO):
         should_close_self_flag = multiprocessing.Value('b', False)
-        return cls(dto=dto,
+
+        return cls(camera_id=camera_id,
+                   dto=dto,
                    should_close_self_flag=should_close_self_flag,
                    process=multiprocessing.Process(target=cls._run_process,
                                                    name=f"Camera{camera_id}",
@@ -47,16 +50,16 @@ class CameraProcess(BaseModel):
         self.process.start()
 
     def close(self):
-        logger.info(f"Closing camera {self._config.camera_id}")
+        logger.info(f"Closing camera {self.camera_id}")
         self.should_close_self_flag.value = True
-        self._process.join()
-        logger.info(f"Camera {self._config.camera_id} closed!")
+        self.process.join()
+        logger.info(f"Camera {self.camera_id} closed!")
 
     def is_alive(self) -> bool:
-        return self._process.is_alive()
+        return self.process.is_alive()
 
     def update_config(self, new_config: CameraConfig):
-        logger.debug(f"Updating camera {self._config.camera_id} with new config: {new_config}")
+        logger.debug(f"Updating camera {self.config.camera_id} with new config: {new_config}")
         self.dto.config_update_queue.put(new_config)
 
     @staticmethod
@@ -67,8 +70,9 @@ class CameraProcess(BaseModel):
         config = dto.camera_configs[camera_id]
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=dto.shmorc_dto,
                                                                        read_only=False)
-        frame_loop_flags = CameraFrameLoopFlags.create(camera_id=camera_id,
-                                                       ipc_flags=dto.ipc_flags)
+        frame_loop_flags = shmorchestrator.orchestrator.frame_loop_flags[camera_id]
+        camera_shm = shmorchestrator.shm.camera_shms[camera_id]
+
         cv2_video_capture: Optional[cv2.VideoCapture] = None
         try:
             cv2_video_capture = create_cv2_video_capture(config)
@@ -81,7 +85,7 @@ class CameraProcess(BaseModel):
             logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
             frame_number = 0
             # Trigger listening loop
-            while not dto.ipc_flags.global_kill_flag.value and not dto.ipc_flags.kill_camera_group_flag and not should_close_self_flag.value:
+            while not dto.ipc_flags.global_kill_flag.value and not dto.ipc_flags.kill_camera_group_flag.value and not should_close_self_flag.value:
 
                 config = CameraProcess.check_for_config_update(config=config,
                                                                cv2_video_capture=cv2_video_capture,
@@ -89,14 +93,14 @@ class CameraProcess(BaseModel):
                                                                frame_loop_flags=frame_loop_flags
                                                                )
 
-                if not shmorchestrator.camera_group_shm.valid:
+                if not shmorchestrator.shm.valid:
                     wait_100us()
                     continue
                 logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
                 frame_number = get_frame(
                     camera_id=config.camera_id,
                     cap=cv2_video_capture,
-                    camera_shared_memory=shmorchestrator.camera_group_shm,
+                    camera_shared_memory=camera_shm,
                     triggers=frame_loop_flags,
                     frame_number=frame_number,
                 )

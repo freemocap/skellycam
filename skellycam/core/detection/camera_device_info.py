@@ -20,7 +20,7 @@ class DeviceVideoFormat(BaseModel):
     width: int
     height: int
     pixel_format: str
-    frame_rate: float
+    framerate: float
 
 
 class CameraDeviceInfo(BaseModel):
@@ -53,7 +53,7 @@ class CameraDeviceInfo(BaseModel):
         Get a list of all available framerates, sorted from lowest ([0]) to highest ([-1])
         """
         all_framerates = [
-            video_format.frame_rate for video_format in self.available_video_formats
+            video_format.framerate for video_format in self.available_video_formats
         ]
         unique_framerates = list(set(all_framerates))
         unique_framerates.sort()
@@ -87,7 +87,7 @@ class CameraDeviceInfo(BaseModel):
                 width=video_format.resolution().width(),
                 height=video_format.resolution().height(),
                 pixel_format=video_format.pixelFormat(),
-                frame_rate=video_format.maxFrameRate(),
+                framerate=video_format.maxFrameRate(),
             )
             for video_format in available_video_formats
         ]

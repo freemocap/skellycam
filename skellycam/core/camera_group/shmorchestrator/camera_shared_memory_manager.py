@@ -90,14 +90,12 @@ class CameraGroupSharedMemory:
         # Close this process's access to the shared memory, but other processes can still access it        
         for camera_shared_memory in self.camera_shms.values():
             camera_shared_memory.close()
-        self.multi_frame_number_shm.close()
 
     def unlink(self):
         # Unlink the shared memory so that it is removed from the system, memory becomes invalid for all processes
         self.shm_valid_flag.value = False
         for camera_shared_memory in self.camera_shms.values():
             camera_shared_memory.unlink()
-        self.multi_frame_number_shm.unlink()
 
     def close_and_unlink(self):
         self.close()

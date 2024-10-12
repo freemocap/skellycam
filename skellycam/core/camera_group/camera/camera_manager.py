@@ -73,45 +73,44 @@ class CameraManager(BaseModel):
         logger.trace(f"Cameras closed: {self.camera_ids}")
 
     def camera_group_frame_loop(self):
-        self.orchestrator.await_for_cameras_ready()
+        self.orchestrator.await_cameras_ready()
+        self.orchestrator.signal_frame_loop_started()
 
         loop_count = 0
         elapsed_per_loop_ns = []
         try:
-            self.orchestrator.await_for_cameras_ready()
-            self.orchestrator.signal_frame_loop_started()
 
-            logger.debug(f"Starting camera trigger loop for cameras: {self.shmorchestrator.camera_ids}...")
+            logger.debug(f"Starting camera trigger loop for cameras: {self.camera_ids}...")
 
             while not self.camera_group_dto.ipc_flags.global_kill_flag.value and not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value:
                 tik = time.perf_counter_ns()
 
                 # Trigger all cameras to read a frame
-                self.shmorchestrator.trigger_multi_frame_read()
+                self.orchestrator.trigger_multi_frame_read()
 
                 # Check for new camera configs
                 if self.camera_group_dto.config_update_queue.qsize() > 0:
                     logger.trace(
                         f"Config update queue has items, pausing frame loop to update configs")
-                    self.shmorchestrator.pause_loop()
+                    self.orchestrator.pause_loop()
 
                     update_instructions = self.camera_group_dto.config_update_queue.get()
 
                     self.update_camera_configs(update_instructions)
-                    self.shmorchestrator.unpause_loop()
+                    self.orchestrator.unpause_loop()
 
                 if loop_count > 0:
                     elapsed_per_loop_ns.append((time.perf_counter_ns() - tik))
                 loop_count += 1
 
-            logger.debug(f"Multi-camera trigger loop for cameras: {self.shmorchestrator.camera_ids}  ended")
+            logger.debug(f"Multi-camera trigger loop for cameras: {self.camera_ids}  ended")
             wait_10ms()
             log_time_stats(
                 camera_configs=self.camera_group_dto.camera_configs,
                 elapsed_per_loop_ns=elapsed_per_loop_ns,
             )
         finally:
-            logger.debug(f"Multi-camera trigger loop for cameras: {self.shmorchestrator.camera_ids}  exited")
+            logger.debug(f"Multi-camera trigger loop for cameras: {self.camera_ids}  exited")
 
 
 def log_time_stats(camera_configs: CameraConfigs,
@@ -119,14 +118,14 @@ def log_time_stats(camera_configs: CameraConfigs,
     number_of_cameras = len(camera_configs)
     resolution = str(camera_configs[0].resolution)
     number_of_frames = len(elapsed_per_loop_ns) + 1
-    ideal_frame_rate = min([camera_config.framerate for camera_config in camera_configs.values()])
+    ideal_framerate = min([camera_config.framerate for camera_config in camera_configs.values()])
 
     logger.info(
         f"Read {number_of_frames} x {resolution} images read from {number_of_cameras} camera(s):"
-        f"\n\tMEASURED FRAME RATE (ideal: {ideal_frame_rate} fps): "
+        f"\n\tMEASURED FRAME RATE (ideal: {ideal_framerate} fps): "
         f"\n\t\tmean   : {(1e9 / np.mean(elapsed_per_loop_ns)):.2f} fps "
         f"\n\t\tmedian : {(1e9 / np.median(elapsed_per_loop_ns)):.2f} fps \n"
-        f"\n\tTime elapsed per multi-frame loop  (ideal: {(ideal_frame_rate ** -1) * 1e3:.2f} ms) -  "
+        f"\n\tTime elapsed per multi-frame loop  (ideal: {(ideal_framerate ** -1) * 1e3:.2f} ms) -  "
         f"\n\t\tmean(std)   : {np.mean(elapsed_per_loop_ns) / 1e6:.2f} ({np.std(elapsed_per_loop_ns) / 1e6:.2f}) ms"
         f"\n\t\tmedian(mad) : {np.median(elapsed_per_loop_ns) / 1e6:.2f} ({np.median(np.abs(elapsed_per_loop_ns - np.median(elapsed_per_loop_ns))) / 1e6:.2f}) ms"
     )

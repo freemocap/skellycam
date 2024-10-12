@@ -22,9 +22,9 @@ def test_trigger_get_frame_deconstructed(
     assert not camera_group_orchestrator_fixture.cameras_ready
 
     # check cams ready
-    wait_camera_ready_thread = threading.Thread(target=camera_group_orchestrator_fixture.await_for_cameras_ready)
+    wait_camera_ready_thread = threading.Thread(target=camera_group_orchestrator_fixture.await_cameras_ready)
     wait_camera_ready_thread.start()
-    for single_camera_triggers in camera_group_orchestrator_fixture.camera_triggers.values():
+    for single_camera_triggers in camera_group_orchestrator_fixture.frame_loop_flags.values():
         single_camera_triggers.camera_ready_flag.set()
     wait_camera_ready_thread.join()
     assert camera_group_orchestrator_fixture.cameras_ready
@@ -89,7 +89,7 @@ def test_trigger_get_frame_deconstructed(
         assert camera_group_orchestrator_fixture.new_multi_frame_available
 
         # 5
-        [triggers.set_frame_copied() for triggers in camera_group_orchestrator_fixture.camera_triggers.values()]
+        [triggers.set_frame_copied() for triggers in camera_group_orchestrator_fixture.frame_loop_flags.values()]
         camera_group_orchestrator_fixture._await_mf_copied_from_shm()
         assert not camera_group_orchestrator_fixture.new_multi_frame_available
 
@@ -108,7 +108,7 @@ def create_frame_read_threads(
     frame_read_threads = []
     for camera_id, cap in capture_mocks.items():
         cam_shm = shared_memory_manager.get_camera_shared_memory(camera_id)
-        cam_triggers = camera_group_orchestrator_fixture.camera_triggers[camera_id]
+        cam_triggers = camera_group_orchestrator_fixture.frame_loop_flags[camera_id]
         frame_read_threads.append(
             threading.Thread(
                 target=get_frame,

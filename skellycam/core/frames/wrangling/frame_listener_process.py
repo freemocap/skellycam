@@ -9,7 +9,7 @@ from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator impor
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frames.timestamps.frame_rate_tracker import FrameRateTracker
+from skellycam.core.frames.timestamps.framerate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_100us
 
 logger = logging.getLogger(__name__)
@@ -42,10 +42,10 @@ class FrameListenerProcess:
         try:
             logger.trace(f"Starting FrameListener loop...")
             shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=dto.shmorc_dto, read_only=False)
-            camera_group_shm = shmorchestrator.camera_group_shm
-            orchestrator = shmorchestrator.camera_group_orchestrator
+            camera_group_shm = shmorchestrator.shm
+            orchestrator = shmorchestrator.orchestrator
 
-            frame_rate_tracker = FrameRateTracker()
+            framerate_tracker = FrameRateTracker()
             mf_payload: Optional[MultiFramePayload] = None
             byte_chunklets_to_send = deque()
 
@@ -60,8 +60,8 @@ class FrameListenerProcess:
 
                     pulled_from_pipe_timestamp = time.perf_counter_ns()
                     mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
-                    frame_rate_tracker.update(pulled_from_pipe_timestamp)
-                    dto.ipc_queue.put(frame_rate_tracker.current())
+                    framerate_tracker.update(pulled_from_pipe_timestamp)
+                    dto.ipc_queue.put(framerate_tracker.current())
                     mf_bytes_list = mf_payload.to_bytes_list()
                     byte_chunklets_to_send.extend(mf_bytes_list)
 

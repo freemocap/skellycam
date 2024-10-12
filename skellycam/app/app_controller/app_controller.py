@@ -67,7 +67,7 @@ class AppController(BaseModel):
 
             self.app_state.create_camera_group()
             await self.app_state.camera_group.start()
-            logger.success("Camera group started successfully!")
+            logger.info("Camera group started")
         except Exception as e:
             logger.exception(f"Error creating camera group:  {e}")
             raise

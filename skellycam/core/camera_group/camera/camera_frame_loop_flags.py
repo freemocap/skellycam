@@ -48,7 +48,7 @@ class CameraFrameLoopFlags(BaseModel):
         been_warned = False
         while not self.frame_loop_initialization_flag.value and self.should_continue:
             wait_10ms()
-            self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
+            been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
 
         logger.trace(f"Camera {self.camera_id} process received `initial_trigger`")
         self.frame_loop_initialization_flag.value = False
@@ -58,7 +58,7 @@ class CameraFrameLoopFlags(BaseModel):
         been_warned = False
         while not self.should_retrieve_frame_flag.value and self.should_continue:
             wait_100us()
-            self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
+            been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
         logger.loop(f"Camera {self.camera_id} process received `retrieve_frame_trigger`")
 
     def await_should_grab(self, max_wait_time_s: float = MAX_WAIT_TIME_S):
@@ -66,7 +66,7 @@ class CameraFrameLoopFlags(BaseModel):
         been_warned = False
         while not self.should_grab_frame_flag.value and self.should_continue:
             wait_100us()
-            self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
+            been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
 
     def set_camera_not_ready(self):
         self.camera_ready_flag.value = False
@@ -83,9 +83,10 @@ class CameraFrameLoopFlags(BaseModel):
     def set_new_frame_available(self):
         self.new_frame_available_flag.value = True
 
-    def _check_wait_time(self, max_wait_time_s: float, start_wait_ns: float, been_warned: bool):
+    def _check_wait_time(self, max_wait_time_s: float, start_wait_ns: float, been_warned: bool) -> bool:
         time_waited_s = (time.perf_counter_ns() - start_wait_ns)
         if time_waited_s > (max_wait_time_s * 1e9) * .5 and not been_warned:
+            been_warned = True
             logger.warning(
                 f"Camera {self.camera_id} process hit half-way point waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
                 f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
@@ -96,3 +97,4 @@ class CameraFrameLoopFlags(BaseModel):
                 f"Camera {self.camera_id} process timed out waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
                 f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
                 f"self.should_continue={self.should_continue}")
+        return been_warned

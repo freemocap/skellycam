@@ -1,17 +1,20 @@
+import logging
 import multiprocessing
 from dataclasses import dataclass
 from typing import Dict
 
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags, logger
+from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.utilities.wait_functions import wait_100us, wait_1ms, wait_10ms, wait_100ms
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class CameraGroupOrchestrator:
-    camera_triggers: Dict[CameraId, CameraFrameLoopFlags]
+    frame_loop_flags: Dict[CameraId, CameraFrameLoopFlags]
     ipc_flags: IPCFlags
 
     new_multi_frame_available_flag: multiprocessing.Value = multiprocessing.Value("b", False)
@@ -24,7 +27,7 @@ class CameraGroupOrchestrator:
                camera_configs: CameraConfigs,
                ipc_flags: IPCFlags):
         return cls(
-            camera_triggers={
+            frame_loop_flags={
                 camera_id: CameraFrameLoopFlags.create(camera_id=camera_id,
                                                        ipc_flags=ipc_flags)
                 for camera_id, camera_config in camera_configs.items()
@@ -34,7 +37,7 @@ class CameraGroupOrchestrator:
 
     @property
     def camera_ids(self):
-        return list(self.camera_triggers.keys())
+        return list(self.frame_loop_flags.keys())
 
     @property
     def should_continue(self):
@@ -42,19 +45,19 @@ class CameraGroupOrchestrator:
 
     @property
     def cameras_ready(self):
-        return all([triggers.camera_ready_flag.value for triggers in self.camera_triggers.values()])
+        return all([triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
 
     @property
     def new_multi_frame_available(self):
-        return all([triggers.new_frame_available_flag.value for triggers in self.camera_triggers.values()])
+        return all([triggers.new_frame_available_flag.value for triggers in self.frame_loop_flags.values()])
 
     @property
     def frames_grabbed(self):
-        return not any([triggers.should_grab_frame_flag.value for triggers in self.camera_triggers.values()])
+        return not any([triggers.should_grab_frame_flag.value for triggers in self.frame_loop_flags.values()])
 
     @property
     def frames_retrieved(self):
-        return not any([triggers.should_retrieve_frame_flag.value for triggers in self.camera_triggers.values()])
+        return not any([triggers.should_retrieve_frame_flag.value for triggers in self.frame_loop_flags.values()])
 
     def pause_loop(self):
         self.pause_when_able.value = True
@@ -73,7 +76,7 @@ class CameraGroupOrchestrator:
             if self.should_continue:
                 logger.trace("Loop unpaused, awaiting cameras ready...")
                 self.frame_loop_paused.value = False
-                self.await_for_cameras_ready()
+                self.await_cameras_ready()
 
         # 0 - Make sure all cameras are ready
         logger.loop(f"FRAME LOOP BEGIN")
@@ -123,15 +126,15 @@ class CameraGroupOrchestrator:
         self._ensure_cameras_ready()
 
         logger.debug(f"Firing initial triggers for all cameras...")
-        for triggers in self.camera_triggers.values():
+        for triggers in self.frame_loop_flags.values():
             triggers.frame_loop_initialization_flag.value = True
 
         self._await_initialization_flag_reset()
 
-    def await_for_cameras_ready(self):
+    def await_cameras_ready(self):
         logger.trace("Waiting for all cameras to be ready...")
         while not all([triggers.camera_ready_flag.value for triggers in
-                       self.camera_triggers.values()]) and self.should_continue:
+                       self.frame_loop_flags.values()]) and self.should_continue:
             wait_10ms()
         logger.debug("All cameras are ready!")
 
@@ -141,14 +144,14 @@ class CameraGroupOrchestrator:
         self.new_multi_frame_available_flag.value = True
 
     def set_multi_frame_pulled_from_shm(self):
-        for triggers in self.camera_triggers.values():
+        for triggers in self.frame_loop_flags.values():
             triggers.new_frame_available_flag.value = False
         self.new_multi_frame_available_flag.value = False
 
     def _await_initialization_flag_reset(self):
         logger.trace("Initial triggers set - waiting for all triggers to reset...")
         while any([triggers.frame_loop_initialization_flag.value for triggers in
-                   self.camera_triggers.values()]) and self.should_continue:
+                   self.frame_loop_flags.values()]) and self.should_continue:
             wait_1ms()
         logger.trace("Initial triggers reset - Cameras ready to roll!")
 
@@ -162,13 +165,13 @@ class CameraGroupOrchestrator:
 
     def _fire_grab_trigger(self):
         logger.loop("Triggering all cameras to `grab` a frame...")
-        for camera_id, triggers in self.camera_triggers.items():
+        for camera_id, triggers in self.frame_loop_flags.items():
             triggers.should_grab_frame_flag.value = True
 
     def _fire_retrieve_trigger(self):
         logger.loop("Triggering all cameras to `retrieve` that frame...")
 
-        for camera_id, triggers in self.camera_triggers.items():
+        for camera_id, triggers in self.frame_loop_flags.items():
             triggers.should_retrieve_frame_flag.value = True
 
     def _wait_for_frames_grabbed_triggers_reset(self):
@@ -195,7 +198,7 @@ class CameraGroupOrchestrator:
                 raise AssertionError("`retrieve` triggers not reset!")
 
             any_new = any(
-                [triggers.new_frame_available_flag.value for triggers in self.camera_triggers.values()]
+                [triggers.new_frame_available_flag.value for triggers in self.frame_loop_flags.values()]
             )
             if self.new_multi_frame_available or any_new:
                 raise AssertionError(
