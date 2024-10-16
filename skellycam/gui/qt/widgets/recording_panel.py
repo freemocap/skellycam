@@ -1,68 +1,63 @@
 import logging
+from typing import Optional
 
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout
 
-from skellycam.gui import get_client, FastAPIClient
-from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
+from skellycam.core.videos.video_recorder_manager import RecordingInfo
+from skellycam.gui.qt.client.fastapi_client import FastAPIClient
 
 logger = logging.getLogger(__name__)
 
 
 class RecordingPanel(QWidget):
     def __init__(
-            self, parent=None
+            self,
+            client: FastAPIClient,
+            parent=None
     ):
         super().__init__(parent=parent)
+        self._recording_info: Optional[RecordingInfo] = None
+        self._initUI()
 
+        self._client: FastAPIClient = client
+
+    def _initUI(self):
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
-
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
-
         buttons_layout = QHBoxLayout()
         self._start_recording_button = QPushButton("\U0001F534 Start Recording")
         self._start_recording_button.clicked.connect(self._start_recording)
         self._start_recording_button.setEnabled(True)
-
         self._stop_recording_button = QPushButton("Stop Recording")
         self._stop_recording_button.setEnabled(False)
         self._stop_recording_button.clicked.connect(self._stop_recording)
         buttons_layout.addWidget(self._start_recording_button)
         buttons_layout.addWidget(self._stop_recording_button)
         self._layout.addLayout(buttons_layout)
-
         self._recording_status_bar = self._create_recording_status_bar()
         self._layout.addLayout(self._recording_status_bar)
-
-        self._gui_state: GUIState = get_gui_state()
-        self._client: FastAPIClient = get_client()
-
-    def update_widget(self):
-
-        logger.gui(f"Updating {self.__class__.__name__}")
-        if self._gui_state.record_frames_flag_status:
-            self._handle_recording_in_progress()
-        else:
-            self._handle_no_recording_in_progress()
 
     def _handle_no_recording_in_progress(self):
         self._start_recording_button.setEnabled(True)
         self._stop_recording_button.setEnabled(False)
         self._start_recording_button.setText("\U0001F534 Start Recording")
         self._recording_status_label.setText("Recording Status:  - Not Recording -")
-        if self._gui_state.recording_info:
-            self._recording_folder_label.setText(
-                f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
+        self._recording_folder_label.setText(
+            f"Most Recent Recording Folder:  {self._gui_state.recording_info.recording_folder}")
 
-    def _handle_recording_in_progress(self):
+    @Slot(object)
+    def handle_recording_in_progress(self, recording_info: RecordingInfo):
+        self._recording_info = recording_info
         self._start_recording_button.setEnabled(False)
         self._stop_recording_button.setEnabled(True)
         self._start_recording_button.setText("\U0001F534 Recording...")
         self._recording_status_label.setText(
-            f"Recording Status: Recording! ({self._gui_state.frame_number} from {self._gui_state.number_of_cameras} cameras)")
+            f"Recording Status: Recording in progress!")
         self._recording_folder_label.setText(
-            f"Active Recording Folder:  {self._gui_state.recording_info.recording_folder}") if self._gui_state.recording_info else None
+            f"Active Recording Folder:  {self._recording_info.recording_folder}") if self._recording_info else None
 
     def _start_recording(self):
         logger.gui("Starting Recording...")

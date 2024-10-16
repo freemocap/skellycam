@@ -4,9 +4,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget, )
 
-from skellycam.gui import get_client
-from skellycam.gui.client.fastapi_client import FastAPIClient
-from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
+from skellycam.gui.qt.client.fastapi_client import FastAPIClient
 from skellycam.gui.qt.widgets.camera_views.camera_grid_view import CameraViewGrid
 from skellycam.gui.qt.widgets.recording_panel import RecordingPanel
 
@@ -23,17 +21,16 @@ class SkellyCamWidget(QWidget):
 
     def __init__(
             self,
+            client: FastAPIClient,
             parent=None,
     ):
         super().__init__(parent=parent)
-
-        self._client: FastAPIClient = get_client()
-        self._gui_state: GUIState = get_gui_state()
+        self._client = client
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
-        self.recording_panel = RecordingPanel(parent=self)
+        self.recording_panel = RecordingPanel(parent=self, client=self._client)
         self._layout.addWidget(self.recording_panel)
 
         self.camera_view_grid = CameraViewGrid(parent=self)
@@ -42,15 +39,6 @@ class SkellyCamWidget(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
-    def update_widget(self):
-        logger.gui(f"Updating {self.__class__.__name__}")
-        self.recording_panel.update_widget()
-        self.camera_view_grid.update_widget()
-        if self.camera_view_grid.camera_view_sizes != self._gui_state.camera_view_sizes:
-            if self.camera_view_grid.camera_view_sizes.too_small():
-                return
-            logger.gui(f"Sending updated view sizes to backend: {self.camera_view_grid.camera_view_sizes}")
-            self._gui_state.camera_view_sizes = self.camera_view_grid.camera_view_sizes
 
     def detect_available_cameras(self):
         logger.gui("Connecting to cameras")
@@ -70,7 +58,7 @@ class SkellyCamWidget(QWidget):
 
     def apply_settings_to_cameras(self):
         logger.gui("Applying settings to cameras")
-        self._client.apply_settings_to_cameras(camera_configs=self._gui_state.user_selected_camera_configs)
+        self._client.apply_settings_to_cameras(camera_configs=self._)
 
     def closeEvent(self, event):
         logger.gui("Close event detected - closing camera group frame worker")

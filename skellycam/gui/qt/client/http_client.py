@@ -4,12 +4,14 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any
 
 import httpx
+from PySide6.QtWidgets import QWidget
 
 logger = logging.getLogger(__name__)
 
 
-class HTTPClient:
-    def __init__(self, base_url: str):
+class HTTPClient(QWidget):
+    def __init__(self, parent: QWidget, base_url: str):
+        super().__init__(parent=parent)
         self.base_url = base_url
         self.client = httpx.Client(base_url=self.base_url, timeout=60)
         self.executor = ThreadPoolExecutor(max_workers=10)

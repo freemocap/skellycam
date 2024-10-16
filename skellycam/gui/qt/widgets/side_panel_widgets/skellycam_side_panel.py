@@ -1,9 +1,9 @@
 import logging
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
-from skellycam.gui.qt.gui_state.gui_state import get_gui_state
+from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_settings_panel import CameraSettingsPanel
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X_EMOJI_STRING, \
@@ -19,7 +19,6 @@ class SkellyCamControlPanel(QWidget):
                  skellycam_widget: SkellyCamWidget):
         super().__init__()
 
-        self.gui_state = get_gui_state()
         # self.setMinimumWidth(250)
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
@@ -63,17 +62,21 @@ class SkellyCamControlPanel(QWidget):
         self._parameter_tree_widget = CameraSettingsPanel(parent=self)
         self._layout.addWidget(self._parameter_tree_widget)
 
-    def update_widget(self):
+    @Slot(object)
+    def handle_new_available_devices(self):
+        self._apply_settings_to_cameras_button.setEnabled(True)
 
-        logger.gui(f"Updating {self.__class__.__name__}")
-        if self.gui_state.available_devices:
-            self._apply_settings_to_cameras_button.setEnabled(True)
-        else:
-            self._apply_settings_to_cameras_button.setEnabled(False)
+    # def update_widget(self):
+    #
+    #     logger.gui(f"Updating {self.__class__.__name__}")
+    #     if self.gui_state.available_devices:
+    #
+    #     else:
+    #         self._apply_settings_to_cameras_button.setEnabled(False)
+    #
+    #     if self.gui_state.connected_camera_configs:
+    #         self._close_cameras_button.setEnabled(True)
+    #     else:
+    #         self._close_cameras_button.setEnabled(False)
 
-        if self.gui_state.connected_camera_configs:
-            self._close_cameras_button.setEnabled(True)
-        else:
-            self._close_cameras_button.setEnabled(False)
 
-        self._parameter_tree_widget.update_widget()

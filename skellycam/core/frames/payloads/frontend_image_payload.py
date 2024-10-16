@@ -10,6 +10,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
@@ -18,6 +19,7 @@ from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPer
 
 class FrontendFramePayload(BaseModel):
     jpeg_images: Dict[CameraId, Optional[str]]
+    camera_configs: Dict[CameraId, CameraConfig]
     multi_frame_metadata: MultiFrameMetadata
     lifespan_timestamps_ns: List[Dict[str, int]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
@@ -60,15 +62,18 @@ class FrontendFramePayload(BaseModel):
         lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
         lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
 
+
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
-                   multi_frame_metadata=mf_metadata)
+                   multi_frame_metadata=mf_metadata,
+                   camera_configs = multi_frame_payload.camera_configs)
 
     @staticmethod
-    def _resize_image(frame: FramePayloadDTO, image_sizes: Dict[CameraId, Dict[str, int]],
-                      fallback_resize_ratio: float) -> np.ndarray: \
+    def _resize_image(frame: FramePayloadDTO,
+                      image_sizes: Dict[CameraId, Dict[str, int]],
+                      fallback_resize_ratio: float) -> np.ndarray:
             # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
         image = frame.image
         camera_id = frame.camera_id

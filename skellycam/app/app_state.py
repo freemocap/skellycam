@@ -83,7 +83,7 @@ class AppState(BaseModel):
         logger.debug("Closing existing camera group...")
         self.ipc_flags.kill_camera_group_flag.value = True
         await self.camera_group.close()
-        self.reset()
+        self._reset()
         logger.success("Camera group closed successfully")
 
     def start_recording(self):

@@ -2,6 +2,7 @@ import logging
 from copy import deepcopy
 from typing import Optional
 
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from pyqtgraph.parametertree import ParameterTree, Parameter
 
@@ -10,7 +11,6 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo, AvailableDevices
-from skellycam.gui.qt.gui_state.gui_state import get_gui_state
 from skellycam.gui.qt.utilities.qt_label_strings import USE_THIS_CAMERA_STRING, COPY_SETTINGS_TO_CAMERAS_STRING
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,6 @@ class CameraSettingsPanel(QWidget):
         self._app_state_camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
 
-        self._gui_state = get_gui_state()
         self._parameter_groups = {}
 
         # self.setMinimumWidth(250)
@@ -44,19 +43,10 @@ class CameraSettingsPanel(QWidget):
         self._parameter_tree = ParameterTree(parent=self, showHeader=False)
         self._layout.addWidget(self._parameter_tree)
 
-    def update_widget(self):
-
-        logger.gui(f"Updating {self.__class__.__name__}")
-        new_available_devices = self._gui_state.available_devices
-        available_devices_changed = not new_available_devices == self._available_devices
-        # camera_configs_changed = not new_camera_configs == self._user_selected_camera_configs # TODO (or prob not bc we're gonna scrap this ui) - specify when user selection differs from pp state
-        if available_devices_changed:  # camera_configs_changed:
-            self._user_selected_camera_configs = self._gui_state.connected_camera_configs if self._user_selected_camera_configs is None else None
-            self._update_parameter_tree()
-
-    def _update_parameter_tree(self):
+    @Slot(object)
+    def update_available_devices(self, available_devices:AvailableDevices):
         logger.gui("Updating Camera Parameter Tree")
-        self._available_devices = self._gui_state.available_devices
+        self._available_devices = available_devices
         if not self._user_selected_camera_configs or len(self._user_selected_camera_configs) == 0:
             return
         if not self._available_devices or len(self._available_devices) == 0:

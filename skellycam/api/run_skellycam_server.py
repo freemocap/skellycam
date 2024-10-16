@@ -20,5 +20,5 @@ def run_server(global_kill_flag: multiprocessing.Value):
 
 
 if __name__ == "__main__":
-    run_server(multiprocessing.Event())
+    run_server(multiprocessing.Value("b", False))
     print("Done!")

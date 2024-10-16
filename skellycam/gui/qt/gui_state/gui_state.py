@@ -1,6 +1,6 @@
 from typing import Optional, Callable, TYPE_CHECKING
 
-from PySide6.QtCore import QMutex, QMutexLocker
+from PySide6.QtCore import QMutex, QMutexLocker, Signal
 from PySide6.QtWidgets import QWidget
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
@@ -12,11 +12,16 @@ from skellycam.gui.qt.gui_state.models.camera_view_sizes import CameraViewSizes
 if TYPE_CHECKING:
     from skellycam.app.app_state import AppStateDTO
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class GUIState(QWidget):
+    new_image_data_available = Signal(dict, bool)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent:QWidget):
+        super().__init__(parent=parent)
         self._user_selected_camera_configs: Optional[CameraConfigs] = None
         self._connected_camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
@@ -35,11 +40,7 @@ class GUIState(QWidget):
 
         self._mutex_lock = QMutex()
 
-        self._image_update_callable: Optional[Callable] = None
 
-    def set_image_update_callable(self, image_update_callable: Callable) -> None:
-        with QMutexLocker(self._mutex_lock):
-            self._image_update_callable: Optional[Callable] = image_update_callable
 
     def update_app_state(self, app_state_dto: 'AppStateDTO') -> None:
         with QMutexLocker(self._mutex_lock):
@@ -117,27 +118,7 @@ class GUIState(QWidget):
                 return None
             return len(self._user_selected_camera_configs)
 
-    @property
-    def latest_frontend_payload(self) -> Optional[FrontendFramePayload]:
-        with QMutexLocker(self._mutex_lock):
-            return self._latest_frontend_payload
 
-    @latest_frontend_payload.setter
-    def latest_frontend_payload(self, value: Optional[FrontendFramePayload]) -> None:
-        with QMutexLocker(self._mutex_lock):
-            self._latest_frontend_payload = value
-            self._frame_number = value.multi_frame_number
-            if self._image_update_callable:
-                self._image_update_callable(jpeg_images=value.jpeg_images,
-                                            framerate_stats_by_camera=None,
-                                            recording_in_progress=self._record_frames_flag_status)
-
-    @property
-    def frame_number(self) -> Optional[int]:
-        with QMutexLocker(self._mutex_lock):
-            if self._latest_frontend_payload is None:
-                return None
-            return self._latest_frontend_payload.multi_frame_number
 
     @property
     def camera_view_sizes(self) -> CameraViewSizes:
@@ -156,12 +137,3 @@ class GUIState(QWidget):
             self._camera_view_sizes = CameraViewSizes()
             self._connected_camera_configs = None
 
-
-GUI_STATE = None
-
-
-def get_gui_state() -> GUIState:
-    global GUI_STATE
-    if GUI_STATE is None:
-        GUI_STATE = GUIState()
-    return GUI_STATE

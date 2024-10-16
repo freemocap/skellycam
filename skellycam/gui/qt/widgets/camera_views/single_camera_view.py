@@ -1,4 +1,5 @@
 import base64
+import logging
 import sys
 import time
 from typing import Optional
@@ -9,10 +10,9 @@ from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize, QRect, QMutex, QMutex
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QBrush
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
-from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
 from skellycam.gui.qt.gui_state.models.camera_framerate_stats import CameraFramerateStats
-
-
+import logging
+logger = logging.getLogger(__name__)
 class EfficientQImageUpdater:
     def __init__(self):
         self.byte_array = QByteArray()
@@ -46,7 +46,6 @@ class SingleCameraViewWidget(QWidget):
 
         self._image_updater = EfficientQImageUpdater()
         self._current_pixmap = QPixmap()
-        self._gui_state: GUIState = get_gui_state()
 
         self._annotations_enabled = True
         self._mutex = QMutex()
@@ -69,17 +68,18 @@ class SingleCameraViewWidget(QWidget):
             return self._current_pixmap.size()
 
     def update_image(self,
-                     base64_str: str,
-                     framerate_stats: Optional[CameraFramerateStats],
-                     recording: bool = False):
-        q_image = self._image_updater.update_image(base64_str)
+                     base64_str: str):
+        logger.gui(f"Updating {self.__class__.__name__} with image for camera {self.camera_id}")
         with QMutexLocker(self._mutex):
+            q_image = self._image_updater.update_image(base64_str)
             self._current_pixmap = QPixmap.fromImage(q_image)
-            if self._annotations_enabled:
-                self._annotate_pixmap(framerate_stats=framerate_stats, recording=recording)
-        self.update_pixmap()
+            # if self._annotations_enabled:
+                # self._annotate_pixmap()
+            self.update_pixmap()
+        logger.gui(f"Successfully updated {self.__class__.__name__} with image for camera {self.camera_id}")
 
-    def _annotate_pixmap(self, framerate_stats: CameraFramerateStats, recording: bool = False):
+    def _annotate_pixmap(self, framerate_stats: Optional[CameraFramerateStats], recording: bool = False):
+        logger.gui(f"Annotating pixmap for camera {self.camera_id}")
         painter = QPainter(self._current_pixmap)
         pixmap_width = self._current_pixmap.width()
         pixmap_height = self._current_pixmap.height()
@@ -110,18 +110,19 @@ class SingleCameraViewWidget(QWidget):
         painter.end()
 
     def resizeEvent(self, event):
-        self.update_pixmap()
         super().resizeEvent(event)
+        with QMutexLocker(self._mutex):
+            self.update_pixmap()
 
     def update_pixmap(self):
-        with QMutexLocker(self._mutex):
-            if not self._current_pixmap.isNull():
-                scaled_pixmap = self._current_pixmap.scaled(
-                    self._image_label_widget.size() * 0.95,
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
-                )
-                self._image_label_widget.setPixmap(scaled_pixmap)
+        if not self._current_pixmap.isNull():
+            logger.gui(f"Updating pixmap for camera {self.camera_id}")
+            scaled_pixmap = self._current_pixmap.scaled(
+                self._image_label_widget.size() * 0.95,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self._image_label_widget.setPixmap(scaled_pixmap)
 
     def _toggle_annotations(self):
         self._annotations_enabled = not self._annotations_enabled

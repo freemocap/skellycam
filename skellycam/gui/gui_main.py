@@ -19,7 +19,7 @@ def gui_main(global_kill_flag: multiprocessing.Value) -> None:
 
     timer = QTimer()
     timer.start(1000)
-    timer.timeout.connect(lambda: main_window.update_widget())  # Update the main window once per second
+    timer.timeout.connect(lambda: main_window.check_if_should_close())  # Update the main window once per second
 
     logger.success("GUI main window presumably opened")
     error_code = qt_app.exec()  # Will block until the GUI window is closed

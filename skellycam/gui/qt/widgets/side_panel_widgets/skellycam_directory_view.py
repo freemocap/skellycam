@@ -5,9 +5,10 @@ from typing import Union
 
 import PySide6
 from PySide6 import QtGui
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
 
-from skellycam.gui.qt.gui_state.gui_state import GUIState, get_gui_state
+from skellycam.core.videos.video_recorder_manager import RecordingInfo
 from skellycam.utilities.cross_platform_start_file import open_file
 
 logger = logging.getLogger(__name__)
@@ -44,13 +45,11 @@ class SkellyCamDirectoryViewWidget(QWidget):
         if self._folder_path is not None:
             self.set_folder_as_root(self._folder_path)
 
-        self._gui_state: GUIState = get_gui_state()
-
-    def update_widget(self):
-        logger.gui(f"Updating {self.__class__.__name__}")
-        if self._gui_state.recording_info:
-
-            rec_path = Path(self._gui_state.recording_info.recording_folder)
+    @Slot(object)
+    def handle_new_recording_info(self, recording_info: RecordingInfo):
+        logger.gui(f"Updating {self.__class__.__name__} with new recording info")
+        if recording_info:
+            rec_path = Path(recording_info.recording_folder)
             if self._folder_path != str(rec_path):
                 self._folder_path = str(rec_path)
                 videos_path = rec_path / "synchronized_videos"
@@ -99,7 +98,7 @@ if __name__ == "__main__":
     from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    skellycam_directory_view_widget = SkellyCamDirectoryViewWidget(folder_path=Path.home())
+    skellycam_directory_view_widget = SkellyCamDirectoryViewWidget(folder_path=str(Path.home()))
     skellycam_directory_view_widget.expand_directory_to_path(Path.home() / "Downloads")
     skellycam_directory_view_widget.show()
     sys.exit(app.exec())

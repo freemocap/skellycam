@@ -1,17 +1,30 @@
 import logging
 
+from PySide6.QtWidgets import QWidget
+
 from skellycam.api.server.server_constants import APP_URL
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.gui.client.http_client import HTTPClient
-from skellycam.gui.client.websocket_client import WebSocketClient
+from skellycam.gui.qt.client.http_client import HTTPClient
+from skellycam.gui.qt.client.websocket_client import WebSocketClient
 
 logger = logging.getLogger(__name__)
 
 
-class FastAPIClient:
-    def __init__(self, base_url: str = APP_URL):
-        self._http_client = HTTPClient(base_url)
-        self._ws_client = WebSocketClient(base_url)
+class FastAPIClient(QWidget):
+    def __init__(self, parent: QWidget, base_url: str = APP_URL):
+        super().__init__(parent=parent)
+        self._http_client = HTTPClient(base_url=base_url,
+                                       parent=self)
+        self._ws_client = WebSocketClient(base_url=base_url,
+                                          parent=self)
+
+    @property
+    def http_client(self) -> HTTPClient:
+        return self._http_client
+
+    @property
+    def websocket_client(self) -> WebSocketClient:
+        return self._ws_client
 
     def connect_websocket(self):
         logger.gui("Client sending request to connect to WebSocket")
