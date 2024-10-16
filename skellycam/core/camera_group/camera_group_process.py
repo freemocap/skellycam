@@ -28,7 +28,7 @@ class CameraGroupProcess:
     def is_running(self) -> bool:
         return self._process is not None and self._process.is_alive()
 
-    async def start(self):
+    def start(self):
         logger.debug("Starting `CameraGroupProcess`...")
         self._process.start()
 

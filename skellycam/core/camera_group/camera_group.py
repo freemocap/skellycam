@@ -25,9 +25,9 @@ class CameraGroup(BaseModel):
     def camera_ids(self):
         return list(self.dto.camera_configs.keys())
 
-    async def start(self, number_of_frames: Optional[int] = None):
+    def start(self):
         logger.info("Starting camera group")
-        await self.camera_group_process.start()
+        self.camera_group_process.start()
 
     async def close(self):
         logger.debug("Closing camera group")

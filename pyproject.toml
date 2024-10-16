@@ -70,6 +70,7 @@ dependencies = [
     "websockets>=13.1",
     "pyinstaller>=6.10.0",
     "pip>=24.2",
+    "nuitka>=2.4.9",
 ]
 requires-python = ">=3.10,<3.13"
 

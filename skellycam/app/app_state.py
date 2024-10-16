@@ -126,18 +126,3 @@ class AppStateDTO(BaseModel):
         )
 
 
-APP_STATE = None
-
-
-def create_app_state(global_kill_flag: multiprocessing.Event) -> AppState:
-    global APP_STATE
-    if APP_STATE is None:
-        APP_STATE = AppState.create(global_kill_flag=global_kill_flag)
-    return APP_STATE
-
-
-def get_app_state():
-    global APP_STATE
-    if APP_STATE is None:
-        raise ValueError("AppState not created!")
-    return APP_STATE

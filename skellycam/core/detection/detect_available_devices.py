@@ -1,19 +1,19 @@
 import logging
+import multiprocessing
 import platform
-from pprint import pprint
 from typing import List, Tuple
 
 import cv2
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtMultimedia import QCameraDevice
 
-from skellycam.app.app_state import get_app_state
+from skellycam.app.app_state import AppState
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo
 
 logger = logging.getLogger(__name__)
 
 
-async def detect_available_devices(check_if_available: bool = True):
+async def detect_available_devices(app_state:AppState, check_if_available: bool = True):
     from PySide6.QtMultimedia import QMediaDevices
     # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
     close_app = False
@@ -45,8 +45,9 @@ async def detect_available_devices(check_if_available: bool = True):
             )
             camera_devices[camera_device_info.cv2_port] = camera_device_info
         logger.debug(f"Detected camera_devices: {list(camera_devices.keys())}")
-        get_app_state().set_available_devices({camera_id: device
+        app_state.set_available_devices({camera_id: device
                                                for camera_id, device in camera_devices.items()})
+        return camera_devices
     except Exception as e:
         logger.exception(f"Error detecting available cameras: {e}")
         raise
@@ -99,6 +100,8 @@ async def detect_opencv_ports(max_ports: int = 20) -> List[int]:
 
 if __name__ == "__main__":
     import asyncio
+    from pprint import pprint
+    from skellycam.app.app_controller.app_controller import create_app_controller
 
-    cameras_out = asyncio.run(detect_available_devices())
+    cameras_out = asyncio.run(detect_available_devices(create_app_controller(multiprocessing.Value('b',False)).app_state))
     pprint(cameras_out, indent=4)

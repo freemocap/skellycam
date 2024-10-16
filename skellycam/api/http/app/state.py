@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter
 
-from skellycam.app.app_state import get_app_state
+from skellycam.app.app_controller.app_controller import get_app_controller
 
 logger = logging.getLogger(__name__)
 state_router = APIRouter()
@@ -15,4 +15,4 @@ async def app_state_endpoint():
     """
     logger.api("Serving application state from `app/state` endpoint...")
 
-    return get_app_state().state_dto()
+    return get_app_controller().app_state.state_dto()

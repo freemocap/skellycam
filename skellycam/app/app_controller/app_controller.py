@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.app.app_controller.controller_tasks import ControllerTasks
-from skellycam.app.app_state import create_app_state, AppState
+from skellycam.app.app_state import AppState
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.detection.detect_available_devices import detect_available_devices
@@ -21,16 +21,16 @@ class AppController(BaseModel):
 
     @classmethod
     def create(cls, global_kill_flag: multiprocessing.Value):
-        return cls( app_state=create_app_state(global_kill_flag=global_kill_flag))
+        return cls(app_state=AppState.create(global_kill_flag=global_kill_flag))
 
     async def detect_available_cameras(self):
         # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
         logger.info(f"Detecting available cameras...")
 
-        self.tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(),
-                                                                        name="DetectAvailableCameras")
+        self.tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(self.app_state),
+                                                                       name="DetectAvailableCameras")
 
-    async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs]=None):
+    async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
         try:
             if camera_configs and self.app_state.camera_group:
                 # if CameraGroup already exists, check if new configs require reset
@@ -40,7 +40,7 @@ class AppController(BaseModel):
                     # Update instructions do not require reset - update existing camera group
                     logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
                     await self.app_state.update_camera_group(camera_configs=camera_configs,
-                                                              update_instructions=update_instructions)
+                                                             update_instructions=update_instructions)
                     return
 
                 # Update instructions require reset - close existing group (will be re-created below)
@@ -57,7 +57,7 @@ class AppController(BaseModel):
     async def _create_camera_group(self, camera_configs: CameraConfigs):
         try:
             if self.app_state.camera_group_configs is None:
-                await detect_available_devices()
+                await detect_available_devices(self.app_state)
 
             if self.app_state.camera_group_configs is None:
                 raise ValueError("No camera configurations detected!")
@@ -66,7 +66,7 @@ class AppController(BaseModel):
                 await self.app_state.close_camera_group()
 
             self.app_state.create_camera_group()
-            await self.app_state.camera_group.start()
+            self.app_state.camera_group.start()
             logger.info("Camera group started")
         except Exception as e:
             logger.exception(f"Error creating camera group:  {e}")
@@ -79,6 +79,8 @@ class AppController(BaseModel):
 
     async def close_camera_group(self):
         await self.app_state.close_camera_group()
+
+
 APP_CONTROLLER = None
 
 
