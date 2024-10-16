@@ -13,10 +13,11 @@ from skellycam.core.videos.video_recorder_manager import RecordingInfo
 
 logger = logging.getLogger(__name__)
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, Slot
+
 
 class WebsocketThread(QThread):
-    message_received = Signal(str)
+    message_received = Signal(object)
     error_occurred = Signal(str)
     connection_opened = Signal()
     connection_closed = Signal()
@@ -72,22 +73,26 @@ class WebSocketClient(QWidget):
     def connect_websocket(self):
         self.websocket_thread.start()
 
+    @Slot(str)
     def _handle_error(self, error_message: str):
         logger.exception(f"WebSocket exception: {error_message}")
 
+    @Slot()
     def _on_open(self):
         logger.info(f"Connected to WebSocket at {self.websocket_url}")
 
+    @Slot()
     def _on_close(self):
         logger.info(f"WebSocket connection closed, shutting down...")
 
+    @Slot(str)
     def _handle_websocket_message(self, message: Union[str, bytes]):
         if isinstance(message, str):
             try:
                 json_data = json.loads(message)
                 self._handle_json_message(json_data)
             except json.JSONDecodeError:
-                logger.warning(f"Received invalid JSON text message: {message}")
+                logger.info(f"Received text message: {message}")
         elif isinstance(message, bytes):
             logger.info(f"Received binary message: size: {len(message) * .001:.3f}kB")
             self._handle_binary_message(message)
@@ -106,20 +111,20 @@ class WebSocketClient(QWidget):
             logger.exception(f"Error processing JSON message: {e}")
 
     def _process_payload(self, payload: Dict[str, Any]):
-        if 'jpeg_images' in payload:
+        if payload['type'] == FrontendFramePayload.__name__:
             fe_payload = FrontendFramePayload(**payload)
-            logger.info(f"Received FrontendFramePayload with {len(fe_payload.camera_ids)} cameras")
+            logger.gui(f"Received FrontendFramePayload for cameras: {fe_payload.camera_ids}")
             fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
             self.new_frontend_payload_available.emit(fe_payload)
-        elif 'recording_name' in payload:
-            logger.info(f"Received RecordingInfo object: {payload}")
+        elif payload['type'] == RecordingInfo.__name__:
+            logger.gui(f"Received RecordingInfo object: {payload}")
             self.new_recording_info_available.emit(RecordingInfo(**payload))
-        elif 'camera_configs' in payload:
-            app_state = AppStateDTO(**payload)
-            logger.info(f"Received AppStateDTO with timestamp: {app_state.state_timestamp}")
-            self.new_app_state_available.update_app_state(app_state_dto=app_state)
+        elif payload['type'] == AppStateDTO.__name__:
+            logger.gui(f"Received AppStateDTO object: {payload}")
+            self.new_app_state_available.emit(AppStateDTO(**payload))
         else:
-            logger.warning(f"Received unrecognized payload")
+            logger.error(f"Received unrecognized payload: {payload}")
+            raise ValueError(f"Received unrecognized payload: {payload}")
 
     def close(self):
         logger.info("Closing WebSocket client")

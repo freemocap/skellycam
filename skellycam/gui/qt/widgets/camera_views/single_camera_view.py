@@ -48,7 +48,6 @@ class SingleCameraViewWidget(QWidget):
         self._current_pixmap = QPixmap()
 
         self._annotations_enabled = True
-        self._mutex = QMutex()
 
         # Enable context menu on QLabel
         self._image_label_widget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -62,20 +61,15 @@ class SingleCameraViewWidget(QWidget):
     def image_label_widget(self):
         return self._image_label_widget
 
-    @property
-    def image_size(self) -> QSize:
-        with QMutexLocker(self._mutex):
-            return self._current_pixmap.size()
 
     def update_image(self,
                      base64_str: str):
         logger.gui(f"Updating {self.__class__.__name__} with image for camera {self.camera_id}")
-        with QMutexLocker(self._mutex):
-            q_image = self._image_updater.update_image(base64_str)
-            self._current_pixmap = QPixmap.fromImage(q_image)
-            # if self._annotations_enabled:
-                # self._annotate_pixmap()
-            self.update_pixmap()
+        q_image = self._image_updater.update_image(base64_str)
+        self._current_pixmap = QPixmap.fromImage(q_image)
+        # if self._annotations_enabled:
+            # self._annotate_pixmap()
+        self.update_pixmap()
         logger.gui(f"Successfully updated {self.__class__.__name__} with image for camera {self.camera_id}")
 
     def _annotate_pixmap(self, framerate_stats: Optional[CameraFramerateStats], recording: bool = False):
@@ -109,10 +103,10 @@ class SingleCameraViewWidget(QWidget):
                 painter.drawText(10, 100, f"Mean FPS: {framerate_stats.fps_mean_str}")
         painter.end()
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        with QMutexLocker(self._mutex):
-            self.update_pixmap()
+    # def resizeEvent(self, event):
+    #     super().resizeEvent(event)
+    #     with QMutexLocker(self._mutex):
+    #         self.update_pixmap()
 
     def update_pixmap(self):
         if not self._current_pixmap.isNull():

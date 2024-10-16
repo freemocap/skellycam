@@ -94,7 +94,7 @@ class AppState(BaseModel):
         self.ipc_flags.record_frames_flag.value = False
         self.ipc_queue.put(self.state_dto())
 
-    def state_dto(self) -> 'AppStateDTO':
+    def state_dto(self):
         return AppStateDTO.from_state(self)
 
     def _reset(self):
@@ -109,6 +109,7 @@ class AppStateDTO(BaseModel):
     """
     Serializable Data Transfer Object for the AppState
     """
+    type: str = "AppStateDTO"
     state_timestamp: str = datetime.now().isoformat()
 
     camera_configs: Optional[CameraConfigs]

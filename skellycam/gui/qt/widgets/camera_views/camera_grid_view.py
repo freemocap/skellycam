@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout, QLabel
 
 from skellycam.core import CameraId
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
@@ -57,7 +57,7 @@ class CameraViewGrid(QWidget):
     def handle_new_frontend_payload(self,
                                     frontend_payload:FrontendFramePayload):
         logger.gui(f"Updating {self.__class__.__name__} with {len(frontend_payload.jpeg_images)} images")
-        if not self._single_camera_views.keys() == frontend_payload.camera_ids:
+        if not list(self._single_camera_views.keys()) == frontend_payload.camera_ids:
             logger.debug(f"Updating single camera view widgets to match frontend payload ids: {frontend_payload.camera_ids}")
             self.update_single_camera_view_widgets(frontend_payload)
         for camera_id, single_camera_view in self._single_camera_views.items():

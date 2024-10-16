@@ -18,6 +18,7 @@ from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPer
 
 
 class FrontendFramePayload(BaseModel):
+    type:str = 'FrontendFramePayload'
     jpeg_images: Dict[CameraId, Optional[str]]
     camera_configs: Dict[CameraId, CameraConfig]
     multi_frame_metadata: MultiFrameMetadata
