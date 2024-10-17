@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
@@ -22,8 +23,12 @@ class CameraGroup(BaseModel):
         return cls(dto=dto, camera_group_process=CameraGroupProcess(dto=dto))
 
     @property
-    def camera_ids(self):
+    def camera_ids(self) -> list[CameraId]:
         return list(self.dto.camera_configs.keys())
+
+    @property
+    def camera_configs(self) -> CameraConfigs:
+        return self.dto.camera_configs
 
     def start(self):
         logger.info("Starting camera group")

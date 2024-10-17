@@ -17,7 +17,7 @@ title_label_style_string = """
                            """
 
 
-class SkellyCamWidget(QWidget):
+class CameraPanel(QWidget):
 
     def __init__(
             self,
@@ -56,9 +56,9 @@ class SkellyCamWidget(QWidget):
         self._client.close_cameras()
         self.camera_view_grid.clear_camera_views()
 
-    def apply_settings_to_cameras(self):
-        logger.gui("Applying settings to cameras")
-        self._client.apply_settings_to_cameras(camera_configs=self._)
+    # def apply_settings_to_cameras(self):
+    #     logger.gui("Applying settings to cameras")
+    #     self._client.apply_settings_to_cameras(camera_configs=self._)
 
     def closeEvent(self, event):
         logger.gui("Close event detected - closing camera group frame worker")

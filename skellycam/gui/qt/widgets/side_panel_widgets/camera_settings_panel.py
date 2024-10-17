@@ -43,6 +43,11 @@ class CameraSettingsPanel(QWidget):
         self._parameter_tree = ParameterTree(parent=self, showHeader=False)
         self._layout.addWidget(self._parameter_tree)
 
+    @property
+    def user_selected_camera_configs(self) -> Optional[CameraConfigs]:
+        self._update_user_selected_camera_settings()
+        return self._user_selected_camera_configs
+
     @Slot(object)
     def update_available_devices(self, available_devices: AvailableDevices):
         logger.gui("Updating Camera Parameter Tree")
@@ -147,7 +152,6 @@ class CameraSettingsPanel(QWidget):
                 rotation=RotationTypes[parameter_group.param("Rotate").value()],
             )
         self._user_selected_camera_configs = new_user_selected_configs
-        self._gui_state.user_selected_camera_configs = self._user_selected_camera_configs
 
     def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: CameraId):
         logger.gui(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")

@@ -50,4 +50,9 @@ QT_CSS_STYLE_SHEET_STRING = """
                                 background-color: #378e90;
                             }    
                             
+                            LogViewWidget {
+                                background-color: #000000;
+                                color: #ffffff;
+                            }
+                            
                             """

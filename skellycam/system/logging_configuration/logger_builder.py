@@ -35,12 +35,7 @@ class LoggerBuilder:
     def _set_logging_level(self, level: LogLevels):
         logging.root.setLevel(level.value)
 
-    def build_file_handler(self):
-        file_handler = logging.FileHandler(get_log_file_path(), encoding="utf-8")
-        file_handler.setLevel(LogLevels.TRACE.value)
-        file_handler.setFormatter(self.default_logging_formatter)
-        file_handler.addFilter(DeltaTimeFilter())
-        return file_handler
+
 
     class ColoredConsoleHandler(logging.StreamHandler):
 
@@ -86,6 +81,13 @@ class LoggerBuilder:
             formatted_record = color_code + formatted_record + "\033[0m"
             # Output the final colorized and formatted record to the console
             print(formatted_record)
+
+    def build_file_handler(self):
+        file_handler = logging.FileHandler(get_log_file_path(), encoding="utf-8")
+        file_handler.setLevel(LogLevels.TRACE.value)
+        file_handler.setFormatter(self.default_logging_formatter)
+        file_handler.addFilter(DeltaTimeFilter())
+        return file_handler
 
     def build_console_handler(self):
         console_handler = self.ColoredConsoleHandler(stream=sys.stdout)

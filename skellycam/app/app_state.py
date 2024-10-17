@@ -112,7 +112,7 @@ class AppStateDTO(BaseModel):
     type: str = "AppStateDTO"
     state_timestamp: str = datetime.now().isoformat()
 
-    connected_camera_configs: Optional[CameraConfigs]
+    camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableDevices]
     current_framerate: Optional[CurrentFrameRate]
     record_frames_flag_status: bool

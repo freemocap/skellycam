@@ -9,14 +9,15 @@ from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
 from skellycam.gui.qt.client.fastapi_client import FastAPIClient
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.gui.qt.skelly_cam_widget import (
-    SkellyCamWidget,
+from skellycam.gui.qt.camera_panel import (
+    CameraPanel,
 )
+from skellycam.gui.qt.widgets.bottom_panel_widgets.log_view_widget import LogViewWidget
 from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
 from skellycam.gui.qt.widgets.side_panel_widgets.app_state_viewer_widget import AppStateJsonViewer
 from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
-from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_side_panel import (
-    SkellyCamControlPanel,
+from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import (
+    CameraControlPanel,
 )
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
@@ -34,6 +35,8 @@ class SkellyCamMainWindow(QMainWindow):
                  parent=None):
         super().__init__(parent=parent)
         self._global_kill_flag = global_kill_flag
+        self._log_view_widget = LogViewWidget(global_kill_flag=global_kill_flag,
+                                              parent=self)  # start this first so it will grab the setup logging
         self._client =  FastAPIClient(self)
         self._client.connect_websocket()
 
@@ -51,14 +54,16 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout = QVBoxLayout()
         self._central_widget.setLayout(self._layout)
 
+        # Welcome View
         self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
         self._layout.addWidget(self._welcome_to_skellycam_widget)
         self._welcome_connect_to_cameras_button = ConnectToCamerasButton(parent=self)
         self._layout.addWidget(self._welcome_connect_to_cameras_button)
 
-        self._skellycam_widget = SkellyCamWidget(parent=self, client=self._client)
-        self._skellycam_widget.hide()
-        self._layout.addWidget(self._skellycam_widget)
+        # Camera Panel
+        self._camera_panel = CameraPanel(parent=self, client=self._client)
+        self._camera_panel.hide()
+        self._layout.addWidget(self._camera_panel)
 
         self._control_panel_dock = QDockWidget("Camera Settings", self)
         self._control_panel_dock.setFeatures(
@@ -66,15 +71,19 @@ class SkellyCamMainWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
 
-        self._skellycam_control_panel = (
-            SkellyCamControlPanel(self._skellycam_widget)
+        # Side Panel
+        # Camera Settings Panel
+        self._control_panel = (
+            CameraControlPanel(self._camera_panel)
         )
         self._control_panel_dock.setWidget(
-            self._skellycam_control_panel
+            self._control_panel
         )
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._control_panel_dock
         )
+
+        # Directory View
         self._directory_view_dock = QDockWidget("Directory View", self)
         self._directory_view_widget = SkellyCamDirectoryViewWidget(
             folder_path=get_default_skellycam_recordings_path()
@@ -102,6 +111,16 @@ class SkellyCamMainWindow(QMainWindow):
             self._directory_view_dock,
         )
 
+        #Bottom Panel
+        log_view_dock_widget = QDockWidget("Log View", self)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, log_view_dock_widget)
+        log_view_dock_widget.setWidget(self._log_view_widget)
+        log_view_dock_widget.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        )
+
+
+
     def check_if_should_close(self):
         logger.gui(f"Updating {self.__class__.__name__}")
         if self._global_kill_flag.value:
@@ -109,7 +128,7 @@ class SkellyCamMainWindow(QMainWindow):
             self.close()
             return
         # self._skellycam_widget.update_widget()
-        # self._skellycam_control_panel.update_widget()
+        # self._control_panel.update_widget()
         # self._directory_view_widget.update_widget()
 
     def _connect_signals_to_slots(self):
@@ -120,25 +139,39 @@ class SkellyCamMainWindow(QMainWindow):
 
         self._welcome_connect_to_cameras_button.button.clicked.connect(self._client.detect_and_connect_to_cameras)
 
-        self._skellycam_control_panel.connect_cameras_button.clicked.connect(
+        self._control_panel.connect_cameras_button.clicked.connect(
             self._hide_welcome_view)
 
-        self._skellycam_control_panel.detect_available_cameras_button.clicked.connect(
+        self._control_panel.detect_available_cameras_button.clicked.connect(
             self._hide_welcome_view)
 
         #websocket
         self._client.websocket_client.new_frontend_payload_available.connect(
-            self._skellycam_widget.camera_view_grid.handle_new_frontend_payload
+            self._camera_panel.camera_view_grid.handle_new_frontend_payload
         )
         self._client.websocket_client.new_app_state_available.connect(
-            self._skellycam_control_panel.handle_new_app_state
+            self._control_panel.handle_new_app_state
+        )
+
+        # Camera Control Panel
+        self._control_panel.detect_available_cameras_button.clicked.connect(
+            self._client.detect_cameras
+        )
+        self._control_panel.connect_cameras_button.clicked.connect(
+            self._client.detect_and_connect_to_cameras
+        )
+        self._control_panel.apply_settings_to_cameras_button.clicked.connect(
+            lambda: self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
+        )
+        self._control_panel.close_cameras_button.clicked.connect(
+            self._client.close_cameras
         )
 
 
     def _hide_welcome_view(self):
         self._welcome_to_skellycam_widget.hide()
         self._welcome_connect_to_cameras_button.hide()
-        self._skellycam_widget.show()
+        self._camera_panel.show()
 
     def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
         logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")
@@ -148,7 +181,7 @@ class SkellyCamMainWindow(QMainWindow):
 
         logger.info("Closing QT GUI window")
         try:
-            self._skellycam_widget.close()
+            self._camera_panel.close()
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
