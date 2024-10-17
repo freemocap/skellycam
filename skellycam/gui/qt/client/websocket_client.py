@@ -94,7 +94,7 @@ class WebSocketClient(QWidget):
             except json.JSONDecodeError:
                 logger.info(f"Received text message: {message}")
         elif isinstance(message, bytes):
-            logger.info(f"Received binary message: size: {len(message) * .001:.3f}kB")
+            logger.gui(f"Received binary message: size: {len(message) * .001:.3f}kB")
             self._handle_binary_message(message)
 
     def _handle_binary_message(self, message: bytes):

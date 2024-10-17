@@ -50,18 +50,22 @@ class SkellyCamMainWindow(QMainWindow):
         self.setCentralWidget(self._central_widget)
         self._layout = QVBoxLayout()
         self._central_widget.setLayout(self._layout)
+
         self._welcome_to_skellycam_widget = WelcomeToSkellyCamWidget()
         self._layout.addWidget(self._welcome_to_skellycam_widget)
         self._welcome_connect_to_cameras_button = ConnectToCamerasButton(parent=self)
         self._layout.addWidget(self._welcome_connect_to_cameras_button)
+
         self._skellycam_widget = SkellyCamWidget(parent=self, client=self._client)
         self._skellycam_widget.hide()
         self._layout.addWidget(self._skellycam_widget)
+
         self._control_panel_dock = QDockWidget("Camera Settings", self)
         self._control_panel_dock.setFeatures(
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
         )
+
         self._skellycam_control_panel = (
             SkellyCamControlPanel(self._skellycam_widget)
         )
@@ -125,6 +129,9 @@ class SkellyCamMainWindow(QMainWindow):
         #websocket
         self._client.websocket_client.new_frontend_payload_available.connect(
             self._skellycam_widget.camera_view_grid.handle_new_frontend_payload
+        )
+        self._client.websocket_client.new_app_state_available.connect(
+            self._skellycam_control_panel.handle_new_app_state
         )
 
 

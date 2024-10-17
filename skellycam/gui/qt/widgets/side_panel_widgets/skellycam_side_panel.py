@@ -2,6 +2,7 @@ import logging
 
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
+from skellycam.app.app_state import AppStateDTO
 
 from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
@@ -59,12 +60,13 @@ class SkellyCamControlPanel(QWidget):
         self._close_cameras_button.clicked.connect(self._skellycam_widget.close_cameras)
 
         # Camera Settings Panel
-        self._parameter_tree_widget = CameraSettingsPanel(parent=self)
-        self._layout.addWidget(self._parameter_tree_widget)
+        self._camera_settings_panel = CameraSettingsPanel(parent=self)
+        self._layout.addWidget(self._camera_settings_panel)
 
     @Slot(object)
-    def handle_new_available_devices(self):
+    def handle_new_app_state(self, app_state: AppStateDTO):
         self._apply_settings_to_cameras_button.setEnabled(True)
+        self._camera_settings_panel.update_available_devices(app_state.available_devices)
 
     # def update_widget(self):
     #

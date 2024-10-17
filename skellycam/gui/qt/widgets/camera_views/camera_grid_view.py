@@ -37,7 +37,6 @@ class CameraViewGrid(QWidget):
         self._single_camera_views: Dict[CameraId, SingleCameraViewWidget] = {}
 
 
-
     @property
     def single_camera_view_camera_ids(self) -> List[CameraId]:
         if self._single_camera_views:
