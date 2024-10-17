@@ -49,9 +49,9 @@ class GUIState(QWidget):
             self._record_frames_flag_status = app_state_dto.record_frames_flag_status
 
             self._available_devices = app_state_dto.available_devices
-            self._connected_camera_configs = app_state_dto.camera_configs
+            self._connected_camera_configs = app_state_dto.connected_camera_configs
             if self._user_selected_camera_configs is None:
-                self._user_selected_camera_configs = app_state_dto.camera_configs
+                self._user_selected_camera_configs = app_state_dto.connected_camera_configs
 
     @property
     def sub_process_statuses(self) -> Optional[str]:

@@ -14,7 +14,7 @@ def test_frame_wrangler(camera_group_shared_memory_fixture: CameraGroupSharedMem
                         frame_wrangler_fixture: FrameWrangler):
     og_shm_manager, recreated_shm_manager = camera_group_shared_memory_fixture
     exit_event = multiprocessing.Event()
-    camera_configs = og_shm_manager.camera_configs
+    camera_configs = og_shm_manager.connected_camera_configs
     frame_wrangler_fixture.start()
     [triggers.set_camera_ready() for triggers in camera_group_orchestrator_fixture.frame_loop_flags.values()]
     number_of_frames_to_test = 4

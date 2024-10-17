@@ -65,8 +65,16 @@ class SkellyCamControlPanel(QWidget):
 
     @Slot(object)
     def handle_new_app_state(self, app_state: AppStateDTO):
-        self._apply_settings_to_cameras_button.setEnabled(True)
-        self._camera_settings_panel.update_available_devices(app_state.available_devices)
+        if app_state.available_devices:
+            self._apply_settings_to_cameras_button.setEnabled(True)
+            self._camera_settings_panel.update_available_devices(app_state.available_devices)
+        else:
+            self._apply_settings_to_cameras_button.setEnabled(False)
+        
+        if app_state.connected_camera_configs:
+            self._close_cameras_button.setEnabled(True)
+        else:
+            self._close_cameras_button.setEnabled(False)
 
     # def update_widget(self):
     #
