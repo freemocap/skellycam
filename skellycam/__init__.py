@@ -26,4 +26,4 @@ __all__ = [
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.logger_builder import LogLevels
 
-configure_logging(LogLevels.ALL)
+configure_logging(LogLevels.DEBUG)

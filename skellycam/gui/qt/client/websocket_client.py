@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QWidget
 
 from skellycam.app.app_state import AppStateDTO
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
+from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ class WebSocketClient(QWidget):
     new_frontend_payload_available = Signal(object)
     new_recording_info_available = Signal(object)
     new_app_state_available = Signal(object)
+    new_framerate_info_available = Signal(object)
 
     def __init__(self,
                  base_url: str,
@@ -122,6 +124,9 @@ class WebSocketClient(QWidget):
         elif payload['type'] == AppStateDTO.__name__:
             logger.gui(f"Received AppStateDTO object: {payload}")
             self.new_app_state_available.emit(AppStateDTO(**payload))
+        elif payload['type'] == CurrentFrameRate.__name__:
+            logger.gui(f"Received CurrentFrameRate object: {payload}")
+            self.new_framerate_info_available.emit(CurrentFrameRate(**payload))
         else:
             logger.error(f"Received unrecognized payload: {payload}")
             raise ValueError(f"Received unrecognized payload: {payload}")

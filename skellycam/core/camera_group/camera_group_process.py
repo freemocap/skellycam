@@ -55,6 +55,6 @@ class CameraGroupProcess:
             raise
         finally:
             dto.ipc_flags.kill_camera_group_flag.value = True
-            frame_wrangler.shutdown() if frame_wrangler else None
-            camera_manager.shutdown() if camera_manager else None
+            frame_wrangler.close() if frame_wrangler else None
+            camera_manager.close() if camera_manager else None
             logger.debug(f"CameraGroupProcess completed")

@@ -69,18 +69,17 @@ class WebsocketServer:
     async def _handle_ipc_queue_message(self, message: Optional[object] = None):
         if isinstance(message, AppStateDTO):
             logger.trace(f"Relaying AppStateDTO to frontend")
-            await self.websocket.send_json(message.model_dump())
 
         elif isinstance(message, RecordingInfo):
             logger.trace(f"Relaying RecordingInfo to frontend")
-            await self.websocket.send_json(message.model_dump_json())
 
         elif isinstance(message, CurrentFrameRate):
             logger.loop(f"Relaying CurrentFrameRate to frontend")
             self._app_state.current_framerate = message
-
         else:
             raise ValueError(f"Unknown message type: {type(message)}")
+
+        await self.websocket.send_json(message.model_dump())
 
     async def _frontend_image_relay(self):
         """
