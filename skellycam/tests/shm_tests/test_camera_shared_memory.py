@@ -35,7 +35,7 @@ def test_recreate_camera_shared_memory(camera_config_fixture: CameraConfig) -> N
     assert recreated_camera_shm.image_shm.buffer.shape == camera_config_fixture.image_shape
     assert recreated_camera_shm.metadata_shm.buffer.shape == FRAME_METADATA_SHAPE
 
-    camera_shm.close()
+    camera_shm.shutdown()
     recreated_camera_shm.close()
     camera_shm.unlink()
 
@@ -53,14 +53,14 @@ def test_put_and_retrieve_frame(camera_config_fixture: CameraConfig,
     assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE
     assert frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] == camera_config_fixture.camera_id
 
-    camera_shm.close()
+    camera_shm.shutdown()
     camera_shm.unlink()
 
 
 def test_close_and_unlink(camera_config_fixture: CameraConfig) -> None:
     camera_shm = CameraSharedMemory.create(camera_config=camera_config_fixture)
 
-    camera_shm.close()
+    camera_shm.shutdown()
     camera_shm.unlink()
 
     # Test for image_shm
@@ -104,7 +104,7 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
     assert frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] == camera_config_fixture.camera_id
 
     # Cleanup
-    camera_shm.close()
+    camera_shm.shutdown()
     camera_shm.unlink()
-    recreated_camera_shm.close()
+    recreated_camera_shm.shutdown()
     recreated_camera_shm.unlink()

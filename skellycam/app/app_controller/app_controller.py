@@ -22,14 +22,12 @@ class ControllerThreadManager:
         self._detect_available_cameras_task: Optional[Future] = None
         self._update_camera_configs_task: Optional[Future] = None
 
-    def submit_task(self, task_name: str, task_callable: Callable, *args, **kwargs) -> Optional[Future]:
+    def submit_task(self, task_name: str, task_callable: Callable, *args, **kwargs):
         if getattr(self, f"_{task_name}_task") is None or getattr(self, f"_{task_name}_task").done():
             future = self.executor.submit(task_callable, *args, **kwargs)
             setattr(self, f"_{task_name}_task", future)
-            return future
         else:
             logger.warning(f"{task_name} task already running! Ignoring request...")
-            return None
 
 
 class AppController(BaseModel):
@@ -106,14 +104,14 @@ class AppController(BaseModel):
             logger.exception(f"Error detecting available devices: {e}")
             raise
 
-    def close(self):
-        logger.info("Closing controller...")
-        self.app_state.ipc_flags.global_kill_flag.value = True
-        self.close_camera_group()
-
     def close_camera_group(self):
         logger.info("Closing camera group...")
         self.app_state.close_camera_group()
+
+    def shutdown(self):
+        logger.info("Closing controller...")
+        self.app_state.ipc_flags.global_kill_flag.value = True
+        self.close_camera_group()
 
 
 

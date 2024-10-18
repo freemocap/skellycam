@@ -6,7 +6,7 @@ from typing import Tuple
 def worker(connection: multiprocessing.Pipe, data_size: int) -> None:
     data = bytearray(data_size)
     connection.send_bytes(data)
-    connection.close()
+    connection.shutdown()
 
 
 def measure_time(chunk_size: int, data_size: int) -> float:

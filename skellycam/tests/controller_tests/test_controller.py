@@ -39,5 +39,5 @@ async def test_start_camera_group(controller_fixture: AppController):
 @pytest.mark.asyncio
 async def test_close(controller_fixture: AppController):
     with patch.object(CameraGroup, 'close', new_callable=AsyncMock) as mock_close:
-        await controller_fixture.close()
+        await controller_fixture.shutdown()
         mock_close.assert_called_once()

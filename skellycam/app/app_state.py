@@ -104,7 +104,7 @@ class AppState(BaseModel):
         self.shmorchestrator = None
         self.available_devices = None
         self.current_framerate = None
-        self.ipc_flags = IPCFlags(global_kill_flag=self.global_kill_flag)
+        self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 
 
 class AppStateDTO(BaseModel):

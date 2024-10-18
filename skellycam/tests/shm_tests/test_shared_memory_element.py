@@ -23,7 +23,7 @@ def test_create(numpy_array_definition_fixture: Tuple[Tuple[int], np.dtype]):
     assert element.buffer.dtype == dtype
     assert isinstance(element.shm, shared_memory.SharedMemory)
 
-    element.close()
+    element.shutdown()
     element.unlink()
 
 
@@ -42,8 +42,8 @@ def test_recreate(ndarray_shape_fixture, dtype_fixture: np.dtype):
     assert recreated_element.buffer.dtype == dtype_fixture
     assert recreated_element.name == shm_name
 
-    element.close()
-    recreated_element.close()
+    element.shutdown()
+    recreated_element.shutdown()
     element.unlink()
 
 
@@ -55,7 +55,7 @@ def test_copy_into_buffer(ndarray_shape_fixture, dtype_fixture: np.dtype):
 
     assert np.array_equal(buffer, element.buffer)
 
-    element.close()
+    element.shutdown()
     element.unlink()
 
 
@@ -76,7 +76,7 @@ def test_copy_from_buffer(random_array_fixture: np.ndarray):
     copied_npy[:] = 0
     assert not np.array_equal(copied_npy, element.buffer)
     assert not np.array_equal(copied_npy, random_array_fixture)
-    element.close()
+    element.shutdown()
     element.unlink()
 
 
@@ -101,7 +101,7 @@ def test_unlink(ndarray_shape_fixture, dtype_fixture: np.dtype):
     element = SharedMemoryElement.create(shape=ndarray_shape_fixture,
                                          dtype=dtype_fixture)
 
-    element.close()
+    element.shutdown()
     element.unlink()
 
     file_not_found_exception_raised = False

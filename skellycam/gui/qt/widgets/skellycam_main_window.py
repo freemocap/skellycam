@@ -122,7 +122,6 @@ class SkellyCamMainWindow(QMainWindow):
 
 
     def check_if_should_close(self):
-        logger.gui(f"Updating {self.__class__.__name__}")
         if self._global_kill_flag.value:
             logger.gui("Global kill flag is `True`, closing QT GUI")
             self.close()

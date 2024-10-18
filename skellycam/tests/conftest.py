@@ -217,7 +217,7 @@ def camera_group_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
                                                          )
     yield manager, recreated_manager
 
-    recreated_manager.close()
+    recreated_manager.shutdown()
     manager.close_and_unlink()
 
 
@@ -295,7 +295,7 @@ def controller_fixture() -> AppController:
     controller = get_app_controller()
     assert isinstance(controller, AppController)
     yield controller
-    controller.close()
+    controller.shutdown()
 
 # @pytest.fixture
 # def fronted_image_payload_fixture(multi_frame_payload_fixture: MultiFramePayload) -> FrontendImagePayload:
