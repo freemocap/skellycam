@@ -4,10 +4,8 @@ import platform
 from typing import List, Tuple
 
 import cv2
-from PySide6.QtCore import QCoreApplication
 from PySide6.QtMultimedia import QCameraDevice
 
-from skellycam.app.app_state import AppState
 from skellycam.core.detection.camera_device_info import CameraDeviceInfo, AvailableDevices
 
 logger = logging.getLogger(__name__)

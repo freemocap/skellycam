@@ -67,7 +67,7 @@ class SkellyCamDirectoryViewWidget(QWidget):
             index = self._file_system_model.index(str(parent_path))
             self._tree_view_widget.expand(index)
 
-        self._tree_view_widget.scrollTo(og_index)
+        # self._tree_view_widget.scrollTo(og_index)
 
     def set_folder_as_root(self, folder_path: Union[str, Path]):
         self._tree_view_widget.setWindowTitle(str(folder_path))

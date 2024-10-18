@@ -2,10 +2,9 @@ import logging
 
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
-from skellycam.app.app_state import AppStateDTO
 
-from skellycam.core.detection.camera_device_info import AvailableDevices
-from skellycam.gui.qt.camera_panel import CameraPanel
+from skellycam.app.app_state import AppStateDTO
+from skellycam.gui.qt.widgets.camera_widgets.camera_panel import CameraPanel
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_settings_panel import CameraSettingsPanel
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X_EMOJI_STRING, \
     MAGNIFYING_GLASS_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING, SPARKLES_EMOJI_STRING

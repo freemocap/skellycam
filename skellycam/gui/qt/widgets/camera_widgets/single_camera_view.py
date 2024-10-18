@@ -6,12 +6,12 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from PySide6.QtCore import Qt, QByteArray, QBuffer, QSize, QRect, QMutex, QMutexLocker
+from PySide6.QtCore import Qt, QByteArray, QBuffer, QRect
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QBrush
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
 from skellycam.gui.qt.gui_state.models.camera_framerate_stats import CameraFramerateStats
-import logging
+
 logger = logging.getLogger(__name__)
 class EfficientQImageUpdater:
     def __init__(self):

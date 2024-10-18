@@ -1,4 +1,4 @@
-from typing import Optional, Callable, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import QMutex, QMutexLocker, Signal
 from PySide6.QtWidgets import QWidget

@@ -7,18 +7,16 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
+from skellycam.app.app_state import AppStateDTO
 from skellycam.gui.qt.client.fastapi_client import FastAPIClient
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.gui.qt.camera_panel import (
-    CameraPanel,
-)
-from skellycam.app.app_state import AppStateDTO
+from skellycam.gui.qt.widgets.camera_widgets.camera_panel import CameraPanel
 from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
 from skellycam.gui.qt.widgets.side_panel_widgets.app_state_viewer_widget import AppStateJsonViewer
-from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import (
     CameraControlPanel,
 )
+from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
@@ -148,6 +146,12 @@ class SkellyCamMainWindow(QMainWindow):
         self._client.websocket_client.new_app_state_available.connect(
             self._handle_new_app_state
         )
+        self._client.websocket_client.new_recording_info_available.connect(
+            self._camera_panel.recording_panel.handle_new_recording_info
+        )
+        self._client.websocket_client.new_recording_info_available.connect(
+            self._directory_view_widget.handle_new_recording_info
+        )
 
         # Camera Control Panel
         self._control_panel.detect_available_cameras_button.clicked.connect(
@@ -161,6 +165,9 @@ class SkellyCamMainWindow(QMainWindow):
         )
         self._control_panel.close_cameras_button.clicked.connect(
             self._client.close_cameras
+        )
+        self._control_panel.close_cameras_button.clicked.connect(
+            self._camera_panel.camera_view_grid.clear_camera_views
         )
 
         # Recording Panel

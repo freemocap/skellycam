@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Optional

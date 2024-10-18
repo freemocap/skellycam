@@ -5,7 +5,6 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout
 
 from skellycam.core.videos.video_recorder_manager import RecordingInfo
-from skellycam.gui.qt.client.fastapi_client import FastAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +44,18 @@ class RecordingPanel(QWidget):
         self._recording_info = recording_info
         self.handle_recording_in_progress()
 
+    def handle_recording_in_progress(self):
+        self.start_recording_button.setEnabled(False)
+        self.stop_recording_button.setEnabled(True)
+        self.start_recording_button.setText("\U0001F534 Recording...")
+        self._recording_status_label.setText(
+            f"Recording Status: Recording in progress!")
+
+        if self._recording_info:
+            self._recording_folder_label.setText(
+                f"Active Recording Folder:  {self._recording_info.recording_folder}")
+
+
     def handle_no_recording_in_progress(self):
         self.start_recording_button.setEnabled(True)
         self.stop_recording_button.setEnabled(False)
@@ -54,17 +65,6 @@ class RecordingPanel(QWidget):
             self._recording_folder_label.setText(
                 f"Most Recent Recording Folder:  {self._recording_info.recording_folder}")
 
-
-    def handle_recording_in_progress(self):
-        self.start_recording_button.setEnabled(False)
-        self.stop_recording_button.setEnabled(True)
-        self.start_recording_button.setText("\U0001F534 Recording...")
-        self._recording_status_label.setText(
-            f"Recording Status: Recording in progress!")
-
-        if not  self._recording_info:
-            self._recording_folder_label.setText(
-                f"Active Recording Folder:  {self._recording_info.recording_folder}") if self._recording_info else None
 
 
     def _create_recording_status_bar(self) -> QHBoxLayout:

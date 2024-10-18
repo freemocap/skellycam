@@ -2,11 +2,11 @@ import logging
 from typing import Dict, List
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.gui.qt.widgets.camera_views.single_camera_view import SingleCameraViewWidget
+from skellycam.gui.qt.widgets.camera_widgets.single_camera_view import SingleCameraViewWidget
 
 MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS = 3
 MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS = 5

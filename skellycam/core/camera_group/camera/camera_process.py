@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 import cv2
-from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags

@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import threading
 from logging.handlers import QueueHandler
 from queue import Queue
 
