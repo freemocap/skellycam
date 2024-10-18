@@ -17,6 +17,8 @@ LOG_VIEW_PROGRESS_BAR_STRING = "Log Progress"
 
 logger = logging.getLogger(__name__)
 
+
+
 level_colors = {
     "DEBUG": (169, 169, 169),  # dimmed gray
     "INFO": (255, 255, 255),  # white

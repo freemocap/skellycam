@@ -35,8 +35,8 @@ class SkellyCamMainWindow(QMainWindow):
                  parent=None):
         super().__init__(parent=parent)
         self._global_kill_flag = global_kill_flag
-        self._log_view_widget = LogViewWidget(global_kill_flag=global_kill_flag,
-                                              parent=self)  # start this first so it will grab the setup logging
+        # self._log_view_widget = LogViewWidget(global_kill_flag=global_kill_flag,
+        #                                       parent=self)  # start this first so it will grab the setup logging
         self._client =  FastAPIClient(self)
         self._client.connect_websocket()
 
@@ -61,7 +61,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout.addWidget(self._welcome_connect_to_cameras_button)
 
         # Camera Panel
-        self._camera_panel = CameraPanel(parent=self, client=self._client)
+        self._camera_panel = CameraPanel(parent=self)
         self._camera_panel.hide()
         self._layout.addWidget(self._camera_panel)
 
@@ -110,14 +110,14 @@ class SkellyCamMainWindow(QMainWindow):
             self._backend_app_state_json_dock,
             self._directory_view_dock,
         )
-
-        #Bottom Panel
-        log_view_dock_widget = QDockWidget("Log View", self)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, log_view_dock_widget)
-        log_view_dock_widget.setWidget(self._log_view_widget)
-        log_view_dock_widget.setFeatures(
-            QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetFloatable
-        )
+        #
+        # #Bottom Panel
+        # log_view_dock_widget = QDockWidget("Log View", self)
+        # self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, log_view_dock_widget)
+        # log_view_dock_widget.setWidget(self._log_view_widget)
+        # log_view_dock_widget.setFeatures(
+        #     QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        # )
 
 
 
@@ -127,9 +127,6 @@ class SkellyCamMainWindow(QMainWindow):
             logger.gui("Global kill flag is `True`, closing QT GUI")
             self.close()
             return
-        # self._skellycam_widget.update_widget()
-        # self._control_panel.update_widget()
-        # self._directory_view_widget.update_widget()
 
     def _connect_signals_to_slots(self):
 
@@ -165,6 +162,14 @@ class SkellyCamMainWindow(QMainWindow):
         )
         self._control_panel.close_cameras_button.clicked.connect(
             self._client.close_cameras
+        )
+
+        # Recording Panel
+        self._camera_panel.recording_panel.start_recording_button.clicked.connect(
+            self._client.start_recording
+        )
+        self._camera_panel.recording_panel.stop_recording_button.clicked.connect(
+            self._client.stop_recording
         )
 
 

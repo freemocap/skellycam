@@ -9,6 +9,7 @@ from skellycam.app.app_controller.controller_tasks import ControllerTasks
 from skellycam.app.app_state import AppState
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
+from skellycam.core.detection.camera_device_info import available_devices_to_default_camera_configs
 from skellycam.core.detection.detect_available_devices import detect_available_devices
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ class AppController(BaseModel):
         # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
         logger.info(f"Detecting available cameras...")
 
-        self.tasks.detect_available_cameras_task = asyncio.create_task(detect_available_devices(self.app_state),
+        self.tasks.detect_available_cameras_task = asyncio.create_task(self._detect_available_devices,
                                                                        name="DetectAvailableCameras")
 
     async def connect_to_cameras(self, camera_configs: Optional[CameraConfigs] = None):
@@ -48,16 +49,19 @@ class AppController(BaseModel):
 
             logger.info(f"Connecting to cameras....")
             self.tasks.connect_to_cameras_task = asyncio.create_task(
-                self._create_camera_group(camera_configs=self.app_state.camera_group_configs),
+                self._create_camera_group(camera_configs=camera_configs),
                 name="ConnectToCameras")
         except Exception as e:
             logger.exception(f"Error connecting to cameras: {e}")
             raise
 
-    async def _create_camera_group(self, camera_configs: CameraConfigs):
+    async def _create_camera_group(self, camera_configs: Optional[CameraConfigs]):
         try:
-            if self.app_state.camera_group_configs is None:
-                await detect_available_devices(self.app_state)
+            if not self.app_state.available_devices and not camera_configs:
+                await self._detect_available_devices()
+                if not self.app_state.available_devices:
+                    logger.warning("No available devices detected!")
+                    return
 
             if self.app_state.camera_group_configs is None:
                 raise ValueError("No camera configurations detected!")
@@ -70,6 +74,13 @@ class AppController(BaseModel):
             logger.info("Camera group started")
         except Exception as e:
             logger.exception(f"Error creating camera group:  {e}")
+            raise
+
+    async def _detect_available_devices(self):
+        try:
+            self.app_state.set_available_devices(await detect_available_devices())
+        except Exception as e:
+            logger.exception(f"Error detecting available devices: {e}")
             raise
 
     async def close(self):

@@ -24,6 +24,6 @@ __all__ = [
 ]
 
 from skellycam.system.logging_configuration.configure_logging import configure_logging
-from skellycam.system.logging_configuration.log_level_enum import LogLevels
+from skellycam.system.logging_configuration.logger_builder import LogLevels
 
-configure_logging(LogLevels.TRACE)
+configure_logging(LogLevels.LOOP)

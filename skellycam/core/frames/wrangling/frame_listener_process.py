@@ -50,23 +50,23 @@ class FrameListenerProcess:
             byte_chunklets_to_send = deque()
 
             while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
-                if orchestrator.new_multi_frame_available_flag.value:
+                if orchestrator.new_multi_frame_available:
                     mf_payload: Optional[MultiFramePayload] = camera_group_shm.get_multi_frame_payload(
                         previous_payload=mf_payload)
 
-                    orchestrator.set_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
+                    orchestrator.set_multi_frame_retrieved()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
                     logger.loop(
                         f"FrameListener -  copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
 
                     pulled_from_pipe_timestamp = time.perf_counter_ns()
                     mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
                     framerate_tracker.update(pulled_from_pipe_timestamp)
-                    dto.ipc_queue.put(framerate_tracker.current())
+                    # dto.ipc_queue.put(framerate_tracker.current())
                     mf_bytes_list = mf_payload.to_bytes_list()
                     byte_chunklets_to_send.extend(mf_bytes_list)
 
                 elif len(
-                        byte_chunklets_to_send) > 0 and not orchestrator.new_multi_frame_available_flag.value:
+                        byte_chunklets_to_send) > 0 and not orchestrator.new_multi_frame_available:
                     # Opportunistically let byte chunks escape one-at-a-time, whenever there isn't frame-loop work to do
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.popleft())
 

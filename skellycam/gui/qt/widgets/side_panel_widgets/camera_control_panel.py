@@ -17,7 +17,7 @@ class CameraControlPanel(QWidget):
     emitting_camera_configs_signal = Signal(dict)
 
     def __init__(self,
-                 skellycam_widget: CameraPanel):
+                 camera_panel: CameraPanel):
         super().__init__()
 
         # self.setMinimumWidth(250)
@@ -25,7 +25,7 @@ class CameraControlPanel(QWidget):
         self.sizePolicy().setVerticalStretch(1)
         self.sizePolicy().setHorizontalStretch(1)
 
-        self._skellycam_widget = skellycam_widget
+        self._camera_panel = camera_panel
         self.setStyleSheet("""
         QPushButton{
         border-width: 2px;
@@ -40,12 +40,10 @@ class CameraControlPanel(QWidget):
         # Make Buttons
         self.detect_available_cameras_button = QPushButton(
             f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
-        self._layout.addWidget(self.detect_available_cameras_button)
 
         self.connect_cameras_button = QPushButton(
             f"Connect Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
         self._layout.addWidget(self.connect_cameras_button)
-        self.connect_cameras_button.clicked.connect(self._skellycam_widget.connect_to_cameras)
 
         self.apply_settings_to_cameras_button = QPushButton(
             f"Apply settings to cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{HAMMER_AND_WRENCH_EMOJI_STRING}",
@@ -77,18 +75,4 @@ class CameraControlPanel(QWidget):
             self.close_cameras_button.setEnabled(True)
         else:
             self.close_cameras_button.setEnabled(False)
-
-    # def update_widget(self):
-    #
-    #     logger.gui(f"Updating {self.__class__.__name__}")
-    #     if self.gui_state.available_devices:
-    #
-    #     else:
-    #         self._apply_settings_to_cameras_button.setEnabled(False)
-    #
-    #     if self.gui_state.connected_camera_configs:
-    #         self._close_cameras_button.setEnabled(True)
-    #     else:
-    #         self._close_cameras_button.setEnabled(False)
-
 

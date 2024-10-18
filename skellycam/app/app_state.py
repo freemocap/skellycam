@@ -48,7 +48,7 @@ class AppState(BaseModel):
     def camera_group_configs(self) -> Optional[CameraConfigs]:
         if self.camera_group is None:
             if self.available_devices is None:
-                return None
+                raise ValueError("Cannot get CameraConfigs without available devices!")
             return available_devices_to_default_camera_configs(self.available_devices)
         return self.camera_group.camera_configs
 
@@ -58,6 +58,8 @@ class AppState(BaseModel):
         self.ipc_queue.put(self.state_dto())
 
     def create_camera_group(self):
+        if self.available_devices is None:
+            raise ValueError("Cannot get CameraConfigs without available devices!")
         self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=self.camera_group_configs,
                                                                            ipc_flags=self.ipc_flags,
                                                                            read_only=True)

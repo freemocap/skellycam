@@ -1,8 +1,7 @@
 import logging
 
-from .log_level_enum import LogLevels
 from .log_test_messages import log_test_messages
-from .logger_builder import LoggerBuilder
+from .logger_builder import LoggerBuilder, LogLevels
 
 # Suppress some external loggers that are too verbose for our context/taste
 logging.getLogger("tzlocal").setLevel(logging.WARNING)

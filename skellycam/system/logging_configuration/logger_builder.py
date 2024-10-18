@@ -1,21 +1,53 @@
 import logging
 import sys
+from datetime import datetime
+from enum import Enum
 from logging.config import dictConfig
+from logging.handlers import QueueHandler
 
-from .custom_formatter import (
-    CustomFormatter,
-)
-from .delta_time_filter import (
-    DeltaTimeFilter,
-)
-from .log_level_enum import (
-    LogLevels,
-)
 from .logging_color_helpers import (
     get_hashed_color,
 )
 from ..default_paths import get_log_file_path
 
+
+class LogLevels(Enum):
+    ALL = logging.NOTSET  # 0 # All logs, including those from third-party libraries
+    GUI = 3  # For logs that are printed in the GUI
+    LOOP = 4  # For logs that are printed in a loop
+    TRACE = 5  # Low level logs for deep debugging
+    DEBUG = logging.DEBUG  # 10 # Detailed information for devs and curious folk
+    INFO = logging.INFO  # 20 # General information about the program
+    SUCCESS = logging.INFO + 2  # 22 # OMG, something worked!
+    API = logging.INFO + 5  # 25 # API calls/responses
+    WARNING = logging.WARNING  # 30 # Something unexpected happened, but it's necessarily an error
+    ERROR = logging.ERROR  # 40 # Something went wrong!
+
+
+class CustomFormatter(logging.Formatter):
+    """A custom Formatter class to include microseconds in log timestamps."""
+
+    def formatTime(self, record: logging.LogRecord, datefmt: str = None) -> str:
+        created = record.created
+        if isinstance(created, float) or isinstance(created, int):
+            timestamp = created
+        else:
+            raise TypeError("Invalid type for 'created'")
+
+        date_format_with_microseconds = "%Y-%m-%dT%H:%M:%S.%f"  # Including microseconds with %f
+        return datetime.strftime(datetime.fromtimestamp(timestamp), date_format_with_microseconds)
+
+class DeltaTimeFilter(logging.Filter):
+    def __init__(self):
+        super().__init__()
+        self.prev_time = datetime.now().timestamp()
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        current_time = datetime.now().timestamp()
+        delta_ms = (current_time - self.prev_time) * 1000
+        record.delta_t = f"Δt:{delta_ms:.6f}ms"
+        self.prev_time = current_time
+        return True
 
 class LoggerBuilder:
     DEFAULT_LOGGING = {"version": 1, "disable_existing_loggers": False}
@@ -94,6 +126,7 @@ class LoggerBuilder:
         console_handler.setFormatter(self.default_logging_formatter)
         console_handler.addFilter(DeltaTimeFilter())
         return console_handler
+
 
     def configure(self):
         if len(logging.getLogger().handlers) == 0:

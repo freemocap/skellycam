@@ -104,6 +104,7 @@ class WebsocketServer:
 
                 mf_payload = self._app_state.camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload)
                 await self._send_frontend_payload(mf_payload)
+                latest_mf_number = mf_payload.multi_frame_number
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")

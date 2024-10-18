@@ -17,8 +17,6 @@ class CameraGroupOrchestrator:
     frame_loop_flags: Dict[CameraId, CameraFrameLoopFlags]
     ipc_flags: IPCFlags
 
-    new_multi_frame_available_flag: multiprocessing.Value = multiprocessing.Value("b", False)
-
     pause_when_able: multiprocessing.Value = multiprocessing.Value("b", False)
     frame_loop_paused: multiprocessing.Value = multiprocessing.Value("b", False)
 
@@ -141,12 +139,14 @@ class CameraGroupOrchestrator:
     def await_new_multi_frame_available(self):
         while (not self.frames_retrieved or not self.new_multi_frame_available) and self.should_continue:
             wait_100us()
-        self.new_multi_frame_available_flag.value = True
 
-    def set_multi_frame_pulled_from_shm(self):
+    def set_multi_frame_retrieved(self):
         for triggers in self.frame_loop_flags.values():
             triggers.new_frame_available_flag.value = False
-        self.new_multi_frame_available_flag.value = False
+
+        if self.new_multi_frame_available:
+            raise AssertionError("New multi-frame available flag not reset properly?")
+
 
     def _await_initialization_flag_reset(self):
         logger.trace("Initial triggers set - waiting for all triggers to reset...")
@@ -160,7 +160,7 @@ class CameraGroupOrchestrator:
             wait_100us()
 
     def _await_mf_copied_from_shm(self):
-        while self.new_multi_frame_available_flag.value and self.should_continue:
+        while self.new_multi_frame_available and self.should_continue:
             wait_100us()
 
     def _fire_grab_trigger(self):
@@ -197,9 +197,10 @@ class CameraGroupOrchestrator:
             if not self.frames_retrieved:
                 raise AssertionError("`retrieve` triggers not reset!")
 
-            any_new = any(
-                [triggers.new_frame_available_flag.value for triggers in self.frame_loop_flags.values()]
-            )
-            if self.new_multi_frame_available or any_new:
+            if self.new_multi_frame_available:
                 raise AssertionError(
-                    f"New frames available trigger not reset properly? `new_frame_available_trigger`: {self.new_multi_frame_available}, `any_new`: {any_new}")
+                    f"New frames available trigger not reset properly? `new_frame_available_trigger`: {self.new_multi_frame_available}")
+
+            if any_new := any([triggers.new_frame_available_flag.value for triggers in self.frame_loop_flags.values()]):
+                raise AssertionError(
+                    f"New frames available before finished with previous multi-frame? `new_frame_available_trigger`: {any_new}")
