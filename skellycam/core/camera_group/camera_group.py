@@ -34,14 +34,14 @@ class CameraGroup(BaseModel):
         logger.info("Starting camera group")
         self.camera_group_process.start()
 
-    async def close(self):
+    def close(self):
         logger.debug("Closing camera group")
         self.dto.ipc_flags.kill_camera_group_flag.value = True
         if self.camera_group_process:
-            await self.camera_group_process.close()
+            self.camera_group_process.close()
         logger.info("Camera group closed.")
 
-    async def update_camera_configs(self,
+    def update_camera_configs(self,
                                     camera_configs: CameraConfigs,
                                     update_instructions: UpdateInstructions):
         logger.debug(

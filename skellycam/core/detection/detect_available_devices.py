@@ -13,7 +13,7 @@ from skellycam.core.detection.camera_device_info import CameraDeviceInfo, Availa
 logger = logging.getLogger(__name__)
 
 
-async def detect_available_devices(check_if_available: bool = True) -> AvailableDevices:
+def detect_available_devices(check_if_available: bool = True) -> AvailableDevices:
     from PySide6.QtMultimedia import QMediaDevices
     # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
     close_app = False
@@ -30,7 +30,7 @@ async def detect_available_devices(check_if_available: bool = True) -> Available
         detected_cameras = devices.videoInputs()
 
         if platform.system() == "Darwin":
-            detected_cameras, camera_ports = await order_darwin_cameras(detected_cameras=detected_cameras)
+            detected_cameras, camera_ports = order_darwin_cameras(detected_cameras=detected_cameras)
         else:
             camera_ports = range(len(detected_cameras))
 
@@ -38,7 +38,7 @@ async def detect_available_devices(check_if_available: bool = True) -> Available
         for camera_number, camera in zip(camera_ports, detected_cameras):
 
             if check_if_available and not platform.system() == "Darwin":  # macOS cameras get checked in order_darwin_cameras
-                await _check_camera_available(camera_number)
+                _check_camera_available(camera_number)
 
             camera_device_info = CameraDeviceInfo.from_q_camera_device(
                 camera_number=camera_number, camera=camera
@@ -53,14 +53,14 @@ async def detect_available_devices(check_if_available: bool = True) -> Available
         if close_app:
             app.quit()
 
-async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
+def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
     """
     Reorder QMultiMediaDevices to match order of OpenCV ports on macOS. 
 
     Removes virtual cameras, and assumes virtual cameras are always last. 
     Also assumes that once virtual cameras are removed, the order of the cameras from Qt will match the order of OpenCV.
     """
-    camera_ports = await detect_opencv_ports()
+    camera_ports = detect_opencv_ports()
     for camera in detected_cameras:
         if "virtual" in camera.description().lower():
             detected_cameras.remove(camera)
@@ -72,7 +72,7 @@ async def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[L
     return detected_cameras, camera_ports
 
 
-async def _check_camera_available(port: int) -> bool:
+def _check_camera_available(port: int) -> bool:
     logger.debug(f"Checking if camera on port: {port} is available...")
     cap = cv2.VideoCapture(port)
     success, frame = cap.read()
@@ -84,11 +84,11 @@ async def _check_camera_available(port: int) -> bool:
     return True
 
 
-async def detect_opencv_ports(max_ports: int = 20) -> List[int]:
+def detect_opencv_ports(max_ports: int = 20) -> List[int]:
     port = 0
     ports = []
     while port < max_ports:
-        camera_available = await _check_camera_available(port)
+        camera_available = _check_camera_available(port)
         if camera_available:
             ports.append(port)
         port += 1

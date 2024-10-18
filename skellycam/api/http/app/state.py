@@ -9,7 +9,7 @@ state_router = APIRouter()
 
 
 @state_router.get("/state", summary="Application State")
-async def app_state_endpoint():
+def app_state_endpoint():
     """
     A simple endpoint that serves the current state of the application
     """

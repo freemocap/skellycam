@@ -10,7 +10,7 @@ ui_router = APIRouter()
 
 
 @ui_router.get("/", response_class=HTMLResponse)
-async def serve_ui():
+def serve_ui():
     logger.info("Serving UI HTML to `/ui`")
     file_path = os.path.join(os.path.dirname(__file__), 'ui.html')
     with open(file_path, 'r') as file:

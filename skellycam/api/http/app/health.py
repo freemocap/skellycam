@@ -9,7 +9,7 @@ health_router = APIRouter()
 
 
 @health_router.get("/healthcheck", summary="Hello👋")
-async def healthcheck_endpoint():
+def healthcheck_endpoint():
     """
     A simple endpoint to greet the user of the SkellyCam API.
 

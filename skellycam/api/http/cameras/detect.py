@@ -16,11 +16,11 @@ detect_cameras_router = APIRouter()
                 "This will return a list of cameras that the system can attempt to connect to, "
                 "along with their available resolutions and framerates",
 )
-async def detect_cameras_route():
+def detect_cameras_route():
     # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client
     logger.api("Received `detect/` request")
     try:
-        await get_app_controller().detect_available_cameras()
+        get_app_controller().detect_available_cameras()
         logger.api(f"`detect/` request handled successfully")
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {e}")

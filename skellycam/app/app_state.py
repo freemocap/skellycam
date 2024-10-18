@@ -70,21 +70,21 @@ class AppState(BaseModel):
                                                 )
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 
-    async def update_camera_group(self,
+    def update_camera_group(self,
                                   camera_configs: CameraConfigs,
                                   update_instructions: UpdateInstructions):
         if self.camera_group is None:
             raise ValueError("Cannot update CameraGroup if it does not exist!")
-        await self.camera_group.update_camera_configs(camera_configs=camera_configs,
+        self.camera_group.update_camera_configs(camera_configs=camera_configs,
                                                        update_instructions=update_instructions)
 
-    async def close_camera_group(self):
+    def close_camera_group(self):
         if self.camera_group is None:
             logger.warning("Camera group does not exist, so it cannot be closed!")
             return
         logger.debug("Closing existing camera group...")
         self.ipc_flags.kill_camera_group_flag.value = True
-        await self.camera_group.close()
+        self.camera_group.close()
         self._reset()
         logger.success("Camera group closed successfully")
 

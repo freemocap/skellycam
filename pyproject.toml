@@ -101,3 +101,8 @@ skellycam-build = "skellycam.system.build_installer.run_pyinstaller:run_pyinstal
 
 [tool.setuptools]
 py-modules = ["skellycam"]
+
+[tool.uv]
+dev-dependencies = [
+    "nuitka>=2.4.9",
+]

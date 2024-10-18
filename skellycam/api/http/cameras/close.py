@@ -16,11 +16,11 @@ class CamerasClosedResponse(BaseResponse):
 
 @close_cameras_router.get("/close",
                           summary="Close camera connections")
-async def close_camera_connections():
+def close_camera_connections():
     logger.api("Received `/close` request...")
 
     try:
-        await get_app_controller().close_camera_group()
+        get_app_controller().close_camera_group()
         logger.api("`/close` request handled successfully.")
     except Exception as e:
         logger.error(f"Failed to close cameras: {type(e).__name__} - {e}")

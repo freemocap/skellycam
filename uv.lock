@@ -1180,6 +1180,11 @@ dev = [
     { name = "pytest" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "nuitka" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
@@ -1208,6 +1213,9 @@ requires-dist = [
     { name = "websocket-client", specifier = "==1.8.*" },
     { name = "websockets", specifier = ">=13.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "nuitka", specifier = ">=2.4.9" }]
 
 [[package]]
 name = "sniffio"

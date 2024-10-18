@@ -32,7 +32,7 @@ class CameraGroupProcess:
         logger.debug("Starting `CameraGroupProcess`...")
         self._process.start()
 
-    async def close(self):
+    def close(self):
         logger.debug("Closing `CameraGroupProcess`...")
         self._dto.ipc_flags.kill_camera_group_flag.value = True
         self._process.join()

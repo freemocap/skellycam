@@ -15,7 +15,10 @@ HYPOTHETICAL_AUTO_EXPOSURE_SETTINGS = [0.75, 3]
 HYPOTHETICAL_MANUAL_EXPOSURE_SETTINGS = [0.25, 1]
 
 
-def run_frame_loop(cap: cv2.VideoCapture, exposure_setting: int, auto_manual_setting: str, frames: int = 10) -> dict:
+def run_frame_loop(cap: cv2.VideoCapture,
+                   exposure_setting: int,
+                   auto_manual_setting: str,
+                   frames: int = 10) -> dict:
     """Capture the mean brightness of frames from the video capture device.
 
     Parameters
