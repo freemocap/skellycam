@@ -40,6 +40,7 @@ class CameraControlPanel(QWidget):
         # Make Buttons
         self.detect_available_cameras_button = QPushButton(
             f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
+        self._layout.addWidget(self.detect_available_cameras_button)
 
         self.connect_cameras_button = QPushButton(
             f"Connect Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")

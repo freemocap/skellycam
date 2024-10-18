@@ -3,7 +3,7 @@ import multiprocessing
 from pathlib import Path
 from typing import Union
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
@@ -12,7 +12,7 @@ from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.camera_panel import (
     CameraPanel,
 )
-from skellycam.gui.qt.widgets.bottom_panel_widgets.log_view_widget import LogViewWidget
+from skellycam.app.app_state import AppStateDTO
 from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
 from skellycam.gui.qt.widgets.side_panel_widgets.app_state_viewer_widget import AppStateJsonViewer
 from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
@@ -147,7 +147,7 @@ class SkellyCamMainWindow(QMainWindow):
             self._camera_panel.camera_view_grid.handle_new_frontend_payload
         )
         self._client.websocket_client.new_app_state_available.connect(
-            self._control_panel.handle_new_app_state
+            self._handle_new_app_state
         )
 
         # Camera Control Panel
@@ -178,9 +178,10 @@ class SkellyCamMainWindow(QMainWindow):
         self._welcome_connect_to_cameras_button.hide()
         self._camera_panel.show()
 
-    def _handle_videos_saved_to_this_folder(self, folder_path: Union[str, Path]):
-        logger.debug(f"Recieved `videos_saved_to_this_folder` signal with string:  {folder_path}")
-        self._directory_view_widget.expand_directory_to_path(folder_path)
+    @Slot(object)
+    def _handle_new_app_state(self, app_state: AppStateDTO):
+        self._control_panel.handle_new_app_state(app_state)
+        self._camera_panel.handle_new_app_state(app_state)
 
     def closeEvent(self, a0) -> None:
 

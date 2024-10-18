@@ -27,11 +27,9 @@ class RecordingPanel(QWidget):
         self.setLayout(self._layout)
         buttons_layout = QHBoxLayout()
         self.start_recording_button = QPushButton("\U0001F534 Start Recording")
-        self.start_recording_button.clicked.connect(self.handle_recording_in_progress)
         self.start_recording_button.setEnabled(True)
         self.stop_recording_button = QPushButton("Stop Recording")
         self.stop_recording_button.setEnabled(False)
-        self.stop_recording_button.clicked.connect(self.handle_no_recording_in_progress)
         buttons_layout.addWidget(self.start_recording_button)
         buttons_layout.addWidget(self.stop_recording_button)
         self._layout.addLayout(buttons_layout)
@@ -48,16 +46,20 @@ class RecordingPanel(QWidget):
         self.stop_recording_button.setEnabled(False)
         self.start_recording_button.setText("\U0001F534 Start Recording")
         self._recording_status_label.setText("Recording Status:  - Not Recording -")
-        self._recording_folder_label.setText(
-            f"Most Recent Recording Folder:  {self._recording_info.recording_folder}")
+        if self._recording_info:
+            self._recording_folder_label.setText(
+                f"Most Recent Recording Folder:  {self._recording_info.recording_folder}")
 
 
     def handle_recording_in_progress(self):
+        if not  self._recording_info:
+            raise ValueError("Cannot handle recording in progress if recording info is None")
         self.start_recording_button.setEnabled(False)
         self.stop_recording_button.setEnabled(True)
         self.start_recording_button.setText("\U0001F534 Recording...")
         self._recording_status_label.setText(
             f"Recording Status: Recording in progress!")
+
         self._recording_folder_label.setText(
             f"Active Recording Folder:  {self._recording_info.recording_folder}") if self._recording_info else None
 

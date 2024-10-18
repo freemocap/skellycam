@@ -55,6 +55,15 @@ class AppController(BaseModel):
             logger.exception(f"Error connecting to cameras: {e}")
             raise
 
+    def start_recording(self):
+        logger.info("Starting recording...")
+        self.app_state.start_recording()
+
+    def stop_recording(self):
+        logger.info("Starting recording...")
+        self.app_state.stop_recording()
+
+
     async def _create_camera_group(self, camera_configs: Optional[CameraConfigs]):
         try:
             if not self.app_state.available_devices and not camera_configs:
