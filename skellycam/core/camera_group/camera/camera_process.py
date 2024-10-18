@@ -80,7 +80,6 @@ class CameraProcess:
             apply_camera_configuration(cv2_video_capture, config)
             frame_loop_flags.set_camera_ready()
 
-            frame_loop_flags.await_frame_loop_initialization()
             logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
             frame_number = 0
             # Trigger listening loop
@@ -96,6 +95,9 @@ class CameraProcess:
                     wait_100us()
                     continue
                 logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
+
+                frame_loop_flags.await_frame_loop_initialization()
+
                 frame_number = get_frame(
                     camera_id=config.camera_id,
                     cap=cv2_video_capture,

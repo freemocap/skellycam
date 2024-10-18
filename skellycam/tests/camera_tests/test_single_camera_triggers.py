@@ -22,10 +22,10 @@ def test_set_ready(single_camera_triggers_fixture: CameraFrameLoopFlags):
 def test_initial_trigger(single_camera_triggers_fixture: CameraFrameLoopFlags):
     await_thread = threading.Thread(target=single_camera_triggers_fixture.await_frame_loop_initialization)
     await_thread.start()
-    single_camera_triggers_fixture.frame_loop_initialization_flag.set()
-    assert single_camera_triggers_fixture.frame_loop_initialization_flag.is_set()
+    single_camera_triggers_fixture.frame_read_initialization_flag.set()
+    assert single_camera_triggers_fixture.frame_read_initialization_flag.is_set()
     await_thread.join()
-    assert not single_camera_triggers_fixture.frame_loop_initialization_flag.is_set()
+    assert not single_camera_triggers_fixture.frame_read_initialization_flag.is_set()
 
 
 def test_frame_grab_trigger(single_camera_triggers_fixture: CameraFrameLoopFlags):

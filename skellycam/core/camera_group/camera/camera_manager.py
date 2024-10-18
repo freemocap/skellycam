@@ -74,7 +74,6 @@ class CameraManager(BaseModel):
 
     def camera_group_frame_loop(self):
         self.orchestrator.await_cameras_ready()
-        self.orchestrator.signal_frame_loop_started()
 
         loop_count = 0
         elapsed_per_loop_ns = []
@@ -83,8 +82,8 @@ class CameraManager(BaseModel):
             logger.debug(f"Starting camera trigger loop for cameras: {self.camera_ids}...")
 
             while not self.camera_group_dto.ipc_flags.global_kill_flag.value and not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value:
-                tik = time.perf_counter_ns()
 
+                tik = time.perf_counter_ns()
                 # Trigger all cameras to read a frame
                 self.orchestrator.trigger_multi_frame_read()
 

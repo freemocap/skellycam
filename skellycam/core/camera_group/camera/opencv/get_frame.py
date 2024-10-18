@@ -8,6 +8,7 @@ from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFra
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     create_empty_frame_metadata
+from skellycam.utilities.wait_functions import wait_1us
 
 logger = logging.getLogger(__name__)
 
@@ -41,19 +42,21 @@ def get_frame(camera_id: CameraId,
     triggers.await_should_grab()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
-    grab_success = cap.grab()  # grab the frame from the camera, but don't decode it yet
+    grab_success = False
+    while not grab_success:
+        grab_success = cap.grab() # This is as close as we get to the moment of transduction, where the light is captured by the sensor. This is where the light gets in ✨
+        if not grab_success:
+            logger.error(f"Failed to grab frame from camera {camera_id}")
+            wait_1us()
     frame_metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
-    if grab_success:
-        triggers.set_frame_grabbed()
-    else:
-        raise ValueError(f"Failed to grab frame from camera {camera_id}")
+    triggers.set_frame_grabbed()
 
     triggers.await_should_retrieve()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
-    # decode the frame buffer into an image! Wow, magic!
-    retrieve_success, image = cap.retrieve()  # This is how the light gets in ✨
+
+    retrieve_success, image = cap.retrieve()  # decode the frame buffer into an image! The light is now in the camera's memory, and we have a digital representation of the pattern of light that was in the field of view of the camera during the last frame/timeslice.
     frame_metadata[FRAME_METADATA_MODEL.POST_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
     if not retrieve_success:
