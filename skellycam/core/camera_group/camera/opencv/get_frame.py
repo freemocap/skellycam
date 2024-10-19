@@ -8,7 +8,6 @@ from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFra
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     create_empty_frame_metadata
-from skellycam.utilities.wait_functions import wait_1us
 
 logger = logging.getLogger(__name__)
 

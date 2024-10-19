@@ -3,7 +3,6 @@ import sys
 from datetime import datetime
 from enum import Enum
 from logging.config import dictConfig
-from logging.handlers import QueueHandler
 
 from .logging_color_helpers import (
     get_hashed_color,
