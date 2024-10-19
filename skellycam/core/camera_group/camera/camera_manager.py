@@ -48,30 +48,6 @@ class CameraManager(BaseModel):
         self.camera_group_frame_loop()
         logger.success(f"Cameras {self.camera_ids} frame loop ended.")
 
-    def close(self):
-        logger.info(f"Stopping cameras: {self.camera_ids}")
-        self.camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
-        self._close_cameras()
-
-    def update_camera_configs(self, update_instructions: UpdateInstructions):
-        logger.debug(f"Updating cameras with instructions: {update_instructions}")
-        for camera_id in update_instructions.update_these_cameras:
-            self.camera_processes[camera_id].update_config(update_instructions.new_configs[camera_id])
-
-    def _close_cameras(self):
-        logger.debug(f"Closing cameras: {self.camera_ids}")
-
-        camera_close_threads = []
-        for camera_process in self.camera_processes.values():
-            camera_close_threads.append(threading.Thread(target=camera_process.close))
-        [thread.start() for thread in camera_close_threads]
-        [thread.join() for thread in camera_close_threads]
-
-        while any([camera_process.is_alive() for camera_process in self.camera_processes.values()]):
-            wait_10ms()
-
-        logger.trace(f"Cameras closed: {self.camera_ids}")
-
     def camera_group_frame_loop(self):
         self.orchestrator.await_cameras_ready()
 
@@ -110,6 +86,31 @@ class CameraManager(BaseModel):
             )
         finally:
             logger.debug(f"Multi-camera trigger loop for cameras: {self.camera_ids}  exited")
+            self.close()
+
+    def close(self):
+        logger.info(f"Stopping cameras: {self.camera_ids}")
+        self.camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
+        self._close_cameras()
+
+    def update_camera_configs(self, update_instructions: UpdateInstructions):
+        logger.debug(f"Updating cameras with instructions: {update_instructions}")
+        for camera_id in update_instructions.update_these_cameras:
+            self.camera_processes[camera_id].update_config(update_instructions.new_configs[camera_id])
+
+    def _close_cameras(self):
+        logger.debug(f"Closing cameras: {self.camera_ids}")
+
+        camera_close_threads = []
+        for camera_process in self.camera_processes.values():
+            camera_close_threads.append(threading.Thread(target=camera_process.close))
+        [thread.start() for thread in camera_close_threads]
+        [thread.join() for thread in camera_close_threads]
+
+        while any([camera_process.is_alive() for camera_process in self.camera_processes.values()]):
+            wait_10ms()
+
+        logger.trace(f"Cameras closed: {self.camera_ids}")
 
 
 def log_time_stats(camera_configs: CameraConfigs,

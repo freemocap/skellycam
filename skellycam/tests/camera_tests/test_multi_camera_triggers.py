@@ -23,9 +23,9 @@ def test_multi_camera_triggers_exit_event(camera_configs_fixture: CameraConfigs,
                     threading.Thread(target=camera_group_orchestrator.await_cameras_ready),
                     threading.Thread(target=camera_group_orchestrator._await_frames_grabbed),
                     threading.Thread(target=camera_group_orchestrator._wait_for_frames_grabbed_triggers_reset),
-                    threading.Thread(target=camera_group_orchestrator._wait_for_retrieve_triggers_reset),
-                    threading.Thread(target=camera_group_orchestrator._await_mf_copied_from_shm),
-                    threading.Thread(target=camera_group_orchestrator.initialize_frame_read)]
+                    threading.Thread(target=camera_group_orchestrator._await_frames_retrieved),
+                    threading.Thread(target=camera_group_orchestrator._await_multi_frame_pulled_from_shm),
+                    threading.Thread(target=camera_group_orchestrator.send_initialization_signal)]
     [thread.start() for thread in wait_threads]
     wait_1ms()
     thread_statuses = [thread.is_alive() for thread in wait_threads]

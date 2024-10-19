@@ -96,13 +96,12 @@ class CameraProcess:
                     continue
                 logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
 
-                frame_loop_flags.await_frame_loop_initialization()
 
                 frame_number = get_frame(
                     camera_id=config.camera_id,
                     cap=cv2_video_capture,
                     camera_shared_memory=camera_shm,
-                    triggers=frame_loop_flags,
+                    frame_loop_flags=frame_loop_flags,
                     frame_number=frame_number,
                 )
                 logger.loop(f"Camera {config.camera_id} got frame# {frame_number} successfully")

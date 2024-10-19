@@ -8,7 +8,7 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.timestamps.framerate_tracker import FrameRateTracker
-from skellycam.utilities.wait_functions import wait_100us
+from skellycam.utilities.wait_functions import wait_100us, wait_1us
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +48,14 @@ class FrameListenerProcess:
             byte_chunklets_to_send = deque()
 
             while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
-                if orchestrator.new_multi_frame_available:
+
+                if orchestrator.should_pull_multi_frame_from_shm.value:
                     mf_payload: Optional[MultiFramePayload] = camera_group_shm.get_multi_frame_payload(
                         previous_payload=mf_payload)
 
-                    orchestrator.set_multi_frame_retrieved()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
+                    orchestrator.signal_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
                     logger.loop(
-                        f"FrameListener -  copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
+                        f"FrameListener - copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
 
                     pulled_from_pipe_timestamp = time.perf_counter_ns()
                     mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
@@ -63,13 +64,11 @@ class FrameListenerProcess:
                     mf_bytes_list = mf_payload.to_bytes_list()
                     byte_chunklets_to_send.extend(mf_bytes_list)
 
-                elif len(
-                        byte_chunklets_to_send) > 0 and not orchestrator.new_multi_frame_available:
+                elif len(byte_chunklets_to_send) > 0:
                     # Opportunistically let byte chunks escape one-at-a-time, whenever there isn't frame-loop work to do
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.popleft())
-
                 else:
-                    wait_100us()
+                    wait_1us()
 
         except Exception as e:
             logger.exception(f"Frame listener process error: {e.__class__} - {e}")

@@ -6,11 +6,11 @@ from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
-from skellycam.utilities.wait_functions import wait_100us, wait_10ms, wait_1us
+from skellycam.utilities.wait_functions import wait_1us
 
 logger = logging.getLogger(__name__)
 
-MAX_WAIT_TIME_S = 6000.0
+MAX_WAIT_TIME_S = 600.0
 
 
 class CameraFrameLoopFlags(BaseModel):
@@ -22,7 +22,9 @@ class CameraFrameLoopFlags(BaseModel):
         default_factory=lambda: multiprocessing.Value("b", False))
     should_grab_frame_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
     should_retrieve_frame_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    new_frame_available_flag: multiprocessing.Value = Field(
+    should_copy_frame_into_shm_flag: multiprocessing.Value = Field(
+        default_factory=lambda: multiprocessing.Value("b", False))
+    new_frame_in_shm: multiprocessing.Value = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
 
     close_self_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
@@ -43,31 +45,20 @@ class CameraFrameLoopFlags(BaseModel):
     def should_continue(self):
         return not self.ipc_flags.global_kill_flag.value and not self.ipc_flags.kill_camera_group_flag.value and not self.close_self_flag.value
 
-    def await_frame_loop_initialization(self, max_wait_time_s: float = MAX_WAIT_TIME_S):
-        start_wait_ns = time.perf_counter_ns()
-        been_warned = False
-        while not self.frame_read_initialization_flag.value and self.should_continue:
-            wait_1us()
-            been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
+    def await_initialization_signal(self):
+        self._wait_loop(self.frame_read_initialization_flag)
 
-        logger.trace(f"Camera {self.camera_id} process received `initial_trigger`")
-        self.frame_read_initialization_flag.value = False # reset flag to signal that it has been received
+        logger.loop(f"Camera {self.camera_id} process received `initial_trigger`")
+        self.frame_read_initialization_flag.value = False  # reset flag to signal that it has been received
 
-    def await_should_retrieve(self, max_wait_time_s: float = MAX_WAIT_TIME_S):
-        start_wait_ns = time.perf_counter_ns()
-        been_warned = False
-        while not self.should_retrieve_frame_flag.value and self.should_continue:
-            wait_1us()
-            been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
-        logger.loop(f"Camera {self.camera_id} process received `retrieve_frame_trigger`")
+    def await_should_grab_signal(self):
+        self._wait_loop(self.should_grab_frame_flag)
 
-    def await_should_grab(self, max_wait_time_s: float = MAX_WAIT_TIME_S):
-        start_wait_ns = time.perf_counter_ns()
-        been_warned = False
-        while not self.should_grab_frame_flag.value and self.should_continue:
-            wait_1us()
-            been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
+    def await_should_retrieve(self):
+        self._wait_loop(self.should_retrieve_frame_flag)
 
+    def await_should_copy_frame_into_shm(self):
+        self._wait_loop(self.should_copy_frame_into_shm_flag)
 
     def set_camera_not_ready(self):
         self.camera_ready_flag.value = False
@@ -75,18 +66,25 @@ class CameraFrameLoopFlags(BaseModel):
     def set_camera_ready(self):
         self.camera_ready_flag.value = True
 
-    def set_frame_grabbed(self):
+    def signal_frame_was_grabbed(self):
         self.should_grab_frame_flag.value = False
 
-    def set_frame_retrieved(self):
+    def signal_frame_was_retrieved(self):
         self.should_retrieve_frame_flag.value = False
 
-    def set_new_frame_available(self):
-        self.new_frame_available_flag.value = True
+    def signal_new_frame_put_in_shm(self):
+        self.new_frame_in_shm.value = True
+
+    def _wait_loop(self, signal_flag: multiprocessing.Value, max_wait_time_s: float = MAX_WAIT_TIME_S):
+        start_wait_ns = time.perf_counter_ns()
+        been_warned = False
+        while not signal_flag.value and self.should_continue:
+            wait_1us()
+            been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
 
     def _check_wait_time(self, max_wait_time_s: float, start_wait_ns: float, been_warned: bool) -> bool:
         time_waited_s = (time.perf_counter_ns() - start_wait_ns) / 1e9
-        if time_waited_s > max_wait_time_s*.01 and not been_warned:
+        if time_waited_s > max_wait_time_s * .01 and not been_warned:
             been_warned = True
             logger.warning(
                 f"Camera {self.camera_id} process hit half-way point waiting for `grab_frame_trigger` for {time_waited_s} seconds:"

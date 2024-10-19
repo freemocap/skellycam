@@ -20,7 +20,7 @@ def test_set_ready(single_camera_triggers_fixture: CameraFrameLoopFlags):
 
 
 def test_initial_trigger(single_camera_triggers_fixture: CameraFrameLoopFlags):
-    await_thread = threading.Thread(target=single_camera_triggers_fixture.await_frame_loop_initialization)
+    await_thread = threading.Thread(target=single_camera_triggers_fixture.await_initialization_signal)
     await_thread.start()
     single_camera_triggers_fixture.frame_read_initialization_flag.set()
     assert single_camera_triggers_fixture.frame_read_initialization_flag.is_set()
@@ -29,12 +29,12 @@ def test_initial_trigger(single_camera_triggers_fixture: CameraFrameLoopFlags):
 
 
 def test_frame_grab_trigger(single_camera_triggers_fixture: CameraFrameLoopFlags):
-    await_thread = threading.Thread(target=single_camera_triggers_fixture.await_should_grab)
+    await_thread = threading.Thread(target=single_camera_triggers_fixture.await_should_grab_signal)
     await_thread.start()
     single_camera_triggers_fixture.should_grab_frame_flag.set()
     assert single_camera_triggers_fixture.should_grab_frame_flag.is_set()
     await_thread.join()
-    single_camera_triggers_fixture.set_frame_grabbed()
+    single_camera_triggers_fixture.signal_frame_was_grabbed()
     assert not single_camera_triggers_fixture.should_grab_frame_flag.is_set()
 
 
@@ -44,7 +44,7 @@ def test_frame_retrieve_trigger(single_camera_triggers_fixture: CameraFrameLoopF
     single_camera_triggers_fixture.should_retrieve_frame_flag.set()
     assert single_camera_triggers_fixture.should_retrieve_frame_flag.is_set()
     await_thread.join()
-    single_camera_triggers_fixture.set_new_frame_available()
+    single_camera_triggers_fixture.signal_new_frame_put_in_shm()
     assert not single_camera_triggers_fixture.should_retrieve_frame_flag.is_set()
 
 
@@ -53,8 +53,8 @@ def test_camera_triggers_exit_event(camera_id_fixture: CameraId,
     camera_triggers = CameraFrameLoopFlags.create(camera_id=camera_id_fixture,
                                                   exit_event=exit_event_fixture)
     assert camera_triggers.should_continue is True
-    wait_threads = [threading.Thread(target=camera_triggers.await_frame_loop_initialization),
-                    threading.Thread(target=camera_triggers.await_should_grab),
+    wait_threads = [threading.Thread(target=camera_triggers.await_initialization_signal),
+                    threading.Thread(target=camera_triggers.await_should_grab_signal),
                     threading.Thread(target=camera_triggers.await_should_retrieve),
                     ]
     [thread.start() for thread in wait_threads]

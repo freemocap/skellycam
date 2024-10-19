@@ -62,7 +62,7 @@ def test_trigger_get_frame_deconstructed(
             assert cap.retrieve_called_count == 0
 
         # 1
-        camera_group_orchestrator_fixture._fire_grab_trigger()
+        camera_group_orchestrator_fixture._send_should_grab_frame_signal()
         wait_1ms()
 
         # 2
@@ -75,7 +75,7 @@ def test_trigger_get_frame_deconstructed(
         assert camera_group_orchestrator_fixture.frames_grabbed
 
         # 3
-        camera_group_orchestrator_fixture._fire_retrieve_trigger()
+        camera_group_orchestrator_fixture._send_should_retrieve_frame_signal()
         wait_1ms()
         for cap in caps.values():
             assert cap.isOpened()
@@ -90,7 +90,7 @@ def test_trigger_get_frame_deconstructed(
 
         # 5
         [triggers.set_frame_copied() for triggers in camera_group_orchestrator_fixture.frame_loop_flags.values()]
-        camera_group_orchestrator_fixture._await_mf_copied_from_shm()
+        camera_group_orchestrator_fixture._await_multi_frame_pulled_from_shm()
         assert not camera_group_orchestrator_fixture.new_multi_frame_available
 
         # 6
