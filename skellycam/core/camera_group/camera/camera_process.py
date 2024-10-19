@@ -50,6 +50,8 @@ class CameraProcess:
 
     def close(self):
         logger.info(f"Closing camera {self.camera_id}")
+        if not self.dto.ipc_flags.kill_camera_group_flag.value == True:
+            raise ValueError(f"Camera {self.camera_id} was closed before the camera group kill flag was set.")
         self.should_close_self_flag.value = True
         self.process.join()
         logger.info(f"Camera {self.camera_id} closed!")
@@ -116,8 +118,6 @@ class CameraProcess:
                 # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... See above note
                 cv2_video_capture.release()
 
-            # Shut down the whole camera group if one camera goes down
-            dto.ipc_flags.kill_camera_group_flag.value = True
 
     @staticmethod
     def check_for_config_update(config: CameraConfig,

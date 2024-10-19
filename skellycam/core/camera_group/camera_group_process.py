@@ -34,7 +34,8 @@ class CameraGroupProcess:
 
     def close(self):
         logger.debug("Closing `CameraGroupProcess`...")
-        self._dto.ipc_flags.kill_camera_group_flag.value = True
+        if not self._dto.ipc_flags.kill_camera_group_flag.value == True:
+            raise ValueError("CameraGroupProcess was closed before the kill flag was set.")
         self._process.join()
         logger.debug("CameraGroupProcess closed.")
 
@@ -54,7 +55,6 @@ class CameraGroupProcess:
             logger.exception(e)
             raise
         finally:
-            dto.ipc_flags.kill_camera_group_flag.value = True
             frame_wrangler.close() if frame_wrangler else None
             camera_manager.close() if camera_manager else None
             logger.debug(f"CameraGroupProcess completed")

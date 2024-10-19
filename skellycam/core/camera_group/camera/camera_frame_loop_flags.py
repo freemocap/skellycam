@@ -97,3 +97,4 @@ class CameraFrameLoopFlags(BaseModel):
                 f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
                 f"self.should_continue={self.should_continue}")
         return been_warned
+

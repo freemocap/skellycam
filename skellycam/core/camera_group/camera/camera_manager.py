@@ -90,7 +90,8 @@ class CameraManager(BaseModel):
 
     def close(self):
         logger.info(f"Stopping cameras: {self.camera_ids}")
-        self.camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
+        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value:
+            raise ValueError("Camera manager should only be closed after global kill flag is set")
         self._close_cameras()
 
     def update_camera_configs(self, update_instructions: UpdateInstructions):

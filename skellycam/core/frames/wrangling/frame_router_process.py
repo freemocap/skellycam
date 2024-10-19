@@ -99,6 +99,8 @@ class FrameRouterProcess:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
-            dto.ipc_flags.kill_camera_group_flag.value = True
+            if not dto.ipc_flags.kill_camera_group_flag.value:
+                raise ValueError("FrameRouter should only be closed after global kill flag is set")
+
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()
