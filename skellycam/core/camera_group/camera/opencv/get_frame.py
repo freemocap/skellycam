@@ -36,10 +36,10 @@ def get_frame(camera_id: CameraId,
     get as tight of a synchronization as possible between the cameras
     # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
     """
-    logger.info(f"Frame#{frame_number} - Camera {camera_id} awaiting `initialization` trigger...")
+    logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `initialization` trigger...")
     frame_loop_flags.await_initialization_signal()
 
-    logger.info(f"Frame#{frame_number} - Camera {camera_id} awaiting `grab` trigger...")
+    logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `grab` trigger...")
     frame_metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=frame_number)
     frame_loop_flags.await_should_grab_signal()
 
@@ -50,7 +50,7 @@ def get_frame(camera_id: CameraId,
     frame_metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
     frame_loop_flags.signal_frame_was_grabbed()
-    logger.info(f"Frame#{frame_number} - Camera {camera_id} awaiting `retrieve` trigger...")
+    logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `retrieve` trigger...")
     frame_loop_flags.await_should_retrieve()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
@@ -63,12 +63,12 @@ def get_frame(camera_id: CameraId,
 
     frame_loop_flags.signal_frame_was_retrieved()
 
-    logger.info(f"Frame#{frame_number} - Camera {camera_id} awaiting `copy` trigger...")
+    logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `copy` trigger...")
     frame_loop_flags.await_should_copy_frame_into_shm()
     camera_shared_memory.put_new_frame(
         image=image,
         metadata=frame_metadata,
     )
     frame_loop_flags.signal_new_frame_put_in_shm()
-    logger.info(f"Frame#{frame_number} - Camera {camera_id} frame frame loop completed successfully!")
+    logger.loop(f"Frame#{frame_number} - Camera {camera_id} frame frame loop completed successfully!")
     return frame_number + 1

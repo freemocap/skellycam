@@ -102,7 +102,6 @@ class AppState(BaseModel):
     def _reset(self):
         self.camera_group = None
         self.shmorchestrator = None
-        self.available_devices = None
         self.current_framerate = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 

@@ -57,7 +57,7 @@ class CameraViewGrid(QWidget):
                                     frontend_payload:FrontendFramePayload):
         logger.gui(f"Updating {self.__class__.__name__} with {len(frontend_payload.jpeg_images)} images")
         if not list(self._single_camera_views.keys()) == frontend_payload.camera_ids:
-            logger.debug(f"Updating single camera view widgets to match frontend payload ids: {frontend_payload.camera_ids}")
+            logger.gui(f"Updating single camera view widgets to match frontend payload ids: {frontend_payload.camera_ids}")
             self.update_single_camera_view_widgets(frontend_payload)
         for camera_id, single_camera_view in self._single_camera_views.items():
             single_camera_view.update_image(base64_str=frontend_payload.jpeg_images[camera_id])
