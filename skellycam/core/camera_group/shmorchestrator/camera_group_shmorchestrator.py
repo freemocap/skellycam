@@ -54,4 +54,5 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
 
     def close(self):
         logger.debug("Closing CameraGroupSharedMemoryOrchestrator...")
+        self.orchestrator.pause_loop()
         self.shm.close_and_unlink()

@@ -36,6 +36,7 @@ class CameraGroup(BaseModel):
 
     def close(self):
         logger.debug("Closing camera group")
+        self.dto.shmorc_dto.camera_group_orchestrator.pause_loop()
         self.dto.ipc_flags.kill_camera_group_flag.value = True
         if self.camera_group_process:
             self.camera_group_process.close()

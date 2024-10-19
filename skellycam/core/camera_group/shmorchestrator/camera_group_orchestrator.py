@@ -7,7 +7,7 @@ from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1us
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1us, wait_100us
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +63,15 @@ class CameraGroupOrchestrator:
 
     def pause_loop(self):
         self.pause_when_able.value = True
+        while not self.frame_loop_paused.value:
+            wait_10ms()
+        logger.trace("Frame loop paused.")
 
     def unpause_loop(self):
         self.pause_when_able.value = False
+        while self.frame_loop_paused.value:
+            wait_10ms()
+        logger.trace("Frame loop un-paused.")
 
     ##############################################################################################################
     def trigger_multi_frame_read(self):
@@ -79,6 +85,8 @@ class CameraGroupOrchestrator:
                 logger.trace("Loop unpaused, awaiting cameras ready...")
                 self.frame_loop_paused.value = False
                 self.await_cameras_ready()
+            else:
+                return # Exit if we should not continue
 
 
         # 0 - Make sure all cameras are ready
@@ -219,5 +227,4 @@ class CameraGroupOrchestrator:
             if any_new := any([triggers.new_frame_in_shm.value for triggers in self.frame_loop_flags.values()]):
                 raise AssertionError(
                     f"New frames available before finished with previous multi-frame? `new_frame_available_trigger`: {any_new}")
-
 

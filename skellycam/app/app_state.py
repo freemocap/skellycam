@@ -85,6 +85,7 @@ class AppState(BaseModel):
         logger.debug("Closing existing camera group...")
         self.ipc_flags.kill_camera_group_flag.value = True
         self.camera_group.close()
+        self.shmorchestrator.close()
         self._reset()
         logger.success("Camera group closed successfully")
 
