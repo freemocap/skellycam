@@ -47,7 +47,8 @@ class CameraGroupOrchestrator:
 
     @property
     def cameras_ready(self):
-        return all([triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
+        self.ipc_flags.cameras_connected_flag.value =  all([triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
+        return self.ipc_flags.cameras_connected_flag.value
 
     @property
     def new_multi_frame_available(self):
