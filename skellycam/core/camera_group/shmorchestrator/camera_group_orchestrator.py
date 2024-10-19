@@ -195,7 +195,7 @@ class CameraGroupOrchestrator:
         self.should_pull_multi_frame_from_shm.value = True
 
     def _await_frames_retrieved(self):
-        while self.frames_retrieved and self.should_continue:
+        while not self.frames_retrieved and self.should_continue:
             wait_1us()
 
     def _ensure_cameras_ready(self):
