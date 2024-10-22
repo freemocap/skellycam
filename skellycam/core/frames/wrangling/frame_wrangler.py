@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class FrameWrangler(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    camera_group_dto: CameraGroupDTO
+    dto: CameraGroupDTO
     listener_process: FrameListenerProcess
     frame_router_process: FrameRouterProcess
 
@@ -26,7 +26,7 @@ class FrameWrangler(BaseModel):
 
                    frame_router_process=FrameRouterProcess(dto=dto,
                                                            frame_escape_pipe=frame_escape_subscriber),
-                   camera_group_dto=dto)
+                   dto=dto)
 
     def start(self):
         logger.debug(f"Starting frame listener process...")
@@ -42,7 +42,7 @@ class FrameWrangler(BaseModel):
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
-        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value == True:
+        if not self.dto.ipc_flags.kill_camera_group_flag.value == True and not self.dto.ipc_flags.global_kill_flag.value == True:
             raise ValueError("FrameWrangler was closed before the kill flag was set.")
         if self.is_alive():
             self.join()
