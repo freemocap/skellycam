@@ -14,11 +14,13 @@ from skellycam.core.camera_group.camera.opencv.get_frame import get_frame
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator
-from skellycam.utilities.wait_functions import wait_100us
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
+from skellycam.utilities.wait_functions import wait_100us, wait_1ms
 
 logger = logging.getLogger(__name__)
 AUTO_EXPOSURE_SETTING = 3  # 0.75
 MANUAL_EXPOSURE_SETTING = 1  # 0.25
+
 
 @dataclass
 class CameraProcess:
@@ -87,27 +89,30 @@ class CameraProcess:
             # Trigger listening loop
             while not dto.ipc_flags.global_kill_flag.value and not dto.ipc_flags.kill_camera_group_flag.value and not should_close_self_flag.value:
 
-                config = CameraProcess.check_for_config_update(config=config,
-                                                               cv2_video_capture=cv2_video_capture,
-                                                               config_update_queue=dto.config_update_queue,
-                                                               frame_loop_flags=frame_loop_flags
-                                                               )
-
                 if not shmorchestrator.shm.valid:
-                    wait_100us()
+                    wait_1ms()
                     continue
-                logger.loop(f"Camera {config.camera_id} ready to get frame# {frame_number}")
 
-
+                logger.loop(f"FCamera {camera_id} awaiting `initialization` trigger for frame loop# {frame_number}")
+                frame_loop_flags.await_initialization_signal()
+                frame_metadata = create_empty_frame_metadata(camera_id=camera_id,
+                                                             frame_number=frame_number,
+                                                             camera_config=config)
                 frame_number = get_frame(
                     camera_id=config.camera_id,
                     cap=cv2_video_capture,
+                    frame_metadata=frame_metadata,
                     camera_shared_memory=camera_shm,
                     frame_loop_flags=frame_loop_flags,
                     frame_number=frame_number,
                 )
                 logger.loop(f"Camera {config.camera_id} got frame# {frame_number} successfully")
 
+                config = CameraProcess.check_for_config_update(config=config,
+                                                               cv2_video_capture=cv2_video_capture,
+                                                               config_update_queue=dto.config_update_queue,
+                                                               frame_loop_flags=frame_loop_flags
+                                                               )
             logger.debug(f"Camera {config.camera_id} process completed")
         except Exception as e:
             logger.exception(f"Exception occured when running Camera Process for Camera: {camera_id} - {e}")
@@ -117,7 +122,6 @@ class CameraProcess:
             if cv2_video_capture:
                 # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... See above note
                 cv2_video_capture.release()
-
 
     @staticmethod
     def check_for_config_update(config: CameraConfig,

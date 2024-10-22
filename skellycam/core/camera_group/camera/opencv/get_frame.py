@@ -2,9 +2,11 @@ import logging
 import time
 
 import cv2
+import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     create_empty_frame_metadata
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 def get_frame(camera_id: CameraId,
               cap: cv2.VideoCapture,
+              frame_metadata: np.ndarray,
               camera_shared_memory: CameraSharedMemory,
               frame_loop_flags: CameraFrameLoopFlags,
               frame_number: int,
@@ -36,15 +39,14 @@ def get_frame(camera_id: CameraId,
     get as tight of a synchronization as possible between the cameras
     # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
     """
-    logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `initialization` trigger...")
-    frame_loop_flags.await_initialization_signal()
+
 
     logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `grab` trigger...")
-    frame_metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=frame_number)
+
     frame_loop_flags.await_should_grab_signal()
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
-    grab_success = cap.grab() # This is as close as we get to the moment of transduction, where the light is captured by the sensor. This is where the light gets in ✨
+    grab_success = cap.grab()  # This is as close as we get to the moment of transduction, where the light is captured by the sensor. This is where the light gets in ✨
     if not grab_success:
         raise RuntimeError(f"Failed to grab frame from camera {camera_id}")
     frame_metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()

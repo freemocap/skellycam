@@ -22,7 +22,7 @@ class FrameLifespanTimestamps(BaseModel):
     @classmethod
     def from_frame_metadata(cls, frame_metadata: np.ndarray):
         return cls(
-            initialized_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.INITIALIZED.value],
+            initialized_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.FRAME_METADATA_INITIALIZED.value],
             pre_grab_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value],
             post_grab_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value],
             pre_retrieve_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value],

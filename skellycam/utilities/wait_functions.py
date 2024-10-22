@@ -18,15 +18,6 @@ def wait_1ms():
     time.sleep(1e-3)
 
 
-def wait_100us():
-    # microseconds (the `u` is a stand in for the Greek letter μ (mu), which is the symbol for micro)
-    time.sleep(1e-4)
-
-
-def wait_1us():
-    # microseconds (the `u` is a stand in for the Greek letter μ (mu), which is the symbol for micro)
-    time.sleep(1e-5)
-
 
 async def async_wait_1_sec():
     await asyncio.sleep(1.0)
@@ -40,9 +31,20 @@ async def async_wait_1ms():
     await asyncio.sleep(1e-3)
 
 
-async def async_wait_10us():
-    await asyncio.sleep(1e-5)
+
+if __name__ == "__main__":
+    print("Testing wait functions")
+
+    tic = time.perf_counter_ns()
+    for i in range(1000):
+        wait_1ms()
+    toc = time.perf_counter_ns()
+    print(f"WAITED 1ms {1000} times in {(toc - tic)/1e9} s")
+
+    tic = time.perf_counter_ns()
+    for i in range(1000):
+        wait_10ms()
+    toc = time.perf_counter_ns()
+    print(f"WAITED 10ms {1000} times in {(toc - tic)/1e9} s")
 
 
-async def async_wait_1us():
-    await asyncio.sleep(1e-6)

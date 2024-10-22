@@ -7,7 +7,7 @@ from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1us, wait_100us
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,8 @@ class CameraGroupOrchestrator:
     frame_loop_flags: Dict[CameraId, CameraFrameLoopFlags]
     ipc_flags: IPCFlags
 
-    pause_when_able: multiprocessing.Value = multiprocessing.Value("b", False)
-    frame_loop_paused: multiprocessing.Value = multiprocessing.Value("b", False)
+    pause_when_able: multiprocessing.Value
+    frame_loop_paused: multiprocessing.Value
 
     should_pull_multi_frame_from_shm: multiprocessing.Value = multiprocessing.Value("b", False)
 
@@ -34,7 +34,9 @@ class CameraGroupOrchestrator:
                                                        ipc_flags=ipc_flags)
                 for camera_id, camera_config in camera_configs.items()
             },
-            ipc_flags=ipc_flags
+            ipc_flags=ipc_flags,
+            pause_when_able=multiprocessing.Value("b", False),
+            frame_loop_paused=multiprocessing.Value("b", False),
         )
 
     @property
@@ -93,45 +95,55 @@ class CameraGroupOrchestrator:
         # 0 - Make sure all cameras are ready
         logger.loop(f"FRAME  {self.loop_count} LOOP BEGIN")
         self._ensure_cameras_ready()
+        wait_1ms()
 
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #0 (start)  - Send frame read initialization triggers")
         self.send_initialization_signal()
+        wait_1ms()
         self._await_initialization_flag_reset()
+        wait_1ms()
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #0 (finish) - All cameras are ready to go!")
 
         # 1 - Trigger each camera should grab an image from the camera device with `cv2.VideoCapture.grab()` (which is faster than `cv2.VideoCapture.read()` as it does not decode the frame)
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #1 (start) - Fire grab triggers")
         self._send_should_grab_frame_signal()
+        wait_1ms()
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #1 (finish) - GRAB triggers fired!")
 
         # 2 - wait for all cameras to grab a frame
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #2 (start) - Wait for all cameras to GRAB a frame")
         self._await_frames_grabbed()
+        wait_1ms()
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #2 (finish) - All cameras have GRABbed a frame!")
 
         # 3- Trigger each camera to retrieve the frame using `cv2.VideoCapture.retrieve()`, which decodes the frame into an image/numpy array
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #3 (start)- Fire retrieve triggers")
         self._send_should_retrieve_frame_signal()
+        wait_1ms()
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #3 (finish) - RETRIEVE triggers fired!")
 
         # 4 - wait for all cameras to retrieve the frame
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #4 (start) - Wait for all cameras to RETRIEVE the frame")
         self._await_frames_retrieved()
+        wait_1ms()
         logger.loop(
             f"**Frame Loop#{self.loop_count}** - Step #4 (finish) - All cameras have RETRIEVED the frame!")
 
         # 5 - Trigger should copy frame into shared memory
         logger.loop(f"**Frame Loop#{self.loop_count}** - Step #5 (start) - Signaling should copy multi-frame into shared memory")
         self._signal_should_put_frame_into_shm()
+        wait_1ms()
         logger.loop(
             f"**Frame Loop#{self.loop_count}** - Step #5 (finish) - Signaled should copy multi-frame into shared memory!")
 
         self._signal_should_pull_multi_frame_from_shm()
+        wait_1ms()
 
         # 6 - wait for the frame to be copied from the `write` buffer to the `read` buffer
         logger.loop(
             f"**Frame Loop#{self.loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
         self._await_multi_frame_pulled_from_shm()
+        wait_1ms()
         logger.loop(
             f"**Frame Loop#{self.loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
 
@@ -140,6 +152,7 @@ class CameraGroupOrchestrator:
         logger.loop(
             f"**Frame Loop#{self.loop_count}** - Step# 7 (start) - Verify that everything is hunky-dory after reading the frames")
         self._verify_hunky_dory_after_read()
+        wait_1ms()
         logger.loop(
             f"**Frame Loop#{self.loop_count}** - Step #7 (end) - Everything is hunky-dory after reading the frames!")
         logger.loop(f"FRAME LOOP# {self.loop_count} Complete!")
@@ -165,22 +178,22 @@ class CameraGroupOrchestrator:
     def signal_multi_frame_pulled_from_shm(self):
         for triggers in self.frame_loop_flags.values():
             triggers.new_frame_in_shm.value = False
-
+        wait_1ms() # Give it a moment before final reset of this frame loop
         self.should_pull_multi_frame_from_shm.value = False
 
     def _await_initialization_flag_reset(self):
         logger.loop("Initial triggers set - waiting for all triggers to reset...")
         while any([triggers.frame_read_initialization_flag.value for triggers in
                    self.frame_loop_flags.values()]) and self.should_continue:
-            wait_1us()
+            wait_1ms()
 
     def _await_frames_grabbed(self):
         while not self.frames_grabbed and self.should_continue:
-            wait_1us()
+            wait_1ms()
 
     def _await_multi_frame_pulled_from_shm(self):
         while self.should_pull_multi_frame_from_shm.value and self.should_continue:
-            wait_1us()
+            wait_1ms()
 
     def _send_should_grab_frame_signal(self):
         logger.loop("Triggering all cameras to `grab` a frame...")
@@ -204,7 +217,7 @@ class CameraGroupOrchestrator:
 
     def _await_frames_retrieved(self):
         while not self.frames_retrieved and self.should_continue:
-            wait_1us()
+            wait_1ms()
 
     def _ensure_cameras_ready(self):
         if not self.cameras_ready:
