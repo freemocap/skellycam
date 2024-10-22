@@ -15,7 +15,7 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
-from skellycam.utilities.wait_functions import wait_100us, wait_1ms
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 AUTO_EXPOSURE_SETTING = 3  # 0.75
@@ -113,6 +113,8 @@ class CameraProcess:
                                                                config_update_queue=dto.config_update_queue,
                                                                frame_loop_flags=frame_loop_flags
                                                                )
+                wait_1ms()
+
             logger.debug(f"Camera {config.camera_id} process completed")
         except Exception as e:
             logger.exception(f"Exception occured when running Camera Process for Camera: {camera_id} - {e}")

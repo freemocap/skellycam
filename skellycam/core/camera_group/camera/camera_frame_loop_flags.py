@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
-from skellycam.utilities.wait_functions import wait_1us
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class CameraFrameLoopFlags(BaseModel):
         start_wait_ns = time.perf_counter_ns()
         been_warned = False
         while not signal_flag.value and self.should_continue:
-            wait_1us()
+            wait_1ms()
             been_warned = self._check_wait_time(max_wait_time_s, start_wait_ns, been_warned)
 
     def _check_wait_time(self, max_wait_time_s: float, start_wait_ns: float, been_warned: bool) -> bool:

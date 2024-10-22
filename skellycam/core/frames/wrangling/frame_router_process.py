@@ -8,7 +8,7 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
-from skellycam.utilities.wait_functions import wait_100us
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class FrameRouterProcess:
         video_recorder_manager: Optional[VideoRecorderManager] = None
         try:
             while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
-                wait_100us()
+                wait_1ms()
 
                 # Check for incoming data
                 if frame_escape_pipe.poll():
@@ -104,3 +104,4 @@ class FrameRouterProcess:
 
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()
+            logger.debug(f"FrameRouter process completed")
