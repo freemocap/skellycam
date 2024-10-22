@@ -49,7 +49,8 @@ class CameraGroupOrchestrator:
 
     @property
     def cameras_ready(self):
-        self.ipc_flags.cameras_connected_flag.value =  all([triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
+        self.ipc_flags.cameras_connected_flag.value = all(
+            [triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
         return self.ipc_flags.cameras_connected_flag.value
 
     @property
@@ -89,8 +90,7 @@ class CameraGroupOrchestrator:
                 self.frame_loop_paused.value = False
                 self.await_cameras_ready()
             else:
-                return # Exit if we should not continue
-
+                return  # Exit if we should not continue
 
         # 0 - Make sure all cameras are ready
         logger.loop(f"FRAME  {self.loop_count} LOOP BEGIN")
@@ -130,7 +130,8 @@ class CameraGroupOrchestrator:
             f"**Frame Loop#{self.loop_count}** - Step #4 (finish) - All cameras have RETRIEVED the frame!")
 
         # 5 - Trigger should copy frame into shared memory
-        logger.loop(f"**Frame Loop#{self.loop_count}** - Step #5 (start) - Signaling should copy multi-frame into shared memory")
+        logger.loop(
+            f"**Frame Loop#{self.loop_count}** - Step #5 (start) - Signaling should copy multi-frame into shared memory")
         self._signal_should_put_frame_into_shm()
         wait_1ms()
         logger.loop(
@@ -144,9 +145,7 @@ class CameraGroupOrchestrator:
             f"**Frame Loop#{self.loop_count}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
         self._await_multi_frame_pulled_from_shm()
         wait_1ms()
-        logger.loop(
-            f"**Frame Loop#{self.loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
-
+        logger.loop(f"**Frame Loop#{self.loop_count}** - Step #6 (finish) - Multi-frame copied from shared memory!")
 
         # 7 - Make sure all the triggers are as they should be
         logger.loop(
@@ -166,7 +165,6 @@ class CameraGroupOrchestrator:
         for triggers in self.frame_loop_flags.values():
             triggers.frame_read_initialization_flag.value = True
 
-
     def await_cameras_ready(self):
         logger.trace("Waiting for all cameras to be ready...")
         while not all([triggers.camera_ready_flag.value for triggers in
@@ -174,16 +172,15 @@ class CameraGroupOrchestrator:
             wait_10ms()
         logger.debug("All cameras are ready!")
 
-
     def signal_multi_frame_pulled_from_shm(self):
         for triggers in self.frame_loop_flags.values():
             triggers.new_frame_in_shm.value = False
-        wait_1ms() # Give it a moment before final reset of this frame loop
+        wait_1ms()  # Give it a moment before final reset of this frame loop
         self.should_pull_multi_frame_from_shm.value = False
 
     def _await_initialization_flag_reset(self):
         logger.loop("Initial triggers set - waiting for all triggers to reset...")
-        while any([triggers.frame_read_initialization_flag.value for triggers in
+        while any([flags.frame_read_initialization_flag.value for flags in
                    self.frame_loop_flags.values()]) and self.should_continue:
             wait_1ms()
 
@@ -203,13 +200,13 @@ class CameraGroupOrchestrator:
     def _send_should_retrieve_frame_signal(self):
         logger.loop("Triggering all cameras to `retrieve` that frame...")
 
-        for camera_id, triggers in self.frame_loop_flags.items():
-            triggers.should_retrieve_frame_flag.value = True
+        for camera_id, flags in self.frame_loop_flags.items():
+            flags.should_retrieve_frame_flag.value = True
 
     def _signal_should_put_frame_into_shm(self):
         logger.loop("Triggering all cameras to copy the frame into shared memory...")
-        for camera_id, triggers in self.frame_loop_flags.items():
-            triggers.should_copy_frame_into_shm_flag.value = True
+        for camera_id, flags in self.frame_loop_flags.items():
+            flags.should_copy_frame_into_shm_flag.value = True
 
     def _signal_should_pull_multi_frame_from_shm(self):
         logger.loop("Signaling that the multi-frame is ready to be pulled from shared memory...")
@@ -223,22 +220,35 @@ class CameraGroupOrchestrator:
         if not self.cameras_ready:
             raise AssertionError("Not all cameras are ready!")
 
-    def _verify_hunky_dory_after_read(self):
-        if self.should_continue:
-            if not self.cameras_ready:
-                raise AssertionError("Not all cameras are ready!")
+    def _verify_hunky_dory_after_read(self, max_attempts=5):
+        are_cameras_ready = False
+        are_frame_grab_flags_reset = False
+        are_frame_retrieve_flags_reset = False
+        is_multi_frame_pulled_from_shm_reset = False
+        are_new_frames_available = False
+        for attempt_number in range(max_attempts):
+            if self.should_continue:
+                are_cameras_ready = self.cameras_ready
+                are_frame_grab_flags_reset = self.frames_grabbed
+                are_frame_retrieve_flags_reset = self.frames_retrieved
+                is_multi_frame_pulled_from_shm_reset = not self.should_pull_multi_frame_from_shm.value
+                are_camera_new_frame_available_flags_reset = not any(
+                    [flags.new_frame_in_shm.value for flags in self.frame_loop_flags.values()])
 
-            if not self.frames_grabbed:
-                raise AssertionError("`grab` triggers not reset!")
+                if all([are_cameras_ready,
+                        are_frame_grab_flags_reset,
+                        are_frame_retrieve_flags_reset,
+                        is_multi_frame_pulled_from_shm_reset,
+                        are_camera_new_frame_available_flags_reset]):
+                    logger.loop(f"Frame loop verification passed on attempt#{attempt_number + 1} of {max_attempts}")
+                    return  # All good, break out of loop
 
-            if not self.frames_retrieved:
-                raise AssertionError("`retrieve` triggers not reset!")
+                logger.warning(f"Frame loop verification failed on attempt {attempt_number + 1} - retrying...")
+                wait_1ms()
 
-            if self.should_pull_multi_frame_from_shm.value:
-                raise AssertionError(
-                    f"`should_pull_multi_frame_from_shm` not reset =  {self.should_pull_multi_frame_from_shm.value}")
-
-            if any_new := any([triggers.new_frame_in_shm.value for triggers in self.frame_loop_flags.values()]):
-                raise AssertionError(
-                    f"New frames available before finished with previous multi-frame? `new_frame_available_trigger`: {any_new}")
-
+        raise AssertionError(f"Frame loop verification failed after {max_attempts} attempts -[\n"
+                             f"are_cameras_ready: {are_cameras_ready}, \n"
+                             f"are_frame_grab_flags_reset: {are_frame_grab_flags_reset}, \n"
+                             f"are_frame_retrieve_flag_reset: {are_frame_retrieve_flags_reset}, \n"
+                             f"is_multi_frame_pulled_from_shm_flag_reset: {is_multi_frame_pulled_from_shm_reset}, \n"
+                             f"are_camera_new_frame_available_flags_reset: {are_new_frames_available}]\n")

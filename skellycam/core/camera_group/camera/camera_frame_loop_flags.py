@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 import time
+from dataclasses import dataclass
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -13,21 +14,18 @@ logger = logging.getLogger(__name__)
 MAX_WAIT_TIME_S = 600.0
 
 
-class CameraFrameLoopFlags(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+@dataclass
+class CameraFrameLoopFlags:
 
     camera_id: CameraId
-    camera_ready_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    frame_read_initialization_flag: multiprocessing.Value = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-    should_grab_frame_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    should_retrieve_frame_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    should_copy_frame_into_shm_flag: multiprocessing.Value = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-    new_frame_in_shm: multiprocessing.Value = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
 
-    close_self_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    camera_ready_flag: multiprocessing.Value
+    frame_read_initialization_flag: multiprocessing.Value
+    should_grab_frame_flag: multiprocessing.Value
+    should_retrieve_frame_flag: multiprocessing.Value
+    should_copy_frame_into_shm_flag: multiprocessing.Value
+    new_frame_in_shm: multiprocessing.Value
+    close_self_flag: multiprocessing.Value
 
     ipc_flags: IPCFlags
 
@@ -39,6 +37,15 @@ class CameraFrameLoopFlags(BaseModel):
         return cls(
             camera_id=camera_id,
             ipc_flags=ipc_flags,
+
+            camera_ready_flag=multiprocessing.Value('b', False),
+            frame_read_initialization_flag=multiprocessing.Value('b', False),
+            should_grab_frame_flag=multiprocessing.Value('b', False),
+            should_retrieve_frame_flag=multiprocessing.Value('b', False),
+            should_copy_frame_into_shm_flag=multiprocessing.Value('b', False),
+            new_frame_in_shm=multiprocessing.Value('b', False),
+            close_self_flag=multiprocessing.Value('b', False),
+
         )
 
     @property
