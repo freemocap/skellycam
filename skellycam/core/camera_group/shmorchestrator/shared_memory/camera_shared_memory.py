@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
+from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
 from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE

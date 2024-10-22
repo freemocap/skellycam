@@ -5,7 +5,8 @@ from typing import Dict, Optional, List
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory, GroupSharedMemoryNames
+from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory import GroupSharedMemoryNames, \
+    CameraSharedMemory
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)

@@ -5,8 +5,8 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory, \
-    CameraGroupSharedMemoryDTO
+from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory_manager import \
+    CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
 
 logger = logging.getLogger(__name__)
 

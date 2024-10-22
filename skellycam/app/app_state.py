@@ -12,7 +12,8 @@ from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory_manager import \
+    CameraGroupSharedMemory
 from skellycam.core.detection.camera_device_info import AvailableDevices, available_devices_to_default_camera_configs
 from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
 
