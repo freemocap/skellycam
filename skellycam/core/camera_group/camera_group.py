@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
+from pydantic.v1 import UUID4
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
@@ -16,11 +17,12 @@ class CameraGroup(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     dto: CameraGroupDTO
-    camera_group_process: Optional[CameraGroupProcess] = None
+    camera_group_process: CameraGroupProcess
+    group_uuid: str
 
     @classmethod
     def create(cls, dto: CameraGroupDTO):
-        return cls(dto=dto, camera_group_process=CameraGroupProcess(dto=dto))
+        return cls(dto=dto, camera_group_process=CameraGroupProcess(dto=dto), group_uuid=dto.group_uuid)
 
     @property
     def camera_ids(self) -> list[CameraId]:
@@ -29,6 +31,10 @@ class CameraGroup(BaseModel):
     @property
     def camera_configs(self) -> CameraConfigs:
         return self.dto.camera_configs
+
+    @property
+    def uuid(self) -> str:
+        return self.group_uuid
 
     def start(self):
         logger.info("Starting camera group")

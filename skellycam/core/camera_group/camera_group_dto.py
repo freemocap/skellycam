@@ -1,5 +1,6 @@
 import multiprocessing
 from dataclasses import dataclass
+from uuid import uuid4
 
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
@@ -12,10 +13,10 @@ class CameraGroupDTO:
     camera_configs: CameraConfigs
     shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO
     ipc_queue: multiprocessing.Queue
-    config_update_queue = multiprocessing.Queue()  # Update camera configs
-
     ipc_flags: IPCFlags
 
+    config_update_queue = multiprocessing.Queue()  # Update camera configs
+    group_uuid: str
     _lock = multiprocessing.Lock()
 
     @property

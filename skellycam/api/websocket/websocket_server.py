@@ -88,6 +88,7 @@ class WebsocketServer:
         logger.info(
             f"Starting frontend image payload relay...")
         mf_payload: Optional[MultiFramePayload] = None
+        camera_group_uuid = None
         latest_mf_number = -1
         try:
             while True:
@@ -96,6 +97,11 @@ class WebsocketServer:
                     await async_wait_1ms()
                     mf_payload = None
                     continue
+
+                if self._app_state.camera_group and camera_group_uuid != self._app_state.camera_group.uuid:
+                    latest_mf_number = -1
+                    mf_payload = None
+                    camera_group_uuid = self._app_state.camera_group.uuid
 
                 if not self._app_state.camera_group_shm.latest_mf_number.value > latest_mf_number:
                     await async_wait_1ms()

@@ -225,7 +225,7 @@ class CameraGroupOrchestrator:
         are_frame_grab_flags_reset = False
         are_frame_retrieve_flags_reset = False
         is_multi_frame_pulled_from_shm_reset = False
-        are_new_frames_available = False
+        are_camera_new_frame_available_flags_reset = False
         for attempt_number in range(max_attempts):
             if self.should_continue:
                 are_cameras_ready = self.cameras_ready
@@ -251,4 +251,4 @@ class CameraGroupOrchestrator:
                              f"are_frame_grab_flags_reset: {are_frame_grab_flags_reset}, \n"
                              f"are_frame_retrieve_flag_reset: {are_frame_retrieve_flags_reset}, \n"
                              f"is_multi_frame_pulled_from_shm_flag_reset: {is_multi_frame_pulled_from_shm_reset}, \n"
-                             f"are_camera_new_frame_available_flags_reset: {are_new_frames_available}]\n")
+                             f"are_camera_new_frame_available_flags_reset: {are_camera_new_frame_available_flags_reset}]\n")

@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -35,7 +36,6 @@ class AppState(BaseModel):
     def create(cls, global_kill_flag: multiprocessing.Value):
         return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag))
 
-
     @property
     def orchestrator(self) -> CameraGroupOrchestrator:
         return self.shmorchestrator.orchestrator
@@ -43,7 +43,6 @@ class AppState(BaseModel):
     @property
     def camera_group_shm(self) -> CameraGroupSharedMemory:
         return self.shmorchestrator.shm
-
 
     @property
     def camera_group_configs(self) -> Optional[CameraConfigs]:
@@ -53,31 +52,35 @@ class AppState(BaseModel):
             return available_devices_to_default_camera_configs(self.available_devices)
         return self.camera_group.camera_configs
 
-
-    def set_available_devices(self, value:AvailableDevices):
+    def set_available_devices(self, value: AvailableDevices):
         self.available_devices = value
         self.ipc_queue.put(self.state_dto())
 
-    def create_camera_group(self):
+    def create_camera_group(self, camera_configs: Optional[CameraConfigs] = None):
+        if camera_configs is None:
+            camera_configs = self.camera_group_configs
         if self.available_devices is None:
             raise ValueError("Cannot get CameraConfigs without available devices!")
-        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=self.camera_group_configs,
-                                                                           ipc_flags=self.ipc_flags,
-                                                                           read_only=True)
+        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=camera_configs,
+                                                                          ipc_flags=self.ipc_flags,
+                                                                          read_only=True)
         self.camera_group = CameraGroup.create(dto=CameraGroupDTO(shmorc_dto=self.shmorchestrator.to_dto(),
-                                                                   camera_configs=self.camera_group_configs,
-                                                                   ipc_queue=self.ipc_queue,
-                                                                   ipc_flags=self.ipc_flags)
-                                                )
+                                                                  camera_configs=camera_configs,
+                                                                  ipc_queue=self.ipc_queue,
+                                                                  ipc_flags=self.ipc_flags,
+                                                                  group_uuid=str(uuid4())
+                                                                  )
+                                               )
+
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 
     def update_camera_group(self,
-                                  camera_configs: CameraConfigs,
-                                  update_instructions: UpdateInstructions):
+                            camera_configs: CameraConfigs,
+                            update_instructions: UpdateInstructions):
         if self.camera_group is None:
             raise ValueError("Cannot update CameraGroup if it does not exist!")
         self.camera_group.update_camera_configs(camera_configs=camera_configs,
-                                                       update_instructions=update_instructions)
+                                                update_instructions=update_instructions)
 
     def close_camera_group(self):
         if self.camera_group is None:
@@ -127,5 +130,3 @@ class AppStateDTO(BaseModel):
             current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
         )
-
-

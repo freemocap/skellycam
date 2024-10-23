@@ -89,7 +89,7 @@ class AppController(BaseModel):
             if self.app_state.camera_group:  # if `connect/` called w/o configs, reset existing connection
                 self.app_state.close_camera_group()
 
-            self.app_state.create_camera_group()
+            self.app_state.create_camera_group(camera_configs=camera_configs)
             self.app_state.camera_group.start()
             logger.info("Camera group started")
         except Exception as e:

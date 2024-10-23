@@ -6,13 +6,10 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
+from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
 
 
-# NOTE - As of 2024-09-22, this class is not used in the codebase. It's kinda neat and should work though
-# and might be useful at some point, so we'll keep it around ^_^
-
-class SharedMemoryIndexedArrayDTO(BaseModel):
+class SharedMemoryRingBufferDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     array_size: int
     shm_element_shape: Tuple[int, ...]
@@ -22,7 +19,7 @@ class SharedMemoryIndexedArrayDTO(BaseModel):
     last_read_index: Synchronized
 
 
-class SharedMemoryIndexedArray(BaseModel):
+class SharedMemoryRingBuffer(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     array_size: int
     shm_element_shape: Tuple[int, ...]
@@ -35,7 +32,7 @@ class SharedMemoryIndexedArray(BaseModel):
     def from_camera_configs(cls,
                             camera_configs: CameraConfigs):
         return cls.create(
-            shm_element_shape=(camera_configs.keys(), *camera_configs.image_shape),
+            shm_element_shape=camera_configs.image_shape,
             dtype=np.uint8,
             array_size=100
         )
@@ -60,7 +57,7 @@ class SharedMemoryIndexedArray(BaseModel):
 
     @classmethod
     def recreate_from_dto(cls,
-                          dto: SharedMemoryIndexedArrayDTO):
+                          dto: SharedMemoryRingBufferDTO):
         dtype = cls._ensure_dtype(dto.dtype)
         shm_elements = [SharedMemoryElement.recreate(shm_name, dto.shm_element_shape, dtype) for shm_name in
                         dto.shm_element_names]
@@ -72,8 +69,8 @@ class SharedMemoryIndexedArray(BaseModel):
                    last_written_index=dto.last_written_index,
                    last_read_index=dto.last_read_index)
 
-    def to_dto(self) -> SharedMemoryIndexedArrayDTO:
-        return SharedMemoryIndexedArrayDTO(
+    def to_dto(self) -> SharedMemoryRingBufferDTO:
+        return SharedMemoryRingBufferDTO(
             array_size=self.array_size,
             shm_element_shape=self.shm_element_shape,
             dtype=self.dtype,
@@ -135,3 +132,77 @@ class SharedMemoryIndexedArray(BaseModel):
     def close_and_unlink(self):
         self.close()
         self.unlink()
+
+if __name__ == "__main__":
+
+    import multiprocessing
+    import numpy as np
+    from time import sleep
+
+
+    def writer_process(ring_buffer: SharedMemoryRingBuffer,
+                       num_payloads: int,
+                       payload_shape: Tuple[int, int],
+                       dtype: np.dtype):
+        for i in range(num_payloads):
+            # Create test data
+            data = np.full(payload_shape, i, dtype=dtype)
+            try:
+                ring_buffer.put_payload(data)
+                print(f"Writer: Written payload {i}")
+            except ValueError as e:
+                print(f"Writer: {e}")
+                # Sleep to simulate waiting for the reader to catch up
+                sleep(0.1)
+
+
+    def reader_process(ring_buffer: SharedMemoryRingBuffer, num_payloads: int):
+        read_data = []
+        for _ in range(num_payloads):
+            try:
+                data = ring_buffer.get_next_payload()
+                read_data.append(data)
+                print(f"Reader: Read payload with max value {data.max()}")
+            except ValueError as e:
+                print(f"Reader: {e}")
+                # Sleep to simulate waiting for the writer to catch up
+                sleep(0.1)
+        return read_data
+
+
+    def test_shared_memory_ring_buffer_multiprocess():
+        # Define parameters
+        array_size = 5
+        num_payloads = 100
+        payload_shape = (100, 100)
+        dtype = np.uint8
+
+        # Create a ring buffer
+        ring_buffer = SharedMemoryRingBuffer.create(
+            shm_element_shape=payload_shape,
+            dtype=dtype,
+            array_size=array_size
+        )
+
+        # Start writer and reader processes
+        writer = multiprocessing.Process(target=writer_process, args=(ring_buffer,
+                                                                      num_payloads,
+                                                                      payload_shape,
+                                                                      dtype))
+        reader = multiprocessing.Process(target=reader_process, args=(ring_buffer,
+                                                                      num_payloads))
+
+        try:
+            writer.start()
+            reader.start()
+
+            writer.join()
+            reader.join()
+
+            print("Multi-process test completed.")
+        except Exception as e:
+            print(f"Test failed: {e}")
+        finally:
+            # Clean up shared memory
+            ring_buffer.close_and_unlink()
+

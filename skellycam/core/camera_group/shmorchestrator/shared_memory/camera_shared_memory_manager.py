@@ -24,8 +24,8 @@ class CameraGroupSharedMemoryDTO:
 class CameraGroupSharedMemory:
     camera_configs: CameraConfigs
     camera_shms: Dict[CameraId, CameraSharedMemory]
-    shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", True)
-    latest_mf_number: multiprocessing.Value = multiprocessing.Value("l", -1)
+    shm_valid_flag: multiprocessing.Value
+    latest_mf_number: multiprocessing.Value
 
     @classmethod
     def create(cls, camera_configs: CameraConfigs, read_only: bool = False):
@@ -33,7 +33,9 @@ class CameraGroupSharedMemory:
                        for camera_id, config in camera_configs.items()}
 
         return cls(camera_configs=camera_configs,
-                   camera_shms=camera_shms)
+                   camera_shms=camera_shms,
+                   shm_valid_flag=multiprocessing.Value('b', True),
+                   latest_mf_number=multiprocessing.Value("l", -1))
 
     @classmethod
     def recreate(cls,

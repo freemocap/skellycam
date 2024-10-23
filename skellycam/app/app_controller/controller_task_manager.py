@@ -5,7 +5,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-class ControllerThreadManager:
+class ControllerTaskManager:
     def __init__(self):
         self.executor = ThreadPoolExecutor()
         self._connect_to_cameras_task: Optional[Future] = None

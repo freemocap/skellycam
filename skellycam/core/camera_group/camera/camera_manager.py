@@ -21,30 +21,30 @@ class CameraManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     orchestrator: CameraGroupOrchestrator
-    camera_group_dto: CameraGroupDTO
+    dto: CameraGroupDTO
     camera_processes: Dict[CameraId, CameraProcess]
 
     @classmethod
     def create(cls,
-               camera_group_dto: CameraGroupDTO):
+               dto: CameraGroupDTO):
 
-        return cls(camera_group_dto=camera_group_dto,
-                   orchestrator=camera_group_dto.shmorc_dto.camera_group_orchestrator,
+        return cls(dto=dto,
+                   orchestrator=dto.shmorc_dto.camera_group_orchestrator,
                    camera_processes={camera_id: CameraProcess.create(camera_id=camera_id,
-                                                                     dto=camera_group_dto,
+                                                                     dto=dto,
                                                                      ) for camera_id in
-                                     camera_group_dto.camera_ids},
+                                     dto.camera_ids},
                    )
 
     @property
     def camera_ids(self):
-        return self.camera_group_dto.camera_ids
+        return self.dto.camera_ids
 
     def start(self):
-        logger.info(f"Starting cameras: {list(self.camera_group_dto.camera_configs.keys())}")
+        logger.info(f"Starting cameras: {list(self.dto.camera_configs.keys())}")
 
         [camera.start() for camera in self.camera_processes.values()]
-
+        self.dto.shmorc_dto.camera_group_orchestrator.await_cameras_ready()
         self.camera_group_frame_loop()
         logger.success(f"Cameras {self.camera_ids} frame loop ended.")
 
@@ -57,19 +57,19 @@ class CameraManager(BaseModel):
 
             logger.debug(f"Starting camera trigger loop for cameras: {self.camera_ids}...")
 
-            while not self.camera_group_dto.ipc_flags.global_kill_flag.value and not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value:
+            while not self.dto.ipc_flags.global_kill_flag.value and not self.dto.ipc_flags.kill_camera_group_flag.value:
 
                 tik = time.perf_counter_ns()
                 # Trigger all cameras to read a frame
                 self.orchestrator.trigger_multi_frame_read()
 
                 # Check for new camera configs
-                if self.camera_group_dto.config_update_queue.qsize() > 0:
+                if self.dto.config_update_queue.qsize() > 0:
                     logger.trace(
                         f"Config update queue has items, pausing frame loop to update configs")
                     self.orchestrator.pause_loop()
 
-                    update_instructions = self.camera_group_dto.config_update_queue.get()
+                    update_instructions = self.dto.config_update_queue.get()
 
                     self.update_camera_configs(update_instructions)
                     self.orchestrator.unpause_loop()
@@ -81,7 +81,7 @@ class CameraManager(BaseModel):
             logger.debug(f"Multi-camera trigger loop for cameras: {self.camera_ids}  ended")
             wait_10ms()
             log_time_stats(
-                camera_configs=self.camera_group_dto.camera_configs,
+                camera_configs=self.dto.camera_configs,
                 elapsed_per_loop_ns=elapsed_per_loop_ns,
             )
         finally:
@@ -90,7 +90,7 @@ class CameraManager(BaseModel):
 
     def close(self):
         logger.info(f"Stopping cameras: {self.camera_ids}")
-        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value and not self.camera_group_dto.ipc_flags.global_kill_flag.value:
+        if not self.dto.ipc_flags.kill_camera_group_flag.value and not self.dto.ipc_flags.global_kill_flag.value:
             raise ValueError("Camera manager should only be closed after global kill flag is set")
         self._close_cameras()
 

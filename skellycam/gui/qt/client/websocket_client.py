@@ -118,17 +118,17 @@ class WebSocketClient(QWidget):
             fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
             self.new_frontend_payload_available.emit(fe_payload)
         elif payload['type'] == RecordingInfo.__name__:
-            logger.gui(f"Received RecordingInfo object: {payload}")
+            logger.gui(f"Received RecordingInfo object")
             self.new_recording_info_available.emit(RecordingInfo(**payload))
         elif payload['type'] == AppStateDTO.__name__:
-            logger.gui(f"Received AppStateDTO object: {payload}")
+            logger.gui(f"Received AppStateDTO object")
             self.new_app_state_available.emit(AppStateDTO(**payload))
         elif payload['type'] == CurrentFrameRate.__name__:
-            logger.gui(f"Received CurrentFrameRate object: {payload}")
+            logger.gui(f"Received CurrentFrameRate object")
             self.new_framerate_info_available.emit(CurrentFrameRate(**payload))
         else:
-            logger.error(f"Received unrecognized payload: {payload}")
-            raise ValueError(f"Received unrecognized payload: {payload}")
+            logger.error(f"Received unrecognized payload")
+            raise ValueError(f"Received unrecognized payload")
 
     def close(self):
         logger.info("Closing WebSocket client")

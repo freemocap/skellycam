@@ -94,13 +94,13 @@ class CameraFrameLoopFlags:
         if time_waited_s > max_wait_time_s * .01 and not been_warned:
             been_warned = True
             logger.warning(
-                f"Camera {self.camera_id} process hit half-way point waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
+                f"Camera {self.camera_id} process  waiting for {time_waited_s} seconds:"
                 f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
                 f"self.should_continue={self.should_continue}")
 
         if time_waited_s > max_wait_time_s:
             raise TimeoutError(
-                f"Camera {self.camera_id} process timed out waiting for `grab_frame_trigger` for {time_waited_s} seconds:"
+                f"Camera {self.camera_id} process timed out after waiting for {time_waited_s} seconds:"
                 f" self.grab_frame_trigger.value={self.should_grab_frame_flag.value}, "
                 f"self.should_continue={self.should_continue}")
         return been_warned
