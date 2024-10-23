@@ -72,7 +72,8 @@ class FrameRouterProcess:
                     mf_payload = mf_payloads_to_process.popleft()
                     if dto.ipc_flags.record_frames_flag.value:
                         if not video_recorder_manager:
-                            video_recorder_manager = VideoRecorderManager.create(camera_configs=dto.camera_configs,
+                            video_recorder_manager = VideoRecorderManager.create(multi_frame_payload=mf_payload,
+                                                                                 camera_configs=dto.camera_configs,
                                                                                  recording_folder=get_default_recording_folder_path(
                                                                                      tag=""))
                             dto.ipc_queue.put(video_recorder_manager.recording_info)
@@ -100,7 +101,7 @@ class FrameRouterProcess:
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             if not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
-                raise ValueError("FrameRouter should only be closed after global kill flag is set")
+                logger.warning("FrameRouter should only be closed after global kill flag is set")
 
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()

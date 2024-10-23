@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
@@ -30,14 +30,14 @@ class FrontendFramePayload(BaseModel):
     def camera_ids(self):
         return list(self.jpeg_images.keys())
 
-    def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayloadDTO]:
+    def get_frame_by_camera_id(self, camera_id: CameraId) -> Optional[FramePayload]:
         if camera_id not in self.jpeg_images:
             return None
         jpeg_image = self.jpeg_images[camera_id]
         if jpeg_image is None:
             return None
         metadata = self.metadata[camera_id]
-        return FramePayloadDTO.from_jpeg_image(jpeg_image=jpeg_image, metadata=metadata)
+        return FramePayload.from_jpeg_image(jpeg_image=jpeg_image, metadata=metadata)
 
     @classmethod
     def from_multi_frame_payload(cls,
@@ -72,7 +72,7 @@ class FrontendFramePayload(BaseModel):
                    camera_configs = multi_frame_payload.camera_configs)
 
     @staticmethod
-    def _resize_image(frame: FramePayloadDTO,
+    def _resize_image(frame: FramePayload,
                       image_sizes: Dict[CameraId, Dict[str, int]],
                       fallback_resize_ratio: float) -> np.ndarray:
             # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
@@ -144,7 +144,7 @@ class FrontendFramePayload(BaseModel):
         return out_str
 
 
-def annotate_image(frame: FramePayloadDTO,
+def annotate_image(frame: FramePayload,
                    image: np.ndarray) -> np.ndarray:
     annotation_text = [
         f"Camera ID: {frame.camera_id}",

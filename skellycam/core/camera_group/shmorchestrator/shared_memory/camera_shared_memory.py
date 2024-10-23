@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 
@@ -85,14 +85,14 @@ class CameraSharedMemory(BaseModel):
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} put frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} into shared memory"
         )
 
-    def retrieve_frame(self) -> FramePayloadDTO:
+    def retrieve_frame(self) -> FramePayload:
         image = self.image_shm.copy_from_buffer()
         metadata = self.metadata_shm.copy_from_buffer()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
-        return FramePayloadDTO.create(image=image, metadata=metadata)
+        return FramePayload.create(image=image, metadata=metadata)
 
     def close(self):
         self.image_shm.close()

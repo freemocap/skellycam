@@ -15,7 +15,7 @@ class CameraGroupDTO:
     ipc_queue: multiprocessing.Queue
     ipc_flags: IPCFlags
 
-    config_update_queue = multiprocessing.Queue()  # Update camera configs
+    config_update_queue: multiprocessing.Queue
     group_uuid: str
     _lock = multiprocessing.Lock()
 

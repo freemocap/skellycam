@@ -96,8 +96,7 @@ class CameraProcess:
                 logger.loop(f"FCamera {camera_id} awaiting `initialization` trigger for frame loop# {frame_number}")
                 frame_loop_flags.await_initialization_signal()
                 frame_metadata = create_empty_frame_metadata(camera_id=camera_id,
-                                                             frame_number=frame_number,
-                                                             camera_config=config)
+                                                             frame_number=frame_number)
                 frame_number = get_frame(
                     camera_id=config.camera_id,
                     cap=cv2_video_capture,

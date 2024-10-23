@@ -57,6 +57,7 @@ class VideoRecorderManager(BaseModel):
 
     @classmethod
     def create(cls,
+               multi_frame_payload: MultiFramePayload,
                camera_configs: CameraConfigs,
                recording_folder: str):
 
@@ -66,7 +67,8 @@ class VideoRecorderManager(BaseModel):
         videos_folder = str(Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
         video_recorders = {}
         for camera_id, config in camera_configs.items():
-            video_recorders[camera_id] = VideoRecorder.create(recording_name=recording_name,
+            video_recorders[camera_id] = VideoRecorder.create(frame=multi_frame_payload.get_frame(camera_id),
+                                                              recording_name=recording_name,
                                                               videos_folder=videos_folder,
                                                               config=camera_configs[camera_id],
                                                               )

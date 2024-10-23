@@ -82,7 +82,7 @@ class FrameListenerProcess:
         finally:
             logger.trace(f"Stopped listening for multi-frames")
             if not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
-                raise ValueError("FrameListenerProcess was closed before the camera group kill flag was set.")
+                logger.warning("FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
 
     def is_alive(self) -> bool:
         return self._process.is_alive()

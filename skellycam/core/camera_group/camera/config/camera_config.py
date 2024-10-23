@@ -119,21 +119,12 @@ class CameraConfig(BaseModel):
 
     @property
     def image_size_bytes(self) -> int:
-        return self.resolution.height * self.resolution.width * self.color_channels * BYTES_PER_MONO_PIXEL
+        return self.resolution.width * self.resolution.height * self.color_channels * BYTES_PER_MONO_PIXEL
 
     @property
     def video_file_extension(self) -> str:
         return get_video_file_type(cv2.VideoWriter_fourcc(*self.writer_fourcc))
 
-    @property
-    def video_frame_shape(self) -> Tuple[int, int]:
-        """
-        Returns the shape of the video frame after applying rotation.
-        """
-        if self.rotation in {RotationTypes.CLOCKWISE_90, RotationTypes.COUNTERCLOCKWISE_90}:
-            return self.resolution.height, self.resolution.width
-        else:
-            return self.resolution.width, self.resolution.height
 
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
@@ -147,7 +138,6 @@ class CameraConfig(BaseModel):
         out_str += f"\torientation: {self.orientation}\n"
         out_str += f"\timage_shape: {self.image_shape}\n"
         out_str += f"\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
-        out_str += f"\tvideo_frame_shape: {self.video_frame_shape}"
         return out_str
 
 

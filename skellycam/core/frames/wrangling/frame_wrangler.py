@@ -10,7 +10,7 @@ from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProc
 logger = logging.getLogger(__name__)
 
 
-class FrameWrangler(BaseModel):
+class  FrameWrangler(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     dto: CameraGroupDTO

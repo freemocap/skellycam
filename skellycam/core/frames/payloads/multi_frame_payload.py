@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
-from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
@@ -17,7 +17,7 @@ from skellycam.utilities.rotate_image import rotate_image
 
 class MultiFramePayload(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    frames: Dict[CameraId, Optional[FramePayloadDTO]]
+    frames: Dict[CameraId, Optional[FramePayload]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
     multi_frame_number: int = 0
@@ -61,16 +61,21 @@ class MultiFramePayload(BaseModel):
         ret.append(b"END")
         return ret
 
-    def add_frame(self, frame_dto: FramePayloadDTO) -> None:
+    def add_frame(self, frame_dto: FramePayload) -> None:
         camera_id = frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
         self.lifespan_timestamps_ns.append({
             f"add_camera_{camera_id}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}": time.perf_counter_ns()})
         self.frames[camera_id] = frame_dto
 
-    def get_frame(self, camera_id: CameraId, rotate: bool = True) -> Optional[FramePayloadDTO]:
-        frame = self.frames[camera_id]
+    def get_frame(self, camera_id: CameraId, rotate: bool = True, return_copy:bool=True) -> Optional[FramePayload]:
+
+        if return_copy:
+            frame = self.frames[camera_id].model_copy()
+        else:
+            frame = self.frames[camera_id]
+
         if frame is None:
-            return
+            raise ValueError(f"Cannot get frame for camera_id {camera_id} from MultiFramePayloadDTO, frame is None")
 
         if rotate and not self.camera_configs[camera_id].rotation == RotationTypes.NO_ROTATION:
             frame.image = rotate_image(frame.image, self.camera_configs[camera_id].rotation)
@@ -92,7 +97,7 @@ class MultiFramePayload(BaseModel):
             if data.pop(0) != b"FRAME-END":
                 raise ValueError(
                     f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-END', got {popped}")
-            frame = FramePayloadDTO.from_bytes_list(frame_list)
+            frame = FramePayload.from_bytes_list(frame_list)
             frames[frame.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]] = frame
 
         return cls(frames=frames, **metadata)

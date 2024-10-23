@@ -10,22 +10,37 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
 IMAGE_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB #TODO - optimize this bad boi
 
 
-class FramePayloadDTO(BaseModel):
+class FramePayload(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     image: np.ndarray
     metadata: np.ndarray
 
-    def to_bytes_list(self) -> List[Any]:
-        ret = [self._shape_to_bytes(self.image.shape),
-               b"IMAGE-START", ]
-        ret.extend(self._split_bytestring_by_size(self.image.tobytes()))
-        return ret + [
-            b"IMAGE-END",
-            self.metadata.tobytes()]
+    @property
+    def camera_id(self):
+        return self.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
+
+    @property
+    def frame_number(self):
+        return self.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
+
+    @property
+    def height(self):
+        return self.image.shape[0]
+
+    @property
+    def width(self):
+        return self.image.shape[1]
 
     @classmethod
-    def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayloadDTO':
+    def create(cls, image: np.ndarray, metadata: np.ndarray):
+        return cls(image=image,
+                   image_shape=image.shape,
+                   metadata=metadata,
+                   metadata_shape=metadata.shape)
+
+    @classmethod
+    def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayload':
         image_shape = cls._bytes_to_shape(bytes_list.pop(0), 3)
         popped = bytes_list.pop(0)
         if popped != b"IMAGE-START":
@@ -48,12 +63,13 @@ class FramePayloadDTO(BaseModel):
                    metadata=metadata,
                    image_shape=image_shape)
 
-    @classmethod
-    def create(cls, image: np.ndarray, metadata: np.ndarray):
-        return cls(image=image,
-                   image_shape=image.shape,
-                   metadata=metadata,
-                   metadata_shape=metadata.shape)
+    def to_bytes_list(self) -> List[Any]:
+        ret = [self._shape_to_bytes(self.image.shape),
+               b"IMAGE-START", ]
+        ret.extend(self._split_bytestring_by_size(self.image.tobytes()))
+        return ret + [
+            b"IMAGE-END",
+            self.metadata.tobytes()]
 
     @staticmethod
     def _shape_to_bytes(shape: Tuple[int, ...]) -> bytes:
@@ -71,23 +87,9 @@ class FramePayloadDTO(BaseModel):
     def _reconstruct_bytestring(chunks: list[bytes]) -> bytes:
         return b''.join(chunks)
 
-    @property
-    def camera_id(self):
-        return self.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
 
-    @property
-    def frame_number(self):
-        return self.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
 
-    @property
-    def height(self):
-        return self.image.shape[0]
-
-    @property
-    def width(self):
-        return self.image.shape[1]
-
-    def __eq__(self, other: "FramePayloadDTO"):
+    def __eq__(self, other: "FramePayload"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
 
     def __str__(self):

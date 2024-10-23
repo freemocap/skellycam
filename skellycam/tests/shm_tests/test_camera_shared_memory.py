@@ -6,7 +6,7 @@ from skellycam.core import IMAGE_DATA_DTYPE
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
 from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
-from skellycam.core.frames.payloads.frame_payload_dto import FramePayloadDTO
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
 
@@ -47,7 +47,7 @@ def test_put_and_retrieve_frame(camera_config_fixture: CameraConfig,
     frame_metadata_fixture[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_config_fixture.camera_id
     camera_shm.put_new_frame(image=image, metadata=frame_metadata_fixture)
     frame_dto = camera_shm.retrieve_frame()
-    assert isinstance(frame_dto, FramePayloadDTO)
+    assert isinstance(frame_dto, FramePayload)
     assert np.array_equal(frame_dto.image, image)
     assert frame_dto.metadata.shape == FRAME_METADATA_SHAPE
     assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE
@@ -97,7 +97,7 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
                                                        shared_memory_names=shm_names)
     frame_dto = recreated_camera_shm.retrieve_frame()
 
-    assert isinstance(frame_dto, FramePayloadDTO)
+    assert isinstance(frame_dto, FramePayload)
     assert np.array_equal(frame_dto.image, image)
     assert frame_dto.metadata.shape == FRAME_METADATA_SHAPE
     assert frame_dto.metadata.dtype == FRAME_METADATA_DTYPE

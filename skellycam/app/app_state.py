@@ -68,6 +68,7 @@ class AppState(BaseModel):
                                                                   camera_configs=camera_configs,
                                                                   ipc_queue=self.ipc_queue,
                                                                   ipc_flags=self.ipc_flags,
+                                                                  config_update_queue=multiprocessing.Queue(),
                                                                   group_uuid=str(uuid4())
                                                                   )
                                                )

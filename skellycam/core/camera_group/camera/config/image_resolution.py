@@ -10,10 +10,10 @@ class ImageResolution(BaseModel):
     @classmethod
     def from_string(cls, tuple_str: str, delimiter: str = "x") -> "ImageResolution":
         """
-        Create a `VideoResolution` from a string like "(720, 1280)"
+        Create a `VideoResolution` from a string like "(720x1280)" or "(1080x1920)" consistent with  rows-by-columns
         """
         height, width = tuple_str.replace("(", "").replace(")", "").split(delimiter)
-        return cls(width=int(width), height=int(height))
+        return cls(height=int(height), width=int(width))
 
     @property
     def orientation(self) -> str:
@@ -30,10 +30,10 @@ class ImageResolution(BaseModel):
 
     @property
     def as_tuple(self) -> tuple:
-        return self.height, self.width
+        return self.width, self.height
 
     def __hash__(self) -> Hashable:
-        return hash((self.width, self.height))
+        return hash((self.height, self.width))
 
     def __lt__(self, other: object) -> bool:
         """
