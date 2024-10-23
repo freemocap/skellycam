@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory import GroupSharedMemoryNames, \
     CameraSharedMemory
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CameraGroupSharedMemoryDTO:
-    camera_configs: CameraConfigs
+    camera_group_dto: CameraGroupDTO
     group_shm_names: GroupSharedMemoryNames
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
@@ -22,35 +23,36 @@ class CameraGroupSharedMemoryDTO:
 
 @dataclass
 class CameraGroupSharedMemory:
-    camera_configs: CameraConfigs
+    camera_group_dto: CameraGroupDTO
     camera_shms: Dict[CameraId, CameraSharedMemory]
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
 
     @classmethod
-    def create(cls, camera_configs: CameraConfigs, read_only: bool = False):
+    def create(cls, camera_group_dto:CameraGroupDTO, read_only: bool = False):
         camera_shms = {camera_id: CameraSharedMemory.create(camera_config=config, read_only=read_only)
-                       for camera_id, config in camera_configs.items()}
+                       for camera_id, config in camera_group_dto.camera_configs.items()}
 
-        return cls(camera_configs=camera_configs,
+        return cls(camera_group_dto=camera_group_dto,
                    camera_shms=camera_shms,
                    shm_valid_flag=multiprocessing.Value('b', True),
                    latest_mf_number=multiprocessing.Value("l", -1))
 
     @classmethod
     def recreate(cls,
-                 dto: CameraGroupSharedMemoryDTO,
+                 camera_group_dto: CameraGroupDTO,
+                 shm_dto: CameraGroupSharedMemoryDTO,
                  read_only: bool):
         camera_shms = {camera_id: CameraSharedMemory.recreate(camera_config=config,
-                                                              shared_memory_names=dto.group_shm_names[
+                                                              shared_memory_names=shm_dto.group_shm_names[
                                                                   camera_id],
                                                               read_only=read_only)
-                       for camera_id, config in dto.camera_configs.items()}
+                       for camera_id, config in  camera_group_dto.camera_configs.items()}
 
-        return cls(camera_configs=dto.camera_configs,
+        return cls(camera_group_dto=camera_group_dto,
                    camera_shms=camera_shms,
-                   shm_valid_flag=dto.shm_valid_flag,
-                   latest_mf_number=dto.latest_mf_number)
+                   shm_valid_flag=shm_dto.shm_valid_flag,
+                   latest_mf_number=shm_dto.latest_mf_number)
 
     @property
     def shared_memory_names(self) -> GroupSharedMemoryNames:
@@ -59,27 +61,28 @@ class CameraGroupSharedMemory:
 
     @property
     def camera_ids(self) -> List[CameraId]:
-        return list(self.camera_shms.keys())
+        return list(self.camera_group_dto.camera_ids.keys())
 
     @property
     def valid(self) -> bool:
         return self.shm_valid_flag.value
 
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
-        return CameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
+        return CameraGroupSharedMemoryDTO(camera_group_dto=self.camera_group_dto,
                                           group_shm_names=self.shared_memory_names,
                                           shm_valid_flag=self.shm_valid_flag,
                                           latest_mf_number=self.latest_mf_number)
 
     def get_multi_frame_payload(self,
-                                previous_payload: Optional[MultiFramePayload]
+                                previous_payload: Optional[MultiFramePayload],
+                                camera_configs: CameraConfigs
                                 ) -> MultiFramePayload:
 
         if previous_payload is None:
-            payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=self.camera_configs)
+            payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
         else:
             payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
-                                                                         camera_configs=self.camera_configs)
+                                                                         camera_configs=camera_configs)
 
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")

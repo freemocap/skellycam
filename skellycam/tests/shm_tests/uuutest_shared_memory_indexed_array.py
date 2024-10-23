@@ -3,7 +3,6 @@ import time
 from typing import List
 
 import numpy as np
-
 from skellycam.core.camera_group.shmorchestrator.shared_memory_indexed_array import SharedMemoryIndexedArrayDTO, \
     SharedMemoryIndexedArray
 

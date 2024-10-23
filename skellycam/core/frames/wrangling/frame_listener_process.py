@@ -5,7 +5,8 @@ from collections import deque
 from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
+from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+    CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.timestamps.framerate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_1ms
@@ -16,13 +17,17 @@ logger = logging.getLogger(__name__)
 class FrameListenerProcess:
     def __init__(
             self,
-            dto: CameraGroupDTO,
+            camera_group_dto: CameraGroupDTO,
+            shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
+            new_configs_queue: multiprocessing.Queue,
             frame_escape_pipe: multiprocessing.Pipe,
 
     ):
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
-                                                args=(dto,
+                                                args=(camera_group_dto,
+                                                      shmorc_dto,
+                                                      new_configs_queue,
                                                       frame_escape_pipe,
                                                       )
                                                 )
@@ -32,26 +37,36 @@ class FrameListenerProcess:
         self._process.start()
 
     @staticmethod
-    def _run_process(dto: CameraGroupDTO,
+    def _run_process(camera_group_dto: CameraGroupDTO,
+                     shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
+                     new_configs_queue: multiprocessing.Queue,
                      frame_escape_pipe: multiprocessing.Pipe,
                      ):
         logger.debug(f"Frame listener process started!")
 
         try:
             logger.trace(f"Starting FrameListener loop...")
-            shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=dto.shmorc_dto, read_only=False)
+            shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
+                                                                           shmorc_dto=shmorc_dto,
+                                                                           read_only=False)
             camera_group_shm = shmorchestrator.shm
             orchestrator = shmorchestrator.orchestrator
 
             framerate_tracker = FrameRateTracker()
             mf_payload: Optional[MultiFramePayload] = None
+            camera_configs = camera_group_dto.camera_configs
             byte_chunklets_to_send = deque()
 
-            while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
+            while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
+                if new_configs_queue.qsize() > 0:
+                    camera_configs = new_configs_queue.get()
 
                 if orchestrator.should_pull_multi_frame_from_shm.value:
-                    mf_payload: Optional[MultiFramePayload] = camera_group_shm.get_multi_frame_payload(
-                        previous_payload=mf_payload)
+
+                    mf_payload: MultiFramePayload = camera_group_shm.get_multi_frame_payload(
+                        previous_payload=mf_payload,
+                        camera_configs=camera_configs,
+                    )
 
                     orchestrator.signal_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
                     logger.loop(
@@ -81,8 +96,9 @@ class FrameListenerProcess:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
-            if not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
-                logger.warning("FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
+            if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
+                logger.warning(
+                    "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
 
     def is_alive(self) -> bool:
         return self._process.is_alive()

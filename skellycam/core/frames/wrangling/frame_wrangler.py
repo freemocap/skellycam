@@ -4,29 +4,38 @@ import multiprocessing
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+    CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.wrangling.frame_listener_process import FrameListenerProcess
 from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProcess
 
 logger = logging.getLogger(__name__)
 
 
-class  FrameWrangler(BaseModel):
+class FrameWrangler(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    dto: CameraGroupDTO
+    camera_group_dto: CameraGroupDTO
     listener_process: FrameListenerProcess
     frame_router_process: FrameRouterProcess
 
     @classmethod
-    def create(cls, dto: CameraGroupDTO):
+    def create(cls,
+               camera_group_dto: CameraGroupDTO,
+               shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
+               frame_router_config_queue: multiprocessing.Queue,
+               frame_listener_config_queue: multiprocessing.Queue):
         frame_escape_publisher, frame_escape_subscriber = multiprocessing.Pipe()
 
-        return cls(listener_process=FrameListenerProcess(dto=dto,
+        return cls(listener_process=FrameListenerProcess(camera_group_dto=camera_group_dto,
+                                                         shmorc_dto=shmorc_dto,
+                                                         new_configs_queue=frame_listener_config_queue,
                                                          frame_escape_pipe=frame_escape_publisher),
 
-                   frame_router_process=FrameRouterProcess(dto=dto,
+                   frame_router_process=FrameRouterProcess(camera_group_dto=camera_group_dto,
+                                                           new_configs_queue=frame_router_config_queue,
                                                            frame_escape_pipe=frame_escape_subscriber),
-                   dto=dto)
+                   camera_group_dto=camera_group_dto)
 
     def start(self):
         logger.debug(f"Starting frame listener process...")

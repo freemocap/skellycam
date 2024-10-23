@@ -6,7 +6,7 @@ from typing import Dict
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -26,13 +26,13 @@ class CameraGroupOrchestrator:
 
     @classmethod
     def create(cls,
-               camera_configs: CameraConfigs,
+               camera_group_dto: CameraGroupDTO,
                ipc_flags: IPCFlags):
         return cls(
             frame_loop_flags={
                 camera_id: CameraFrameLoopFlags.create(camera_id=camera_id,
                                                        ipc_flags=ipc_flags)
-                for camera_id, camera_config in camera_configs.items()
+                for camera_id, camera_config in camera_group_dto.camera_configs.items()
             },
             ipc_flags=ipc_flags,
             pause_when_able=multiprocessing.Value("b", False),
@@ -65,13 +65,10 @@ class CameraGroupOrchestrator:
     def frames_retrieved(self):
         return not any([triggers.should_retrieve_frame_flag.value for triggers in self.frame_loop_flags.values()])
 
-    def pause_loop(self, await_paused: bool = True):
-        self.pause_when_able.value = True
+    def pause_loop(self):
         logger.trace("Pause requested, setting `pause_when_able` flag to True.")
-        if await_paused:
-            while not self.frame_loop_paused.value:
-                wait_10ms()
-            logger.trace("Frame loop paused.")
+        self.pause_when_able.value = True
+
 
     def unpause_loop(self):
         self.pause_when_able.value = False

@@ -1,11 +1,11 @@
 from typing import Tuple
 
 import numpy as np
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
+from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
 
 from skellycam.core import IMAGE_DATA_DTYPE
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import CameraSharedMemory
-from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE

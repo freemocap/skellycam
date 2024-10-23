@@ -29,6 +29,7 @@ class AppState:
     config_update_queue: multiprocessing.Queue
 
     shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
+    camera_group_dto: Optional[CameraGroupDTO] = None
     camera_group: Optional[CameraGroup] = None
     available_devices: Optional[AvailableDevices] = None
     current_framerate: Optional[CurrentFrameRate] = None
@@ -64,16 +65,17 @@ class AppState:
             camera_configs = self.camera_group_configs
         if self.available_devices is None:
             raise ValueError("Cannot get CameraConfigs without available devices!")
-        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_configs=camera_configs,
-                                                                          ipc_flags=self.ipc_flags,
-                                                                          read_only=True)
-        self.camera_group = CameraGroup.create(dto=CameraGroupDTO(shmorc_dto=self.shmorchestrator.to_dto(),
-                                                                  camera_configs=camera_configs,
+        self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
                                                                   ipc_queue=self.ipc_queue,
                                                                   ipc_flags=self.ipc_flags,
                                                                   config_update_queue=self.config_update_queue,
                                                                   group_uuid=str(uuid4())
                                                                   )
+        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.camera_group_dto,
+                                                                          ipc_flags=self.ipc_flags,
+                                                                          read_only=True)
+        self.camera_group = CameraGroup.create(camera_group_dto=self.camera_group_dto,
+                                               shmorc_dto=self.shmorchestrator.to_dto()
                                                )
 
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")

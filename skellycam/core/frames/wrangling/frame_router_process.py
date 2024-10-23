@@ -15,12 +15,15 @@ logger = logging.getLogger(__name__)
 
 class FrameRouterProcess:
     def __init__(self,
-                 dto: CameraGroupDTO,
+                 camera_group_dto: CameraGroupDTO,
+                 new_configs_queue: multiprocessing.Queue,
                  frame_escape_pipe: multiprocessing.Pipe, ):
 
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
-                                                args=(dto, frame_escape_pipe,))
+                                                args=(camera_group_dto,
+                                                        new_configs_queue,
+                                                      frame_escape_pipe,))
 
     def start(self):
         logger.trace(f"Starting frame listener process")
@@ -34,6 +37,7 @@ class FrameRouterProcess:
 
     @staticmethod
     def _run_process(dto: CameraGroupDTO,
+                     new_configs_queue: multiprocessing.Queue,
                      frame_escape_pipe: multiprocessing.Pipe, ):
         """
         This process is not coupled to the frame loop, and the `escape pipe` is elastic, so blocking is not as big a sin here.
@@ -72,6 +76,8 @@ class FrameRouterProcess:
                     mf_payload = mf_payloads_to_process.popleft()
                     if dto.ipc_flags.record_frames_flag.value:
                         if not video_recorder_manager:
+                            if new_configs_queue.qsize() > 0:
+                                dto.camera_configs = new_configs_queue.get()
                             video_recorder_manager = VideoRecorderManager.create(multi_frame_payload=mf_payload,
                                                                                  camera_configs=dto.camera_configs,
                                                                                  recording_folder=get_default_recording_folder_path(

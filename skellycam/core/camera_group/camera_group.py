@@ -1,28 +1,42 @@
 import logging
-from typing import Optional
+import multiprocessing
+from dataclasses import dataclass
 
-from pydantic import BaseModel, ConfigDict
-from pydantic.v1 import UUID4
+from pydantic import ConfigDict
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.camera_group_process import CameraGroupProcess
+from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+    CameraGroupSharedMemoryOrchestratorDTO
 
 logger = logging.getLogger(__name__)
 
 
-class CameraGroup(BaseModel):
+@dataclass
+class CameraGroup:
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     dto: CameraGroupDTO
     camera_group_process: CameraGroupProcess
+    frame_router_config_queue: multiprocessing.Queue
+    frame_listener_config_queue: multiprocessing.Queue
     group_uuid: str
 
     @classmethod
-    def create(cls, dto: CameraGroupDTO):
-        return cls(dto=dto, camera_group_process=CameraGroupProcess(dto=dto), group_uuid=dto.group_uuid)
+    def create(cls, camera_group_dto: CameraGroupDTO, shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
+        frame_router_config_queue = multiprocessing.Queue()
+        frame_listener_config_queue = multiprocessing.Queue()
+        return cls(dto=camera_group_dto,
+                   camera_group_process=CameraGroupProcess(camera_group_dto=camera_group_dto,
+                                                           shmorc_dto=shmorc_dto,
+                                                           frame_router_config_queue=frame_router_config_queue,
+                                                           frame_listener_config_queue=frame_listener_config_queue),
+                   frame_router_config_queue=frame_router_config_queue,
+                   frame_listener_config_queue=frame_listener_config_queue,
+                   group_uuid=camera_group_dto.group_uuid)
 
     @property
     def camera_ids(self) -> list[CameraId]:
@@ -42,16 +56,18 @@ class CameraGroup(BaseModel):
 
     def close(self):
         logger.debug("Closing camera group")
-        self.dto.shmorc_dto.camera_group_orchestrator.pause_loop()
+        self.shmorc_dto.camera_group_orchestrator.pause_loop()
         self.dto.ipc_flags.kill_camera_group_flag.value = True
         if self.camera_group_process:
             self.camera_group_process.close()
         logger.info("Camera group closed.")
 
     def update_camera_configs(self,
-                                    camera_configs: CameraConfigs,
-                                    update_instructions: UpdateInstructions):
+                              camera_configs: CameraConfigs,
+                              update_instructions: UpdateInstructions):
         logger.debug(
             f"Updating Camera Configs with instructions: {update_instructions}")
         self.dto.update_camera_configs(camera_configs)
         self.dto.config_update_queue.put(update_instructions)
+        self.frame_router_config_queue.put(update_instructions.new_configs)
+        self.frame_listener_config_queue.put(update_instructions.new_configs)

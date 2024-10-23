@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 from _pytest.terminal import TerminalReporter
 from fastapi import FastAPI
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import GroupSharedMemoryNames
+from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from starlette.testclient import TestClient
 
 from skellycam.api import create_app
@@ -16,8 +18,6 @@ from skellycam.core.camera_group import CameraGroupOrchestrator
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import GroupSharedMemoryNames
-from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
 from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \

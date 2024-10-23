@@ -3,8 +3,6 @@ from enum import Enum
 
 import numpy as np
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-
 
 class FRAME_METADATA_MODEL(Enum):
     """

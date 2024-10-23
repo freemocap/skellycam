@@ -4,6 +4,7 @@ from typing import Tuple, Union
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+
 class SharedMemoryElement(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     buffer: np.ndarray

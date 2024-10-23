@@ -3,7 +3,7 @@ import logging
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.app.app_controller.ipc_flags import IPCFlags
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory_manager import \
     CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
@@ -24,24 +24,25 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
 
     @classmethod
     def create(cls,
-               camera_configs: CameraConfigs,
+               camera_group_dto: CameraGroupDTO,
                ipc_flags: IPCFlags,
                read_only: bool):
-
-        return cls(shm = CameraGroupSharedMemory.create(camera_configs=camera_configs,
-                                                                     read_only=read_only),
-                   orchestrator=CameraGroupOrchestrator.create(camera_configs=camera_configs,
-                                                                            ipc_flags=ipc_flags)
+        return cls(shm=CameraGroupSharedMemory.create(camera_group_dto=camera_group_dto,
+                                                      read_only=read_only),
+                   orchestrator=CameraGroupOrchestrator.create(camera_group_dto=camera_group_dto,
+                                                               ipc_flags=ipc_flags)
                    )
 
     @classmethod
     def recreate(cls,
-                 dto: CameraGroupSharedMemoryOrchestratorDTO,
+                 camera_group_dto: CameraGroupDTO,
+                 shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                  read_only: bool):
         return cls(
-            shm=CameraGroupSharedMemory.recreate(dto=dto.camera_group_shm_dto,
-                                                              read_only=read_only),
-            orchestrator=dto.camera_group_orchestrator,
+            shm=CameraGroupSharedMemory.recreate(camera_group_dto=camera_group_dto,
+                                                 shm_dto=shmorc_dto.camera_group_shm_dto,
+                                                 read_only=read_only),
+            orchestrator=shmorc_dto.camera_group_orchestrator,
         )
 
     @property

@@ -13,7 +13,7 @@ from skellycam.core.camera_group.camera.opencv.create_cv2_video_capture import c
 from skellycam.core.camera_group.camera.opencv.get_frame import get_frame
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
-    CameraGroupSharedMemoryOrchestrator
+    CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
 from skellycam.utilities.wait_functions import wait_1ms
 
@@ -26,24 +26,26 @@ MANUAL_EXPOSURE_SETTING = 1  # 0.25
 class CameraProcess:
     camera_id: CameraId
     process: multiprocessing.Process
-    dto: CameraGroupDTO
+    camera_group_dto: CameraGroupDTO
     should_close_self_flag: multiprocessing.Value
     new_config_queue: multiprocessing.Queue
 
     @classmethod
     def create(cls,
                camera_id: CameraId,
-               dto: CameraGroupDTO):
+               camera_group_dto: CameraGroupDTO,
+               shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
         should_close_self_flag = multiprocessing.Value('b', False)
         new_config_queue = multiprocessing.Queue()
         return cls(camera_id=camera_id,
-                   dto=dto,
+                   camera_group_dto=camera_group_dto,
                    should_close_self_flag=should_close_self_flag,
                    new_config_queue=new_config_queue,
                    process=multiprocessing.Process(target=cls._run_process,
                                                    name=f"Camera{camera_id}",
                                                    args=(camera_id,
-                                                         dto,
+                                                         camera_group_dto,
+                                                         shmorc_dto,
                                                          new_config_queue,
                                                          should_close_self_flag)
                                                    ),
@@ -55,7 +57,7 @@ class CameraProcess:
 
     def close(self):
         logger.info(f"Closing camera {self.camera_id}")
-        if not self.dto.ipc_flags.kill_camera_group_flag.value == True:
+        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value == True:
             raise ValueError(f"Camera {self.camera_id} was closed before the camera group kill flag was set.")
         self.should_close_self_flag.value = True
         self.process.join()
@@ -70,12 +72,14 @@ class CameraProcess:
 
     @staticmethod
     def _run_process(camera_id: CameraId,
-                     dto: CameraGroupDTO,
+                     camera_group_dto: CameraGroupDTO,
+                     shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                      new_config_queue: multiprocessing.Queue,
                      should_close_self_flag: multiprocessing.Value
                      ):
-        config = dto.camera_configs[camera_id]
-        shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(dto=dto.shmorc_dto,
+        config = camera_group_dto.camera_configs[camera_id]
+        shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
+                                                                       shmorc_dto=shmorc_dto,
                                                                        read_only=False)
         frame_loop_flags = shmorchestrator.orchestrator.frame_loop_flags[camera_id]
         camera_shm = shmorchestrator.shm.camera_shms[camera_id]
@@ -91,7 +95,7 @@ class CameraProcess:
             logger.trace(f"Camera {config.camera_id} trigger listening loop started!")
             frame_number = 0
             # Trigger listening loop
-            while not dto.ipc_flags.global_kill_flag.value and not dto.ipc_flags.kill_camera_group_flag.value and not should_close_self_flag.value:
+            while not camera_group_dto.ipc_flags.global_kill_flag.value and not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not should_close_self_flag.value:
 
                 if not shmorchestrator.shm.valid:
                     wait_1ms()

@@ -2,7 +2,6 @@ from multiprocessing import shared_memory
 from typing import Tuple
 
 import numpy as np
-
 from skellycam.core.camera_group.shmorchestrator.shared_memory_element import SharedMemoryElement
 
 
