@@ -21,7 +21,7 @@ def test_create_camera_shared_memory(camera_config_fixture: CameraConfig) -> Non
     assert camera_shm.image_shm.buffer.shape == camera_config_fixture.image_shape
     assert camera_shm.metadata_shm.buffer.shape == FRAME_METADATA_SHAPE
 
-    camera_shm.close()
+    camera_shm.close_and_unlink()
     camera_shm.unlink()
 
 
@@ -36,7 +36,7 @@ def test_recreate_camera_shared_memory(camera_config_fixture: CameraConfig) -> N
     assert recreated_camera_shm.metadata_shm.buffer.shape == FRAME_METADATA_SHAPE
 
     camera_shm.shutdown()
-    recreated_camera_shm.close()
+    recreated_camera_shm.close_and_unlink()
     camera_shm.unlink()
 
 

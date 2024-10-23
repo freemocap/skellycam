@@ -132,7 +132,7 @@ class CameraProcess:
             if cv2_video_capture:
                 # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... See above note
                 cv2_video_capture.release()
-
+            camera_shm.close()
 
 def check_for_config_update(config: CameraConfig,
                             cv2_video_capture: cv2.VideoCapture,

@@ -84,7 +84,7 @@ def test_close(ndarray_shape_fixture, dtype_fixture: np.dtype):
                                          dtype=dtype_fixture)
     assert isinstance(element.shm, shared_memory.SharedMemory)
     assert isinstance(element, SharedMemoryElement)
-    element.close()
+    element.close_and_unlink()
 
     type_error_exception_raised = False
     try:

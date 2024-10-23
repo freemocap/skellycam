@@ -94,7 +94,7 @@ class AppState:
             return
         logger.debug("Closing existing camera group...")
         self.camera_group.close()
-        self.shmorchestrator.close()
+        self.shmorchestrator.close_and_unlink()
         self._reset()
         logger.success("Camera group closed successfully")
 

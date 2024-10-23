@@ -53,7 +53,7 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
         return CameraGroupSharedMemoryOrchestratorDTO(camera_group_shm_dto=self.shm.to_dto(),
                                                       camera_group_orchestrator=self.orchestrator)
 
-    def close(self):
+    def close_and_unlink(self):
         logger.debug("Closing CameraGroupSharedMemoryOrchestrator...")
         self.orchestrator.pause_loop()
         self.shm.close_and_unlink()

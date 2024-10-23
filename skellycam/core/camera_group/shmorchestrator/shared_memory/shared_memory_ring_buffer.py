@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
+from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_number import SharedMemoryNumber
 
 
 class SharedMemoryRingBufferDTO(BaseModel):
@@ -14,8 +15,8 @@ class SharedMemoryRingBufferDTO(BaseModel):
     shm_element_shape: Tuple[int, ...]
     dtype: np.dtype
     shm_element_names: List[str]
-    last_written_index: Synchronized
-    last_read_index: Synchronized
+    last_written_index: SharedMemoryNumber
+    last_read_index: SharedMemoryNumber
 
 
 class SharedMemoryRingBuffer(BaseModel):
@@ -24,17 +25,8 @@ class SharedMemoryRingBuffer(BaseModel):
     shm_element_shape: Tuple[int, ...]
     dtype: np.dtype
     shm_elements: List[SharedMemoryElement]
-    last_written_index: Synchronized  # NOTE - represents APPARENT index of last written element from the User's perspective, we will internally handle wrapping around the array
-    last_read_index: Synchronized  # NOTE - represents APPARENT index of last read element from the User's perspective, we will internally handle wrapping around the array
-
-    @classmethod
-    def from_camera_configs(cls,
-                            camera_configs: CameraConfigs):
-        return cls.create(
-            shm_element_shape=camera_configs.image_shape,
-            dtype=np.uint8,
-            array_size=100
-        )
+    last_written_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last written element from the User's perspective, we will internally handle wrapping around the array
+    last_read_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last read element from the User's perspective, we will internally handle wrapping around the array
 
     @classmethod
     def create(cls,

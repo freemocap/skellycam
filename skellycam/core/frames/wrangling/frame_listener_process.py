@@ -42,20 +42,18 @@ class FrameListenerProcess:
                      new_configs_queue: multiprocessing.Queue,
                      frame_escape_pipe: multiprocessing.Pipe,
                      ):
-        logger.debug(f"Frame listener process started!")
+        logger.trace(f"Starting FrameListener loop...")
+        shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
+                                                                       shmorc_dto=shmorc_dto,
+                                                                       read_only=False)
+        camera_group_shm = shmorchestrator.shm
+        orchestrator = shmorchestrator.orchestrator
 
+        framerate_tracker = FrameRateTracker()
+        mf_payload: Optional[MultiFramePayload] = None
+        camera_configs = camera_group_dto.camera_configs
+        byte_chunklets_to_send = deque()
         try:
-            logger.trace(f"Starting FrameListener loop...")
-            shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
-                                                                           shmorc_dto=shmorc_dto,
-                                                                           read_only=False)
-            camera_group_shm = shmorchestrator.shm
-            orchestrator = shmorchestrator.orchestrator
-
-            framerate_tracker = FrameRateTracker()
-            mf_payload: Optional[MultiFramePayload] = None
-            camera_configs = camera_group_dto.camera_configs
-            byte_chunklets_to_send = deque()
 
             while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 if new_configs_queue.qsize() > 0:
@@ -99,6 +97,8 @@ class FrameListenerProcess:
             if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 logger.warning(
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
+
+            camera_group_shm.close()
 
     def is_alive(self) -> bool:
         return self._process.is_alive()
