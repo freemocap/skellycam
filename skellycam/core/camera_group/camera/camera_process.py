@@ -28,20 +28,23 @@ class CameraProcess:
     process: multiprocessing.Process
     dto: CameraGroupDTO
     should_close_self_flag: multiprocessing.Value
+    new_config_queue: multiprocessing.Queue
 
     @classmethod
     def create(cls,
                camera_id: CameraId,
                dto: CameraGroupDTO):
         should_close_self_flag = multiprocessing.Value('b', False)
-
+        new_config_queue = multiprocessing.Queue()
         return cls(camera_id=camera_id,
                    dto=dto,
                    should_close_self_flag=should_close_self_flag,
+                   new_config_queue=new_config_queue,
                    process=multiprocessing.Process(target=cls._run_process,
                                                    name=f"Camera{camera_id}",
                                                    args=(camera_id,
                                                          dto,
+                                                         new_config_queue,
                                                          should_close_self_flag)
                                                    ),
 
@@ -62,12 +65,13 @@ class CameraProcess:
         return self.process.is_alive()
 
     def update_config(self, new_config: CameraConfig):
-        logger.debug(f"Updating camera {self.config.camera_id} with new config: {new_config}")
-        self.dto.config_update_queue.put(new_config)
+        logger.debug(f"Updating camera {self.camera_id} with new config: {new_config}")
+        self.new_config_queue.put(new_config)
 
     @staticmethod
     def _run_process(camera_id: CameraId,
                      dto: CameraGroupDTO,
+                     new_config_queue: multiprocessing.Queue,
                      should_close_self_flag: multiprocessing.Value
                      ):
         config = dto.camera_configs[camera_id]
@@ -93,25 +97,26 @@ class CameraProcess:
                     wait_1ms()
                     continue
 
-                logger.loop(f"FCamera {camera_id} awaiting `initialization` trigger for frame loop# {frame_number}")
-                frame_loop_flags.await_initialization_signal()
-                frame_metadata = create_empty_frame_metadata(camera_id=camera_id,
-                                                             frame_number=frame_number)
-                frame_number = get_frame(
-                    camera_id=config.camera_id,
-                    cap=cv2_video_capture,
-                    frame_metadata=frame_metadata,
-                    camera_shared_memory=camera_shm,
-                    frame_loop_flags=frame_loop_flags,
-                    frame_number=frame_number,
-                )
-                logger.loop(f"Camera {config.camera_id} got frame# {frame_number} successfully")
-
-                config = CameraProcess.check_for_config_update(config=config,
-                                                               cv2_video_capture=cv2_video_capture,
-                                                               config_update_queue=dto.config_update_queue,
-                                                               frame_loop_flags=frame_loop_flags
-                                                               )
+                if frame_loop_flags.frame_loop_initialization_flag.value:
+                    logger.loop(f"Camera {camera_id} received `initialization` signal for frame loop# {frame_number}")
+                    frame_loop_flags.frame_loop_initialization_flag.value = False
+                    frame_metadata = create_empty_frame_metadata(camera_id=camera_id,
+                                                                 frame_number=frame_number)
+                    frame_number = get_frame(
+                        camera_id=config.camera_id,
+                        cap=cv2_video_capture,
+                        frame_metadata=frame_metadata,
+                        camera_shared_memory=camera_shm,
+                        frame_loop_flags=frame_loop_flags,
+                        frame_number=frame_number,
+                    )
+                    logger.loop(f"Camera {config.camera_id} got frame# {frame_number} successfully")
+                else:
+                    config = check_for_config_update(config=config,
+                                                     cv2_video_capture=cv2_video_capture,
+                                                     new_config_queue=new_config_queue,
+                                                     frame_loop_flags=frame_loop_flags
+                                                     )
                 wait_1ms()
 
             logger.debug(f"Camera {config.camera_id} process completed")
@@ -124,17 +129,17 @@ class CameraProcess:
                 # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... See above note
                 cv2_video_capture.release()
 
-    @staticmethod
-    def check_for_config_update(config: CameraConfig,
-                                cv2_video_capture: cv2.VideoCapture,
-                                config_update_queue: multiprocessing.Queue,
-                                frame_loop_flags: CameraFrameLoopFlags) -> CameraConfig:
-        if config_update_queue.qsize() > 0:
-            logger.debug(f"Camera {config.camera_id} received new config update - setting `not ready`")
-            frame_loop_flags.set_camera_not_ready()
-            config = config_update_queue.get()
-            apply_camera_configuration(cv2_video_capture, config)
-            logger.debug(
-                f"Camera {config.camera_id} updated with new config: {config} - setting `ready`")
-            frame_loop_flags.set_camera_ready()
-        return config
+
+def check_for_config_update(config: CameraConfig,
+                            cv2_video_capture: cv2.VideoCapture,
+                            new_config_queue: multiprocessing.Queue,
+                            frame_loop_flags: CameraFrameLoopFlags) -> CameraConfig:
+    if new_config_queue.qsize() > 0:
+        logger.debug(f"Camera {config.camera_id} received new config update - setting `not ready`")
+        frame_loop_flags.set_camera_not_ready()
+        config = new_config_queue.get()
+        apply_camera_configuration(cv2_video_capture, config)
+        logger.debug(
+            f"Camera {config.camera_id} updated with new config: {config} - setting `ready`")
+        frame_loop_flags.set_camera_ready()
+    return config

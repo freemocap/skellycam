@@ -1,10 +1,11 @@
 import logging
 import multiprocessing
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 from skellycam.app.app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
@@ -21,11 +22,11 @@ from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
 logger = logging.getLogger(__name__)
 
 
-class AppState(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
+@dataclass
+class AppState:
     ipc_flags: IPCFlags
-    ipc_queue: multiprocessing.Queue = Field(default_factory=lambda: multiprocessing.Queue())
+    ipc_queue: multiprocessing.Queue
+    config_update_queue: multiprocessing.Queue
 
     shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
     camera_group: Optional[CameraGroup] = None
@@ -34,7 +35,9 @@ class AppState(BaseModel):
 
     @classmethod
     def create(cls, global_kill_flag: multiprocessing.Value):
-        return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag))
+        return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag),
+                   ipc_queue=multiprocessing.Queue(),
+                   config_update_queue=multiprocessing.Queue())
 
     @property
     def orchestrator(self) -> CameraGroupOrchestrator:
@@ -68,7 +71,7 @@ class AppState(BaseModel):
                                                                   camera_configs=camera_configs,
                                                                   ipc_queue=self.ipc_queue,
                                                                   ipc_flags=self.ipc_flags,
-                                                                  config_update_queue=multiprocessing.Queue(),
+                                                                  config_update_queue=self.config_update_queue,
                                                                   group_uuid=str(uuid4())
                                                                   )
                                                )

@@ -45,9 +45,9 @@ class UpdateInstructions(BaseModel):
                     logger.trace(f"Camera {camera_id} resolution changed - Setting `reset_all` to True")
                     reset_all = True
 
-                if new_configs[camera_id].rotation != old_configs[camera_id].rotation:
-                    logger.trace(f"Camera {camera_id} rotation changed - Setting `reset_all` to True")
-                    reset_all = True
+                # if new_configs[camera_id].rotation != old_configs[camera_id].rotation:
+                #     logger.trace(f"Camera {camera_id} rotation changed - Setting `reset_all` to True")
+                #     reset_all = True
 
         ### Step 1b - if any new cameras added or disabled, reset all
         for camera_id, config in new_configs.items():

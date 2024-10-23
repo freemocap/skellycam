@@ -65,11 +65,13 @@ class CameraGroupOrchestrator:
     def frames_retrieved(self):
         return not any([triggers.should_retrieve_frame_flag.value for triggers in self.frame_loop_flags.values()])
 
-    def pause_loop(self):
+    def pause_loop(self, await_paused: bool = True):
         self.pause_when_able.value = True
-        while not self.frame_loop_paused.value:
-            wait_10ms()
-        logger.trace("Frame loop paused.")
+        logger.trace("Pause requested, setting `pause_when_able` flag to True.")
+        if await_paused:
+            while not self.frame_loop_paused.value:
+                wait_10ms()
+            logger.trace("Frame loop paused.")
 
     def unpause_loop(self):
         self.pause_when_able.value = False
@@ -159,28 +161,21 @@ class CameraGroupOrchestrator:
 
     ##############################################################################################################
 
-    def send_initialization_signal(self):
-
-        logger.loop(f"Firing initial triggers for all cameras...")
-        for triggers in self.frame_loop_flags.values():
-            triggers.frame_read_initialization_flag.value = True
-
-    def await_cameras_ready(self):
-        logger.trace("Waiting for all cameras to be ready...")
-        while not all([triggers.camera_ready_flag.value for triggers in
-                       self.frame_loop_flags.values()]) and self.should_continue:
-            wait_10ms()
-        logger.debug("All cameras are ready!")
-
     def signal_multi_frame_pulled_from_shm(self):
         for triggers in self.frame_loop_flags.values():
             triggers.new_frame_in_shm.value = False
         wait_1ms()  # Give it a moment before final reset of this frame loop
         self.should_pull_multi_frame_from_shm.value = False
 
+    def send_initialization_signal(self):
+
+        logger.loop(f"Firing initial triggers for all cameras...")
+        for triggers in self.frame_loop_flags.values():
+            triggers.frame_loop_initialization_flag.value = True
+
     def _await_initialization_flag_reset(self):
         logger.loop("Initial triggers set - waiting for all triggers to reset...")
-        while any([flags.frame_read_initialization_flag.value for flags in
+        while any([flags.frame_loop_initialization_flag.value for flags in
                    self.frame_loop_flags.values()]) and self.should_continue:
             wait_1ms()
 
@@ -191,6 +186,17 @@ class CameraGroupOrchestrator:
     def _await_multi_frame_pulled_from_shm(self):
         while self.should_pull_multi_frame_from_shm.value and self.should_continue:
             wait_1ms()
+
+    def _await_frames_retrieved(self):
+        while not self.frames_retrieved and self.should_continue:
+            wait_1ms()
+
+    def await_cameras_ready(self):
+        logger.trace("Waiting for all cameras to be ready...")
+        while not all([triggers.camera_ready_flag.value for triggers in
+                       self.frame_loop_flags.values()]) and self.should_continue:
+            wait_10ms()
+        logger.debug("All cameras are ready!")
 
     def _send_should_grab_frame_signal(self):
         logger.loop("Triggering all cameras to `grab` a frame...")
@@ -211,10 +217,6 @@ class CameraGroupOrchestrator:
     def _signal_should_pull_multi_frame_from_shm(self):
         logger.loop("Signaling that the multi-frame is ready to be pulled from shared memory...")
         self.should_pull_multi_frame_from_shm.value = True
-
-    def _await_frames_retrieved(self):
-        while not self.frames_retrieved and self.should_continue:
-            wait_1ms()
 
     def _ensure_cameras_ready(self):
         if not self.cameras_ready:
