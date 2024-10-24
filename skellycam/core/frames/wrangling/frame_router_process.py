@@ -62,7 +62,7 @@ class FrameRouterProcess:
 
                 if shm_ring_buffer and shm_ring_buffer.new_data_available:
                     bytes_payload = shm_ring_buffer.get_next_payload()
-                    mf_payload = MultiFramePayload.from_bytes_buffer(bytes_payload)
+                    mf_payload = MultiFramePayload.from_numpy_buffer(bytes_payload)
                     mf_payloads_to_process.append(mf_payload)
                 else:
                     if video_recorder_manager and video_recorder_manager.frames_to_save and not frame_escape_pipe.poll():  # prioritize other work before saving a frame

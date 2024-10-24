@@ -72,20 +72,20 @@ class FrameListenerProcess:
                         f"FrameListener - copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
 
                     pulled_from_pipe_timestamp = time.perf_counter_ns()
-                    mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
+                    # mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
                     framerate_tracker.update(pulled_from_pipe_timestamp)
                     # dto.ipc_queue.put(framerate_tracker.current())
 
                     if not shm_ring_buffer:
                         logger.trace(f"Creating SharedMemoryRingBuffer from MultiFramePayload")
                         shm_ring_buffer = SharedMemoryRingBuffer.create(
-                            example_payload=mf_payload.to_bytes_buffer(),
+                            example_payload=mf_payload.to_numpy_buffer(),
                         )
                         frame_escape_pipe.send(shm_ring_buffer.to_dto())
                         while not shm_ring_buffer.last_read_index.value == -1:
                             wait_1ms()
 
-                    shm_ring_buffer.put_payload(mf_payload.to_bytes_buffer())
+                    shm_ring_buffer.put_payload(mf_payload.to_numpy_buffer())
 
                 else:
                     wait_1ms()

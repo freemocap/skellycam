@@ -115,7 +115,7 @@ class WebSocketClient(QWidget):
         if payload['type'] == FrontendFramePayload.__name__:
             fe_payload = FrontendFramePayload(**payload)
             logger.gui(f"Received FrontendFramePayload for cameras: {fe_payload.camera_ids}")
-            fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
+            # fe_payload.lifespan_timestamps_ns.append({"received_from_websocket": time.perf_counter_ns()})
             self.new_frontend_payload_available.emit(fe_payload)
         elif payload['type'] == RecordingInfo.__name__:
             logger.gui(f"Received RecordingInfo object")

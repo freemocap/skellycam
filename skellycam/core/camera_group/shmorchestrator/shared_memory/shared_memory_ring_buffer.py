@@ -131,13 +131,7 @@ class SharedMemoryRingBuffer:
 
         shm_data = self.ring_buffer_shm.buffer[self.last_written_index.get() % self.ring_buffer_length]
 
-        # Convert the data back to the original format
-        if isinstance(self.dtype, np.dtype) and np.issubdtype(self.dtype, np.string_):
-            return shm_data.tobytes()
-        elif isinstance(self.dtype, np.dtype) and np.issubdtype(self.dtype, np.unicode_):
-            return shm_data.tobytes().decode('utf-8')
-        else:
-            return shm_data
+        return shm_data
 
     def get_next_payload(self) -> np.ndarray | bytes | str:
         if not self.new_data_available:
@@ -147,13 +141,7 @@ class SharedMemoryRingBuffer:
         shm_data = self.ring_buffer_shm.buffer[index_to_read % self.ring_buffer_length]
         self.last_read_index.set(index_to_read)
 
-        # Convert the data back to the original format
-        if isinstance(self.dtype, np.dtype) and np.issubdtype(self.dtype, np.string_):
-            return shm_data.tobytes()
-        elif isinstance(self.dtype, np.dtype) and np.issubdtype(self.dtype, np.unicode_):
-            return shm_data.tobytes().decode('utf-8')
-        else:
-            return shm_data
+        return shm_data
 
     def close(self):
         self.ring_buffer_shm.close()
