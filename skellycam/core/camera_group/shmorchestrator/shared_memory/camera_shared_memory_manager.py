@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory import GroupSharedMemoryNames, \
+from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory import CameraSharedMemoryDTOs, \
     CameraSharedMemory
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroupSharedMemoryDTO:
     camera_group_dto: CameraGroupDTO
-    group_shm_names: GroupSharedMemoryNames
+    camera_shm_dtos: CameraSharedMemoryDTOs
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
 
@@ -29,8 +29,9 @@ class CameraGroupSharedMemory:
     latest_mf_number: multiprocessing.Value
 
     @classmethod
-    def create(cls, camera_group_dto:CameraGroupDTO, read_only: bool = False):
-        camera_shms = {camera_id: CameraSharedMemory.create(camera_config=config, read_only=read_only)
+    def create(cls, camera_group_dto: CameraGroupDTO, read_only: bool = False):
+        camera_shms = {camera_id: CameraSharedMemory.create(camera_config=config,
+                                                            read_only=read_only)
                        for camera_id, config in camera_group_dto.camera_configs.items()}
 
         return cls(camera_group_dto=camera_group_dto,
@@ -43,11 +44,9 @@ class CameraGroupSharedMemory:
                  camera_group_dto: CameraGroupDTO,
                  shm_dto: CameraGroupSharedMemoryDTO,
                  read_only: bool):
-        camera_shms = {camera_id: CameraSharedMemory.recreate(camera_config=config,
-                                                              shared_memory_names=shm_dto.group_shm_names[
-                                                                  camera_id],
+        camera_shms = {camera_id: CameraSharedMemory.recreate(dto=shm_dto.camera_shm_dtos[camera_id],
                                                               read_only=read_only)
-                       for camera_id, config in  camera_group_dto.camera_configs.items()}
+                       for camera_id in camera_group_dto.camera_configs.keys()}
 
         return cls(camera_group_dto=camera_group_dto,
                    camera_shms=camera_shms,
@@ -55,28 +54,31 @@ class CameraGroupSharedMemory:
                    latest_mf_number=shm_dto.latest_mf_number)
 
     @property
-    def shared_memory_names(self) -> GroupSharedMemoryNames:
-        return {camera_id: camera_shared_memory.shared_memory_names for camera_id, camera_shared_memory in
+    def camera_shm_dtos(self) -> CameraSharedMemoryDTOs:
+        return {camera_id: camera_shared_memory.to_dto() for camera_id, camera_shared_memory in
                 self.camera_shms.items()}
 
-    @property
-    def camera_ids(self) -> List[CameraId]:
-        return list(self.camera_group_dto.camera_ids.keys())
 
     @property
     def valid(self) -> bool:
         return self.shm_valid_flag.value
 
+    @property
+    def read_only(self) -> bool:
+        return all([camera_shared_memory.read_only for camera_shared_memory in self.camera_shms.values()])
+
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_group_dto=self.camera_group_dto,
-                                          group_shm_names=self.shared_memory_names,
+                                          camera_shm_dtos=self.camera_shm_dtos,
                                           shm_valid_flag=self.shm_valid_flag,
                                           latest_mf_number=self.latest_mf_number)
 
-    def get_multi_frame_payload(self,
-                                previous_payload: Optional[MultiFramePayload],
-                                camera_configs: CameraConfigs
-                                ) -> MultiFramePayload:
+    def get_next_multi_frame_payload(self,
+                                     previous_payload: Optional[MultiFramePayload],
+                                     camera_configs: CameraConfigs
+                                     ) -> MultiFramePayload:
+        if self.read_only:
+            raise ValueError("Cannot call `get_next_multi_frame_payload` on read-only shared memory instance! Use `get_latest_multi_frame_payload` instead.")
 
         if previous_payload is None:
             payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
@@ -88,7 +90,7 @@ class CameraGroupSharedMemory:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
-            frame = camera_shared_memory.retrieve_frame()
+            frame = camera_shared_memory.retrieve_next_frame()
             payload.add_frame(frame)
         if not payload.full:
             raise ValueError("Did not read full multi-frame payload!")

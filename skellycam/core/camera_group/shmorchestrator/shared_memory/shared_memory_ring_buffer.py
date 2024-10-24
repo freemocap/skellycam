@@ -27,16 +27,25 @@ class SharedMemoryRingBuffer:
     last_written_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last written element from the User's perspective, we will internally handle wrapping around the array
     last_read_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last read element from the User's perspective, we will internally handle wrapping around the array
 
+    @property
+    def new_data_available(self):
+        return self.last_written_index.get() != -1 and self.last_written_index.get() != self.last_read_index.get()
+
+    @property
+    def ring_buffer_length(self):
+        return self.ring_buffer_shape[0]
+
     @classmethod
     def create(cls,
-               example_payload: np.ndarray | bytes | str,
+               example_payload: np.ndarray ,
                dtype: Union[np.dtype, type, str] = np.uint8,
-               buffer_memory_allocation: int = ONE_GIGABYTE,
+               buffer_memory_allocation: int | None = ONE_GIGABYTE,
+               ring_buffer_length: int | None = None,
                # TODO - calculate based on desired final size in memory rather than as an integer count of shm_elements
                ):
         array = cls._payload_to_ndarray(dtype, example_payload)
-
-        ring_buffer_length = buffer_memory_allocation // np.prod(array.shape)
+        if not ring_buffer_length:
+            ring_buffer_length = buffer_memory_allocation // np.prod(array.shape)
         full_buffer = np.zeros((ring_buffer_length,) + array.shape, dtype=dtype)
         ring_buffer_shm = SharedMemoryElement.create(full_buffer.shape, dtype)
         last_written_index = SharedMemoryNumber.create(initial_value=-1)
@@ -87,14 +96,6 @@ class SharedMemoryRingBuffer:
             last_read_index_shm_name=self.last_read_index.name
         )
 
-    @property
-    def new_data_available(self):
-        return self.last_written_index.get() != -1 and self.last_written_index.get() != self.last_read_index.get()
-
-    @property
-    def ring_buffer_length(self):
-        return self.ring_buffer_shape[0]
-
     @staticmethod
     def _ensure_dtype(dtype: Union[np.dtype, type, str]) -> np.dtype:
         if not isinstance(dtype, np.dtype):
@@ -104,7 +105,7 @@ class SharedMemoryRingBuffer:
     def _check_overwrite(self, next_index: int) -> bool:
         return next_index % self.ring_buffer_length == self.last_read_index.get() % self.ring_buffer_length
 
-    def put_payload(self, payload: np.ndarray | bytes | str):
+    def put_payload(self, payload: np.ndarray):
         array = self._payload_to_ndarray(self.dtype, payload)
         if array.shape != self.ring_buffer_shape[1:]:
             raise ValueError(
@@ -118,7 +119,7 @@ class SharedMemoryRingBuffer:
         self.ring_buffer_shm.buffer[index_to_write % self.ring_buffer_length] = array
         self.last_written_index.set(index_to_write)
 
-    def get_latest_payload(self) -> np.ndarray | bytes | str:
+    def get_latest_payload(self) -> np.ndarray:
         """
         NOTE - this method does NOT update the 'last_read_index' value.
 
@@ -180,6 +181,7 @@ def writer_process(ring_buffer_dto: SharedMemoryRingBufferDTO,
             # Sleep to simulate waiting for the reader to catch up
             sleep(0.1)
 
+
 def reader_process(ring_buffer_dto: SharedMemoryRingBufferDTO, num_payloads: int):
     ring_buffer = SharedMemoryRingBuffer.recreate(ring_buffer_dto)
     read_data = []
@@ -200,6 +202,7 @@ def reader_process(ring_buffer_dto: SharedMemoryRingBufferDTO, num_payloads: int
             sleep(0.1)
     return read_data
 
+
 def test_shared_memory_ring_buffer_multiprocess():
     # Define parameters
     num_payloads = 10
@@ -216,6 +219,7 @@ def test_shared_memory_ring_buffer_multiprocess():
     # Test with str payload
     str_payload = 'a' * (np.prod(payload_shape) * np.dtype(dtype).itemsize)
     test_payload(str_payload, dtype, "str", num_payloads)
+
 
 def test_payload(example_payload, dtype, payload_type, num_payloads):
     print(f"Testing with {payload_type} payload")
@@ -255,6 +259,7 @@ def test_payload(example_payload, dtype, payload_type, num_payloads):
     finally:
         # Clean up shared memory
         ring_buffer.close_and_unlink()
+
 
 if __name__ == "__main__":
     test_shared_memory_ring_buffer_multiprocess()

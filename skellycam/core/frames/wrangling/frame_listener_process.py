@@ -62,7 +62,7 @@ class FrameListenerProcess:
 
                 if orchestrator.should_pull_multi_frame_from_shm.value:
 
-                    mf_payload: MultiFramePayload = camera_group_shm.get_multi_frame_payload(
+                    mf_payload: MultiFramePayload = camera_group_shm.get_next_multi_frame_payload(
                         previous_payload=mf_payload,
                         camera_configs=camera_configs,
                     )
