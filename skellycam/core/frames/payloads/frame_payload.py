@@ -32,6 +32,7 @@ class FramePayloadBuffer:
 
         return cls(buffer=buffer)
 
+
     def to_frame_payload(self) -> 'FramePayload':
         # Extract metadata from buffer
         metadata_size = np.prod(FRAME_METADATA_SHAPE)
@@ -41,7 +42,7 @@ class FramePayloadBuffer:
         # Extract image shape from buffer
         image_shape_start = metadata_end
         image_shape_end = image_shape_start + 3
-        image_shape = tuple(map(int, self.buffer[image_shape_start:image_shape_end]))
+        image_shape = tuple(map(int, self.buffer[image_shape_start:image_shape_end].astype(np.int64)))
 
         # Extract image data from buffer
         image_data_start = image_shape_end
