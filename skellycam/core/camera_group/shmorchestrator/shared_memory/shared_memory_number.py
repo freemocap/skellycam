@@ -22,6 +22,14 @@ class SharedMemoryNumber(BaseModel):
     def name(self) -> str:
         return self.shm_element.name
 
+    @property
+    def value(self) -> int:
+        return int(self.shm_element.buffer[0])
+
+    @value.setter
+    def value(self, value: int):
+        self.shm_element.buffer[0] = value
+
     def set(self, value: int) -> None:
         """Set the value of the counter."""
         self.shm_element.buffer[0] = value

@@ -88,6 +88,10 @@ class MultiFramePayload(BaseModel):
         return frame
 
     @classmethod
+    def from_bytes_buffer(cls, data: bytes) -> 'MultiFramePayload':
+        return cls.from_bytes_list(data.split(BYTES_BUFFER_SPLITTER))
+
+    @classmethod
     def from_list(cls, data: List[Any]) -> 'MultiFramePayload':
         metadata = json.loads(data.pop(0).decode("utf-8"))
         frames = {}

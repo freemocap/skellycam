@@ -5,6 +5,8 @@ from collections import deque
 from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_ring_buffer import \
+    SharedMemoryRingBufferDTO, SharedMemoryRingBuffer
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
@@ -47,25 +49,21 @@ class FrameRouterProcess:
         incoming_mf_byte_chunklets = []
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         video_recorder_manager: Optional[VideoRecorderManager] = None
+        shm_ring_buffer: Optional[SharedMemoryRingBuffer] = None
         try:
             while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
                 wait_1ms()
                 # Check for incoming data
                 if frame_escape_pipe.poll():
-                    bytes_payload: bytes = frame_escape_pipe.recv_bytes()
+                    shm_ring_buffer_dto:SharedMemoryRingBufferDTO = frame_escape_pipe.recv()
+                    if shm_ring_buffer:
+                        shm_ring_buffer.close()
+                    shm_ring_buffer = SharedMemoryRingBuffer.recreate(shm_ring_buffer_dto)
 
-                    if bytes_payload == b"START":
-                        logger.loop(f"FrameRouter - Receiving START of a multi-frame bytes list from pipe...")
-                    elif bytes_payload == b"END":
-                        mf_payload = MultiFramePayload.from_list(incoming_mf_byte_chunklets)
-                        incoming_mf_byte_chunklets = []
-                        mf_payload.lifespan_timestamps_ns.append(
-                            {"Reconstructed in FrameRouterProcess": time.perf_counter_ns()})
-                        mf_payloads_to_process.append(mf_payload)
-                        logger.loop(
-                            f"FrameRouter - Reconstructed multi-frame payload# {mf_payload.multi_frame_number} from pipe bytes!")
-                    else:
-                        incoming_mf_byte_chunklets.append(bytes_payload)
+                if shm_ring_buffer and shm_ring_buffer.new_data_available:
+                    bytes_payload = shm_ring_buffer.get_next_payload()
+                    mf_payload = MultiFramePayload.from_bytes_buffer(bytes_payload)
+                    mf_payloads_to_process.append(mf_payload)
                 else:
                     if video_recorder_manager and video_recorder_manager.frames_to_save and not frame_escape_pipe.poll():  # prioritize other work before saving a frame
                         video_recorder_manager.save_one_frame()  # passes if empty
@@ -111,3 +109,5 @@ class FrameRouterProcess:
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()
             logger.debug(f"FrameRouter process completed")
+            if shm_ring_buffer:
+                shm_ring_buffer.close()

@@ -8,7 +8,7 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory_indexed_array imp
 
 
 def producer(shared_dto: SharedMemoryIndexedArrayDTO, data: List[np.ndarray]):
-    shm_array = SharedMemoryIndexedArray.recreate_from_dto(shared_dto)
+    shm_array = SharedMemoryIndexedArray.recreate(shared_dto)
     data_length = len(data)
     for _ in range(10):
         for array in data:
@@ -22,7 +22,7 @@ def producer(shared_dto: SharedMemoryIndexedArrayDTO, data: List[np.ndarray]):
 def fast_consumer(shared_dto: SharedMemoryIndexedArrayDTO,
                   data: List[np.ndarray],
                   shutdown_flag: multiprocessing.Value):
-    shm_array = SharedMemoryIndexedArray.recreate_from_dto(shared_dto)
+    shm_array = SharedMemoryIndexedArray.recreate(shared_dto)
     index = 0
     data_length = len(data)
     while not shutdown_flag.value:
@@ -39,7 +39,7 @@ def fast_consumer(shared_dto: SharedMemoryIndexedArrayDTO,
 def slow_consumer(shared_dto: SharedMemoryIndexedArrayDTO,
                   data: List[np.ndarray],
                   shutdown_flag: multiprocessing.Value):
-    shm_array = SharedMemoryIndexedArray.recreate_from_dto(shared_dto)
+    shm_array = SharedMemoryIndexedArray.recreate(shared_dto)
     index = 0
     data_length = len(data)
     time.sleep(.001)
