@@ -97,6 +97,26 @@ class CameraGroupSharedMemory:
         self.latest_mf_number.value = payload.multi_frame_number
         return payload
 
+    def get_latest_multi_frame_payload(self,
+                                     previous_payload: Optional[MultiFramePayload],
+                                     camera_configs: CameraConfigs
+                                     ) -> MultiFramePayload:
+        if previous_payload is None:
+            payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
+        else:
+            payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
+                                                                         camera_configs=camera_configs)
+
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+
+        for camera_id, camera_shared_memory in self.camera_shms.items():
+            frame = camera_shared_memory.retrieve_latest_frame()
+            payload.add_frame(frame)
+        if not payload.full:
+            raise ValueError("Did not read full multi-frame payload!")
+        return payload
+
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it        
         for camera_shared_memory in self.camera_shms.values():
