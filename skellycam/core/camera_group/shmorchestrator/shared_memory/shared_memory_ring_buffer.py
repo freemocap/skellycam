@@ -37,7 +37,7 @@ class SharedMemoryRingBuffer:
 
     @classmethod
     def create(cls,
-               example_payload: np.ndarray ,
+               example_payload: np.ndarray,
                dtype: Union[np.dtype, type, str] = np.uint8,
                buffer_memory_allocation: int | None = ONE_GIGABYTE,
                ring_buffer_length: int | None = None,
@@ -49,8 +49,7 @@ class SharedMemoryRingBuffer:
         full_buffer = np.zeros((ring_buffer_length,) + array.shape, dtype=dtype)
         ring_buffer_shm = SharedMemoryElement.create(full_buffer.shape, dtype)
         last_written_index = SharedMemoryNumber.create(initial_value=-1)
-        last_read_index = SharedMemoryNumber.create(
-            initial_value=-2)  # will increment to -1 on `recreate` to indicate that the reader is ready
+        last_read_index = SharedMemoryNumber.create(initial_value=-1)
         return cls(ring_buffer_shm=ring_buffer_shm,
                    ring_buffer_shape=full_buffer.shape,
                    dtype=dtype,

@@ -52,6 +52,9 @@ class CameraManager(BaseModel):
         self.camera_group_frame_loop()
         logger.success(f"Cameras {self.camera_ids} frame loop ended.")
 
+    def join(self):
+        [camera.join() for camera in self.camera_processes.values()]
+
     def camera_group_frame_loop(self):
         self.orchestrator.await_cameras_ready()
 
@@ -82,7 +85,7 @@ class CameraManager(BaseModel):
             )
         finally:
             logger.debug(f"Multi-camera trigger loop for cameras: {self.camera_ids}  exited")
-            self.close()
+            self._close_cameras()
 
     def _check_handle_config_update(self):
         # Check for new camera configs
@@ -96,12 +99,6 @@ class CameraManager(BaseModel):
                 wait_100ms()
             self.orchestrator.await_cameras_ready()
             logger.trace(f"Camera configs updated for cameras: {self.camera_ids}")
-
-    def close(self):
-        logger.info(f"Stopping cameras: {self.camera_ids}")
-        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value and not self.camera_group_dto.ipc_flags.global_kill_flag.value:
-            raise ValueError("Camera manager should only be closed after global kill flag is set")
-        self._close_cameras()
 
     def update_camera_configs(self, update_instructions: UpdateInstructions):
         logger.debug(f"Updating cameras with instructions: {update_instructions}")

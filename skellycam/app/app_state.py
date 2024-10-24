@@ -66,17 +66,17 @@ class AppState:
         if self.available_devices is None:
             raise ValueError("Cannot get CameraConfigs without available devices!")
         self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
-                                                                  ipc_queue=self.ipc_queue,
-                                                                  ipc_flags=self.ipc_flags,
-                                                                  config_update_queue=self.config_update_queue,
-                                                                  group_uuid=str(uuid4())
-                                                                  )
+                                               ipc_queue=self.ipc_queue,
+                                               ipc_flags=self.ipc_flags,
+                                               config_update_queue=self.config_update_queue,
+                                               group_uuid=str(uuid4())
+                                               )
         self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.camera_group_dto,
                                                                           ipc_flags=self.ipc_flags,
                                                                           read_only=True)
-        self.camera_group = CameraGroup.create(camera_group_dto=self.camera_group_dto,
-                                               shmorc_dto=self.shmorchestrator.to_dto()
-                                               )
+        self.camera_group = CameraGroup(camera_group_dto=self.camera_group_dto,
+                                        shmorc_dto=self.shmorchestrator.to_dto()
+                                        )
 
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 

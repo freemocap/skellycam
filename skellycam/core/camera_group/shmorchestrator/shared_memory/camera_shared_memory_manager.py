@@ -67,6 +67,10 @@ class CameraGroupSharedMemory:
     def read_only(self) -> bool:
         return all([camera_shared_memory.read_only for camera_shared_memory in self.camera_shms.values()])
 
+    @property
+    def new_data_available(self) -> bool:
+        return all([camera_shared_memory.new_data_available for camera_shared_memory in self.camera_shms.values()])
+
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_group_dto=self.camera_group_dto,
                                           camera_shm_dtos=self.camera_shm_dtos,
