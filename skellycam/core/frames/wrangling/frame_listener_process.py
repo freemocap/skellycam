@@ -80,8 +80,9 @@ class FrameListenerProcess:
                 elif len(byte_chunklets_to_send) > 0:
                     # Opportunistically let byte chunks escape one-at-a-time, whenever there isn't frame-loop work to do
                     frame_escape_pipe.send_bytes(byte_chunklets_to_send.popleft())
-
-                wait_1ms()
+                    logger.api(f"FRAME LISTENER - len(byte_chunklets_to_send): {len(byte_chunklets_to_send)}")
+                else:
+                    wait_1ms()
 
         except Exception as e:
             logger.exception(f"Frame listener process error: {e.__class__} - {e}")

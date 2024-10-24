@@ -8,9 +8,9 @@ class SharedMemoryNumber(BaseModel):
     shm_element: SharedMemoryElement
 
     @classmethod
-    def create(cls):
+    def create(cls, initial_value: int = -1):
         element = SharedMemoryElement.create(shape=(1,), dtype=np.int64)
-        element.buffer[0] = -1
+        element.buffer[0] = initial_value
         return cls(shm_element=element)
 
     @classmethod

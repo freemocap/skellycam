@@ -14,6 +14,7 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
 from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 from skellycam.utilities.rotate_image import rotate_image
 
+BYTES_BUFFER_SPLITTER = b"__SPLITTER__"
 
 class MultiFramePayload(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -47,6 +48,10 @@ class MultiFramePayload(BaseModel):
     @property
     def camera_ids(self) -> List[CameraId]:
         return list(self.frames.keys())
+
+    def to_bytes_buffer(self) -> bytes:
+        return BYTES_BUFFER_SPLITTER.join(self.to_bytes_list())
+
 
     def to_bytes_list(self) -> List[Any]:
         if not self.full:

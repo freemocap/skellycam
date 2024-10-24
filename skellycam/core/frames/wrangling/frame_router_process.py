@@ -50,7 +50,6 @@ class FrameRouterProcess:
         try:
             while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
                 wait_1ms()
-
                 # Check for incoming data
                 if frame_escape_pipe.poll():
                     bytes_payload: bytes = frame_escape_pipe.recv_bytes()
