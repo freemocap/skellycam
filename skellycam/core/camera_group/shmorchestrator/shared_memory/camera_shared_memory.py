@@ -32,6 +32,9 @@ class CameraSharedMemory(BaseModel):
     metadata_shm: SharedMemoryRingBuffer
     read_only: bool
 
+    @property
+    def new_data_available(self):
+        return self.image_shm.new_data_available and self.metadata_shm.new_data_available
     @classmethod
     def create(
             cls,

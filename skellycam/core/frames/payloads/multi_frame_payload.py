@@ -131,7 +131,7 @@ class MultiFramePayload(BaseModel):
         return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
 
     def __str__(self) -> str:
-        print_str = f"["
+        print_str = f"MultiFrame# {self.multi_frame_number} - FramePayloads: ["
         for camera_id, frame in self.frames.items():
             print_str += str(frame) + "\n"
         print_str += "]"
