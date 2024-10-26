@@ -4,14 +4,14 @@ from collections import deque
 from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_ring_buffer import \
+from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
+    RingBufferCameraGroupSharedMemory, RingBufferCameraGroupSharedMemoryDTO
+from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import \
     SharedMemoryRingBufferDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
-    SingleSlotCameraGroupSharedMemory, SingleSlotCameraGroupSharedMemoryDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
-from skellycam.utilities.wait_functions import wait_1ms, wait_100ms
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +41,9 @@ class FrameRouterProcess:
         self._process.join()
 
     @staticmethod
-    def _run_process(dto: CameraGroupDTO,
+    def _run_process(camera_group_dto: CameraGroupDTO,
                      new_configs_queue: multiprocessing.Queue,
-                     frame_escape_ring_shm_dto: SingleSlotCameraGroupSharedMemoryDTO,
+                     frame_escape_ring_shm_dto: RingBufferCameraGroupSharedMemoryDTO,
                      ):
         """
         This process is not coupled to the frame loop, and the `escape pipe` is elastic, so blocking is not as big a sin here.
@@ -52,53 +52,42 @@ class FrameRouterProcess:
         logger.debug(f"FrameRouter  process started!")
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         video_recorder_manager: Optional[VideoRecorderManager] = None
-        frame_escape_ring_shm = SingleSlotCameraGroupSharedMemory.recreate(camera_group_dto=dto,
+        frame_escape_ring_shm = RingBufferCameraGroupSharedMemory.recreate(camera_group_dto=camera_group_dto,
                                                                            shm_dto=frame_escape_ring_shm_dto,
                                                                            read_only=False)
-        camera_configs = dto.camera_configs
+
+        camera_configs = camera_group_dto.camera_configs
         mf_payload: Optional[MultiFramePayload] = None
         try:
-            while not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
+            while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
+                wait_1ms()
                 if new_configs_queue.qsize() > 0:
                     camera_configs = new_configs_queue.get()
-                wait_100ms()
-                # mf_payload: Optional[MultiFramePayload] = frame_escape_ring_shm.get_multi_frame_payload(previous_payload=mf_payload,
-                #                                                                                         camera_configs=camera_configs)
-                #
-                # # if frame_escape_ring_shm.new
-                # #     shm_ring_buffer_dto: SharedMemoryRingBufferDTO = frame_escape_pipe.recv()
-                # #     if shm_ring_buffer:
-                # #         shm_ring_buffer.close()
-                # #     shm_ring_buffer = SharedMemoryRingBuffer.recreate(shm_ring_buffer_dto)
-                # #
-                # # if shm_ring_buffer and shm_ring_buffer.new_data_available:
-                # #     bytes_payload = shm_ring_buffer.get_data()
-                # #     mf_payload = MultiFramePayload.from_bytes_buffer(bytes_payload)
-                # #     mf_payloads_to_process.append(mf_payload)
-                # # else:
-                # #     if video_recorder_manager and video_recorder_manager.frames_to_save and not frame_escape_pipe.poll():  # prioritize other work before saving a frame
-                # #         video_recorder_manager.save_one_frame()  # passes if empty
-                #
-                # # Handle multi-frame payloads
-                # if len(mf_payloads_to_process) > 0:
-                #     mf_payload = mf_payloads_to_process.popleft()
-                #     if dto.ipc_flags.record_frames_flag.value:
-                #         if not video_recorder_manager:
-                #
-                #             video_recorder_manager = VideoRecorderManager.create(multi_frame_payload=mf_payload,
-                #                                                                  camera_configs=dto.camera_configs,
-                #                                                                  recording_folder=get_default_recording_folder_path(
-                #                                                                      tag=""))
-                #             dto.ipc_queue.put(video_recorder_manager.recording_info)
-                #         video_recorder_manager.add_multi_frame(mf_payload)
-                #     else:
-                #         if video_recorder_manager:
-                #             logger.info('Recording complete, finishing and closing recorder...')
-                #             while len(mf_payloads_to_process) > 0:
-                #                 video_recorder_manager.add_multi_frame(mf_payloads_to_process.popleft())
-                #             video_recorder_manager.finish_and_close()  # Note, this will block this process until all frames are written
-                #             video_recorder_manager = None
-                #     # TODO - send mf_payload along to the processing pipeline, somehow (maybe via another pipe? or the SharedMemoryIndexedArray thing i made?)
+                while frame_escape_ring_shm.new_multi_frame_available:
+                    mf_payload: MultiFramePayload = frame_escape_ring_shm.get_multi_frame_payload(
+                        previous_payload=mf_payload,
+                        camera_configs=camera_configs)
+                    mf_payloads_to_process.append(mf_payload)
+
+                # Handle multi-frame payloads
+                if len(mf_payloads_to_process) > 0:
+                    mf_payload = mf_payloads_to_process.popleft()
+                    if camera_group_dto.ipc_flags.record_frames_flag.value:
+                        if not video_recorder_manager:
+                            video_recorder_manager = VideoRecorderManager.create(multi_frame_payload=mf_payload,
+                                                                                 camera_configs=camera_group_dto.camera_configs,
+                                                                                 recording_folder=get_default_recording_folder_path(
+                                                                                     tag=""))
+                            camera_group_dto.ipc_queue.put(video_recorder_manager.recording_info)
+                        video_recorder_manager.add_multi_frame(mf_payload)
+                    else:
+                        if video_recorder_manager:
+                            logger.info('Recording complete, finishing and closing recorder...')
+                            while len(mf_payloads_to_process) > 0:
+                                video_recorder_manager.add_multi_frame(mf_payloads_to_process.popleft())
+                            video_recorder_manager.finish_and_close()  # Note, this will block this process until all frames are written
+                            video_recorder_manager = None
+                    # TODO - send mf_payload along to the processing pipeline, somehow (maybe via another pipe? or the SharedMemoryIndexedArray thing i made?)
 
 
         except Exception as e:
@@ -113,9 +102,9 @@ class FrameRouterProcess:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"Stopped listening for multi-frames")
-            if not dto.ipc_flags.kill_camera_group_flag.value and not dto.ipc_flags.global_kill_flag.value:
+            if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 logger.warning("FrameRouter should only be closed after global kill flag is set")
-
+                camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()
             logger.debug(f"FrameRouter process completed")

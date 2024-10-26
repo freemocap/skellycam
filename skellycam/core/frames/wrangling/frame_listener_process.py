@@ -6,7 +6,9 @@ from typing import Optional
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_ring_buffer import SharedMemoryRingBuffer
+from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
+    RingBufferCameraGroupSharedMemory, RingBufferCameraGroupSharedMemoryDTO
+from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
     SingleSlotCameraGroupSharedMemory, SingleSlotCameraGroupSharedMemoryDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
@@ -42,7 +44,7 @@ class FrameListenerProcess:
     def _run_process(camera_group_dto: CameraGroupDTO,
                      shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                      new_configs_queue: multiprocessing.Queue,
-                     frame_escape_ring_shm_dto: SingleSlotCameraGroupSharedMemoryDTO,
+                     frame_escape_ring_shm_dto: RingBufferCameraGroupSharedMemoryDTO,
                      ):
         logger.trace(f"Starting FrameListener loop...")
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
@@ -51,8 +53,8 @@ class FrameListenerProcess:
         camera_group_shm = shmorchestrator.shm
         orchestrator = shmorchestrator.orchestrator
 
-        frame_escape_ring_shm = SingleSlotCameraGroupSharedMemory.recreate(camera_group_dto=camera_group_dto,
-                                                                           shm_dto=frame_escape_ring_shm_dto,
+        frame_escape_ring_shm = RingBufferCameraGroupSharedMemory.recreate(camera_group_dto=camera_group_dto,
+                                                                            shm_dto=frame_escape_ring_shm_dto,
                                                                            read_only=False)
 
 
@@ -112,7 +114,7 @@ class FrameListenerProcess:
             if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 logger.warning(
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
-
+                camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
             camera_group_shm.close()
             if shm_ring_buffer:
                 shm_ring_buffer.close_and_unlink()

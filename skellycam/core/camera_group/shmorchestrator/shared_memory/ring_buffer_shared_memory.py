@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import numpy as np
 
@@ -31,16 +31,18 @@ class SharedMemoryRingBuffer:
     def create(cls,
                example_payload: np.ndarray ,
                dtype: Union[np.dtype, type, str] = np.uint8,
-               buffer_memory_allocation: int = ONE_GIGABYTE,
+               memory_allocation: int = ONE_GIGABYTE,
+               ring_buffer_length: Optional[int] = None
                # TODO - calculate based on desired final size in memory rather than as an integer count of shm_elements
                ):
 
-        ring_buffer_length = buffer_memory_allocation // np.prod(example_payload.shape)
+        dtype = cls._ensure_dtype(dtype)
+        if ring_buffer_length is None:
+            ring_buffer_length = memory_allocation // np.prod(example_payload.shape)
         full_buffer = np.zeros((ring_buffer_length,) + example_payload.shape, dtype=dtype)
         ring_buffer_shm = SharedMemoryElement.create(full_buffer.shape, dtype)
         last_written_index = SharedMemoryNumber.create(initial_value=-1)
-        last_read_index = SharedMemoryNumber.create(
-            initial_value=-2)  # will increment to -1 on `recreate` to indicate that the reader is ready
+        last_read_index = SharedMemoryNumber.create(initial_value=-1)
         return cls(ring_buffer_shm=ring_buffer_shm,
                    ring_buffer_shape=full_buffer.shape,
                    dtype=dtype,
@@ -59,8 +61,6 @@ class SharedMemoryRingBuffer:
                        dtype=dtype,
                        last_written_index=SharedMemoryNumber.recreate(shm_name=dto.last_written_index_shm_name),
                        last_read_index=SharedMemoryNumber.recreate(shm_name=dto.last_read_index_shm_name))
-        if instance.last_read_index.get() == -2:
-            instance.last_read_index.set(-1)
 
         return instance
 

@@ -1,14 +1,12 @@
 import logging
 import time
-from typing import Dict
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
+from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
+    SharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
@@ -16,33 +14,36 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
 logger = logging.getLogger(__name__)
 
 
-class SharedMemoryNames(BaseModel):
-    image_shm_name: str
-    metadata_shm_name: str
-
-
-GroupSharedMemoryNames = Dict[CameraId, SharedMemoryNames]
-
-
-class SingleSlotCameraSharedMemory(BaseModel):
+class RingBufferCameraSharedMemoryDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    image_shm: SharedMemoryElement
-    metadata_shm: SharedMemoryElement
+    image_shm_dto: SharedMemoryRingBufferDTO
+    metadata_shm_dto: SharedMemoryRingBufferDTO
+
+
+class RingBufferCameraSharedMemory(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    image_shm: SharedMemoryRingBuffer
+    metadata_shm: SharedMemoryRingBuffer
     read_only: bool
 
     @classmethod
     def create(
             cls,
             camera_config: CameraConfig,
+            memory_allocation: int,
             read_only: bool,
     ):
-        image_shm = SharedMemoryElement.create(
-            shape=camera_config.image_shape,
+        example_image = np.zeros(camera_config.image_shape, dtype=np.uint8)
+        example_metadata = np.zeros(FRAME_METADATA_SHAPE, dtype=FRAME_METADATA_DTYPE)
+        image_shm = SharedMemoryRingBuffer.create(
+            example_payload=example_image,
+            memory_allocation=memory_allocation,
             dtype=DEFAULT_IMAGE_DTYPE,
         )
-        metadata_shm = SharedMemoryElement.create(
-            shape=FRAME_METADATA_SHAPE,
+        metadata_shm = SharedMemoryRingBuffer.create(
+            example_payload=example_metadata,
             dtype=FRAME_METADATA_DTYPE,
+            ring_buffer_length=image_shm.ring_buffer_length,
         )
 
         return cls(
@@ -53,18 +54,13 @@ class SingleSlotCameraSharedMemory(BaseModel):
 
     @classmethod
     def recreate(cls,
-                 camera_config: CameraConfig,
-                 shared_memory_names: SharedMemoryNames,
+                dto: RingBufferCameraSharedMemoryDTO,
                  read_only: bool, ):
-        image_shm = SharedMemoryElement.recreate(
-            shared_memory_names.image_shm_name,
-            shape=camera_config.image_shape,
-            dtype=np.uint8,
+        image_shm = SharedMemoryRingBuffer.recreate(
+            dto=dto.image_shm_dto
         )
-        metadata_shm = SharedMemoryElement.recreate(
-            shared_memory_names.metadata_shm_name,
-            shape=FRAME_METADATA_SHAPE,
-            dtype=FRAME_METADATA_DTYPE,
+        metadata_shm = SharedMemoryRingBuffer.recreate(
+            dto=dto.metadata_shm_dto
         )
         return cls(
             image_shm=image_shm,
@@ -73,8 +69,14 @@ class SingleSlotCameraSharedMemory(BaseModel):
         )
 
     @property
-    def shared_memory_names(self) -> SharedMemoryNames:
-        return SharedMemoryNames(image_shm_name=self.image_shm.name, metadata_shm_name=self.metadata_shm.name)
+    def new_frame_available(self):
+        return self.image_shm.new_data_available and self.metadata_shm.new_data_available
+
+    def to_dto(self) -> RingBufferCameraSharedMemoryDTO:
+        return RingBufferCameraSharedMemoryDTO(
+            image_shm_dto=self.image_shm.to_dto(),
+            metadata_shm_dto=self.metadata_shm.to_dto(),
+        )
 
     def put_frame(self, image: np.ndarray, metadata: np.ndarray):
         if self.read_only:
@@ -87,7 +89,6 @@ class SingleSlotCameraSharedMemory(BaseModel):
         )
 
     def retrieve_frame(self) -> FramePayload:
-
         image = self.image_shm.get_data()
         metadata = self.metadata_shm.get_data()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
