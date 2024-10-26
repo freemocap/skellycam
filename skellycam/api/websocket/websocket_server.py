@@ -107,8 +107,8 @@ class WebsocketServer:
                     await async_wait_1ms()
                     continue
 
-                mf_payload = self._app_state.camera_group_shm.get_latest_multi_frame_payload(previous_payload=mf_payload,
-                                                                                           camera_configs=self._app_state.camera_group.camera_configs)
+                mf_payload = self._app_state.camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload,
+                                                                                        camera_configs=self._app_state.camera_group.camera_configs)
                 await self._send_frontend_payload(mf_payload)
                 latest_mf_number = mf_payload.multi_frame_number
 

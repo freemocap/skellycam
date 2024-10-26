@@ -41,14 +41,14 @@ class SharedMemoryElement(BaseModel):
     def size(self) -> int:
         return self.shm.size
 
-    def copy_into_buffer(self, array: np.ndarray):
-        if array.dtype != self.dtype:
-            raise ValueError(f"Array dtype {array.dtype} does not match SharedMemoryElement dtype {self.dtype}")
-        if array.shape != self.original_shape:
-            raise ValueError(f"Array shape {array.shape} does not match SharedMemoryElement shape {self.original_shape}")
-        np.copyto(dst=self.buffer, src=array)
+    def put_data(self, data: np.ndarray):
+        if data.dtype != self.dtype:
+            raise ValueError(f"Array dtype {data.dtype} does not match SharedMemoryElement dtype {self.dtype}")
+        if data.shape != self.original_shape:
+            raise ValueError(f"Array shape {data.shape} does not match SharedMemoryElement shape {self.original_shape}")
+        np.copyto(dst=self.buffer, src=data)
 
-    def copy_from_buffer(self) -> np.ndarray:
+    def get_data(self) -> np.ndarray:
         array = np.copy(self.buffer)
         if array.dtype != self.dtype:
             raise ValueError(f"Array dtype {array.dtype} does not match SharedMemoryElement dtype {self.dtype}")

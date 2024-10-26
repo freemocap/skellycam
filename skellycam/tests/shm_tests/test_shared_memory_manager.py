@@ -23,14 +23,14 @@ def test_create_camera_shared_memory_manager(camera_configs_fixture: CameraConfi
 def test_recreate_camera_shared_memory_manager(camera_shared_memory_manager_fixture: CameraGroupSharedMemory):
     recreated_manager = CameraGroupSharedMemory.recreate(
         camera_configs=camera_shared_memory_manager_fixture.camera_configs,
-        group_shm_names=camera_shared_memory_manager_fixture.to_dto)
+        group_shm_names=camera_shared_memory_manager_fixture.shared_memory_names)
     assert isinstance(recreated_manager, CameraGroupSharedMemory)
     assert len(recreated_manager.camera_shms) == len(camera_shared_memory_manager_fixture.camera_shms)
 
 
 def test_shared_memory_names_property(camera_shared_memory_manager_fixture: CameraGroupSharedMemory):
     manager = camera_shared_memory_manager_fixture
-    shared_memory_names = manager.to_dto
+    shared_memory_names = manager.shared_memory_names
     assert isinstance(shared_memory_names, Dict)
     for shm_name in shared_memory_names.values():
         assert isinstance(shm_name, SharedMemoryNames)
@@ -44,19 +44,19 @@ def test_get_multi_frame_payload(camera_shared_memory_manager_fixture: CameraGro
     for camera_id, camera_shm in manager.camera_shms.items():
         metadata = multi_frame_payload_fixture.frames[camera_id].metadata
         metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_id
-        camera_shm.put_new_frame(image=multi_frame_payload_fixture.frames[camera_id].image,
-                                 metadata=metadata)
+        camera_shm.put_frame(image=multi_frame_payload_fixture.frames[camera_id].image,
+                             metadata=metadata)
 
     # Test initial payload
-    initial_payload = manager.get_next_multi_frame_payload(previous_payload=None)
+    initial_payload = manager.get_multi_frame_payload(previous_payload=None)
     assert initial_payload.full
     assert initial_payload.multi_frame_number == 0
 
     # Test subsequent payload
     for camera_id, camera_shm in manager.camera_shms.items():
-        camera_shm.put_new_frame(image=initial_payload.frames[camera_id].image,
-                                 metadata=initial_payload.frames[camera_id].metadata)
-    next_payload = manager.get_next_multi_frame_payload(previous_payload=initial_payload)
+        camera_shm.put_frame(image=initial_payload.frames[camera_id].image,
+                             metadata=initial_payload.frames[camera_id].metadata)
+    next_payload = manager.get_multi_frame_payload(previous_payload=initial_payload)
     assert next_payload.full
     assert next_payload.multi_frame_number == 1
     assert next_payload.utc_ns_to_perf_ns == initial_payload.utc_ns_to_perf_ns

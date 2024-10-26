@@ -50,7 +50,7 @@ def test_copy_into_buffer(ndarray_shape_fixture, dtype_fixture: np.dtype):
     element = SharedMemoryElement.create(shape=ndarray_shape_fixture, dtype=dtype_fixture)
 
     buffer = np.zeros(ndarray_shape_fixture, dtype=dtype_fixture)
-    element.copy_into_buffer(buffer)
+    element.put_data(buffer)
 
     assert np.array_equal(buffer, element.buffer)
 
@@ -61,8 +61,8 @@ def test_copy_into_buffer(ndarray_shape_fixture, dtype_fixture: np.dtype):
 def test_copy_from_buffer(random_array_fixture: np.ndarray):
     element = SharedMemoryElement.create(shape=random_array_fixture.shape,
                                          dtype=random_array_fixture.dtype)
-    element.copy_into_buffer(random_array_fixture)
-    copied_npy = element.copy_from_buffer()
+    element.put_data(random_array_fixture)
+    copied_npy = element.get_data()
 
     assert isinstance(copied_npy, np.ndarray)
     assert copied_npy.shape == random_array_fixture.shape

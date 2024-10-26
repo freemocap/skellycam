@@ -6,7 +6,8 @@ import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
-from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory import CameraSharedMemory
+from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
+    SingleSlotCameraSharedMemory
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 def get_frame(camera_id: CameraId,
               cap: cv2.VideoCapture,
               frame_metadata: np.ndarray,
-              camera_shared_memory: CameraSharedMemory,
+              camera_shared_memory: SingleSlotCameraSharedMemory,
               frame_loop_flags: CameraFrameLoopFlags,
               frame_number: int,
               ) -> int:
@@ -61,12 +62,14 @@ def get_frame(camera_id: CameraId,
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {camera_id}")
 
+    frame_loop_flags.signal_frame_was_retrieved()
 
-    camera_shared_memory.put_new_frame(
+    logger.loop(f"Frame#{frame_number} - Camera {camera_id} awaiting `copy` trigger...")
+    frame_loop_flags.await_should_copy_frame_into_shm()
+    camera_shared_memory.put_frame(
         image=image,
         metadata=frame_metadata,
     )
-    frame_loop_flags.signal_frame_was_retrieved()
-
+    frame_loop_flags.signal_new_frame_put_in_shm()
     logger.loop(f"Frame#{frame_number} - Camera {camera_id} frame frame loop completed successfully!")
     return frame_number + 1

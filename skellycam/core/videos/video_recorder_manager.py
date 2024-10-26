@@ -84,14 +84,14 @@ class VideoRecorderManager(BaseModel):
     def add_multi_frame(self, mf_payload: MultiFramePayload):
         self.fresh = False
         logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
-        # mf_payload.lifespan_timestamps_ns.append({"start_adding_multi_frame_to_video_recorder": time.perf_counter_ns()})
+        mf_payload.lifespan_timestamps_ns.append({"start_adding_multi_frame_to_video_recorder": time.perf_counter_ns()})
         self._validate_multi_frame(mf_payload=mf_payload)
-        # mf_payload.lifespan_timestamps_ns.append({"before_add_multi_frame_to_video_savers": time.perf_counter_ns()})
+        mf_payload.lifespan_timestamps_ns.append({"before_add_multi_frame_to_video_savers": time.perf_counter_ns()})
         for camera_id in mf_payload.camera_ids:
             frame = mf_payload.get_frame(camera_id)
             self.video_recorders[camera_id].add_frame(frame=frame)
 
-        # mf_payload.lifespan_timestamps_ns.append({"before_logging_multi_frame": time.perf_counter_ns()})
+        mf_payload.lifespan_timestamps_ns.append({"before_logging_multi_frame": time.perf_counter_ns()})
         self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
 
     def save_one_frame(self) -> Optional[bool]:

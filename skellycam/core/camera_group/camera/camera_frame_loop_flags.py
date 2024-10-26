@@ -21,6 +21,8 @@ class CameraFrameLoopFlags:
     frame_loop_initialization_flag: multiprocessing.Value
     should_grab_frame_flag: multiprocessing.Value
     should_retrieve_frame_flag: multiprocessing.Value
+    should_copy_frame_into_shm_flag: multiprocessing.Value
+    new_frame_in_shm: multiprocessing.Value
     close_self_flag: multiprocessing.Value
 
     ipc_flags: IPCFlags
@@ -38,7 +40,10 @@ class CameraFrameLoopFlags:
             frame_loop_initialization_flag=multiprocessing.Value('b', False),
             should_grab_frame_flag=multiprocessing.Value('b', False),
             should_retrieve_frame_flag=multiprocessing.Value('b', False),
+            should_copy_frame_into_shm_flag=multiprocessing.Value('b', False),
+            new_frame_in_shm=multiprocessing.Value('b', False),
             close_self_flag=multiprocessing.Value('b', False),
+
         )
 
     @property
@@ -57,6 +62,8 @@ class CameraFrameLoopFlags:
     def await_should_retrieve(self):
         self._wait_loop(self.should_retrieve_frame_flag, waiting_for="should_retrieve_frame_flag")
 
+    def await_should_copy_frame_into_shm(self):
+        self._wait_loop(self.should_copy_frame_into_shm_flag, waiting_for="should_copy_frame_into_shm_flag")
 
     def set_camera_not_ready(self):
         self.camera_ready_flag.value = False
@@ -70,6 +77,8 @@ class CameraFrameLoopFlags:
     def signal_frame_was_retrieved(self):
         self.should_retrieve_frame_flag.value = False
 
+    def signal_new_frame_put_in_shm(self):
+        self.new_frame_in_shm.value = True
 
     def _wait_loop(self, signal_flag: multiprocessing.Value, waiting_for:str,max_wait_time_s: float = MAX_WAIT_TIME_S):
         start_wait_ns = time.perf_counter_ns()

@@ -14,8 +14,8 @@ from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
-from skellycam.core.camera_group.shmorchestrator.shared_memory.camera_shared_memory_manager import \
-    CameraGroupSharedMemory
+from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
+    SingleSlotCameraGroupSharedMemory
 from skellycam.core.detection.camera_device_info import AvailableDevices, available_devices_to_default_camera_configs
 from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
 
@@ -45,7 +45,7 @@ class AppState:
         return self.shmorchestrator.orchestrator
 
     @property
-    def camera_group_shm(self) -> CameraGroupSharedMemory:
+    def camera_group_shm(self) -> SingleSlotCameraGroupSharedMemory:
         return self.shmorchestrator.shm
 
     @property
@@ -66,17 +66,17 @@ class AppState:
         if self.available_devices is None:
             raise ValueError("Cannot get CameraConfigs without available devices!")
         self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
-                                               ipc_queue=self.ipc_queue,
-                                               ipc_flags=self.ipc_flags,
-                                               config_update_queue=self.config_update_queue,
-                                               group_uuid=str(uuid4())
-                                               )
+                                                                  ipc_queue=self.ipc_queue,
+                                                                  ipc_flags=self.ipc_flags,
+                                                                  config_update_queue=self.config_update_queue,
+                                                                  group_uuid=str(uuid4())
+                                                                  )
         self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.camera_group_dto,
                                                                           ipc_flags=self.ipc_flags,
                                                                           read_only=True)
-        self.camera_group = CameraGroup(camera_group_dto=self.camera_group_dto,
-                                        shmorc_dto=self.shmorchestrator.to_dto()
-                                        )
+        self.camera_group = CameraGroup.create(camera_group_dto=self.camera_group_dto,
+                                               shmorc_dto=self.shmorchestrator.to_dto()
+                                               )
 
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 

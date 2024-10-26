@@ -1,15 +1,14 @@
 import json
 import time
-from collections import deque
 from typing import Dict, Optional, List, Any
 
 import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
-from skellycam.core.frames.payloads.frame_payload import FramePayload, FramePayloadBuffer, create_dummy_frame_payload
+from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
@@ -22,8 +21,8 @@ class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
-    # multi_frame_number: int = 0
-# #     # lifespan_timestamps_ns: List[Dict[str, int]] = Field(default_factory=lambda: [{"created": time.perf_counter_ns()}])
+    multi_frame_number: int = 0
+    lifespan_timestamps_ns: List[Dict[str, int]] = Field(default_factory=lambda: [{"created": time.perf_counter_ns()}])
 
     camera_configs: CameraConfigs
 
@@ -43,17 +42,6 @@ class MultiFramePayload(BaseModel):
                    )
 
     @property
-    def multi_frame_number(self) -> int:
-        nums = []
-        for frame in self.frames.values():
-            if frame is not None:
-                nums.append(frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value])
-        mf_num = set(nums)
-        if len(mf_num) > 1:
-            raise ValueError(f"MultiFramePayloadDTO has multiple frame numbers: {mf_num}")
-        return mf_num.pop()
-
-    @property
     def full(self) -> bool:
         return all([frame is not None for frame in self.frames.values()])
 
@@ -61,55 +49,27 @@ class MultiFramePayload(BaseModel):
     def camera_ids(self) -> List[CameraId]:
         return list(self.frames.keys())
 
-    def to_numpy_buffer(self) -> np.ndarray:
-        bytes_buffer =  BYTES_BUFFER_SPLITTER.join(self.to_bytes_dequeue())
-        return np.frombuffer(bytes_buffer, dtype=np.uint8)
+    def to_bytes_buffer(self) -> bytes:
+        return BYTES_BUFFER_SPLITTER.join(self.to_bytes_list())
 
 
-    @classmethod
-    def from_numpy_buffer(cls, data: np.ndarray) -> 'MultiFramePayload':
-        bytes_deque = deque(data.tobytes().split(BYTES_BUFFER_SPLITTER))
-        return cls.from_deque(bytes_deque)
-
-    @classmethod
-    def from_deque(cls, data: deque[bytes]) -> 'MultiFramePayload':
-        if data.popleft() != b"START":
-            raise ValueError(f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'START'")
-        metadata = json.loads(data.popleft().decode("utf-8"))
-        frames = {}
-        while len(data) > 0:
-            popped = data.popleft()
-            if popped != b"FRAME-START":
-                raise ValueError(
-                    f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-START', got {popped}")
-            frame_list = []
-            frame_bytes = data.popleft()
-            frame_list.append(FramePayloadBuffer(buffer =frame_bytes).to_frame_payload())
-            if data.popleft() != b"FRAME-END":
-                raise ValueError(
-                    f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-END', got {popped}")
-            frame = FramePayload.from_bytes_list(frame_list)
-            frames[frame.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]] = frame
-
-        return cls(frames=frames, **metadata)
-
-    def to_bytes_dequeue(self) -> deque[bytes]:
+    def to_bytes_list(self) -> List[Any]:
         if not self.full:
             raise ValueError("Cannot serialize MultiFramePayloadDTO to list without all frames present")
-        ret = deque([b"START"])
+        ret = [b"START"]
         metadata_bytes = self.model_dump_json(exclude={"frames"}).encode("utf-8")
         ret.append(metadata_bytes)
         for frame in self.frames.values():
             ret.append(b"FRAME-START")
-            ret.append(FramePayloadBuffer.from_frame_payload(frame).buffer.tobytes())
+            ret.extend(frame.to_bytes_list())
             ret.append(b"FRAME-END")
         ret.append(b"END")
         return ret
 
     def add_frame(self, frame_dto: FramePayload) -> None:
         camera_id = frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
-# #         # self.lifespan_timestamps_ns.append({
-        #     f"add_camera_{camera_id}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}": time.perf_counter_ns()})
+        self.lifespan_timestamps_ns.append({
+            f"add_camera_{camera_id}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}": time.perf_counter_ns()})
         self.frames[camera_id] = frame_dto
 
     def get_frame(self, camera_id: CameraId, rotate: bool = True, return_copy:bool=True) -> Optional[FramePayload]:
@@ -127,11 +87,35 @@ class MultiFramePayload(BaseModel):
 
         return frame
 
+    @classmethod
+    def from_bytes_buffer(cls, data: bytes) -> 'MultiFramePayload':
+        return cls.from_bytes_list(data.split(BYTES_BUFFER_SPLITTER))
+
+    @classmethod
+    def from_list(cls, data: List[Any]) -> 'MultiFramePayload':
+        metadata = json.loads(data.pop(0).decode("utf-8"))
+        frames = {}
+        while len(data) > 0:
+            popped = data.pop(0)
+            if popped != b"FRAME-START":
+                raise ValueError(
+                    f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-START', got {popped}")
+            frame_list = []
+            while data[0] != b"FRAME-END":
+                frame_list.append(data.pop(0))
+            if data.pop(0) != b"FRAME-END":
+                raise ValueError(
+                    f"Unexpected element in MultiFramePayloadDTO bytes list, expected 'FRAME-END', got {popped}")
+            frame = FramePayload.from_bytes_list(frame_list)
+            frames[frame.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]] = frame
+
+        return cls(frames=frames, **metadata)
+
     def to_metadata(self) -> 'MultiFrameMetadata':
         return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
 
     def __str__(self) -> str:
-        print_str = f"MultiFrame# {self.multi_frame_number} - FramePayloads: ["
+        print_str = f"["
         for camera_id, frame in self.frames.items():
             print_str += str(frame) + "\n"
         print_str += "]"
@@ -142,7 +126,7 @@ class MultiFrameMetadata(BaseModel):
     frame_number: int
     frame_metadata_by_camera: Dict[CameraId, FrameMetadata]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
-    # multi_frame_lifespan_timestamps_ns: List[Dict[str, int]]  # TODO - Make a model for this
+    multi_frame_lifespan_timestamps_ns: List[Dict[str, int]]  # TODO - Make a model for this
 
     @classmethod
     def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload):
@@ -152,7 +136,7 @@ class MultiFrameMetadata(BaseModel):
                 camera_id: FrameMetadata.from_frame_metadata_array(frame.metadata)
                 for camera_id, frame in multi_frame_payload.frames.items()
             },
-            # multi_frame_lifespan_timestamps_ns=multi_frame_payload.lifespan_timestamps_ns,
+            multi_frame_lifespan_timestamps_ns=multi_frame_payload.lifespan_timestamps_ns,
             utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns
         )
 
@@ -164,22 +148,3 @@ class MultiFrameMetadata(BaseModel):
         ])
         unix_ns = self.utc_ns_to_perf_ns.convert_perf_counter_ns_to_unix_ns(mean_frame_grab_ns)
         return unix_ns / 1e9
-
-
-def create_dummy_multi_frame_payload(number_of_cameras:int=3):
-    camera_configs = {CameraId(i): CameraConfig(camera_id=i) for i in range(number_of_cameras)}
-    mf_payload = MultiFramePayload.create_initial(camera_configs)
-    for camera_id in camera_configs.keys():
-        frame =create_dummy_frame_payload(camera_id)
-        mf_payload.add_frame(frame)
-    return mf_payload
-
-if __name__ == "__main__":
-    og_mf = create_dummy_multi_frame_payload()
-    print(f"og_mf:\n\n {og_mf}")
-    array = MultiFramePayload.to_numpy_buffer(og_mf)
-    new_mf = MultiFramePayload.from_numpy_buffer(array)
-    print(f"new_mf:\n\n {new_mf}")
-    if not og_mf == new_mf:
-        raise ValueError("MultiFramePayload failed to convert back and forth")
-    print("MultiFramePayloadBuffer passed")

@@ -15,7 +15,7 @@ def producer(shared_dto: SharedMemoryIndexedArrayDTO, data: List[np.ndarray]):
             print(
                 f"Producer - Putting array into shared memory index: {shm_array.last_written_index.value + 1} (wrapped index: {(shm_array.last_written_index.value + 1) % data_length})")
 
-            shm_array.put_payload(array)
+            shm_array.put_data(array)
             time.sleep(0.001)
 
 
@@ -27,7 +27,7 @@ def fast_consumer(shared_dto: SharedMemoryIndexedArrayDTO,
     data_length = len(data)
     while not shutdown_flag.value:
         if shm_array.new_data_available:
-            received_array = shm_array.get_next_payload()
+            received_array = shm_array.get_data()
             print(
                 f"Fast Consumer - Received array from shared memory index: {shm_array.last_read_index.value} (wrapped index: {shm_array.last_read_index.value % data_length})")
 
@@ -45,7 +45,7 @@ def slow_consumer(shared_dto: SharedMemoryIndexedArrayDTO,
     time.sleep(.001)
     while not shutdown_flag.value:
         if shm_array.new_data_available:
-            received_array = shm_array.get_next_payload()
+            received_array = shm_array.get_data()
             print(
                 f"Slow Consumer - Received array from shared memory index: {shm_array.last_read_index.value} (wrapped index: {shm_array.last_read_index.value % data_length})")
             assert np.array_equal(received_array, data[index % data_length]), f"Data mismatch at index {index}"

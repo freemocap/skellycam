@@ -66,9 +66,6 @@ class CameraProcess:
     def is_alive(self) -> bool:
         return self.process.is_alive()
 
-    def join(self):
-        self.process.join()
-
     def update_config(self, new_config: CameraConfig):
         logger.debug(f"Updating camera {self.camera_id} with new config: {new_config}")
         self.new_config_queue.put(new_config)
