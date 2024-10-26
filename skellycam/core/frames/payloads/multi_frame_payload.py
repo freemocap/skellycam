@@ -21,7 +21,6 @@ class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
-    multi_frame_number: int = 0
     lifespan_timestamps_ns: List[Dict[str, int]] = Field(default_factory=lambda: [{"created": time.perf_counter_ns()}])
 
     camera_configs: CameraConfigs
@@ -48,6 +47,14 @@ class MultiFramePayload(BaseModel):
     @property
     def camera_ids(self) -> List[CameraId]:
         return list(self.frames.keys())
+
+    @property
+    def multi_frame_number(self) -> int:
+        frame_numbers = [frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] for frame in self.frames.values()]
+        mf_number = set(frame_numbers)
+        if len(mf_number) > 1:
+            raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
+        return mf_number.pop()
 
     def to_bytes_buffer(self) -> bytes:
         return BYTES_BUFFER_SPLITTER.join(self.to_bytes_list())
