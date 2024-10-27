@@ -19,6 +19,7 @@ class CameraGroupProcess:
             frame_router_config_queue: multiprocessing.Queue,
             frame_listener_config_queue: multiprocessing.Queue
     ):
+        self.dto = camera_group_dto
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
@@ -43,8 +44,9 @@ class CameraGroupProcess:
 
     def close(self):
         logger.debug("Closing `CameraGroupProcess`...")
-        if not self._dto.ipc_flags.kill_camera_group_flag.value == True:
-            raise ValueError("CameraGroupProcess was closed before the kill flag was set.")
+        if not self.dto.ipc_flags.kill_camera_group_flag.value == True:
+            logger.warning("CameraGroupProcess was closed before the kill flag was set.")
+        self.dto.ipc_flags.kill_camera_group_flag.value = True
         self._process.join()
         logger.debug("CameraGroupProcess closed.")
 

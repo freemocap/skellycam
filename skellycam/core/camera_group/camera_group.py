@@ -11,6 +11,7 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.camera_group_process import CameraGroupProcess
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
+from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,9 @@ class CameraGroup:
     group_uuid: str
 
     @classmethod
-    def create(cls, camera_group_dto: CameraGroupDTO, shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
+    def create(cls,
+               camera_group_dto: CameraGroupDTO,
+               shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
         frame_router_config_queue = multiprocessing.Queue()
         frame_listener_config_queue = multiprocessing.Queue()
         return cls(dto=camera_group_dto,
@@ -56,7 +59,6 @@ class CameraGroup:
 
     def close(self):
         logger.debug("Closing camera group")
-        self.shmorc_dto.camera_group_orchestrator.pause_loop()
         self.dto.ipc_flags.kill_camera_group_flag.value = True
         if self.camera_group_process:
             self.camera_group_process.close()
