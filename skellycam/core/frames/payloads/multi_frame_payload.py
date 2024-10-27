@@ -22,6 +22,7 @@ class MultiFrameNumpyBuffer(BaseModel):
     time_mapping_buffer: np.ndarray
     mf_metadata_buffer: np.ndarray
     mf_image_buffer: np.ndarray
+    multi_frame_number: int
 
     @classmethod
     def from_multi_frame_payload(cls, multi_frame_payload: 'MultiFramePayload') -> 'MultiFrameNumpyBuffer':
@@ -36,7 +37,14 @@ class MultiFrameNumpyBuffer(BaseModel):
         mf_images_ravelled = [image.ravel() for image in mf_images]
         mf_image_buffer = np.concatenate(mf_images_ravelled, axis=0)
 
-        return cls(time_mapping_buffer=time_mapping_buffer, mf_metadata_buffer=mf_metadata_buffer, mf_image_buffer=mf_image_buffer)
+        mf_number = [frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] for frame in multi_frame_payload.frames.values()]
+        if len(set(mf_number)) > 1:
+            raise ValueError(f"MultiFramePayload has multiple frame numbers {set(mf_number)}")
+
+        return cls(time_mapping_buffer=time_mapping_buffer,
+                   mf_metadata_buffer=mf_metadata_buffer,
+                   mf_image_buffer=mf_image_buffer,
+                   multi_frame_number=mf_number.pop())
 
     def to_multi_frame_payload(self, camera_configs:CameraConfigs) -> 'MultiFramePayload':
         time_mapping = UtcToPerfCounterMapping.from_numpy_buffer(self.time_mapping_buffer)
@@ -46,6 +54,10 @@ class MultiFrameNumpyBuffer(BaseModel):
         mf_metadatas = np.split(self.mf_metadata_buffer, number_of_cameras)
         frames = {}
         for metadata in mf_metadatas:
+            if not metadata.shape == FRAME_METADATA_SHAPE:
+                raise ValueError(f"Metadata shape {metadata.shape} does not match expected shape {FRAME_METADATA_SHAPE}")
+            if not metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] == self.multi_frame_number:
+                raise ValueError(f"Metadata frame number {metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} does not match expected frame number {self.multi_frame_number}")
             camera_id = CameraId(metadata[FRAME_METADATA_MODEL.CAMERA_ID.value])
             image_width = metadata[FRAME_METADATA_MODEL.IMAGE_WIDTH.value]
             image_height = metadata[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value]
