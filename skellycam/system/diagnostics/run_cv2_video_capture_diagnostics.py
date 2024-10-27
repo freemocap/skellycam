@@ -52,48 +52,59 @@ def measure_latency(video_capture: cv2.VideoCapture, max_frame_count: int = 30) 
 
 def run_camera_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_codes: List[str]):
     results = []
+    try:
+        for backend in BackendSelection:
+            if backend.value not in [cv2.CAP_DSHOW, cv2.CAP_V4L, cv2.CAP_V4L2, cv2.CAP_ANY, cv2.CAP_FFMPEG, cv2.CAP_OPENCV_MJPEG]:
+                continue
+            for code in fourcc_codes:
+                for size in image_sizes:
+                    print(f"Testing backend {backend.name}: FourCC: {code} at resolution: {size[0]}x{size[1]}")
+                    video_capture = cv2.VideoCapture(0, backend.value)
+                    outcome = "init-outcome"
+                    try:
+                        fourcc = cv2.VideoWriter_fourcc(*code)
+                        video_capture.set(cv2.CAP_PROP_FOURCC, fourcc)
 
-    for backend in BackendSelection:
-        if backend.value not in [cv2.CAP_V4L, cv2.CAP_V4L2, cv2.CAP_ANY, cv2.CAP_FFMPEG, cv2.CAP_OPENCV_MJPEG]:
-            continue
-        for code in fourcc_codes:
-            for size in image_sizes:
+                        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, size[0])
+                        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, size[1])
+                        success, image = video_capture.read()
+                        if not success:
+                            print(
+                                f"Failed to read frame from camera using backend: {backend.name},  FourCC: {code} at resolution: {size[0]}x{size[1]}...")
+                        #     continue
+                        #
+                        # if not image.shape == (size[1], size[0], 3):
+                        #     print(f"Image shape mismatch! Expected: {size[1], size[0], 3}, got: {image.shape}... skipping!")
+                        #     continue
 
-                print(f"Testing backend {backend.name}: FourCC: {code} at resolution: {size[0]}x{size[1]}")
-                video_capture = cv2.VideoCapture(0, backend.value)
-                fourcc = cv2.VideoWriter_fourcc(*code)
-                video_capture.set(cv2.CAP_PROP_FOURCC, fourcc)
-                video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, size[0])
-                video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, size[1])
+                        latency_metrics = measure_latency(video_capture)
+                        outcome = {
+                            'Backend': backend.name,
+                            'FourCC': code,
+                            'Resolution': f"{size[0]}x{size[1]}",
+                            **latency_metrics
+                        }
+                        results.append(outcome)
+                    except Exception as e:
+                        print(
+                            f"Failed to read frame from camera using backend: {backend.name},  FourCC: {code} at resolution: {size[0]}x{size[1]}...")
+                    finally:
+                        video_capture.release()
+                        print(f"\n{outcome}\n")
 
-                success, image = video_capture.read()
-                if not success:
-                    print(
-                        f"Failed to read frame from camera using backend: {backend.name},  FourCC: {code} at resolution: {size[0]}x{size[1]}...")
-                #     continue
-                #
-                # if not image.shape == (size[1], size[0], 3):
-                #     print(f"Image shape mismatch! Expected: {size[1], size[0], 3}, got: {image.shape}... skipping!")
-                #     continue
 
-                latency_metrics = measure_latency(video_capture)
-                outcome = {
-                    'Backend': backend.name,
-                    'FourCC': code,
-                    'Resolution': f"{size[0]}x{size[1]}",
-                    **latency_metrics
-                }
-                results.append(outcome)
-                print(outcome)
+    except Exception as e:
+        print(
+        f"Failed to read frame from camera using backend: {backend.name},  FourCC: {code} at resolution: {size[0]}x{size[1]}...")
+    finally:
 
-                video_capture.release()
-
-    df = pd.DataFrame(results)
-    print(df.to_string(index=False))
+        df = pd.DataFrame(results)
+        pd.set_option('display.float_format', '{:.3f}'.format)
+        print(df.to_string(index=False))
 
 
 if __name__ == "__main__":
-    image_sizes = [(640, 480)]  # , (1280, 720), (1920, 1080)]
-    fourcc_codes = ['XVID', 'MJPG']  # , 'X264', 'MP4V', 'H264',]
+    image_sizes = [(640, 480) , (1280, 720), (1920, 1080)]
+    fourcc_codes = ['XVID', 'MJPG', 'X264', 'MP4V', 'H264',]
 
     run_camera_diagnostics(image_sizes, fourcc_codes)

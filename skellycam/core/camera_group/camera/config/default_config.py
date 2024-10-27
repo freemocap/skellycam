@@ -24,4 +24,4 @@ class DefaultCameraConfig(Enum):
     FRAMERATE: float = DEFAULT_FRAME_RATE
     ROTATION: RotationTypes = RotationTypes.NO_ROTATION
     CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
-    WRITER_FOURCC: str = "MP4V"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
+    WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
