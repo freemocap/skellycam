@@ -80,7 +80,7 @@ class SharedMemoryRingBuffer:
 
     @property
     def new_data_available(self):
-        return self.ready_to_read and self.last_written_index.get() != self.last_read_index.get()
+        return self.ready_to_read and self.last_written_index.get() > self.last_read_index.get()
 
     @property
     def ring_buffer_length(self):

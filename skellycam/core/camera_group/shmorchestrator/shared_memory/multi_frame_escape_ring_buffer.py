@@ -153,7 +153,6 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                              f"Time Mapping: {self.mf_time_mapping_shm.last_written_index.value}, "
                              f"Expected: {multi_frame_payload.multi_frame_number}")
         self.latest_mf_number.value = multi_frame_payload.multi_frame_number
-        print(f"PUT MF NUMBER: {multi_frame_payload.multi_frame_number}")
 
     def get_multi_frame_payload(self,
                                 camera_configs: CameraConfigs,
@@ -179,7 +178,6 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                 raise ValueError(
                     f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf_payload.multi_frame_number}")
             self.previous_read_mf_payload = mf_payload
-            print(f"\tRETRIEVED NEXT MF NUMBER: {mf_payload.multi_frame_number}")
 
         elif retrieve_type == "latest":
             mf_payload = MultiFramePayload.from_numpy_buffer(
@@ -188,7 +186,6 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                                                           mf_time_mapping_buffer=self.mf_time_mapping_shm.get_latest_payload(),
                                                           ),
                 camera_configs=camera_configs)
-            print(f"\t\tRETRIEVED LATEST MF NUMBER: {mf_payload.multi_frame_number}")
         else:
             raise ValueError(f"Invalid retrieve_type: {retrieve_type}")
 

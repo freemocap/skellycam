@@ -57,7 +57,7 @@ class VideoRecorder(BaseModel):
         self._validate_frame(frame)
         self._frames_to_write.append(frame)
 
-    def write_one_frame(self):
+    def write_one_frame(self) -> int | None:
         if len(self._frames_to_write) == 0:
             return
 
@@ -67,10 +67,11 @@ class VideoRecorder(BaseModel):
         frame = self._frames_to_write.popleft()
         self._validate_frame(frame)
         self.video_writer.write(frame.image)
-        logger.loop(f"Added frame# {frame.frame_number} to VideoSaver for camera {self.camera_id}")
+        logger.loop(f"VideoRecorder for Camera {self.camera_id} wrote frame {frame.frame_number} to video file: {self.video_path}")
 
         if not self.video_writer.isOpened():
             raise ValidationError(f"VideoWriter not open (after adding frame)!")
+        return frame.frame_number
 
     def finish_and_close(self):
         logger.debug(f"Finishing and closing VideoSaver for camera {self.camera_id}")

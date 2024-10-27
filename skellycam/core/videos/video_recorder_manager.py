@@ -82,7 +82,6 @@ class VideoRecorderManager(BaseModel):
                    )
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
-        self.fresh = False
         logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
         self._validate_multi_frame(mf_payload=mf_payload)
         for camera_id in mf_payload.camera_ids:
@@ -99,17 +98,18 @@ class VideoRecorderManager(BaseModel):
         if not Path(self.recording_folder).exists():
             self._create_video_recording_folder()
 
-        self._choose_and_save_one()
+        frame_counts = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in self.video_recorders.items()}
+        camera_id_to_save = max(frame_counts, key=frame_counts.get)
+        tik = time.perf_counter_ns()
+        frame_number = self.video_recorders[camera_id_to_save].write_one_frame()
+        tok = time.perf_counter_ns()
+        if frame_number is None:
+            raise RuntimeError(f"Frame number is None after writing frame to video recorder for camera {camera_id_to_save}")
+        if camera_id_to_save == 0:
+            print("\n------------------------------------")
+        print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
         return True
 
-    def _choose_and_save_one(self):
-        # get the camera with the most frames to write (of the first one with the max number of frames to write, if there is a tie)
-        frame_write_lengths = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in
-                               self.video_recorders.items()}
-        camera_id = max(self.video_recorders, key=lambda x: self.video_recorders[x].number_of_frames_to_write)
-        logger.loop(
-            f"Saving one frame from camera {camera_id}, camera id vs frame write lengths: {frame_write_lengths}")
-        self.video_recorders[camera_id].write_one_frame()
 
     def _save_folder_readme(self):
         with open(str(Path(self.recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:

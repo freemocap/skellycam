@@ -55,38 +55,54 @@ class FrameRouterProcess:
                                                                                 read_only=False)
 
         camera_configs = camera_group_dto.camera_configs
-        mf_payload: Optional[MultiFramePayload] = None
         try:
             while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 wait_1ms()
+
+                # Check for new camera configs
                 if new_configs_queue.qsize() > 0:
                     camera_configs = new_configs_queue.get()
+
+                # Fully drain the ring shm buffer every time and put the frames into a deque in this Process' memory
                 while frame_escape_ring_shm.new_multi_frame_available:
                     mf_payload: MultiFramePayload = frame_escape_ring_shm.get_multi_frame_payload(
                         camera_configs=camera_configs,
                         retrieve_type="next")
+                    # print(f"ROUTER - pulled mf_payload #{mf_payload.multi_frame_number} from ring buffer (mf_payloads_to_process: {len(mf_payloads_to_process)})")
                     mf_payloads_to_process.append(mf_payload)
 
-                # Handle multi-frame payloads
-                if len(mf_payloads_to_process) > 0:
-                    mf_payload = mf_payloads_to_process.popleft()
-                    if camera_group_dto.ipc_flags.record_frames_flag.value:
+                # If we're recording, create a VideoRecorderManager and load all available frames into it (but don't save them to disk yet)
+                if camera_group_dto.ipc_flags.record_frames_flag.value:
+                    while len(mf_payloads_to_process) > 0:
+                        mf_payload = mf_payloads_to_process.popleft()
                         if not video_recorder_manager:
                             video_recorder_manager = VideoRecorderManager.create(multi_frame_payload=mf_payload,
                                                                                  camera_configs=camera_group_dto.camera_configs,
                                                                                  recording_folder=get_default_recording_folder_path(
                                                                                      tag=""))
                             camera_group_dto.ipc_queue.put(video_recorder_manager.recording_info)
+                        # print(
+                        #     f"\tROUTER - adding mf_payload #{mf_payload.multi_frame_number} to video_recorder_manager")
                         video_recorder_manager.add_multi_frame(mf_payload)
-                    else:
-                        if video_recorder_manager:
-                            logger.info('Recording complete, finishing and closing recorder...')
-                            while len(mf_payloads_to_process) > 0:
-                                video_recorder_manager.add_multi_frame(mf_payloads_to_process.popleft())
-                            video_recorder_manager.finish_and_close()  # Note, this will block this process until all frames are written
-                            video_recorder_manager = None
+                else:
+                    # If we're not recording and video_recorder_manager exists, finish up the videos and close the recorder
+                    if video_recorder_manager:
+                        logger.info('Recording complete, finishing and closing recorder...')
+                        while len(mf_payloads_to_process) > 0:
+                            print(
+                                f"\t\tROUTER (POST-REC) - adding mf_payload #{mf_payloads_to_process[0].multi_frame_number} to video_recorder_manager")
+                            video_recorder_manager.add_multi_frame(mf_payloads_to_process.popleft())
+                        video_recorder_manager.finish_and_close()
+
+                        video_recorder_manager = None
+
+                    # If we're not recording, just clear the deque of frames
+                    mf_payloads_to_process.clear()
                     # TODO - send mf_payload along to the processing pipeline, somehow (maybe via another pipe? or the SharedMemoryIndexedArray thing i made?)
 
+                # If we're recording, save one frame from the video_recorder_manager each loop (skips if no frames to save)
+                if video_recorder_manager:
+                    video_recorder_manager.save_one_frame()
 
         except Exception as e:
             logger.error(f"Frame exporter process error: {e}")
