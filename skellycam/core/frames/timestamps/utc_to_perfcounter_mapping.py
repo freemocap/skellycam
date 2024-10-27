@@ -1,5 +1,6 @@
 import time
 
+import numpy as np
 from pydantic import BaseModel, Field
 
 
@@ -17,3 +18,10 @@ class UtcToPerfCounterMapping(BaseModel):
         Convert a `time.perf_counter_ns()` timestamp to a unix timestamp
         """
         return self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns)
+
+    def to_numpy_buffer(self):
+        return np.concatenate([np.array([self.utc_time_ns]), np.array([self.perf_counter_ns])], dtype=np.int64)
+
+    @classmethod
+    def from_numpy_buffer(cls, buffer: np.ndarray):
+        return cls(utc_time_ns=buffer[0], perf_counter_ns=buffer[1])

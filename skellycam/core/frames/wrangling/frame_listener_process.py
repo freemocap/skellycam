@@ -7,7 +7,7 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
-    RingBufferCameraGroupSharedMemory, RingBufferCameraGroupSharedMemoryDTO
+    MultiFrameEscapeSharedMemoryRingBuffer, RingBufferCameraGroupSharedMemoryDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
     SingleSlotCameraGroupSharedMemory, SingleSlotCameraGroupSharedMemoryDTO

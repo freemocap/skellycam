@@ -1,27 +1,17 @@
 import logging
 import time
-from typing import Dict
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
+from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_names import SharedMemoryNames
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 
 logger = logging.getLogger(__name__)
-
-
-class SharedMemoryNames(BaseModel):
-    image_shm_name: str
-    metadata_shm_name: str
-
-
-GroupSharedMemoryNames = Dict[CameraId, SharedMemoryNames]
 
 
 class SingleSlotCameraSharedMemory(BaseModel):

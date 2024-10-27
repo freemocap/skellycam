@@ -26,14 +26,13 @@ class SharedMemoryRingBuffer:
     ring_buffer_shape: Tuple[int, ...]
     last_written_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last written element from the User's perspective, we will internally handle wrapping around the array
     last_read_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last read element from the User's perspective, we will internally handle wrapping around the array
-
+    read_only: bool
     @classmethod
     def create(cls,
                example_payload: np.ndarray ,
                dtype: Union[np.dtype, type, str] = np.uint8,
                memory_allocation: int = ONE_GIGABYTE,
                ring_buffer_length: Optional[int] = None
-               # TODO - calculate based on desired final size in memory rather than as an integer count of shm_elements
                ):
 
         dtype = cls._ensure_dtype(dtype)

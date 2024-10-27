@@ -7,7 +7,8 @@ from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
-    GroupSharedMemoryNames, SingleSlotCameraSharedMemory
+    SingleSlotCameraSharedMemory
+from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_names import GroupSharedMemoryNames
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)

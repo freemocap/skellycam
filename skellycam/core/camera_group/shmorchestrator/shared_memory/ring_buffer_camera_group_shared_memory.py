@@ -1,80 +1,40 @@
 import logging
 import multiprocessing
 from dataclasses import dataclass
-from typing import Dict, Optional, List
+from typing import Optional, List
+
+import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_shared_memory import \
-    RingBufferCameraSharedMemory, RingBufferCameraSharedMemoryDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE
-from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
-    GroupSharedMemoryNames
+from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE, \
+    SharedMemoryRingBuffer, SharedMemoryRingBufferDTO
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
+    create_empty_frame_metadata, FRAME_METADATA_DTYPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class RingBufferCameraGroupSharedMemoryDTO:
+class MultiFrameEscapeSharedMemoryRingBufferDTO:
     camera_group_dto: CameraGroupDTO
-    per_camera_memory_allocation: int
-    camera_shm_dtos: Dict[CameraId, RingBufferCameraSharedMemoryDTO]
+    mf_metadata_shm_dto: SharedMemoryRingBufferDTO
+    mf_image_shm_dto: SharedMemoryRingBufferDTO
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
-    lock: multiprocessing.Lock
 
 
 @dataclass
-class RingBufferCameraGroupSharedMemory:
+class MultiFrameEscapeSharedMemoryRingBuffer:
     camera_group_dto: CameraGroupDTO
-    camera_shms: Dict[CameraId, RingBufferCameraSharedMemory]
+    mf_metadata_shm: SharedMemoryRingBuffer
+    mf_time_mapping_shm: SharedMemoryRingBuffer
+    mf_image_shm: SharedMemoryRingBuffer
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
-    per_camera_memory_allocation: int
-    lock: multiprocessing.Lock
     read_only: bool
-
-    @classmethod
-    def create(cls,
-               camera_group_dto: CameraGroupDTO,
-               read_only: bool = False):
-        per_camera_memory_allocation = ONE_GIGABYTE // len(camera_group_dto.camera_configs)
-        camera_shms = {camera_id: RingBufferCameraSharedMemory.create(camera_config=config,
-                                                                      memory_allocation=per_camera_memory_allocation,
-                                                                      read_only=read_only)
-                       for camera_id, config in camera_group_dto.camera_configs.items()}
-
-        return cls(camera_group_dto=camera_group_dto,
-                   camera_shms=camera_shms,
-                   per_camera_memory_allocation=per_camera_memory_allocation,
-                   shm_valid_flag=multiprocessing.Value('b', True),
-                   latest_mf_number=multiprocessing.Value("l", -1),
-                     lock=multiprocessing.Lock(),
-                   read_only=read_only)
-
-    @classmethod
-    def recreate(cls,
-                 camera_group_dto: CameraGroupDTO,
-                 shm_dto: RingBufferCameraGroupSharedMemoryDTO,
-                 read_only: bool):
-        camera_shms = {camera_id: RingBufferCameraSharedMemory.recreate(dto=shm_dto.camera_shm_dtos[camera_id],
-                                                                        read_only=read_only)
-                       for camera_id, config in camera_group_dto.camera_configs.items()}
-
-        return cls(camera_group_dto=camera_group_dto,
-                   camera_shms=camera_shms,
-                   shm_valid_flag=shm_dto.shm_valid_flag,
-                   latest_mf_number=shm_dto.latest_mf_number,
-                   per_camera_memory_allocation=shm_dto.per_camera_memory_allocation,
-                     lock=shm_dto.lock,
-                     read_only=read_only)
-
-    @property
-    def shared_memory_names(self) -> GroupSharedMemoryNames:
-        return {camera_id: camera_shared_memory.shared_memory_names for camera_id, camera_shared_memory in
-                self.camera_shms.items()}
 
     @property
     def camera_ids(self) -> List[CameraId]:
@@ -92,15 +52,61 @@ class RingBufferCameraGroupSharedMemory:
     def new_multi_frame_available(self) -> bool:
         return all([camera_shared_memory.new_frame_available for camera_shared_memory in self.camera_shms.values()])
 
-    def to_dto(self) -> RingBufferCameraGroupSharedMemoryDTO:
-        return RingBufferCameraGroupSharedMemoryDTO(camera_group_dto=self.camera_group_dto,
-                                                    camera_shm_dtos={camera_id: camera_shared_memory.to_dto()
-                                                                     for camera_id, camera_shared_memory in
-                                                                     self.camera_shms.items()},
-                                                    shm_valid_flag=self.shm_valid_flag,
-                                                    latest_mf_number=self.latest_mf_number,
-                                                    lock=self.lock,
-                                                    per_camera_memory_allocation=self.per_camera_memory_allocation)
+    @classmethod
+    def create(cls,
+               camera_group_dto: CameraGroupDTO,
+               read_only: bool = False):
+        example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
+                          camera_group_dto.camera_configs.values()]
+        example_images_ravelled = [image.ravel() for image in example_images]
+        example_mf_image_buffer = np.concatenate(
+            example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated
+
+        example_mf_metadatas = [create_empty_frame_metadata(camera_id=camera_id,
+                                                            frame_number=0,
+                                                            config=config)
+                                for camera_id, config in camera_group_dto.camera_configs.items()]
+        example_mf_metadatas_ravelled = [metadata.ravel() for metadata in example_mf_metadatas]
+        example_mf_metadata_buffer = np.concatenate(
+            example_mf_metadatas_ravelled)  # Example metadata unravelled into 1D arrays and concatenated
+
+        mf_image_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_image_buffer,
+                                                     dtype=DEFAULT_IMAGE_DTYPE,
+                                                     memory_allocation=ONE_GIGABYTE)
+        mf_metadata_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_metadata_buffer,
+                                                        dtype=FRAME_METADATA_DTYPE,
+                                                        memory_allocation=ONE_GIGABYTE)
+        return cls(camera_group_dto=camera_group_dto,
+                   mf_image_shm=mf_image_shm,
+                   mf_metadata_shm=mf_metadata_shm,
+                   shm_valid_flag=multiprocessing.Value('b', True),
+                   latest_mf_number=multiprocessing.Value("l", -1),
+                   read_only=read_only)
+
+    @classmethod
+    def recreate(cls,
+                 camera_group_dto: CameraGroupDTO,
+                 shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
+                 read_only: bool):
+        mf_image_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_image_shm_dto,
+                                                       read_only=read_only)
+        mf_metadata_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_metadata_shm_dto,
+                                                          read_only=read_only)
+
+        return cls(camera_group_dto=camera_group_dto,
+                   mf_image_shm=mf_image_shm,
+                   mf_metadata_shm=mf_metadata_shm,
+
+                   shm_valid_flag=shm_dto.shm_valid_flag,
+                   latest_mf_number=shm_dto.latest_mf_number,
+                   read_only=read_only)
+
+    def to_dto(self) -> MultiFrameEscapeSharedMemoryRingBufferDTO:
+        return MultiFrameEscapeSharedMemoryRingBufferDTO(camera_group_dto=self.camera_group_dto,
+                                                         mf_metadata_shm_dto=self.mf_metadata_shm.to_dto(),
+                                                         mf_image_shm_dto=self.mf_image_shm.to_dto(),
+                                                         shm_valid_flag=self.shm_valid_flag,
+                                                         latest_mf_number=self.latest_mf_number, )
 
     def put_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
         if not self.valid:
@@ -110,8 +116,8 @@ class RingBufferCameraGroupSharedMemory:
 
     def get_latest_multi_frame_payload(self,
                                        previous_payload: Optional[MultiFramePayload],
-                                        camera_configs: CameraConfigs,
-                                        ) -> MultiFramePayload:
+                                       camera_configs: CameraConfigs,
+                                       ) -> MultiFramePayload:
         with self.lock:
             if previous_payload is None:
                 mf_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
@@ -150,6 +156,9 @@ class RingBufferCameraGroupSharedMemory:
                 mf_payload.add_frame(frame)
             if not mf_payload or not mf_payload.full:
                 raise ValueError("Did not read full multi-frame mf_payload!")
+            if not mf_payload.multi_frame_number == self.latest_mf_number.value + 1:
+                raise ValueError(
+                    f"Multi-frame number mismatch! Expected {self.latest_mf_number.value + 1}, got {mf_payload.multi_frame_number}")
             self.latest_mf_number.value = mf_payload.multi_frame_number
             return mf_payload
 

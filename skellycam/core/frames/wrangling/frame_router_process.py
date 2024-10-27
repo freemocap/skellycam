@@ -5,7 +5,7 @@ from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
-    RingBufferCameraGroupSharedMemory, RingBufferCameraGroupSharedMemoryDTO
+    MultiFrameEscapeSharedMemoryRingBuffer, RingBufferCameraGroupSharedMemoryDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
@@ -51,9 +51,9 @@ class FrameRouterProcess:
         logger.debug(f"FrameRouter  process started!")
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         video_recorder_manager: Optional[VideoRecorderManager] = None
-        frame_escape_ring_shm = RingBufferCameraGroupSharedMemory.recreate(camera_group_dto=camera_group_dto,
-                                                                           shm_dto=frame_escape_ring_shm_dto,
-                                                                           read_only=False)
+        frame_escape_ring_shm = MultiFrameEscapeSharedMemoryRingBuffer.recreate(camera_group_dto=camera_group_dto,
+                                                                                shm_dto=frame_escape_ring_shm_dto,
+                                                                                read_only=False)
 
         camera_configs = camera_group_dto.camera_configs
         mf_payload: Optional[MultiFramePayload] = None

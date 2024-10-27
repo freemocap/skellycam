@@ -3,6 +3,8 @@ from enum import Enum
 
 import numpy as np
 
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
+
 
 class FRAME_METADATA_MODEL(Enum):
     """
@@ -12,18 +14,21 @@ class FRAME_METADATA_MODEL(Enum):
     convert to a Pydantic model when we're safely away from Camera land.
     """
     CAMERA_ID: int = 0  # CameraId (as an int corresponding the int used to create the cv2.VideoCapture object)
-    FRAME_NUMBER: int = 1  # (The number of frames that have been captured by the camera since it was started)
-    FRAME_METADATA_INITIALIZED: int = 2  # (timestamp when the metadata was initialized)
-    PRE_GRAB_TIMESTAMP_NS: int = 3  # (timestamp before calling cv2.VideoCapture.grab())
-    POST_GRAB_TIMESTAMP_NS: int = 4  # (timestamp after calling cv2.VideoCapture.grab())
-    PRE_RETRIEVE_TIMESTAMP_NS: int = 5  # (timestamp before calling cv2.VideoCapture.retrieve())
-    POST_RETRIEVE_TIMESTAMP_NS: int = 6  # (timestamp after calling cv2.VideoCapture.retrieve())
-    COPY_TO_BUFFER_TIMESTAMP_NS: int = 7  # (timestamp when frame was copied to shared memory)
-    COPY_FROM_BUFFER_TIMESTAMP_NS: int = 8  # (timestamp when frame was copied from shared memory)
-    START_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 9  # (timestamp before compressing to jpeg)
-    END_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 10  # (timestamp_ns (timestamp after compressing to jpeg)
-    START_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 11  # (timestamp before annotating image)
-    END_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 12  # (timestamp after annotating image)
+    IMAGE_HEIGHT: int = 1  # Height of the frame in pixels
+    IMAGE_WIDTH: int = 2  # Width of the frame in pixels
+    IMAGE_COLOR_CHANNELS: int = 3  # Number of color channels in the image
+    FRAME_NUMBER: int = 4  # (The number of frames that have been captured by the camera since it was started)
+    FRAME_METADATA_INITIALIZED: int = 5  # (timestamp when the metadata was initialized)
+    PRE_GRAB_TIMESTAMP_NS: int = 6  # (timestamp before calling cv2.VideoCapture.grab())
+    POST_GRAB_TIMESTAMP_NS: int = 7  # (timestamp after calling cv2.VideoCapture.grab())
+    PRE_RETRIEVE_TIMESTAMP_NS: int = 8  # (timestamp before calling cv2.VideoCapture.retrieve())
+    POST_RETRIEVE_TIMESTAMP_NS: int = 9  # (timestamp after calling cv2.VideoCapture.retrieve())
+    COPY_TO_BUFFER_TIMESTAMP_NS: int = 10  # (timestamp when frame was copied to shared memory)
+    COPY_FROM_BUFFER_TIMESTAMP_NS: int = 11  # (timestamp when frame was copied from shared memory)
+    START_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 12  # (timestamp before compressing to jpeg)
+    END_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 13  # (timestamp_ns (timestamp after compressing to jpeg)
+    START_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 14  # (timestamp before annotating image)
+    END_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 15  # (timestamp after annotating image)
 
 
 DEFAULT_IMAGE_DTYPE = np.uint8
@@ -34,13 +39,17 @@ FRAME_METADATA_SIZE_BYTES = np.dtype(FRAME_METADATA_DTYPE).itemsize * np.prod(FR
 
 def create_empty_frame_metadata(
         camera_id: int,
-        frame_number: int
+        frame_number: int,
+        config: CameraConfig
 ) -> np.ndarray:
     metadata_array = np.zeros(FRAME_METADATA_SHAPE,
                               dtype=FRAME_METADATA_DTYPE)
     metadata_array[FRAME_METADATA_MODEL.FRAME_METADATA_INITIALIZED.value] = time.perf_counter_ns()
 
     metadata_array[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_id
+    metadata_array[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value] = config.image_shape[0]
+    metadata_array[FRAME_METADATA_MODEL.IMAGE_WIDTH.value] = config.image_shape[1]
+    metadata_array[FRAME_METADATA_MODEL.IMAGE_COLOR_CHANNELS.value] = config.image_shape[2]
     metadata_array[FRAME_METADATA_MODEL.FRAME_NUMBER.value] = frame_number
 
     if metadata_array.dtype != FRAME_METADATA_DTYPE:
