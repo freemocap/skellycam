@@ -3,6 +3,8 @@ import multiprocessing
 from collections import deque
 from typing import Optional
 
+import cv2
+
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
@@ -55,6 +57,8 @@ class FrameRouterProcess:
                                                                                 read_only=False)
 
         camera_configs = camera_group_dto.camera_configs
+
+
         try:
             while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 wait_1ms()
@@ -75,6 +79,7 @@ class FrameRouterProcess:
                 if camera_group_dto.ipc_flags.record_frames_flag.value:
                     while len(mf_payloads_to_process) > 0:
                         mf_payload = mf_payloads_to_process.popleft()
+
                         if not video_recorder_manager:
                             video_recorder_manager = VideoRecorderManager.create(multi_frame_payload=mf_payload,
                                                                                  camera_configs=camera_group_dto.camera_configs,

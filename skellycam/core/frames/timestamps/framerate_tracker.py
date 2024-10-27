@@ -66,6 +66,16 @@ class FrameRateTracker(BaseModel):
             recent_mean_frame_duration_ms=self.recent_mean_frame_duration_ms,
         )
 
+    def to_string_list(self) -> List[str]:
+        return [
+            f"Mean Frame Duration (ms): {self.mean_frame_duration_ms:.2f}",
+            f"Mean FPS: {self.mean_frames_per_second:.2f}",
+            f"Recent FPS: {self.recent_frames_per_second:.2f}",
+            f"Recent Mean Frame Duration (ms): {self.recent_mean_frame_duration_ms:.2f}",
+        ]
+    def __str__(self):
+        return "\n".join(self.to_string_list())
+
 
 if __name__ == "__main__":
     import time
