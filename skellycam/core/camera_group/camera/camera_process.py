@@ -105,6 +105,7 @@ class CameraProcess:
                     logger.loop(f"Camera {camera_id} received `initialization` signal for frame loop# {frame_number}")
                     frame_loop_flags.frame_loop_initialization_flag.value = False
                     frame_metadata = create_empty_frame_metadata(camera_id=camera_id,
+                                                                 config=config,
                                                                  frame_number=frame_number)
                     frame_number = get_frame(
                         camera_id=config.camera_id,

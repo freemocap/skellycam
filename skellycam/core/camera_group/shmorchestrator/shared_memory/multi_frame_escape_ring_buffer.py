@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Literal
 
 import numpy as np
 
@@ -12,7 +12,8 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_share
     SharedMemoryRingBuffer, SharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
     create_empty_frame_metadata, FRAME_METADATA_DTYPE
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
+from skellycam.utilities.wait_functions import wait_1ms, wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +50,15 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @property
     def ready_to_read(self) -> bool:
-        return all([camera_shared_memory.ready_to_read for camera_shared_memory in self.camera_shms.values()])
+        return all([self.mf_metadata_shm.ready_to_read,
+                    self.mf_image_shm.ready_to_read,
+                    self.mf_time_mapping_shm.ready_to_read])
 
     @property
     def new_multi_frame_available(self) -> bool:
-        return all([camera_shared_memory.new_frame_available for camera_shared_memory in self.camera_shms.values()])
+        return all([self.mf_metadata_shm.new_data_available,
+                    self.mf_image_shm.new_data_available,
+                    self.mf_time_mapping_shm.new_data_available])
 
     @classmethod
     def create(cls,
@@ -75,15 +80,16 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
         mf_image_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_image_buffer,
                                                      dtype=DEFAULT_IMAGE_DTYPE,
-                                                     memory_allocation=ONE_GIGABYTE)
+                                                     memory_allocation=ONE_GIGABYTE,
+                                                     read_only=read_only)
         mf_metadata_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_metadata_buffer,
                                                         dtype=FRAME_METADATA_DTYPE,
                                                         ring_buffer_length=mf_image_shm.ring_buffer_length,
-                                                        )
+                                                        read_only=read_only)
         mf_time_mapping_shm = SharedMemoryRingBuffer.create(example_payload=np.zeros(2, dtype=np.int64),
                                                             dtype=np.int64,
                                                             ring_buffer_length=mf_image_shm.ring_buffer_length,
-                                                            )
+                                                            read_only=read_only)
         return cls(camera_group_dto=camera_group_dto,
                    mf_image_shm=mf_image_shm,
                    mf_metadata_shm=mf_metadata_shm,
@@ -120,63 +126,82 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                                                          shm_valid_flag=self.shm_valid_flag,
                                                          latest_mf_number=self.latest_mf_number, )
 
-    def put_multi_frame_payload(self, multi_frame_payload: MultiFramePayload):
+    def put_multi_frame_payload(self,
+                                multi_frame_payload: MultiFramePayload):
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot write to it!")
         if not multi_frame_payload.full:
             raise ValueError("Cannot write incomplete multi-frame payload to shared memory!")
-        mf_numpy_buffer = multi_frame_payload.to_numpy_buffer()
+        if self.read_only:
+            raise ValueError("Cannot write to read-only shared memory!")
+
+        mf_numpy_buffer: MultiFrameNumpyBuffer = multi_frame_payload.to_numpy_buffer()
         self.mf_image_shm.put_data(mf_numpy_buffer.mf_image_buffer)
         self.mf_metadata_shm.put_data(mf_numpy_buffer.mf_metadata_buffer)
         self.mf_time_mapping_shm.put_data(mf_numpy_buffer.mf_time_mapping_buffer)
+
         if not {self.mf_image_shm.last_written_index.value,
                 self.mf_metadata_shm.last_written_index.value,
                 self.mf_time_mapping_shm.last_written_index.value,
                 multi_frame_payload.multi_frame_number} == {multi_frame_payload.multi_frame_number}:
+            self.camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
             raise ValueError("Multi-frame number mismatch! "
                              f"Image: {self.mf_image_shm.last_written_index.value}, "
                              f"Metadata: {self.mf_metadata_shm.last_written_index.value}, "
                              f"Time Mapping: {self.mf_time_mapping_shm.last_written_index.value}, "
                              f"Expected: {multi_frame_payload.multi_frame_number}")
-
         self.latest_mf_number.value = multi_frame_payload.multi_frame_number
-
+        print(f"PUT MF NUMBER: {multi_frame_payload.multi_frame_number}")
 
     def get_multi_frame_payload(self,
-                                     previous_payload: Optional[MultiFramePayload],
-                                     camera_configs: CameraConfigs,
-                                     ) -> MultiFramePayload:
-        if previous_payload is None:
-            mf_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
-        else:
-            mf_payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
-                                                                            camera_configs=camera_configs)
+                                camera_configs: CameraConfigs,
+                                retrieve_type: Literal["latest", "next"]
+                                ) -> MultiFramePayload:
+        if retrieve_type == "next" and self.read_only:
+            raise ValueError(
+                "Cannot retrieve `next` multi-frame payload from read-only shared memory (bc it increments the counter), use 'latest' instead")
 
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
-        mf_image_buffer = self.mf_image_shm.get_data()
-        mf_metadata_buffer = self.mf_metadata_shm.get_data()
-        mf_time_mapping_buffer = self.mf_time_mapping_shm.get_data()
+        if retrieve_type == "next":
+            mf_payload = MultiFramePayload.from_numpy_buffer(
+                buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_next_payload(),
+                                                          mf_metadata_buffer=self.mf_metadata_shm.get_next_payload(),
+                                                          mf_time_mapping_buffer=self.mf_time_mapping_shm.get_next_payload(),
+                                                          ),
+                camera_configs=camera_configs)
+            if not self.latest_mf_number.value == mf_payload.multi_frame_number:
+                raise ValueError(
+                    f"Multi-frame number mismatch! Expected {self.latest_mf_number.value + 1}, got {mf_payload.multi_frame_number}")
+
+            print(f"\tRETRIEVED NEXT MF NUMBER: {mf_payload.multi_frame_number}")
+
+        elif retrieve_type == "latest":
+            mf_payload = MultiFramePayload.from_numpy_buffer(
+                buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_latest_payload(),
+                                                          mf_metadata_buffer=self.mf_metadata_shm.get_latest_payload(),
+                                                          mf_time_mapping_buffer=self.mf_time_mapping_shm.get_latest_payload(),
+                                                          ),
+                camera_configs=camera_configs)
+            print(f"\t\tRETRIEVED LATEST MF NUMBER: {mf_payload.multi_frame_number}")
+        else:
+            raise ValueError(f"Invalid retrieve_type: {retrieve_type}")
 
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")
-        if not mf_payload.multi_frame_number == self.latest_mf_number.value + 1:
-            raise ValueError(
-                f"Multi-frame number mismatch! Expected {self.latest_mf_number.value + 1}, got {mf_payload.multi_frame_number}")
-        self.latest_mf_number.value = mf_payload.multi_frame_number
+
         return mf_payload
 
     def close(self):
-        # Close this process's access to the shared memory, but other processes can still access it        
-        for camera_shared_memory in self.camera_shms.values():
-            camera_shared_memory.close()
+        self.mf_image_shm.close()
+        self.mf_metadata_shm.close()
+        self.mf_time_mapping_shm.close()
 
     def unlink(self):
-        # Unlink the shared memory so that it is removed from the system, memory becomes invalid for all processes
-        self.shm_valid_flag.value = False
-        for camera_shared_memory in self.camera_shms.values():
-            camera_shared_memory.unlink()
+        self.mf_image_shm.unlink()
+        self.mf_metadata_shm.unlink()
+        self.mf_time_mapping_shm.unlink()
 
     def close_and_unlink(self):
         self.close()

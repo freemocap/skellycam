@@ -5,10 +5,6 @@ from dataclasses import dataclass
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
-    MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
-    SingleSlotCameraGroupSharedMemory
 from skellycam.core.frames.wrangling.frame_listener_process import FrameListenerProcess
 from skellycam.core.frames.wrangling.frame_router_process import FrameRouterProcess
 
@@ -33,8 +29,8 @@ class FrameWrangler:
                                                          new_configs_queue=frame_listener_config_queue),
 
                    frame_router_process=FrameRouterProcess(camera_group_dto=camera_group_dto,
-                                                           new_configs_queue=frame_router_config_queue,
-                                                           frame_escape_ring_shm_dto=shmorc_dto.frame_escape_ring_shm_dto),
+                                                           shmorc_dto=shmorc_dto,
+                                                           new_configs_queue=frame_router_config_queue),
                    camera_group_dto=camera_group_dto)
 
     def start(self):

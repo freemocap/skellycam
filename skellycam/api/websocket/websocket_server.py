@@ -20,7 +20,7 @@ class WebsocketServer:
     def __init__(self, websocket: WebSocket):
         self.websocket = websocket
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
-        self._app_state:AppState = get_app_controller().app_state
+        self._app_state: AppState = get_app_controller().app_state
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -108,8 +108,8 @@ class WebsocketServer:
                 if not self._app_state.frame_escape_shm.latest_mf_number.value > latest_mf_number:
                     continue
 
-                mf_payload = self._app_state.frame_escape_shm.get_latest_multi_frame_payload(previous_payload=mf_payload,
-                                                                                           camera_configs=self._app_state.camera_group.camera_configs)
+                mf_payload = self._app_state.frame_escape_shm.get_multi_frame_payload(camera_configs=self._app_state.camera_group.camera_configs,
+                                                                                      retrieve_type="latest")
                 await self._send_frontend_payload(mf_payload)
                 latest_mf_number = mf_payload.multi_frame_number
 

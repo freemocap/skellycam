@@ -14,7 +14,7 @@ from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
+from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
     SingleSlotCameraGroupSharedMemory
@@ -45,7 +45,7 @@ class AppState:
 
     @property
     def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer:
-        return self.shmorchestrator.frame_escape_ring_shm
+        return self.shmorchestrator.multi_frame_escape_ring_shm
 
     @property
     def camera_group_configs(self) -> Optional[CameraConfigs]:

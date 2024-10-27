@@ -22,7 +22,6 @@ class FrontendFramePayload(BaseModel):
     jpeg_images: Dict[CameraId, Optional[str]]
     camera_configs: Dict[CameraId, CameraConfig]
     multi_frame_metadata: MultiFrameMetadata
-    lifespan_timestamps_ns: List[Dict[str, int]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
 
@@ -60,13 +59,10 @@ class FrontendFramePayload(BaseModel):
                                               fallback_resize_ratio=resize_image)
             jpeg_images[camera_id] = cls._image_to_jpeg_cv2(resized_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
-        lifespan_timestamps_ns = deepcopy(multi_frame_payload.lifespan_timestamps_ns)
-        lifespan_timestamps_ns.append({"converted_to_frontend_payload": time.perf_counter_ns()})
 
 
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
-                   lifespan_timestamps_ns=lifespan_timestamps_ns,
                    jpeg_images=jpeg_images,
                    multi_frame_metadata=mf_metadata,
                    camera_configs = multi_frame_payload.camera_configs)

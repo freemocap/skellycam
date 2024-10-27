@@ -116,7 +116,7 @@ class SharedMemoryRingBuffer:
     def _read_next_payload(self) -> np.ndarray | None:
         if self.last_written_index.get() == -1:
             raise ValueError("No data available to read.")
-        index_to_read = self.last_read_index.get() + 1
+        index_to_read = self.last_read_index.value + 1
         if index_to_read > self.last_written_index.value:
             raise ValueError("Cannot read past the last written index!")
         shm_data = self.ring_buffer_shm.buffer[index_to_read % self.ring_buffer_length]

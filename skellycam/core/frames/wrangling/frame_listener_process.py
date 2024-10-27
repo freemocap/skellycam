@@ -6,11 +6,6 @@ from typing import Optional
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
-    MultiFrameEscapeSharedMemoryRingBuffer, RingBufferCameraGroupSharedMemoryDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
-from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
-    SingleSlotCameraGroupSharedMemory, SingleSlotCameraGroupSharedMemoryDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.timestamps.framerate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_1ms
@@ -47,7 +42,7 @@ class FrameListenerProcess:
                                                                        read_only=False)
         frame_loop_shm = shmorchestrator.frame_loop_shm
         orchestrator = shmorchestrator.orchestrator
-        frame_escape_ring_shm = shmorchestrator.frame_escape_ring_shm
+        multi_frame_escape_shm = shmorchestrator.multi_frame_escape_ring_shm
 
 
         framerate_tracker = FrameRateTracker()
@@ -66,16 +61,14 @@ class FrameListenerProcess:
                         camera_configs=camera_configs,
                     )
 
-                    orchestrator.signal_multi_frame_pulled_from_shm()  # NOTE - Reset the flag ASAP after copy to let the frame_loop start the next cycle
                     logger.loop(
                         f"FrameListener - copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
 
                     pulled_from_pipe_timestamp = time.perf_counter_ns()
-                    mf_payload.lifespan_timestamps_ns.append({"received_in_frame_router": pulled_from_pipe_timestamp})
                     framerate_tracker.update(pulled_from_pipe_timestamp)
 
-                    frame_escape_ring_shm.put_multi_frame_payload(mf_payload)
-
+                    multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
+                    orchestrator.signal_multi_frame_pulled_from_shm()
                 else:
                     wait_1ms()
 
@@ -95,7 +88,7 @@ class FrameListenerProcess:
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
                 camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
             frame_loop_shm.close()
-            frame_escape_ring_shm.close()
+            multi_frame_escape_shm.close()
 
     def is_alive(self) -> bool:
         return self._process.is_alive()
