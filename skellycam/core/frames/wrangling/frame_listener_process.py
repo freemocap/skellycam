@@ -31,11 +31,12 @@ class ImageAnnotator:
 
     def annotate_image(self,
                        image: np.ndarray,
-                       string_list: List[str],
                        multi_frame_number: int,
+                       framerate_tracker: FrameRateTracker,
                        frame_number: int,
                        camera_id: int) -> np.ndarray:
         annotated_image = image.copy()
+        image_height, image_width, _ = image.shape
         # cv2.rectangle(annotated_image, (0, 0), (300, 80), (255, 255, 255, .2), -1)
         for _ in range(2):
             if _ == 0:
@@ -49,8 +50,22 @@ class ImageAnnotator:
                         (self.position_x, self.position_y), self.font, self.font_scale, color, thickness)
 
             cv2.putText(annotated_image, f"MultiFrame# {multi_frame_number}", (self.position_x, self.position_y + self.vertical_offset), self.font, self.font_scale, color, thickness)
-            for i, string in enumerate(string_list):
+            for i, string in enumerate(framerate_tracker.to_string_list()):
                 cv2.putText(annotated_image, string, (self.position_x, self.position_y + (i + 2) * self.vertical_offset), self.font, self.font_scale, color, thickness)
+
+
+            frame_durations = framerate_tracker.frame_durations_ns
+            cv2.line(annotated_image, (0, image_height - 33), (image_width, image_height - 33), (255, 255, 255), 1)
+            cv2.putText(annotated_image, f"(33ms)", (10, image_height - 33), self.font, self.font_scale/2, (0, 0, 0), 2)
+            # Calculate the start index based on the length of frame_durations and image width
+            start_index = max(0, len(frame_durations) - image_width)
+            # Plot the time series as circles
+            for px in range(0, image_width, 4):
+                data_index = start_index + px
+                if data_index < len(frame_durations):
+                    duration_ms = frame_durations[data_index] / 1e6
+                    y_position = int(image_height - duration_ms)
+                    cv2.circle(annotated_image, (px, y_position), 3, (255, 0, 255), -1)
         return annotated_image
 
 
@@ -111,7 +126,7 @@ class FrameListenerProcess:
                         frame.image = image_annotator.annotate_image(image=frame.image,
                                                                      frame_number=frame.frame_number,
                                                                      multi_frame_number=mf_payload.multi_frame_number,
-                                                                     string_list=framerate_tracker.to_string_list(),
+                                                                     framerate_tracker = framerate_tracker,
                                                                      camera_id=camera_id)
 
                     multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
