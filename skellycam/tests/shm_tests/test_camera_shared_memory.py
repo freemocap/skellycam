@@ -46,7 +46,7 @@ def test_put_and_retrieve_frame(camera_config_fixture: CameraConfig,
     camera_shm = CameraSharedMemory.create(camera_config=camera_config_fixture)
     frame_metadata_fixture[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_config_fixture.camera_id
     camera_shm.put_frame(image=image, metadata=frame_metadata_fixture)
-    frame_dto = camera_shm.retrieve_frame()
+    frame_dto = camera_shm.retrieve_next_frame()
     assert isinstance(frame_dto, FramePayload)
     assert np.array_equal(frame_dto.image, image)
     assert frame_dto.metadata.shape == FRAME_METADATA_SHAPE
@@ -95,7 +95,7 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
     shm_names = camera_shm.shared_memory_names
     recreated_camera_shm = CameraSharedMemory.recreate(camera_config=camera_config_fixture,
                                                        shared_memory_names=shm_names)
-    frame_dto = recreated_camera_shm.retrieve_frame()
+    frame_dto = recreated_camera_shm.retrieve_next_frame()
 
     assert isinstance(frame_dto, FramePayload)
     assert np.array_equal(frame_dto.image, image)

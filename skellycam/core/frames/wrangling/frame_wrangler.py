@@ -20,7 +20,6 @@ class FrameWrangler:
     camera_group_dto: CameraGroupDTO
     listener_process: FrameListenerProcess
     frame_router_process: FrameRouterProcess
-    frame_escape_ring_shm: SingleSlotCameraGroupSharedMemory
 
     @classmethod
     def create(cls,
@@ -29,19 +28,14 @@ class FrameWrangler:
                frame_router_config_queue: multiprocessing.Queue,
                frame_listener_config_queue: multiprocessing.Queue):
 
-        frame_escape_ring_shm = RingBufferCameraGroupSharedMemory.create(camera_group_dto=camera_group_dto,
-                                                                         read_only=True)
-
         return cls(listener_process=FrameListenerProcess(camera_group_dto=camera_group_dto,
                                                          shmorc_dto=shmorc_dto,
-                                                         new_configs_queue=frame_listener_config_queue,
-                                                         frame_escape_ring_shm_dto=frame_escape_ring_shm.to_dto()),
+                                                         new_configs_queue=frame_listener_config_queue),
 
                    frame_router_process=FrameRouterProcess(camera_group_dto=camera_group_dto,
                                                            new_configs_queue=frame_router_config_queue,
-                                                           frame_escape_ring_shm_dto=frame_escape_ring_shm.to_dto()),
-                   camera_group_dto=camera_group_dto,
-                   frame_escape_ring_shm=frame_escape_ring_shm)
+                                                           frame_escape_ring_shm_dto=shmorc_dto.frame_escape_ring_shm_dto),
+                   camera_group_dto=camera_group_dto)
 
     def start(self):
         logger.debug(f"Starting frame listener process...")
@@ -57,9 +51,8 @@ class FrameWrangler:
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
-        if not self.dto.ipc_flags.kill_camera_group_flag.value == True and not self.dto.ipc_flags.global_kill_flag.value == True:
+        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value == True and not self.camera_group_dto.ipc_flags.global_kill_flag.value == True:
             raise ValueError("FrameWrangler was closed before the kill flag was set.")
         if self.is_alive():
             self.join()
-        self.frame_escape_ring_shm.close_and_unlink()
         logger.debug(f"Frame wrangler closed")

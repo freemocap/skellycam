@@ -23,16 +23,12 @@ class FrameListenerProcess:
             self,
             camera_group_dto: CameraGroupDTO,
             shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
-            new_configs_queue: multiprocessing.Queue,
-            frame_escape_ring_shm_dto: SingleSlotCameraGroupSharedMemoryDTO,
-
-    ):
+            new_configs_queue: multiprocessing.Queue):
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
                                                 args=(camera_group_dto,
                                                       shmorc_dto,
                                                       new_configs_queue,
-                                                        frame_escape_ring_shm_dto,
                                                       )
                                                 )
 
@@ -44,24 +40,19 @@ class FrameListenerProcess:
     def _run_process(camera_group_dto: CameraGroupDTO,
                      shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                      new_configs_queue: multiprocessing.Queue,
-                     frame_escape_ring_shm_dto: RingBufferCameraGroupSharedMemoryDTO,
                      ):
         logger.trace(f"Starting FrameListener loop...")
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
                                                                        shmorc_dto=shmorc_dto,
                                                                        read_only=False)
-        camera_group_shm = shmorchestrator.shm
+        frame_loop_shm = shmorchestrator.frame_loop_shm
         orchestrator = shmorchestrator.orchestrator
-
-        frame_escape_ring_shm = RingBufferCameraGroupSharedMemory.recreate(camera_group_dto=camera_group_dto,
-                                                                            shm_dto=frame_escape_ring_shm_dto,
-                                                                           read_only=False)
+        frame_escape_ring_shm = shmorchestrator.frame_escape_ring_shm
 
 
         framerate_tracker = FrameRateTracker()
         mf_payload: Optional[MultiFramePayload] = None
         camera_configs = camera_group_dto.camera_configs
-        shm_ring_buffer: Optional[SharedMemoryRingBuffer] = None
         try:
 
             while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
@@ -70,7 +61,7 @@ class FrameListenerProcess:
 
                 if orchestrator.should_pull_multi_frame_from_shm.value:
 
-                    mf_payload: MultiFramePayload = camera_group_shm.get_multi_frame_payload(
+                    mf_payload: MultiFramePayload = frame_loop_shm.get_multi_frame_payload(
                         previous_payload=mf_payload,
                         camera_configs=camera_configs,
                     )
@@ -84,18 +75,6 @@ class FrameListenerProcess:
                     framerate_tracker.update(pulled_from_pipe_timestamp)
 
                     frame_escape_ring_shm.put_multi_frame_payload(mf_payload)
-                    # dto.ipc_queue.put(framerate_tracker.current())
-
-                    # if not shm_ring_buffer:
-                    #     logger.trace(f"Creating SharedMemoryRingBuffer from MultiFramePayload")
-                    #     shm_ring_buffer = SharedMemoryRingBuffer.create(
-                    #         example_payload=mf_payload.to_bytes_buffer(),
-                    #     )
-                    #     frame_escape_pipe.send(shm_ring_buffer.to_dto())
-                    #     while not shm_ring_buffer.last_read_index.value == -1:
-                    #         wait_1ms()
-                    #
-                    # shm_ring_buffer.put_payload(mf_payload.to_bytes_buffer())
 
                 else:
                     wait_1ms()
@@ -115,9 +94,8 @@ class FrameListenerProcess:
                 logger.warning(
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
                 camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
-            camera_group_shm.close()
-            if shm_ring_buffer:
-                shm_ring_buffer.close_and_unlink()
+            frame_loop_shm.close()
+            frame_escape_ring_shm.close()
 
     def is_alive(self) -> bool:
         return self._process.is_alive()

@@ -48,7 +48,7 @@ def test_get_multi_frame_payload(camera_shared_memory_manager_fixture: CameraGro
                              metadata=metadata)
 
     # Test initial payload
-    initial_payload = manager.get_multi_frame_payload(previous_payload=None)
+    initial_payload = manager.get_next_multi_frame_payload(previous_payload=None)
     assert initial_payload.full
     assert initial_payload.multi_frame_number == 0
 
@@ -56,7 +56,7 @@ def test_get_multi_frame_payload(camera_shared_memory_manager_fixture: CameraGro
     for camera_id, camera_shm in manager.camera_shms.items():
         camera_shm.put_frame(image=initial_payload.frames[camera_id].image,
                              metadata=initial_payload.frames[camera_id].metadata)
-    next_payload = manager.get_multi_frame_payload(previous_payload=initial_payload)
+    next_payload = manager.get_next_multi_frame_payload(previous_payload=initial_payload)
     assert next_payload.full
     assert next_payload.multi_frame_number == 1
     assert next_payload.utc_ns_to_perf_ns == initial_payload.utc_ns_to_perf_ns
@@ -78,7 +78,7 @@ def test_close_and_unlink(camera_shared_memory_manager_fixture: CameraGroupShare
         # Test for image_shm
         image_shm_exception_raised = False
         try:
-            camera_shm.image_shm.shm.buf[:]
+            camera_shm.image_shm.frame_loop_shm_dto.buf[:]
         except TypeError:
             image_shm_exception_raised = True
         assert image_shm_exception_raised, "TypeError was not raised for image_shm"
@@ -86,7 +86,7 @@ def test_close_and_unlink(camera_shared_memory_manager_fixture: CameraGroupShare
         # Test for metadata_shm
         metadata_shm_exception_raised = False
         try:
-            camera_shm.metadata_shm.shm.buf[:]
+            camera_shm.metadata_shm.frame_loop_shm_dto.buf[:]
         except TypeError:
             metadata_shm_exception_raised = True
         assert metadata_shm_exception_raised, "TypeError was not raised for metadata_shm"

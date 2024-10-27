@@ -6,8 +6,6 @@ from typing import Optional
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_group_shared_memory import \
     RingBufferCameraGroupSharedMemory, RingBufferCameraGroupSharedMemoryDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import \
-    SharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
@@ -20,7 +18,8 @@ class FrameRouterProcess:
     def __init__(self,
                  camera_group_dto: CameraGroupDTO,
                  new_configs_queue: multiprocessing.Queue,
-                 frame_escape_ring_shm_dto: SharedMemoryRingBufferDTO, ):
+                 frame_escape_ring_shm_dto: RingBufferCameraGroupSharedMemoryDTO,
+                 ):
 
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
@@ -64,7 +63,7 @@ class FrameRouterProcess:
                 if new_configs_queue.qsize() > 0:
                     camera_configs = new_configs_queue.get()
                 while frame_escape_ring_shm.new_multi_frame_available:
-                    mf_payload: MultiFramePayload = frame_escape_ring_shm.get_multi_frame_payload(
+                    mf_payload: MultiFramePayload = frame_escape_ring_shm.get_next_multi_frame_payload(
                         previous_payload=mf_payload,
                         camera_configs=camera_configs)
                     mf_payloads_to_process.append(mf_payload)
@@ -108,5 +107,4 @@ class FrameRouterProcess:
             if video_recorder_manager:
                 video_recorder_manager.finish_and_close()
             logger.debug(f"FrameRouter process completed")
-            # if shm_ring_buffer:
-            #     shm_ring_buffer.close()
+            frame_escape_ring_shm.close()

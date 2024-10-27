@@ -67,7 +67,7 @@ class CameraGroup:
                               update_instructions: UpdateInstructions):
         logger.debug(
             f"Updating Camera Configs with instructions: {update_instructions}")
-        self.dto.update_camera_configs(camera_configs)
+        self.dto.camera_configs = camera_configs
         self.dto.config_update_queue.put(update_instructions)
         self.frame_router_config_queue.put(update_instructions.new_configs)
         self.frame_listener_config_queue.put(update_instructions.new_configs)

@@ -20,7 +20,7 @@ def test_create(numpy_array_definition_fixture: Tuple[Tuple[int], np.dtype]):
 
     assert element.buffer.shape == shape
     assert element.buffer.dtype == dtype
-    assert isinstance(element.shm, shared_memory.SharedMemory)
+    assert isinstance(element.frame_loop_shm_dto, shared_memory.SharedMemory)
 
     element.shutdown()
     element.unlink()
@@ -62,7 +62,7 @@ def test_copy_from_buffer(random_array_fixture: np.ndarray):
     element = SharedMemoryElement.create(shape=random_array_fixture.shape,
                                          dtype=random_array_fixture.dtype)
     element.put_data(random_array_fixture)
-    copied_npy = element.get_data()
+    copied_npy = element.get_next_payload()
 
     assert isinstance(copied_npy, np.ndarray)
     assert copied_npy.shape == random_array_fixture.shape
@@ -82,13 +82,13 @@ def test_copy_from_buffer(random_array_fixture: np.ndarray):
 def test_close(ndarray_shape_fixture, dtype_fixture: np.dtype):
     element = SharedMemoryElement.create(shape=ndarray_shape_fixture,
                                          dtype=dtype_fixture)
-    assert isinstance(element.shm, shared_memory.SharedMemory)
+    assert isinstance(element.frame_loop_shm_dto, shared_memory.SharedMemory)
     assert isinstance(element, SharedMemoryElement)
     element.close_and_unlink()
 
     type_error_exception_raised = False
     try:
-        element.shm.buf[:]
+        element.frame_loop_shm_dto.buf[:]
     except TypeError:
         type_error_exception_raised = True
     assert type_error_exception_raised, "TypeError was not raised"

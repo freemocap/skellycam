@@ -32,6 +32,7 @@ class RingBufferCameraGroupSharedMemory:
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
     per_camera_memory_allocation: int
+    read_only: bool
 
     @classmethod
     def create(cls,
@@ -47,7 +48,8 @@ class RingBufferCameraGroupSharedMemory:
                    camera_shms=camera_shms,
                    per_camera_memory_allocation=per_camera_memory_allocation,
                    shm_valid_flag=multiprocessing.Value('b', True),
-                   latest_mf_number=multiprocessing.Value("l", -1))
+                   latest_mf_number=multiprocessing.Value("l", -1),
+                   read_only=read_only)
 
     @classmethod
     def recreate(cls,
@@ -62,7 +64,8 @@ class RingBufferCameraGroupSharedMemory:
                    camera_shms=camera_shms,
                    shm_valid_flag=shm_dto.shm_valid_flag,
                    latest_mf_number=shm_dto.latest_mf_number,
-                   per_camera_memory_allocation=shm_dto.per_camera_memory_allocation)
+                   per_camera_memory_allocation=shm_dto.per_camera_memory_allocation,
+                     read_only=read_only)
 
     @property
     def shared_memory_names(self) -> GroupSharedMemoryNames:
@@ -76,6 +79,10 @@ class RingBufferCameraGroupSharedMemory:
     @property
     def valid(self) -> bool:
         return self.shm_valid_flag.value
+
+    @property
+    def ready_to_read(self) -> bool:
+        return all([camera_shared_memory.ready_to_read for camera_shared_memory in self.camera_shms.values()])
 
     @property
     def new_multi_frame_available(self) -> bool:
@@ -96,11 +103,10 @@ class RingBufferCameraGroupSharedMemory:
         for camera_id, camera_shared_memory in self.camera_shms.items():
             camera_shared_memory.put_frame(**multi_frame_payload.get_frame(camera_id).model_dump())
 
-    def get_multi_frame_payload(self,
-                                previous_payload: Optional[MultiFramePayload],
-                                camera_configs: CameraConfigs,
-                                ) -> MultiFramePayload:
-
+    def get_latest_multi_frame_payload(self,
+                                       previous_payload: Optional[MultiFramePayload],
+                                        camera_configs: CameraConfigs,
+                                        ) -> MultiFramePayload:
         if previous_payload is None:
             mf_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
         else:
@@ -111,7 +117,29 @@ class RingBufferCameraGroupSharedMemory:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
-            frame = camera_shared_memory.retrieve_frame()
+            frame = camera_shared_memory.retrieve_latest_frame()
+            mf_payload.add_frame(frame)
+        if not mf_payload or not mf_payload.full:
+            raise ValueError("Did not read full multi-frame mf_payload!")
+        return mf_payload
+
+    def get_next_multi_frame_payload(self,
+                                     previous_payload: Optional[MultiFramePayload],
+                                     camera_configs: CameraConfigs,
+                                     ) -> MultiFramePayload:
+        if self.read_only:
+            raise ValueError("Cannot read `next` from shared memory that is read-only, use `get_latest..` instead!")
+        if previous_payload is None:
+            mf_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
+        else:
+            mf_payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
+                                                                            camera_configs=camera_configs)
+
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+
+        for camera_id, camera_shared_memory in self.camera_shms.items():
+            frame = camera_shared_memory.retrieve_next_frame()
             mf_payload.add_frame(frame)
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")

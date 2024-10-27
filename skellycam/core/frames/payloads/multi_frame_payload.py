@@ -16,6 +16,7 @@ from skellycam.utilities.rotate_image import rotate_image
 
 BYTES_BUFFER_SPLITTER = b"__SPLITTER__"
 
+
 class MultiFramePayload(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     frames: Dict[CameraId, Optional[FramePayload]]
@@ -59,7 +60,6 @@ class MultiFramePayload(BaseModel):
     def to_bytes_buffer(self) -> bytes:
         return BYTES_BUFFER_SPLITTER.join(self.to_bytes_list())
 
-
     def to_bytes_list(self) -> List[Any]:
         if not self.full:
             raise ValueError("Cannot serialize MultiFramePayloadDTO to list without all frames present")
@@ -77,9 +77,18 @@ class MultiFramePayload(BaseModel):
         camera_id = frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
         self.lifespan_timestamps_ns.append({
             f"add_camera_{camera_id}_frame_{frame_dto.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}": time.perf_counter_ns()})
+        for frame in self.frames.values():
+            if frame:
+                if frame.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value] == camera_id:
+                    raise ValueError(
+                        f"Cannot add frame for camera_id {camera_id} to MultiFramePayloadDTO, frame already exists!")
+                if not frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] == frame_dto.metadata[
+                    FRAME_METADATA_MODEL.FRAME_NUMBER.value]:
+                    raise ValueError(
+                        f"Cannot add frame for camera_id {camera_id} to MultiFramePayloadDTO, frame number mismatch!")
         self.frames[camera_id] = frame_dto
 
-    def get_frame(self, camera_id: CameraId, rotate: bool = True, return_copy:bool=True) -> Optional[FramePayload]:
+    def get_frame(self, camera_id: CameraId, rotate: bool = True, return_copy: bool = True) -> Optional[FramePayload]:
 
         if return_copy:
             frame = self.frames[camera_id].model_copy()

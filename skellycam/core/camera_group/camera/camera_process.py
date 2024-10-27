@@ -82,7 +82,7 @@ class CameraProcess:
                                                                        shmorc_dto=shmorc_dto,
                                                                        read_only=False)
         frame_loop_flags = shmorchestrator.orchestrator.frame_loop_flags[camera_id]
-        camera_shm = shmorchestrator.shm.camera_shms[camera_id]
+        camera_shm = shmorchestrator.frame_loop_shm.camera_shms[camera_id]
 
         cv2_video_capture: Optional[cv2.VideoCapture] = None
         try:
@@ -97,7 +97,7 @@ class CameraProcess:
             # Trigger listening loop
             while not camera_group_dto.ipc_flags.global_kill_flag.value and not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not should_close_self_flag.value:
 
-                if not shmorchestrator.shm.valid:
+                if not shmorchestrator.frame_loop_shm.valid:
                     wait_1ms()
                     continue
 

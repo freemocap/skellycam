@@ -92,9 +92,10 @@ class WebsocketServer:
         latest_mf_number = -1
         try:
             while True:
-                if not self._app_state.shmorchestrator or not self._app_state.shmorchestrator.valid:
+                await async_wait_1ms()
+
+                if not self._app_state.shmorchestrator or not self._app_state.shmorchestrator.valid or not self._app_state.frame_escape_shm.ready_to_read:
                     latest_mf_number = -1
-                    await async_wait_1ms()
                     mf_payload = None
                     continue
 
@@ -102,13 +103,13 @@ class WebsocketServer:
                     latest_mf_number = -1
                     mf_payload = None
                     camera_group_uuid = self._app_state.camera_group.uuid
-
-                if not self._app_state.camera_group_shm.latest_mf_number.value > latest_mf_number:
-                    await async_wait_1ms()
                     continue
 
-                mf_payload = self._app_state.camera_group_shm.get_multi_frame_payload(previous_payload=mf_payload,
-                                                                                        camera_configs=self._app_state.camera_group.camera_configs)
+                if not self._app_state.frame_escape_shm.latest_mf_number.value > latest_mf_number:
+                    continue
+
+                mf_payload = self._app_state.frame_escape_shm.get_latest_multi_frame_payload(previous_payload=mf_payload,
+                                                                                           camera_configs=self._app_state.camera_group.camera_configs)
                 await self._send_frontend_payload(mf_payload)
                 latest_mf_number = mf_payload.multi_frame_number
 

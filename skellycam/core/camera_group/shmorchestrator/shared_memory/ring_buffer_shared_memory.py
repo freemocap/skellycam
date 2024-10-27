@@ -76,6 +76,10 @@ class SharedMemoryRingBuffer:
         )
 
     @property
+    def ready_to_read(self):
+        return self.last_written_index.get() != -1
+
+    @property
     def new_data_available(self):
         return self.last_written_index.get() != -1 and self.last_written_index.get() != self.last_read_index.get()
 
@@ -89,7 +93,7 @@ class SharedMemoryRingBuffer:
             dtype = np.dtype(dtype)
         return dtype
 
-    def _tesst_overwrite(self, next_index: int) -> bool:
+    def _check_overwrite(self, next_index: int) -> bool:
         return next_index % self.ring_buffer_length == self.last_read_index.get() % self.ring_buffer_length
 
     def put_data(self, data: np.ndarray):
@@ -99,7 +103,7 @@ class SharedMemoryRingBuffer:
                 f"Array shape {data.shape} does not match SharedMemoryIndexedArray shape {self.ring_buffer_shape[1:]}")
 
         index_to_write = self.last_written_index.get() + 1
-        if self._tesst_overwrite(index_to_write):
+        if self._check_overwrite(index_to_write):
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 
         # self.shm_elements[index_to_write % self.ring_buffer_length].copy_into_buffer(array)
@@ -108,13 +112,10 @@ class SharedMemoryRingBuffer:
 
 
 
-    def get_data(self, get_latest:bool=False) -> np.ndarray | None:
+    def get_next_payload(self) -> np.ndarray | None:
         if not self.new_data_available:
-            return
-        if get_latest:
-            return self._get_latest_payload()
-        else:
-            return self._read_next_payload()
+            raise ValueError("No new data available to read.")
+        return self._read_next_payload()
 
     def _read_next_payload(self) -> np.ndarray| None:
         if self.last_written_index.get() == -1:
@@ -124,7 +125,7 @@ class SharedMemoryRingBuffer:
         self.last_read_index.set(index_to_read)
         return shm_data
 
-    def _get_latest_payload(self) -> np.ndarray | None:
+    def get_latest_payload(self) -> np.ndarray | None:
         """
         NOTE - this method does NOT update the 'last_read_index' value.
 
@@ -133,7 +134,7 @@ class SharedMemoryRingBuffer:
         The task of making sure we get ALL the data without overwriting to the 'get_next_payload' method (i.e. making sure we save all the frames to disk/video).
         """
         if self.last_written_index.get() == -1:
-            return
+            raise ValueError("No data available to read.")
 
         return self.ring_buffer_shm.buffer[self.last_written_index.get() % self.ring_buffer_length]
 
@@ -184,7 +185,7 @@ def reader_process(ring_buffer_dto: SharedMemoryRingBufferDTO, num_payloads: int
         try:
             if ring_buffer.new_data_available:
                 attempts = 0
-                data = ring_buffer.get_data()
+                data = ring_buffer.get_next_payload()
                 read_data.append(data)
                 print(f"Reader: Read payload {ring_buffer.last_read_index.get()} with max value {data.max()}")
             else:
