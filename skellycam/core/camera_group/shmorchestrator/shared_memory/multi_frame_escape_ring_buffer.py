@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 from dataclasses import dataclass
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import numpy as np
 
@@ -13,7 +13,6 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_share
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
     create_empty_frame_metadata, FRAME_METADATA_DTYPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
-from skellycam.utilities.wait_functions import wait_1ms, wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,10 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
+
     read_only: bool
+
+    previous_read_mf_payload: Optional[MultiFramePayload] = None
 
     @property
     def camera_ids(self) -> List[CameraId]:
@@ -171,10 +173,12 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                                                           mf_time_mapping_buffer=self.mf_time_mapping_shm.get_next_payload(),
                                                           ),
                 camera_configs=camera_configs)
-            if not self.latest_mf_number.value == mf_payload.multi_frame_number:
-                raise ValueError(
-                    f"Multi-frame number mismatch! Expected {self.latest_mf_number.value + 1}, got {mf_payload.multi_frame_number}")
 
+            if (not self.previous_read_mf_payload and mf_payload.multi_frame_number != 0) or \
+                    (self.previous_read_mf_payload and mf_payload.multi_frame_number != self.previous_read_mf_payload.multi_frame_number + 1):
+                raise ValueError(
+                    f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf_payload.multi_frame_number}")
+            self.previous_read_mf_payload = mf_payload
             print(f"\tRETRIEVED NEXT MF NUMBER: {mf_payload.multi_frame_number}")
 
         elif retrieve_type == "latest":
