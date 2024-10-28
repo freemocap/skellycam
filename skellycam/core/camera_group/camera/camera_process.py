@@ -13,7 +13,10 @@ from skellycam.core.camera_group.camera.opencv.create_cv2_video_capture import c
 from skellycam.core.camera_group.camera.opencv.get_frame import get_frame
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
-    CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
+    CameraGroupSharedMemoryOrchestratorDTO
+from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_names import SharedMemoryNames
+from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
+    SingleSlotCameraSharedMemory
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
 from skellycam.utilities.wait_functions import wait_1ms
 
@@ -45,7 +48,8 @@ class CameraProcess:
                                                    name=f"Camera{camera_id}",
                                                    args=(camera_id,
                                                          camera_group_dto,
-                                                         shmorc_dto,
+                                                         shmorc_dto.camera_group_orchestrator.frame_loop_flags[camera_id],
+                                                         shmorc_dto.frame_loop_shm_dto.group_shm_names[camera_id],
                                                          new_config_queue,
                                                          should_close_self_flag)
                                                    ),
@@ -73,16 +77,16 @@ class CameraProcess:
     @staticmethod
     def _run_process(camera_id: CameraId,
                      camera_group_dto: CameraGroupDTO,
-                     shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
+                     frame_loop_flags: CameraFrameLoopFlags,
+                     camera_shm_name: SharedMemoryNames,
                      new_config_queue: multiprocessing.Queue,
                      should_close_self_flag: multiprocessing.Value
                      ):
         config = camera_group_dto.camera_configs[camera_id]
-        shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
-                                                                       shmorc_dto=shmorc_dto,
-                                                                       read_only=False)
-        frame_loop_flags = shmorchestrator.orchestrator.frame_loop_flags[camera_id]
-        camera_shm = shmorchestrator.frame_loop_shm.camera_shms[camera_id]
+
+        camera_shm = SingleSlotCameraSharedMemory.recreate(camera_config=config,
+                                                           shared_memory_names=camera_shm_name,
+                                                           read_only=False)
 
         cv2_video_capture: Optional[cv2.VideoCapture] = None
         try:
@@ -96,10 +100,6 @@ class CameraProcess:
             frame_number = 0
             # Trigger listening loop
             while not camera_group_dto.ipc_flags.global_kill_flag.value and not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not should_close_self_flag.value:
-
-                if not shmorchestrator.frame_loop_shm.valid:
-                    wait_1ms()
-                    continue
 
                 if frame_loop_flags.frame_loop_initialization_flag.value:
                     logger.loop(f"Camera {camera_id} received `initialization` signal for frame loop# {frame_number}")
