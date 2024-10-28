@@ -29,7 +29,7 @@ class FrameWrangler:
                                                          new_configs_queue=frame_listener_config_queue),
 
                    frame_router_process=FrameRouterProcess(camera_group_dto=camera_group_dto,
-                                                           shmorc_dto=shmorc_dto,
+                                                           multi_frame_escape_shm_dto=shmorc_dto.multi_frame_escape_shm_dto,
                                                            new_configs_queue=frame_router_config_queue),
                    camera_group_dto=camera_group_dto)
 

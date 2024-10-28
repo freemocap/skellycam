@@ -82,7 +82,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
         mf_image_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_image_buffer,
                                                      dtype=DEFAULT_IMAGE_DTYPE,
-                                                     memory_allocation=ONE_GIGABYTE,
+                                                     memory_allocation=ONE_GIGABYTE*int(len(list(camera_group_dto.camera_configs.keys()))),
                                                      read_only=read_only)
         mf_metadata_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_metadata_buffer,
                                                         dtype=FRAME_METADATA_DTYPE,

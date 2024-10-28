@@ -11,7 +11,7 @@ from skellycam.core.detection.camera_device_info import CameraDeviceInfo, Availa
 logger = logging.getLogger(__name__)
 
 
-def detect_available_devices(check_if_available: bool = True) -> AvailableDevices:
+def detect_available_devices(check_if_available: bool = False) -> AvailableDevices:
     from PySide6.QtMultimedia import QMediaDevices
     # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
     close_app = False

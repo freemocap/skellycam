@@ -1,6 +1,7 @@
 import logging
 from collections import deque
 from pathlib import Path
+from typing import Optional
 
 import cv2
 from pydantic import BaseModel, ValidationError
@@ -19,6 +20,7 @@ class VideoRecorder(BaseModel):
     camera_config: CameraConfig
     frame_width: int
     frame_height: int
+    previous_frame: Optional[FramePayload] = None
     _frames_to_write: deque[FramePayload] = deque()
 
     class Config:
@@ -66,6 +68,12 @@ class VideoRecorder(BaseModel):
 
         frame = self._frames_to_write.popleft()
         self._validate_frame(frame)
+        if self.previous_frame is not None:
+            if not frame.frame_number == self.previous_frame.frame_number + 1:
+                raise ValidationError(f"Frame numbers for camera {self.camera_id} are not consecutive! \n "
+                                      f"Previous frame number: {self.previous_frame.frame_number}, \n"
+                                      f"Current frame number: {frame.frame_number}\n")
+        self.previous_frame = frame
         self.video_writer.write(frame.image)
         logger.loop(f"VideoRecorder for Camera {self.camera_id} wrote frame {frame.frame_number} to video file: {self.video_path}")
 

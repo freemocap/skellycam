@@ -1,72 +1,17 @@
 import logging
 import multiprocessing
 import time
-from dataclasses import dataclass
-from typing import Optional, List
-
-import cv2
-import numpy as np
+from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
+from skellycam.core.frames.image_annotation import ImageAnnotator
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.timestamps.framerate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ImageAnnotator:
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1.5
-    color_top = (255, 0, 255)  # FFOOFF!
-    thickness_top = 3
-    color_bottom = (125, 0, 255) # 000OFF!
-    thickness_bottom = 4
-    position_x = 10 # top-left corner (x: left, +X is rightward)
-    position_y = 50 # top-left corner (y: top, +Y is downward)
-    vertical_offset = 50
-
-    def annotate_image(self,
-                       image: np.ndarray,
-                       multi_frame_number: int,
-                       framerate_tracker: FrameRateTracker,
-                       frame_number: int,
-                       camera_id: int) -> np.ndarray:
-        annotated_image = image.copy()
-        image_height, image_width, _ = image.shape
-        # cv2.rectangle(annotated_image, (0, 0), (300, 80), (255, 255, 255, .2), -1)
-        for _ in range(2):
-            if _ == 0:
-                color = self.color_top
-                thickness = self.thickness_top
-            else:
-                color = self.color_bottom
-                thickness = self.thickness_bottom
-            cv2.putText(annotated_image,
-                        f" CameraId: {camera_id}, Frame#{frame_number})",
-                        (self.position_x, self.position_y), self.font, self.font_scale, color, thickness)
-
-            cv2.putText(annotated_image, f"MultiFrame# {multi_frame_number}", (self.position_x, self.position_y + self.vertical_offset), self.font, self.font_scale, color, thickness)
-            for i, string in enumerate(framerate_tracker.to_string_list()):
-                cv2.putText(annotated_image, string, (self.position_x, self.position_y + (i + 2) * self.vertical_offset), self.font, self.font_scale, color, thickness)
-
-
-            frame_durations = framerate_tracker.frame_durations_ns
-            cv2.line(annotated_image, (0, image_height - 33), (image_width, image_height - 33), (255, 255, 255), 1)
-            cv2.putText(annotated_image, f"(33ms)", (10, image_height - 33), self.font, self.font_scale/2, (0, 0, 0), 2)
-            # Calculate the start index based on the length of frame_durations and image width
-            start_index = max(0, len(frame_durations) - image_width)
-            # Plot the time series as circles
-            for px in range(0, image_width, 4):
-                data_index = start_index + px
-                if data_index < len(frame_durations):
-                    duration_ms = frame_durations[data_index] / 1e6
-                    y_position = int(image_height - duration_ms)
-                    cv2.circle(annotated_image, (px, y_position), 3, (255, 0, 255), -1)
-        return annotated_image
 
 
 class FrameListenerProcess:
@@ -96,14 +41,13 @@ class FrameListenerProcess:
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
                                                                        shmorc_dto=shmorc_dto,
                                                                        read_only=False)
-        frame_loop_shm = shmorchestrator.frame_loop_shm
         orchestrator = shmorchestrator.orchestrator
+        frame_loop_shm = shmorchestrator.frame_loop_shm
         multi_frame_escape_shm = shmorchestrator.multi_frame_escape_ring_shm
 
         framerate_tracker = FrameRateTracker()
         mf_payload: Optional[MultiFramePayload] = None
         camera_configs = camera_group_dto.camera_configs
-        image_annotator = ImageAnnotator()
         try:
 
             while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
@@ -112,25 +56,26 @@ class FrameListenerProcess:
 
                 if orchestrator.should_pull_multi_frame_from_shm.value:
 
+                    tik1 = time.perf_counter_ns()
                     mf_payload: MultiFramePayload = frame_loop_shm.get_multi_frame_payload(
                         previous_payload=mf_payload,
                         camera_configs=camera_configs,
                     )
-
+                    tok1 = time.perf_counter_ns()
                     logger.loop(
                         f"FrameListener - copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
-
-                    framerate_tracker.update(time.perf_counter_ns())
-
-                    for camera_id, frame in mf_payload.frames.items():
-                        frame.image = image_annotator.annotate_image(image=frame.image,
-                                                                     frame_number=frame.frame_number,
-                                                                     multi_frame_number=mf_payload.multi_frame_number,
-                                                                     framerate_tracker = framerate_tracker,
-                                                                     camera_id=camera_id)
-
-                    multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
                     orchestrator.signal_multi_frame_pulled_from_shm()
+                    framerate_tracker.update(time.perf_counter_ns())
+                    # for camera_id, frame in mf_payload.frames.items():
+                    #     frame.image = image_annotator.annotate_image(image=frame.image,
+                    #                                                  frame_number=frame.frame_number,
+                    #                                                  multi_frame_number=mf_payload.multi_frame_number,
+                    #                                                  framerate_tracker = framerate_tracker,
+                    #                                                  camera_id=camera_id)
+                    tik2 = time.perf_counter_ns()
+                    multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
+                    tok2 = time.perf_counter_ns()
+                    print(f"Time to pull mf from shm: {(tok1 - tik1) / 1e6} ms, time to put mf into shm: {(tok2 - tik2) / 1e6} ms - recent fps: {framerate_tracker.recent_frames_per_second}")
                 else:
                     wait_1ms()
 

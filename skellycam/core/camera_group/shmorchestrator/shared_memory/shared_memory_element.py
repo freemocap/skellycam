@@ -13,9 +13,11 @@ class SharedMemoryElement(BaseModel):
     original_shape: Tuple[int, ...]
 
     @classmethod
-    def create(cls, shape: Tuple[int, ...], dtype: Union[np.dtype, type, str]):
+    def create(cls, shape: Tuple[int, ...], dtype: np.dtype):
         dtype = cls._ensure_dtype(dtype)
-        payload_size_bytes = int(np.prod(shape) * dtype.itemsize)
+        payload_size_bytes = int(np.prod(shape, dtype=np.int64) * dtype.itemsize)
+        if payload_size_bytes < 0:
+            raise ValueError(f"Payload size is negative: {payload_size_bytes}")
         shm = shared_memory.SharedMemory(size=payload_size_bytes, create=True)
         buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
         return cls(buffer=buffer, shm=shm, dtype=dtype, original_shape=shape)
