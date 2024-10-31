@@ -3,7 +3,7 @@ from unittest.mock import patch, AsyncMock
 import pytest
 
 from skellycam.app.app_controller.app_controller import AppController
-from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.system.device_detection.camera_device_info import AvailableDevices
 
 
 @pytest.mark.skip(reason="This test is not implemented yet.")

@@ -4,23 +4,15 @@ import platform
 from typing import List, Tuple
 
 import cv2
-from PySide6.QtMultimedia import QCameraDevice
+from PySide6.QtMultimedia import QCameraDevice, QMediaDevices
 
-from skellycam.core.detection.camera_device_info import CameraDeviceInfo, AvailableDevices
+from skellycam.system.device_detection.camera_device_info import CameraDeviceInfo, AvailableDevices
 
 logger = logging.getLogger(__name__)
 
 
 def detect_available_devices(check_if_available: bool = False) -> AvailableDevices:
-    from PySide6.QtMultimedia import QMediaDevices
-    # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
-    close_app = False
-    # if not QCoreApplication.instance():
-    #     logger.debug("No QCoreApplication instance found - creating new instance so we can use QMediaDevices to detect cameras...")
-    #     app = QCoreApplication([])
-    #     close_app = True
-    # else:
-    #     app = QCoreApplication.instance()
+
 
     try:
         logger.info("Detecting available cameras...")

@@ -11,7 +11,6 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.camera_group_process import CameraGroupProcess
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
-from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)
 

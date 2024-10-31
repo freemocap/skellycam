@@ -1,8 +1,7 @@
 import base64
 import time
-from copy import deepcopy
 from io import BytesIO
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 import cv2
 import numpy as np
@@ -14,7 +13,7 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
-from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class FrontendFramePayload(BaseModel):

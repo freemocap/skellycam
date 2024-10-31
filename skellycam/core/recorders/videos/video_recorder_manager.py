@@ -10,9 +10,9 @@ from pydantic import BaseModel, ValidationError, Field
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frames.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.frames.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
-from skellycam.core.videos.video_recorder import VideoRecorder
+from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
+from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"

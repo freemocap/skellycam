@@ -9,8 +9,8 @@ from skellycam.app.app_controller.app_controller import get_app_controller
 from skellycam.app.app_state import AppStateDTO, AppState
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
-from skellycam.core.videos.video_recorder_manager import RecordingInfo
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
+from skellycam.core.recorders.videos.video_recorder_manager import RecordingInfo
 from skellycam.utilities.wait_functions import async_wait_1ms
 
 logger = logging.getLogger(__name__)

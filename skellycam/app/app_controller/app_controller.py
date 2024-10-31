@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from skellycam.app.app_state import AppState
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.detection.detect_available_devices import detect_available_devices
+from skellycam.system.device_detection.detect_available_camerass import detect_available_devices
 
 logger = logging.getLogger(__name__)
 

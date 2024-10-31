@@ -10,7 +10,7 @@ from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     create_empty_frame_metadata
-from skellycam.core.frames.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 from skellycam.utilities.rotate_image import rotate_image
 
 

@@ -1,7 +1,6 @@
-import pyaudio
 import wave
-from typing import List
 
+import pyaudio
 from skellycam.core.audio.detect_microphone_devices import list_microphones
 
 

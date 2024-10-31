@@ -1,13 +1,15 @@
+import threading
 from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import QMutex, QMutexLocker, Signal
 from PySide6.QtWidgets import QWidget
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.core.detection.camera_device_info import AvailableDevices
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.videos.video_recorder_manager import RecordingInfo
+from skellycam.core.recorders.videos.video_recorder_manager import RecordingInfo
 from skellycam.gui.qt.gui_state.models.camera_view_sizes import CameraViewSizes
+from skellycam.system.device_detection.camera_device_info import AvailableDevices
+from skellycam.system.device_detection.detect_available_camerass import detect_available_devices
 
 if TYPE_CHECKING:
     from skellycam.app.app_state import AppStateDTO
@@ -25,6 +27,7 @@ class GUIState(QWidget):
         self._user_selected_camera_configs: Optional[CameraConfigs] = None
         self._connected_camera_configs: Optional[CameraConfigs] = None
         self._available_devices: Optional[AvailableDevices] = None
+
         self._kill_camera_group_flag_status: bool = False
         self._record_frames_flag_status: bool = False
 
@@ -39,6 +42,8 @@ class GUIState(QWidget):
         self._latest_app_state_dto: Optional['AppStateDTO'] = None
 
         self._mutex_lock = QMutex()
+
+        self._detect_available_devices_task: Optional[threading.Thread] = None
 
 
 
@@ -137,3 +142,9 @@ class GUIState(QWidget):
             self._camera_view_sizes = CameraViewSizes()
             self._connected_camera_configs = None
 
+
+    def detect_available_devices(self):
+        def update_available_devices():
+            self._available_devices = detect_available_devices()
+        self._detect_available_devices_task = threading.Thread(target=update_available_devices)
+        self._detect_available_devices_task.start()

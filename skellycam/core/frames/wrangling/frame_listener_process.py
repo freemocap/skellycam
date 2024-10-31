@@ -6,9 +6,8 @@ from typing import Optional
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
-from skellycam.core.frames.image_annotation import ImageAnnotator
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frames.timestamps.framerate_tracker import FrameRateTracker
+from skellycam.core.recorders.timestamps.framerate_tracker import FrameRateTracker
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)

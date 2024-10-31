@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
-from skellycam.core.frames.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.frames.timestamps.old.camera_timestamp_log import CameraTimestampLog
-from skellycam.core.frames.timestamps.old.multi_frame_timestamp_log import (
+from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.recorders.timestamps.old.camera_timestamp_log import CameraTimestampLog
+from skellycam.core.recorders.timestamps.old.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
 

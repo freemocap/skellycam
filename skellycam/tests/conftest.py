@@ -18,12 +18,12 @@ from skellycam.core.camera_group import CameraGroupOrchestrator
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
-from skellycam.core.detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
+from skellycam.system.device_detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.tests.mocks import MockVideoCapture
 
 

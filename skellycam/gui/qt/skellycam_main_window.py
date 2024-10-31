@@ -8,7 +8,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
 from skellycam.app.app_state import AppStateDTO
-from skellycam.gui.qt.client.fastapi_client import FastAPIClient
+from skellycam.gui.qt.client.gui_client import FastAPIClient
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.gui.qt.widgets.camera_widgets.camera_panel import CameraPanel
 from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
@@ -155,7 +155,7 @@ class SkellyCamMainWindow(QMainWindow):
 
         # Camera Control Panel
         self._control_panel.detect_available_cameras_button.clicked.connect(
-            self._client.detect_cameras
+            self.gui_state.detect_available_devices
         )
         self._control_panel.connect_cameras_button.clicked.connect(
             self._client.detect_and_connect_to_cameras

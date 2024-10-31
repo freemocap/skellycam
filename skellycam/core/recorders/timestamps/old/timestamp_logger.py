@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
 from skellycam.core.frames.payloads.frame_payload import FramePayload
-from skellycam.core.frames.timestamps.old.camera_timestamp_log import CameraTimestampLog
+from skellycam.core.recorders.timestamps.old.camera_timestamp_log import CameraTimestampLog
 
 logger = logging.getLogger(__name__)
 

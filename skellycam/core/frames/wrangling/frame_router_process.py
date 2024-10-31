@@ -7,7 +7,7 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.videos.video_recorder_manager import VideoRecorderManager
+from skellycam.core.recorders.videos.video_recorder_manager import VideoRecorderManager
 from skellycam.system.default_paths import get_default_recording_folder_path
 from skellycam.utilities.wait_functions import wait_1ms
 

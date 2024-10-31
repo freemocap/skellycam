@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from skellycam.core.frames.timestamps.framerate_tracker import FrameRateTracker
+from skellycam.core.recorders.timestamps.framerate_tracker import FrameRateTracker
 
 
 @dataclass

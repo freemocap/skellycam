@@ -5,7 +5,7 @@ import pytest
 from skellycam.app.app_controller.app_controller import AppController
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
-from skellycam.core.detection.camera_device_info import AvailableDevices
+from skellycam.system.device_detection.camera_device_info import AvailableDevices
 
 
 @pytest.mark.asyncio

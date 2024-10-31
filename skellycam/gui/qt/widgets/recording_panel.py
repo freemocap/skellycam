@@ -4,7 +4,7 @@ from typing import Optional
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout
 
-from skellycam.core.videos.video_recorder_manager import RecordingInfo
+from skellycam.core.recorders.videos.video_recorder_manager import RecordingInfo
 
 logger = logging.getLogger(__name__)
 

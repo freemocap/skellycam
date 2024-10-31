@@ -2,6 +2,7 @@ from pprint import pprint
 
 import pyaudio
 
+
 def list_microphones():
     """
     List available unique microphone devices.

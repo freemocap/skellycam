@@ -12,14 +12,12 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
-    SingleSlotCameraGroupSharedMemory
-from skellycam.core.detection.camera_device_info import AvailableDevices, available_devices_to_default_camera_configs
-from skellycam.core.frames.timestamps.framerate_tracker import CurrentFrameRate
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
+from skellycam.system.device_detection.camera_device_info import AvailableDevices, \
+    available_devices_to_default_camera_configs
 
 logger = logging.getLogger(__name__)
 
