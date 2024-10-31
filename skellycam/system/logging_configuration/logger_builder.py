@@ -129,7 +129,8 @@ class LoggerBuilder:
 
     def configure(self):
         if len(logging.getLogger().handlers) == 0:
-            handlers = [self.build_file_handler(), self.build_console_handler()]
+            handlers = [#self.build_file_handler(),
+                        self.build_console_handler()]
             for handler in handlers:
                 if handler not in logging.getLogger("").handlers:
                     logging.getLogger("").handlers.append(handler)

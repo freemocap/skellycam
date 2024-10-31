@@ -75,7 +75,8 @@ class FrameListenerProcess:
                     tik2 = time.perf_counter_ns()
                     multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
                     tok2 = time.perf_counter_ns()
-                    print(f"Time to pull mf from shm: {(tok1 - tik1) / 1e6} ms, time to put mf into shm: {(tok2 - tik2) / 1e6} ms - recent fps: {framerate_tracker.recent_frames_per_second}")
+                    # if mf_payload.multi_frame_number % 10 == 0:
+                        # print(f"Time to pull mf from shm: {(tok1 - tik1) / 1e6} ms, time to put mf into shm: {(tok2 - tik2) / 1e6} ms - recent fps: {framerate_tracker.recent_frames_per_second}")
                 else:
                     wait_1ms()
 

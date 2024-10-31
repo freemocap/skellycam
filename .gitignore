@@ -214,6 +214,9 @@ out/
 *.wmv
 *.mkv
 *.webm
+*.wav
+*.mp3
+*.flac
 
 # Don't ignore `skellycam.spec` file
 !skellycam.spec

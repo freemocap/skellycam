@@ -96,7 +96,7 @@ class SharedMemoryRingBuffer:
             raise ValueError(
                 f"Array shape {data.shape} does not match SharedMemoryIndexedArray shape {self.ring_buffer_shape[1:]}")
 
-        index_to_write = self.last_written_index.get() + 1
+        index_to_write = self.last_written_index.value + 1
         if self._check_for_overwrite(index_to_write):
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 

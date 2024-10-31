@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Type
 
 import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
@@ -21,77 +21,164 @@ class MultiFrameNumpyBuffer(BaseModel):
     mf_image_buffer: np.ndarray
     multi_frame_number: int
 
+
     @classmethod
     def from_multi_frame_payload(cls, multi_frame_payload: 'MultiFramePayload') -> 'MultiFrameNumpyBuffer':
+        frames = list(multi_frame_payload.frames.values())
+
         time_mapping_buffer = multi_frame_payload.utc_ns_to_perf_ns.to_numpy_buffer()
 
-        mf_metadatas = [frame.metadata for frame in multi_frame_payload.frames.values()]
-        mf_metadata_buffer = np.concatenate(mf_metadatas, axis=0)
-        if mf_metadata_buffer.shape[0] != FRAME_METADATA_SHAPE[0] * len(multi_frame_payload.frames):
+        mf_metadatas = np.concatenate([frame.metadata for frame in frames], axis=0)
+        expected_metadata_shape = FRAME_METADATA_SHAPE[0] * len(frames)
+        if mf_metadatas.shape[0] != expected_metadata_shape:
             raise ValueError(
-                f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be {FRAME_METADATA_SHAPE[0] * len(multi_frame_payload.frames)} but is {mf_metadata_buffer.shape[0]}")
+                f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be {expected_metadata_shape} but is {mf_metadatas.shape[0]}")
 
-        mf_images = [frame.image for frame in multi_frame_payload.frames.values()]
-        mf_images_ravelled = [image.ravel() for image in mf_images]
-        mf_image_buffer = np.concatenate(mf_images_ravelled, axis=0)
+        mf_images = np.concatenate([frame.image.ravel() for frame in frames], axis=0)
 
-        mf_number = [frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] for frame in
-                     multi_frame_payload.frames.values()]
-        if len(set(mf_number)) > 1:
-            raise ValueError(f"MultiFramePayload has multiple frame numbers {set(mf_number)}")
+        mf_number = {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] for frame in frames}
+        if len(mf_number) > 1:
+            raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
 
-        return cls(mf_time_mapping_buffer=time_mapping_buffer,
-                   mf_metadata_buffer=mf_metadata_buffer,
-                   mf_image_buffer=mf_image_buffer,
-                   multi_frame_number=mf_number.pop())
-
-    @classmethod
-    def from_buffers(cls,
-                     mf_time_mapping_buffer: np.ndarray,
-                     mf_metadata_buffer: np.ndarray,
-                     mf_image_buffer: np.ndarray) -> 'MultiFrameNumpyBuffer':
-        frame_numbers = set(mf_metadata_buffer.reshape(-1, FRAME_METADATA_SHAPE[0])[:, FRAME_METADATA_MODEL.FRAME_NUMBER.value])
-
-        if len(set(frame_numbers)) > 1:
-            raise ValueError(f"MultiFramePayload has multiple frame numbers {set(frame_numbers)}")
-        return cls(mf_time_mapping_buffer=mf_time_mapping_buffer,
-                   mf_metadata_buffer=mf_metadata_buffer,
-                   mf_image_buffer=mf_image_buffer,
-                   multi_frame_number=frame_numbers.pop())
+        return cls(
+            mf_time_mapping_buffer=time_mapping_buffer,
+            mf_metadata_buffer=mf_metadatas,
+            mf_image_buffer=mf_images,
+            multi_frame_number=mf_number.pop()
+        )
 
     def to_multi_frame_payload(self, camera_configs: CameraConfigs) -> 'MultiFramePayload':
-
         time_mapping = UtcToPerfCounterMapping.from_numpy_buffer(self.mf_time_mapping_buffer)
 
         if self.mf_metadata_buffer.shape[0] % FRAME_METADATA_SHAPE[0] != 0:
             raise ValueError(
-                f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be a multiple of {FRAME_METADATA_SHAPE[0]} but is {self.mf_metadata_buffer.shape[0]}")
+                f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be a multiple of {FRAME_METADATA_SHAPE[0]} but is {self.mf_metadata_buffer.shape[0]}"
+            )
+
         number_of_cameras = self.mf_metadata_buffer.shape[0] // FRAME_METADATA_SHAPE[0]
         mf_metadatas = np.split(self.mf_metadata_buffer, number_of_cameras)
         frames = {}
+        buffer_index = 0
+
         for metadata in mf_metadatas:
             if not metadata.shape == FRAME_METADATA_SHAPE:
                 raise ValueError(
-                    f"Metadata shape {metadata.shape} does not match expected shape {FRAME_METADATA_SHAPE}")
-            if not metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] == self.multi_frame_number:
+                    f"Metadata shape {metadata.shape} does not match expected shape {FRAME_METADATA_SHAPE}"
+                )
+            if metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] != self.multi_frame_number:
                 raise ValueError(
-                    f"Metadata frame number {metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} does not match expected frame number {self.multi_frame_number}")
-            camera_id = CameraId(metadata[FRAME_METADATA_MODEL.CAMERA_ID.value])
-            image_width = metadata[FRAME_METADATA_MODEL.IMAGE_WIDTH.value]
-            image_height = metadata[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value]
-            image_color_channels = metadata[FRAME_METADATA_MODEL.IMAGE_COLOR_CHANNELS.value]
-            image_shape = (image_height, image_width, image_color_channels)
-            if camera_configs[camera_id].image_shape != image_shape:
+                    f"Metadata frame number {metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} does not match expected frame number {self.multi_frame_number}"
+                )
+
+            image_shape = (metadata[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value],
+                           metadata[FRAME_METADATA_MODEL.IMAGE_WIDTH.value],
+                           metadata[FRAME_METADATA_MODEL.IMAGE_COLOR_CHANNELS.value])
+
+            if camera_configs[metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]].image_shape != image_shape:
                 raise ValueError(
-                    f"Camera config image shape {camera_configs[camera_id].image_shape} does not match image shape {image_shape}")
+                    f"Camera config image shape {camera_configs[metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]].image_shape} does not match image shape {image_shape}"
+                )
+
             image_length = np.prod(image_shape)
-            image_buffer = self.mf_image_buffer[:image_length]
-            self.mf_image_buffer = self.mf_image_buffer[image_length:]
+            image_buffer = self.mf_image_buffer[int(buffer_index):int(buffer_index + image_length)]
+            buffer_index += image_length
             image = image_buffer.reshape(image_shape)
-            frames[camera_id] = FramePayload(metadata=metadata, image=image)
-        return MultiFramePayload(frames=frames,
-                                 camera_configs=camera_configs,
-                                 utc_ns_to_perf_ns=time_mapping)
+            frames[metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]] = FramePayload(metadata=metadata, image=image)
+
+        return MultiFramePayload(
+            frames=frames,
+            camera_configs=camera_configs,
+            utc_ns_to_perf_ns=time_mapping
+        )
+
+    @classmethod
+    def from_buffers(cls: Type['MultiFrameNumpyBuffer'],
+                     mf_time_mapping_buffer: np.ndarray,
+                     mf_metadata_buffer: np.ndarray,
+                     mf_image_buffer: np.ndarray) -> 'MultiFrameNumpyBuffer':
+        reshaped_metadata = mf_metadata_buffer.reshape(-1, FRAME_METADATA_SHAPE[0])
+        frame_numbers = np.unique(reshaped_metadata[:, FRAME_METADATA_MODEL.FRAME_NUMBER.value])
+
+        if len(frame_numbers) > 1:
+            raise ValueError(f"MultiFramePayload has multiple frame numbers {frame_numbers}")
+
+        return cls(
+            mf_time_mapping_buffer=mf_time_mapping_buffer,
+            mf_metadata_buffer=mf_metadata_buffer,
+            mf_image_buffer=mf_image_buffer,
+            multi_frame_number=frame_numbers[0]
+        )
+    # @classmethod
+    # def from_multi_frame_payload(cls, multi_frame_payload: 'MultiFramePayload') -> 'MultiFrameNumpyBuffer':
+    #     time_mapping_buffer = multi_frame_payload.utc_ns_to_perf_ns.to_numpy_buffer()
+    #
+    #     mf_metadatas = [frame.metadata for frame in multi_frame_payload.frames.values()]
+    #     mf_metadata_buffer = np.concatenate(mf_metadatas, axis=0)
+    #     if mf_metadata_buffer.shape[0] != FRAME_METADATA_SHAPE[0] * len(multi_frame_payload.frames):
+    #         raise ValueError(
+    #             f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be {FRAME_METADATA_SHAPE[0] * len(multi_frame_payload.frames)} but is {mf_metadata_buffer.shape[0]}")
+    #
+    #     mf_images = [frame.image for frame in multi_frame_payload.frames.values()]
+    #     mf_images_ravelled = [image.ravel() for image in mf_images]
+    #     mf_image_buffer = np.concatenate(mf_images_ravelled, axis=0)
+    #
+    #     mf_number = [frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] for frame in
+    #                  multi_frame_payload.frames.values()]
+    #     if len(set(mf_number)) > 1:
+    #         raise ValueError(f"MultiFramePayload has multiple frame numbers {set(mf_number)}")
+    #
+    #     return cls(mf_time_mapping_buffer=time_mapping_buffer,
+    #                mf_metadata_buffer=mf_metadata_buffer,
+    #                mf_image_buffer=mf_image_buffer,
+    #                multi_frame_number=mf_number.pop())
+    #
+    # @classmethod
+    # def from_buffers(cls,
+    #                  mf_time_mapping_buffer: np.ndarray,
+    #                  mf_metadata_buffer: np.ndarray,
+    #                  mf_image_buffer: np.ndarray) -> 'MultiFrameNumpyBuffer':
+    #     frame_numbers = set(mf_metadata_buffer.reshape(-1, FRAME_METADATA_SHAPE[0])[:, FRAME_METADATA_MODEL.FRAME_NUMBER.value])
+    #
+    #     if len(set(frame_numbers)) > 1:
+    #         raise ValueError(f"MultiFramePayload has multiple frame numbers {set(frame_numbers)}")
+    #     return cls(mf_time_mapping_buffer=mf_time_mapping_buffer,
+    #                mf_metadata_buffer=mf_metadata_buffer,
+    #                mf_image_buffer=mf_image_buffer,
+    #                multi_frame_number=frame_numbers.pop())
+    #
+    # def to_multi_frame_payload(self, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+    #
+    #     time_mapping = UtcToPerfCounterMapping.from_numpy_buffer(self.mf_time_mapping_buffer)
+    #
+    #     if self.mf_metadata_buffer.shape[0] % FRAME_METADATA_SHAPE[0] != 0:
+    #         raise ValueError(
+    #             f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be a multiple of {FRAME_METADATA_SHAPE[0]} but is {self.mf_metadata_buffer.shape[0]}")
+    #     number_of_cameras = self.mf_metadata_buffer.shape[0] // FRAME_METADATA_SHAPE[0]
+    #     mf_metadatas = np.split(self.mf_metadata_buffer, number_of_cameras)
+    #     frames = {}
+    #     for metadata in mf_metadatas:
+    #         if not metadata.shape == FRAME_METADATA_SHAPE:
+    #             raise ValueError(
+    #                 f"Metadata shape {metadata.shape} does not match expected shape {FRAME_METADATA_SHAPE}")
+    #         if not metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] == self.multi_frame_number:
+    #             raise ValueError(
+    #                 f"Metadata frame number {metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} does not match expected frame number {self.multi_frame_number}")
+    #         camera_id = CameraId(metadata[FRAME_METADATA_MODEL.CAMERA_ID.value])
+    #         image_width = metadata[FRAME_METADATA_MODEL.IMAGE_WIDTH.value]
+    #         image_height = metadata[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value]
+    #         image_color_channels = metadata[FRAME_METADATA_MODEL.IMAGE_COLOR_CHANNELS.value]
+    #         image_shape = (image_height, image_width, image_color_channels)
+    #         if camera_configs[camera_id].image_shape != image_shape:
+    #             raise ValueError(
+    #                 f"Camera config image shape {camera_configs[camera_id].image_shape} does not match image shape {image_shape}")
+    #         image_length = np.prod(image_shape)
+    #         image_buffer = self.mf_image_buffer[:image_length]
+    #         self.mf_image_buffer = self.mf_image_buffer[image_length:]
+    #         image = image_buffer.reshape(image_shape)
+    #         frames[camera_id] = FramePayload(metadata=metadata, image=image)
+    #     return MultiFramePayload(frames=frames,
+    #                              camera_configs=camera_configs,
+    #                              utc_ns_to_perf_ns=time_mapping)
 
     def __str__(self):
         return f"MultiFrameNumpyBuffer: metadata shape {self.mf_metadata_buffer.shape}, image shape {self.mf_image_buffer.shape}, time mapping shape {self.mf_time_mapping_buffer.shape}"
