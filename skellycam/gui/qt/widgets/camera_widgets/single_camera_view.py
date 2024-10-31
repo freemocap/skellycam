@@ -2,7 +2,7 @@ import base64
 import logging
 import sys
 import time
-from typing import Optional
+from typing import Optional, Dict
 
 import cv2
 import numpy as np
@@ -10,7 +10,6 @@ from PySide6.QtCore import Qt, QByteArray, QBuffer, QRect
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QBrush
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
-from skellycam.gui.qt.gui_state.models.camera_framerate_stats import CameraFramerateStats
 
 logger = logging.getLogger(__name__)
 class EfficientQImageUpdater:
@@ -72,7 +71,7 @@ class SingleCameraViewWidget(QWidget):
         self.update_pixmap()
         logger.gui(f"Successfully updated {self.__class__.__name__} with image for camera {self.camera_id}")
 
-    def _annotate_pixmap(self, framerate_stats: Optional[CameraFramerateStats], recording: bool = False):
+    def _annotate_pixmap(self, framerate_stats: Optional[Dict], recording: bool = False):
         logger.gui(f"Annotating pixmap for camera {self.camera_id}")
         painter = QPainter(self._current_pixmap)
         pixmap_width = self._current_pixmap.width()
