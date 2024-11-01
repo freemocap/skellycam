@@ -2,16 +2,11 @@ import logging
 
 from fastapi import APIRouter
 
-from skellycam.api.models.base_models import BaseResponse
 from skellycam.app.app_controller.app_controller import get_app_controller
 
 logger = logging.getLogger(__name__)
 
 close_cameras_router = APIRouter()
-
-
-class CamerasClosedResponse(BaseResponse):
-    pass
 
 
 @close_cameras_router.get("/close",

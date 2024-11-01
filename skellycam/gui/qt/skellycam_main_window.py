@@ -22,6 +22,7 @@ from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
 )
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path, \
     get_default_skellycam_recordings_path, SKELLYCAM_FAVICON_ICO_PATH
+from skellycam.system.device_detection.detect_available_camerass import detect_available_devices
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._global_kill_flag = global_kill_flag
         # self._log_view_widget = LogViewWidget(global_kill_flag=global_kill_flag,
         #                                       parent=self)  # start this first so it will grab the setup logging
-        self._client =  FastAPIClient(self)
+        self._client = FastAPIClient(self)
         self._client.connect_websocket()
 
         self._initUI()
@@ -117,8 +118,6 @@ class SkellyCamMainWindow(QMainWindow):
         #     QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetFloatable
         # )
 
-
-
     def check_if_should_close(self):
         if self._global_kill_flag.value:
             logger.gui("Global kill flag is `True`, closing QT GUI")
@@ -131,15 +130,15 @@ class SkellyCamMainWindow(QMainWindow):
             self._hide_welcome_view
         )
 
-        self._welcome_connect_to_cameras_button.button.clicked.connect(self._client.detect_and_connect_to_cameras)
+        self._welcome_connect_to_cameras_button.button.clicked.connect(self.connect_to_cameras())
 
-        self._control_panel.connect_cameras_button.clicked.connect(
-            self._hide_welcome_view)
+        # self._control_panel.connect_cameras_button.clicked.connect(
+        #     self._hide_welcome_view)
 
         self._control_panel.detect_available_cameras_button.clicked.connect(
             self._hide_welcome_view)
 
-        #websocket
+        # websocket
         self._client.websocket_client.new_frontend_payload_available.connect(
             self._camera_panel.camera_view_grid.handle_new_frontend_payload
         )
@@ -155,13 +154,14 @@ class SkellyCamMainWindow(QMainWindow):
 
         # Camera Control Panel
         self._control_panel.detect_available_cameras_button.clicked.connect(
-            self.gui_state.detect_available_devices
+            lambda: self._control_panel.camera_settings_panel.update_available_devices(
+                detect_available_devices(check_if_available=True))
         )
-        self._control_panel.connect_cameras_button.clicked.connect(
-            self._client.detect_and_connect_to_cameras
-        )
+        # self._control_panel.connect_cameras_button.clicked.connect(
+        #     lambda: self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
+        # )
         self._control_panel.apply_settings_to_cameras_button.clicked.connect(
-            lambda: self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
+            self.connect_to_cameras
         )
         self._control_panel.close_cameras_button.clicked.connect(
             self._client.close_cameras
@@ -178,11 +178,16 @@ class SkellyCamMainWindow(QMainWindow):
             self._client.stop_recording
         )
 
-
     def _hide_welcome_view(self):
         self._welcome_to_skellycam_widget.hide()
         self._welcome_connect_to_cameras_button.hide()
         self._camera_panel.show()
+
+    @Slot()
+    def connect_to_cameras(self):
+        if not self._control_panel.user_selected_camera_configs:
+            self._control_panel.camera_settings_panel.update_available_devices(detect_available_devices())
+        self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
 
     @Slot(object)
     def _handle_new_app_state(self, app_state: AppStateDTO):
@@ -192,13 +197,13 @@ class SkellyCamMainWindow(QMainWindow):
     def closeEvent(self, a0) -> None:
 
         logger.info("Closing QT GUI window")
+        self._global_kill_flag.value = True
         try:
             self._camera_panel.close()
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)
 
-        self._global_kill_flag.value = True
         remove_empty_directories(get_default_skellycam_base_folder_path())
 
 

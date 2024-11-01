@@ -52,9 +52,10 @@ class FastAPIClient(QWidget):
         logger.gui("Calling `/cameras/record/stop` endpoint")
         self._http_client.get("/cameras/record/stop")
 
-    def detect_and_connect_to_cameras(self):
-        logger.gui("Calling `cameras/connect` endpoint")
-        self._http_client.get("/cameras/connect/detect")
+    # def detect_and_connect_to_cameras(self):
+    #     logger.gui("Calling `cameras/connect` endpoint")
+    #
+    #     self._http_client.get("/cameras/connect/detect")
 
     def apply_settings_to_cameras(self, camera_configs: CameraConfigs):
         logger.gui("Calling `/cameras/connect/apply` endpoint")

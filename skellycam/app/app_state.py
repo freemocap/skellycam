@@ -57,11 +57,11 @@ class AppState:
         self.available_devices = value
         self.ipc_queue.put(self.state_dto())
 
-    def create_camera_group(self, camera_configs: Optional[CameraConfigs] = None):
+    def create_camera_group(self, camera_configs: CameraConfigs):
         if camera_configs is None:
-            camera_configs = self.camera_group_configs
-        if self.available_devices is None:
-            raise ValueError("Cannot get CameraConfigs without available devices!")
+            raise ValueError("Cannot create CameraGroup without camera_configs!")
+        # if self.available_devices is None:
+        #     raise ValueError("Cannot get CameraConfigs without available devices!")
         self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
                                                ipc_queue=self.ipc_queue,
                                                ipc_flags=self.ipc_flags,

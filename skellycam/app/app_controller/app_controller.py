@@ -75,16 +75,18 @@ class AppController(BaseModel):
         self.app_state.stop_recording()
 
 
-    def _create_camera_group(self, camera_configs: Optional[CameraConfigs]):
+    def _create_camera_group(self, camera_configs: CameraConfigs):
         try:
-            if not self.app_state.available_devices and not camera_configs:
-                self._detect_available_devices()
-                if not self.app_state.available_devices:
-                    logger.warning("No available devices detected!")
-                    return
+            if not camera_configs:
+                raise ValueError("Must provide camera configurations to connect to cameras!")
+            # if not self.app_state.available_devices and not camera_configs:
+            #     self._detect_available_devices()
+            #     if not self.app_state.available_devices:
+            #         logger.warning("No available devices detected!")
+            #         return
 
-            if self.app_state.camera_group_configs is None:
-                raise ValueError("No camera configurations detected!")
+            # if self.app_state.camera_group_configs is None:
+            #     raise ValueError("No camera configurations detected!")
 
             if self.app_state.camera_group:  # if `connect/` called w/o configs, reset existing connection
                 self.app_state.close_camera_group()

@@ -19,7 +19,7 @@ enabled_routers = {
     },
     "/cameras": {
         "connect": connect_cameras_router,
-        "detect": detect_cameras_router,
+        # "detect": detect_cameras_router,
         "record": record_cameras_router,
         "close": close_cameras_router
     },
