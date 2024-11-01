@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Literal
 
 import cv2
 from pydantic import BaseModel, Field, field_validator
@@ -74,10 +74,11 @@ class CameraConfig(BaseModel):
     pixel_format: str = Field(default="RGB",
                               description="How to interpret the color channels")
 
-    exposure: int = Field(
+    exposure: int|str = Field(
         default=DefaultCameraConfig.EXPOSURE.value,
         description="The exposure of the camera using the opencv convention - "
-                    "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/",
+                    "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/ "
+                    "or 'AUTO' to use automatic exposure (Hint! Set this as low as possible to avoid blur. Mocap likes BRIGHT environments and FAST/LOW exposure settings!)",
     )
 
     framerate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,

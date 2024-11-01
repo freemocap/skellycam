@@ -8,6 +8,8 @@ from skellycam.core.camera_group.camera.config.extract_config import extract_con
 
 logger = logging.getLogger(__name__)
 
+AUTO_EXPOSURE_SETTING = 3  # 0.75?
+MANUAL_EXPOSURE_SETTING = 1  # 0.25?
 
 class FailedToApplyCameraConfigurationError(Exception):
     pass
@@ -29,7 +31,11 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
             raise FailedToApplyCameraConfigurationError(
                 f"Failed to apply configuration to Camera {config.camera_id} - Camera is not open"
             )
-        cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(config.exposure))
+        if config.exposure == "AUTO":
+            cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING)
+        else:
+            cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
+            cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(config.exposure))
         cv2_vid_capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
         cv2_vid_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
         cv2_vid_capture.set(cv2.CAP_PROP_FPS, config.framerate)

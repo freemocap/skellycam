@@ -55,4 +55,5 @@ QT_CSS_STYLE_SHEET_STRING = """
                                 color: #ffffff;
                             }
                             
+                            QDockWidget { border: 1px solid black; }
                             """

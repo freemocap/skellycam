@@ -65,6 +65,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout.addWidget(self._camera_panel)
 
         self._control_panel_dock = QDockWidget("Camera Settings", self)
+        self._control_panel_dock.resize(300, self._control_panel_dock.height())
         self._control_panel_dock.setFeatures(
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable,
@@ -164,7 +165,7 @@ class SkellyCamMainWindow(QMainWindow):
             self.connect_to_cameras
         )
         self._control_panel.close_cameras_button.clicked.connect(
-            self._client.close_cameras
+            self.close_cameras
         )
         self._control_panel.close_cameras_button.clicked.connect(
             self._camera_panel.camera_view_grid.clear_camera_views
@@ -185,9 +186,16 @@ class SkellyCamMainWindow(QMainWindow):
 
     @Slot()
     def connect_to_cameras(self):
+        self._control_panel.apply_settings_to_cameras_button.setEnabled(True)
+        self._control_panel.close_cameras_button.setEnabled(True)
         if not self._control_panel.user_selected_camera_configs:
             self._control_panel.camera_settings_panel.update_available_devices(detect_available_devices())
         self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
+
+    @Slot()
+    def close_cameras(self):
+        self._control_panel.close_cameras_button.setEnabled(False)
+        self._client.close_cameras()
 
     @Slot(object)
     def _handle_new_app_state(self, app_state: AppStateDTO):

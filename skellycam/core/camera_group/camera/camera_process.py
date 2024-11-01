@@ -21,8 +21,7 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_e
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
-AUTO_EXPOSURE_SETTING = 3  # 0.75
-MANUAL_EXPOSURE_SETTING = 1  # 0.25
+
 
 
 @dataclass

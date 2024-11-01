@@ -72,23 +72,31 @@ class CameraSettingsPanel(QWidget):
     def _convert_to_parameter(self, camera_config: CameraConfig,
                               camera_info: CameraDeviceInfo) -> Parameter:
         logger.gui(f"Converting camera config to parameter: {camera_config}")
+        # Retrieve the descriptions from the CameraConfig class
+        config_schema = camera_config.model_fields
         camera_parameter_group = Parameter.create(
             name="Camera_" + str(camera_config.camera_id),
             type="group",
             children=[
                 dict(name=self.tr(USE_THIS_CAMERA_STRING),
                      type="bool",
-                     value=True),
+                     value=True,
+                     tip=config_schema['use_this_camera'].description,
+                        ),
                 dict(
                     name=self.tr("Rotate"),
                     type="list",
                     limits=[rotation_type.name for rotation_type in RotationTypes],
                     value=camera_config.rotation.name,
+                    tip=config_schema['rotation'].description,
                 ),
-                dict(name=self.tr("Exposure"),
-                     type="int",
-                     limits=(-13, -1),
-                     value=camera_config.exposure),
+                dict(
+                    name=self.tr("Exposure"),
+                    type="list",
+                    limits=["AUTO" , *[str(x) for x in range(-4, -13, -1)]],
+                    value=str(camera_config.exposure),
+                    tip=config_schema['exposure'].description,
+                ),
                 dict(
                     name=self.tr("Resolution"),
                     type="list",
@@ -100,17 +108,19 @@ class CameraSettingsPanel(QWidget):
                     type="list",
                     value=camera_config.framerate,
                     limits=camera_info.available_framerates,
-                    tip="Framerate in frames per second",
+                    tip=config_schema['framerate'].description,
                 ),
                 dict(
                     name=self.tr("Video Capture FourCC"),
                     type="str",
                     value=camera_config.capture_fourcc,
+                    tip=config_schema['capture_fourcc'].description,
                 ),
                 dict(
                     name=self.tr("Video Writer FourCC"),
                     type="str",
                     value=camera_config.writer_fourcc,
+                    tip=config_schema['writer_fourcc'].description,
                 ),
 
                 self._create_copy_to_all_cameras_action_parameter(
