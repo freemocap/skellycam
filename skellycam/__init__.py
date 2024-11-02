@@ -12,16 +12,7 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
 __package_root__ = __file__.replace("/__init__.py", "")
 
-__all__ = [
-    "__author__",
-    "__email__",
-    "__version__",
-    "__description__",
-    "__package_name__",
-    "__repo_url__",
-    "__repo_issues_url__",
-    "__pypi_url__",
-]
+
 
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.logger_builder import LogLevels
@@ -31,3 +22,16 @@ configure_logging(LogLevels.TRACE)
 # Export the main classes that the `freemocap` core software uses
 from skellycam.gui.qt.widgets.camera_widgets.camera_panel import CameraPanel as SkellyCamCameraPanel
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import CameraControlPanel as SkellyCamCameraControlPanel
+
+__all__ = [
+    "__author__",
+    "__email__",
+    "__version__",
+    "__description__",
+    "__package_name__",
+    "__repo_url__",
+    "__repo_issues_url__",
+    "__pypi_url__",
+    'SkellyCamCameraPanel',
+    'SkellyCamCameraControlPanel',
+]
