@@ -27,3 +27,7 @@ from skellycam.system.logging_configuration.configure_logging import configure_l
 from skellycam.system.logging_configuration.logger_builder import LogLevels
 
 configure_logging(LogLevels.TRACE)
+
+# Export the main classes that the `freemocap` core software uses
+from skellycam.gui.qt.widgets.camera_widgets.camera_panel import CameraPanel as SkellyCamCameraPanel
+from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import CameraControlPanel as SkellyCamCameraControlPanel
