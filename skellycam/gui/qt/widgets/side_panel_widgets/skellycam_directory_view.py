@@ -8,7 +8,7 @@ from PySide6 import QtGui
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QLabel, QMenu, QTreeView, QVBoxLayout, QWidget, QFileSystemModel
 
-from skellycam.core.recorders.videos.video_recorder_manager import RecordingInfo
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.utilities.cross_platform_start_file import open_file
 
 logger = logging.getLogger(__name__)
