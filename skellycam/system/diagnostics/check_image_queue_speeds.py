@@ -5,7 +5,6 @@ from typing import Tuple
 
 import numpy as np
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import RingBufferCamerSharedMemory
 
 def create_fake_image() -> np.ndarray:
     """Creates a fake 1080p image using NumPy.
@@ -48,6 +47,15 @@ def sender(queue: multiprocessing.Queue,
 
     print(f"Average time to send 1080p image down a pipe: {sum(durations) / len(durations) / 1e6} ms")
 
+    durations = []
+    for _ in range(iterations):
+        tik = time.perf_counter_ns()
+        pipe.send_bytes(image)
+        tok = time.perf_counter_ns()
+        durations.append(tok - tik)
+
+    print(f"Average time to send_bytes 1080p image down a pipe: {sum(durations) / len(durations) / 1e6} ms")
+
 def receiver(queue: multiprocessing.Queue,
              pipe: multiprocessing.Pipe,
              iterations: int) -> None:
@@ -66,7 +74,7 @@ def receiver(queue: multiprocessing.Queue,
         _ = queue.get()
         tok = time.perf_counter_ns()
         durations.append(tok - tik)
-    print(f"Average time to recv 1080p image from a queue: {sum(durations) / len(durations) / 1e6} ms")
+    print(f"Average time to recv 1080p image from a queue: {sum(durations) / len(durations) / 1e6} ms\n\n")
 
     durations = []
     for _ in range(iterations):
@@ -76,6 +84,15 @@ def receiver(queue: multiprocessing.Queue,
         durations.append(tok - tik)
 
     print(f"Average time to recv 1080p image from a pipe: {sum(durations) / len(durations) / 1e6} ms")
+
+    durations = []
+    for _ in range(iterations):
+        tik = time.perf_counter_ns()
+        _ = pipe.recv_bytes()
+        tok = time.perf_counter_ns()
+        durations.append(tok - tik)
+
+    print(f"Average time to recv_bytes 1080p image from a pipe: {sum(durations) / len(durations) / 1e6} ms")
 
 
 def measure_time(iterations: int = 100) -> Tuple[float, float]:
@@ -94,7 +111,6 @@ def measure_time(iterations: int = 100) -> Tuple[float, float]:
     queue = multiprocessing.Queue()
     pipe1, pipe2 = multiprocessing.Pipe()
     config = CameraConfig(camera_id=0)
-    ring_shm = RingBufferCamerSharedMemory.create(config=config)
 
     sender_process = multiprocessing.Process(target=sender, args=(queue, pipe1, iterations))
     receiver_process = multiprocessing.Process(target=receiver, args=(queue, pipe2, iterations))
