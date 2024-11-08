@@ -31,5 +31,4 @@ __all__ = [
     "__pypi_url__",
     'SkellyCamCameraPanel',
     'SkellyCamCameraControlPanel',
-    'create_skellycam_app_controller',
 ]
