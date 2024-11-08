@@ -6,7 +6,7 @@ from typing import Optional, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from skellycam.app.app_state import AppState
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.system.device_detection.detect_available_camerass import detect_available_devices
@@ -29,14 +29,14 @@ class ControllerThreadManager:
             logger.warning(f"{task_name} task already running! Ignoring request...")
 
 
-class AppController(BaseModel):
+class SkellycamAppController(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    app_state: AppState
+    app_state: SkellycamAppState
     tasks: ControllerThreadManager = Field(default_factory=ControllerThreadManager)
 
     @classmethod
     def create(cls, global_kill_flag: multiprocessing.Value):
-        return cls(app_state=AppState.create(global_kill_flag=global_kill_flag))
+        return cls(app_state=SkellycamAppState.create(global_kill_flag=global_kill_flag))
 
     def detect_available_cameras(self):
         # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client?
@@ -116,18 +116,18 @@ class AppController(BaseModel):
 
 
 
-APP_CONTROLLER = None
+SKELLYCAM_APP_CONTROLLER = None
 
 
-def create_app_controller(global_kill_flag: multiprocessing.Value) -> AppController:
-    global APP_CONTROLLER
-    if not APP_CONTROLLER:
-        APP_CONTROLLER = AppController.create(global_kill_flag=global_kill_flag)
-    return APP_CONTROLLER
+def create_skellycam_app_controller(global_kill_flag: multiprocessing.Value) -> SkellycamAppController:
+    global SKELLYCAM_APP_CONTROLLER
+    if not SKELLYCAM_APP_CONTROLLER:
+        SKELLYCAM_APP_CONTROLLER = SkellycamAppController.create(global_kill_flag=global_kill_flag)
+    return SKELLYCAM_APP_CONTROLLER
 
 
-def get_app_controller() -> AppController:
-    global APP_CONTROLLER
-    if not isinstance(APP_CONTROLLER, AppController):
+def get_skellycam_app_controller() -> SkellycamAppController:
+    global SKELLYCAM_APP_CONTROLLER
+    if not isinstance(SKELLYCAM_APP_CONTROLLER, SkellycamAppController):
         raise ValueError("AppController not created!")
-    return APP_CONTROLLER
+    return SKELLYCAM_APP_CONTROLLER

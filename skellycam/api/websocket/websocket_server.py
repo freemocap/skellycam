@@ -5,8 +5,8 @@ from typing import Optional
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.app.app_controller.app_controller import get_app_controller
-from skellycam.app.app_state import AppStateDTO, AppState
+from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
@@ -20,7 +20,7 @@ class WebsocketServer:
     def __init__(self, websocket: WebSocket):
         self.websocket = websocket
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
-        self._app_state: AppState = get_app_controller().app_state
+        self._app_state: SkellycamAppState = get_skellycam_app_controller().app_state
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -67,8 +67,8 @@ class WebsocketServer:
         logger.info("Ending listener for client messages...")
 
     async def _handle_ipc_queue_message(self, message: Optional[object] = None):
-        if isinstance(message, AppStateDTO):
-            logger.trace(f"Relaying AppStateDTO to frontend")
+        if isinstance(message, SkellycamAppStateDTO):
+            logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
 
         elif isinstance(message, RecordingInfo):
             logger.trace(f"Relaying RecordingInfo to frontend")

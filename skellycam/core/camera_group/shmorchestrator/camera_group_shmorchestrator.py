@@ -2,7 +2,7 @@ import logging
 
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.app.app_controller.ipc_flags import IPCFlags
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \

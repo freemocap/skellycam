@@ -4,14 +4,14 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget, )
 
-from skellycam.app.app_state import AppStateDTO
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.gui.qt.widgets.camera_widgets.camera_grid_view import CameraViewGrid
 from skellycam.gui.qt.widgets.recording_panel import RecordingPanel
 
 logger = logging.getLogger(__name__)
 
 
-class CameraPanel(QWidget):
+class SkellycamCameraPanel(QWidget):
 
     def __init__(
             self,
@@ -36,7 +36,7 @@ class CameraPanel(QWidget):
         logger.gui("Close event detected - closing camera group frame worker")
         self.close()
 
-    def handle_new_app_state(self, app_state: AppStateDTO):
+    def handle_new_app_state(self, app_state: SkellycamAppStateDTO):
         if app_state.record_frames_flag_status:
             # Change background to red
             self.camera_view_grid.setStyleSheet("background-color: red;")

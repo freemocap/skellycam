@@ -3,7 +3,7 @@ import multiprocessing
 import time
 from dataclasses import dataclass
 
-from skellycam.app.app_controller.ipc_flags import IPCFlags
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.utilities.wait_functions import wait_1ms
 

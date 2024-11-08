@@ -5,10 +5,12 @@ from typing import Union, Dict, Any
 import websocket
 from PySide6.QtWidgets import QWidget
 
-from skellycam.app.app_state import AppStateDTO
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
 from skellycam.core.recorders.videos.video_recorder_manager import RecordingInfo
+
+SKELLYCAM_WEBSOCKET_PATH = "/skellycam/websocket/connect"
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +62,7 @@ class WebSocketClient(QWidget):
                  base_url: str,
                  parent=None):
         super().__init__(parent)
-        self.websocket_url = base_url.replace("http", "ws") + "/websocket/connect"
+        self.websocket_url = base_url.replace("http", "ws") + SKELLYCAM_WEBSOCKET_PATH
         self.websocket_thread = WebsocketThread(self.websocket_url)
 
         # Connect signals
@@ -118,9 +120,9 @@ class WebSocketClient(QWidget):
         elif payload['type'] == RecordingInfo.__name__:
             logger.gui(f"Received RecordingInfo object")
             self.new_recording_info_available.emit(RecordingInfo(**payload))
-        elif payload['type'] == AppStateDTO.__name__:
-            logger.gui(f"Received AppStateDTO object")
-            self.new_app_state_available.emit(AppStateDTO(**payload))
+        elif payload['type'] == SkellycamAppStateDTO.__name__:
+            logger.gui(f"Received SkellycamAppStateDTO object")
+            self.new_app_state_available.emit(SkellycamAppStateDTO(**payload))
         elif payload['type'] == CurrentFrameRate.__name__:
             logger.gui(f"Received CurrentFrameRate object")
             self.new_framerate_info_available.emit(CurrentFrameRate(**payload))

@@ -2,7 +2,7 @@ from unittest.mock import patch, AsyncMock
 
 import pytest
 
-from skellycam.app.app_controller.app_controller import AppController
+from skellycam.skellycam_app.skellycam_app_controller.app_controller import AppController
 from skellycam.system.device_detection.camera_device_info import AvailableDevices
 
 

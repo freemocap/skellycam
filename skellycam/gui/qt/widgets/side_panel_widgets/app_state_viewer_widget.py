@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QTextEdit, QVBoxLayout
 
 
-class AppStateJsonViewer(QWidget):
+class SkellycamAppStateJsonViewer(QWidget):
     def __init__(self):
         super().__init__()
 

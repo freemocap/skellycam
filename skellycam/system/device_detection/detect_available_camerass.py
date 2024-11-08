@@ -87,7 +87,7 @@ def detect_opencv_ports(max_ports: int = 20) -> List[int]:
 if __name__ == "__main__":
     import asyncio
     from pprint import pprint
-    from skellycam.app.app_controller.app_controller import create_app_controller
+    from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 
     cameras_out = asyncio.run(detect_available_devices(create_app_controller(multiprocessing.Value('b',False)).app_state))
     pprint(cameras_out, indent=4)

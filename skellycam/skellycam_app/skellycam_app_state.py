@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
-from skellycam.app.app_controller.ipc_flags import IPCFlags
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class AppState:
+class SkellycamAppState:
     ipc_flags: IPCFlags
     ipc_queue: multiprocessing.Queue
     config_update_queue: multiprocessing.Queue
@@ -104,7 +104,7 @@ class AppState:
         self.ipc_queue.put(self.state_dto())
 
     def state_dto(self):
-        return AppStateDTO.from_state(self)
+        return SkellycamAppStateDTO.from_state(self)
 
     def _reset(self):
         self.camera_group = None
@@ -113,11 +113,11 @@ class AppState:
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 
 
-class AppStateDTO(BaseModel):
+class SkellycamAppStateDTO(BaseModel):
     """
-    Serializable Data Transfer Object for the AppState
+    Serializable Data Transfer Object for the SkellycamAppState
     """
-    type: str = "AppStateDTO"
+    type: str = "SkellycamAppStateDTO"
     state_timestamp: str = datetime.now().isoformat()
 
     camera_configs: Optional[CameraConfigs]
@@ -126,7 +126,7 @@ class AppStateDTO(BaseModel):
     record_frames_flag_status: bool
 
     @classmethod
-    def from_state(cls, state: AppState):
+    def from_state(cls, state: SkellycamAppState):
         return cls(
             camera_configs=state.camera_group_configs,
             available_devices=state.available_devices,

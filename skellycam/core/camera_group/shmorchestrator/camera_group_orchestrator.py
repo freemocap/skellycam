@@ -3,7 +3,7 @@ import multiprocessing
 from dataclasses import dataclass
 from typing import Dict
 
-from skellycam.app.app_controller.ipc_flags import IPCFlags
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO

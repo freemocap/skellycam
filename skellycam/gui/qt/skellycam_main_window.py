@@ -7,14 +7,14 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
-from skellycam.app.app_state import AppStateDTO
-from skellycam.gui.qt.client.gui_client import FastAPIClient
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
+from skellycam.gui.qt.client.gui_client import SkellycamFrontendClient
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
-from skellycam.gui.qt.widgets.camera_widgets.camera_panel import CameraPanel
+from skellycam.gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
 from skellycam.gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
-from skellycam.gui.qt.widgets.side_panel_widgets.app_state_viewer_widget import AppStateJsonViewer
+from skellycam.gui.qt.widgets.side_panel_widgets.app_state_viewer_widget import SkellycamAppStateJsonViewer
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import (
-    CameraControlPanel,
+    SkellycamCameraControlPanel,
 )
 from skellycam.gui.qt.widgets.side_panel_widgets.skellycam_directory_view import SkellyCamDirectoryViewWidget
 from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
@@ -36,7 +36,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._global_kill_flag = global_kill_flag
         # self._log_view_widget = LogViewWidget(global_kill_flag=global_kill_flag,
         #                                       parent=self)  # start this first so it will grab the setup logging
-        self._client = FastAPIClient(self)
+        self._client = SkellycamFrontendClient(self)
         self._client.connect_websocket()
 
         self._initUI()
@@ -60,7 +60,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout.addWidget(self._welcome_connect_to_cameras_button)
 
         # Camera Panel
-        self._camera_panel = CameraPanel(parent=self)
+        self._camera_panel = SkellycamCameraPanel(parent=self)
         self._camera_panel.hide()
         self._layout.addWidget(self._camera_panel)
 
@@ -74,7 +74,7 @@ class SkellyCamMainWindow(QMainWindow):
         # Side Panel
         # Camera Settings Panel
         self._control_panel = (
-            CameraControlPanel(self._camera_panel)
+            SkellycamCameraControlPanel(self._camera_panel)
         )
         self._control_panel_dock.setWidget(
             self._control_panel
@@ -97,7 +97,7 @@ class SkellyCamMainWindow(QMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, self._directory_view_dock
         )
         self._backend_app_state_json_dock = QDockWidget("App State (JSON)", self)
-        self._app_state_json_widget = AppStateJsonViewer()
+        self._app_state_json_widget = SkellycamAppStateJsonViewer()
         self._backend_app_state_json_dock.setWidget(self._app_state_json_widget)
         self._backend_app_state_json_dock.setFeatures(
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
@@ -198,7 +198,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._client.close_cameras()
 
     @Slot(object)
-    def _handle_new_app_state(self, app_state: AppStateDTO):
+    def _handle_new_app_state(self, app_state: SkellycamAppStateDTO):
         self._control_panel.handle_new_app_state(app_state)
         self._camera_panel.handle_new_app_state(app_state)
 

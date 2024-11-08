@@ -3,8 +3,8 @@ import logging
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
-from skellycam.app.app_state import AppStateDTO
-from skellycam.gui.qt.widgets.camera_widgets.camera_panel import CameraPanel
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
+from skellycam.gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_settings_panel import CameraSettingsPanel
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X_EMOJI_STRING, \
     MAGNIFYING_GLASS_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
@@ -12,11 +12,11 @@ from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X
 logger = logging.getLogger(__name__)
 
 
-class CameraControlPanel(QWidget):
+class SkellycamCameraControlPanel(QWidget):
     emitting_camera_configs_signal = Signal(dict)
 
     def __init__(self,
-                 camera_panel: CameraPanel):
+                 camera_panel: SkellycamCameraPanel):
         super().__init__()
 
         # self.setMinimumWidth(250)
@@ -64,7 +64,7 @@ class CameraControlPanel(QWidget):
         return self.camera_settings_panel.user_selected_camera_configs
 
     @Slot(object)
-    def handle_new_app_state(self, app_state: AppStateDTO):
+    def handle_new_app_state(self, app_state: SkellycamAppStateDTO):
         if app_state.available_devices:
             self.apply_settings_to_cameras_button.setEnabled(True)
             self.camera_settings_panel.update_available_devices(app_state.available_devices)

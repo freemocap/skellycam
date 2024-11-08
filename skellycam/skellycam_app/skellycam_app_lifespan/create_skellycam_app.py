@@ -4,13 +4,13 @@ from fastapi import FastAPI
 
 from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
-from skellycam.app.app_lifespan.app_lifespan import lifespan
-from skellycam.app.app_lifespan.app_setup import register_routes, customize_swagger_ui
+from skellycam.skellycam_app.skellycam_app_lifespan.skellycam_app_lifespan import lifespan
+from skellycam.skellycam_app.skellycam_app_lifespan.skellycam_app_setup import register_routes, customize_swagger_ui
 
 logger = logging.getLogger(__name__)
 
 
-def create_app() -> FastAPI:
+def create_skellycam_app() -> FastAPI:
     logger.api("Creating FastAPI app")
     app = FastAPI(lifespan=lifespan)
     cors(app)
