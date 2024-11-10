@@ -12,8 +12,9 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
 __package_root__ = __file__.replace("/__init__.py", "")
 
-
-
+from skellycam.gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
+from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import SkellycamCameraControlPanel
+from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.logger_builder import LogLevels
 
@@ -29,6 +30,7 @@ __all__ = [
     "__repo_url__",
     "__repo_issues_url__",
     "__pypi_url__",
-    'SkellyCamCameraPanel',
-    'SkellyCamCameraControlPanel',
+    'SkellycamCameraPanel',
+    'SkellycamCameraControlPanel',
+    'create_skellycam_app_controller',
 ]

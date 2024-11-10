@@ -12,7 +12,7 @@ from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager im
 from starlette.testclient import TestClient
 
 from skellycam.api import create_app
-from skellycam.skellycam_app.skellycam_app_controller.app_controller import AppController, create_app_controller, get_or_create_skellycam_app_controller
+from skellycam.skellycam_app.skellycam_app_controller.app_controller import AppController, create_app_controller, get_skellycam_app_controller
 from skellycam.core import CameraId
 from skellycam.core.camera_group import CameraGroupOrchestrator
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
@@ -292,7 +292,7 @@ def client_fixture(app_fixture: FastAPI) -> TestClient:
 @pytest.fixture
 def controller_fixture() -> AppController:
     create_app_controller()
-    controller = get_or_create_skellycam_app_controller()
+    controller = get_skellycam_app_controller()
     assert isinstance(controller, AppController)
     yield controller
     controller.shutdown()

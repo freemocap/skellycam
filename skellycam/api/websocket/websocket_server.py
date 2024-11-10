@@ -5,7 +5,7 @@ from typing import Optional
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_or_create_skellycam_app_controller
+from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
@@ -20,7 +20,7 @@ class WebsocketServer:
     def __init__(self, websocket: WebSocket):
         self.websocket = websocket
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
-        self._app_state: SkellycamAppState = get_or_create_skellycam_app_controller().app_state
+        self._app_state: SkellycamAppState = get_skellycam_app_controller().app_state
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")

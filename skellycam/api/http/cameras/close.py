@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter
 
-from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_or_create_skellycam_app_controller
+from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def close_camera_connections():
     logger.api("Received `/close` request...")
 
     try:
-        get_or_create_skellycam_app_controller().close_camera_group()
+        get_skellycam_app_controller().close_camera_group()
         logger.api("`/close` request handled successfully.")
     except Exception as e:
         logger.error(f"Failed to close cameras: {type(e).__name__} - {e}")

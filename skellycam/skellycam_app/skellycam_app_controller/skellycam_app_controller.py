@@ -132,8 +132,4 @@ def get_skellycam_app_controller() -> SkellycamAppController:
         raise ValueError("AppController not created!")
     return SKELLYCAM_APP_CONTROLLER
 
-def get_or_create_skellycam_app_controller() -> SkellycamAppController:
-    global SKELLYCAM_APP_CONTROLLER
-    if not isinstance(SKELLYCAM_APP_CONTROLLER, SkellycamAppController):
-        raise ValueError("AppController not created!")
-    return SKELLYCAM_APP_CONTROLLER
+
