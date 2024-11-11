@@ -107,3 +107,12 @@ class FrameMetadata(BaseModel):
             frame_number=metadata_array[FRAME_METADATA_MODEL.FRAME_NUMBER.value],
             frame_lifespan_timestamps_ns=FrameLifespanTimestamps.from_frame_metadata(metadata_array)
         )
+
+    def to_df_row(self):
+        lifespan_dict = {f"camera_{self.camera_id}_{key}": value for key, value in
+                         self.frame_lifespan_timestamps_ns.model_dump().items()}
+        return {
+            f"camera_{self.camera_id}_frame_number": self.frame_number,
+            f"camera_{self.camera_id}_timestamp_ns": self.timestamp_ns,
+            **lifespan_dict
+        }

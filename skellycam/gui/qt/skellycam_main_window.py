@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 
+from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.gui.qt.client.gui_client import SkellycamFrontendClient
 from skellycam.gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
@@ -60,9 +61,9 @@ class SkellyCamMainWindow(QMainWindow):
         self._layout.addWidget(self._welcome_connect_to_cameras_button)
 
         # Camera Panel
-        self._camera_panel = SkellycamCameraPanel(parent=self)
-        self._camera_panel.hide()
-        self._layout.addWidget(self._camera_panel)
+        self._skellycam_camera_panel = SkellycamCameraPanel(parent=self)
+        self._skellycam_camera_panel.hide()
+        self._layout.addWidget(self._skellycam_camera_panel)
 
         self._control_panel_dock = QDockWidget("Camera Settings", self)
         self._control_panel_dock.resize(300, self._control_panel_dock.height())
@@ -74,7 +75,7 @@ class SkellyCamMainWindow(QMainWindow):
         # Side Panel
         # Camera Settings Panel
         self._control_panel = (
-            SkellycamCameraControlPanel(self._camera_panel)
+            SkellycamCameraControlPanel(self._skellycam_camera_panel)
         )
         self._control_panel_dock.setWidget(
             self._control_panel
@@ -141,13 +142,13 @@ class SkellyCamMainWindow(QMainWindow):
 
         # websocket
         self._client.websocket_client.new_frontend_payload_available.connect(
-            self._camera_panel.camera_view_grid.handle_new_frontend_payload
+            self._skellycam_camera_panel.camera_view_grid.handle_new_frontend_payload
         )
         self._client.websocket_client.new_app_state_available.connect(
             self._handle_new_app_state
         )
         self._client.websocket_client.new_recording_info_available.connect(
-            self._camera_panel.recording_panel.handle_new_recording_info
+            self._skellycam_camera_panel.recording_panel.handle_new_recording_info
         )
         self._client.websocket_client.new_recording_info_available.connect(
             self._directory_view_widget.handle_new_recording_info
@@ -168,21 +169,24 @@ class SkellyCamMainWindow(QMainWindow):
             self.close_cameras
         )
         self._control_panel.close_cameras_button.clicked.connect(
-            self._camera_panel.camera_view_grid.clear_camera_views
+            self._skellycam_camera_panel.camera_view_grid.clear_camera_views
         )
 
         # Recording Panel
-        self._camera_panel.recording_panel.start_recording_button.clicked.connect(
-            self._client.start_recording
+        self._skellycam_camera_panel.recording_panel.start_recording_button.clicked.connect(
+            lambda: self._client.start_recording(StartRecordingRequest(mic_device_index=self._skellycam_camera_panel.recording_panel.audio_recording_panel.user_selected_mic_index))
         )
-        self._camera_panel.recording_panel.stop_recording_button.clicked.connect(
+
+
+
+        self._skellycam_camera_panel.recording_panel.stop_recording_button.clicked.connect(
             self._client.stop_recording
         )
 
     def _hide_welcome_view(self):
         self._welcome_to_skellycam_widget.hide()
         self._welcome_connect_to_cameras_button.hide()
-        self._camera_panel.show()
+        self._skellycam_camera_panel.show()
 
     @Slot()
     def connect_to_cameras(self):
@@ -200,14 +204,14 @@ class SkellyCamMainWindow(QMainWindow):
     @Slot(object)
     def _handle_new_app_state(self, app_state: SkellycamAppStateDTO):
         self._control_panel.handle_new_app_state(app_state)
-        self._camera_panel.handle_new_app_state(app_state)
+        self._skellycam_camera_panel.handle_new_app_state(app_state)
 
     def closeEvent(self, a0) -> None:
 
         logger.info("Closing QT GUI window")
         self._global_kill_flag.value = True
         try:
-            self._camera_panel.close()
+            self._skellycam_camera_panel.close()
         except Exception as e:
             logger.error(f"Error while closing the viewer widget: {e}")
         super().closeEvent(a0)

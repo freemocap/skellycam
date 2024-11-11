@@ -4,9 +4,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget, )
 
+from skellycam.gui.qt.widgets.recording_control_panel.recording_panel import RecordingPanel
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.gui.qt.widgets.camera_widgets.camera_grid_view import CameraViewGrid
-from skellycam.gui.qt.widgets.recording_panel import RecordingPanel
 
 logger = logging.getLogger(__name__)
 

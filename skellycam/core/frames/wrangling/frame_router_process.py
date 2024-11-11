@@ -7,7 +7,7 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.recorders.videos.video_recorder_manager import VideoRecorderManager
+from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.system.default_paths import get_default_recording_folder_path
 from skellycam.utilities.wait_functions import wait_1ms
 
@@ -47,7 +47,7 @@ class FrameRouterProcess:
 
         logger.debug(f"FrameRouter  process started!")
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
-        video_recorder_manager: Optional[VideoRecorderManager] = None
+        recording_manager: Optional[RecordingManager] = None
         frame_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer = MultiFrameEscapeSharedMemoryRingBuffer.recreate(
             camera_group_dto=camera_group_dto,
             shm_dto=multi_frame_escape_shm_dto,
@@ -88,32 +88,33 @@ class FrameRouterProcess:
                                 raise ValueError(
                                     f"FrameRouter expected mf_payload #{previous_mf_payload_pulled_from_deque.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
                         previous_mf_payload_pulled_from_deque = mf_payload
-                        if not video_recorder_manager:
-                            video_recorder_manager = VideoRecorderManager.create(multi_frame_payload=mf_payload,
-                                                                                 camera_configs=camera_group_dto.camera_configs,
-                                                                                 recording_folder=get_default_recording_folder_path(
+                        if not recording_manager:
+                            recording_manager = RecordingManager.create(multi_frame_payload=mf_payload,
+                                                                             camera_configs=camera_group_dto.camera_configs,
+                                                                             mic_device_index=camera_group_dto.ipc_flags.mic_device_index.value if not camera_group_dto.ipc_flags.mic_device_index.value != -1 else None,
+                                                                             recording_folder=get_default_recording_folder_path(
                                                                                      tag=""))
-                            camera_group_dto.ipc_queue.put(video_recorder_manager.recording_info)
-                        video_recorder_manager.add_multi_frame(mf_payload)
+                            camera_group_dto.ipc_queue.put(recording_manager.recording_info)
+                        recording_manager.add_multi_frame(mf_payload)
                 else:
-                    # If we're not recording and video_recorder_manager exists, finish up the videos and close the recorder
-                    if video_recorder_manager:
+                    # If we're not recording and recording_manager exists, finish up the videos and close the recorder
+                    if recording_manager:
                         logger.info('Recording complete, finishing and closing recorder...')
                         while len(mf_payloads_to_process) > 0:
                             print(
-                                f"\t\tROUTER (POST-REC) - adding mf_payload #{mf_payloads_to_process[0].multi_frame_number} to video_recorder_manager")
-                            video_recorder_manager.add_multi_frame(mf_payloads_to_process.popleft())
-                        video_recorder_manager.finish_and_close()
+                                f"\t\tROUTER (POST-REC) - adding mf_payload #{mf_payloads_to_process[0].multi_frame_number} to recording_manager")
+                            recording_manager.add_multi_frame(mf_payloads_to_process.popleft())
+                        recording_manager.finish_and_close()
 
-                        video_recorder_manager = None
+                        recording_manager = None
 
                     # If we're not recording, just clear the deque of frames
                     mf_payloads_to_process.clear()
                     # TODO - send mf_payload along to the processing pipeline, somehow (maybe via another pipe? or the SharedMemoryIndexedArray thing i made?)
 
-                # If we're recording, save one frame from the video_recorder_manager each loop (skips if no frames to save)
-                if video_recorder_manager:
-                    video_recorder_manager.save_one_frame()
+                # If we're recording, save one frame from the recording_manager each loop (skips if no frames to save)
+                if recording_manager:
+                    recording_manager.save_one_frame()
 
         except Exception as e:
             logger.error(f"Frame exporter process error: {e}")
@@ -130,7 +131,7 @@ class FrameRouterProcess:
             if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 logger.warning("FrameRouter should only be closed after global kill flag is set")
                 camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
-            if video_recorder_manager:
-                video_recorder_manager.finish_and_close()
+            if recording_manager:
+                recording_manager.finish_and_close()
             logger.debug(f"FrameRouter process completed")
             frame_escape_ring_shm.close()

@@ -5,10 +5,10 @@ from typing import Union, Dict, Any
 import websocket
 from PySide6.QtWidgets import QWidget
 
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
-from skellycam.core.recorders.videos.video_recorder_manager import RecordingInfo
 
 SKELLYCAM_WEBSOCKET_PATH = "/skellycam/websocket/connect"
 

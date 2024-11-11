@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
+from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
@@ -95,7 +96,8 @@ class SkellycamAppState:
         self._reset()
         logger.success("Camera group closed successfully")
 
-    def start_recording(self):
+    def start_recording(self, request: StartRecordingRequest):
+        self.ipc_flags.mic_device_index.value = request.mic_device_index
         self.ipc_flags.record_frames_flag.value = True
         self.ipc_queue.put(self.state_dto())
 

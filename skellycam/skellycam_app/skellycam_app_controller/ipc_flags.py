@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class IPCFlags:
     global_kill_flag: multiprocessing.Value
     record_frames_flag: multiprocessing.Value
+    mic_device_index: multiprocessing.Value
     kill_camera_group_flag: multiprocessing.Value
     cameras_connected_flag: multiprocessing.Value
 
@@ -14,4 +15,5 @@ class IPCFlags:
         self.record_frames_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self.kill_camera_group_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self.cameras_connected_flag: multiprocessing.Value = multiprocessing.Value("b", False)
+        self.mic_device_index: multiprocessing.Value = multiprocessing.Value("i", -1)
 

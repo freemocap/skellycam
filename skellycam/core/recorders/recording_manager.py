@@ -10,6 +10,7 @@ from pydantic import BaseModel, ValidationError, Field
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
@@ -31,7 +32,7 @@ Each video in this folder should have precisely the same number of frames, each 
 logger = logging.getLogger(__name__)
 
 
-class VideoRecorderManager(BaseModel):
+class RecordingManager(BaseModel):
     recording_uuid: str = str(uuid.uuid4())
     recording_folder: str
     recording_name: str
@@ -40,13 +41,14 @@ class VideoRecorderManager(BaseModel):
 
     video_recorders: Dict[CameraId, VideoRecorder]
     multi_frame_timestamp_logger: MultiframeTimestampLogger
+    audio_recorder: Optional[AudioRecorder]
 
     class Config:
         arbitrary_types_allowed = True
 
     @property
     def recording_info(self) -> "RecordingInfo":
-        return RecordingInfo.from_video_recorder_manager(self)
+        return RecordingInfo.from_recording_manager(self)
 
     @property
     def number_of_frames_to_save(self) -> int:
@@ -60,12 +62,20 @@ class VideoRecorderManager(BaseModel):
     def create(cls,
                multi_frame_payload: MultiFramePayload,
                camera_configs: CameraConfigs,
-               recording_folder: str):
+               recording_folder: str,
+               mic_device_index: Optional[int] = None,):
 
         logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
 
         recording_name = Path(recording_folder).name
         videos_folder = str(Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
+
+        audio_recorder = None
+        audio_recorder_thread = None
+        if mic_device_index is not None:
+                audio_file_path = str(Path(videos_folder) / f"{recording_name}_audio.wav")
+                audio_recorder = AudioRecorder(mic_device_index=mic_device_index,
+                                                        audio_file_path=audio_file_path)
         video_recorders = {}
         for camera_id, config in camera_configs.items():
             video_recorders[camera_id] = VideoRecorder.create(frame=multi_frame_payload.get_frame(camera_id),
@@ -74,17 +84,24 @@ class VideoRecorderManager(BaseModel):
                                                               config=camera_configs[camera_id],
                                                               )
 
+
         return cls(recording_folder=recording_folder,
                    recording_name=recording_name,
                    camera_configs=camera_configs,
                    video_recorders=video_recorders,
                    multi_frame_timestamp_logger=MultiframeTimestampLogger.create(video_save_directory=videos_folder,
-                                                                                 recording_name=recording_name)
+                                                                                 recording_name=recording_name),
+                   audio_recorder=audio_recorder,
                    )
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
         logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
         self._validate_multi_frame(mf_payload=mf_payload)
+        if self.fresh:
+            self.fresh = False
+            if self.audio_recorder:
+                self.audio_recorder.start_recording()
+
         for camera_id in mf_payload.camera_ids:
             frame = mf_payload.get_frame(camera_id)
             self.video_recorders[camera_id].add_frame(frame=frame)
@@ -106,9 +123,7 @@ class VideoRecorderManager(BaseModel):
         tok = time.perf_counter_ns()
         if frame_number is None:
             raise RuntimeError(f"Frame number is None after writing frame to video recorder for camera {camera_id_to_save}")
-        if camera_id_to_save == 0:
-            print("\n------------------------------------")
-        print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
+        # print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
         return True
 
 
@@ -127,10 +142,12 @@ class VideoRecorderManager(BaseModel):
     def finish_and_close(self):
         logger.debug(f"Finishing up...")
         finish_threads = []
+        if self.audio_recorder:
+            finish_threads.append(threading.Thread(target=self.audio_recorder.stop_recording()))
+            finish_threads[-1].start()
         for recorder in self.video_recorders.values():
             finish_threads.append(threading.Thread(target=recorder.finish_and_close))
-        for thread in finish_threads:
-            thread.start()
+            finish_threads[-1].start()
         for thread in finish_threads:
             thread.join()
         self.close()
@@ -157,7 +174,9 @@ class VideoRecorderManager(BaseModel):
     def save_recording_summary(self):
         # TODO - Update the `recording_info` with the final recording info? Or maybe a separeate `RecordingStats` save?
         # Save the recording info to a `[recording_name]_info.json` in the recording folder
+        # self.multi_frame_timestamp_logger.save_timestamp_stats()
         self.recording_info.save_to_file()
+
 
     def validate_recording(self):
         # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot

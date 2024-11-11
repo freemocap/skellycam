@@ -6,6 +6,8 @@ from typing import Tuple
 from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
+from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+
 
 class FullTimestamp(BaseModel):
     """
@@ -75,11 +77,11 @@ class FullTimestamp(BaseModel):
         return cls.from_datetime(datetime.now(), perf_counter_ns=time.perf_counter_ns())
 
     @classmethod
-    def from_perf_to_unix_mapping(cls, perf_counter_to_unix_mapping: Tuple[int, int]):
-        perf_counter_ns, unix_timestamp = perf_counter_to_unix_mapping
+    def from_perf_to_unix_mapping(cls, utc_to_perf_mapping: UtcToPerfCounterMapping):
+
         return cls.from_datetime(
-            datetime.fromtimestamp(unix_timestamp / 1e9),
-            perf_counter_ns=perf_counter_ns,
+            datetime.fromtimestamp(utc_to_perf_mapping.perf_counter_ns / 1e9),
+            perf_counter_ns=utc_to_perf_mapping.perf_counter_ns,
         )
 
     @property
@@ -122,7 +124,9 @@ if __name__ == "__main__":
     )
     print(
         FullTimestamp.from_perf_to_unix_mapping(
-            perf_counter_to_unix_mapping=(time.perf_counter_ns(), time.time_ns())
+            UtcToPerfCounterMapping(
+                perf_counter_ns=time.perf_counter_ns(), utc_ns=time.time_ns()
+            )
         ).model_dump(),
         indent=4,
     )

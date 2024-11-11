@@ -1,3 +1,4 @@
+from pprint import pprint
 from typing import Dict, Optional, List, Type
 
 import numpy as np
@@ -294,6 +295,19 @@ class MultiFrameMetadata(BaseModel):
         unix_ns = self.utc_ns_to_perf_ns.convert_perf_counter_ns_to_unix_ns(mean_frame_grab_ns)
         return unix_ns / 1e9
 
+    @property
+    def seconds_since_cameras_connected(self) -> float:
+        return self.timestamp_unix_seconds - self.utc_ns_to_perf_ns.utc_time_ns / 1e9
+
+    def to_df_row(self):
+        row = {
+            "multi_frame_number": self.frame_number,
+            "seconds_since_cameras_connected": self.seconds_since_cameras_connected,
+            "timestamp_unix_seconds": self.timestamp_unix_seconds,
+        }
+        for camera_id, frame_metadata in self.frame_metadata_by_camera.items():
+            row.update(**frame_metadata.to_df_row())
+        return row
 
 def create_example_multi_frame_payload() -> MultiFramePayload:
     camera_configs = {CameraId(id): CameraConfig(camera_id=id) for id in range(3)}
@@ -325,3 +339,6 @@ if __name__ == "__main__":
         if not np.array_equal(og_frame.metadata, new_frame.metadata):
             raise ValueError(f"Metadata for camera_id {camera_id} do not match")
     print(new_mf)
+
+    print("Metadata:")
+    pprint(og_mf.to_metadata())

@@ -6,6 +6,7 @@ from typing import Optional, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
@@ -66,9 +67,9 @@ class SkellycamAppController(BaseModel):
             logger.exception(f"Error connecting to cameras: {e}")
             raise
 
-    def start_recording(self):
+    def start_recording(self, request: StartRecordingRequest):
         logger.info("Starting recording...")
-        self.app_state.start_recording()
+        self.app_state.start_recording(request)
 
     def stop_recording(self):
         logger.info("Starting recording...")

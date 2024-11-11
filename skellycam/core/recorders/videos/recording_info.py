@@ -8,7 +8,7 @@ import logging
 
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 if TYPE_CHECKING:
-    from skellycam.core.recorders.videos.video_recorder_manager import VideoRecorderManager
+    from skellycam.core.recorders.recording_manager import RecordingManager
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class RecordingInfo(BaseModel):
     recording_start_timestamp: FullTimestamp = Field(default_factory=FullTimestamp.now)
 
     @classmethod
-    def from_video_recorder_manager(cls, frame_saver: 'VideoRecorderManager'):
+    def from_recording_manager(cls, frame_saver: 'RecordingManager'):
         camera_configs = {camera_id: config.model_dump() for camera_id, config in frame_saver.camera_configs.items()}
         return cls(recording_name=frame_saver.recording_name,
                    recording_folder=frame_saver.recording_folder,

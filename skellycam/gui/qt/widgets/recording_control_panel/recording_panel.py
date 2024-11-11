@@ -4,7 +4,10 @@ from typing import Optional
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout
 
+from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.gui.qt.widgets.recording_control_panel.audio_record_panel import AudioRecorderWidget
+from skellycam.system.default_paths import get_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +70,11 @@ class RecordingPanel(QWidget):
 
 
 
+
     def _create_recording_status_bar(self) -> QHBoxLayout:
         recording_status_bar = QHBoxLayout()
+        self.audio_recording_panel = AudioRecorderWidget()
+        recording_status_bar.addWidget(self.audio_recording_panel)
         self._recording_status_label = QLabel("Recording Status:  - Not Recording -")
         recording_status_bar.addWidget(self._recording_status_label)
         self._recording_folder_label = QLabel("Active Recording Folder:  - None -")
