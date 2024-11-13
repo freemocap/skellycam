@@ -132,7 +132,7 @@ class SkellyCamMainWindow(QMainWindow):
             self._hide_welcome_view
         )
 
-        self._welcome_connect_to_cameras_button.button.clicked.connect(self.connect_to_cameras())
+        self._welcome_connect_to_cameras_button.button.clicked.connect(self.connect_to_cameras)
 
         # self._control_panel.connect_cameras_button.clicked.connect(
         #     self._hide_welcome_view)

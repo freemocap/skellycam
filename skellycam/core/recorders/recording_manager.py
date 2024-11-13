@@ -71,11 +71,10 @@ class RecordingManager(BaseModel):
         videos_folder = str(Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
 
         audio_recorder = None
-        audio_recorder_thread = None
-        if mic_device_index is not None:
-                audio_file_path = str(Path(videos_folder) / f"{recording_name}_audio.wav")
-                audio_recorder = AudioRecorder(mic_device_index=mic_device_index,
-                                                        audio_file_path=audio_file_path)
+        if mic_device_index is not -1:
+            audio_file_path = str(Path(videos_folder) / f"{recording_name}_audio.wav")
+            audio_recorder = AudioRecorder(mic_device_index=mic_device_index,
+                                                    audio_file_path=audio_file_path)
         video_recorders = {}
         for camera_id, config in camera_configs.items():
             video_recorders[camera_id] = VideoRecorder.create(frame=multi_frame_payload.get_frame(camera_id),

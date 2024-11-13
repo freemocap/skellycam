@@ -48,7 +48,12 @@ class AudioRecorder:
     def start_recording(self):
 
         self.recording_thread.start()
-        logger.debug(f"Started recording thread for file: {self.audio_filename}")
+        logger.debug(f"Started audio recording thread for file: {self.audio_filename}")
+
+    def stop_recording(self):
+        self.stop_event.set()
+        self.recording_thread.join()
+        logger.trace("Audio recording stopped.")
 
     def _record(self):
 
@@ -66,11 +71,6 @@ class AudioRecorder:
         logger.debug(f"Audio recording finished! Total duration: {(time.perf_counter_ns() - start_time) / 1e9 :.4f} sec")
         self._save_audio()
         self._save_timestamps()
-
-    def stop_recording(self):
-        self.stop_event.set()
-        self.recording_thread.join()
-        logger.trace("Audio recording stopped.")
 
     def _save_audio(self):
         self.stream.stop_stream()

@@ -78,9 +78,13 @@ class FullTimestamp(BaseModel):
 
     @classmethod
     def from_perf_to_unix_mapping(cls, utc_to_perf_mapping: UtcToPerfCounterMapping):
+        # Convert perf_counter_ns to seconds and add to the base UTC timestamp
+        base_utc_timestamp = utc_to_perf_mapping.utc_time_ns / 1e9
+        perf_counter_seconds = utc_to_perf_mapping.perf_counter_ns / 1e9
+        datetime_reference = datetime.fromtimestamp(base_utc_timestamp + perf_counter_seconds)
 
         return cls.from_datetime(
-            datetime.fromtimestamp(utc_to_perf_mapping.perf_counter_ns / 1e9),
+            datetime_reference,
             perf_counter_ns=utc_to_perf_mapping.perf_counter_ns,
         )
 
@@ -125,7 +129,8 @@ if __name__ == "__main__":
     print(
         FullTimestamp.from_perf_to_unix_mapping(
             UtcToPerfCounterMapping(
-                perf_counter_ns=time.perf_counter_ns(), utc_ns=time.time_ns()
+                perf_counter_ns=time.perf_counter_ns(),
+                utc_ns=time.time_ns()
             )
         ).model_dump(),
         indent=4,
@@ -133,3 +138,5 @@ if __name__ == "__main__":
 
     print("Printing `Timestamp.now().to_descriptive_dict()`:")
     print(FullTimestamp.now().to_descriptive_dict(), indent=4)
+
+

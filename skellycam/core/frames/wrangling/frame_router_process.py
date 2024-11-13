@@ -91,7 +91,7 @@ class FrameRouterProcess:
                         if not recording_manager:
                             recording_manager = RecordingManager.create(multi_frame_payload=mf_payload,
                                                                              camera_configs=camera_group_dto.camera_configs,
-                                                                             mic_device_index=camera_group_dto.ipc_flags.mic_device_index.value if not camera_group_dto.ipc_flags.mic_device_index.value != -1 else None,
+                                                                             mic_device_index=camera_group_dto.ipc_flags.mic_device_index.value,
                                                                              recording_folder=get_default_recording_folder_path(
                                                                                      tag=""))
                             camera_group_dto.ipc_queue.put(recording_manager.recording_info)

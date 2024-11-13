@@ -60,8 +60,8 @@ class CameraProcess:
 
     def close(self):
         logger.info(f"Closing camera {self.camera_id}")
-        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value == True:
-            raise ValueError(f"Camera {self.camera_id} was closed before the camera group kill flag was set.")
+        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value == True and not self.should_close_self_flag.value == True:
+            raise ValueError(f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc_flags.kill_camera_group_flag.value}, should_close_self_flag: {self.should_close_self_flag.value}")
         self.should_close_self_flag.value = True
         self.process.join()
         logger.info(f"Camera {self.camera_id} closed!")
