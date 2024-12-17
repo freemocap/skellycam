@@ -6,11 +6,11 @@ from typing import Optional, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from skellycam.core.recorders.start_recording_request import StartRecordingRequest
-from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
-from skellycam.system.device_detection.detect_available_camerass import detect_available_devices
+from skellycam.core.recorders.start_recording_request import StartRecordingRequest
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
+from skellycam.system.device_detection.detect_available_cameras import detect_available_devices
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class SkellycamAppController(BaseModel):
                     # Update instructions do not require reset - update existing camera group
                     logger.debug(f"Updating CameraGroup with configs: {camera_configs}")
                     self.app_state.update_camera_group(camera_configs=camera_configs,
-                                                             update_instructions=update_instructions)
+                                                       update_instructions=update_instructions)
                     return
 
                 # Update instructions require reset - close existing group (will be re-created below)
@@ -75,19 +75,18 @@ class SkellycamAppController(BaseModel):
         logger.info("Starting recording...")
         self.app_state.stop_recording()
 
-
     def _create_camera_group(self, camera_configs: CameraConfigs):
         try:
             if not camera_configs:
                 raise ValueError("Must provide camera configurations to connect to cameras!")
-            # if not self.app_state.available_devices and not camera_configs:
-            #     self._detect_available_devices()
-            #     if not self.app_state.available_devices:
-            #         logger.warning("No available devices detected!")
-            #         return
+            if not self.app_state.available_devices and not camera_configs:
+                self._detect_available_devices()
+                if not self.app_state.available_devices:
+                    logger.warning("No available devices detected!")
+                    return
 
-            # if self.app_state.camera_group_configs is None:
-            #     raise ValueError("No camera configurations detected!")
+            if self.app_state.camera_group_configs is None:
+                raise ValueError("No camera configurations detected!")
 
             if self.app_state.camera_group:  # if `connect/` called w/o configs, reset existing connection
                 self.app_state.close_camera_group()
@@ -116,7 +115,6 @@ class SkellycamAppController(BaseModel):
         self.close_camera_group()
 
 
-
 SKELLYCAM_APP_CONTROLLER = None
 
 
@@ -132,5 +130,3 @@ def get_skellycam_app_controller() -> SkellycamAppController:
     if not isinstance(SKELLYCAM_APP_CONTROLLER, SkellycamAppController):
         raise ValueError("AppController not created!")
     return SKELLYCAM_APP_CONTROLLER
-
-
