@@ -1,12 +1,14 @@
 import logging
 import multiprocessing
 from collections import deque
+from pathlib import Path
 from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.system.default_paths import get_default_recording_folder_path
 from skellycam.utilities.wait_functions import wait_1ms
@@ -58,8 +60,12 @@ class FrameRouterProcess:
         previous_mf_payload_pulled_from_shm: Optional[MultiFramePayload] = None
         previous_mf_payload_pulled_from_deque: Optional[MultiFramePayload] = None
 
+        def should_continue():
+            return not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value
+
+        audio_recorder: Optional[AudioRecorder] = None
         try:
-            while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
+            while should_continue():
                 wait_1ms()
 
                 # Check for new camera configs
@@ -90,27 +96,33 @@ class FrameRouterProcess:
                         previous_mf_payload_pulled_from_deque = mf_payload
                         if not recording_manager:
                             recording_manager = RecordingManager.create(multi_frame_payload=mf_payload,
-                                                                             camera_configs=camera_group_dto.camera_configs,
-                                                                             mic_device_index=camera_group_dto.ipc_flags.mic_device_index.value,
-                                                                             recording_folder=get_default_recording_folder_path(
-                                                                                     tag=""))
+                                                                        camera_configs=camera_group_dto.camera_configs,
+                                                                        recording_folder=get_default_recording_folder_path(
+                                                                            tag=""))
+                            if camera_group_dto.ipc_flags.mic_device_index.value != -1:
+                                audio_file_path = str(Path(
+                                    recording_manager.videos_folder) / f"{recording_manager.recording_name}_audio.wav")
+                                audio_recorder = AudioRecorder(audio_file_path=audio_file_path,
+                                                               mic_device_index=camera_group_dto.ipc_flags.mic_device_index.value)
+                                audio_recorder.start()
                             camera_group_dto.ipc_queue.put(recording_manager.recording_info)
                         recording_manager.add_multi_frame(mf_payload)
                 else:
                     # If we're not recording and recording_manager exists, finish up the videos and close the recorder
                     if recording_manager:
                         logger.info('Recording complete, finishing and closing recorder...')
+                        previous_mf_payload_pulled_from_deque = None
                         while len(mf_payloads_to_process) > 0:
-                            print(
-                                f"\t\tROUTER (POST-REC) - adding mf_payload #{mf_payloads_to_process[0].multi_frame_number} to recording_manager")
                             recording_manager.add_multi_frame(mf_payloads_to_process.popleft())
                         recording_manager.finish_and_close()
 
                         recording_manager = None
+                        if audio_recorder:
+                            audio_recorder.stop()
+                            audio_recorder = None
 
                     # If we're not recording, just clear the deque of frames
                     mf_payloads_to_process.clear()
-                    # TODO - send mf_payload along to the processing pipeline, somehow (maybe via another pipe? or the SharedMemoryIndexedArray thing i made?)
 
                 # If we're recording, save one frame from the recording_manager each loop (skips if no frames to save)
                 if recording_manager:
