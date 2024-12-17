@@ -2,11 +2,11 @@ import logging
 import platform
 from typing import List, Dict
 
-from PySide6.QtMultimedia import QCameraDevice
 from pydantic import BaseModel
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,11 @@ class CameraDeviceInfo(BaseModel):
         return unique_framerates
 
     @classmethod
-    def from_q_camera_device(cls, camera_number: int, camera: QCameraDevice):
+    def from_q_camera_device(cls, camera_number: int, camera):
+        from PySide6.QtMultimedia import QCameraDevice
+        if not isinstance(camera, QCameraDevice):
+            raise ValueError(f"Expected QCameraDevice, got {type(camera)}")
+
         device_address = camera.id().data().decode("utf-8")
         try:
             if platform.system() == 'Windows' or platform.system() == 'Darwin':
@@ -78,7 +82,34 @@ class CameraDeviceInfo(BaseModel):
             device_address=device_address,
             cv2_port=cv2_port
         )
-
+    @classmethod
+    def from_opencv_port_number(cls, port_number: int):
+        device_address = f"opencv_port_{port_number}"
+        description = f"OpenCV Camera {port_number}"
+        video_format_1080 = DeviceVideoFormat(
+            width=1920,
+            height=1080,
+            pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
+            framerate=DefaultCameraConfig.FRAMERATE.value
+        )
+        video_format_720 = DeviceVideoFormat(
+            width=1280,
+            height=720,
+            pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
+            framerate=DefaultCameraConfig.FRAMERATE.value
+        )
+        video_format_480 = DeviceVideoFormat(
+            width=640,
+            height=480,
+            pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
+            framerate=DefaultCameraConfig.FRAMERATE.value
+        )
+        return cls(
+            description=description,
+            device_address=device_address,
+            cv2_port=port_number,
+            available_video_formats=[video_format_1080, video_format_720, video_format_480]
+        )
     @staticmethod
     def _get_available_video_formats(camera) -> List[DeviceVideoFormat]:
         available_video_formats = camera.videoFormats()
