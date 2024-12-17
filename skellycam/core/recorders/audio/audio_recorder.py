@@ -1,15 +1,42 @@
 import json
 import logging
+import multiprocessing
 import threading
 import time
 import wave
+from pathlib import Path
+from typing import Optional, List
 
+import numpy as np
 import pyaudio
+from pydantic import BaseModel
 
+from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 logger = logging.getLogger(__name__)
 
+class AudioChunk(BaseModel):
+    audio_chunk_number: int
+    chunk_duration_seconds: float
+    start_time_in_seconds_from_zero: int
+    end_time_in_seconds_from_zero: int
+    start_time_perf_counter_ns: int
+    end_time_perf_counter_ns: int
+
+class AudioRecordingInfo(BaseModel):
+    file_name: str
+    utc_to_perf_counter_ns_mapping: dict
+    audio_record_start_time: dict
+    rate: int
+    channels: int
+    chunk_size: int
+    audio_record_duration_seconds: Optional[float] = None
+    audio_record_end_time: Optional[dict] = None
+    mean_chunk_duration_seconds: Optional[float] = None
+    std_chunk_duration_seconds: Optional[float] = None
+    number_of_audio_chunks_recorded: Optional[int] = None
+    audio_chunks: List[AudioChunk] = []
 
 class AudioRecorder:
     def __init__(self,
@@ -17,24 +44,21 @@ class AudioRecorder:
                  mic_device_index: int,
                  rate: int = 44100,
                  channels: int = 2,
-                 chunk_size: int = 1024):
+                 chunk_size: int = 2048):
         if not audio_file_path.endswith('.wav'):
             audio_file_path += '.wav'
         self.audio_filename = audio_file_path
         self.mic_device_index = mic_device_index
-
-        self.recording_thread = threading.Thread(target=AudioRecorder._record, args=(self,))
+        self.should_continue = multiprocessing.Value('b', True)
+        self.recording_thread = threading.Thread(target=AudioRecorder._record,
+                                                 args=(self,
+                                                       self.should_continue),
+                                                 daemon=True)
         self.rate = rate
         self.channels = channels
         self.chunk_size = chunk_size
-        self.stop_event = threading.Event()
         self.frames = []
-        self.audio_data = {
-            'file_path': self.audio_filename,
-            'file_name': self.audio_filename.split('/')[-1],
-            'utc_to_perf_counter_ns_mapping': UtcToPerfCounterMapping().model_dump(),
-            'audio_chunks': []
-        }
+        self.audio_recording_info: Optional[AudioRecordingInfo] = None
         self.audio = pyaudio.PyAudio()
         self.stream = self.audio.open(format=pyaudio.paInt16,
                                       channels=self.channels,
@@ -45,32 +69,63 @@ class AudioRecorder:
         logger.debug(
             f"Initialized AudioRecorder with file path: {self.audio_filename}, mic device index: {self.mic_device_index}")
 
-    def start_recording(self):
-
+    def start(self):
+        logger.debug("Starting audio recording thread...")
         self.recording_thread.start()
-        logger.debug(f"Started audio recording thread for file: {self.audio_filename}")
 
-    def stop_recording(self):
-        self.stop_event.set()
+    def stop(self):
+        logger.debug("Stopping audio recording thread...")
+        self.should_continue.value = False
         self.recording_thread.join()
-        logger.trace("Audio recording stopped.")
 
-    def _record(self):
+
+
+    def _record(self, should_continue: multiprocessing.Value):
 
         logger.trace("Audio recording started...")
         start_time = time.perf_counter_ns()
         logger.trace(f"Recording started at {start_time} ns.")
-        while not self.stop_event.is_set():
+        self._initialize_audio_data()
+
+        while should_continue.value:
             chunk_start_time = time.perf_counter_ns()
             data = self.stream.read(self.chunk_size)
             chunk_end_time = time.perf_counter_ns()
             self.frames.append(data)
-            self.audio_data['audio_chunks'].append({'chunk_start_time': chunk_start_time,
-                                                    'chunk_end_time': chunk_end_time})
-            logger.loop(f"Recorded chunk with duration {(chunk_end_time - chunk_start_time) / 1e9 :.4f} sec")
-        logger.debug(f"Audio recording finished! Total duration: {(time.perf_counter_ns() - start_time) / 1e9 :.4f} sec")
+            self.audio_recording_info.audio_chunks.append(AudioChunk(
+                audio_chunk_number=len(self.audio_recording_info.audio_chunks),
+                chunk_duration_seconds=(chunk_end_time - chunk_start_time) / 1e9,
+                start_time_in_seconds_from_zero=chunk_start_time - start_time,
+                end_time_in_seconds_from_zero=chunk_end_time - start_time,
+                start_time_perf_counter_ns=chunk_start_time,
+                end_time_perf_counter_ns=chunk_end_time
+            ))
+            logger.loop(f"Recorded Audio chunk with duration {(chunk_end_time - chunk_start_time) / 1e9 :.4f} sec")
+
+        logger.debug(
+            f"Audio recording finished! Total duration: {(time.perf_counter_ns() - start_time) / 1e9 :.4f} sec")
+        self._finalize_audio_data()
         self._save_audio()
         self._save_timestamps()
+
+    def _initialize_audio_data(self):
+        self.audio_recording_info = AudioRecordingInfo(
+            file_name=self.audio_filename.replace(str(Path.home()), "~"),
+            utc_to_perf_counter_ns_mapping=UtcToPerfCounterMapping().model_dump(),
+            audio_record_start_time=FullTimestamp.now().model_dump(),
+            rate=self.rate,
+            channels=self.channels,
+            chunk_size=self.chunk_size,
+            audio_chunks=[]
+        )
+
+    def _finalize_audio_data(self):
+        self.audio_recording_info.audio_record_duration_seconds = (self.audio_recording_info.audio_chunks[-1].end_time_perf_counter_ns - self.audio_recording_info.audio_chunks[0].start_time_perf_counter_ns) / 1e9
+        self.audio_recording_info.audio_record_end_time = FullTimestamp.now().model_dump()
+        self.audio_recording_info.mean_chunk_duration_seconds = np.mean([chunk.chunk_duration_seconds for chunk in self.audio_recording_info.audio_chunks])
+        self.audio_recording_info.std_chunk_duration_seconds = np.std([chunk.chunk_duration_seconds for chunk in self.audio_recording_info.audio_chunks])
+        self.audio_recording_info.number_of_audio_chunks_recorded = len(self.audio_recording_info.audio_chunks)
+        logger.trace(f"Audio data finalized: {self.audio_recording_info.model_dump(exclude={'audio_chunks'})}")
 
     def _save_audio(self):
         self.stream.stop_stream()
@@ -86,9 +141,8 @@ class AudioRecorder:
     def _save_timestamps(self):
         timestamps_filename = f"{self.audio_filename.replace('.wav', '_timestamps.json')}"
         with open(timestamps_filename, 'w') as f:
-            f.write(json.dumps(self.audio_data, indent=4))
+            f.write(json.dumps(self.audio_recording_info.model_dump(), indent=4))
         logger.debug(f"Audio timestamps saved to {timestamps_filename}")
-
 
 
 if __name__ == "__main__":
@@ -103,11 +157,11 @@ if __name__ == "__main__":
             if chosen_mic not in mics:
                 raise ValueError("Invalid Device ID chosen.")
             audio_recorder = AudioRecorder(audio_file_path="output.wav",
-                                                  mic_device_index=chosen_mic)
-            audio_recorder.start_recording()
+                                           mic_device_index=chosen_mic)
+            audio_recorder.start()
             time.sleep(1)
             input("Press Enter to stop recording...")
-            audio_recorder.stop_recording()
+            audio_recorder.stop()
 
         except ValueError as e:
             print(f"Error: {e}")
