@@ -23,7 +23,7 @@ from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
 )
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path, \
     get_default_skellycam_recordings_path, SKELLYCAM_FAVICON_ICO_PATH
-from skellycam.system.device_detection.detect_available_camerass import detect_available_devices
+from skellycam.system.device_detection.detect_available_cameras import detect_available_devices
 
 logger = logging.getLogger(__name__)
 
