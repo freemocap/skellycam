@@ -13,6 +13,7 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 __package_root__ = __file__.replace("/__init__.py", "")
 
 from skellycam.api.routers import SKELLYCAM_ROUTERS
+from skellycam.core import CameraId
 from skellycam.gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import SkellycamCameraControlPanel
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
@@ -35,4 +36,5 @@ __all__ = [
     'SkellycamCameraControlPanel',
     'create_skellycam_app_controller',
     'SKELLYCAM_ROUTERS',
+    'CameraId',
 ]
