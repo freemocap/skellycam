@@ -3,13 +3,13 @@ from unittest.mock import patch, AsyncMock
 import pytest
 
 from skellycam.skellycam_app.skellycam_app_controller.app_controller import AppController
-from skellycam.system.device_detection.camera_device_info import AvailableDevices
+from skellycam.system.device_detection.camera_device_info import AvailableCameras
 
 
 @pytest.mark.skip(reason="This test is not implemented yet.")
 @pytest.mark.asyncio
 async def test_detect_with_cameras(controller_fixture: AppController,
-                                   available_devices_fixture: AvailableDevices):
+                                   available_devices_fixture: AvailableCameras):
     with patch('skellycam.core.detection.detect_available_devices.detect_available_devices',
                new_callable=AsyncMock) as mock_detect:
         mock_detect.return_value = available_devices_fixture

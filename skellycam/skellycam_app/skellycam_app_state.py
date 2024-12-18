@@ -17,8 +17,8 @@ from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator im
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
-from skellycam.system.device_detection.camera_device_info import AvailableDevices, \
-    available_devices_to_default_camera_configs
+from skellycam.system.device_detection.camera_device_info import AvailableCameras, \
+    available_cameras_to_default_camera_configs
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class SkellycamAppState:
     shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
     camera_group_dto: Optional[CameraGroupDTO] = None
     camera_group: Optional[CameraGroup] = None
-    available_devices: Optional[AvailableDevices] = None
+    available_cameras: Optional[AvailableCameras] = None
     current_framerate: Optional[CurrentFrameRate] = None
 
     @classmethod
@@ -49,13 +49,13 @@ class SkellycamAppState:
     @property
     def camera_group_configs(self) -> Optional[CameraConfigs]:
         if self.camera_group is None:
-            if self.available_devices is None:
+            if self.available_cameras is None:
                 raise ValueError("Cannot get CameraConfigs without available devices!")
-            return available_devices_to_default_camera_configs(self.available_devices)
+            return available_cameras_to_default_camera_configs(self.available_cameras)
         return self.camera_group.camera_configs
 
-    def set_available_devices(self, value: AvailableDevices):
-        self.available_devices = value
+    def set_available_cameras(self, value: AvailableCameras):
+        self.available_cameras = value
         self.ipc_queue.put(self.state_dto())
 
     def create_camera_group(self, camera_configs: CameraConfigs):
@@ -123,7 +123,7 @@ class SkellycamAppStateDTO(BaseModel):
     state_timestamp: str = datetime.now().isoformat()
 
     camera_configs: Optional[CameraConfigs]
-    available_devices: Optional[AvailableDevices]
+    available_devices: Optional[AvailableCameras]
     current_framerate: Optional[CurrentFrameRate]
     record_frames_flag_status: bool
 
@@ -131,7 +131,7 @@ class SkellycamAppStateDTO(BaseModel):
     def from_state(cls, state: SkellycamAppState):
         return cls(
             camera_configs=state.camera_group_configs,
-            available_devices=state.available_devices,
+            available_devices=state.available_cameras,
             current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
         )

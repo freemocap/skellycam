@@ -23,7 +23,7 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
-from skellycam.system.device_detection.camera_device_info import AvailableDevices, CameraDeviceInfo, DeviceVideoFormat
+from skellycam.system.device_detection.camera_device_info import AvailableCameras, CameraDeviceInfo, DeviceVideoFormat
 from skellycam.tests.mocks import MockVideoCapture
 
 
@@ -83,7 +83,7 @@ def image_resolution_fixture(image_shape_fixture: Tuple[int, int, int]
 
 
 @pytest.fixture
-def available_devices_fixture(camera_configs_fixture: CameraConfigs) -> AvailableDevices:
+def available_devices_fixture(camera_configs_fixture: CameraConfigs) -> AvailableCameras:
     available_devices = {}
     for camera_id, config in camera_configs_fixture.items():
         d1 = DeviceVideoFormat(width=config.resolution.width,

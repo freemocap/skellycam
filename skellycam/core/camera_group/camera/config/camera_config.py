@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Optional, Literal
+from typing import Tuple, Dict, Optional
 
 import cv2
 from pydantic import BaseModel, Field, field_validator
@@ -56,6 +56,10 @@ class CameraConfig(BaseModel):
         default=DefaultCameraConfig.CAMERA_ID.value,
         description="The id of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera",
     )
+    camera_name: str = Field(
+        default=DefaultCameraConfig.CAMERA_NAME.value,
+        description="The name of the camera, if known",
+    )
 
     use_this_camera: bool = Field(
         default=DefaultCameraConfig.USE_THIS_CAMERA.value,
@@ -74,7 +78,7 @@ class CameraConfig(BaseModel):
     pixel_format: str = Field(default="RGB",
                               description="How to interpret the color channels")
 
-    exposure: int|str = Field(
+    exposure: int | str = Field(
         default=DefaultCameraConfig.EXPOSURE.value,
         description="The exposure of the camera using the opencv convention - "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/ "
@@ -126,7 +130,6 @@ class CameraConfig(BaseModel):
     def video_file_extension(self) -> str:
         return get_video_file_type(cv2.VideoWriter_fourcc(*self.writer_fourcc))
 
-
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
 
@@ -147,7 +150,7 @@ CameraConfigs = Dict[CameraId, CameraConfig]
 
 def default_camera_configs_factory():
     return {
-        DefaultCameraConfig.CAMERA_ID: CameraConfig(),
+        DefaultCameraConfig.CAMERA_ID: CameraConfig()
     }
 
 

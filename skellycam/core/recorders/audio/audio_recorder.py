@@ -146,10 +146,10 @@ class AudioRecorder:
 
 
 if __name__ == "__main__":
-    from skellycam.system.device_detection.detect_microphone_devices import get_available_microphone_devices
+    from skellycam.system.device_detection.detect_microphone_devices import get_available_microphones
     from pprint import pprint
 
-    mics = get_available_microphone_devices()
+    mics = get_available_microphones()
     pprint(mics)
     if mics:
         try:

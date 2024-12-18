@@ -70,8 +70,8 @@ dependencies = [
     "websockets>=13.1",
     "pyinstaller>=6.10.0",
     "pip>=24.2",
-    "nuitka>=2.4.9",
     "pyaudio>=0.2.14",
+    "pygrabber>=0.2",
 ]
 requires-python = ">=3.10,<3.13"
 
@@ -98,8 +98,8 @@ push = true
 
 [project.scripts]
 skellycam = "skellycam.__main__:main"
-skellycam-build = "skellycam.system.build_installer.run_pyinstaller:run_pyinstaller"
-# uv run python -m nuitka --standalone --plugin-enable=pyside6 .\skellycam\__main__.py
+#skellycam-build-pyinstaller = "skellycam.system.build_installer.run_pyinstaller:run_pyinstaller"
+#skellycam-build-nuitka = "uv run python -m nuitka --standalone --plugin-enable=pyside6 .skellycam/__main__.py"
 
 [tool.setuptools]
 py-modules = ["skellycam"]

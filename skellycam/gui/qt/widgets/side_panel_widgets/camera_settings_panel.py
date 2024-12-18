@@ -11,7 +11,7 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 from skellycam.gui.qt.utilities.qt_label_strings import USE_THIS_CAMERA_STRING, COPY_SETTINGS_TO_CAMERAS_STRING
-from skellycam.system.device_detection.camera_device_info import CameraDeviceInfo, AvailableDevices
+from skellycam.system.device_detection.camera_device_info import CameraDeviceInfo, AvailableCameras
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class CameraSettingsPanel(QWidget):
 
         self._user_selected_camera_configs: Optional[CameraConfigs] = None
         self._app_state_camera_configs: Optional[CameraConfigs] = None
-        self._available_devices: Optional[AvailableDevices] = None
+        self._available_devices: Optional[AvailableCameras] = None
 
         self._parameter_groups = {}
 
@@ -49,7 +49,7 @@ class CameraSettingsPanel(QWidget):
         return self._user_selected_camera_configs
 
     @Slot(object)
-    def update_available_devices(self, available_devices: AvailableDevices):
+    def update_available_devices(self, available_devices: AvailableCameras):
         logger.gui("Updating Camera Parameter Tree")
         if self._available_devices == available_devices:
             return

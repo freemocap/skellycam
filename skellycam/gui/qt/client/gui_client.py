@@ -59,10 +59,14 @@ class SkellycamFrontendClient(QWidget):
     #
     #     self._http_client.get("/cameras/connect/detect")
 
-    def apply_settings_to_cameras(self, camera_configs: CameraConfigs):
+    def cameras_connect_apply(self, camera_configs: CameraConfigs):
         logger.gui("Calling `/skellycam/cameras/connect/apply` endpoint")
         if not camera_configs:
             raise ValueError("CameraConfigs are `None`")
         data = {camera_id: config.model_dump() for camera_id, config in camera_configs.items()}
         self._http_client.post(endpoint="/skellycam/cameras/connect/apply",
                                data=data)
+
+    def cameras_connect_detect(self):
+        logger.gui("Calling `/skellycam/cameras/connect/detect` endpoint")
+        self._http_client.get("/skellycam/cameras/connect/detect")

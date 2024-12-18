@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QCheckBox, QLabel, QHBoxLayout
-from skellycam.system.device_detection.detect_microphone_devices import get_available_microphone_devices
+from skellycam.system.device_detection.detect_microphone_devices import get_available_microphones
 
 class AudioRecorderWidget(QWidget):
     def __init__(self):
@@ -36,7 +36,7 @@ class AudioRecorderWidget(QWidget):
     def populate_mic_dropdown(self):
         self.mic_dropdown.clear()
 
-        mics = get_available_microphone_devices()
+        mics = get_available_microphones()
         for mic_index, mic_name in mics.items():
             if mic_index == 0:
                 self.mic_dropdown.addItem(f"0 - Default Microphone")

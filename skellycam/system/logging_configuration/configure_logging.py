@@ -13,6 +13,7 @@ logging.getLogger("websocket").setLevel(logging.INFO)
 logging.getLogger("watchfiles").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("comtypes").setLevel(logging.WARNING)
 
 # Add custom log levels
 logging.addLevelName(LogLevels.GUI.value, "GUI")

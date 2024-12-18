@@ -23,6 +23,29 @@ class DeviceVideoFormat(BaseModel):
     framerate: float
 
 
+video_format_1080 = DeviceVideoFormat(
+    width=1920,
+    height=1080,
+    pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
+    framerate=DefaultCameraConfig.FRAMERATE.value
+)
+video_format_480 = DeviceVideoFormat(
+    width=640,
+    height=480,
+    pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
+    framerate=DefaultCameraConfig.FRAMERATE.value
+)
+
+video_format_720 = DeviceVideoFormat(
+    width=1280,
+    height=720,
+    pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
+    framerate=DefaultCameraConfig.FRAMERATE.value
+)
+
+DEFAULT_VIDEO_FORMATS = [video_format_1080, video_format_720, video_format_480]
+
+
 class CameraDeviceInfo(BaseModel):
     """
     Selected information pulled out of a QCameraDevice object
@@ -60,6 +83,15 @@ class CameraDeviceInfo(BaseModel):
         return unique_framerates
 
     @classmethod
+    def from_pygrabber_device(cls, device_index: int, device_name: str):
+        return cls(
+            description=device_name,
+            available_video_formats=DEFAULT_VIDEO_FORMATS,
+            device_address=f"pygrabber_device_{device_index}",
+            cv2_port=device_index
+        )
+
+    @classmethod
     def from_q_camera_device(cls, camera_number: int, camera):
         from PySide6.QtMultimedia import QCameraDevice
         if not isinstance(camera, QCameraDevice):
@@ -82,34 +114,19 @@ class CameraDeviceInfo(BaseModel):
             device_address=device_address,
             cv2_port=cv2_port
         )
+
     @classmethod
     def from_opencv_port_number(cls, port_number: int):
         device_address = f"opencv_port_{port_number}"
         description = f"OpenCV Camera {port_number}"
-        video_format_1080 = DeviceVideoFormat(
-            width=1920,
-            height=1080,
-            pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
-            framerate=DefaultCameraConfig.FRAMERATE.value
-        )
-        video_format_720 = DeviceVideoFormat(
-            width=1280,
-            height=720,
-            pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
-            framerate=DefaultCameraConfig.FRAMERATE.value
-        )
-        video_format_480 = DeviceVideoFormat(
-            width=640,
-            height=480,
-            pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
-            framerate=DefaultCameraConfig.FRAMERATE.value
-        )
+
         return cls(
             description=description,
             device_address=device_address,
             cv2_port=port_number,
-            available_video_formats=[video_format_1080, video_format_720, video_format_480]
+            available_video_formats=DEFAULT_VIDEO_FORMATS
         )
+
     @staticmethod
     def _get_available_video_formats(camera) -> List[DeviceVideoFormat]:
         available_video_formats = camera.videoFormats()
@@ -129,9 +146,10 @@ class CameraDeviceInfo(BaseModel):
         return f"{self.description}"
 
 
-AvailableDevices = Dict[CameraId, CameraDeviceInfo]
+AvailableCameras = Dict[CameraId, CameraDeviceInfo]
 
 
-def available_devices_to_default_camera_configs(available_devices: AvailableDevices) -> CameraConfigs:
-    return {camera_id: CameraConfig(camera_id=camera_id) for camera_id in
-            available_devices.keys()}
+def available_cameras_to_default_camera_configs(available_devices: AvailableCameras) -> CameraConfigs:
+    return {camera_id: CameraConfig(camera_id=camera_id,
+                                    camera_name=camera_info.description,
+                                    ) for camera_id, camera_info in available_devices.items()}

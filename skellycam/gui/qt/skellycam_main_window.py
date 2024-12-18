@@ -23,7 +23,7 @@ from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
 )
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path, \
     get_default_skellycam_recordings_path, SKELLYCAM_FAVICON_ICO_PATH
-from skellycam.system.device_detection.detect_available_cameras import detect_available_devices
+from skellycam.system.device_detection.detect_available_cameras import get_available_cameras
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +157,8 @@ class SkellyCamMainWindow(QMainWindow):
         # Camera Control Panel
         self._control_panel.detect_available_cameras_button.clicked.connect(
             lambda: self._control_panel.camera_settings_panel.update_available_devices(
-                detect_available_devices(check_if_available=True))
+                get_available_cameras()
+            )
         )
         # self._control_panel.connect_cameras_button.clicked.connect(
         #     lambda: self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
@@ -189,12 +190,15 @@ class SkellyCamMainWindow(QMainWindow):
         self._skellycam_camera_panel.show()
 
     @Slot()
-    def connect_to_cameras(self):
+    def connect_to_cameras(self, detect_clientside: bool = False):
         self._control_panel.apply_settings_to_cameras_button.setEnabled(True)
         self._control_panel.close_cameras_button.setEnabled(True)
-        if not self._control_panel.user_selected_camera_configs:
-            self._control_panel.camera_settings_panel.update_available_devices(detect_available_devices())
-        self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
+        if detect_clientside:
+            if not self._control_panel.user_selected_camera_configs:
+                self._control_panel.camera_settings_panel.update_available_devices(get_available_cameras())
+                self._client.cameras_connect_apply(self._control_panel.user_selected_camera_configs)
+            else:
+                self._client.cameras_connect_detect()
 
     @Slot()
     def close_cameras(self):
