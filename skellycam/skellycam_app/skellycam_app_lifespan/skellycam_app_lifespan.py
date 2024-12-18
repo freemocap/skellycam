@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -24,9 +25,9 @@ async def lifespan(app: FastAPI):
     logger.info(f"Creating `Controller` instance...")
     controller = get_skellycam_app_controller()
     logger.success(f"Skellycam API (version:{skellycam.__version__}) started successfully 💀📸✨")
-    logger.api(f"Skellycam API  running on: \nSwagger API docs - {APP_URL} \n Test UI: test ui: {APP_URL}/ui 👈[click to open backend UI in your browser]\n")
+    logger.api(f"Skellycam API  running on: \nSwagger API docs - {APP_URL} \n Test UI: {APP_URL}/skellycam/ui 👈[click to open backend UI in your browser]\n")
 
-    # Let the app do its thing
+    # # Let the app do its thing
     yield
 
     # Shutdown actions

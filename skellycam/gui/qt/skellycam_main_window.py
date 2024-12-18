@@ -23,7 +23,7 @@ from skellycam.gui.qt.widgets.welcome_to_skellycam_widget import (
 )
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path, \
     get_default_skellycam_recordings_path, SKELLYCAM_FAVICON_ICO_PATH
-from skellycam.system.device_detection.detect_available_cameras import get_available_cameras
+from skellycam.system.device_detection.detect_available_cameras import get_available_cameras, CameraDetectionStrategies
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +157,7 @@ class SkellyCamMainWindow(QMainWindow):
         # Camera Control Panel
         self._control_panel.detect_available_cameras_button.clicked.connect(
             lambda: self._control_panel.camera_settings_panel.update_available_devices(
-                get_available_cameras()
+                get_available_cameras(CameraDetectionStrategies.OPENCV)
             )
         )
         # self._control_panel.connect_cameras_button.clicked.connect(

@@ -10,7 +10,7 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
-from skellycam.system.device_detection.detect_available_cameras import  get_available_cameras
+from skellycam.system.device_detection.detect_available_cameras import get_available_cameras, CameraDetectionStrategies
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ class ControllerThreadManager:
         if getattr(self, f"_{task_name}_task") is None or getattr(self, f"_{task_name}_task").done():
             future = self.executor.submit(task_callable, *args, **kwargs)
             setattr(self, f"_{task_name}_task", future)
+            logger.debug(f"Submitted `{task_name}` task: " + str(future))
         else:
             logger.warning(f"{task_name} task already running! Ignoring request...")
 
@@ -77,13 +78,13 @@ class SkellycamAppController(BaseModel):
 
     def _create_camera_group(self, camera_configs: CameraConfigs):
         try:
-            if not camera_configs:
-                raise ValueError("Must provide camera configurations to connect to cameras!")
+
             if not self.app_state.available_cameras and not camera_configs:
-                self._detect_available_cameras()
+                self._detect_available_cameras(strategy=CameraDetectionStrategies.OPENCV)
                 if not self.app_state.available_cameras:
                     logger.warning("No available devices detected!")
                     return
+                camera_configs = self.app_state.camera_group_configs
 
             if self.app_state.camera_group_configs is None:
                 raise ValueError("No camera configurations detected!")
@@ -98,9 +99,9 @@ class SkellycamAppController(BaseModel):
             logger.exception(f"Error creating camera group:  {e}")
             raise
 
-    def _detect_available_cameras(self):
+    def _detect_available_cameras(self, strategy: CameraDetectionStrategies):
         try:
-            self.app_state.set_available_cameras(get_available_cameras())
+            self.app_state.set_available_cameras(get_available_cameras(strategy=strategy))
         except Exception as e:
             logger.exception(f"Error detecting available devices: {e}")
             raise
