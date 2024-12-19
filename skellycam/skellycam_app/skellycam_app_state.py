@@ -135,3 +135,18 @@ class SkellycamAppStateDTO(BaseModel):
             current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
         )
+
+SKELLYCAM_APP_STATE: Optional[SkellycamAppState] = None
+def create_skellycam_app_state(global_kill_flag: multiprocessing.Value) -> SkellycamAppState:
+    global SKELLYCAM_APP_STATE
+    if not SKELLYCAM_APP_STATE:
+        SKELLYCAM_APP_STATE = SkellycamAppState.create(global_kill_flag=global_kill_flag)
+    else:
+        raise ValueError("SkellycamAppState already exists!")
+    return SKELLYCAM_APP_STATE
+
+def get_skellycam_app_state() -> SkellycamAppState:
+    global SKELLYCAM_APP_STATE
+    if SKELLYCAM_APP_STATE is None:
+        raise ValueError("SkellycamAppState does not exist!")
+    return SKELLYCAM_APP_STATE
