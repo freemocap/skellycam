@@ -18,10 +18,10 @@ connect_cameras_router = APIRouter()
 def cameras_apply_config_route(
         request: CameraConfigs = Body(..., examples=[default_camera_configs_factory()])
 ):
-    logger.api("Received `/connect/apply` POST request...")
+    logger.api("Received `skellycam/cameras/connect/apply` POST request...")
     try:
         get_skellycam_app_controller().connect_to_cameras(camera_configs=request)
-        logger.api("`/connect/apply` POST request handled successfully.")
+        logger.api("`skellycam/cameras/connect/apply` POST request handled successfully.")
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)
@@ -32,10 +32,10 @@ def cameras_apply_config_route(
     summary="Detect and connect to all available cameras with default settings",
 )
 def detect_and_connect_to_cameras_route():
-    logger.api("Received `/connect` GET request...")
+    logger.api("Received `skellycam/cameras/connect` GET request...")
     try:
         get_skellycam_app_controller().connect_to_cameras()
-        logger.api("`/connect` GET request handled successfully.")
+        logger.api("`skellycam/cameras/connect` GET request handled successfully.")
     except Exception as e:
         logger.error(f"Failed to detect available cameras: {type(e).__name__} - {e}")
         logger.exception(e)
