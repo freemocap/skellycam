@@ -23,7 +23,6 @@ class RingBufferCameraSharedMemoryDTO(BaseModel):
 class RingBufferCameraSharedMemory(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     image_shm: SharedMemoryRingBuffer
-    metadata_shm: SharedMemoryRingBuffer
     read_only: bool
 
     @classmethod
@@ -40,15 +39,10 @@ class RingBufferCameraSharedMemory(BaseModel):
             memory_allocation=memory_allocation,
             dtype=DEFAULT_IMAGE_DTYPE,
         )
-        metadata_shm = SharedMemoryRingBuffer.create(
-            example_payload=example_metadata,
-            dtype=FRAME_METADATA_DTYPE,
-            ring_buffer_length=image_shm.ring_buffer_length,
-        )
+
 
         return cls(
             image_shm=image_shm,
-            metadata_shm=metadata_shm,
             read_only=read_only,
         )
 
@@ -57,20 +51,17 @@ class RingBufferCameraSharedMemory(BaseModel):
                 dto: RingBufferCameraSharedMemoryDTO,
                  read_only: bool, ):
         image_shm = SharedMemoryRingBuffer.recreate(
-            dto=dto.image_shm_dto
-        )
-        metadata_shm = SharedMemoryRingBuffer.recreate(
-            dto=dto.metadata_shm_dto
+            dto=dto.image_shm_dto,
+            read_only=read_only,
         )
         return cls(
             image_shm=image_shm,
-            metadata_shm=metadata_shm,
             read_only=read_only,
         )
 
     @property
     def ready_to_read(self):
-        return self.image_shm.ready_to_read and self.metadata_shm.ready_to_read
+        return self.image_shm.ready_to_read
 
     @property
     def new_frame_available(self):

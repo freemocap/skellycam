@@ -7,8 +7,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
-from skellycam.core.recorders.start_recording_request import StartRecordingRequest
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
+from skellycam import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
@@ -16,7 +15,11 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
+from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_shared_memory import \
+    RingBufferCameraSharedMemory
+from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, \
     available_cameras_to_default_camera_configs
 
@@ -41,10 +44,18 @@ class SkellycamAppState:
                    ipc_queue=multiprocessing.Queue(),
                    config_update_queue=multiprocessing.Queue())
 
-
     @property
     def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer:
         return self.shmorchestrator.multi_frame_escape_ring_shm
+
+    @property
+    def camera_ring_buffer_shms(self) -> dict[CameraId, RingBufferCameraSharedMemory]:
+        if self.camera_group is None:
+            raise ValueError("Cannot get RingBufferCameraSharedMemory without CameraGroup!")
+        return {camera_id: RingBufferCameraSharedMemory.create(camera_config=config,
+                                                               memory_allocation=100_000,  # 100 MB per camera
+                                                               read_only=False)
+                for camera_id, config in self.camera_group.camera_configs.items()}
 
     @property
     def camera_group_configs(self) -> Optional[CameraConfigs]:
@@ -136,7 +147,10 @@ class SkellycamAppStateDTO(BaseModel):
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
         )
 
+
 SKELLYCAM_APP_STATE: Optional[SkellycamAppState] = None
+
+
 def create_skellycam_app_state(global_kill_flag: multiprocessing.Value) -> SkellycamAppState:
     global SKELLYCAM_APP_STATE
     if not SKELLYCAM_APP_STATE:
@@ -144,6 +158,7 @@ def create_skellycam_app_state(global_kill_flag: multiprocessing.Value) -> Skell
     else:
         raise ValueError("SkellycamAppState already exists!")
     return SKELLYCAM_APP_STATE
+
 
 def get_skellycam_app_state() -> SkellycamAppState:
     global SKELLYCAM_APP_STATE
