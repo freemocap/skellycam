@@ -3,7 +3,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
-from skellycam.api.routers import SKELLYCAM_ROUTERS, SKELLYCAM_STANDALONE_ROUTES
+from skellycam.api.routers import SKELLYCAM_ROUTERS
+from skellycam.api.standalone_routers import SKELLYCAM_STANDALONE_ROUTES
 from starlette.responses import FileResponse
 
 import skellycam
