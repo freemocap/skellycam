@@ -108,7 +108,7 @@ class VideoRecorderManager(BaseModel):
             raise RuntimeError(f"Frame number is None after writing frame to video recorder for camera {camera_id_to_save}")
         if camera_id_to_save == 0:
             print("\n------------------------------------")
-        print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
+        # print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
         return True
 
 
