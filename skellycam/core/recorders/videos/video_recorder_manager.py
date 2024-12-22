@@ -101,13 +101,9 @@ class VideoRecorderManager(BaseModel):
 
         frame_counts = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in self.video_recorders.items()}
         camera_id_to_save = max(frame_counts, key=frame_counts.get)
-        tik = time.perf_counter_ns()
         frame_number = self.video_recorders[camera_id_to_save].write_one_frame()
-        tok = time.perf_counter_ns()
         if frame_number is None:
             raise RuntimeError(f"Frame number is None after writing frame to video recorder for camera {camera_id_to_save}")
-        if camera_id_to_save == 0:
-            print("\n------------------------------------")
         # print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
         return True
 
