@@ -125,6 +125,11 @@ class SkellycamAppState:
         self.current_framerate = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 
+    def close(self):
+        self.ipc_flags.global_kill_flag.value = True
+        if self.camera_group:
+            self.close_camera_group()
+
 
 class SkellycamAppStateDTO(BaseModel):
     """
