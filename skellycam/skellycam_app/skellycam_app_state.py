@@ -53,7 +53,7 @@ class SkellycamAppState:
         if self.camera_group is None:
             raise ValueError("Cannot get RingBufferCameraSharedMemory without CameraGroup!")
         return {camera_id: RingBufferCameraSharedMemory.create(camera_config=config,
-                                                               memory_allocation=100_000,  # 100 MB per camera
+                                                               memory_allocation=100_000_000,  # 100 MB per camera
                                                                read_only=False)
                 for camera_id, config in self.camera_group.camera_configs.items()}
 
