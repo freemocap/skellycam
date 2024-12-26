@@ -23,10 +23,10 @@ class CameraGroupProcess:
         self._process = Process(
             name=CameraGroupProcess.__name__,
             target=CameraGroupProcess._run_process,
-            args=(camera_group_dto,
-                  shmorc_dto,
-                  frame_router_config_queue,
-                  frame_listener_config_queue,
+            kwargs=dict(camera_group_dto=camera_group_dto,
+                  shmorc_dto=shmorc_dto,
+                  frame_router_config_queue=frame_router_config_queue,
+                  frame_listener_config_queue=frame_listener_config_queue
                   )
         )
 

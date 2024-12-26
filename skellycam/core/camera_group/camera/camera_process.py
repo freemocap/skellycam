@@ -14,14 +14,12 @@ from skellycam.core.camera_group.camera.opencv.get_frame import get_frame
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_names import SharedMemoryNames
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
-    SingleSlotCameraSharedMemory
+    SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
-
 
 
 @dataclass
@@ -45,12 +43,15 @@ class CameraProcess:
                    new_config_queue=new_config_queue,
                    process=multiprocessing.Process(target=cls._run_process,
                                                    name=f"Camera{camera_id}",
-                                                   args=(camera_id,
-                                                         camera_group_dto,
-                                                         shmorc_dto.camera_group_orchestrator.frame_loop_flags[camera_id],
-                                                         shmorc_dto.frame_loop_shm_dto.group_shm_names[camera_id],
-                                                         new_config_queue,
-                                                         should_close_self_flag)
+                                                   kwargs=dict(camera_id=camera_id,
+                                                               camera_group_dto=camera_group_dto,
+                                                               frame_loop_flags=
+                                                               shmorc_dto.camera_group_orchestrator.frame_loop_flags[
+                                                                   camera_id],
+                                                               camera_shm_dto=
+                                                               shmorc_dto.frame_loop_shm_dto.camera_shm_dtos[camera_id],
+                                                               new_config_queue=new_config_queue,
+                                                               should_close_self_flag=should_close_self_flag)
                                                    ),
 
                    )
@@ -61,7 +62,8 @@ class CameraProcess:
     def close(self):
         logger.info(f"Closing camera {self.camera_id}")
         if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value == True and not self.should_close_self_flag.value == True:
-            raise ValueError(f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc_flags.kill_camera_group_flag.value}, should_close_self_flag: {self.should_close_self_flag.value}")
+            raise ValueError(
+                f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc_flags.kill_camera_group_flag.value}, should_close_self_flag: {self.should_close_self_flag.value}")
         self.should_close_self_flag.value = True
         self.process.join()
         logger.info(f"Camera {self.camera_id} closed!")
@@ -77,14 +79,14 @@ class CameraProcess:
     def _run_process(camera_id: CameraId,
                      camera_group_dto: CameraGroupDTO,
                      frame_loop_flags: CameraFrameLoopFlags,
-                     camera_shm_name: SharedMemoryNames,
+                     camera_shm_dto: CameraSharedMemoryDTO,
                      new_config_queue: multiprocessing.Queue,
                      should_close_self_flag: multiprocessing.Value
                      ):
         config = camera_group_dto.camera_configs[camera_id]
 
         camera_shm = SingleSlotCameraSharedMemory.recreate(camera_config=config,
-                                                           shared_memory_names=camera_shm_name,
+                                                           camera_shm_dto=camera_shm_dto,
                                                            read_only=False)
 
         cv2_video_capture: Optional[cv2.VideoCapture] = None
@@ -133,6 +135,7 @@ class CameraProcess:
                 # cv2_video_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING) # TODO - Figure out this manual/auto exposure setting stuff... See above note
                 cv2_video_capture.release()
             camera_shm.close()
+
 
 def check_for_config_update(config: CameraConfig,
                             cv2_video_capture: cv2.VideoCapture,

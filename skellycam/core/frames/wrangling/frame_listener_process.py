@@ -21,9 +21,9 @@ class FrameListenerProcess:
             new_configs_queue: multiprocessing.Queue):
         self._process = multiprocessing.Process(target=self._run_process,
                                                 name=self.__class__.__name__,
-                                                args=(camera_group_dto,
-                                                      shmorc_dto,
-                                                      new_configs_queue,
+                                                kwargs=dict(camera_group_dto=camera_group_dto,
+                                                      shmorc_dto=shmorc_dto,
+                                                      new_configs_queue=new_configs_queue
                                                       )
                                                 )
 
