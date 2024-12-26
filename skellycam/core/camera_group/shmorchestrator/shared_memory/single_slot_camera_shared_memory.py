@@ -1,17 +1,21 @@
 import logging
 import time
+from dataclasses import dataclass
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_names import SharedMemoryNames
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 
 logger = logging.getLogger(__name__)
+
+class CameraSharedMemoryDTO(BaseModel):
+    image_shm_name: str
+    metadata_shm_name: str
 
 
 class SingleSlotCameraSharedMemory(BaseModel):
@@ -44,15 +48,15 @@ class SingleSlotCameraSharedMemory(BaseModel):
     @classmethod
     def recreate(cls,
                  camera_config: CameraConfig,
-                 shared_memory_names: SharedMemoryNames,
+                 camera_shm_dto: CameraSharedMemoryDTO,
                  read_only: bool, ):
         image_shm = SharedMemoryElement.recreate(
-            shared_memory_names.image_shm_name,
+            camera_shm_dto.image_shm_name,
             shape=camera_config.image_shape,
             dtype=np.uint8,
         )
         metadata_shm = SharedMemoryElement.recreate(
-            shared_memory_names.metadata_shm_name,
+            camera_shm_dto.metadata_shm_name,
             shape=FRAME_METADATA_SHAPE,
             dtype=FRAME_METADATA_DTYPE,
         )
@@ -62,9 +66,8 @@ class SingleSlotCameraSharedMemory(BaseModel):
             read_only=read_only,
         )
 
-    @property
-    def shared_memory_names(self) -> SharedMemoryNames:
-        return SharedMemoryNames(image_shm_name=self.image_shm.name, metadata_shm_name=self.metadata_shm.name)
+    def to_dto(self) -> CameraSharedMemoryDTO:
+        return CameraSharedMemoryDTO(image_shm_name=self.image_shm.name, metadata_shm_name=self.metadata_shm.name)
 
     def put_frame(self, image: np.ndarray, metadata: np.ndarray):
         if self.read_only:

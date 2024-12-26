@@ -19,7 +19,7 @@ def test_multi_camera_trigger_loop(
         mock_videocapture: cv2.VideoCapture
 ):
     shm_manager, recreated_shm_manager = camera_group_shared_memory_fixture
-    shm_names = shm_manager.shared_memory_names
+    shm_names = shm_manager.camera_shm_dtos
     exit_event = multiprocessing.Event()
     camera_group_orchestrator = CameraGroupOrchestrator.from_camera_configs(shm_manager.connected_camera_configs)
     [camera_group_orchestrator.frame_loop_flags[camera_id].camera_ready_flag.set() for camera_id in

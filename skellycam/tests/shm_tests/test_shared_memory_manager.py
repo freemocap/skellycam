@@ -23,14 +23,14 @@ def test_create_camera_shared_memory_manager(camera_configs_fixture: CameraConfi
 def test_recreate_camera_shared_memory_manager(camera_shared_memory_manager_fixture: CameraGroupSharedMemory):
     recreated_manager = CameraGroupSharedMemory.recreate(
         camera_configs=camera_shared_memory_manager_fixture.camera_configs,
-        group_shm_names=camera_shared_memory_manager_fixture.shared_memory_names)
+        group_shm_names=camera_shared_memory_manager_fixture.camera_shm_dtos)
     assert isinstance(recreated_manager, CameraGroupSharedMemory)
     assert len(recreated_manager.camera_shms) == len(camera_shared_memory_manager_fixture.camera_shms)
 
 
 def test_shared_memory_names_property(camera_shared_memory_manager_fixture: CameraGroupSharedMemory):
     manager = camera_shared_memory_manager_fixture
-    shared_memory_names = manager.shared_memory_names
+    shared_memory_names = manager.camera_shm_dtos
     assert isinstance(shared_memory_names, Dict)
     for shm_name in shared_memory_names.values():
         assert isinstance(shm_name, SharedMemoryNames)

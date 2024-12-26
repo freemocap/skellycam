@@ -213,7 +213,7 @@ def camera_group_shared_memory_fixture(camera_configs_fixture: CameraConfigs,
     manager = CameraGroupSharedMemory.create(camera_configs=camera_configs_fixture)
     assert manager
     recreated_manager = CameraGroupSharedMemory.recreate(camera_configs=camera_configs_fixture,
-                                                         group_shm_names=manager.shared_memory_names
+                                                         group_shm_names=manager.camera_shm_dtos
                                                          )
     yield manager, recreated_manager
 
@@ -231,7 +231,7 @@ def camera_group_orchestrator_fixture(camera_configs_fixture: CameraConfigs,
 def camera_group_shared_memory_names_fixture(camera_group_shared_memory_fixture: Tuple[
     CameraGroupSharedMemory, CameraGroupSharedMemory]) -> GroupSharedMemoryNames:
     og_manager, recreated_manager = camera_group_shared_memory_fixture
-    yield og_manager.shared_memory_names
+    yield og_manager.camera_shm_dtos
 
 
 @pytest.fixture
@@ -243,7 +243,7 @@ def exit_event_fixture() -> multiprocessing.Event:
 def camera_group_shared_memory_names_fixture(camera_group_shared_memory_fixture: Tuple[
     CameraGroupSharedMemory, CameraGroupSharedMemory]) -> GroupSharedMemoryNames:
     og_manager, recreated_manager = camera_group_shared_memory_fixture
-    yield og_manager.shared_memory_names
+    yield og_manager.camera_shm_dtos
 
 
 @pytest.fixture

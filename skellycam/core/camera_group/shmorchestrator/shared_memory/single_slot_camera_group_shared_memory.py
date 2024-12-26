@@ -6,18 +6,19 @@ from typing import Dict, Optional, List
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_names import GroupSharedMemoryNames
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
-    SingleSlotCameraSharedMemory
+    SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)
+
+CameraSharedMemoryDTOs = Dict[CameraId, CameraSharedMemoryDTO]
 
 
 @dataclass
 class SingleSlotCameraGroupSharedMemoryDTO:
     camera_group_dto: CameraGroupDTO
-    group_shm_names: GroupSharedMemoryNames
+    camera_shm_dtos: CameraSharedMemoryDTOs
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
 
@@ -50,7 +51,7 @@ class SingleSlotCameraGroupSharedMemory:
                  shm_dto: SingleSlotCameraGroupSharedMemoryDTO,
                  read_only: bool):
         camera_shms = {camera_id: SingleSlotCameraSharedMemory.recreate(camera_config=config,
-                                                                        shared_memory_names=shm_dto.group_shm_names[
+                                                                        camera_shm_dto=shm_dto.camera_shm_dtos[
                                                                             camera_id],
                                                                         read_only=read_only)
                        for camera_id, config in camera_group_dto.camera_configs.items()}
@@ -62,8 +63,8 @@ class SingleSlotCameraGroupSharedMemory:
                    read_only=read_only)
 
     @property
-    def shared_memory_names(self) -> GroupSharedMemoryNames:
-        return {camera_id: camera_shared_memory.shared_memory_names for camera_id, camera_shared_memory in
+    def camera_shm_dtos(self) -> CameraSharedMemoryDTOs:
+        return {camera_id: camera_shared_memory.to_dto() for camera_id, camera_shared_memory in
                 self.camera_shms.items()}
 
     @property
@@ -76,7 +77,7 @@ class SingleSlotCameraGroupSharedMemory:
 
     def to_dto(self) -> SingleSlotCameraGroupSharedMemoryDTO:
         return SingleSlotCameraGroupSharedMemoryDTO(camera_group_dto=self.camera_group_dto,
-                                                    group_shm_names=self.shared_memory_names,
+                                                    camera_shm_dtos=self.camera_shm_dtos,
                                                     shm_valid_flag=self.shm_valid_flag,
                                                     latest_mf_number=self.latest_mf_number)
 

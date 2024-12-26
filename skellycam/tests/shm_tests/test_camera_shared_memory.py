@@ -27,7 +27,7 @@ def test_create_camera_shared_memory(camera_config_fixture: CameraConfig) -> Non
 
 def test_recreate_camera_shared_memory(camera_config_fixture: CameraConfig) -> None:
     camera_shm = CameraSharedMemory.create(camera_config_fixture)
-    shm_names = camera_shm.shared_memory_names
+    shm_names = camera_shm.camera_shm_dtos
 
     recreated_camera_shm = CameraSharedMemory.recreate(camera_config=camera_config_fixture,
                                                        shared_memory_names=shm_names)
@@ -66,7 +66,7 @@ def test_close_and_unlink(camera_config_fixture: CameraConfig) -> None:
     # Test for image_shm
     image_shm_not_found_exception_raised = False
     try:
-        SharedMemoryElement.recreate(shm_name=camera_shm.shared_memory_names.image_shm_name,
+        SharedMemoryElement.recreate(shm_name=camera_shm.camera_shm_dtos.image_shm_name,
                                      shape=camera_config_fixture.image_shape,
                                      dtype=IMAGE_DATA_DTYPE)
     except FileNotFoundError:
@@ -76,7 +76,7 @@ def test_close_and_unlink(camera_config_fixture: CameraConfig) -> None:
     # Test for metadata_shm
     metadata_shm_not_found_exception_raised = False
     try:
-        SharedMemoryElement.recreate(shm_name=camera_shm.shared_memory_names.metadata_shm_name,
+        SharedMemoryElement.recreate(shm_name=camera_shm.camera_shm_dtos.metadata_shm_name,
                                      shape=FRAME_METADATA_SHAPE,
                                      dtype=FRAME_METADATA_DTYPE)
     except FileNotFoundError:
@@ -92,7 +92,7 @@ def test_integration_workflow(camera_config_fixture: CameraConfig,
     camera_shm.put_frame(image=image, metadata=frame_metadata_fixture)
 
     # Recreate CameraSharedMemory and retrieve frame
-    shm_names = camera_shm.shared_memory_names
+    shm_names = camera_shm.camera_shm_dtos
     recreated_camera_shm = CameraSharedMemory.recreate(camera_config=camera_config_fixture,
                                                        shared_memory_names=shm_names)
     frame_dto = recreated_camera_shm.retrieve_next_frame()
