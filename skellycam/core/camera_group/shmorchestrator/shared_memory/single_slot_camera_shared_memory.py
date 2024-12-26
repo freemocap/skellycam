@@ -4,7 +4,6 @@ import time
 from dataclasses import dataclass
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
@@ -14,21 +13,22 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CameraSharedMemoryDTO:
     last_read_frame_number: multiprocessing.Value
-    last_wrote_frame_number: multiprocessing.Value
+    last_written_frame_number: multiprocessing.Value
     image_shm_name: str
     metadata_shm_name: str
 
-
-class SingleSlotCameraSharedMemory(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+@dataclass
+class SingleSlotCameraSharedMemory:
     last_read_frame_number: multiprocessing.Value
-    last_wrote_frame_number: multiprocessing.Value
+    last_written_frame_number: multiprocessing.Value
     image_shm: SharedMemoryElement
     metadata_shm: SharedMemoryElement
     read_only: bool
+
 
     @classmethod
     def create(
@@ -45,12 +45,11 @@ class SingleSlotCameraSharedMemory(BaseModel):
             dtype=FRAME_METADATA_DTYPE,
         )
 
-
         return cls(
             image_shm=image_shm,
             metadata_shm=metadata_shm,
             last_read_frame_number=multiprocessing.Value("l", -1),
-            last_wrote_frame_number=multiprocessing.Value("l", -1),
+            last_written_frame_number=multiprocessing.Value("l", -1),
             read_only=read_only,
 
         )
@@ -74,18 +73,19 @@ class SingleSlotCameraSharedMemory(BaseModel):
             image_shm=image_shm,
             metadata_shm=metadata_shm,
             last_read_frame_number=camera_shm_dto.last_read_frame_number,
-            last_wrote_frame_number=camera_shm_dto.last_wrote_frame_number,
+            last_written_frame_number=camera_shm_dto.last_written_frame_number,
             read_only=read_only,
         )
 
     def to_dto(self) -> CameraSharedMemoryDTO:
         return CameraSharedMemoryDTO(image_shm_name=self.image_shm.name,
                                      metadata_shm_name=self.metadata_shm.name,
-                                        last_read_frame_number=self.last_read_frame_number)
+                                     last_written_frame_number=self.last_written_frame_number,
+                                     last_read_frame_number=self.last_read_frame_number)
 
     @property
     def new_frame_available(self) -> bool:
-        return self.last_read_frame_number.value < self.last_wrote_frame_number.value
+        return self.last_read_frame_number.value < self.last_written_frame_number.value
 
     def put_frame(self, image: np.ndarray, metadata: np.ndarray):
         if self.read_only:
@@ -93,7 +93,7 @@ class SingleSlotCameraSharedMemory(BaseModel):
         metadata[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         self.image_shm.put_data(image)
         self.metadata_shm.put_data(metadata)
-        self.last_wrote_frame_number = metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
+        self.last_written_frame_number.value = metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} put frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} into shared memory"
         )
