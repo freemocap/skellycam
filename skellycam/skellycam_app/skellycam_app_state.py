@@ -65,6 +65,12 @@ class SkellycamAppState:
             return available_cameras_to_default_camera_configs(self.available_cameras)
         return self.camera_group.camera_configs
 
+    @property
+    def camera_configs(self) -> CameraConfigs:
+        if self.camera_group is None:
+            raise ValueError("Cannot get CameraConfigs without CameraGroup!")
+        return self.camera_group.camera_configs
+
     def set_available_cameras(self, value: AvailableCameras):
         self.available_cameras = value
         self.ipc_queue.put(self.state_dto())
