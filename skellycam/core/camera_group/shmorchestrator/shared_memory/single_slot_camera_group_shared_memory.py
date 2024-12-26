@@ -95,6 +95,9 @@ class SingleSlotCameraGroupSharedMemory:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
+            if not camera_shared_memory.new_frame_available:
+                raise ValueError(f"Camera {camera_id} does not have a new frame available!")
+
             frame = camera_shared_memory.retrieve_frame()
             if frame.frame_number != self.latest_mf_number.value + 1:
                 raise ValueError(
