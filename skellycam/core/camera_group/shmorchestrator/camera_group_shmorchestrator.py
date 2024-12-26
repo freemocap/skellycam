@@ -31,7 +31,7 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
                camera_group_dto: CameraGroupDTO,
                ipc_flags: IPCFlags,
                read_only: bool):
-        return cls(frame_loop_shm=SingleSlotCameraGroupSharedMemory.create(camera_group_dto=camera_group_dto,
+        return cls(frame_loop_shm=SingleSlotCameraGroupSharedMemory.create(camera_configs=camera_group_dto.camera_configs,
                                                                            read_only=read_only),
                    multi_frame_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.create(camera_group_dto=camera_group_dto,
                                                                                        read_only=read_only),
@@ -45,8 +45,7 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
                  shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                  read_only: bool):
         return cls(
-            frame_loop_shm=SingleSlotCameraGroupSharedMemory.recreate(camera_group_dto=camera_group_dto,
-                                                                      shm_dto=shmorc_dto.frame_loop_shm_dto,
+            frame_loop_shm=SingleSlotCameraGroupSharedMemory.recreate(shm_dto=shmorc_dto.frame_loop_shm_dto,
                                                                       read_only=read_only),
             multi_frame_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.recreate(camera_group_dto=camera_group_dto,
                                                                                   shm_dto=shmorc_dto.multi_frame_escape_shm_dto,

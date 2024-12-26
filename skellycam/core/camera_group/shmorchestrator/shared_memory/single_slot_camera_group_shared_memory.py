@@ -17,7 +17,7 @@ CameraSharedMemoryDTOs = Dict[CameraId, CameraSharedMemoryDTO]
 
 @dataclass
 class SingleSlotCameraGroupSharedMemoryDTO:
-    camera_group_dto: CameraGroupDTO
+    camera_configs: CameraConfigs
     camera_shm_dtos: CameraSharedMemoryDTOs
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
@@ -25,7 +25,7 @@ class SingleSlotCameraGroupSharedMemoryDTO:
 
 @dataclass
 class SingleSlotCameraGroupSharedMemory:
-    camera_group_dto: CameraGroupDTO
+    camera_configs: CameraConfigs
     camera_shms: Dict[CameraId, SingleSlotCameraSharedMemory]
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
@@ -33,13 +33,13 @@ class SingleSlotCameraGroupSharedMemory:
 
     @classmethod
     def create(cls,
-               camera_group_dto: CameraGroupDTO,
+               camera_configs: CameraConfigs,
                read_only: bool = False):
         camera_shms = {camera_id: SingleSlotCameraSharedMemory.create(camera_config=config,
                                                                       read_only=read_only)
-                       for camera_id, config in camera_group_dto.camera_configs.items()}
+                       for camera_id, config in camera_configs.items()}
 
-        return cls(camera_group_dto=camera_group_dto,
+        return cls(camera_configs=camera_configs,
                    camera_shms=camera_shms,
                    shm_valid_flag=multiprocessing.Value('b', True),
                    latest_mf_number=multiprocessing.Value("l", -1),
@@ -47,16 +47,15 @@ class SingleSlotCameraGroupSharedMemory:
 
     @classmethod
     def recreate(cls,
-                 camera_group_dto: CameraGroupDTO,
                  shm_dto: SingleSlotCameraGroupSharedMemoryDTO,
                  read_only: bool):
         camera_shms = {camera_id: SingleSlotCameraSharedMemory.recreate(camera_config=config,
                                                                         camera_shm_dto=shm_dto.camera_shm_dtos[
                                                                             camera_id],
                                                                         read_only=read_only)
-                       for camera_id, config in camera_group_dto.camera_configs.items()}
+                       for camera_id, config in shm_dto.camera_configs.items()}
 
-        return cls(camera_group_dto=camera_group_dto,
+        return cls(camera_configs=shm_dto.camera_configs,
                    camera_shms=camera_shms,
                    shm_valid_flag=shm_dto.shm_valid_flag,
                    latest_mf_number=shm_dto.latest_mf_number,
@@ -69,14 +68,14 @@ class SingleSlotCameraGroupSharedMemory:
 
     @property
     def camera_ids(self) -> List[CameraId]:
-        return list(self.camera_group_dto.camera_ids.keys())
+        return list(self.camera_shms.keys())
 
     @property
     def valid(self) -> bool:
         return self.shm_valid_flag.value
 
     def to_dto(self) -> SingleSlotCameraGroupSharedMemoryDTO:
-        return SingleSlotCameraGroupSharedMemoryDTO(camera_group_dto=self.camera_group_dto,
+        return SingleSlotCameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
                                                     camera_shm_dtos=self.camera_shm_dtos,
                                                     shm_valid_flag=self.shm_valid_flag,
                                                     latest_mf_number=self.latest_mf_number)
