@@ -8,6 +8,7 @@ from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
+from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
 
 def get_video_file_type(fourcc_code: int) -> Optional[str]:
@@ -78,11 +79,18 @@ class CameraConfig(BaseModel):
     pixel_format: str = Field(default="RGB",
                               description="How to interpret the color channels")
 
+    exposure_mode: str = Field(DefaultCameraConfig.EXPOSURE_MODE.value,
+                               description="The exposure mode to use for the camera, "
+                                           "AUTO for device automatic exposure, "
+                                           "MANUAL to set the exposure manually, "
+                                           "or RECOMMENDED to use the find the setting "
+                                           "that puts mean pixel intensity at 128 (255/2).")
     exposure: int | str = Field(
         default=DefaultCameraConfig.EXPOSURE.value,
-        description="The exposure of the camera using the opencv convention - "
+        description="The exposure of the camera using the opencv convention (the number is the exposure time in ms, raised to the power of -2). "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/ "
-                    "or 'AUTO' to use automatic exposure (Hint! Set this as low as possible to avoid blur. Mocap likes BRIGHT environments and FAST/LOW exposure settings!)",
+                    " (Hint! Set this as low as possible to avoid blur."
+                    " Mocap likes BRIGHT environments and FAST/LOW exposure settings!)",
     )
 
     framerate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,

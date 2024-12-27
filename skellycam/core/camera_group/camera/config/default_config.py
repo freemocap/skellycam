@@ -3,8 +3,9 @@ from enum import Enum
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
+from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
-DEFAULT_EXPOSURE = -7
+# DEFAULT_EXPOSURE = -7
 
 DEFAULT_IMAGE_HEIGHT: int = 720
 DEFAULT_IMAGE_WIDTH: int = 1280
@@ -22,7 +23,8 @@ class DefaultCameraConfig(Enum):
     USE_THIS_CAMERA = True
     RESOLUTION = DEFAULT_RESOLUTION
     COLOR_CHANNELS: int = DEFAULT_IMAGE_CHANNELS
-    EXPOSURE: int = DEFAULT_EXPOSURE
+    EXPOSURE_MODE: str = ExposureModes.RECOMMENDED.name
+    EXPOSURE: int = -7
     FRAMERATE: float = DEFAULT_FRAME_RATE
     ROTATION: RotationTypes = RotationTypes.NO_ROTATION
     CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
