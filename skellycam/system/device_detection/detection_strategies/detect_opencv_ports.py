@@ -20,7 +20,6 @@ def get_available_cameras_opencv() -> AvailableCameras:
 
 
 def check_opencv_camera_port_available(port: int, check_images:int=5) -> bool:
-    logger.trace(f"Checking if camera on port: {port} is available...")
     cap = cv2.VideoCapture(port)
     try:
         successes = []
@@ -48,7 +47,7 @@ def check_opencv_camera_port_available(port: int, check_images:int=5) -> bool:
         same_image = mean_image_diffs < 0.01
 
         if cap.isOpened() and all_success and all_images and mean_duration < 2 and not same_image:
-            logger.debug(f"Camera on port: {port} is available: All success: {all_success}, All images: {all_images}, Mean image grab duration: {mean_duration*1000:.3f} (ms), Mean image diffs: {mean_image_diffs:.3f}")
+            logger.trace(f"Camera on port: {port} is available: All success: {all_success}, All images: {all_images}, Mean image grab duration: {mean_duration*1000:.3f} (ms), Mean image diffs: {mean_image_diffs:.3f}")
         else:
             logger.trace(f"Camera on port: {port} is not available: All success: {all_success}, All images: {all_images}, Mean duration: {mean_duration*1000:.3f} (ms, if higher than 1.0, this is likely a virtual camera), Mean image diffs: {mean_image_diffs} (if lower than 0.01, this is likely a virtual camera sending identical images)")
             return False
@@ -59,11 +58,17 @@ def check_opencv_camera_port_available(port: int, check_images:int=5) -> bool:
             cap.release()
         return False
 
-def detect_opencv_ports(max_ports: int = 20) -> List[int]:
+def detect_opencv_ports(max_ports: int = 20, give_up_after:int=3) -> List[int]:
     ports = []
+    failed_port_count = 0
     for port in range(max_ports):
         if check_opencv_camera_port_available(port):
             ports.append(port)
+            failed_port_count = 0
+        else:
+            failed_port_count += 1
+            if failed_port_count >= give_up_after:
+                break
 
     return ports
 
