@@ -35,7 +35,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
                 f"Failed to apply configuration to Camera {config.camera_id} - Camera is not open"
             )
         if config.exposure_mode == ExposureModes.RECOMMENDED.name:
-            optimized_exposure = get_recommended_cv2_cap_exposure(cv2_vid_capture) -1
+            optimized_exposure = get_recommended_cv2_cap_exposure(cv2_vid_capture)
             cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
             cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(optimized_exposure))
             logger.info(f"Setting camera {config.camera_id} to recommended exposure: {optimized_exposure}")
