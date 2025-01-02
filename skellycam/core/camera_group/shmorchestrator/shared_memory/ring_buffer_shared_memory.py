@@ -118,7 +118,7 @@ class SharedMemoryRingBuffer:
         index_to_read = self.last_read_index.value + 1
         if index_to_read > self.last_written_index.value:
             raise ValueError("Cannot read past the last written index!")
-        shm_data = self.ring_buffer_shm.buffer[index_to_read % self.ring_buffer_length]
+        shm_data = self.ring_buffer_shm.buffer[index_to_read % self.ring_buffer_length].copy()
         self.last_read_index.value = index_to_read
         return shm_data
 
@@ -133,7 +133,7 @@ class SharedMemoryRingBuffer:
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
 
-        return self.ring_buffer_shm.buffer[self.last_written_index.value % self.ring_buffer_length]
+        return self.ring_buffer_shm.buffer[self.last_written_index.value % self.ring_buffer_length].copy()
 
     def close(self):
         self.ring_buffer_shm.close()

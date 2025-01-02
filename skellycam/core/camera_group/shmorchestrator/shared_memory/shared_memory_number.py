@@ -24,7 +24,7 @@ class SharedMemoryNumber(BaseModel):
 
     @property
     def value(self) -> int:
-        return int(self.shm_element.buffer[0])
+        return int(self.shm_element.buffer[0].copy())
 
     @value.setter
     def value(self, value: int):
@@ -36,7 +36,7 @@ class SharedMemoryNumber(BaseModel):
 
     def get(self) -> int:
         """Get the current value of the counter."""
-        return int(self.shm_element.buffer[0])
+        return int(self.shm_element.buffer[0].copy())
 
     def close(self) -> None:
         """Close the shared memory."""
