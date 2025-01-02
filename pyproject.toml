@@ -73,11 +73,14 @@ dependencies = [
     "pyaudio>=0.2.14",
     "pygrabber>=0.2",
     "tabulate>=0.9.0",
+        "skellytracker",
 ]
 requires-python = ">=3.10,<3.13"
 
 dynamic = ["version", "description"]
 
+[tool.uv.sources]
+skellytracker = { git = "https://github.com/freemocap/skellytracker", branch = "jon/development" }
 [project.optional-dependencies]
 dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
 

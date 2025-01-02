@@ -53,7 +53,7 @@ class FrameListenerProcess:
                 if new_configs_queue.qsize() > 0:
                     camera_configs = new_configs_queue.get()
 
-                if orchestrator.should_pull_multi_frame_from_shm.value:
+                if orchestrator.should_pull_multi_frame_from_shm.value and orchestrator.new_multi_frame_available:
 
                     tik1 = time.perf_counter_ns()
                     mf_payload: MultiFramePayload = frame_loop_shm.get_multi_frame_payload(
