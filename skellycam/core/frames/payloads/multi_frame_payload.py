@@ -203,7 +203,6 @@ class MultiFramePayload(BaseModel):
                       previous: 'MultiFramePayload',
                       camera_configs: CameraConfigs) -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
-                   multi_frame_number=previous.multi_frame_number + 1,
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
                    camera_configs=camera_configs,
                    )

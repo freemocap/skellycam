@@ -103,6 +103,11 @@
             const logEntry = document.createElement('div');
             logEntry.innerText = entry;
             logContainer.prepend(logEntry);
+
+            // Limit the number of log entries to 30
+            if (logContainer.children.length > 30) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
         }
 
         async function callApi(endpoint, method = 'GET') {
