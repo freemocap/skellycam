@@ -62,27 +62,31 @@ class CameraViewGrid(QWidget):
         for camera_id, single_camera_view in self._single_camera_views.items():
             single_camera_view.update_image(base64_str=frontend_payload.jpeg_images[camera_id])
 
-    def create_single_camera_views(self, frontend_payload:FrontendFramePayload):
-
+    def create_single_camera_views(self, frontend_payload: FrontendFramePayload):
         landscape_camera_number = -1
         portrait_camera_number = -1
-        for camera_id, camera_config in frontend_payload.camera_configs.items():
+        total_landscape_cameras = sum(
+            1 for config in frontend_payload.camera_configs.values() if config.orientation in ["landscape", "square"]
+        )
 
+        max_rows_for_landscape = 2 if total_landscape_cameras <= 4 else 3
+        max_columns_for_landscape = 2 if total_landscape_cameras <= 4 else 3
+
+        for camera_id, camera_config in frontend_payload.camera_configs.items():
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
                                                         camera_config=camera_config,
                                                         parent=self)
 
-            if camera_config.orientation == "landscape" or "square":
+            if camera_config.orientation in ["landscape", "square"]:
                 landscape_camera_number += 1
-                divmod_whole, divmod_remainder = divmod(int(landscape_camera_number),
-                                                        MAX_NUM_ROWS_FOR_LANDSCAPE_CAMERA_VIEWS)
+                divmod_whole, divmod_remainder = divmod(landscape_camera_number, max_columns_for_landscape)
                 grid_row = divmod_whole
                 grid_column = divmod_remainder
                 self._camera_landscape_grid_layout.addWidget(single_camera_view, grid_row, grid_column)
 
             elif camera_config.orientation == "portrait":
                 portrait_camera_number += 1
-                divmod_whole, divmod_remainder = divmod(int(portrait_camera_number),
+                divmod_whole, divmod_remainder = divmod(portrait_camera_number,
                                                         MAX_NUM_COLUMNS_FOR_PORTRAIT_CAMERA_VIEWS)
                 grid_row = divmod_whole
                 grid_column = divmod_remainder

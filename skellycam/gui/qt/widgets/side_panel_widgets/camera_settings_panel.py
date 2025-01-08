@@ -165,16 +165,28 @@ class CameraSettingsPanel(QWidget):
 
     def _copy_settings_to_all_cameras(self, camera_id_to_copy_from: CameraId):
         logger.gui(f"Applying settings to all cameras from camera {camera_id_to_copy_from}")
-        camera_configs = self._user_selected_camera_configs
-        for camera_id in camera_configs.keys():
+        if not self._user_selected_camera_configs:
+            return
+
+        source_config = self._user_selected_camera_configs.get(camera_id_to_copy_from)
+        if not source_config:
+            return
+
+        for camera_id, parameter_group in self._parameter_groups.items():
             if camera_id == camera_id_to_copy_from:
                 continue
-            original_config = deepcopy(self._user_selected_camera_configs[camera_id])
-            camera_configs[camera_id] = deepcopy(self._user_selected_camera_configs[camera_id_to_copy_from])
-            camera_configs[camera_id].camera_id = camera_id
-            camera_configs[camera_id].use_this_camera = original_config.use_this_camera
-        self._update_user_selected_camera_settings()
 
+            # Update the parameter group with the source config values
+            parameter_group.param(USE_THIS_CAMERA_STRING).setValue(source_config.use_this_camera)
+            parameter_group.param("Resolution").setValue(str(source_config.resolution))
+            parameter_group.param("Exposure").setValue(str(source_config.exposure))
+            parameter_group.param("Framerate").setValue(source_config.framerate)
+            parameter_group.param("Video Capture FourCC").setValue(source_config.capture_fourcc)
+            parameter_group.param("Video Writer FourCC").setValue(source_config.writer_fourcc)
+            parameter_group.param("Rotate").setValue(source_config.rotation.name)
+
+        # Update the internal state
+        self._update_user_selected_camera_settings()
     def _enable_or_disable_camera_settings(self, camera_config_parameter_group):
         use_this_camera_checked = camera_config_parameter_group.param(
             USE_THIS_CAMERA_STRING

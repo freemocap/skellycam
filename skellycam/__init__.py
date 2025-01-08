@@ -25,7 +25,7 @@ from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.logger_builder import LogLevels
 
-configure_logging(LogLevels.TRACE)
+configure_logging(LogLevels.GUI)
 
 
 __all__ = [

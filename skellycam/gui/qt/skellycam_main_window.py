@@ -195,10 +195,14 @@ class SkellyCamMainWindow(QMainWindow):
         self._control_panel.close_cameras_button.setEnabled(True)
         if detect_clientside:
             if not self._control_panel.user_selected_camera_configs:
-                self._control_panel.camera_settings_panel.update_available_devices(get_available_cameras())
+                self._control_panel.camera_settings_panel.update_available_devices(get_available_cameras(CameraDetectionStrategies.QT_MULTIMEDIA))
                 self._client.cameras_connect_apply(self._control_panel.user_selected_camera_configs)
             else:
                 self._client.cameras_connect_detect()
+        else:
+            self._client.cameras_connect_detect()
+        
+
 
     @Slot()
     def close_cameras(self):
