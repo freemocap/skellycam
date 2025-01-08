@@ -1,6 +1,7 @@
 # SPECIAL INSTRUCTIONS FOR THE `jon/development` BRANCH 
 
 ## Installation
+
 ### Python server
 0. Install `uv` 
    - https://github.com/astral-sh/uv?tab=readme-ov-file#installation
@@ -17,6 +18,15 @@
    - Mac/Linux: `source .venv/bin/activate`
 6. Install dependencies
   - `uv sync`
+
+#### Linux only (?)
+You need to install `clang` and `portaudio` to get the audio recording stuff to work.
+```
+sudo apt update
+sudo apt install clang
+sudo apt install portaudio19-dev
+```
+   
 
 
 ## Run the SkellyCam application (QT GUI and FastAPI/Uvicorn server) i
