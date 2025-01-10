@@ -69,7 +69,7 @@ class FrameRouterProcess:
                 wait_1ms()
 
                 # Check for new camera configs
-                if new_configs_queue.qsize() > 0:
+                if not new_configs_queue.empty():
                     camera_configs = new_configs_queue.get()
 
                 # Fully drain the ring shm buffer every time and put the frames into a deque in this Process' memory
