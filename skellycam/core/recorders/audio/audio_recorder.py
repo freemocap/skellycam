@@ -55,7 +55,7 @@ class AudioRecorder:
                                                        self.should_continue),
                                                  daemon=True)
         self.rate = rate
-        self.channels = channels
+        self.channels = self._validate_channel_input(channel_input=channels)
         self.chunk_size = chunk_size
         self.frames = []
         self.audio_recording_info: Optional[AudioRecordingInfo] = None
@@ -143,6 +143,18 @@ class AudioRecorder:
         with open(timestamps_filename, 'w') as f:
             f.write(json.dumps(self.audio_recording_info.model_dump(), indent=4))
         logger.debug(f"Audio timestamps saved to {timestamps_filename}")
+
+    def _validate_channel_input(self, channel_input: int) -> int:
+        device_info = pyaudio.get_device_info_by_index(self.mic_device_index)
+        max_input_channels = device_info['maxInputChannels']
+        if channel_input > max_input_channels:
+            logger.debug(
+                f"Number of audio channels chosen ({channel_input}) exceeds device maximum"
+                f" - Defaulting to device maximum ({max_input_channels}) channels")
+            return max_input_channels
+        else:
+            return channel_input
+
 
 
 if __name__ == "__main__":
