@@ -89,13 +89,13 @@ class CameraManager(BaseModel):
 
     def _check_handle_config_update(self):
         # Check for new camera configs
-        if self.camera_group_dto.config_update_queue.qsize() > 0:
+        if not self.camera_group_dto.config_update_queue.empty():
             logger.trace(f"Handling camera config updates for cameras: {self.camera_ids}")
             update_instructions = self.camera_group_dto.config_update_queue.get()
 
             self.update_camera_configs(update_instructions)
             while any(
-                    [camera_process.new_config_queue.qsize() > 0 for camera_process in self.camera_processes.values()]):
+                    [not camera_process.new_config_queue.empty() for camera_process in self.camera_processes.values()]):
                 wait_100ms()
             self.orchestrator.await_cameras_ready()
             logger.trace(f"Camera configs updated for cameras: {self.camera_ids}")

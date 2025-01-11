@@ -141,7 +141,7 @@ def check_for_config_update(config: CameraConfig,
                             cv2_video_capture: cv2.VideoCapture,
                             new_config_queue: multiprocessing.Queue,
                             frame_loop_flags: CameraFrameLoopFlags) -> CameraConfig:
-    if new_config_queue.qsize() > 0:
+    if not new_config_queue.empty():
         logger.debug(f"Camera {config.camera_id} received new config update - setting `not ready`")
         frame_loop_flags.set_camera_not_ready()
         config = new_config_queue.get()

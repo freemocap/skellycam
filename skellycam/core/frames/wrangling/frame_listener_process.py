@@ -50,7 +50,7 @@ class FrameListenerProcess:
         try:
 
             while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
-                if new_configs_queue.qsize() > 0:
+                if not new_configs_queue.empty():
                     camera_configs = new_configs_queue.get()
 
                 if orchestrator.should_pull_multi_frame_from_shm.value and orchestrator.new_multi_frame_available:

@@ -50,7 +50,7 @@ class WebsocketServer:
 
         try:
             while True:
-                if self._app_state.ipc_queue.qsize() > 0:
+                if not self._app_state.ipc_queue.empty():
                     try:
                         await self._handle_ipc_queue_message(message=self._app_state.ipc_queue.get())
                     except multiprocessing.queues.Empty:
