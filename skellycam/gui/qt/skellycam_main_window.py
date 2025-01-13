@@ -164,7 +164,7 @@ class SkellyCamMainWindow(QMainWindow):
         #     lambda: self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
         # )
         self._control_panel.apply_settings_to_cameras_button.clicked.connect(
-            self.connect_to_cameras
+            lambda: self._client.cameras_connect_apply(self._control_panel.user_selected_camera_configs)
         )
         self._control_panel.close_cameras_button.clicked.connect(
             self.close_cameras
