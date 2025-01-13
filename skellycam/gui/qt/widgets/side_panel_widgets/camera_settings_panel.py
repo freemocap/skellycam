@@ -91,9 +91,16 @@ class CameraSettingsPanel(QWidget):
                     tip=config_schema['rotation'].description,
                 ),
                 dict(
+                    name=self.tr("Exposure Mode"),
+                    type="list",
+                    limits=["RECOMMENDED","AUTO", "MANUAL"],
+                    value=camera_config.exposure_mode,
+                    tip=config_schema['exposure_mode'].description,
+                ),
+                dict(
                     name=self.tr("Exposure"),
                     type="list",
-                    limits=["AUTO" , *[str(x) for x in range(-4, -13, -1)]],
+                    limits=[*[str(x) for x in range(-4, -13, -1)]],
                     value=str(camera_config.exposure),
                     tip=config_schema['exposure'].description,
                 ),
