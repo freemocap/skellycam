@@ -1,7 +1,6 @@
 import logging
 import multiprocessing
 import threading
-from multiprocessing import Process
 
 from skellycam.core.camera_group.camera.camera_manager import CameraManager
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
