@@ -21,6 +21,7 @@ class ControllerThreadManager:
         self._connect_to_cameras_task: Optional[Future] = None
         self._detect_available_cameras_task: Optional[Future] = None
         self._update_camera_configs_task: Optional[Future] = None
+        self._read_videos_task: Optional[Future] = None
 
     def submit_task(self, task_name: str, task_callable: Callable, *args, **kwargs):
         if getattr(self, f"_{task_name}_task") is None or getattr(self, f"_{task_name}_task").done():
