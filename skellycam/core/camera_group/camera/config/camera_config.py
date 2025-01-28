@@ -3,7 +3,7 @@ from typing import Tuple, Dict, Optional
 import cv2
 from pydantic import BaseModel, Field, field_validator
 
-from skellycam.core import BYTES_PER_MONO_PIXEL
+from skellycam.core import BYTES_PER_MONO_PIXEL, CameraName
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
@@ -57,7 +57,7 @@ class CameraConfig(BaseModel):
         default=DefaultCameraConfig.CAMERA_ID.value,
         description="The id of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera",
     )
-    camera_name: str = Field(
+    camera_name: CameraName = Field(
         default=DefaultCameraConfig.CAMERA_NAME.value,
         description="The name of the camera, if known",
     )

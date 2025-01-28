@@ -4,7 +4,7 @@ from typing import List, Dict
 
 from pydantic import BaseModel
 
-from skellycam.core import CameraId
+from skellycam.core import CameraId, CameraName
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
@@ -52,7 +52,7 @@ class CameraDeviceInfo(BaseModel):
     # TODO - deprecate `/camreas/detect/` route and move 'detection' responsibilities to client - remove all refrence to QT and Pyside
     """
 
-    description: str
+    description: CameraName
     device_address: str
     cv2_port: int
     available_video_formats: List[DeviceVideoFormat]
