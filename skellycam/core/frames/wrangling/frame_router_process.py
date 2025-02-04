@@ -95,10 +95,11 @@ class FrameRouterProcess:
                                     f"FrameRouter expected mf_payload #{previous_mf_payload_pulled_from_deque.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
                         previous_mf_payload_pulled_from_deque = mf_payload
                         if not recording_manager:
+                            nametag = camera_group_dto.ipc_flags.recording_nametag.value.decode("utf-8")
                             recording_manager = RecordingManager.create(multi_frame_payload=mf_payload,
                                                                         camera_configs=camera_group_dto.camera_configs,
                                                                         recording_folder=get_default_recording_folder_path(
-                                                                            tag=""))
+                                                                            tag=nametag))
                             if camera_group_dto.ipc_flags.mic_device_index.value != -1:
                                 audio_file_path = str(Path(
                                     recording_manager.videos_folder) / f"{recording_manager.recording_name}_audio.wav")
