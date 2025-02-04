@@ -109,8 +109,11 @@ class SkellycamAppState:
         logger.success("Camera group closed successfully")
 
     def start_recording(self, request: StartRecordingRequest):
+        print(f'REQUEST NAME: {request.recording_name} ')
         self.ipc_flags.mic_device_index.value = request.mic_device_index
         self.ipc_flags.record_frames_flag.value = True
+        self.ipc_flags.recording_nametag.value = request.recording_name
+        print(f'RECORDING NAME SET TO: {self.ipc_flags.recording_nametag.value}')
         self.ipc_queue.put(self.state_dto())
 
     def stop_recording(self):
