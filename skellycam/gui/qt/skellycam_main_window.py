@@ -175,7 +175,8 @@ class SkellyCamMainWindow(QMainWindow):
 
         # Recording Panel
         self._skellycam_camera_panel.recording_panel.start_recording_button.clicked.connect(
-            lambda: self._client.start_recording(StartRecordingRequest(mic_device_index=self._skellycam_camera_panel.recording_panel.audio_recording_panel.user_selected_mic_index))
+            lambda: self._client.start_recording(StartRecordingRequest(mic_device_index=self._skellycam_camera_panel.recording_panel.audio_recording_panel.user_selected_mic_index,
+                                                                       recording_name= self._skellycam_camera_panel.recording_panel.session_nametag.text().strip()))
         )
 
 
