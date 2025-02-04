@@ -5,6 +5,7 @@ from typing import Optional
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
@@ -67,6 +68,11 @@ class WebsocketServer:
         logger.info("Ending listener for client messages...")
 
     async def _handle_ipc_queue_message(self, message: Optional[object] = None):
+        if isinstance(message, CameraConfig):
+            logger.trace(f"Updating device extracted camera config for camera {message.camera_id}")
+            self._app_state.set_device_extracted_camera_config(message)
+            message = self._app_state.state_dto()
+
         if isinstance(message, SkellycamAppStateDTO):
             logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
 

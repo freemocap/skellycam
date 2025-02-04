@@ -1,3 +1,4 @@
+import enum
 from typing import Hashable
 
 from pydantic import BaseModel
@@ -53,3 +54,4 @@ class ImageResolution(BaseModel):
 
     def __str__(self) -> str:
         return f"({self.height}x{self.width})"
+

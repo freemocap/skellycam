@@ -48,6 +48,8 @@ class CameraGroup:
     def camera_configs(self) -> CameraConfigs:
         return self.dto.camera_configs
 
+
+
     @property
     def uuid(self) -> str:
         return self.group_uuid

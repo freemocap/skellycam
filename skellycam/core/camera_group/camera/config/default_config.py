@@ -23,7 +23,7 @@ class DefaultCameraConfig(Enum):
     USE_THIS_CAMERA = True
     RESOLUTION = DEFAULT_RESOLUTION
     COLOR_CHANNELS: int = DEFAULT_IMAGE_CHANNELS
-    EXPOSURE_MODE: str = ExposureModes.RECOMMENDED.name
+    EXPOSURE_MODE: str = ExposureModes.MANUAL.name
     EXPOSURE: int = -7
     FRAMERATE: float = DEFAULT_FRAME_RATE
     ROTATION: RotationTypes = RotationTypes.NO_ROTATION

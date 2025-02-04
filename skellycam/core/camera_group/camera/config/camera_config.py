@@ -8,7 +8,6 @@ from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
-from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
 
 def get_video_file_type(fourcc_code: int) -> Optional[str]:
@@ -79,7 +78,7 @@ class CameraConfig(BaseModel):
     pixel_format: str = Field(default="RGB",
                               description="How to interpret the color channels")
 
-    exposure_mode: str = Field(DefaultCameraConfig.EXPOSURE_MODE.value,
+    exposure_mode: str = Field(default=DefaultCameraConfig.EXPOSURE_MODE.value,
                                description="The exposure mode to use for the camera, "
                                            "AUTO for device automatic exposure, "
                                            "MANUAL to set the exposure manually, "

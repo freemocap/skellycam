@@ -17,7 +17,7 @@ class FailedToApplyCameraConfigurationError(Exception):
     pass
 
 
-def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> CameraConfig:
+def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig, initial: bool = False) -> CameraConfig:
     # set camera stream parameters
 
     logger.info(
@@ -34,7 +34,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
             raise FailedToApplyCameraConfigurationError(
                 f"Failed to apply configuration to Camera {config.camera_id} - Camera is not open"
             )
-        if config.exposure_mode == ExposureModes.RECOMMENDED.name:
+        if config.exposure_mode == ExposureModes.RECOMMENDED.name or initial:
             optimized_exposure = get_recommended_cv2_cap_exposure(cv2_vid_capture)
             cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
             cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(optimized_exposure))
@@ -53,10 +53,10 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
         )
         extracted_config = extract_config_from_cv2_capture(camera_id=config.camera_id,
                                                            cv2_capture=cv2_vid_capture,
-                                                           exposure_mode=config.exposure_mode,
+                                                           exposure_mode=ExposureModes.MANUAL.name, # set to manual after running recommended routine the first time
                                                            rotation=config.rotation,
                                                            use_this_camera=config.use_this_camera)
-        if not cv2_vid_capture.isOpened():
+        if not cv2_vid_capture.isOpened() or extracted_config is None:
             raise FailedToApplyCameraConfigurationError(
                 f"Failed to apply configuration to Camera {config.camera_id} - Camera closed when applying configuration"
             )
