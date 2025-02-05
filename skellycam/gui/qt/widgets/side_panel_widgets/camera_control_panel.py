@@ -3,9 +3,9 @@ import logging
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
-from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_settings_panel import CameraSettingsPanel
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.system.default_paths import CAMERA_WITH_FLASH_EMOJI_STRING, RED_X_EMOJI_STRING, \
     MAGNIFYING_GLASS_EMOJI_STRING, HAMMER_AND_WRENCH_EMOJI_STRING
 
@@ -40,6 +40,7 @@ class SkellycamCameraControlPanel(QWidget):
         self.detect_available_cameras_button = QPushButton(
             f"Detect Available Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{MAGNIFYING_GLASS_EMOJI_STRING}")
         self._layout.addWidget(self.detect_available_cameras_button)
+        self.detect_available_cameras_button.setEnabled(False)
 
         # self.connect_cameras_button = QPushButton(
         #     f"Connect Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{SPARKLES_EMOJI_STRING}")
@@ -65,9 +66,10 @@ class SkellycamCameraControlPanel(QWidget):
 
     @Slot(object)
     def handle_new_app_state(self, app_state: SkellycamAppStateDTO):
-        if app_state.available_devices:
+        if app_state.camera_configs:
             self.apply_settings_to_cameras_button.setEnabled(True)
-            self.camera_settings_panel.update_available_devices(app_state.available_devices)
+            self.camera_settings_panel.update_camera_configs(available_devices=app_state.available_devices,
+                                                             camera_configs=app_state.camera_configs)
         else:
             self.apply_settings_to_cameras_button.setEnabled(False)
 
@@ -75,4 +77,3 @@ class SkellycamCameraControlPanel(QWidget):
             self.close_cameras_button.setEnabled(True)
         else:
             self.close_cameras_button.setEnabled(False)
-

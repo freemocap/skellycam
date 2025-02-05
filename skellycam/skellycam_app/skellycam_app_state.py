@@ -8,7 +8,7 @@ from uuid import uuid4
 from pydantic import BaseModel
 from skellycam.core import CameraId
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
@@ -68,7 +68,11 @@ class SkellycamAppState:
 
     def set_available_cameras(self, value: AvailableCameras):
         self.available_cameras = value
-        self.ipc_queue.put(self.state_dto())
+
+    def set_device_extracted_camera_config(self, config: CameraConfig):
+        if self.camera_group is None or self.camera_group.camera_configs is None:
+            raise ValueError("Cannot set device extracted camera config without CameraGroup!")
+        self.camera_group.camera_configs[config.camera_id] = config
 
     def create_camera_group(self, camera_configs: CameraConfigs):
         if camera_configs is None:
@@ -140,7 +144,7 @@ class SkellycamAppStateDTO(BaseModel):
     """
     Serializable Data Transfer Object for the SkellycamAppState
     """
-    type: str = "SkellycamAppStateDTO"
+    type: str
     state_timestamp: str = datetime.now().isoformat()
 
     camera_configs: Optional[CameraConfigs]
@@ -150,11 +154,14 @@ class SkellycamAppStateDTO(BaseModel):
 
     @classmethod
     def from_state(cls, state: SkellycamAppState):
+
+
         return cls(
             camera_configs=state.camera_group_configs,
             available_devices=state.available_cameras,
             current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
+            type=cls.__name__
         )
 
 

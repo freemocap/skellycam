@@ -49,16 +49,17 @@ class CameraSettingsPanel(QWidget):
         return self._user_selected_camera_configs
 
     @Slot(object)
-    def update_available_devices(self, available_devices: AvailableCameras):
+    def update_camera_configs(self, available_devices: AvailableCameras, camera_configs: CameraConfigs | None  = None):
         logger.gui("Updating Camera Parameter Tree")
-        if self._available_devices == available_devices:
+        if self._available_devices == available_devices and self._app_state_camera_configs == camera_configs:
             return
         self._available_devices = available_devices
+        self._app_state_camera_configs = camera_configs
         if not self._available_devices or len(self._available_devices) == 0:
             return
         if not self._user_selected_camera_configs or len(self._user_selected_camera_configs) == 0:
-            self._user_selected_camera_configs = {camera_id: CameraConfig(camera_id=camera_id)
-                                                  for camera_id in self._available_devices.keys()}
+            self._user_selected_camera_configs = self._app_state_camera_configs
+
 
         if len(self._parameter_groups) > 0:
             self._parameter_tree.clear()

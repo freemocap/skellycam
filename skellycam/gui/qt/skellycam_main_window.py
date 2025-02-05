@@ -155,11 +155,11 @@ class SkellyCamMainWindow(QMainWindow):
         )
 
         # Camera Control Panel
-        self._control_panel.detect_available_cameras_button.clicked.connect(
-            lambda: self._control_panel.camera_settings_panel.update_available_devices(
-                get_available_cameras(CameraDetectionStrategies.OPENCV)
-            )
-        )
+        # self._control_panel.detect_available_cameras_button.clicked.connect(
+        #     lambda: self._control_panel.camera_settings_panel.update_camera_configs(
+        #         get_available_cameras(CameraDetectionStrategies.OPENCV)
+        #     )
+        # )
         # self._control_panel.connect_cameras_button.clicked.connect(
         #     lambda: self._client.apply_settings_to_cameras(self._control_panel.user_selected_camera_configs)
         # )
@@ -196,7 +196,7 @@ class SkellyCamMainWindow(QMainWindow):
         self._control_panel.close_cameras_button.setEnabled(True)
         if detect_clientside:
             if not self._control_panel.user_selected_camera_configs:
-                self._control_panel.camera_settings_panel.update_available_devices(get_available_cameras(CameraDetectionStrategies.QT_MULTIMEDIA))
+                self._control_panel.camera_settings_panel.update_camera_configs(get_available_cameras(CameraDetectionStrategies.QT_MULTIMEDIA))
                 self._client.cameras_connect_apply(self._control_panel.user_selected_camera_configs)
             else:
                 self._client.cameras_connect_detect()
