@@ -140,7 +140,7 @@ class SkellycamAppStateDTO(BaseModel):
     """
     Serializable Data Transfer Object for the SkellycamAppState
     """
-    type: str = "SkellycamAppStateDTO"
+    type: str
     state_timestamp: str = datetime.now().isoformat()
 
     camera_configs: Optional[CameraConfigs]
@@ -157,6 +157,7 @@ class SkellycamAppStateDTO(BaseModel):
             available_devices=state.available_cameras,
             current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
+            type=cls.__name__
         )
 
 
