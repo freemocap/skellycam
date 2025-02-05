@@ -1,8 +1,8 @@
 import logging
 from typing import Optional
 
-from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout
+from PySide6.QtCore import Slot, Qt
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout, QLineEdit
 
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
@@ -38,7 +38,19 @@ class RecordingPanel(QWidget):
 
         buttons_layout.addWidget(self.start_recording_button)
         buttons_layout.addWidget(self.stop_recording_button)
+
         self._layout.addLayout(buttons_layout)
+
+        session_nametag_layout = QHBoxLayout()
+        session_nametag_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.session_nametag_label = QLabel('Enter optional nametag here:')  
+        self.session_nametag = QLineEdit()
+        self.session_nametag.setFixedWidth(250)
+
+        session_nametag_layout.addWidget(self.session_nametag_label)
+        session_nametag_layout.addWidget(self.session_nametag)
+        session_nametag_layout.addStretch(1)
+        self._layout.addLayout(session_nametag_layout)
         self._recording_status_bar = self._create_recording_status_bar()
         self._layout.addLayout(self._recording_status_bar)
 
@@ -53,10 +65,15 @@ class RecordingPanel(QWidget):
         self.start_recording_button.setText("\U0001F534 Recording...")
         self._recording_status_label.setText(
             f"Recording Status: Recording in progress!")
+        
+        recording_tag = self.session_nametag.text().strip()
+
 
         if self._recording_info:
             self._recording_folder_label.setText(
                 f"Active Recording Folder:  {self._recording_info.recording_folder}")
+            
+        
 
 
     def handle_no_recording_in_progress(self):
