@@ -29,7 +29,7 @@ def check_opencv_camera_port_available(port: int, check_images:int=5) -> bool:
             tik = time.perf_counter()
             success, image = cap.read()
             if not success:
-                logger.trace(f"Failed to grab image from camera on port: {port}")
+                logger.trace(f"No available camera on port: {port}")
                 return False
             tok = time.perf_counter()
             successes.append(success)
