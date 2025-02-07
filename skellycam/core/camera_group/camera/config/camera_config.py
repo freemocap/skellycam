@@ -141,14 +141,14 @@ class CameraConfig(BaseModel):
         return self.model_dump() == other.model_dump()
 
     def __str__(self):
-        out_str = f"BASE CONFIG:\n"
+        out_str = f"\n\tBASE CONFIG:\n"
         for key, value in self.model_dump().items():
-            out_str += f"\t{key} ({type(value).__name__}): {value} \n"
-        out_str += "COMPUTED:\n"
-        out_str += f"\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
-        out_str += f"\torientation: {self.orientation}\n"
-        out_str += f"\timage_shape: {self.image_shape}\n"
-        out_str += f"\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
+            out_str += f"\t\t{key} ({type(value).__name__}): {value} \n"
+        out_str += "\tCOMPUTED:\n"
+        out_str += f"\t\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
+        out_str += f"\t\torientation: {self.orientation}\n"
+        out_str += f"\t\timage_shape: {self.image_shape}\n"
+        out_str += f"\t\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
         return out_str
 
 
