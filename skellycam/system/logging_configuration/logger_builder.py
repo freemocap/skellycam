@@ -9,7 +9,7 @@ from .logging_color_helpers import (
 )
 from ..default_paths import get_log_file_path
 
-
+MAX_DELTA_T_LEN = 10
 class LogLevels(Enum):
     ALL = logging.NOTSET  # 0 # All logs, including those from third-party libraries
     LOOP = 3  # For logs that are printed in a loop
