@@ -226,24 +226,27 @@ class CameraGroupOrchestrator:
         is_multi_frame_pulled_from_shm_reset = False
         are_camera_new_frame_available_flags_reset = False
         for attempt_number in range(max_attempts):
-            if self.should_continue:
-                are_cameras_ready = self.cameras_ready
-                are_frame_grab_flags_reset = self.frames_grabbed
-                are_frame_retrieve_flags_reset = self.frames_retrieved
-                is_multi_frame_pulled_from_shm_reset = not self.should_pull_multi_frame_from_shm.value
-                are_camera_new_frame_available_flags_reset = not any(
-                    [flags.new_frame_in_shm.value for flags in self.frame_loop_flags.values()])
+            if not self.should_continue:
+                logger.debug("Breaking out of frame loop verification due to kill flag being set")
+                self.ipc_flags.kill_camera_group_flag.value = True
+                return
+            are_cameras_ready = self.cameras_ready
+            are_frame_grab_flags_reset = self.frames_grabbed
+            are_frame_retrieve_flags_reset = self.frames_retrieved
+            is_multi_frame_pulled_from_shm_reset = not self.should_pull_multi_frame_from_shm.value
+            are_camera_new_frame_available_flags_reset = not any(
+                [flags.new_frame_in_shm.value for flags in self.frame_loop_flags.values()])
 
-                if all([are_cameras_ready,
-                        are_frame_grab_flags_reset,
-                        are_frame_retrieve_flags_reset,
-                        is_multi_frame_pulled_from_shm_reset,
-                        are_camera_new_frame_available_flags_reset]):
-                    logger.loop(f"Frame loop verification passed on attempt#{attempt_number + 1} of {max_attempts}")
-                    return  # All good, break out of loop
+            if all([are_cameras_ready,
+                    are_frame_grab_flags_reset,
+                    are_frame_retrieve_flags_reset,
+                    is_multi_frame_pulled_from_shm_reset,
+                    are_camera_new_frame_available_flags_reset]):
+                logger.loop(f"Frame loop verification passed on attempt#{attempt_number + 1} of {max_attempts}")
+                return  # All good, break out of loop
 
-                logger.warning(f"Frame loop verification failed on attempt {attempt_number + 1} - retrying...")
-                wait_1ms()
+            logger.warning(f"Frame loop verification failed on attempt {attempt_number + 1} - retrying...")
+            wait_1ms()
 
         raise AssertionError(f"Frame loop verification failed after {max_attempts} attempts -[\n"
                              f"are_cameras_ready: {are_cameras_ready}, \n"
