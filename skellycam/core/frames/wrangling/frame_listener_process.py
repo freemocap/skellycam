@@ -89,7 +89,7 @@ class FrameListenerProcess:
         except KeyboardInterrupt:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
-            logger.trace(f"Stopped listening for multi-frames")
+            logger.trace(f"{FrameListenerProcess.__class__.__name__} shutting down...")
             if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
                 logger.warning(
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")

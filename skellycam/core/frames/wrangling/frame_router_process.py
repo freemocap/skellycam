@@ -47,7 +47,7 @@ class FrameRouterProcess:
                      new_configs_queue: multiprocessing.Queue,
                      ):
 
-        logger.debug(f"FrameRouter  process started!")
+        logger.debug(f"FrameRouter process started!")
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         recording_manager: Optional[RecordingManager] = None
         frame_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer = MultiFrameEscapeSharedMemoryRingBuffer.recreate(

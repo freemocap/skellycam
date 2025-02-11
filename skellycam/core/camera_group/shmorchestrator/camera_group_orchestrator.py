@@ -219,7 +219,7 @@ class CameraGroupOrchestrator:
         if not self.cameras_ready:
             raise AssertionError("Not all cameras are ready!")
 
-    def _verify_hunky_dory_after_read(self, max_attempts=5):
+    def _verify_hunky_dory_after_read(self, max_attempts=100):
         are_cameras_ready = False
         are_frame_grab_flags_reset = False
         are_frame_retrieve_flags_reset = False
