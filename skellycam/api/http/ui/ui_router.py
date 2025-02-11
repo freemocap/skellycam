@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 from fastapi import APIRouter
 from starlette.responses import HTMLResponse
@@ -19,6 +20,7 @@ def serve_ui():
         ui_html_string = file.read()
     ui_html_string = ui_html_string.replace("{{HTTP_URL}}", APP_URL)
     ui_html_string =  ui_html_string.replace("{{WEBSOCKET_URL}}", APP_URL.replace("http", "ws"))
+    ui_html_string =  ui_html_string.replace("{{SKELLYCAM_DATA_FOLDER}}", str(Path().home()/"skellycam_data")).replace("\\", "/")
     return HTMLResponse(content=ui_html_string, status_code=200)
 
 

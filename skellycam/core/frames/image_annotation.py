@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from skellycam.core.recorders.timestamps.framerate_tracker import FrameRateTracker
+from skellycam.core.recorders.timestamps.framerate_tracker import FramerateTracker
 
 
 @dataclass
@@ -21,7 +21,7 @@ class ImageAnnotator:
     def annotate_image(self,
                        image: np.ndarray,
                        multi_frame_number: int,
-                       framerate_tracker: FrameRateTracker,
+                       framerate_tracker: FramerateTracker,
                        frame_number: int,
                        camera_id: int) -> np.ndarray:
         annotated_image = image.copy()

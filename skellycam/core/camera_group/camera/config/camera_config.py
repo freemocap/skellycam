@@ -1,7 +1,7 @@
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Self
 
 import cv2
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 from skellycam.core import BYTES_PER_MONO_PIXEL, CameraName
 from skellycam.core import CameraId
@@ -109,10 +109,12 @@ class CameraConfig(BaseModel):
         description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object",
     )
 
-    @field_validator("camera_id", mode="before")
-    @classmethod
-    def convert_camera_id(cls, v):
-        return CameraId(v)
+    @model_validator(mode="after")
+    def validate(cls, self) -> Self:
+        if self.camera_name is DefaultCameraConfig.CAMERA_NAME.value:
+            self.camera_name = f"Camera-{self.camera_id}"
+        self.camera_id = CameraId(self.camera_id)
+        return self
 
     @property
     def orientation(self) -> str:

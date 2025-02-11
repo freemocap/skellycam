@@ -17,7 +17,7 @@
 
         h1 {
             font-size: 24px;
-            background-color: #4a4e69;
+            background-color: #20212e;
             color: white;
             margin: 0;
             padding: 10px;
@@ -26,11 +26,26 @@
 
         #controls {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            background-color: #4a4e69;
+            background-color: #0b1522;
             padding: 10px;
             color: white;
             justify-content: center;
+            //height: 50px;
+            border: 2px solid #1f467c;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
         }
 
         #ws-status {
@@ -39,19 +54,21 @@
         }
 
         button {
-            margin: 0 10px;
+            margin: 0 5px;
             padding: 10px;
             font-size: small;
-            background-color: #9a8c98;
-            color: white;
-            border: none;
+            background-color: #0f3c32;
+            color: #fafafa;
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
+            border: #30806f 3px solid;
         }
 
+
         button:hover {
-            background-color: #c9ada7;
+            background-color: #511981;
+            border: #800c4a 3px solid;
         }
 
         #content-container {
@@ -70,43 +87,126 @@
             justify-content: center;
             align-items: center;
             padding: 10px;
+            position: relative;
         }
 
-        .image {
-            max-width: 100%;
-            height: auto;
-            margin: 5px;
-        }
-
-
-        #log-container {
-            height: 100px;
+        #bottom-panel {
+            display: flex;
+            height: 150px;
             overflow-y: auto;
             background-color: #4a4e69;
-            color: white;
+            color: #fafafa;
             padding: 10px;
+            justify-content: space-between;
+            resize: vertical;
+            border-top: 2px solid #05bca6;
+
+
         }
 
-        .log-entry {
-            margin-bottom: 5px;
+        #separator {
+            width: 2px;
+            background-color: #000210;
+            cursor: ew-resize;
+            margin: 0 8px;
         }
+
+
+        #log-container,
+        #config-container {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        #framerate-container {
+            display: flex;
+            justify-content: space-around;
+            color: #fafafa;
+            padding: 5px;
+            border-radius: 5px;
+            margin: 10px;
+            position: absolute;
+            top: 120px;
+            right: 10px;
+            background-color: rgba(50, 110, 120, 0.5);
+            z-index: 1;
+        }
+
+        .framerate-display {
+            text-align: center;
+            padding: 5px;
+        }
+
+        .framerate-text {
+            font-size: 14px;
+            background-color: #22223b;
+            padding: 5px;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        #vertical-resizer {
+            height: 5px;
+            background-color: #080e35;
+            cursor: ns-resize;
+            position: relative;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #1f467c;
+            height: 10px;
+            width: 200px;
+        }
+
+
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         let ws;
         let isConnected = false;
         const websocket_url = '{{WEBSOCKET_URL}}/skellycam/websocket/connect';
         const http_url = '{{HTTP_URL}}';
         const imageElements = {};
-        const spheres = {};
-        let scene;
-        let isDragging = false;
-        let dragStartX, dragStartY;
-        let initialX, initialY;
+        let isResizingHorizontally = false;
+        let isResizingVertically = false;
+        let paused = false;
+        let recording = false;
+        let defaultPath = `{{SKELLYCAM_DATA_FOLDER}}`;
+        let defaultName = getFormattedDate();
+
+        function getFormattedDate() {
+            // remove the fractional seconds
+            // return new Date().toISOString().replace(/:/g, '-');
+            const dateString = new Date().toISOString().split('.')[0].replace(/:/g, '-').replace('T', '_')
+            return 'skellycam-' + dateString;
+        }
 
         function updateStatus() {
             document.getElementById('ws-status').innerText = isConnected ? 'Status: Connected ✔️' : 'Status: Disconnected ❌';
-            document.getElementById('ws-status').style.color = isConnected ? '#4caf50' : '#f44336';
+            document.getElementById('ws-status').style.color = isConnected ? '#5aea5f' : '#f44336';
+        }
+
+        function handleNewFrontendPayload(data, jsonString) {
+            // the keys to the jpeg_images dict are the camera ids
+            addLogEntry(`MultiFrame Payload# ${data.multi_frame_number} from camera ids ${Object.keys(data.jpeg_images)}`);
+            if (data.jpeg_images) {
+                updateImages(data.jpeg_images);
+            }
+
+            if (data.frontend_framerate) {
+                updateFrameRate(data.frontend_framerate);
+            }
+
+            if (data.backend_framerate) {
+                updateFrameRate(data.backend_framerate);
+            }
+
+            if (data.camera_configs) {
+                document.getElementById('config-container').innerText = JSON.stringify(data.camera_configs, null, 2);
+            }
         }
 
         function connectWebSocket() {
@@ -122,41 +222,47 @@
                 updateStatus();
             };
             ws.onmessage = async (event) => {
+
+                // Check if event.data is a string or a Blob
+                // if (event.type === "message") {
+                //     const data = JSON.parse(event.data);
+                //     addLogEntry(`Received JSON message: ${event.data}`);
+                //
+                //
+                // } else
                 if (event.data instanceof Blob) {
+                    // If it's a Blob, convert it to ArrayBuffer first, then to a string
                     const arrayBuffer = await event.data.arrayBuffer();
-                    const jsonString = decoder.decode(arrayBuffer);
+                    const jsonString = new TextDecoder('utf-8').decode(arrayBuffer);
                     const data = JSON.parse(jsonString);
-                    addLogEntry(`Received message with length: ${jsonString.length} from mf_payload# ${data.multi_frame_number}`);
-                    updateImages(data.jpeg_images);
-                    updateSpheres(data.latest_pipeline_output?.aggregation_layer_output?.points3d);
+
+
+                    if (data.multi_frame_number) {
+                        if (!paused) {
+                            handleNewFrontendPayload(data, jsonString);
+                        }
+
+                    }
+
                 }
             };
         }
 
-        function updateSpheres(points3d) {
-            if (!points3d) return;
 
-            for (const id in spheres) {
-                spheres[id].updated = false;
+        function updateFrameRate(data) {
+            const {mean_frame_duration_ms, mean_frames_per_second, framerate_source} = data;
+            if (!mean_frame_duration_ms || !mean_frames_per_second) {
+                return;
             }
-
-            for (const [point_id, coords] of Object.entries(points3d)) {
-                if (!spheres[point_id]) {
-                    const geometry = new THREE.SphereGeometry(1, 10, 10);
-                    const material = new THREE.MeshBasicMaterial({color: 0xff0000});
-                    const sphere = new THREE.Mesh(geometry, material);
-                    scene.add(sphere);
-                    spheres[point_id] = {mesh: sphere, updated: true};
-                } else {
-                    spheres[point_id].mesh.position.set(coords[0], coords[1], coords[2]);
-                    spheres[point_id].updated = true;
-                }
-            }
-
-            for (const id in spheres) {
-                spheres[id].mesh.visible = spheres[id].updated;
+            if (framerate_source === 'backend') {
+                document.getElementById('backend-framerate').innerText =
+                    `Camera Backend Framerate (FPS): ${mean_frames_per_second.toFixed(2)}| Frame Duration: ${mean_frame_duration_ms.toFixed(2)} ms`;
+            } else if (framerate_source === 'frontend') {
+                document.getElementById('frontend-framerate').innerText =
+                    `GUI Frontend Framerate (FPS): ${mean_frames_per_second.toFixed(2)}| Frame Duration: ${mean_frame_duration_ms.toFixed(2)} ms`;
             }
         }
+
 
         function updateImages(images) {
             const container = document.getElementById('images-container');
@@ -185,9 +291,19 @@
             }
         }
 
-        async function callApi(endpoint, method = 'GET') {
+        async function callApi(endpoint, method = 'GET', body = null) {
             try {
-                const response = await fetch(endpoint, {method});
+                if (method === 'POST' && body) {
+                    body = JSON.stringify(body);
+                }
+
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: body,
+                });
                 const data = await response.json();
                 console.log('Request succeeded with JSON response', data);
                 addLogEntry(`Success: ${endpoint} - ${JSON.stringify(data)}`);
@@ -197,23 +313,136 @@
             }
         }
 
+        function togglePause() {
+            paused = !paused;
+            const button = document.getElementById('pause-button');
+            button.innerText = paused ? 'Resume' : 'Pause';
+            button.style.backgroundColor = paused ? '#bf7201' : '#0f3c32';
+            // button.style.color = paused ? '#000' : '#fafafa';
+        }
+
+        function toggleRecord() {
+            recording = !recording;
+            const button = document.getElementById('record-button');
+            button.innerText = recording ? 'Stop Recording' : 'Start Recording';
+            button.style.backgroundColor = recording ? '#9f0210' : '#0f3c32';
+
+            const recordingPath = document.getElementById('recording-path').value || defaultPath;
+            const recordingName = document.getElementById('recording-name').value || defaultName;
+            console.log(`Starting recording to ${recordingPath} / ${recordingName}`);
+            if (!recording) {
+                const requestBody = {
+                    recording_path: recordingPath,
+                    recording_name: recordingName
+                };
+                callApi(`${http_url}/skellycam/cameras/record/start`, 'POST', requestBody);
+            } else {
+                callApi(`${http_url}/skellycam/cameras/record/stop`);
+            }
+        }
 
 
-        window.onload = connectWebSocket;
+        window.onload = function () {
+            connectWebSocket();
+
+            const separator = document.getElementById('separator');
+            const logContainer = document.getElementById('log-container');
+            const configContainer = document.getElementById('config-container');
+            const bottomPanel = document.getElementById('bottom-panel');
+            const verticalResizer = document.getElementById('vertical-resizer');
+
+            separator.addEventListener('mousedown', function () {
+                isResizingHorizontally = true;
+                document.addEventListener('mousemove', resizeHorizontally);
+                document.addEventListener('mouseup', stopHorizontalResize);
+            });
+
+            verticalResizer.addEventListener('mousedown', function () {
+                isResizingVertically = true;
+                document.addEventListener('mousemove', resizeVertically);
+                document.addEventListener('mouseup', stopVerticalResize);
+            });
+
+            function resizeHorizontally(e) {
+                if (isResizingHorizontally) {
+                    const newWidth = e.clientX - logContainer.offsetLeft;
+                    logContainer.style.flex = `0 0 ${newWidth}px`;
+                    configContainer.style.flex = `1 1 auto`;
+                }
+            }
+
+            function stopHorizontalResize() {
+                isResizingHorizontally = false;
+                document.removeEventListener('mousemove', resizeHorizontally);
+                document.removeEventListener('mouseup', stopHorizontalResize);
+            }
+
+            function resizeVertically(e) {
+                if (isResizingVertically) {
+                    const newHeight = window.innerHeight - e.clientY;
+                    bottomPanel.style.height = `${newHeight}px`;
+                }
+            }
+
+            function stopVerticalResize() {
+                isResizingVertically = false;
+                document.removeEventListener('mousemove', resizeVertically);
+                document.removeEventListener('mouseup', stopVerticalResize);
+            }
+
+            // Set default values for the recording path and name
+            document.getElementById('recording-path').value = defaultPath;
+            document.getElementById('recording-name').value = defaultName;
+
+            // Update the recording name every second
+            setInterval(() => {
+                if (!document.getElementById('recording-name').value || document.getElementById('recording-name').value === defaultName) {
+                    defaultName = getFormattedDate();
+                    document.getElementById('recording-name').value = defaultName;
+                }
+            }, 1000);
+
+        }
+
     </script>
 </head>
 <body>
-    <h1>Skellycam Test UI</h1>
-    <div id="controls">
-        <span id="ws-status">Status: Disconnected ❌</span>
+<h1>Skellycam Test UI</h1>
+<div id="controls">
+    <div class="button-group">
         <button onclick="connectWebSocket()">Connect WebSocket</button>
+        <span id="ws-status">Status: Disconnected ❌</span>
+
         <button onclick="callApi(`${http_url}/skellycam/cameras/connect/detect`)">Connect to Cameras</button>
         <button onclick="callApi(`${http_url}/skellycam/cameras/close`)">Close Cameras</button>
+        <button onclick="togglePause()" id="pause-button">Pause</button>
+        <button onclick="toggleRecord()" id="record-button">Start Recording</button>
+        <input type="text" id="recording-path" placeholder="Save Location"/>
+        <input type="text" id="recording-name" placeholder="Recording Name"/>
     </div>
-    <div id="content-container">
-        <div id="images-container"></div>
+
+    <div id="framerate-container">
+        <div class="framerate-display">
+            <div id="backend-framerate" class="framerate-text">Server/Backend - Frame Duration: N/A ms |
+                Framerate: N/A fps
+            </div>
+            <div id="frontend-framerate" class="framerate-text">GUI/Frontend - Frame Duration: N/A ms | Framerate:
+                N/A fps
+            </div>
+        </div>
     </div>
-    <h3>Logs</h3>
+</div>
+<div id="content-container">
+    <div id="images-container"></div>
+</div>
+<div id="vertical-resizer"></div>
+
+<div id="bottom-panel">
+    <h4>Logs</h4>
     <div id="log-container"></div>
+    <div id="separator"></div>
+    <h4>Camera Configs</h4>
+    <div id="config-container"></div>
+</div>
 </body>
 </html>

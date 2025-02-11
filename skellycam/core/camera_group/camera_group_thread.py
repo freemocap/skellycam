@@ -59,7 +59,7 @@ class CameraGroupThread:
 
         frame_wrangler = FrameWrangler.create(camera_group_dto=camera_group_dto,
                                               shmorc_dto=shmorc_dto,
-                                              frame_router_config_queue=frame_router_config_queue,
+                                              frame_saver_config_queue=frame_router_config_queue,
                                               frame_listener_config_queue=frame_listener_config_queue)
 
         camera_manager = CameraManager.create(camera_group_dto=camera_group_dto,

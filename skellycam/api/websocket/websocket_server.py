@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import multiprocessing
+import time
 from typing import Optional
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
@@ -10,7 +11,7 @@ from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller i
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.utilities.wait_functions import async_wait_1ms
 
@@ -22,6 +23,8 @@ class WebsocketServer:
         self.websocket = websocket
         self.frontend_image_relay_task: Optional[asyncio.Task] = None
         self._app_state: SkellycamAppState = get_skellycam_app_controller().app_state
+        self.latest_backend_framerate: Optional[CurrentFramerate] = None
+        self.latest_frontend_framerate: Optional[CurrentFramerate] = None
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -79,9 +82,9 @@ class WebsocketServer:
         elif isinstance(message, RecordingInfo):
             logger.trace(f"Relaying RecordingInfo to frontend")
 
-        elif isinstance(message, CurrentFrameRate):
-            logger.loop(f"Relaying CurrentFrameRate to frontend")
-            self._app_state.current_framerate = message
+        elif isinstance(message, CurrentFramerate):
+            self.latest_backend_framerate = message
+            return
         else:
             raise ValueError(f"Unknown message type: {type(message)}")
 
@@ -93,7 +96,7 @@ class WebsocketServer:
         """
         logger.info(
             f"Starting frontend image payload relay...")
-        mf_payload: Optional[MultiFramePayload] = None
+        frontend_framerate_tracker = FramerateTracker.create(framerate_source="frontend")
         camera_group_uuid = None
         latest_mf_number = -1
         try:
@@ -116,6 +119,10 @@ class WebsocketServer:
 
                 mf_payload = self._app_state.frame_escape_shm.get_multi_frame_payload(camera_configs=self._app_state.camera_group.camera_configs,
                                                                                       retrieve_type="latest")
+                frontend_framerate_tracker.update(time.perf_counter_ns())
+                if mf_payload.multi_frame_number % 10 == 0:
+                    # update every 10 multi-frames to match backend framerate behavior
+                    self.latest_frontend_framerate = frontend_framerate_tracker.current
                 await self._send_frontend_payload(mf_payload)
                 latest_mf_number = mf_payload.multi_frame_number
 
@@ -129,6 +136,8 @@ class WebsocketServer:
 
     async def _send_frontend_payload(self,
                                      mf_payload: MultiFramePayload):
+        mf_payload.backend_framerate = self.latest_backend_framerate
+        mf_payload.frontend_framerate = self.latest_frontend_framerate
         frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload)
         logger.loop(f"Sending frontend payload through websocket...")
         if not self.websocket.client_state == WebSocketState.CONNECTED:

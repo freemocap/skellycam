@@ -18,7 +18,7 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escap
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_shared_memory import \
     RingBufferCameraSharedMemory
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, \
     available_cameras_to_default_camera_configs
@@ -36,7 +36,8 @@ class SkellycamAppState:
     camera_group_dto: Optional[CameraGroupDTO] = None
     camera_group: Optional[CameraGroup] = None
     available_cameras: Optional[AvailableCameras] = None
-    current_framerate: Optional[CurrentFrameRate] = None
+    backend_framerate: Optional[CurrentFramerate] = None
+    frontend_framerate: Optional[CurrentFramerate] = None
 
     @classmethod
     def create(cls, global_kill_flag: multiprocessing.Value):
@@ -130,7 +131,6 @@ class SkellycamAppState:
     def _reset(self):
         self.camera_group = None
         self.shmorchestrator = None
-        self.current_framerate = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 
     def close(self):
@@ -148,7 +148,6 @@ class SkellycamAppStateDTO(BaseModel):
 
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableCameras]
-    current_framerate: Optional[CurrentFrameRate]
     record_frames_flag_status: bool
 
     @classmethod
@@ -158,7 +157,6 @@ class SkellycamAppStateDTO(BaseModel):
         return cls(
             camera_configs=state.camera_group_configs,
             available_devices=state.available_cameras,
-            current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
             type=cls.__name__
         )

@@ -16,7 +16,7 @@ from skellycam.utilities.wait_functions import wait_1ms
 logger = logging.getLogger(__name__)
 
 
-class FrameRouterProcess:
+class FrameSaverProcess:
     def __init__(self,
                  camera_group_dto: CameraGroupDTO,
                  multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
