@@ -1,7 +1,7 @@
 import logging
 
 from PySide6.QtCore import Signal, Slot
-from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QCheckBox
 
 from skellycam.gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
 from skellycam.gui.qt.widgets.side_panel_widgets.camera_settings_panel import CameraSettingsPanel
@@ -55,6 +55,17 @@ class SkellycamCameraControlPanel(QWidget):
         self.close_cameras_button = QPushButton(f"Close Cameras {CAMERA_WITH_FLASH_EMOJI_STRING}{RED_X_EMOJI_STRING}")
         self.close_cameras_button.setEnabled(False)
         self._layout.addWidget(self.close_cameras_button)
+
+        # Checkboxes
+        self.use_clientside_camera_detection = QCheckBox("Use Client-side Detection")
+        self.use_clientside_camera_detection.setChecked(False)
+        # self._layout.addWidget(self.use_clientside_camera_detection)
+        self.connect_automatically_checkbox = QCheckBox("Connect Automatically")
+        self.connect_automatically_checkbox.setChecked(False)
+        # self._layout.addWidget(self.connect_automatically_checkbox)
+        self.connect_automatically_checkbox = QCheckBox("Use Previous Settings")
+        self.connect_automatically_checkbox.setChecked(False)
+        # self._layout.addWidget(self.connect_automatically_checkbox)
 
         # Camera Settings Panel
         self.camera_settings_panel = CameraSettingsPanel(parent=self)

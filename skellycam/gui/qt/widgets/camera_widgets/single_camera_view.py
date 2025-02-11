@@ -2,14 +2,16 @@ import base64
 import logging
 import sys
 import time
+from collections.abc import Callable
 from typing import Optional, Dict
 
 import cv2
 import numpy as np
-from PySide6.QtCore import Qt, QByteArray, QBuffer, QRect
+from PySide6.QtCore import Qt, QByteArray, QBuffer, QRect, Signal
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QFont, QAction, QBrush
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu
 
+from skellycam import CameraId
 
 logger = logging.getLogger(__name__)
 class EfficientQImageUpdater:
@@ -28,11 +30,16 @@ class EfficientQImageUpdater:
 
 
 class SingleCameraViewWidget(QWidget):
-    def __init__(self, camera_id, camera_config, parent=None):
+    clicked = Signal()  # Declare the signal here
+
+    def __init__(self,
+                 camera_id:CameraId,
+                 get_camera_config:Callable,
+                 parent=None):
         super().__init__(parent=parent)
 
         self._camera_id = camera_id
-        self._camera_config = camera_config
+        self._get_camera_config = get_camera_config
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
@@ -51,7 +58,25 @@ class SingleCameraViewWidget(QWidget):
         # Enable context menu on QLabel
         self._image_label_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self._image_label_widget.customContextMenuRequested.connect(self._show_context_menu)
+        self.setMouseTracking(True)
+        self._selected = False
+        self.annotate_images = True
 
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            logger.gui(f"Camera {self.camera_id} clicked")
+            self.clicked.emit()  # Emit the signal when the widget is clicked
+            self.toggle_selected()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def toggle_selected(self):
+        self._selected = not self._selected
+        if self._selected:
+            self._image_label_widget.setStyleSheet("border: 3px solid cyan;")
+        else:
+            self._image_label_widget.setStyleSheet("border: 1px solid;")
     @property
     def camera_id(self):
         return self._camera_id
@@ -66,12 +91,12 @@ class SingleCameraViewWidget(QWidget):
         logger.gui(f"Updating {self.__class__.__name__} with image for camera {self.camera_id}")
         q_image = self._image_updater.update_image(base64_str)
         self._current_pixmap = QPixmap.fromImage(q_image)
-        # if self._annotations_enabled:
-            # self._annotate_pixmap()
+        if self._annotations_enabled:
+            self._annotate_pixmap()
         self.update_pixmap()
         logger.gui(f"Successfully updated {self.__class__.__name__} with image for camera {self.camera_id}")
 
-    def _annotate_pixmap(self, framerate_stats: Optional[Dict], recording: bool = False):
+    def _annotate_pixmap(self, framerate_stats: Optional[Dict]=None, recording: bool = False):
         logger.gui(f"Annotating pixmap for camera {self.camera_id}")
         painter = QPainter(self._current_pixmap)
         pixmap_width = self._current_pixmap.width()
@@ -83,7 +108,7 @@ class SingleCameraViewWidget(QWidget):
         # Draw semi-transparent background without a border
         painter.setPen(Qt.NoPen)
 
-        background_rect = QRect(5, 5, int(pixmap_width * .55), 100)
+        background_rect = QRect(5, 5, int(pixmap_width * .20105), 50)
         painter.setBrush(QBrush(QColor(255, 255, 255, 100)))  # Semi-transparent white background
         painter.drawRect(background_rect)
 
@@ -93,8 +118,9 @@ class SingleCameraViewWidget(QWidget):
             painter.setPen(QColor(255, 0, 0))  # Red color
         else:
             painter.setPen(QColor(0, 0, 255))  # Blue color
-        painter.drawText(10, 20, f"Recording Frames? {recording}")
-        painter.drawText(10, 40, f"CameraId: {self.camera_id}")
+        # painter.drawText(10, 20, f"Recording Frames? {recording}")
+        painter.drawText(10, 20, f"CameraId: {self.camera_id}")
+        painter.drawText(10, 40, f"Exposure: {self._get_camera_config().exposure}")
         if framerate_stats:
             painter.drawText(10, 60, f"Frame#: {framerate_stats.frame_number}")
             if framerate_stats.duration_stats:

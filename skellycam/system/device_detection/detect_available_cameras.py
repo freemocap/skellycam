@@ -1,4 +1,5 @@
 import logging
+import platform
 from enum import Enum
 from typing import List, Tuple
 
@@ -43,9 +44,9 @@ def get_available_cameras(strategy: CameraDetectionStrategies, remove_camera_nam
 
 
 def _get_available_cameras_qt_multimedia(remove_camera_names) -> AvailableCameras:
-    from PySide6.QtMultimedia import QMediaDevices
-    from PySide6.QtMultimedia import QCameraDevice
-    import platform
+    from PySide6.QtMultimedia import QMediaDevices, QCameraDevice
+
+
     def order_darwin_cameras(detected_cameras: List[QCameraDevice]) -> Tuple[List[QCameraDevice], List[int]]:
         camera_ports = detect_opencv_ports()
         if len(camera_ports) != len(detected_cameras):
@@ -62,8 +63,8 @@ def _get_available_cameras_qt_multimedia(remove_camera_names) -> AvailableCamera
     remove_virtual_cameras(camera_ports, detected_cameras)
     camera_devices = {}
     for camera_number, camera in zip(camera_ports, detected_cameras):
-        if not platform.system() == "Darwin":
-            _check_camera_available(camera_number)
+        # if not platform.system() == "Darwin":
+        #     _check_camera_available(camera_number)
         camera_device_info = CameraDeviceInfo.from_q_camera_device(camera_number=camera_number, camera=camera)
         camera_devices[camera_device_info.cv2_port] = camera_device_info
     return camera_devices

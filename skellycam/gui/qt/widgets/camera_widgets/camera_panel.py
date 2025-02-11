@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget, )
 
+from skellycam import CameraId
 from skellycam.gui.qt.widgets.recording_control_panel.recording_panel import RecordingPanel
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.gui.qt.widgets.camera_widgets.camera_grid_view import CameraViewGrid
@@ -19,6 +20,7 @@ class SkellycamCameraPanel(QWidget):
     ):
         super().__init__(parent=parent)
 
+
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
 
@@ -31,6 +33,11 @@ class SkellycamCameraPanel(QWidget):
         self.sizePolicy().setHorizontalStretch(1)
         self.sizePolicy().setVerticalStretch(1)
 
+    def toggle_annotation(self):
+        self.camera_view_grid.toggle_annotation()
+
+    def set_selected_camera(self, camera_id: CameraId):
+        self.camera_view_grid.select_camera(camera_id)
 
     def closeEvent(self, event):
         logger.gui("Close event detected - closing camera group frame worker")

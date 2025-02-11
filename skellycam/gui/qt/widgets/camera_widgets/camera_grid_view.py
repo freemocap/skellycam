@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, List
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, Signal
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QVBoxLayout
 
 from skellycam.core import CameraId
@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class CameraViewGrid(QWidget):
+    camera_selected = Signal(CameraId)
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self._layout = QVBoxLayout()
@@ -35,6 +37,24 @@ class CameraViewGrid(QWidget):
                             font-family: "Dosis", sans-serif;
         """)
         self._single_camera_views: Dict[CameraId, SingleCameraViewWidget] = {}
+        self._selected_camera_id: CameraId | None = None
+        self.setup_click_signals()
+        self._latest_frontend_payload: FrontendFramePayload | None = None
+
+
+    def toggle_annotation(self):
+        for single_camera_view in self._single_camera_views.values():
+            single_camera_view.annotate_images = not single_camera_view.annotate_images
+    def setup_click_signals(self):
+        for camera_id, single_camera_view in self._single_camera_views.items():
+            single_camera_view.clicked.connect(lambda cid=camera_id: self.select_camera(cid))
+
+    def select_camera(self, selected_camera_id: CameraId):
+        for camera_id, single_camera_view in self._single_camera_views.items():
+            if camera_id == selected_camera_id:
+                single_camera_view.toggle_selected()
+
+        self.camera_selected.emit(selected_camera_id)
 
 
     @property
@@ -63,6 +83,7 @@ class CameraViewGrid(QWidget):
             single_camera_view.update_image(base64_str=frontend_payload.jpeg_images[camera_id])
 
     def create_single_camera_views(self, frontend_payload: FrontendFramePayload):
+        self._latest_frontend_payload = frontend_payload
         landscape_camera_number = -1
         portrait_camera_number = -1
         total_landscape_cameras = sum(
@@ -74,7 +95,7 @@ class CameraViewGrid(QWidget):
 
         for camera_id, camera_config in frontend_payload.camera_configs.items():
             single_camera_view = SingleCameraViewWidget(camera_id=camera_id,
-                                                        camera_config=camera_config,
+                                                        get_camera_config=lambda: self._latest_frontend_payload.camera_configs[camera_id],
                                                         parent=self)
 
             if camera_config.orientation in ["landscape", "square"]:
