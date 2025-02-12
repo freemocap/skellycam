@@ -98,10 +98,7 @@
             color: #fafafa;
             padding: 10px;
             justify-content: space-between;
-            resize: vertical;
             border-top: 2px solid #05bca6;
-
-
         }
 
         #separator {
@@ -111,8 +108,16 @@
             margin: 0 8px;
         }
 
+        .section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+            margin-bottom: 20px;
+        }
 
         #log-container,
+        #camera-list,
         #config-container {
             flex: 1;
             padding: 10px;
@@ -149,9 +154,16 @@
 
         #vertical-resizer {
             height: 5px;
-            background-color: #080e35;
+            background-color: #157362;
             cursor: ns-resize;
             position: relative;
+        }
+
+        .horizontal-separator {
+            width: 5px;
+            background-color: #000210;
+            cursor: ew-resize;
+            margin: 0 8px;
         }
 
         input[type="text"] {
@@ -176,6 +188,7 @@
         let recording = false;
         let defaultPath = `{{SKELLYCAM_DATA_FOLDER}}`;
         let defaultName = getFormattedDate();
+        const availableCameras = [];
 
         function getFormattedDate() {
             // remove the fractional seconds
@@ -191,7 +204,7 @@
 
         function handleNewFrontendPayload(data, jsonString) {
             // the keys to the jpeg_images dict are the camera ids
-            addLogEntry(`MultiFrame Payload# ${data.multi_frame_number} from camera ids ${Object.keys(data.jpeg_images)}`);
+            // addLogEntry(`MultiFrame Payload# ${data.multi_frame_number} from camera ids ${Object.keys(data.jpeg_images)}`);
             if (data.jpeg_images) {
                 updateImages(data.jpeg_images);
             }
@@ -283,7 +296,7 @@
             const logContainer = document.getElementById('log-container');
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry';
-            logEntry.innerText = entry;
+            logEntry.innerText = '- ' + entry;
             logContainer.prepend(logEntry);
 
             if (logContainer.children.length > 30) {
@@ -292,10 +305,15 @@
         }
 
         async function callApi(endpoint, method = 'GET', body = null) {
+            if (!isConnected) {
+                addLogEntry(`Error: Not connected to WebSocket`);
+                return;
+            }
+            if (method === 'POST' && body) {
+                body = JSON.stringify(body, null, 2);
+            }
+            console.log(`Calling API: ${endpoint} with method ${method} and body ${body}`);
             try {
-                if (method === 'POST' && body) {
-                    body = JSON.stringify(body);
-                }
 
                 const response = await fetch(endpoint, {
                     method: method,
@@ -329,8 +347,9 @@
 
             const recordingPath = document.getElementById('recording-path').value || defaultPath;
             const recordingName = document.getElementById('recording-name').value || defaultName;
-            console.log(`Starting recording to ${recordingPath} / ${recordingName}`);
-            if (!recording) {
+            if (recording) {
+                console.log(`Starting recording to ${recordingPath} / ${recordingName}`);
+
                 const requestBody = {
                     recording_path: recordingPath,
                     recording_name: recordingName
@@ -342,15 +361,74 @@
         }
 
 
+        // async function getAvailableCameras() {
+        //     try {
+        //     const devices = await navigator.mediaDevices.enumerateDevices();
+        //     console.log('All devices:', devices); // Log all detected devices
+        //
+        //     const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        //     console.log('Video devices:', videoDevices); // Log only video devices
+        //
+        //         let cameraIndex = -1;
+        //         for (const device of videoDevices) {
+        //             cameraIndex++;
+        //             const constraints = {
+        //                 video: {deviceId: device.deviceId}
+        //             };
+        //
+        //             try {
+        //                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        //                 console.log(`Camera ${cameraIndex} ${device.label} is available!`);
+        //                 addLogEntry(`Camera ${cameraIndex} ${device.label} is available!`);
+        //                 availableCameras.push(`${cameraIndex} - ${device.label || 'Unnamed Camera'} (available)`);
+        //                 stream.getTracks().forEach(track => track.stop());
+        //             } catch (error) {
+        //                 console.error(`Error accessing camera ${device.label}:`, error);
+        //                 addLogEntry(`Could not access camera ${device.label}: ${error.message}`);
+        //                                 availableCameras.push(`${cameraIndex} - ${device.label || 'Unnamed Camera'} (not available)`);
+        //
+        //             }
+        //         }
+        //
+        //         const cameraListElement = document.getElementById('camera-list');
+        //         cameraListElement.innerHTML = ''; // Clear previous list
+        //         availableCameras.forEach(camera => {
+        //             const listItem = document.createElement('li');
+        //             listItem.textContent = camera;
+        //             cameraListElement.appendChild(listItem);
+        //         });
+        //
+        //         if (availableCameras.length === 0) {
+        //             const listItem = document.createElement('li');
+        //             listItem.textContent = 'No available cameras found';
+        //             cameraListElement.appendChild(listItem);
+        //         }
+        //     } catch (error) {
+        //         console.error('Error accessing media devices:', error);
+        //         addLogEntry(`Error accessing media devices: ${error.message}`);
+        //     }
+        // }
+
+
         window.onload = function () {
             connectWebSocket();
+            // getAvailableCameras();
 
             const separator = document.getElementById('separator');
             const logContainer = document.getElementById('log-container');
             const configContainer = document.getElementById('config-container');
             const bottomPanel = document.getElementById('bottom-panel');
             const verticalResizer = document.getElementById('vertical-resizer');
+            const horizontalSeparators = document.querySelectorAll('.horizontal-separator');
+            const sections = document.querySelectorAll('.section');
 
+            horizontalSeparators.forEach((separator, index) => {
+                separator.addEventListener('mousedown', function () {
+                    isResizingHorizontally = true;
+                    document.addEventListener('mousemove', (e) => resizeHorizontally(e, index));
+                    document.addEventListener('mouseup', stopHorizontalResize);
+                });
+            });
             separator.addEventListener('mousedown', function () {
                 isResizingHorizontally = true;
                 document.addEventListener('mousemove', resizeHorizontally);
@@ -363,11 +441,11 @@
                 document.addEventListener('mouseup', stopVerticalResize);
             });
 
-            function resizeHorizontally(e) {
+            function resizeHorizontally(e, index) {
                 if (isResizingHorizontally) {
-                    const newWidth = e.clientX - logContainer.offsetLeft;
-                    logContainer.style.flex = `0 0 ${newWidth}px`;
-                    configContainer.style.flex = `1 1 auto`;
+                    const newWidth = e.clientX - sections[index].getBoundingClientRect().left;
+                    sections[index].style.flex = `0 0 ${newWidth}px`;
+                    sections[index + 1].style.flex = `1 1 auto`;
                 }
             }
 
@@ -438,11 +516,20 @@
 <div id="vertical-resizer"></div>
 
 <div id="bottom-panel">
-    <h4>Logs</h4>
-    <div id="log-container"></div>
-    <div id="separator"></div>
-    <h4>Camera Configs</h4>
-    <div id="config-container"></div>
+    <div class="section log-section">
+        <h4>Logs</h4>
+        <div id="log-container"></div>
+    </div>
+<!--    <div id="separator" class="horizontal-separator"></div>-->
+<!--    <div class="section config-section">-->
+<!--        <h4>Available Camera Devices</h4>-->
+<!--        <ul id="camera-list"></ul>-->
+<!--    </div>-->
+    <div id="separator" class="horizontal-separator"></div>
+    <div class="section camera-section">
+        <h4>Connected Camera Configs</h4>
+        <div id="config-container"></div>
+    </div>
 </div>
 </body>
 </html>
