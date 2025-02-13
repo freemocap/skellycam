@@ -29,7 +29,7 @@ def main(qt: bool = True) -> None:
 
     global_kill_flag = multiprocessing.Value('b', False)
     if qt:
-        from skellycam.gui.gui_main import gui_main
+        from skellycam.qt_gui.gui_main import gui_main
 
         backend_process = multiprocessing.Process(target=run_server, args=(global_kill_flag,))
         logger.info("Starting backend process")
