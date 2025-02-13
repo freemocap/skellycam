@@ -39,12 +39,12 @@ export const CameraImage = ({ cameraId, base64Image, showAnnotation }: CameraIma
                         bottom: 8,
                         left: 8,
                         color: "white",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)",
+                        backgroundColor: "rgba(0, 0, 0, 0.75)",
                         padding: "2px 4px",
                         borderRadius: "4px"
                     }}
                 >
-                    {cameraId}
+                    Camera {cameraId}
                 </Typography>
             )}
         </Box>

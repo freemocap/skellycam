@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
-import {FrontendFramePayloadSchema, JpegImagesSchema, Points3dSchema} from "@/models/FrontendFramePayloadSchema";
+import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/models/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/models/SkellyCamAppStateSchema";
 
 const MAX_RECONNECT_ATTEMPTS = 20;
@@ -10,7 +10,6 @@ export const useWebSocket = (wsUrl: string) => {
     const [latestFrontendPayload, setLatestFrontendPayload] = useState<z.infer<typeof FrontendFramePayloadSchema> | null>(null);
     const [latestSkellyCamAppState, setLatestSkellyCamAppState] = useState<z.infer<typeof SkellyCamAppStateSchema> | null>(null);
     const [latestImages, setLatestImages] = useState<z.infer<typeof JpegImagesSchema> | null>(null);
-    const [latestPoints3d, setLatestPoints3d] = useState<z.infer<typeof Points3dSchema> | null>(null);
 
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
@@ -103,5 +102,5 @@ export const useWebSocket = (wsUrl: string) => {
         };
     }, [connect]);
 
-    return {isConnected, latestFrontendPayload, latestImages, latestPoints3d, latestSkellyCamAppState ,connect, disconnect};
+    return {isConnected, latestFrontendPayload, latestImages,  latestSkellyCamAppState ,connect, disconnect};
 };

@@ -21,14 +21,16 @@ export const ConfigView = () => {
 
     return (
         <Box>
-            <h2>JS Detected Cameras</h2>
+            <h2 style={{ color: 'white' }}>JS Detected Cameras</h2>
             {devicesWithNames.map(device => (
-                <Typography key={device.deviceId}>Webcam {device.label}</Typography>
+                <Typography key={device.deviceId} style={{ color: '#fafafa' }}>
+                    Webcam {device.label}
+                </Typography>
             ))}
             <br/>
-            <h2>Latest SkellyCamAppState</h2>
+            <h2 style={{ color: '#fafafa' }}>Latest SkellyCamAppState</h2>
             {latestSkellyCamAppState && (
-                <Typography component="pre">
+                <Typography component="pre" style={{ color: '#fafafa' }}>
                     {JSON.stringify(latestSkellyCamAppState, null, 2)}
                 </Typography>
             )}

@@ -227,3 +227,4 @@ pyapp-latest/*
 *.dist
 *.build
 output_timestamps.json
+pyapp*

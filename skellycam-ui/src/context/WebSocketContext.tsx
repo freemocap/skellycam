@@ -1,7 +1,7 @@
 import React, {createContext, ReactNode, useContext} from "react";
 import {useWebSocket} from "@/hooks/useWebSocket";
 import {z} from "zod";
-import {FrontendFramePayloadSchema, JpegImagesSchema, Points3dSchema} from "@/models/FrontendFramePayloadSchema";
+import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/models/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/models/SkellyCamAppStateSchema";
 
 interface WebSocketContextProps {
@@ -9,7 +9,6 @@ interface WebSocketContextProps {
     latestFrontendPayload: z.infer<typeof FrontendFramePayloadSchema> | null;
     latestSkellyCamAppState: z.infer<typeof SkellyCamAppStateSchema> | null;
     latestImages:z.infer<typeof JpegImagesSchema> |null;
-    latestPoints3d: z.infer<typeof Points3dSchema> | null;
     connect: () => void;
     disconnect: () => void;
 }
@@ -25,7 +24,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({url, childr
     const {isConnected, latestFrontendPayload,  latestImages, latestPoints3d, latestSkellyCamAppState, connect, disconnect} = useWebSocket(url);
 
     return (
-        <WebSocketContext.Provider value={{isConnected, latestFrontendPayload,latestImages, latestPoints3d, latestSkellyCamAppState, connect, disconnect}}>
+        <WebSocketContext.Provider value={{isConnected, latestFrontendPayload,latestImages, latestSkellyCamAppState, connect, disconnect}}>
             {children}
         </WebSocketContext.Provider>
     )

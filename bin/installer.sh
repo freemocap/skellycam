@@ -1,1 +1,1 @@
-pyinstaller --name="freemocap"  --windowed  --onefile .\freemocap\__main__.py
+pyinstaller --name="skellycam"  --windowed  --onefile .\skellycam\run_skellycam_server.py

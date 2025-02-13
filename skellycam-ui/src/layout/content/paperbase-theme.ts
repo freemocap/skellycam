@@ -4,9 +4,9 @@ import { createTheme } from '@mui/material/styles';
 export const paperbaseTheme = createTheme({
     palette: {
         primary: {
-            light: '#7363ff',
-            main: '#3c007d',
-            dark: '#190020',
+            light: '#63ccff',
+            main: '#004967',
+            dark: '#001723',
         },
     },
     typography: {
@@ -108,7 +108,7 @@ const extendedTheme = {
             styleOverrides: {
                 root: {
                     '&.Mui-selected': {
-                        color: '#ab4ff7',
+                       color: '#4fc3f7',
                     },
                 },
             },
