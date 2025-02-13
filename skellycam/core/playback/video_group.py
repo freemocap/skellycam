@@ -1,18 +1,29 @@
+from dataclasses import dataclass
 import logging
 import multiprocessing
 
+from skellycam.core import CameraId
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.camera_group_process import CameraGroupThread
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
+from skellycam.core.playback.video_config import VideoConfigs
+from skellycam.core.playback.video_group_dto import VideoGroupDTO
 
 logger = logging.getLogger(__name__)
 
+""" 
+TODO:
+Do we need a process VideoGroupThread/Process?
+I think this will somehow run the video_playback class, and that probably wants to run in its own thread.
+But how do we want it to run? 
+
+"""
 
 @dataclass
-class VideoGroup(CameraGroup):
-    dto: CameraGroupDTO
+class VideoGroup:
+    dto: VideoGroupDTO
     camera_group_process: CameraGroupThread
     frame_router_config_queue: multiprocessing.Queue
     frame_listener_config_queue: multiprocessing.Queue
@@ -20,49 +31,40 @@ class VideoGroup(CameraGroup):
 
     @classmethod
     def create(cls,
-               camera_group_dto: CameraGroupDTO,
+               video_group_dto: VideoGroupDTO,
                shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
+        # TODO: figure out what to use for shmorchestrator
+        # TODO: rewrite CameraGroupThread as VideoGroupThread
         frame_router_config_queue = multiprocessing.Queue()
         frame_listener_config_queue = multiprocessing.Queue()
-        return cls(dto=camera_group_dto,
-                   camera_group_process=CameraGroupThread(camera_group_dto=camera_group_dto,
+        return cls(dto=video_group_dto,
+                   camera_group_process=CameraGroupThread(camera_group_dto=video_group_dto,
                                                           shmorc_dto=shmorc_dto,
                                                           frame_router_config_queue=frame_router_config_queue,
                                                           frame_listener_config_queue=frame_listener_config_queue),
                    frame_router_config_queue=frame_router_config_queue,
                    frame_listener_config_queue=frame_listener_config_queue,
-                   group_uuid=camera_group_dto.group_uuid)
+                   group_uuid=video_group_dto.group_uuid)
 
     @property
-    def camera_ids(self) -> list[CameraId]:
-        return list(self.dto.camera_configs.keys())
+    def video_ids(self) -> list[CameraId]:
+        return list(self.dto.video_configs.keys())
 
     @property
-    def camera_configs(self) -> CameraConfigs:
-        return self.dto.camera_configs
+    def video_configs(self) -> VideoConfigs:
+        return self.dto.video_configs
 
     @property
     def uuid(self) -> str:
         return self.group_uuid
 
     def start(self):
-        logger.info("Starting camera group")
+        logger.info("Starting video group")
         self.camera_group_process.start()
 
     def close(self):
-        logger.debug("Closing camera group")
+        logger.debug("Closing video group")
         self.dto.ipc_flags.kill_camera_group_flag.value = True
         if self.camera_group_process:
             self.camera_group_process.close()
-        logger.info("Camera group closed.")
-
-    def update_camera_configs(self,
-                              camera_configs: CameraConfigs,
-                              update_instructions: UpdateInstructions):
-        logger.debug(
-            f"Updating Camera Configs with instructions: {update_instructions}")
-        self.dto.camera_configs = camera_configs
-        self.dto.config_update_queue.put(update_instructions)
-        self.frame_router_config_queue.put(update_instructions.new_configs)
-        self.frame_listener_config_queue.put(update_instructions.new_configs)
-
+        logger.info("video group closed.")

@@ -201,7 +201,7 @@ class MultiFramePayload(BaseModel):
     @classmethod
     def from_previous(cls,
                       previous: 'MultiFramePayload',
-                      camera_configs: CameraConfigs) -> 'MultiFramePayload':
+                      camera_configs: Type[CameraConfigs]) -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
                    camera_configs=camera_configs,

@@ -1,5 +1,7 @@
+from dataclasses import dataclass, field
 import logging
 import multiprocessing
+import sys
 import time
 from pathlib import Path
 from typing import Dict, Optional
@@ -7,6 +9,7 @@ from typing import Dict, Optional
 import cv2
 from skellytracker.utilities.get_video_paths import get_video_paths
 
+from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
@@ -15,54 +18,46 @@ from skellycam.core.playback.video_config import VideoConfig, VideoConfigs
 
 logger = logging.getLogger(__name__)
 
-# TODO: make pydantic model/dataclass
+def load_video_configs_from_folder(synchronized_video_folder_path: str | Path) -> VideoConfigs: # this should live elsewhere, and class should just take in VideoConfigs
+    video_configs = {}
+    for camera_id, path in enumerate(get_video_paths(path_to_video_folder=synchronized_video_folder_path)):
+        capture = cv2.VideoCapture(str(path))
+        color_channels = 1 if capture.get(cv2.CAP_PROP_MONOCHROME) else 3
+        video_configs[camera_id] = VideoConfig(
+            camera_id=camera_id,
+            camera_name=path.stem,
+
+            resolution=ImageResolution(height=int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                                        width=int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))),
+            color_channels=color_channels,
+            framerate=capture.get(cv2.CAP_PROP_FPS),
+            capture_fourcc=int(capture.get(cv2.CAP_PROP_FOURCC)).to_bytes(4, byteorder=sys.byteorder).decode('utf-8'),
+            video_path=path
+        )
+    return video_configs
+
+@dataclass # TODO: switch to pydantic
 class VideoPlayback:
-    """
-    Reads video from file into MultiFramePayloads
-
-    Use with a context manager, like:
-    with VideoReader() as video_reader:
-        while video_reader.current_payload is not None:
-            queue.put(video_reader.current_payload)
-            time.sleep(self.frame_duration)
-            video_reader.next_frame_payload()
-    """
-
-    def __init__(self, synchronized_video_folder_path: str | Path):
-        self.synchronized_video_folder_path = Path(synchronized_video_folder_path)
-        self.index_to_path_map = self.create_index_to_path_map()
-        self.video_captures = self.load_video_captures()
-        self.video_configs = self.create_video_configs()
-
+    video_configs: VideoConfigs
+    current_payload: MultiFramePayload = field(init=False)
+    
+    def __post_init__(self):
+        self.load_captures_from_configs()
         self.current_payload = self.create_initial_payload()
+    
+    def load_captures_from_configs(self) -> Dict[str, cv2.VideoCapture]:
+        video_captures = {}
+        for video_config in self.video_configs.values():
+            video_capture = cv2.VideoCapture(str(video_config.video_path))
+            if not video_capture.isOpened():
+                raise RuntimeError(f"Failed to open video capture for camera {video_config.camera_id}")
+            video_captures[video_config.camera_id] = video_capture
 
-    def create_index_to_path_map(self):  # I didn't make this a property in case user edits folder while running
-        return {index: path for index, path in
-                enumerate(get_video_paths(path_to_video_folder=self.synchronized_video_folder_path))}
-
-    def load_video_captures(self) -> Dict[int, cv2.VideoCapture]:
-        return {
-            index: cv2.VideoCapture(str(video_path)) for index, video_path in self.index_to_path_map.items()
-        }
-
-    def create_video_configs(self) -> VideoConfigs:
-        video_configs = {}
-        for camera_id, capture in self.video_captures.items():
-            color_channels = 1 if capture.get(cv2.CAP_PROP_MONOCHROME) else 3
-            video_configs[camera_id] = VideoConfig(
-                camera_id=camera_id,
-                camera_name=self.index_to_path_map[camera_id].stem,
-                resolution=ImageResolution(height=int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                                           width=int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))),
-                color_channels=color_channels,
-                framerate=capture.get(cv2.CAP_PROP_FPS),
-                capture_fourcc=capture.get(cv2.CAP_PROP_FOURCC)
-            )
-        return video_configs
+        return video_captures
 
     @property
     def fps(self) -> float:
-        fps = {cap.get(cv2.CAP_PROP_FPS) for cap in self.video_captures.values()}
+        fps = {video.framerate for video in self.video_configs.values()}
 
         if len(fps) != 1:
             # TODO: is this worth validating? or if frames counts match we don't care
@@ -83,9 +78,9 @@ class VideoPlayback:
         for camera_id, video_capture in self.video_captures.items():
             ret, frame = video_capture.read()
             if not ret:
-                logger.error(f"Failed to read frame {self.current_payload.multi_frame_number} for camera {camera_id}")
+                logger.error(f"Failed to read frame 0 for camera {camera_id}")
                 self.close_video_captures()
-                raise RuntimeError(f"Unable to load first frame from ")
+                raise RuntimeError(f"Unable to load first frame from {camera_id}")
             metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=0,
                                                    config=self.video_configs[camera_id])
             frame = FramePayload.create(image=frame, metadata=metadata)
@@ -94,18 +89,20 @@ class VideoPlayback:
         return initial_payload
 
     def next_frame_payload(self) -> Optional[MultiFramePayload]:
-        payload = MultiFramePayload.from_previous(camera_configs=self.video_configs)
+        if self.current_payload is None:
+            raise RuntimeError("Cannot run next_frame_payload when current_payload is None - must be run after create_initial_payload")
+        payload = MultiFramePayload.from_previous(camera_configs=self.video_configs, previous=self.current_payload)
 
         for camera_id, video_capture in self.video_captures.items():
             ret, frame = video_capture.read()
-            if not ret:  # temporary limit for testing
+            if not ret:
                 print(f"Failed to read frame {self.current_payload.multi_frame_number} for camera {camera_id}")
                 print("Closing video captures")
                 self.close_video_captures()
                 self.current_payload = None  # this ensures None is stuffed into Queue to signal processing is done, could be a better way to do this
                 return None  # TODO: call an end_video function, based off how skellycam normally ends things
             metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=payload.multi_frame_number,
-                                                   config=self.camera_configs[camera_id])
+                                                   config=self.video_configs[camera_id])
             frame = FramePayload.create(image=frame, metadata=metadata)
 
             payload.add_frame(frame)

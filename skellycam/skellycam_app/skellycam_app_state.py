@@ -17,6 +17,9 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escap
     MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_shared_memory import \
     RingBufferCameraSharedMemory
+from skellycam.core.playback.video_config import VideoConfigs
+from skellycam.core.playback.video_group import VideoGroup
+from skellycam.core.playback.video_group_dto import VideoGroupDTO
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
@@ -130,6 +133,24 @@ class SkellycamAppState:
         self.ipc_flags.global_kill_flag.value = True
         if self.camera_group:
             self.close_camera_group()
+
+    def create_video_group(self, video_configs: VideoConfigs):
+        if video_configs is None:
+            raise ValueError("Cannot create VideoGroup without video_configs!")
+        self.video_group_dto = VideoGroupDTO(video_configs=video_configs,
+                                             ipc_queue=self.ipc_queue,
+                                             ipc_flags=self.ipc_flags,
+                                             group_uuid=str(uuid4())
+                                             )
+        # TODO: figure out what to use for shmorchestrator
+        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.video_group_dto,
+                                                                          ipc_flags=self.ipc_flags,
+                                                                          read_only=True)
+        self.video_group = VideoGroup.create(video_group_dto=self.video_group_dto,
+                                             shmorc_dto=self.shmorchestrator.to_dto()
+                                             )
+
+        logger.info(f"Video group created successfully for cameras: {self.video_group.video_ids}")
 
 
 class SkellycamAppStateDTO(BaseModel):
