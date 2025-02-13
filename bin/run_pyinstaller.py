@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 os.environ['PYINSTALLER_NO_CONDA'] = '1'
 
-SPEC_FILE_PATH = str(Path(__file__).parent / 'freemocap.spec')
+SPEC_FILE_PATH = str(Path(__file__).parent / 'skellycam.spec')
 if not Path(SPEC_FILE_PATH).exists():
     raise FileNotFoundError(f"Spec file not found at {SPEC_FILE_PATH}")
 

@@ -1400,6 +1400,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "nuitka" },
+    { name = "pyinstaller" },
 ]
 
 [package.metadata]
@@ -1435,7 +1436,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "nuitka", specifier = ">=2.4.9" }]
+dev = [
+    { name = "nuitka", specifier = ">=2.4.9" },
+    { name = "pyinstaller", specifier = ">=6.11.1" },
+]
 
 [[package]]
 name = "skellytracker"

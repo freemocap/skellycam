@@ -111,4 +111,5 @@ py-modules = ["skellycam"]
 [tool.uv]
 dev-dependencies = [
     "nuitka>=2.4.9",
+    "pyinstaller>=6.11.1",
 ]
