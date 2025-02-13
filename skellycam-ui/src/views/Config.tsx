@@ -3,6 +3,7 @@ import React from "react";
 import { useAsync } from "react-use";
 import { AvailableCameraDevices } from "@/services/detectCameraDevices";
 import { useWebSocketContext } from "@/context/WebSocketContext";
+import {Counter} from "@/components/Counter";
 
 export const ConfigView = () => {
     const [devices, setDevices] = React.useState<MediaDeviceInfo[]>([]);
@@ -34,6 +35,7 @@ export const ConfigView = () => {
                     {JSON.stringify(latestSkellyCamAppState, null, 2)}
                 </Typography>
             )}
+            <Counter/>
         </Box>
     );
 }

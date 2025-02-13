@@ -27,7 +27,7 @@
     "@mui/material": "^6.1.1",
     "@react-three/drei": "^9.120.7",
     "@react-three/fiber": "^8.17.10",
-    "@reduxjs/toolkit": "^2.3.0",
+    "@reduxjs/toolkit": "^2.5.1",
     "@types/three": "^0.171.0",
     "axios": "^1.7.7",
     "electron-updater": "^6.1.8",

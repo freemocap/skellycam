@@ -20,8 +20,8 @@ interface WebSocketProviderProps {
 
 const WebSocketContext = createContext<WebSocketContextProps | undefined>(undefined);
 
-export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({url, children}) => {
-    const {isConnected, latestFrontendPayload,  latestImages, latestPoints3d, latestSkellyCamAppState, connect, disconnect} = useWebSocket(url);
+export const WebSocketContextProvider: React.FC<WebSocketProviderProps> = ({url, children}) => {
+    const {isConnected, latestFrontendPayload,  latestImages, latestSkellyCamAppState, connect, disconnect} = useWebSocket(url);
 
     return (
         <WebSocketContext.Provider value={{isConnected, latestFrontendPayload,latestImages, latestSkellyCamAppState, connect, disconnect}}>
