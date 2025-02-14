@@ -111,7 +111,7 @@ class LoggerBuilder:
                                                         color_code + "└» " + record.getMessage() + "\033[0m")
             formatted_record = color_code + formatted_record + "\033[0m"
             # Output the final colorized and formatted record to the console
-            print(formatted_record)
+            print(formatted_record.encode('utf-8', errors='replace').decode('utf-8'))
 
     def build_file_handler(self):
         file_handler = logging.FileHandler(get_log_file_path(), encoding="utf-8")

@@ -32,5 +32,5 @@ async def lifespan(app: FastAPI):
 
     # Shutdown actions
     logger.api("Skellycam API ending...")
-    await controller.shutdown()
+    controller.shutdown()
     logger.success("Skellycam API shutdown complete - Goodbye!👋")

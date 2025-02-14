@@ -9,7 +9,8 @@
   },
   "files": [
     "dist-electron",
-    "dist"
+    "dist",
+    "python-binary/windows/skellycam-server.exe"
   ],
   "mac": {
     "artifactName": "${productName}_${version}.${ext}",
