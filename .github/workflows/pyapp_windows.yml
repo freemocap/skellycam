@@ -71,7 +71,7 @@ jobs:
           WORKSPACE=$(cygpath -u "${{ github.workspace}}")
           cd $WORKSPACE/pyapp-v${{ env.LATEST_VERSION }}
           export PYAPP_PROJECT_NAME=skellycam
-          export PYAPP_PROJECT_VERSION=${{ env.VERSION }}
+          export PYAPP_PROJECT_VERSION=2.2.2.2
           export PYAPP_PYTHON_VERSION=3.11
           export PYAPP_PROJECT_DEPENDENCY_FILE=$WORKSPACE/requirements.txt
           export PYAPP_EXEC_SCRIPT=$WORKSPACE/skellycam/run_skellycam_server.py
