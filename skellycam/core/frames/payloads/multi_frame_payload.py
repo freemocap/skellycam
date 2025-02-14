@@ -11,6 +11,7 @@ from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     create_empty_frame_metadata
+from skellycam.core.playback.video_config import VideoConfigs
 from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 from skellycam.utilities.rotate_image import rotate_image
 
@@ -191,7 +192,7 @@ class MultiFramePayload(BaseModel):
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
 
-    camera_configs: CameraConfigs
+    camera_configs: CameraConfigs | VideoConfigs
 
     @classmethod
     def create_initial(cls, camera_configs: CameraConfigs) -> 'MultiFramePayload':
@@ -201,7 +202,7 @@ class MultiFramePayload(BaseModel):
     @classmethod
     def from_previous(cls,
                       previous: 'MultiFramePayload',
-                      camera_configs: Type[CameraConfigs]) -> 'MultiFramePayload':
+                      camera_configs: CameraConfigs | VideoConfigs) -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
                    camera_configs=camera_configs,

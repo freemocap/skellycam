@@ -11,6 +11,7 @@ class IPCFlags:
     cameras_connected_flag: multiprocessing.Value
     playback_run_flag: multiprocessing.Value
     playback_pause_flag: multiprocessing.Value
+    playback_stop_flag: multiprocessing.Value
     playback_frame_number_flag: multiprocessing.Value
 
 
@@ -22,5 +23,6 @@ class IPCFlags:
         self.mic_device_index: multiprocessing.Value = multiprocessing.Value("i", -1)
         self.playback_run_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self.playback_pause_flag: multiprocessing.Value = multiprocessing.Value("b", True)
+        self.playback_stop_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self.playback_frame_number_flag: multiprocessing.Value = multiprocessing.Value("i", 0)
 

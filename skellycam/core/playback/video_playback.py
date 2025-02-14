@@ -40,9 +40,10 @@ def load_video_configs_from_folder(synchronized_video_folder_path: str | Path) -
 class VideoPlayback:
     video_configs: VideoConfigs
     current_payload: MultiFramePayload = field(init=False)
+    video_captures: Dict[str, cv2.VideoCapture] = field(init=False)
     
     def __post_init__(self):
-        self.load_captures_from_configs()
+        self.video_captures = self.load_captures_from_configs()
         self.current_payload = self.create_initial_payload()
     
     def load_captures_from_configs(self) -> Dict[str, cv2.VideoCapture]:
@@ -81,8 +82,8 @@ class VideoPlayback:
                 logger.error(f"Failed to read frame 0 for camera {camera_id}")
                 self.close_video_captures()
                 raise RuntimeError(f"Unable to load first frame from {camera_id}")
-            metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=0,
-                                                   config=self.video_configs[camera_id])
+            metadata = create_empty_frame_metadata(camera_id=int(camera_id), frame_number=0,
+                                                   config=self.video_configs[int(camera_id)])
             frame = FramePayload.create(image=frame, metadata=metadata)
 
             initial_payload.add_frame(frame)
@@ -99,16 +100,22 @@ class VideoPlayback:
                 print(f"Failed to read frame {self.current_payload.multi_frame_number} for camera {camera_id}")
                 print("Closing video captures")
                 self.close_video_captures()
-                self.current_payload = None  # this ensures None is stuffed into Queue to signal processing is done, could be a better way to do this
+                self.current_payload = None
                 return None  # TODO: call an end_video function, based off how skellycam normally ends things
-            metadata = create_empty_frame_metadata(camera_id=camera_id, frame_number=payload.multi_frame_number,
-                                                   config=self.video_configs[camera_id])
+            metadata = create_empty_frame_metadata(camera_id=int(camera_id), frame_number=payload.multi_frame_number,
+                                                   config=self.video_configs[int(camera_id)])
             frame = FramePayload.create(image=frame, metadata=metadata)
 
             payload.add_frame(frame)
 
         self.current_payload = payload
         return payload
+    
+    def go_to_frame(self, frame_number: int):
+        # TODO: this can be inaccurate, so maybe make another method of doing this accurately?
+        for video_capture in self.video_captures.values():
+            video_capture.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+        
 
     def __enter__(self):
         return self
@@ -117,13 +124,11 @@ class VideoPlayback:
         self.close_video_captures()
 
 
-def read_video_into_queue(synchronized_video_path: Path, camera_payload_queue: multiprocessing.Queue) -> None:
-    with VideoPlayback(synchronized_video_folder_path=synchronized_video_path) as video_reader:
-        while video_reader.current_payload is not None:
-            camera_payload_queue.put(video_reader.current_payload)
-            time.sleep(1 / video_reader.frame_duration)
-            video_reader.next_frame_payload()
-
-    camera_payload_queue.put(None)
+def read_video_into_queue(video_configs: VideoConfigs, camera_payload_queue: multiprocessing.Queue) -> None:
+    with VideoPlayback(video_configs=video_configs) as video_playback:
+        while video_playback.current_payload is not None:
+            camera_payload_queue.put(video_playback.current_payload)
+            time.sleep(video_playback.frame_duration)
+            video_playback.next_frame_payload()
 
     print("processed entire recording!")
