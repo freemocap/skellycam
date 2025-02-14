@@ -33,3 +33,5 @@ yarn.lock
 /playwright/.cache/
 
 *.exe
+pyapp-*
+*.zip

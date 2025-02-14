@@ -12,7 +12,7 @@ pip install -e .
 pip freeze > pyapp-requirements.txt
 
 # Remove opencv-python dependency from requirements.txt
-(Get-Content pyapp-requirements.txt) -notmatch 'opencv-python' | Set-Content requirements.txt
+(Get-Content pyapp-requirements.txt) -notmatch 'opencv-python' | Set-Content pyapp-requirements.txt
 
 # Set environment variables for PyApp
 $env:PYAPP_PROJECT_NAME = "skellycam"
@@ -57,12 +57,16 @@ Set-Location ..
 # Construct the path to the executable in the bin folder
 $binPath = Join-Path -Path $extractedDir -ChildPath "bin\pyapp.exe"
 
-# Rename the executable
-Rename-Item -Path $binPath -NewName "skellycam_app.exe"
+# Copy the executable to the current working directory
+Copy-Item -Path $binPath -Destination (Get-Location)
 
-# Install Rcedit with Chocolatey
+# Rename the executable in the current working directory
+Rename-Item -Path ".\pyapp.exe" -NewName "skellycam_app.exe"
+
 # Ensure Chocolatey is installed on your system
-choco install rcedit -y
+# Install Rcedit with Chocolatey (uncomment to install Rcedit, which should be used to set the executable icon)
+# You should only run this choco command from an elevated PowerShell session
+#choco install rcedit -y
 
 # Set executable icon
 # Uncomment and specify the correct path for your icon if needed
