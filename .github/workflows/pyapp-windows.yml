@@ -1,0 +1,88 @@
+name: Create Windows Installer
+
+on:
+  workflow_dispatch:
+#  push:
+#    tags: [ v* ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print System Info...
+        run: |
+          systeminfo || true
+          env
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          # Semantic version range syntax or exact version of a Python version
+          python-version: '3.11'
+          # Optional - x64 or x86 architecture, defaults to x64
+          architecture: 'x64'
+
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Create virtual environment
+        run: uv venv
+      - name: Activate virtual environment
+        run: |
+          .\.venv\Scripts\activate
+          python -c "import sys; print(sys.executable)"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: List installed dependencies
+        run: pip list
+
+      - name: Download PyApp
+        run: |
+          curl -L -o pyapp.zip "https://github.com/ofek/pyapp/releases/download/v0.22.0/source.zip"
+      - name: Unzip PyApp
+        run: |
+          unzip pyapp.zip
+        shell: bash
+
+      - name: List Directory Contents
+        run: |
+          ls -la
+        shell: bash
+
+      - name: Get SkellyCam Version
+        id: extract_version
+        run: |
+          version=$(python skellycam\extract_version.py)
+          echo "VERSION=$version" >> $GITHUB_ENV
+
+      - name: Create Windows Installer
+        run: |
+          WORKSPACE=$(cygpath -u "${{ github.workspace}}")
+          cd $WORKSPACE/pyapp-v0.22.0
+          export PYAPP_PROJECT_NAME=skellycam
+          export PYAPP_PROJECT_VERSION=$VERSION
+          export PYAPP_PYTHON_VERSION=3.11
+          export PYAPP_PROJECT_DEPENDENCY_FILE=$WORKSPACE/requirements.txt
+          export PYAPP_EXEC_SCRIPT=$WORKSPACE/skellycam/run_skellycam_server.py
+          export PYAPP_PIP_EXTRA_ARGS=--no-deps
+          export PYAPP_EXPOSE_ALL_COMMANDS=true
+          cargo build --release
+          cargo install pyapp --force --root $WORKSPACE
+          cd $WORKSPACE
+          mv $WORKSPACE/bin/pyapp skellycam_windows_exe_x86_64-pc-windows-msvc
+        shell: bash
+      - name: Install Rcedit with Chocolatey
+        run: choco install rcedit -y
+        shell: bash
+      - name: Set Executable Icon
+        run: |
+          rcedit "skellycam_windows_exe_x86_64-pc-windows-msvc" --set-icon "${{ github.workspace }}/skellycam/assets/logo/skellycam_skelly_logo.ico"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: skellycam_windows_exe_x86_64-pc-windows-msvc
+          path: skellycam_windows_exe_x86_64-pc-windows-msvc.exe
