@@ -1,6 +1,5 @@
 import multiprocessing
 from dataclasses import dataclass
-import ctypes
 
 
 @dataclass

@@ -219,7 +219,7 @@ out/
 *.flac
 
 # Don't ignore `skellycam.spec` file
-!skellycam.spec
+!installers/skellycam.spec
 !.python-version
 pyapp-source.zip
 pyapp-latest/*

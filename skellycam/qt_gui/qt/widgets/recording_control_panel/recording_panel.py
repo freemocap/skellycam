@@ -4,10 +4,8 @@ from typing import Optional
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget, QLabel, QVBoxLayout, QLineEdit
 
-from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.qt_gui.qt.widgets.recording_control_panel.audio_record_panel import AudioRecorderWidget
-from skellycam.system.default_paths import get_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
 

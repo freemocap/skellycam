@@ -3,6 +3,7 @@ import time
 from typing import Tuple
 
 import numpy as np
+
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 
 

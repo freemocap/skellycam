@@ -1,7 +1,7 @@
 from collections import deque
 from typing import List
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 
 class CurrentFramerate(BaseModel):

@@ -4,25 +4,27 @@
 # Ensure Python 3.11 is installed and added to your PATH
 #Write-Host "Ensure Python 3.11 is installed and added to your PATH."
 
-# Upgrade pip and install dependencies
-python -m pip install --upgrade pip
-pip install -e .
+# Print the Python executable path
+python -c "import sys; print(sys.executable)"
+
+# Upgrade pip and install dependencies without using cache
+python -m pip install --upgrade pip --no-cache-dir
+pip install -e . --no-cache-dir
 
 # Freeze dependencies to requirements.txt
-pip freeze > pyapp-requirements.txt
+pip freeze > requirements.txt
 
 # Remove opencv-python dependency from requirements.txt
-(Get-Content pyapp-requirements.txt) -notmatch 'opencv-python' | Set-Content pyapp-requirements.txt
+(Get-Content requirements.txt) -notmatch 'opencv-python' | Set-Content requirements.txt
 
 # Set environment variables for PyApp
-$env:PYAPP_PROJECT_NAME = "skellycam"
-$env:PYAPP_PROJECT_VERSION = "v2.0.0"
+$env:PYAPP_PROJECT_NAME = "skellycam-server"
+$env:PYAPP_PROJECT_VERSION = "v2.0.1"
 $env:PYAPP_PYTHON_VERSION = "3.11"
-$env:PYAPP_PROJECT_DEPENDENCY_FILE = (Resolve-Path "pyapp-requirements.txt").Path
+$env:PYAPP_PROJECT_DEPENDENCY_FILE = (Resolve-Path "requirements.txt").Path
 $env:PYAPP_EXEC_SCRIPT = (Resolve-Path "skellycam\run_skellycam_server.py").Path
 $env:PYAPP_PIP_EXTRA_ARGS = "--no-deps"
 $env:PYAPP_EXPOSE_ALL_COMMANDS = "true"
-
 
 # Define the GitHub repository
 $repo = "ofek/pyapp"
@@ -51,7 +53,7 @@ Set-Location $extractedDir
 cargo build --release
 cargo install pyapp --force --root (Get-Location).Path
 
-## Return to the initial directory
+# Return to the initial directory
 Set-Location ..
 
 # Construct the path to the executable in the bin folder
@@ -61,7 +63,7 @@ $binPath = Join-Path -Path $extractedDir -ChildPath "bin\pyapp.exe"
 Copy-Item -Path $binPath -Destination (Get-Location)
 
 # Rename the executable in the current working directory
-Rename-Item -Path ".\pyapp.exe" -NewName "skellycam_app.exe"
+Rename-Item -Path ".\pyapp.exe" -NewName "skellycam-server.exe"
 
 # Ensure Chocolatey is installed on your system
 # Install Rcedit with Chocolatey (uncomment to install Rcedit, which should be used to set the executable icon)
@@ -70,6 +72,10 @@ Rename-Item -Path ".\pyapp.exe" -NewName "skellycam_app.exe"
 
 # Set executable icon
 # Uncomment and specify the correct path for your icon if needed
-rcedit "skellycam_app.exe" --set-icon "freemocap/shared/skellycam-logo/skellycam-favicon.ico"
+rcedit "skellycam-server.exe" --set-icon "shared/skellycam-logo/skellycam-favicon.ico"
 
-Write-Host "skellycam_app.exe has been created with the specified icon."
+
+# Clean up: Remove the downloaded and extracted files, except for the .exe
+Remove-Item -Recurse -Force "pyapp.zip"
+Remove-Item -Recurse -Force $extractedDir
+Remove-Item -Force "requirements.txt"

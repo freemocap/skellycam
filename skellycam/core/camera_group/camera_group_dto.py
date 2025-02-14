@@ -1,8 +1,8 @@
 import multiprocessing
 from dataclasses import dataclass
 
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 
 
 @dataclass

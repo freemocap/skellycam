@@ -1,5 +1,7 @@
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QComboBox, QCheckBox, QLabel, QHBoxLayout
+from PySide6.QtWidgets import QApplication, QWidget, QComboBox, QCheckBox, QLabel, QHBoxLayout
+
 from skellycam.system.device_detection.detect_microphone_devices import get_available_microphones
+
 
 class AudioRecorderWidget(QWidget):
     def __init__(self):

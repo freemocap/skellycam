@@ -89,9 +89,8 @@ async function createWindow() {
     })
 
     // Start the Python server
-    const pythonServer = exec(pythonServerExectuablePath, {
-        env: {...process.env, PYTHONIOENCODING: 'utf-8'}
-    }, (error, stdout, stderr) => {
+    const pythonServer = exec(pythonServerExectuablePath,
+        (error, stdout, stderr) => {
         if (error) {
             console.error(`Error starting Python server: ${error}`);
             return;

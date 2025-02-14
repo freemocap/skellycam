@@ -1,12 +1,12 @@
+import logging
 import uuid
 from typing import TYPE_CHECKING, Any, Dict
 
 from pydantic import BaseModel, Field
 
 from skellycam.core import CameraId
-import logging
-
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
+
 if TYPE_CHECKING:
     from skellycam.core.recorders.recording_manager import RecordingManager
 

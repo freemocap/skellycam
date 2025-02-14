@@ -1,13 +1,12 @@
-import threading
+import logging
 import time
 from typing import List
 
+import cv2
 import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, CameraDeviceInfo
-import logging
-import cv2
 
 logger = logging.getLogger(__name__)
 

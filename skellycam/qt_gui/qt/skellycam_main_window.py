@@ -1,23 +1,20 @@
 import logging
 import multiprocessing
-import threading
-import time
 from pathlib import Path
 from typing import Union
 
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget, QCheckBox
+from PySide6.QtWidgets import QDockWidget, QMainWindow, QVBoxLayout, QWidget
 from pydantic import BaseModel
 
 from skellycam import CameraConfigs
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
-from skellycam.qt_gui.qt.widgets.keyboard_shortcuts import KeyboardShortcuts
-from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.qt_gui.qt.client.gui_client import SkellycamFrontendClient
 from skellycam.qt_gui.qt.css.qt_css_stylesheet import QT_CSS_STYLE_SHEET_STRING
 from skellycam.qt_gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
 from skellycam.qt_gui.qt.widgets.connect_to_cameras_button import ConnectToCamerasButton
+from skellycam.qt_gui.qt.widgets.keyboard_shortcuts import KeyboardShortcuts
 from skellycam.qt_gui.qt.widgets.side_panel_widgets.app_state_viewer_widget import SkellycamAppStateJsonViewer
 from skellycam.qt_gui.qt.widgets.side_panel_widgets.camera_control_panel import (
     SkellycamCameraControlPanel,
@@ -26,6 +23,7 @@ from skellycam.qt_gui.qt.widgets.side_panel_widgets.skellycam_directory_view imp
 from skellycam.qt_gui.qt.widgets.welcome_to_skellycam_widget import (
     WelcomeToSkellyCamWidget,
 )
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path, \
     get_default_skellycam_recordings_path, SKELLYCAM_FAVICON_ICO_PATH
 from skellycam.system.device_detection.detect_available_cameras import get_available_cameras, CameraDetectionStrategies

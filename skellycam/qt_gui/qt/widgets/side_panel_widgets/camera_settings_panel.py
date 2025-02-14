@@ -1,5 +1,4 @@
 import logging
-from copy import deepcopy
 from typing import Optional
 
 from PySide6.QtCore import Slot

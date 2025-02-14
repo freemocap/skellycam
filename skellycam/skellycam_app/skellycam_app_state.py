@@ -6,8 +6,8 @@ from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel
-from skellycam.core import CameraId
 
+from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
