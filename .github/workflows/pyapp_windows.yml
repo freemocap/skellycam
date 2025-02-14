@@ -38,6 +38,9 @@ jobs:
       - name: List installed dependencies
         run: pip list
 
+      - name: Save requirements.txt
+        run: uv pip freeze > requirements.txt
+
       - name: Get Latest PyApp Version
         id: get_latest_version
         shell: pwsh
