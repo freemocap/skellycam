@@ -63,9 +63,9 @@ jobs:
         id: extract_version
         shell: pwsh
         run: |
-#          $version = python skellycam/utilities/get_version.py
           $version = 2.1.2
           echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+#          $version = python skellycam/utilities/get_version.py
 
       - name: Create Windows Installer
         run: |
