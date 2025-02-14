@@ -38,10 +38,11 @@ jobs:
 
       - name: Get Latest PyApp Version
         id: get_latest_version
+        shell: pwsh
         run: |
-          latest_info=$(curl -s https://api.github.com/repos/ofek/pyapp/releases/latest)
-          latest_version=$(echo $latest_info | python -c "import sys, json; print(json.load(sys.stdin)['tag_name'].strip('v'))")
-          echo "LATEST_VERSION=$latest_version" >> $GITHUB_ENV
+          $latestInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/ofek/pyapp/releases/latest"
+          $latestVersion = $latestInfo.tag_name.TrimStart('v')
+          echo "LATEST_VERSION=$latestVersion" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
 
       - name: Download Latest PyApp
         run: |
