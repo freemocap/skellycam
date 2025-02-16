@@ -1,1 +1,0 @@
-nuitka --onefile --user-package-configuration-file=installers/skellycam-nuitka.config.yml skellycam/run_skellycam_server.py
