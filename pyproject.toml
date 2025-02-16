@@ -67,6 +67,7 @@ dependencies = [
     "pip>=24.2",
     "pyaudio>=0.2.14",
     "tabulate>=0.9.0",
+    "nuitka>=2.6.5",
 ]
 requires-python = ">=3.10,<3.13"
 
@@ -96,7 +97,7 @@ push = true
 [project.scripts]
 skellycam = "skellycam.__main__:main"
 #skellycam-build-pyinstaller = "skellycam.system.build_installer.run_pyinstaller:run_pyinstaller"
-#skellycam-build-nuitka = "uv run python -m nuitka --standalone --plugin-enable=pyside6 .skellycam/__main__.py"
+#skellycam-build-nuitka = "nuitka --standalone --user-package-configuration-file=skellycam-nuitka.config.yml skellycam/run_skellycam_server.py"
 
 [tool.setuptools]
 py-modules = ["skellycam"]

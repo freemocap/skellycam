@@ -23,7 +23,7 @@ $env:PYAPP_PROJECT_VERSION = "v2.0.1"
 $env:PYAPP_PYTHON_VERSION = "3.11"
 $env:PYAPP_PROJECT_DEPENDENCY_FILE = (Resolve-Path "requirements.txt").Path
 $env:PYAPP_EXEC_SCRIPT = (Resolve-Path "skellycam\run_skellycam_server.py").Path
-$env:PYAPP_PIP_EXTRA_ARGS = "--no-deps"
+$env:PYAPP_PIP_EXTRA_ARGS = "--no-deps --no-cache-dir"
 $env:PYAPP_EXPOSE_ALL_COMMANDS = "true"
 
 # Define the GitHub repository
