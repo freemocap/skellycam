@@ -1,15 +1,15 @@
-/**
- * @see https://www.electron.build/configuration/configuration
- */
 {
-  "appId": "skellycam.ui.app",
-  "asar": true,
+  "appId": "skellycam.app",
   "directories": {
     "output": "release/${version}"
   },
   "files": [
     "dist-electron",
     "dist",
+    "python-binary/windows/skellycam-server.exe"
+  ],
+  "asar": true,
+  "asarUnpack": [
     "python-binary/windows/skellycam-server.exe"
   ],
   "mac": {
