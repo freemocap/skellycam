@@ -89,15 +89,21 @@ async function createWindow() {
     })
 
     // Start the Python server
-    const pythonServer = exec(pythonServerExectuablePath,
+    const pythonServer = exec(pythonServerExectuablePath, {
+            env: {
+                ...process.env,
+                PYTHONIOENCODING: 'utf-8', // Force UTF-8 for I/O
+                PYTHONUTF8: '1'            // Enable Python's UTF-8 mode (v3.7+)
+            }
+        },
         (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error starting Python server: ${error}`);
-            return;
-        }
-        console.log(`Python server stdout: ${stdout}`);
-        console.error(`Python server stderr: ${stderr}`);
-    });
+            if (error) {
+                console.error(`Error starting Python server: ${error}`);
+                return;
+            }
+            console.log(`Python server stdout: ${stdout}`);
+            console.error(`Python server stderr: ${stderr}`);
+        });
 
     // Auto update
     update(win)

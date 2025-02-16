@@ -73,8 +73,6 @@ requires-python = ">=3.10,<3.13"
 
 dynamic = ["version", "description"]
 
-[tool.uv.sources]
-skellytracker = { git = "https://github.com/freemocap/skellytracker", branch = "jon/development" }
 [project.optional-dependencies]
 dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
 
@@ -97,7 +95,7 @@ push = true
 [project.scripts]
 skellycam = "skellycam.__main__:main"
 #skellycam-build-pyinstaller = "skellycam.system.build_installer.run_pyinstaller:run_pyinstaller"
-#skellycam-build-nuitka = "nuitka --standalone --user-package-configuration-file=skellycam-nuitka.config.yml skellycam/run_skellycam_server.py"
+#skellycam-build-nuitka = "nuitka --onefile --user-package-configuration-file=installers/skellycam-nuitka.config.yml skellycam/run_skellycam_server.py"
 
 [tool.setuptools]
 py-modules = ["skellycam"]
