@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+process.env.LAUNCH_PYTHON_SERVER = 'true';
 
 // The built directory structure
 //
@@ -45,36 +46,54 @@ let win: BrowserWindow | null = null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 let pythonServer: any;
-let pythonServerExectuablePath = path.resolve(process.resourcesPath, 'app.asar.unpacked/python-binary/windows/skellycam-server.exe');
+let pythonServerExecutablePath = path.resolve(process.resourcesPath, 'app.asar.unpacked/skellycam_server.exe');
 
-// Check executable existence
-if (!fs.existsSync(pythonServerExectuablePath)) {
-    console.error(`Python server executable not found at ${pythonServerExectuablePath}`);
-    pythonServerExectuablePath = path.resolve(__dirname, '../../python-binary/windows/skellycam-server.exe');
-    if (!fs.existsSync(pythonServerExectuablePath)) {
-        console.error(`Python server executable not found at ${pythonServerExectuablePath} either`);
+
+function checkExecutablePath() {
+    if (!fs.existsSync(pythonServerExecutablePath)) {
+        console.error(`Python server executable not found at ${pythonServerExecutablePath}`);
+        pythonServerExecutablePath = path.resolve(__dirname, '../../../skellycam_server.exe');
+        if (!fs.existsSync(pythonServerExecutablePath)) {
+            console.error(`Python server executable not found at ${pythonServerExecutablePath} either`);
+            app.quit();
+        }
+    } else {
+        console.log(`Python server executable found at ${pythonServerExecutablePath}`);
     }
-    app.quit();
-} else {
-    console.log(`Python server executable found at ${pythonServerExectuablePath}`);
 }
-fs.access(pythonServerExectuablePath, fs.constants.X_OK, (err) => {
-    if (err) {
-        console.error(`${pythonServerExectuablePath} is not executable or accessible: ${err.message}`);
-        app.quit();
-    } else {
-        console.log(`${pythonServerExectuablePath} is executable`);
-    }
-});
 
 
-require('fs').access(pythonServerExectuablePath, require('fs').constants.X_OK, (err: { message: any }) => {
-    if (err) {
-        console.error(`${pythonServerExectuablePath} is not executable or accessible: ${err.message}`);
-    } else {
-        console.log(`${pythonServerExectuablePath} is executable`);
-    }
-});
+function startPythonServer() {
+    checkExecutablePath();
+    fs.access(pythonServerExecutablePath, fs.constants.X_OK, (err) => {
+        if (err) {
+            console.error(`${pythonServerExecutablePath} is not executable or accessible: ${err.message}`);
+            app.quit();
+        } else {
+            console.log(`${pythonServerExecutablePath} is executable`);
+            pythonServer = exec(`"${pythonServerExecutablePath}"`, {
+                    env: {
+                        ...process.env,
+                        PYTHONIOENCODING: 'utf-8',
+                        PYTHONUTF8: '1'
+                    }
+                },
+                (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`Error starting Python server: ${error.message}`);
+                        return;
+                    }
+                    console.log(`Python server stdout: ${stdout}`);
+                    if (stderr) console.error(`Python server stderr: ${stderr}`);
+                });
+
+            pythonServer.on('exit', (code: any) => {
+                console.log(`Python server exited with code: ${code}`);
+            });
+        }
+    });
+}
+
 
 async function createWindow() {
     win = new BrowserWindow({
@@ -112,26 +131,13 @@ async function createWindow() {
         return {action: 'deny'}
     })
 
-    // Start the Python server
-    const pythonServer = exec(`"${pythonServerExectuablePath}"`, {
-            env: {
-                ...process.env,
-                PYTHONIOENCODING: 'utf-8',
-                PYTHONUTF8: '1'
-            }
-        },
-        (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error starting Python server: ${error.message}`);
-                return;
-            }
-            console.log(`Python server stdout: ${stdout}`);
-            if (stderr) console.error(`Python server stderr: ${stderr}`);
-        });
 
-    pythonServer.on('exit', (code) => {
-        console.log(`Python server exited with code: ${code}`);
-    });
+    if (process.env.LAUNCH_PYTHON_SERVER == 'true') {
+        console.log("Environment variable LAUNCH_PYTHON_SERVER is set to 'true'. Starting python server...");
+        startPythonServer();
+    } else {
+        console.log("Environment variable LAUNCH_PYTHON_SERVER is not set to 'true'. Python server will not be started.");
+    }
 
     // Auto update
     update(win)

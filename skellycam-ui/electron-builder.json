@@ -6,7 +6,7 @@
   "files": [
     "dist-electron",
     "dist",
-    "python-binary/windows/skellycam-server.exe",
+    "../skellycam_server.exe",
     "../shared/skellycam-logo/skellycam-favicon.ico"
   ],
   "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
