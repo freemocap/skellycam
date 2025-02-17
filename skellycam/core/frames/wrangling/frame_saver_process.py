@@ -52,9 +52,12 @@ class FrameSaverProcess:
         logger.debug(f"FrameRouter process started!")
 
         def heartbeat_thread_function():
+            heart_beat_counter = 0
             while camera_group_dto.should_continue:
-                logger.trace(f"FrameSaverProcess heartbeat says 'beep'")
-                time.sleep(10)
+                heart_beat_counter += 1
+                if heart_beat_counter % 10 == 0:
+                    logger.trace(f"FrameSaverProcess heartbeat says 'beep'")
+                time.sleep(1)
 
         heartbeat_thread = threading.Thread(target=heartbeat_thread_function,
                                             daemon=True,

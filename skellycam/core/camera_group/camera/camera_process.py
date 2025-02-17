@@ -91,12 +91,18 @@ class CameraProcess:
                      ):
         config = camera_group_dto.camera_configs[camera_id]
 
-        def heartbeat_thread_function():
-            while camera_group_dto.should_continue and not should_close_self_flag.value:
-                logger.trace(f"Camera#{camera_id} Process heartbeat says 'beep'")
-                time.sleep(10)
 
-        heartbeat_thread = threading.Thread(target=heartbeat_thread_function, name=f"Camera{camera_id}Heartbeat")
+        def heartbeat_thread_function():
+            heartbeat_counter = 0
+            while camera_group_dto.should_continue and not should_close_self_flag.value:
+                heartbeat_counter += 1
+                if heartbeat_counter % 10 == 0:
+                    logger.trace(f"Camera#{camera_id} Process heartbeat says 'beep'")
+                time.sleep(1)
+
+        heartbeat_thread = threading.Thread(target=heartbeat_thread_function,
+
+                                            name=f"Camera{camera_id}Heartbeat")
         heartbeat_thread.start()
 
         camera_shm = SingleSlotCameraSharedMemory.recreate(camera_config=config,
@@ -154,6 +160,7 @@ class CameraProcess:
             if cv2_video_capture:
                 cv2_video_capture.release()
             camera_shm.close()
+
 
 
 def check_for_config_update(config: CameraConfig,
