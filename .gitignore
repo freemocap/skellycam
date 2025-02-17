@@ -229,3 +229,4 @@ pyapp-latest/*
 output_timestamps.json
 pyapp-v*
 *.exe
+*onefile-build/*
