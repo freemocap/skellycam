@@ -10,8 +10,7 @@ from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_process import CameraProcess
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.camera_group.camera_group_dto import CameraGroupDTOfrom skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
@@ -23,7 +22,7 @@ class CameraManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     orchestrator: CameraGroupOrchestrator
-    camera_group_dto: CameraGroupDTO
+    camera_group_dto: CameraGroup
     camera_processes: Dict[CameraId, CameraProcess]
 
     @classmethod

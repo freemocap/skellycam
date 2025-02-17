@@ -18,3 +18,7 @@ class CameraGroupDTO:
     @property
     def camera_ids(self):
         return list(self.camera_configs.keys())
+
+    @property
+    def should_continue(self):
+        return self.ipc_flags.should_continue

@@ -5,7 +5,7 @@ import sys
 import time
 from pathlib import Path
 
-from skellycam.run_skellycam_server import run_server
+from skellycam.skellycam_server import run_server
 from skellycam.utilities.clean_path import clean_path
 from skellycam.utilities.setup_windows_app_id import setup_app_id_for_windows
 

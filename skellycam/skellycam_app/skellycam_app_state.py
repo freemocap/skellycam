@@ -32,15 +32,17 @@ class SkellycamAppState:
     ipc_queue: multiprocessing.Queue
     config_update_queue: multiprocessing.Queue
 
-    shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
-    camera_group_dto: Optional[CameraGroupDTO] = None
-    camera_group: Optional[CameraGroup] = None
-    available_cameras: Optional[AvailableCameras] = None
-    backend_framerate: Optional[CurrentFramerate] = None
-    frontend_framerate: Optional[CurrentFramerate] = None
+    shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
+    camera_group_dto: CameraGroupDTO | None = None
+    camera_group: CameraGroup | None = None
+    available_cameras: AvailableCameras | None = None
+    backend_framerate: CurrentFramerate | None = None
+    frontend_framerate: CurrentFramerate | None = None
 
     @classmethod
-    def create(cls, global_kill_flag: multiprocessing.Value):
+    def create(cls,
+               global_kill_flag: multiprocessing.Value,
+               ) -> "SkellycamAppState":
         return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag),
                    ipc_queue=multiprocessing.Queue(),
                    config_update_queue=multiprocessing.Queue())
@@ -66,7 +68,6 @@ class SkellycamAppState:
             return available_cameras_to_default_camera_configs(self.available_cameras)
         return self.camera_group.camera_configs
 
-
     def set_available_cameras(self, value: AvailableCameras):
         self.available_cameras = value
 
@@ -81,11 +82,11 @@ class SkellycamAppState:
         # if self.available_devices is None:
         #     raise ValueError("Cannot get CameraConfigs without available devices!")
         self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
-                                               ipc_queue=self.ipc_queue,
-                                               ipc_flags=self.ipc_flags,
-                                               config_update_queue=self.config_update_queue,
-                                               group_uuid=str(uuid4())
-                                               )
+                                            ipc_queue=self.ipc_queue,
+                                            ipc_flags=self.ipc_flags,
+                                            config_update_queue=self.config_update_queue,
+                                            group_uuid=str(uuid4())
+                                            )
         self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.camera_group_dto,
                                                                           ipc_flags=self.ipc_flags,
                                                                           read_only=True)
@@ -117,8 +118,8 @@ class SkellycamAppState:
         self.ipc_flags.mic_device_index.value = request.mic_device_index
         self.ipc_flags.record_frames_flag.value = True
         name_to_store = request.recording_name if request.recording_name else ""
-        self.ipc_flags.recording_nametag.value = name_to_store.encode("utf-8")        
-        
+        self.ipc_flags.recording_nametag.value = name_to_store.encode("utf-8")
+
         self.ipc_queue.put(self.state_dto())
 
     def stop_recording(self):
@@ -152,8 +153,6 @@ class SkellycamAppStateDTO(BaseModel):
 
     @classmethod
     def from_state(cls, state: SkellycamAppState):
-
-
         return cls(
             camera_configs=state.camera_group_configs,
             available_devices=state.available_cameras,
@@ -165,7 +164,8 @@ class SkellycamAppStateDTO(BaseModel):
 SKELLYCAM_APP_STATE: Optional[SkellycamAppState] = None
 
 
-def create_skellycam_app_state(global_kill_flag: multiprocessing.Value) -> SkellycamAppState:
+def create_skellycam_app_state(global_kill_flag: multiprocessing.Value,
+                               ) -> SkellycamAppState:
     global SKELLYCAM_APP_STATE
     if not SKELLYCAM_APP_STATE:
         SKELLYCAM_APP_STATE = SkellycamAppState.create(global_kill_flag=global_kill_flag)

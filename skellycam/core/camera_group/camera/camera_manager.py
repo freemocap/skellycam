@@ -61,7 +61,7 @@ class CameraManager(BaseModel):
 
             logger.debug(f"Starting camera trigger loop for cameras: {self.camera_ids}...")
 
-            while not self.camera_group_dto.ipc_flags.global_kill_flag.value and not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value:
+            while  self.camera_group_dto.should_continue:
 
                 tik = time.perf_counter_ns()
 

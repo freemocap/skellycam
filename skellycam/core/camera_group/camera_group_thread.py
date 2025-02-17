@@ -4,6 +4,7 @@ import threading
 
 from skellycam.core.camera_group.camera.camera_manager import CameraManager
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
@@ -23,6 +24,7 @@ class CameraGroupThread:
         self._thread = threading.Thread(
             name=CameraGroupThread.__name__,
             target=CameraGroupThread._run_thread,
+            daemon=True,
             kwargs=dict(camera_group_dto=camera_group_dto,
                   shmorc_dto=shmorc_dto,
                   frame_router_config_queue=frame_router_config_queue,

@@ -35,8 +35,7 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
                                                                            read_only=read_only),
                    multi_frame_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.create(camera_group_dto=camera_group_dto,
                                                                                        read_only=read_only),
-                   orchestrator=CameraGroupOrchestrator.create(camera_group_dto=camera_group_dto,
-                                                               ipc_flags=ipc_flags)
+                   orchestrator=CameraGroupOrchestrator.from_dto(camera_group_dto=camera_group_dto,)
                    )
 
     @classmethod

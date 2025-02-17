@@ -25,18 +25,20 @@ class FrameListenerWorker:
         if use_thread:
             self._worker = threading.Thread(target=self._run_worker,
                                             name=self.__class__.__name__,
+                                            daemon=True,
                                             kwargs=dict(camera_group_dto=camera_group_dto,
-                                                                shmorc_dto=shmorc_dto,
-                                                                new_configs_queue=new_configs_queue
-                                                                )
+                                                        shmorc_dto=shmorc_dto,
+                                                        new_configs_queue=new_configs_queue
+                                                        )
                                             )
         else:
             self._worker = multiprocessing.Process(target=self._run_worker,
                                                    name=self.__class__.__name__,
+                                                   daemon=True,
                                                    kwargs=dict(camera_group_dto=camera_group_dto,
-                                                          shmorc_dto=shmorc_dto,
-                                                          new_configs_queue=new_configs_queue
-                                                          )
+                                                               shmorc_dto=shmorc_dto,
+                                                               new_configs_queue=new_configs_queue
+                                                               )
                                                    )
 
     def start(self):
@@ -61,31 +63,21 @@ class FrameListenerWorker:
         camera_configs = camera_group_dto.camera_configs
         try:
 
-            while not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
+            while camera_group_dto.should_continue:
                 if not new_configs_queue.empty():
                     camera_configs = new_configs_queue.get()
 
                 if orchestrator.should_pull_multi_frame_from_shm.value and orchestrator.new_multi_frame_available:
 
-                    tik1 = time.perf_counter_ns()
                     mf_payload: MultiFramePayload = frame_loop_shm.get_multi_frame_payload(
                         previous_payload=mf_payload,
                         camera_configs=camera_configs,
                     )
-                    tok1 = time.perf_counter_ns()
                     logger.loop(
                         f"FrameListener - copied multi-frame payload# {mf_payload.multi_frame_number} from shared memory")
                     orchestrator.signal_multi_frame_pulled_from_shm()
                     backend_framerate_tracker.update(time.perf_counter_ns())
-                    # for camera_id, frame in mf_payload.frames.items():
-                    #     frame.image = image_annotator.annotate_image(image=frame.image,
-                    #                                                  frame_number=frame.frame_number,
-                    #                                                  multi_frame_number=mf_payload.multi_frame_number,
-                    #                                                  framerate_tracker = framerate_tracker,
-                    #                                                  camera_id=camera_id)
-                    tik2 = time.perf_counter_ns()
                     multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
-                    tok2 = time.perf_counter_ns()
                     if mf_payload.multi_frame_number % 10 == 0:
                         # update every 10  multi-frames to avoid overloading the queue
                         camera_group_dto.ipc_queue.put(backend_framerate_tracker.current)
@@ -103,9 +95,11 @@ class FrameListenerWorker:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
             logger.trace(f"{FrameListenerWorker.__class__.__name__} shutting down...")
-            if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
-                logger.warning(
+            if camera_group_dto.should_continue:
+                raise RuntimeError(
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
+            if not camera_group_dto.ipc_flags.kill_camera_group_flag.value:
+                logger.trace(f"FrameListenerProcess shutting down - setting kill_camera_group_flag to True")
                 camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
             frame_loop_shm.close()
             multi_frame_escape_shm.close()

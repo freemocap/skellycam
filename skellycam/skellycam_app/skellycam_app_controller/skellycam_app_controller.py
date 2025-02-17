@@ -10,6 +10,7 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState, create_skellycam_app_state
+from skellycam.skellycam_app.skellycam_process_manager.skellycam_process_manager import SkellycamProcessManager
 from skellycam.system.device_detection.detect_available_cameras import get_available_cameras, CameraDetectionStrategies
 
 logger = logging.getLogger(__name__)
@@ -120,11 +121,14 @@ class SkellycamAppController(BaseModel):
 SKELLYCAM_APP_CONTROLLER = None
 
 
-def create_skellycam_app_controller(global_kill_flag: multiprocessing.Value) -> SkellycamAppController:
+def create_skellycam_app_controller(global_kill_flag: multiprocessing.Value
+                                    ) -> SkellycamAppController:
     global SKELLYCAM_APP_CONTROLLER
     if not SKELLYCAM_APP_CONTROLLER:
         SKELLYCAM_APP_CONTROLLER = SkellycamAppController.create(
             skellycam_app_state=create_skellycam_app_state(global_kill_flag=global_kill_flag))
+
+
     return SKELLYCAM_APP_CONTROLLER
 
 

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroupOrchestrator:
     frame_loop_flags: Dict[CameraId, CameraFrameLoopFlags]
-    ipc_flags: IPCFlags
+    camera_group_dto: CameraGroupDTO
 
     pause_when_able: multiprocessing.Value
     frame_loop_paused: multiprocessing.Value
@@ -25,19 +25,22 @@ class CameraGroupOrchestrator:
     loop_count: int = 0
 
     @classmethod
-    def create(cls,
-               camera_group_dto: CameraGroupDTO,
-               ipc_flags: IPCFlags):
+    def from_dto(cls,
+               camera_group_dto: CameraGroupDTO,):
         return cls(
             frame_loop_flags={
                 camera_id: CameraFrameLoopFlags.create(camera_id=camera_id,
-                                                       ipc_flags=ipc_flags)
+                                                       ipc_flags=camera_group_dto.ipc_flags)
                 for camera_id, camera_config in camera_group_dto.camera_configs.items()
             },
-            ipc_flags=ipc_flags,
             pause_when_able=multiprocessing.Value("b", False),
             frame_loop_paused=multiprocessing.Value("b", False),
+            camera_group_dto=camera_group_dto,
         )
+
+    @property
+    def ipc_flags(self):
+        return self.camera_group_dto.ipc_flags
 
     @property
     def camera_ids(self):
@@ -45,7 +48,7 @@ class CameraGroupOrchestrator:
 
     @property
     def should_continue(self):
-        return not self.ipc_flags.kill_camera_group_flag.value and not self.ipc_flags.global_kill_flag.value
+        return self.ipc_flags.should_continue
 
     @property
     def cameras_ready(self):

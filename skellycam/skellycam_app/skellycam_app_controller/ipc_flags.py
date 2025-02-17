@@ -19,3 +19,7 @@ class IPCFlags:
         self.mic_device_index: multiprocessing.Value = multiprocessing.Value("i", -1)
         self.recording_nametag: multiprocessing.Array = multiprocessing.Array('c', 250)
         self.recording_nametag.value = b""
+
+    @property
+    def should_continue(self):
+        return not self.global_kill_flag.value and not self.kill_camera_group_flag.value

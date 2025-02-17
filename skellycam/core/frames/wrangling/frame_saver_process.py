@@ -1,5 +1,7 @@
 import logging
 import multiprocessing
+import threading
+import time
 from collections import deque
 from pathlib import Path
 from typing import Optional
@@ -11,7 +13,7 @@ from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.system.default_paths import get_default_recording_folder_path
-from skellycam.utilities.wait_functions import wait_1ms
+from skellycam.utilities.wait_functions import wait_1ms, wait_1s
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,17 @@ class FrameSaverProcess:
                      ):
 
         logger.debug(f"FrameRouter process started!")
+
+        def heartbeat_thread_function():
+            while camera_group_dto.should_continue:
+                logger.trace(f"FrameSaverProcess heartbeat says 'beep'")
+                time.sleep(10)
+
+        heartbeat_thread = threading.Thread(target=heartbeat_thread_function,
+                                            daemon=True,
+                                            name=f"FrameSaverProcess_heartbeat")
+        heartbeat_thread.start()
+
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         recording_manager: Optional[RecordingManager] = None
         frame_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer = MultiFrameEscapeSharedMemoryRingBuffer.recreate(
@@ -60,12 +73,10 @@ class FrameSaverProcess:
         previous_mf_payload_pulled_from_shm: Optional[MultiFramePayload] = None
         previous_mf_payload_pulled_from_deque: Optional[MultiFramePayload] = None
 
-        def should_continue():
-            return not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value
 
         audio_recorder: Optional[AudioRecorder] = None
         try:
-            while should_continue():
+            while camera_group_dto.should_continue:
                 wait_1ms()
 
                 # Check for new camera configs
@@ -130,19 +141,19 @@ class FrameSaverProcess:
                     recording_manager.save_one_frame()
 
         except Exception as e:
-            logger.error(f"Frame exporter process error: {e}")
+            logger.error(f"Frame Saver process error: {e}")
             logger.exception(e)
             raise
         except BrokenPipeError as e:
-            logger.error(f"Frame exporter process error: {e} - Broken pipe error, problem in FrameListenerProcess?")
+            logger.error(f"Frame Saver process error: {e} - Broken pipe error, problem in FrameListenerProcess?")
             logger.exception(e)
             raise
         except KeyboardInterrupt:
-            logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
+            pass
         finally:
             logger.trace(f"Stopped listening for multi-frames")
-            if not camera_group_dto.ipc_flags.kill_camera_group_flag.value and not camera_group_dto.ipc_flags.global_kill_flag.value:
-                logger.warning("FrameRouter should only be closed after global kill flag is set")
+            if camera_group_dto.should_continue:
+                logger.error("FrameSaver shut down for unknown reason! `camera_group_dto.should_continue` is True")
                 camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
             if recording_manager:
                 recording_manager.finish_and_close()
