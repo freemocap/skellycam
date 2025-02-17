@@ -16,7 +16,7 @@ def kill_process_on_port(port: int):
                     logger.warning(
                         f"Process already running on port: {port} (PID:{proc.info['pid']}), shutting it down...[TODO - HANDLE THIS BETTER! Figure out why we're leaving behind zombie processes...]")
                     proc.kill()
-        except psutil.AccessDenied:
+        except psutil.AccessDenied or psutil.NoSuchProcess:
             continue
 
 

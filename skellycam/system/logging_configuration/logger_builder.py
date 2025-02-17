@@ -23,6 +23,7 @@ class LogLevels(Enum):
     ERROR = logging.ERROR  # 40 # Something went wrong!
 
 
+
 class CustomFormatter(logging.Formatter):
     """A custom Formatter class to include microseconds in log timestamps."""
 

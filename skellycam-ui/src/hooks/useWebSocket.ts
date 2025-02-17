@@ -53,7 +53,7 @@ export const useWebSocket = (wsUrl: string) => {
             if (e instanceof z.ZodError) {
                 console.error('Validation failed with errors:', JSON.stringify(e.errors, null, 2));
             } else {
-                console.error('Error parsing message data:', e);
+                console.log(`Websocket message: ${data}`);
             }
         }
     };

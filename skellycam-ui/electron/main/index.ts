@@ -7,9 +7,9 @@ import {update} from './update'
 import {exec} from 'child_process'
 import * as fs from "node:fs";
 
-const require = createRequire(import.meta.url)
+// const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-process.env.LAUNCH_PYTHON_SERVER = 'true';
+process.env.LAUNCH_PYTHON_SERVER = 'false';
 
 // The built directory structure
 //
@@ -51,10 +51,10 @@ let pythonServerExecutablePath = path.resolve(process.resourcesPath, 'app.asar.u
 
 function checkExecutablePath() {
     if (!fs.existsSync(pythonServerExecutablePath)) {
-        console.error(`Python server executable not found at ${pythonServerExecutablePath}`);
+        const originalPythonServerExecutablePath = pythonServerExecutablePath;
         pythonServerExecutablePath = path.resolve(__dirname, '../../../skellycam_server.exe');
         if (!fs.existsSync(pythonServerExecutablePath)) {
-            console.error(`Python server executable not found at ${pythonServerExecutablePath} either`);
+            console.error(`Python server executable not found at '${pythonServerExecutablePath}' or '${originalPythonServerExecutablePath}'`);
             app.quit();
         }
     } else {
@@ -72,21 +72,20 @@ function startPythonServer() {
         } else {
             console.log(`${pythonServerExecutablePath} is executable`);
             pythonServer = exec(`"${pythonServerExecutablePath}"`, {
-                    env: {
-                        ...process.env,
-                        PYTHONIOENCODING: 'utf-8',
-                        PYTHONUTF8: '1'
-                    }
+                env: {
+                    ...process.env,
+                    PYTHONIOENCODING: 'utf-8',
+                    PYTHONUTF8: '1'
                 },
-                (error, stdout, stderr) => {
-                    if (error) {
-                        console.error(`Error starting Python server: ${error.message}`);
-                        return;
-                    }
-                    console.log(`Python server stdout: ${stdout}`);
-                    if (stderr) console.error(`Python server stderr: ${stderr}`);
-                });
+                maxBuffer: 1024 * 1024 // 1MB buffer size
+            });
+            pythonServer.stdout.on('data', (data: any) => {
+                console.log(`Python server stdout: ${data}`);
+            });
 
+            pythonServer.stderr.on('data', (data: any) => {
+                console.error(`Python server stderr: ${data}`);
+            });
             pythonServer.on('exit', (code: any) => {
                 console.log(`Python server exited with code: ${code}`);
             });

@@ -149,3 +149,4 @@ class WebsocketServer:
         if not self.websocket.client_state == WebSocketState.CONNECTED:
             logger.error("Websocket shut down while sending payload!")
             raise RuntimeError("Websocket shut down while sending payload!")
+

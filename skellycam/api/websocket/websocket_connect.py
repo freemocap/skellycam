@@ -18,6 +18,17 @@ async def websocket_server_connect(websocket: WebSocket):
     await websocket.accept()
     logger.success(f"Websocket connection established!")
 
-    async with WebsocketServer(websocket=websocket) as runner:
-        await runner.run()
+    async with WebsocketServer(websocket=websocket) as websocket_server:
+        set_websocket_server(websocket_server)
+        await websocket_server.run()
     logger.info("Websocket closed")
+
+WEBSOCKET_SERVER : WebsocketServer|None = None
+
+def set_websocket_server(websocket_server:WebsocketServer):
+    global WEBSOCKET_SERVER
+    WEBSOCKET_SERVER = websocket_server
+
+def get_websocket_server() -> WebsocketServer:
+    global WEBSOCKET_SERVER
+    return WEBSOCKET_SERVER

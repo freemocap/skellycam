@@ -12,7 +12,7 @@
   "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
   "asar": true,
   "asarUnpack": [
-    "python-binary/windows/skellycam-server.exe"
+    "skellycam-server.exe"
   ],
   "mac": {
     "artifactName": "${productName}_${version}.${ext}",
