@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit'
 import counterReducer from './slices/counterSlice'
+import {availableCamerasSlice} from "@/store/slices/availableCamerasSlice";
 
 export const AppStateStore = configureStore({
     reducer: {
         counter: counterReducer,
+        availableCameras: availableCamerasSlice.reducer,
     },
 })
 

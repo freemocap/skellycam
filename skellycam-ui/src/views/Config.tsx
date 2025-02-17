@@ -1,18 +1,19 @@
-import { Box, Typography } from "@mui/material";
+import {Box, Typography} from "@mui/material";
 import React from "react";
-import { useAsync } from "react-use";
-import { AvailableCameraDevices } from "@/services/detectCameraDevices";
-import { useWebSocketContext } from "@/context/WebSocketContext";
-import {Counter} from "@/components/Counter";
+import {useAsync} from "react-use";
+import {DetectAvailableCameraDevices} from "@/services/detectCameraDevices";
+import {useWebSocketContext} from "@/context/WebSocketContext";
+import {useSelector} from "react-redux";
+import {RootState} from "@/store/appStateStore";
 
 export const ConfigView = () => {
     const [devices, setDevices] = React.useState<MediaDeviceInfo[]>([]);
     const { latestSkellyCamAppState } = useWebSocketContext();
-
+    const availableCameras = useSelector((state: RootState) => state.availableCameras.available_cameras);
 
 
     useAsync(async () => {
-        const cam = new AvailableCameraDevices();
+        const cam = new DetectAvailableCameraDevices();
         const deviceInfos = await cam.findAllCameras(false);
         setDevices(deviceInfos);
     }, []); // Adding an empty dependency array to ensure this runs once on component mount
@@ -35,7 +36,12 @@ export const ConfigView = () => {
                     {JSON.stringify(latestSkellyCamAppState, null, 2)}
                 </Typography>
             )}
-            <Counter/>
+            <h2 style={{ color: '#fafafa' }}>Available Camera Devices</h2>
+            {availableCameras && (
+                <Typography component="pre" style={{ color: '#fafafa' }}>
+                    {JSON.stringify(availableCameras, null, 2)}
+                </Typography>
+            )}
         </Box>
     );
 }

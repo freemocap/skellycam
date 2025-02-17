@@ -2,6 +2,9 @@ import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
 import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/models/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/models/SkellyCamAppStateSchema";
+import { useDispatch } from 'react-redux';
+import {setAvailableCameras} from "@/store/slices/availableCamerasSlice";
+import {AvailableCamerasSchema} from "@/models/AvailableCamerasSchema";
 
 const MAX_RECONNECT_ATTEMPTS = 20;
 
@@ -13,6 +16,8 @@ export const useWebSocket = (wsUrl: string) => {
 
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
+
+    const dispatch = useDispatch();
 
     const handleIncomingMessage = (data: Blob | string) => {
         if (typeof data === 'string') {
@@ -38,6 +43,9 @@ export const useWebSocket = (wsUrl: string) => {
             } else if (parsedData.type === 'SkellycamAppStateDTO') {
                 const skellycamAppState = SkellyCamAppStateSchema.parse(parsedData);
                 setLatestSkellyCamAppState(skellycamAppState);
+                if (skellycamAppState.available_devices) {
+                    dispatch(setAvailableCameras(AvailableCamerasSchema.parse(skellycamAppState.available_devices)));
+                }
             } else {
                 console.warn('Received unknown message type:', parsedData.type);
             }

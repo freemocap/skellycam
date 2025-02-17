@@ -1,2 +1,0 @@
-This file is here to keep the folder structure in git when the binary is not present.
-Please put `skellycam-server.exe` here
