@@ -10,8 +10,6 @@ from uvicorn import Server
 from skellycam.api.server.server_constants import HOSTNAME, PORT
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_lifespan.create_skellycam_app import create_skellycam_app
-from skellycam.skellycam_app.skellycam_process_manager.skellycam_process_manager import \
-    create_skellycam_process_manager, get_skellycam_process_manager
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
@@ -27,8 +25,8 @@ class UvicornServerManager:
         create_skellycam_app_controller(global_kill_flag=global_kill_flag)
         self.hostname: str = hostname
         self.port: int = port
-        self.server_thread: Optional[threading.Thread] = None
-        self.server: Optional[Server] = None
+        self.server_thread: threading.Thread|None = None
+        self.server: Server|None = None
         self.log_level: str = log_level
 
     @property
@@ -55,9 +53,6 @@ class UvicornServerManager:
             try:
                 logger.debug("Running uvicorn server...")
                 self.server.run()
-                while not self._global_kill_flag.value:
-                    logger.trace("Server heartbeat says 'beep'")
-                    time.sleep(2)
             except Exception as e:
                 logger.error(f"A fatal error occurred in the uvicorn server: {e}")
                 logger.exception(e)
@@ -69,21 +64,11 @@ class UvicornServerManager:
         self.server_thread.start()
         self.server_thread.join()
         logger.debug("Server thread shutdown")
+        kill_process_on_port(port=self.port)
 
     def shutdown_server(self):
         logger.info("Shutting down Uvicorn Server...")
         self._global_kill_flag.value = True
         if self.server:
             self.server.should_exit = True
-            waiting_time = 0
-            while self.server_thread.is_alive():
-                waiting_time += 1
-                time.sleep(1)
-                if waiting_time > 3:
-                    logger.debug("Server thread is not shutting down. Forcing exit...")
-                    self.server.force_exit = True
-                if waiting_time > 5:
-                    logger.debug("Server thread is not shutting down. Killing process...")
-                    kill_process_on_port(port=self.port)
 
-            logger.info("Uvicorn Server shutdown successfully")

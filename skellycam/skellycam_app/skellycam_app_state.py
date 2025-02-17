@@ -106,7 +106,6 @@ class SkellycamAppState:
 
     def close_camera_group(self):
         if self.camera_group is None:
-            logger.warning("Camera group does not exist, so it cannot be closed!")
             return
         logger.debug("Closing existing camera group...")
         self.camera_group.close()
