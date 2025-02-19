@@ -1,17 +1,14 @@
 import { z } from "zod";
 import {AvailableCamerasSchema} from "@/models/AvailableCamerasSchema";
 
-// Schema for CurrentFrameRate
-const CurrentFrameRateSchema = z.object({
+export const CurrentFrameRateSchema = z.object({
     mean_frame_duration_ms: z.number(),
     mean_frames_per_second: z.number(),
     recent_frames_per_second: z.number(),
     recent_mean_frame_duration_ms: z.number(),
 });
 
-// Schema for CameraConfig, assuming you have a similar structure in TypeScript
-const CameraConfigSchema = z.object({
-    // Assuming CameraId and CameraName are strings for simplicity
+export const CameraConfigSchema = z.object({
     camera_id: z.number(),
     camera_name: z.string(),
     use_this_camera: z.boolean(),
@@ -29,15 +26,13 @@ const CameraConfigSchema = z.object({
     writer_fourcc: z.string(),
 });
 
-// Schema for CameraConfigs, a dictionary of CameraConfig
-const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema);
 
-// Zod schema for SkellycamAppStateDTO
 export const SkellyCamAppStateSchema = z.object({
     type: z.literal("SkellycamAppStateDTO"),
     state_timestamp: z.string().optional(), // Assuming a string timestamp
-    camera_configs: CameraConfigsSchema.optional(), // Optional CameraConfigs
+    camera_configs: z.record(z.string(), CameraConfigSchema).optional(), // Optional CameraConfigs
     available_devices: AvailableCamerasSchema.optional(), // Optional AvailableCameras
     current_framerate: CurrentFrameRateSchema.nullable().optional(), // Allow null or undefined
-    record_frames_flag_status: z.boolean(),
+    is_recording_flag: z.boolean(),
+    record_directory: z.string().optional(),
 });

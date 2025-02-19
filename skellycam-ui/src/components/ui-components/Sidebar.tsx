@@ -7,9 +7,9 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import {useNavigate} from "react-router";
-import WebsocketConnectionStatus from "@/components/ui-components/WebsocketConnectionStatus";
-import {ConnectToCamerasButton} from "@/components/ui-components/ConnectToCamerasButton";
-import AudioExtractor from "@/components/AudioExtractor";
+import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
+import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
+// import {RecordButton} from "@/components/RecordButton";
 
 const sidebarItems = [
     {
@@ -78,6 +78,7 @@ export const Sidebar = function (props: DrawerProps) {
             </List>
             <WebsocketConnectionStatus/>
             <ConnectToCamerasButton />
+            {/*<RecordButton />*/}
 
         </Drawer>
 )

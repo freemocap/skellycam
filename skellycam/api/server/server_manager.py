@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import os
 import threading
 import time
 from typing import Optional
@@ -28,6 +29,11 @@ class UvicornServerManager:
         self.server_thread: threading.Thread|None = None
         self.server: Server|None = None
         self.log_level: str = log_level
+        self.shutdown_listener_thread = threading.Thread(target=self.shutdown_listener_loop,
+                                                         name="ShutdownListenerThread",
+                                                         daemon=True)
+        self.shutdown_listener_thread.start()
+
 
     @property
     def is_running(self):
@@ -72,3 +78,16 @@ class UvicornServerManager:
         if self.server:
             self.server.should_exit = True
 
+    def shutdown_listener_loop(self):
+        logger.info("Shutting down listener loop...")
+        while self.is_running:
+            time.sleep(1)
+            if os.getenv("SKELLYCAM_APP_SHUTDOWN"):
+                logger.info("Detected SKELLYCAM_APP_SHUTDOWN environment variable - shutting down server")
+                self.shutdown_server()
+                break
+            if self._global_kill_flag.value:
+                logger.info("Detected global kill flag - shutting down server")
+                self.shutdown_server()
+                break
+        logger.info("Shutdown listener loop completed")

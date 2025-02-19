@@ -10,6 +10,8 @@ from .logging_color_helpers import (
 from ..default_paths import get_log_file_path
 
 MAX_DELTA_T_LEN = 10
+
+
 class LogLevels(Enum):
     ALL = logging.NOTSET  # 0 # All logs, including those from third-party libraries
     LOOP = 3  # For logs that are printed in a loop
@@ -21,7 +23,6 @@ class LogLevels(Enum):
     API = logging.INFO + 5  # 25 # API calls/responses
     WARNING = logging.WARNING  # 30 # Something unexpected happened, but it's necessarily an error
     ERROR = logging.ERROR  # 40 # Something went wrong!
-
 
 
 class CustomFormatter(logging.Formatter):
@@ -37,6 +38,7 @@ class CustomFormatter(logging.Formatter):
         date_format_with_microseconds = "%Y-%m-%dT%H:%M:%S.%f"  # Including microseconds with %f
         return datetime.strftime(datetime.fromtimestamp(timestamp), date_format_with_microseconds)
 
+
 class DeltaTimeFilter(logging.Filter):
     def __init__(self):
         super().__init__()
@@ -49,12 +51,12 @@ class DeltaTimeFilter(logging.Filter):
         self.prev_time = current_time
         return True
 
+
 class LoggerBuilder:
     DEFAULT_LOGGING = {"version": 1, "disable_existing_loggers": False}
     # https://www.alt-codes.net/editor.php
     format_string = (
-        f"%(message)s |-<%(levelname)8s >┤ %(delta_t){MAX_DELTA_T_LEN}s | %(name)s.%(funcName)s():%(lineno)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s"
-    )
+        f"└>> %(message)s |-<%(levelname)8s >┤ %(delta_t){MAX_DELTA_T_LEN}s | %(name)s.%(funcName)s():%(lineno)s | %(asctime)s | PID:%(process)d:%(processName)s TID:%(thread)d:%(threadName)s")
 
     def __init__(self, level: LogLevels):
         self.default_logging_formatter = CustomFormatter(
@@ -66,8 +68,6 @@ class LoggerBuilder:
 
     def _set_logging_level(self, level: LogLevels):
         logging.root.setLevel(level.value)
-
-
 
     class ColoredConsoleHandler(logging.StreamHandler):
 
@@ -109,7 +109,7 @@ class LoggerBuilder:
             )
 
             formatted_record = formatted_record.replace(record.getMessage(),
-                                                        color_code + "└» " + record.getMessage() + "\033[0m")
+                                                        color_code +  record.getMessage() + "\033[0m")
             formatted_record = color_code + formatted_record + "\033[0m"
             # Output the final colorized and formatted record to the console
             print(formatted_record.encode('utf-8', errors='replace').decode('utf-8'))
@@ -127,11 +127,10 @@ class LoggerBuilder:
         console_handler.addFilter(DeltaTimeFilter())
         return console_handler
 
-
     def configure(self):
         if len(logging.getLogger().handlers) == 0:
-            handlers = [#self.build_file_handler(),
-                        self.build_console_handler()]
+            handlers = [  # self.build_file_handler(),
+                self.build_console_handler()]
             for handler in handlers:
                 if handler not in logging.getLogger("").handlers:
                     logging.getLogger("").handlers.append(handler)

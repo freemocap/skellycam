@@ -2,22 +2,22 @@ import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
 import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/models/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/models/SkellyCamAppStateSchema";
-import { useDispatch } from 'react-redux';
 import {setAvailableCameras} from "@/store/slices/availableCamerasSlice";
 import {AvailableCamerasSchema} from "@/models/AvailableCamerasSchema";
-
+import { useAppDispatch } from '@/store/hooks';
+import {setFramerate, setIsRecording, setRecordingDirectory} from "@/store/slices/appState";
+import {camerasSetAll} from "@/store/slices/cameraConfigsSlice";
 const MAX_RECONNECT_ATTEMPTS = 20;
 
 export const useWebSocket = (wsUrl: string) => {
     const [isConnected, setIsConnected] = useState(false);
     const [latestFrontendPayload, setLatestFrontendPayload] = useState<z.infer<typeof FrontendFramePayloadSchema> | null>(null);
-    const [latestSkellyCamAppState, setLatestSkellyCamAppState] = useState<z.infer<typeof SkellyCamAppStateSchema> | null>(null);
     const [latestImages, setLatestImages] = useState<z.infer<typeof JpegImagesSchema> | null>(null);
-
+    const [latestSkellyCamAppState, setLatestSkellyCamAppState] = useState<z.infer<typeof SkellyCamAppStateSchema> | null>(null);
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
 
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
 
     const handleIncomingMessage = (data: Blob | string) => {
         if (typeof data === 'string') {
@@ -41,11 +41,7 @@ export const useWebSocket = (wsUrl: string) => {
                 setLatestFrontendPayload(frontendImagePayload);
                 setLatestImages(frontendImagePayload.jpeg_images);
             } else if (parsedData.type === 'SkellycamAppStateDTO') {
-                const skellycamAppState = SkellyCamAppStateSchema.parse(parsedData);
-                setLatestSkellyCamAppState(skellycamAppState);
-                if (skellycamAppState.available_devices) {
-                    dispatch(setAvailableCameras(AvailableCamerasSchema.parse(skellycamAppState.available_devices)));
-                }
+                handleNewSkellyCamAppState(parsedData);
             } else {
                 console.warn('Received unknown message type:', parsedData.type);
             }
@@ -58,6 +54,28 @@ export const useWebSocket = (wsUrl: string) => {
         }
     };
 
+    const handleNewSkellyCamAppState = (parsedData: any) => {
+        // TODO - check if the new app state is different from the current state before updating
+        const skellycamAppState = SkellyCamAppStateSchema.parse(parsedData);
+        setLatestSkellyCamAppState(skellycamAppState);
+        if (skellycamAppState.available_devices) {
+            dispatch(setAvailableCameras(AvailableCamerasSchema.parse(skellycamAppState.available_devices)));
+        }
+        if (skellycamAppState.camera_configs) {
+            const cameras = Object.values(skellycamAppState.camera_configs);
+            dispatch(camerasSetAll(cameras));
+        }
+        if (skellycamAppState.current_framerate) {
+            dispatch(setFramerate(skellycamAppState.current_framerate));
+        }
+        if (skellycamAppState.is_recording_flag !== undefined) {
+            dispatch(setIsRecording(skellycamAppState.is_recording_flag));
+        }
+        if (skellycamAppState.record_directory !== undefined) {
+            dispatch(setRecordingDirectory(skellycamAppState.record_directory));
+        }
+
+    }
 
     const connect = useCallback(() => {
         if (websocket && websocket.readyState !== WebSocket.CLOSED) {
