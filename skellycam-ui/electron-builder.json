@@ -6,13 +6,13 @@
   "files": [
     "dist-electron",
     "dist",
-    "../skellycam_server.exe",
+    "skellycam_server.exe",
     "../shared/skellycam-logo/skellycam-favicon.ico"
   ],
   "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
   "asar": true,
   "asarUnpack": [
-    "skellycam-server.exe"
+    "**/skellycam_server.exe"
   ],
   "mac": {
     "artifactName": "${productName}_${version}.${ext}",

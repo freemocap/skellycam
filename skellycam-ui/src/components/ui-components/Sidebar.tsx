@@ -9,6 +9,7 @@ import ListItemText from '@mui/material/ListItemText';
 import {useNavigate} from "react-router";
 import WebsocketConnectionStatus from "@/components/ui-components/WebsocketConnectionStatus";
 import {ConnectToCamerasButton} from "@/components/ui-components/ConnectToCamerasButton";
+import AudioExtractor from "@/components/AudioExtractor";
 
 const sidebarItems = [
     {

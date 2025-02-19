@@ -9,7 +9,7 @@ import * as fs from "node:fs";
 
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-process.env.LAUNCH_PYTHON_SERVER = 'false';
+process.env.LAUNCH_PYTHON_SERVER = 'true';
 
 // The built directory structure
 //
@@ -52,7 +52,7 @@ let pythonServerExecutablePath = path.resolve(process.resourcesPath, 'app.asar.u
 function checkExecutablePath() {
     if (!fs.existsSync(pythonServerExecutablePath)) {
         const originalPythonServerExecutablePath = pythonServerExecutablePath;
-        pythonServerExecutablePath = path.resolve(__dirname, '../../../skellycam_server.exe');
+        pythonServerExecutablePath = path.resolve(__dirname, '../../skellycam_server.exe');
         if (!fs.existsSync(pythonServerExecutablePath)) {
             console.error(`Python server executable not found at '${pythonServerExecutablePath}' or '${originalPythonServerExecutablePath}'`);
             app.quit();
@@ -79,13 +79,13 @@ function startPythonServer() {
                 },
                 maxBuffer: 1024 * 1024 // 1MB buffer size
             });
-            pythonServer.stdout.on('data', (data: any) => {
-                console.log(`Python server stdout: ${data}`);
-            });
-
-            pythonServer.stderr.on('data', (data: any) => {
-                console.error(`Python server stderr: ${data}`);
-            });
+            // pythonServer.stdout.on('data', (data: any) => {
+            //     console.log(`Python server stdout: ${data}`);
+            // });
+            //
+            // pythonServer.stderr.on('data', (data: any) => {
+            //     console.error(`Python server stderr: ${data}`);
+            // });
             pythonServer.on('exit', (code: any) => {
                 console.log(`Python server exited with code: ${code}`);
             });
