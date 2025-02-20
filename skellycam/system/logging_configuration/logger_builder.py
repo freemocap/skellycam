@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from logging.config import dictConfig
 from multiprocessing import Queue
@@ -35,11 +36,15 @@ class LoggerBuilder:
             root.removeHandler(handler)
 
         # Add new handlers
-        root.addHandler(self._build_console_handler())
         root.addHandler(self._build_file_handler())
 
         if self.queue:
             root.addHandler(self._build_websocket_handler())
+
+        if not os.getenv("SKELLYCAM_RUNNING_IN_ELECTRON"):
+            # only add console handler if not running in electron, otherwise logs will go through the websocket handler
+            root.addHandler(self._build_console_handler())
+
 
     def _build_console_handler(self):
         handler = ColoredConsoleHandler()
