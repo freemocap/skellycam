@@ -5,8 +5,8 @@ import {LeftSidebarDrawer} from "@/components/ui-components/LeftSidebarDrawer";
 export const LeftSidePanel = () => {
     return (
         <Panel collapsible defaultSize={20} minSize={10} collapsedSize={4}>
+            left side
             {/*<LeftSidebarDrawer/>*/}
-            left side panel
         </Panel>
     );
 };

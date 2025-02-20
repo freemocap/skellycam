@@ -1,7 +1,6 @@
 import * as React from 'react';
 import Drawer, {DrawerProps} from '@mui/material/Drawer';
 import {useNavigate} from "react-router";
-import {extendedPaperbaseTheme} from "@/layout/base-content/paperbase_theme/paperbase-theme";
 import {Divider, List, ListItem, ListItemButton, ListItemText} from "@mui/material";
 import Box from "@mui/material/Box";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";

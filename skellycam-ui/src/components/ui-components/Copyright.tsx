@@ -4,12 +4,15 @@ import * as React from "react";
 
 export const Copyright =  function() {
   return (
-    <Typography variant="body2" color="#fafafa" align="center">
-      {'Copyright © '}
-      <Link color="inherit" href="https://github.com/freemocap/">
+    <Typography variant="body2" color="#777" align="center">
+      {'w/ '}
+        <Link color="inherit" href="https://github.com/freemocap/">
+         ❤️
+      </Link>{'  from the '}
+        <Link color="inherit" href="https://github.com/freemocap/">
         FreeMoCap Foundation
       </Link>{' '}
-      {new Date().getFullYear()}.
+      {new Date().getFullYear()}
     </Typography>
   );
 }
