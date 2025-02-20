@@ -1,8 +1,8 @@
 LOG_POINTER_STRING = "└>>"
 LOG_FORMAT_STRING_WO_PID_TID = LOG_POINTER_STRING + (
     " %(message)s | "
-    " %(levelname)8s | "
-    " %(delta_t)10s | " 
+    " %(levelname)s | "
+    " %(delta_t)s | " 
     " %(name)s.%(funcName)s():%(lineno)s | "
     " %(asctime)s | "
 )
