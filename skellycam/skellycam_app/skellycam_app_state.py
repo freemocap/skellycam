@@ -20,6 +20,7 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camer
 from skellycam.core.playback.video_config import VideoConfigs
 from skellycam.core.playback.video_group import VideoGroup
 from skellycam.core.playback.video_group_dto import VideoGroupDTO
+from skellycam.core.playback.video_group_shmorchestrator import VideoGroupSharedMemoryOrchestrator
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
@@ -35,7 +36,7 @@ class SkellycamAppState:
     ipc_queue: multiprocessing.Queue
     config_update_queue: multiprocessing.Queue
 
-    shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator] = None
+    shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator | VideoGroupSharedMemoryOrchestrator] = None
     camera_group_dto: Optional[CameraGroupDTO] = None
     camera_group: Optional[CameraGroup] = None
     available_cameras: Optional[AvailableCameras] = None
@@ -67,7 +68,13 @@ class SkellycamAppState:
                 raise ValueError("Cannot get CameraConfigs without available devices!")
             return available_cameras_to_default_camera_configs(self.available_cameras)
         return self.camera_group.camera_configs
-
+    
+    @property
+    def video_configs(self) -> Optional[VideoConfigs]:
+        if self.video_group is None:
+            logger.warning("Cannot get VideoConfigs without CameraGroup!")
+            return
+        return self.video_group.video_configs
 
     def set_available_cameras(self, value: AvailableCameras):
         self.available_cameras = value
@@ -125,6 +132,7 @@ class SkellycamAppState:
 
     def _reset(self):
         self.camera_group = None
+        self.video_group = None
         self.shmorchestrator = None
         self.current_framerate = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
@@ -133,6 +141,8 @@ class SkellycamAppState:
         self.ipc_flags.global_kill_flag.value = True
         if self.camera_group:
             self.close_camera_group()
+        if self.video_group:
+            self.close_video_group()
 
     def create_video_group(self, video_configs: VideoConfigs):
         if video_configs is None:
@@ -142,15 +152,54 @@ class SkellycamAppState:
                                              ipc_flags=self.ipc_flags,
                                              group_uuid=str(uuid4())
                                              )
-        # TODO: figure out what to use for shmorchestrator
-        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.video_group_dto,
-                                                                          ipc_flags=self.ipc_flags,
+        self.shmorchestrator = VideoGroupSharedMemoryOrchestrator.create(video_group_dto=self.video_group_dto, 
                                                                           read_only=True)
         self.video_group = VideoGroup.create(video_group_dto=self.video_group_dto,
                                              shmorc_dto=self.shmorchestrator.to_dto()
                                              )
 
         logger.info(f"Video group created successfully for cameras: {self.video_group.video_ids}")
+
+    def update_video_group(self,
+                           video_configs: VideoConfigs):
+        if self.video_group is None:
+            raise ValueError("Cannot update VideoGroup if it does not exist!")
+        self.shmorchestrator.recreate(video_group_dto=self.video_group_dto,
+                                      shmorc_dto=self.shmorchestrator.to_dto(),
+                                      read_only=True)
+        # TODO: may need to recreate or update frame escape shared memory based on new video configs, check how cameras do this
+        # camera group does this with different update parameters, including a full reset option
+        # we probably can scrap the update code and just always do a full reset
+        self.video_group.update_video_configs(video_configs=video_configs,
+                                              shmorc_dto=self.shmorchestrator.to_dto())
+
+    def close_video_group(self):
+        if self.video_group is None:
+            logger.warning("Video group does not exist, so it cannot be closed!")
+            return
+        logger.debug("Closing existing video group...")
+        self.video_group.close()
+        self.shmorchestrator.close_and_unlink()
+        self._reset()
+        logger.success("Camera group closed successfully")
+
+    # TODO: double check we don't need to the queue here
+    def play_videos(self):
+        self.ipc_flags.playback_run_flag.value = True
+        self.ipc_flags.playback_pause_flag.value = False
+        self.ipc_flags.playback_stop_flag.value = False
+
+    def pause_videos(self):
+        self.ipc_flags.playback_run_flag.value = False
+        self.ipc_flags.playback_pause_flag.value = True
+
+    def stop_videos(self):
+        self.ipc_flags.playback_stop_flag.value = True
+        self.ipc_flags.playback_run_flag.value = False
+
+    def seek_videos(self, frame_number: int):
+        self.ipc_flags.playback_frame_number_flag.value = frame_number
+
 
 
 class SkellycamAppStateDTO(BaseModel):

@@ -18,3 +18,7 @@ class CameraGroupDTO:
     @property
     def camera_ids(self):
         return list(self.camera_configs.keys())
+    
+    @property
+    def configs(self):  # TODO: this is to keep the camera group/video group API consistent. Could be handled with code at the interface level if that's preferred
+        return self.camera_configs 

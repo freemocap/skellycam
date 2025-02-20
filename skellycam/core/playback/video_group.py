@@ -3,13 +3,9 @@ import logging
 import multiprocessing
 
 from skellycam.core import CameraId
-from skellycam.core.camera_group.camera_group import CameraGroup
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.camera_group_process import CameraGroupThread
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
-    CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.playback.video_config import VideoConfigs
 from skellycam.core.playback.video_group_dto import VideoGroupDTO
+from skellycam.core.playback.video_group_shmorchestrator import VideoGroupSharedMemoryOrchestratorDTO
 from skellycam.core.playback.video_group_thread import VideoGroupThread
 
 logger = logging.getLogger(__name__)
@@ -26,9 +22,7 @@ class VideoGroup:
     @classmethod
     def create(cls,
                video_group_dto: VideoGroupDTO,
-               shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
-        # TODO: figure out what to use for shmorchestrator
-        # TODO: rewrite CameraGroupThread as VideoGroupThread
+               shmorc_dto: VideoGroupSharedMemoryOrchestratorDTO):
         frame_router_config_queue = multiprocessing.Queue()
         frame_listener_config_queue = multiprocessing.Queue()
         return cls(dto=video_group_dto,
@@ -60,3 +54,14 @@ class VideoGroup:
         if self.video_group_thread:
             self.video_group_thread.close()
         logger.info("video group closed.")
+
+    def update_video_configs(self,
+                            video_configs: VideoConfigs,
+                            shmorc_dto: VideoGroupSharedMemoryOrchestratorDTO):  # TODO: I think this needs to be included as shm must be recreated if image size changes
+        logger.debug(
+            "Updating Video Configs")
+        if self.video_group_thread.is_running:
+            raise Exception("Cannot update video configs while video group is running")
+        self.dto.video_configs = video_configs
+        self.video_group_thread = VideoGroupThread(video_group_dto=self.dto,
+                                                   multi_frame_escape_shm_dto=shmorc_dto.multi_frame_escape_shm_dto)

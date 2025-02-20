@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MultiFrameEscapeSharedMemoryRingBufferDTO:
-    camera_group_dto: CameraGroupDTO
+    camera_group_dto: CameraGroupDTO | VideoGroupDTO
     mf_time_mapping_shm_dto: SharedMemoryRingBufferDTO
     mf_metadata_shm_dto: SharedMemoryRingBufferDTO
     mf_image_shm_dto: SharedMemoryRingBufferDTO
@@ -46,7 +46,9 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @property
     def camera_ids(self) -> List[CameraId]:
-        return list(self.camera_group_dto.camera_ids.keys())
+        if isinstance(self.camera_group_dto, VideoGroupDTO):
+            return self.camera_group_dto.video_ids  # TODO: this could be handled better, but this property isn't being used right now
+        return self.camera_group_dto.camera_ids
 
     @property
     def valid(self) -> bool:
@@ -66,10 +68,10 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @classmethod
     def create(cls,
-               camera_group_dto: CameraGroupDTO,
+               camera_group_dto: CameraGroupDTO | VideoGroupDTO,
                read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
-                          camera_group_dto.camera_configs.values()]
+                          camera_group_dto.configs.values()]
         example_images_ravelled = [image.ravel() for image in example_images]
         example_mf_image_buffer = np.concatenate(
             example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated
@@ -77,14 +79,14 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         example_mf_metadatas = [create_empty_frame_metadata(camera_id=camera_id,
                                                             frame_number=0,
                                                             config=config)
-                                for camera_id, config in camera_group_dto.camera_configs.items()]
+                                for camera_id, config in camera_group_dto.configs.items()]
         example_mf_metadatas_ravelled = [metadata.ravel() for metadata in example_mf_metadatas]
         example_mf_metadata_buffer = np.concatenate(
             example_mf_metadatas_ravelled)  # Example metadata unravelled into 1D arrays and concatenated
 
         mf_image_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_image_buffer,
                                                      dtype=DEFAULT_IMAGE_DTYPE,
-                                                     memory_allocation=ONE_GIGABYTE*int(len(list(camera_group_dto.camera_configs.keys()))),
+                                                     memory_allocation=ONE_GIGABYTE*int(len(list(camera_group_dto.configs.keys()))),
                                                      read_only=read_only)
         mf_metadata_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_metadata_buffer,
                                                         dtype=FRAME_METADATA_DTYPE,
@@ -104,7 +106,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @classmethod
     def recreate(cls,
-                 camera_group_dto: CameraGroupDTO,
+                 camera_group_dto: CameraGroupDTO | VideoGroupDTO,
                  shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
                  read_only: bool):
         mf_image_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_image_shm_dto,

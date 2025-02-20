@@ -2,12 +2,14 @@ import logging
 import multiprocessing
 from asyncio import Future
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Optional, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
+from skellycam.core.playback.video_config import load_video_configs_from_folder
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState, create_skellycam_app_state
 from skellycam.system.device_detection.detect_available_cameras import get_available_cameras, CameraDetectionStrategies
@@ -108,14 +110,53 @@ class SkellycamAppController(BaseModel):
             logger.exception(f"Error detecting available devices: {e}")
             raise
 
+    def open_video_group(self, video_folder_path: str | Path):
+        logger.info("Opening video group...")
+        try:
+            video_folder_path = Path(video_folder_path)
+
+            video_configs = load_video_configs_from_folder(synchronized_video_folder_path=video_folder_path)
+            self.app_state.create_video_group(video_configs=video_configs)
+            self.app_state.video_group.start()
+            logger.info("Video group started")
+        except Exception as e:
+            logger.exception(f"Error opening video group: {e}")
+            raise
+
+    def play_videos(self):
+        logger.info("Playing videos...")
+        self.app_state.play_videos()
+
+    def pause_videos(self):
+        logger.info("Pausing videos...")
+        self.app_state.pause_videos()
+
+    def stop_videos(self):
+        logger.info("Stopping videos...")
+        self.app_state.stop_videos()
+
+    def seek_videos(self, frame_number: int):
+        logger.info(f"Seeking videos to frame {frame_number}...")
+        self.app_state.seek_videos(frame_number=frame_number)
+
+    def update_video_configs(self, video_folder_path: str | Path):
+        pass  # TODO: not sure if this is needed
+
     def close_camera_group(self):
         logger.info("Closing camera group...")
         self.app_state.close_camera_group()
 
+    def close_video_group(self):
+        logger.info("Closing video group...")
+        self.app_state.close_video_group()
+
     def shutdown(self):
         logger.info("Closing controller...")
         self.app_state.ipc_flags.global_kill_flag.value = True
-        self.close_camera_group()
+        if self.app_state.camera_group:
+            self.close_camera_group()
+        if self.app_state.video_group:
+            self.app_state.close_video_group()
 
 
 SKELLYCAM_APP_CONTROLLER = None

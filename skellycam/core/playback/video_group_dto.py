@@ -17,3 +17,7 @@ class VideoGroupDTO:
     @property
     def video_ids(self):
         return list(self.video_configs.keys())
+    
+    @property
+    def configs(self):
+        return self.video_configs
