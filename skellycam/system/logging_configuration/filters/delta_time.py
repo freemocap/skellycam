@@ -11,6 +11,6 @@ class DeltaTimeFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         current_time = datetime.now().timestamp()
-        record.delta_t = f"{(current_time - self.prev_time) * 1000:.2f}ms"
+        record.delta_t = f"{(current_time - self.prev_time) * 1000:.3f}ms"
         self.prev_time = current_time
         return True
