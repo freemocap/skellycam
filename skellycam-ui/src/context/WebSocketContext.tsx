@@ -1,8 +1,8 @@
 import React, {createContext, ReactNode, useContext} from "react";
 import {useWebSocket} from "@/hooks/useWebSocket";
 import {z} from "zod";
-import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/models/FrontendFramePayloadSchema";
-import {SkellyCamAppStateSchema} from "@/models/SkellyCamAppStateSchema";
+import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/types/zod-schemas/FrontendFramePayloadSchema";
+import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 
 interface WebSocketContextProps {
     isConnected: boolean;

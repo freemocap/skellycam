@@ -1,12 +1,12 @@
 // theme.ts
-import { createTheme } from '@mui/material/styles';
+import {createTheme} from '@mui/material/styles';
 
 export const paperbaseTheme = createTheme({
     palette: {
         primary: {
-            light: '#63ccff',
-            main: '#004967',
-            dark: '#001723',
+            light: '#00597f',
+            main: '#002d46',
+            dark: '#000b10',
         },
     },
     typography: {
@@ -19,6 +19,11 @@ export const paperbaseTheme = createTheme({
     shape: {
         borderRadius: 8,
     },
+    mixins: {
+        toolbar: {
+            minHeight: 48,
+        },
+    },
     components: {
         MuiTab: {
             defaultProps: {
@@ -26,14 +31,9 @@ export const paperbaseTheme = createTheme({
             },
         },
     },
-    mixins: {
-        toolbar: {
-            minHeight: 48,
-        },
-    },
 });
 
-const extendedTheme = {
+const extendedPaperbaseTheme = {
     ...paperbaseTheme,
     components: {
         MuiDrawer: {
@@ -108,7 +108,7 @@ const extendedTheme = {
             styleOverrides: {
                 root: {
                     '&.Mui-selected': {
-                       color: '#4fc3f7',
+                        color: '#4fc3f7',
                     },
                 },
             },
@@ -141,7 +141,27 @@ const extendedTheme = {
                 },
             },
         },
+        MuiPanelResizeHandle: {
+            styleOverrides: {
+                root: {
+                    backgroundColor: paperbaseTheme.palette.primary.light,
+                    width: 4,
+                    '&[data-panel-group-direction="horizontal"]': {
+                        cursor: 'col-resize',
+                    },
+                    '&[data-panel-group-direction="vertical"]': {
+                        height: 4,
+                        cursor: 'row-resize',
+                    },
+                    '&:hover': {
+                        backgroundColor: paperbaseTheme.palette.secondary.main,
+                    },
+                    transition: 'background-color 0.2s ease',
+                },
+            },
+        },
+
     },
 };
 
-export default extendedTheme;
+export default extendedPaperbaseTheme;

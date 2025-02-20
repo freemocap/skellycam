@@ -1,4 +1,4 @@
-import {CameraConfigSchema} from "@/models/SkellyCamAppStateSchema";
+import {CameraConfigSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 import {z} from "zod";
 import {createEntityAdapter, createSlice} from "@reduxjs/toolkit";
 

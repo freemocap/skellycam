@@ -1,5 +1,5 @@
 import { z } from "zod";
-import {CurrentFrameRateSchema} from "@/models/SkellyCamAppStateSchema";
+import {CurrentFrameRateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 import {createSlice} from "@reduxjs/toolkit";
 
 type AppState = {

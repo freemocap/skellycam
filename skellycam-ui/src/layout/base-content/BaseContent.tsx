@@ -2,22 +2,26 @@ import React from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Router} from "@/layout/routing/router";
-import {paperbaseTheme} from "@/layout/content/paperbase-theme";
+import {Copyright} from "@/components/ui-components/Copyright";
+import extendedPaperbaseTheme from "@/layout/base-content/paperbase_theme/paperbase-theme";
 
 export const BaseContent = () => {
     return (
         <React.Fragment>
-            {/*<Header title="FreeeeMoCap " onDrawerToggle={() => {}}/>*/}
             <Box sx={{
                 py: 6,
                 px: 4,
                 flex: 1,
-                height: '90vh',
-                bgcolor: paperbaseTheme.palette.primary.dark, border: '1px solid charcoal'
+                height: '100%',
+                bgcolor: extendedPaperbaseTheme.palette.primary.main,
+                borderStyle: 'solid', borderWidth: '1px', borderColor: extendedPaperbaseTheme.palette.divider
             }}>
                 <ErrorBoundary>
                     <Router/>
                 </ErrorBoundary>
+                <Box component="footer" sx={{p: 1}}>
+                    <Copyright />
+                </Box>
             </Box>
         </React.Fragment>
     )

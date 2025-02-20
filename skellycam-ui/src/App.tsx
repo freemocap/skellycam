@@ -1,5 +1,5 @@
 import React from 'react';
-import {Paperbase} from "@/layout/paperbase_theme/Paperbase";
+import {PaperbaseContent} from "@/layout/base-content/paperbase_theme/PaperbaseContent";
 import {WebSocketContextProvider} from "@/context/WebSocketContext";
 import {Provider} from "react-redux";
 import {AppStateStore} from "@/store/appStateStore";
@@ -12,7 +12,7 @@ function App() {
         <Provider store={AppStateStore}>
             <WebSocketContextProvider url={wsUrl}>
                 <React.Fragment>
-                    <Paperbase/>
+                    <PaperbaseContent/>
                 </React.Fragment>
             </WebSocketContextProvider>
         </Provider>

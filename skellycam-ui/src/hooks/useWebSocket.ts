@@ -1,9 +1,9 @@
 import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
-import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/models/FrontendFramePayloadSchema";
-import {SkellyCamAppStateSchema} from "@/models/SkellyCamAppStateSchema";
+import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/types/zod-schemas/FrontendFramePayloadSchema";
+import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 import {setAvailableCameras} from "@/store/slices/availableCamerasSlice";
-import {AvailableCamerasSchema} from "@/models/AvailableCamerasSchema";
+import {AvailableCamerasSchema} from "@/types/zod-schemas/AvailableCamerasSchema";
 import { useAppDispatch } from '@/store/hooks';
 import {setFramerate, setIsRecording, setRecordingDirectory} from "@/store/slices/appState";
 import {camerasSetAll} from "@/store/slices/cameraConfigsSlice";

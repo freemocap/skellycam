@@ -1,6 +1,6 @@
-import { Box, Button } from "@mui/material";
-import React, { useState, useEffect } from "react";
-import { useWebSocketContext } from "@/context/WebSocketContext";
+import {Box} from "@mui/material";
+import React, {useEffect, useState} from "react";
+import {useWebSocketContext} from "@/context/WebSocketContext";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
 
 
@@ -25,9 +25,20 @@ export const CamerasView = () => {
     }, []);
 
     return (
-        <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-            {latestImages  && (
-                <CameraImagesGrid images={latestImages} showAnnotation={showAnnotation} />
+        <Box sx={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            width: "100%",
+            overflow: "hidden"
+
+        }}>
+            {latestImages && (
+                <CameraImagesGrid
+                    images={latestImages}
+                    showAnnotation={showAnnotation}
+                    sx={{flex: 1, minHeight: 0}} // Allows grid to shrink
+                />
             )}
         </Box>
     );
