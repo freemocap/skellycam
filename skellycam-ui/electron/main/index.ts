@@ -9,8 +9,9 @@ import * as fs from "node:fs";
 
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-process.env.LAUNCH_PYTHON_SERVER = 'true';
-
+process.env.LAUNCH_SKELLYCAM_PYTHON_SERVER = 'true';
+process.env.SKELLYCAM_RUNNING_IN_ELECTRON = 'true';
+process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'false'; // Server will shutdown when this is set to 'true'
 // The built directory structure
 //
 // ├─┬ dist-electron
@@ -87,6 +88,7 @@ function startPythonServer() {
             //     console.error(`Python server stderr: ${data}`);
             // });
             pythonServer.on('exit', (code: any) => {
+                process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'true';
                 console.log(`Python server exited with code: ${code}`);
             });
         }
@@ -144,14 +146,15 @@ async function createWindow() {
 
 app.whenReady().then(createWindow)
 
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
     if (pythonServer) {
         console.log('Killing python server...');
+        process.env.SKELLYCAM_SHUTDOWN = 'true';
+        await new Promise(resolve => setTimeout(resolve, 1000));
         pythonServer.kill();
         console.log('Python server shutdown.');
     }
     win = null
-    if (process.platform !== 'darwin') app.quit()
 
 })
 
