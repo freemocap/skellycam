@@ -3,7 +3,6 @@ import {Route, Routes} from "react-router-dom";
 import {ConfigView} from "@/views/Config";
 import {CamerasView} from "@/views/CamerasView";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
-import {WelcomeView} from "@/views/WelcomeView/WelcomeView";
 
 export const Router = () => {
     return (

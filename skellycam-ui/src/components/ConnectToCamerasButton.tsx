@@ -5,7 +5,7 @@ import axios from 'axios';
 export const ConnectToCamerasButton = () => {
     const handleDetectCameras = async () => {
         try {
-            const response = await axios.get('http://localhost:8006/skellycam/cameras/connect/detect');
+            const response = await axios.get(`${window.location.origin}/skellycam/cameras/connect/detect`);
             console.log('Response:', response.data);
         } catch (error) {
             console.error('Error detecting cameras:', error);
