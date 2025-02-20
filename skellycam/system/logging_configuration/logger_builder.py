@@ -4,6 +4,7 @@ from logging.config import dictConfig
 from multiprocessing import Queue
 from typing import Optional
 
+from .formatters.custom_formatter import CustomFormatter
 from .handlers.colored_console import ColoredConsoleHandler
 from .handlers.websocket_log_queue_handler import WebSocketQueueHandler, create_websocket_log_queue
 from .log_format_string import LOG_FORMAT_STRING
@@ -52,7 +53,9 @@ class LoggerBuilder:
         return handler
 
     def _build_websocket_handler(self):
-        return WebSocketQueueHandler(self.queue)
+        handler = WebSocketQueueHandler(self.queue)
+        handler.setLevel(self.level.value)
+        return handler
 
     def configure(self):
         if len(logging.getLogger().handlers) == 0:

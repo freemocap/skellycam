@@ -18,8 +18,8 @@ def serve_ui():
     file_path = os.path.join(os.path.dirname(__file__), 'ui.html')
     with open(file_path, 'r', encoding='utf-8') as file:
         ui_html_string = file.read()
-    ui_html_string = ui_html_string.replace("{{HTTP_URL}}", APP_URL)
-    ui_html_string =  ui_html_string.replace("{{WEBSOCKET_URL}}", APP_URL.replace("http", "ws"))
+    # ui_html_string = ui_html_string.replace("{{HTTP_URL}}", APP_URL)
+    # ui_html_string =  ui_html_string.replace("{{WEBSOCKET_URL}}", APP_URL.replace("http", "ws"))
     ui_html_string =  ui_html_string.replace("{{SKELLYCAM_DATA_FOLDER}}", str(Path().home()/"skellycam_data")).replace("\\", "/")
     return HTMLResponse(content=ui_html_string, status_code=200)
 

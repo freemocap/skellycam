@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import multiprocessing
 import time
@@ -13,6 +14,7 @@ from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramera
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 from skellycam.utilities.wait_functions import async_wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -26,14 +28,24 @@ class WebsocketServer:
         self.latest_backend_framerate: CurrentFramerate|None = None
         self.latest_frontend_framerate: CurrentFramerate|None = None
 
+        self._websocket_should_continue =True
+
+
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
+        self._websocket_should_continue = True
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         logger.debug("WebsocketRunner context manager exiting...")
+        self._websocket_should_continue = False
         if not self.websocket.client_state == WebSocketState.DISCONNECTED:
             await self.websocket.close()
+
+
+    @property
+    def should_continue(self):
+        return self._app_state.ipc_flags.global_should_continue and self._websocket_should_continue
 
     async def run(self):
         logger.info("Starting websocket runner...")
@@ -54,7 +66,7 @@ class WebsocketServer:
         logger.info("Starting websocket relay listener...")
 
         try:
-            while True:
+            while self.should_continue:
                 if not self._app_state.ipc_queue.empty():
                     try:
                         await self._handle_ipc_queue_message(message=self._app_state.ipc_queue.get())
@@ -101,7 +113,7 @@ class WebsocketServer:
         camera_group_uuid = None
         latest_mf_number = -1
         try:
-            while True:
+            while self.should_continue:
                 await async_wait_1ms()
 
                 if not self._app_state.shmorchestrator or not self._app_state.shmorchestrator.valid or not self._app_state.frame_escape_shm.ready_to_read:
@@ -151,3 +163,25 @@ class WebsocketServer:
             logger.error("Websocket shut down while sending payload!")
             raise RuntimeError("Websocket shut down while sending payload!")
 
+
+    async def _logs_relay(self):
+        logger.info("Starting websocket log relay listener...")
+        websocket_log_queue = get_websocket_log_queue()
+        try:
+            while self.should_continue:
+                if not websocket_log_queue.empty():
+                    try:
+                        log_record = websocket_log_queue.get()
+                        await self.websocket.send_json(log_record)
+                    except multiprocessing.queues.Empty:
+                        continue
+                else:
+                    await async_wait_1ms()
+
+        except WebSocketDisconnect:
+            logger.api("Client disconnected, ending listener task...")
+        except asyncio.CancelledError:
+            pass
+        finally:
+            logger.info("Ending listener for frontend payload messages in queue...")
+        logger.info("Ending listener for client messages...")

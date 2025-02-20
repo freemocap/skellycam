@@ -21,4 +21,4 @@ class CameraGroupDTO:
 
     @property
     def should_continue(self):
-        return self.ipc_flags.should_continue
+        return self.ipc_flags.camera_group_should_continue

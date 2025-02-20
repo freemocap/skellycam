@@ -25,21 +25,22 @@ def run_server(global_kill_flag: multiprocessing.Value):
 
 
 def shutdown_listener_loop(global_kill_flag: multiprocessing.Value):
-    while not global_kill_flag.value:
+
+    while not global_kill_flag.value and not os.getenv("SKELLYCAM_SHUTDOWN"):
         time.sleep(1)
-        if os.getenv('SKELLYCAM_SHUTDOWN'):
-            logger.info("Detected SKELLYCAM_SHUTDOWN environment variable - shutting down server")
-            global_kill_flag.value = True
+    logger.info(f"Global kill flag is {global_kill_flag.value}, os.getenv('SKELLYCAM_SHUTDOWN') is {os.getenv('SKELLYCAM_SHUTDOWN')} - setting global kill flag to True")
+    global_kill_flag.value = True
+
 
     logger.info("Shutdown listener loop ended")
 
 
 if __name__ == "__main__":
     outer_global_kill_flag = multiprocessing.Value("b", False)
-    run_server(outer_global_kill_flag)
-    outer_global_kill_flag.value = True
     shutdown_listener_thread = threading.Thread(target=shutdown_listener_loop, args=(outer_global_kill_flag,),
                                                 daemon=True)
     shutdown_listener_thread.start()
+    run_server(outer_global_kill_flag)
+    outer_global_kill_flag.value = True
     logger.info("Server main process ended - Thank you for using SkellyCam 💀📸✨")
     print("Done!")

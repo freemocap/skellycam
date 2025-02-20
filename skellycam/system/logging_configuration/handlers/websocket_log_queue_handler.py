@@ -1,4 +1,5 @@
 import logging
+from logging import LogRecord
 from queue import Queue
 from ..formatters.custom_formatter import CustomFormatter
 from ..filters.delta_time import DeltaTimeFilter
@@ -15,7 +16,9 @@ class WebSocketQueueHandler(logging.Handler):
         self.addFilter(DeltaTimeFilter())
 
     def emit(self, record: logging.LogRecord):
-        self.queue.put(self.format(record))
+        log_record_dict =  record.__dict__
+        log_record_dict["formatted_message"] = self.format(record) # replace ANSI codes with spans and hex colors
+        self.queue.put(log_record_dict)
 
 MAX_WEBSOCKET_LOG_QUEUE_SIZE = 1000
 WEBSOCKET_LOG_QUEUE: Queue| None = None

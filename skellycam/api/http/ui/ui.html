@@ -42,11 +42,6 @@
             margin-bottom: 10px;
         }
 
-        .input-group {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
 
         #ws-status {
             margin-right: 15px;
@@ -116,17 +111,25 @@
             margin-bottom: 20px;
         }
 
-        #log-container,
-        #camera-list,
         #config-container {
             flex: 1;
             padding: 10px;
             overflow-y: auto;
             height: 100%;
+            overflow: auto;
         }
 
-        #framerate-container {
+        #log-container {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            height: 100%;
+            white-space: nowrap; /* Default behavior */
+        }
+
+        #info-container {
             display: flex;
+            flex-direction: column;
             justify-content: space-around;
             color: #fafafa;
             padding: 5px;
@@ -159,11 +162,11 @@
             position: relative;
         }
 
-        .horizontal-separator {
-            width: 5px;
-            background-color: #000210;
-            cursor: ew-resize;
-            margin: 0 8px;
+        .recording-path-box {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            margin-bottom: 10px;
         }
 
         input[type="text"] {
@@ -179,8 +182,9 @@
     <script>
         let ws;
         let isConnected = false;
-        const websocket_url = '{{WEBSOCKET_URL}}/skellycam/websocket/connect';
-        const http_url = '{{HTTP_URL}}';
+
+        const http_url = window.location.origin;
+        const websocket_url = `${http_url.replace('http', 'ws')}/skellycam/websocket/connect`;
         const imageElements = {};
         let isResizingHorizontally = false;
         let isResizingVertically = false;
@@ -188,7 +192,6 @@
         let recording = false;
         let defaultPath = `{{SKELLYCAM_DATA_FOLDER}}`;
         let defaultName = getFormattedDate();
-        const availableCameras = [];
 
         function getFormattedDate() {
             // remove the fractional seconds
@@ -224,7 +227,6 @@
 
         function connectWebSocket() {
             ws = new WebSocket(websocket_url);
-            const decoder = new TextDecoder('utf-8');
 
             ws.onopen = () => {
                 isConnected = true;
@@ -236,13 +238,6 @@
             };
             ws.onmessage = async (event) => {
 
-                // Check if event.data is a string or a Blob
-                // if (event.type === "message") {
-                //     const data = JSON.parse(event.data);
-                //     addLogEntry(`Received JSON message: ${event.data}`);
-                //
-                //
-                // } else
                 if (event.data instanceof Blob) {
                     // If it's a Blob, convert it to ArrayBuffer first, then to a string
                     const arrayBuffer = await event.data.arrayBuffer();
@@ -257,6 +252,17 @@
 
                     }
 
+                } else if (event.data instanceof String) {
+                    addLogEntry(`Received message: ${event.data}`);
+                } else {
+                    try {
+                        const parsedData = JSON.parse(event.data);
+                        if (parsedData.formatted_message) {
+                            addLogEntry(parsedData.formatted_message);
+                        }
+                    } catch (e) {
+                        addLogEntry(`Received non-JSON message: ${event.data}`);
+                    }
                 }
             };
         }
@@ -296,8 +302,10 @@
             const logContainer = document.getElementById('log-container');
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry';
-            logEntry.innerText = '- ' + entry;
+            logEntry.innerText = entry;
+            logEntry.style.marginBottom = '12px'; // Add some space between log entries
             logContainer.prepend(logEntry);
+
 
             if (logContainer.children.length > 30) {
                 logContainer.removeChild(logContainer.lastChild);
@@ -415,8 +423,6 @@
             // getAvailableCameras();
 
             const separator = document.getElementById('separator');
-            const logContainer = document.getElementById('log-container');
-            const configContainer = document.getElementById('config-container');
             const bottomPanel = document.getElementById('bottom-panel');
             const verticalResizer = document.getElementById('vertical-resizer');
             const horizontalSeparators = document.querySelectorAll('.horizontal-separator');
@@ -495,11 +501,20 @@
         <button onclick="callApi(`${http_url}/skellycam/cameras/close`)">Close Cameras</button>
         <button onclick="togglePause()" id="pause-button">Pause</button>
         <button onclick="toggleRecord()" id="record-button">Start Recording</button>
-        <input type="text" id="recording-path" placeholder="Save Location"/>
-        <input type="text" id="recording-name" placeholder="Recording Name"/>
+        <div class="recording-path-box">
+            <div class="text-input-box-pair">
+                <label for="recording-path"> Base Recording Path:</label>
+                <input type="text" id="recording-path" placeholder="Recording Path"/>
+            </div>
+            <div class="text-input-box-pair">
+                <label for="recording-name"> Recording Name:</label>
+                <input type="text" id="recording-name" placeholder="Recording Name"/>
+            </div>
+
+        </div>
     </div>
 
-    <div id="framerate-container">
+    <div id="info-container">
         <div class="framerate-display">
             <div id="backend-framerate" class="framerate-text">Server/Backend - Frame Duration: N/A ms |
                 Framerate: N/A fps
@@ -508,27 +523,23 @@
                 N/A fps
             </div>
         </div>
+        <div class="section camera-section">
+            <h4>Connected Camera Configs</h4>
+            <div id="config-container"></div>
+        </div>
     </div>
 </div>
 <div id="content-container">
     <div id="images-container"></div>
 </div>
+<div id="separator"></div>
 <div id="vertical-resizer"></div>
 
 <div id="bottom-panel">
     <div class="section log-section">
         <h4>Logs</h4>
+
         <div id="log-container"></div>
-    </div>
-<!--    <div id="separator" class="horizontal-separator"></div>-->
-<!--    <div class="section config-section">-->
-<!--        <h4>Available Camera Devices</h4>-->
-<!--        <ul id="camera-list"></ul>-->
-<!--    </div>-->
-    <div id="separator" class="horizontal-separator"></div>
-    <div class="section camera-section">
-        <h4>Connected Camera Configs</h4>
-        <div id="config-container"></div>
     </div>
 </div>
 </body>

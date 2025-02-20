@@ -80,7 +80,7 @@ class UvicornServerManager:
 
     def shutdown_listener_loop(self):
         logger.info("Shutting down listener loop...")
-        while self.is_running:
+        while self._global_kill_flag.value is False:
             time.sleep(1)
             if os.getenv("SKELLYCAM_APP_SHUTDOWN"):
                 logger.info("Detected SKELLYCAM_APP_SHUTDOWN environment variable - shutting down server")

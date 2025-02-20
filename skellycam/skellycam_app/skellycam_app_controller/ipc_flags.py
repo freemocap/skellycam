@@ -21,5 +21,9 @@ class IPCFlags:
         self.recording_nametag.value = b""
 
     @property
-    def should_continue(self):
+    def camera_group_should_continue(self):
         return not self.global_kill_flag.value and not self.kill_camera_group_flag.value
+
+    @property
+    def global_should_continue(self):
+        return not self.global_kill_flag.value
