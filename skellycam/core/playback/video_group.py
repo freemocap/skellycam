@@ -39,6 +39,10 @@ class VideoGroup:
     @property
     def video_configs(self) -> VideoConfigs:
         return self.dto.video_configs
+    
+    @property
+    def configs(self) -> VideoConfigs:
+        return self.video_configs
 
     @property
     def uuid(self) -> str:

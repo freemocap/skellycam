@@ -39,6 +39,8 @@ class SkellycamAppState:
     shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator | VideoGroupSharedMemoryOrchestrator] = None
     camera_group_dto: Optional[CameraGroupDTO] = None
     camera_group: Optional[CameraGroup] = None
+    video_group_dto: Optional[VideoGroupDTO] = None
+    video_group: Optional[VideoGroup] = None
     available_cameras: Optional[AvailableCameras] = None
     current_framerate: Optional[CurrentFrameRate] = None
 
@@ -179,6 +181,7 @@ class SkellycamAppState:
             return
         logger.debug("Closing existing video group...")
         self.video_group.close()
+        self.video_group = None # camera group doesn't do this
         self.shmorchestrator.close_and_unlink()
         self._reset()
         logger.success("Camera group closed successfully")

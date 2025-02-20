@@ -49,7 +49,7 @@ class MultiFrameNumpyBuffer(BaseModel):
             multi_frame_number=mf_number.pop()
         )
 
-    def to_multi_frame_payload(self, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+    def to_multi_frame_payload(self, camera_configs: CameraConfigs | VideoConfigs) -> 'MultiFramePayload':
         time_mapping = UtcToPerfCounterMapping.from_numpy_buffer(self.mf_time_mapping_buffer)
 
         if self.mf_metadata_buffer.shape[0] % FRAME_METADATA_SHAPE[0] != 0:
@@ -228,7 +228,7 @@ class MultiFramePayload(BaseModel):
         return MultiFrameNumpyBuffer.from_multi_frame_payload(self)
 
     @classmethod
-    def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+    def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs | VideoConfigs) -> 'MultiFramePayload':
         return buffer.to_multi_frame_payload(camera_configs=camera_configs)
 
     def add_frame(self, frame_dto: FramePayload) -> None:

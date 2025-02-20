@@ -110,18 +110,22 @@
             }
         }
 
-        async function callApi(endpoint, method = 'GET') {
-            try {
-                const response = await fetch(endpoint, {method});
-                const data = await response.json();
-                document.getElementById('result').innerText = JSON.stringify(data, null, 2);
-                addLogEntry(`Success: ${endpoint} - ${JSON.stringify(data)}`);
-
-            } catch (error) {
-                document.getElementById('result').innerText = `Error: ${error.message}`;
-                addLogEntry(`Error: ${endpoint} - ${error.message}`);
+        async function callApi(endpoint, method = 'GET', body = null) {
+        try {
+            const options = { method };
+            if (body) {
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify(body);
             }
+            const response = await fetch(endpoint, options);
+            const data = await response.json();
+            document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+            addLogEntry(`Success: ${endpoint} - ${JSON.stringify(data)}`);
+        } catch (error) {
+            document.getElementById('result').innerText = `Error: ${error.message}`;
+            addLogEntry(`Error: ${endpoint} - ${error.message}`);
         }
+    }
     </script>
 </head>
 <body>
@@ -152,6 +156,14 @@
     <button onclick="callApi('http://localhost:8006/skellycam/cameras/detect')">Detect Cameras</button>
     <button onclick="callApi('http://localhost:8006/skellycam/cameras/record/start')">Start Recording</button>
     <button onclick="callApi('http://localhost:8006/skellycam/cameras/record/stop')">Stop Recording</button>
+
+    <!-- Video Playback API Calls -->
+    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/open_videos', 'POST', '/Users/philipqueen/freemocap_data/recording_sessions/freemocap_test_data/synchronized_videos')">Open Videos</button>
+    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/close_videos')">Close Videos</button>
+    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/play_videos')">Play Videos</button>
+    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/pause_videos')">Pause Videos</button>
+    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/stop_videos')">Stop Videos</button>
+    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/seek_videos')">Seek Videos</button>
 </div>
 <!-- Results and Logs Section -->
 <pre id="result"></pre>

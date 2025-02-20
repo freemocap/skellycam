@@ -94,21 +94,31 @@ class WebsocketServer:
             while True:
                 await async_wait_1ms()
 
+                # TODO: this is to handle having a video group or camera group, but there may be a better way to do this
+                if self._app_state.camera_group is not None:
+                    camera_group = self._app_state.camera_group
+                elif self._app_state.video_group is not None:
+                    camera_group = self._app_state.video_group
+                else:
+                    camera_group = None
+                    continue
+
                 if not self._app_state.shmorchestrator or not self._app_state.shmorchestrator.valid or not self._app_state.frame_escape_shm.ready_to_read:
                     latest_mf_number = -1
                     mf_payload = None
                     continue
 
-                if self._app_state.camera_group and camera_group_uuid != self._app_state.camera_group.uuid:
+                if camera_group and camera_group_uuid != camera_group.uuid:
                     latest_mf_number = -1
                     mf_payload = None
-                    camera_group_uuid = self._app_state.camera_group.uuid
+                    camera_group_uuid = camera_group.uuid
                     continue
 
                 if not self._app_state.frame_escape_shm.latest_mf_number.value > latest_mf_number:
                     continue
 
-                mf_payload = self._app_state.frame_escape_shm.get_multi_frame_payload(camera_configs=self._app_state.camera_group.camera_configs,
+                logger.debug("Relaying image payload to frontend...")
+                mf_payload = self._app_state.frame_escape_shm.get_multi_frame_payload(camera_configs=camera_group.configs,
                                                                                       retrieve_type="latest")
                 await self._send_frontend_payload(mf_payload)
                 latest_mf_number = mf_payload.multi_frame_number

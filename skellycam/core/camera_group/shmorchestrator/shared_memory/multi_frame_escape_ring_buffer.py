@@ -14,6 +14,7 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_share
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
     create_empty_frame_metadata, FRAME_METADATA_DTYPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
+from skellycam.core.playback.video_config import VideoConfigs
 from skellycam.core.playback.video_group_dto import VideoGroupDTO
 
 logger = logging.getLogger(__name__)
@@ -178,7 +179,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         #             f"\n\t\tput time mapping in shm: {(tik_put_time_mapping - tik_put_metadata)/1e6:.3f}ms)")
 
     def get_multi_frame_payload(self,
-                                camera_configs: CameraConfigs,
+                                camera_configs: CameraConfigs | VideoConfigs,
                                 retrieve_type: Literal["latest", "next"]
                                 ) -> MultiFramePayload:
         if retrieve_type == "next" and self.read_only:

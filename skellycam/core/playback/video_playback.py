@@ -98,6 +98,7 @@ class VideoPlayback:
         # TODO: this can be inaccurate, so maybe make another method of doing this accurately?
         # TODO: validate frame input!
         # TODO: Got multi-frame number mismatch when seeking
+        # TODO: Need to reset multi_frame_payload so it doesn't get out of sync
         for video_capture in self.video_captures.values():
             video_capture.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
 
