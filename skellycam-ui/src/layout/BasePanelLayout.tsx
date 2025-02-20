@@ -1,10 +1,7 @@
 import React from "react"
 import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
-import {MainContentPanel} from "@/layout/base-layout/sub-panels/MainContentPanel";
-import {LeftSidePanel} from "@/layout/base-layout/sub-panels/LeftSidePanel";
-import {BottomPanel} from "@/layout/base-layout/sub-panels/BottomPanel";
-import {paperbaseTheme} from "@/layout/base-content/paperbase_theme/paperbase-theme";
-
+import {paperbaseTheme} from "@/layout/paperbase_theme/paperbase-theme";
+import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     return (
@@ -16,7 +13,9 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
             {/* Top section (horizontal panels) - 80% height */}
             <Panel defaultSize={80} minSize={20}>
                 <PanelGroup direction="horizontal">
-                    <LeftSidePanel/>
+                    <Panel collapsible defaultSize={20} minSize={10} collapsedSize={4}>
+                        <LeftSidePanelContent/>
+                    </Panel>
                     {/* Horizontal Resize Handle
                     - like meaning the line is vertical and it lets you
                      resize the horizontal size of the panel */}
@@ -25,17 +24,16 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                             width: "4px",
                             cursor: "col-resize",
                             backgroundColor: paperbaseTheme.palette.primary.light,
-                            // transition: "background-color 0.2s ease",
-                            // "&:hover": {
-                            //     backgroundColor: paperbaseTheme.palette.secondary.main
-                            // }
                         }}
                     />
-                    <MainContentPanel>
+
+                    {/*Main/Central Content Panel*/}
+                    <Panel defaultSize={50} minSize={10}>
                         {children}
-                    </MainContentPanel>
+                    </Panel>
                 </PanelGroup>
             </Panel>
+
             {/* Vertical Resize Handle  - like meaning the line is horizontal
             and it lets you resize the vertical size of the panel */}
             <PanelResizeHandle
@@ -43,15 +41,14 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                     height: "4px",
                     cursor: "row-resize",
                     backgroundColor: paperbaseTheme.palette.primary.light,
-                    // transition: "background-color 0.2s ease",
-                    // ":hover": {
-                    //     backgroundColor: paperbaseTheme.palette.secondary.main
-                    // }
+
                 }}
             />
-            {/* Bottom section - 20% height */}
+
+
             <Panel collapsible defaultSize={20} minSize={10} collapsedSize={4}>
-                <BottomPanel/>
+                {/*<TerminalDrawer/>*/}
+                bottom panel
             </Panel>
         </PanelGroup>
     )

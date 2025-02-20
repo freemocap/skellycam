@@ -33,6 +33,7 @@ export const CamerasView = () => {
             overflow: "hidden"
 
         }}>
+            cameras
             {latestImages && (
                 <CameraImagesGrid
                     images={latestImages}

@@ -1,9 +1,9 @@
 import React from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
-import {Router} from "@/layout/routing/router";
 import {Copyright} from "@/components/ui-components/Copyright";
-import extendedPaperbaseTheme from "@/layout/base-content/paperbase_theme/paperbase-theme";
+import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
+import {CamerasView} from "@/components/camera-views/CamerasView";
 
 export const BaseContent = () => {
     return (
@@ -17,7 +17,7 @@ export const BaseContent = () => {
                 borderStyle: 'solid', borderWidth: '1px', borderColor: extendedPaperbaseTheme.palette.divider
             }}>
                 <ErrorBoundary>
-                    <Router/>
+                    <CamerasView/>
                 </ErrorBoundary>
                 <Box component="footer" sx={{p: 1}}>
                     <Copyright />

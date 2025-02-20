@@ -2,8 +2,8 @@ import {darken, Typography} from "@mui/material";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from '@mui/icons-material/Close';
 import Drawer from "@mui/material/Drawer";
-import extendedPaperbaseTheme from "@/layout/base-content/paperbase_theme/paperbase-theme";
-export const TerminalDrawer = () => {
+import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
+export const TerminalPanelContent = () => {
     return (
         <Drawer
             variant="permanent"

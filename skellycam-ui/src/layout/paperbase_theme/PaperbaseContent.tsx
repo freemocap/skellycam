@@ -2,9 +2,9 @@ import * as React from 'react';
 import {ThemeProvider} from '@mui/material/styles';
 import {HashRouter} from 'react-router-dom';
 import {CssBaseline} from "@mui/material";
-import {BaseContent} from "@/layout/base-content/BaseContent";
-import {BasePanelLayout} from "@/layout/base-layout/BasePanelLayout";
-import extendedPaperbaseTheme from "@/layout/base-content/paperbase_theme/paperbase-theme";
+import {BaseContent} from "@/layout/BaseContent";
+import {BasePanelLayout} from "@/layout/BasePanelLayout";
+import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 
 export const PaperbaseContent = function () {
 

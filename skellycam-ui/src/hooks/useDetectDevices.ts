@@ -1,4 +1,4 @@
-export class DetectAvailableCameraDevices {
+export class useDetectDevices {
     public async findAllCameras(filterVirtual: boolean = true) {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const cameras = devices.filter(({kind}) => kind === "videoinput");

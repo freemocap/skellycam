@@ -96,7 +96,7 @@ function startPythonServer() {
 }
 
 
-async function createWindow() {
+async function createMainWindow() {
     win = new BrowserWindow({
         title: 'Main window',
         icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
@@ -144,7 +144,7 @@ async function createWindow() {
     update(win)
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(createMainWindow)
 
 app.on('window-all-closed', async () => {
     if (pythonServer) {
@@ -171,7 +171,7 @@ app.on('activate', () => {
     if (allWindows.length) {
         allWindows[0].focus()
     } else {
-        createWindow()
+        createMainWindow()
     }
 })
 
