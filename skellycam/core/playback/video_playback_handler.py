@@ -1,5 +1,5 @@
 import logging
-from time import time
+import time
 
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.core.playback.video_group_dto import VideoGroupDTO

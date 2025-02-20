@@ -6,10 +6,10 @@ from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller i
 
 logger = logging.getLogger(__name__)
 
-close_cameras_router = APIRouter()
+close_videos_router = APIRouter()
 
 
-@close_cameras_router.get("/close_videos",
+@close_videos_router.get("/close_videos",
                           summary="Close video connections")
 def close_camera_connections():
     logger.api("Received `/close_videos` request...")

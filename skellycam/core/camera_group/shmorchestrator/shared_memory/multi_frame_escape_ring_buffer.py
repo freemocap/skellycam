@@ -72,6 +72,12 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
                           camera_group_dto.configs.values()]
+        for config in camera_group_dto.configs.values():
+            logger.warning(config)
+        logger.info(f"Creating shared memory with {len(example_images)} cameras, "
+                    f"image shape: {example_images[0].shape}, "
+                    f"image dtype: {example_images[0].dtype}, "
+                    f"image size: {example_images[0].nbytes / 1e6:.3f}MB")
         example_images_ravelled = [image.ravel() for image in example_images]
         example_mf_image_buffer = np.concatenate(
             example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated

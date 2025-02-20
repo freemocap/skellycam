@@ -96,6 +96,8 @@ class VideoPlayback:
     
     def go_to_frame(self, frame_number: int):
         # TODO: this can be inaccurate, so maybe make another method of doing this accurately?
+        # TODO: validate frame input!
+        # TODO: Got multi-frame number mismatch when seeking
         for video_capture in self.video_captures.values():
             video_capture.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
 

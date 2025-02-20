@@ -20,7 +20,7 @@ class VideoGroupThread:
         self._thread = threading.Thread(
             name=VideoGroupThread.__name__,
             target=VideoGroupThread._run_thread,
-            kwargs=dict(camera_group_dto=video_group_dto,
+            kwargs=dict(video_group_dto=video_group_dto,
                   multi_frame_escape_shm_dto=multi_frame_escape_shm_dto,
                   )
         )
