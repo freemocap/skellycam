@@ -1,20 +1,11 @@
 import logging
 
+from skellycam.system.logging_configuration.log_levels import LogLevels
+from skellycam.system.logging_configuration.package_log_quieters import suppress_noisy_package_logs
 from .log_test_messages import log_test_messages
-from .logger_builder import LoggerBuilder, LogLevels
+from .logger_builder import LoggerBuilder
 
-# Suppress some external loggers that are too verbose for our context/taste
-logging.getLogger("tzlocal").setLevel(logging.WARNING)
-logging.getLogger("matplotlib").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("asyncio").setLevel(logging.WARNING)
-logging.getLogger("websockets").setLevel(logging.INFO)
-logging.getLogger("websocket").setLevel(logging.INFO)
-logging.getLogger("watchfiles").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("comtypes").setLevel(logging.WARNING)
-
+suppress_noisy_package_logs()
 # Add custom log levels
 logging.addLevelName(LogLevels.GUI.value, "GUI")
 logging.addLevelName(LogLevels.LOOP.value, "LOOP")

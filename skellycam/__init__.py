@@ -21,7 +21,7 @@ from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
 from skellycam.system.logging_configuration.configure_logging import configure_logging
-from skellycam.system.logging_configuration.logger_builder import LogLevels
+from skellycam.system.logging_configuration.log_levels import LogLevels
 
 configure_logging(LogLevels.DEBUG)
 

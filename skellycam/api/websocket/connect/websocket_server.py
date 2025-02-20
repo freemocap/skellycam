@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 class WebsocketServer:
     def __init__(self, websocket: WebSocket):
         self.websocket = websocket
-        self.frontend_image_relay_task: Optional[asyncio.Task] = None
         self._app_state: SkellycamAppState = get_skellycam_app_controller().app_state
-        self.latest_backend_framerate: Optional[CurrentFramerate] = None
-        self.latest_frontend_framerate: Optional[CurrentFramerate] = None
+
+        self.latest_backend_framerate: CurrentFramerate|None = None
+        self.latest_frontend_framerate: CurrentFramerate|None = None
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -41,6 +41,7 @@ class WebsocketServer:
             await asyncio.gather(
                 asyncio.create_task(self._frontend_image_relay()),
                 asyncio.create_task(self._ipc_queue_relay()),
+                asyncio.create_task(self._logs_relay()),
             )
         except Exception as e:
             logger.exception(f"Error in websocket runner: {e.__class__}: {e}")
