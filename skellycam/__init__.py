@@ -25,7 +25,7 @@ from skellycam.system.logging_configuration.configure_logging import configure_l
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import create_websocket_log_queue
 from skellycam.system.logging_configuration.log_levels import LogLevels
 
-LOG_LEVEL = LogLevels.TRACE
+LOG_LEVEL = LogLevels.INFO
 configure_logging(LOG_LEVEL)
 
 

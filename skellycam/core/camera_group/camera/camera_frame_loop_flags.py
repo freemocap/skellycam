@@ -48,7 +48,7 @@ class CameraFrameLoopFlags:
 
     @property
     def should_continue(self):
-        return not self.ipc_flags.global_kill_flag.value and not self.ipc_flags.kill_camera_group_flag.value and not self.close_self_flag.value
+        return self.ipc_flags.camera_group_should_continue and not self.close_self_flag.value
 
     def await_initialization_signal(self):
         self._wait_loop(self.frame_loop_initialization_flag, waiting_for="frame_read_initialization_flag")

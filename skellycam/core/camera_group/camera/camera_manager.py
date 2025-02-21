@@ -92,7 +92,7 @@ class CameraManager(BaseModel):
 
             self.update_camera_configs(update_instructions)
             while any(
-                    [not camera_process.new_config_queue.empty() for camera_process in self.camera_processes.values()]):
+                    [not camera_process.new_config_queue.empty() for camera_process in self.camera_processes.values()]) and self.camera_group_dto.should_continue:
                 wait_100ms()
             self.orchestrator.await_cameras_ready()
             logger.trace(f"Camera configs updated for cameras: {self.camera_ids}")

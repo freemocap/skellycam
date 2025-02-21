@@ -5,6 +5,7 @@ import threading
 import time
 from typing import Optional
 
+import psutil
 import uvicorn
 from uvicorn import Server
 
@@ -30,7 +31,7 @@ class UvicornServerManager:
         self.server: Server|None = None
         self.log_level: str = log_level
         self.shutdown_listener_thread = threading.Thread(target=self.shutdown_listener_loop,
-                                                         name="ShutdownListenerThread",
+                                                         name="UvicornServerManagerShutdownListenerThread",
                                                          daemon=True)
         self.shutdown_listener_thread.start()
 
@@ -58,7 +59,7 @@ class UvicornServerManager:
             logger.debug("Server thread started")
             try:
                 logger.debug("Running uvicorn server...")
-                self.server.run()
+                self.server.run() #blocks until server is stopped
             except Exception as e:
                 logger.error(f"A fatal error occurred in the uvicorn server: {e}")
                 logger.exception(e)
@@ -66,22 +67,29 @@ class UvicornServerManager:
             finally:
                 logger.info(f"Uvicorn server thread completed")
 
-        self.server_thread = threading.Thread(target=server_thread)
+        self.server_thread = threading.Thread(target=server_thread, name="UvicornServerManagerThread", daemon=True)
         self.server_thread.start()
-        self.server_thread.join()
+        while not self._global_kill_flag.value and self.server_thread.is_alive():
+            time.sleep(1)
         logger.debug("Server thread shutdown")
-        kill_process_on_port(port=self.port)
+        # kill_process_on_port(port=self.port)
 
     def shutdown_server(self):
         logger.info("Shutting down Uvicorn Server...")
         self._global_kill_flag.value = True
         if self.server:
             self.server.should_exit = True
+        time.sleep(1)
+        # Kill child processes
+        current_process = psutil.Process()
+        for child in current_process.children(recursive=True):
+            logger.debug(f"Killing child process: {child}")
+            child.kill()
 
     def shutdown_listener_loop(self):
-        while self._global_kill_flag.value is False:
+        while self._global_kill_flag.value is False and not os.getenv("SKELLYCAM_SHOULD_SHUTDOWN"):
             time.sleep(1)
-            if os.getenv("SKELLYCAM_APP_SHUTDOWN"):
+            if os.getenv("SKELLYCAM_SHOULD_SHUTDOWN"):
                 logger.info("Detected SKELLYCAM_APP_SHUTDOWN environment variable - shutting down server")
                 self.shutdown_server()
                 break

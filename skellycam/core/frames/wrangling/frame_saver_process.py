@@ -90,7 +90,7 @@ class FrameSaverProcess:
                     camera_configs = new_configs_queue.get()
 
                 # Fully drain the ring shm buffer every time and put the frames into a deque in this Process' memory
-                while frame_escape_ring_shm.new_multi_frame_available:
+                while frame_escape_ring_shm.new_multi_frame_available and camera_group_dto.should_continue:
                     mf_payload: MultiFramePayload = frame_escape_ring_shm.get_multi_frame_payload(
                         camera_configs=camera_configs,
                         retrieve_type="next")
@@ -105,6 +105,9 @@ class FrameSaverProcess:
                 # If we're recording, create a VideoRecorderManager and load all available frames into it (but don't save them to disk yet)
                 if camera_group_dto.ipc_flags.record_frames_flag.value:
                     while len(mf_payloads_to_process) > 0:
+                        if not camera_group_dto.ipc_flags.global_should_continue:
+                            logger.critical("FrameSaverProcess received kill signal before recording was complete!! Recording may be incomplete or corrupt!")
+                            break
                         mf_payload = mf_payloads_to_process.popleft()
                         if previous_mf_payload_pulled_from_deque:
                             if not mf_payload.multi_frame_number == previous_mf_payload_pulled_from_deque.multi_frame_number + 1:

@@ -61,7 +61,7 @@ class VideoRecorder(BaseModel):
 
     def write_one_frame(self) -> int | None:
         if len(self._frames_to_write) == 0:
-            return
+            return None
 
         if not self.video_writer.isOpened():
             raise ValidationError(f"VideoWriter not open (before adding frame)!")

@@ -51,9 +51,9 @@ class WebsocketServer:
         logger.info("Starting websocket runner...")
         try:
             await asyncio.gather(
-                asyncio.create_task(self._frontend_image_relay()),
-                asyncio.create_task(self._ipc_queue_relay()),
-                asyncio.create_task(self._logs_relay()),
+                asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
+                asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
+                asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
             )
         except Exception as e:
             logger.exception(f"Error in websocket runner: {e.__class__}: {e}")
