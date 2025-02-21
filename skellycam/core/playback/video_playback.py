@@ -36,6 +36,7 @@ class VideoPlayback:
 
     @property
     def fps(self) -> float:
+        # TODO: if we have timestamps, base off that instead
         fps = {video.framerate for video in self.video_configs.values()}
 
         if len(fps) != 1:
@@ -47,6 +48,19 @@ class VideoPlayback:
     @property
     def frame_duration(self) -> float:
         return 1 / self.fps
+    
+    @property
+    def current_frame_number(self) -> int:
+        return self.frame_number
+    
+    @property
+    def num_frames(self) -> int:
+        num_frames = {video.num_frames for video in self.video_configs.values()}
+
+        if len(num_frames) != 1:
+            raise RuntimeError(f"Videos are not synchronized, frame counts do not match: {num_frames}")
+
+        return num_frames.pop()
 
     def close_video_captures(self):
         for video_capture in self.video_captures.values():
@@ -77,9 +91,9 @@ class VideoPlayback:
         for camera_id, video_capture in self.video_captures.items():
             ret, frame = video_capture.read()
             if not ret:
-                print(f"Failed to read frame {self.frame_number} for camera {camera_id}")
+                logger.error(f"Failed to read frame {self.frame_number} for camera {camera_id}")
                 # TODO: we might not want to close video captures here
-                print("Closing video captures")
+                logger.error("Closing video captures")
                 self.close_video_captures()
                 self.current_payload = None
                 self.frame_number = None
@@ -96,13 +110,14 @@ class VideoPlayback:
     
     def go_to_frame(self, frame_number: int):
         # TODO: this can be inaccurate, so maybe make another method of doing this accurately?
-        # TODO: validate frame input!
-        # TODO: Got multi-frame number mismatch when seeking
-        # TODO: Need to reset multi_frame_payload so it doesn't get out of sync
+        if frame_number >= self.num_frames or frame_number < 0:
+            raise RuntimeError(f"Frame number {frame_number} is out of bounds for video with {self.num_frames} frames")
+
         for video_capture in self.video_captures.values():
             video_capture.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
 
         self.frame_number = frame_number
+        self.next_frame_payload()  # TODO: check if this is needed
         
 
     def __enter__(self):
@@ -110,20 +125,3 @@ class VideoPlayback:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close_video_captures()
-
-
-def read_video_into_queue(video_configs: VideoConfigs, camera_payload_queue: multiprocessing.Queue) -> None:
-    with VideoPlayback(video_configs=video_configs) as video_playback:
-        while video_playback.current_payload is not None:
-            camera_payload_queue.put(video_playback.current_payload)
-            time.sleep(video_playback.frame_duration)
-            video_playback.next_frame_payload()
-
-    print("processed entire recording!")
-
-if __name__ == "__main__":
-    video_configs = load_video_configs_from_folder("/Users/philipqueen/freemocap_data/recording_sessions/freemocap_test_data/synchronized_videos")
-    with VideoPlayback(video_configs=video_configs) as video_playback:
-        while video_playback.current_payload is not None:
-            print(video_playback.current_payload.multi_frame_number)
-            video_playback.next_frame_payload()

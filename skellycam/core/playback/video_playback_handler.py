@@ -25,18 +25,24 @@ def video_playback_handler(video_group_dto: VideoGroupDTO,
     with VideoPlayback(video_configs=video_configs) as video_playback:
         while not video_group_dto.ipc_flags.kill_camera_group_flag.value and not video_group_dto.ipc_flags.global_kill_flag.value:
             # TODO: kill camera group flag check might not be right - do we want to be able to run the cameras and videos at the same time?
-            if video_group_dto.ipc_flags.playback_stop_flag.value: # TODO: not sure if we want/need this, or if this is correct behavior
+            if video_group_dto.ipc_flags.playback_stop_flag.value:
+                logger.info("Playback stop flag set, stopping video playback.")
                 if video_group_dto.ipc_flags.playback_frame_number_flag.value != 0:
+                    logger.info("Resetting video playback to frame 0.")
                     video_playback.go_to_frame(0)
                     current_frame = 0
-                    #should
-                time.sleep(30)
+                    video_group_dto.ipc_flags.playback_frame_number_flag.value = 0
+                    frame_escape_ring_shm.reset_last_written_indices(0)
+                time.sleep(0.30)
+                continue
             elif video_group_dto.ipc_flags.playback_pause_flag.value:
-                time.sleep(30)
+                time.sleep(0.30)
                 continue
             elif video_group_dto.ipc_flags.playback_frame_number_flag.value != current_frame:
-                video_playback.go_to_frame(current_frame)
+                # TODO: reset shm indices to current frame
                 current_frame = video_group_dto.ipc_flags.playback_frame_number_flag.value
+                video_playback.go_to_frame(current_frame)
+                frame_escape_ring_shm.reset_last_written_indices(current_frame)
 
             
             frame_escape_ring_shm.put_multi_frame_payload(video_playback.current_payload)

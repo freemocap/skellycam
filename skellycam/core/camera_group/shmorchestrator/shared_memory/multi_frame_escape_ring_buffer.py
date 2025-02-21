@@ -221,6 +221,16 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         #     print(f"\t\tGET MF FROM SHM -  multi-frame {mf_payload.multi_frame_number} from shared memory (took: {(tok - tik)/1e6:.3f}ms total, "
         #             f"\n\t\t\tfrom numpy: {(tik_from_numpy - tik)/1e6:.3f}ms)")
         return mf_payload
+    
+    def reset_last_written_indices(self, updated_index: int = 0):
+        """
+        Reset the last written indices of the shared memory buffers to a given index.
+        Intended to be used when seeking in a video.
+        """
+        self.mf_image_shm.last_written_index.value = updated_index
+        self.mf_metadata_shm.last_written_index.value = updated_index
+        self.mf_time_mapping_shm.last_written_index.value = updated_index
+        self.latest_mf_number.value = updated_index
 
     def close(self):
         self.mf_image_shm.close()

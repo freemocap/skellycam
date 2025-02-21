@@ -59,5 +59,4 @@ class VideoGroupThread:
             logger.exception(e)
             raise
         finally:
-            # cleanup code here
             logger.debug(f"VideoGroupThread completed")

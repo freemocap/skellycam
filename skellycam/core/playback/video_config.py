@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 class VideoConfig(CameraConfig):
     video_path: Path
+    num_frames: int
     exposure_mode: str = ""
 
 VideoConfigs = Dict[int, VideoConfig]  # TODO: making this CameraID causes a circular import
@@ -29,7 +30,7 @@ def load_video_configs_from_folder(synchronized_video_folder_path: str | Path) -
         video_configs[camera_id] = VideoConfig(
             camera_id=camera_id,
             camera_name=path.stem,
-
+            num_frames= int(capture.get(cv2.CAP_PROP_FRAME_COUNT)),
             resolution=ImageResolution(height=int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
                                         width=int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))),
             color_channels=color_channels,

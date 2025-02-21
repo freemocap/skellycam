@@ -77,6 +77,28 @@ class SkellycamAppState:
             logger.warning("Cannot get VideoConfigs without CameraGroup!")
             return
         return self.video_group.video_configs
+    
+    @property
+    def active_group(self) -> Optional[CameraGroup | VideoGroup]:
+        if self.camera_group is not None:
+            return self.camera_group
+        if self.video_group is not None:
+            return self.video_group
+        
+    @property
+    def active_group_dto(self) -> Optional[CameraGroupDTO | VideoGroupDTO]:
+        if self.camera_group_dto is not None:
+            return self.camera_group_dto
+        if self.video_group_dto is not None:
+            return self.video_group_dto
+        
+    @property
+    def active_group_type(self) -> Optional[str]:
+        # TODO: this could be an enum, or even just a bool for camera_group_is_active
+        if self.camera_group is not None:
+            return "CameraGroup"
+        if self.video_group is not None:
+            return "VideoGroup"
 
     def set_available_cameras(self, value: AvailableCameras):
         self.available_cameras = value
