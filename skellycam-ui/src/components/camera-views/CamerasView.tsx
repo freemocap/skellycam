@@ -38,7 +38,7 @@ export const CamerasView = () => {
                 <CameraImagesGrid
                     images={latestImages}
                     showAnnotation={showAnnotation}
-                    sx={{flex: 1, minHeight: 0}} // Allows grid to shrink
+                    sx={{flex: 1, minHeight: 0}}
                 />
             )}
         </Box>

@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Box from "@mui/material/Box";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
-import {List, ListItem} from "@mui/material";
+import {List, ListItem, Paper} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
 import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
 import {ConfigView} from "@/components/config-views/ConfigView";
@@ -44,27 +44,27 @@ export const LeftSidePanelContent = () => {
             <WebsocketConnectionStatus/>
 
             <ConnectToCamerasButton/>
-
-            <Accordion>
-                <AccordionSummary
-                    expandIcon={<ExpandMoreIcon sx={{ color: extendedPaperbaseTheme.palette.primary.contrastText }} />}
-                    sx={{
-                        backgroundColor: extendedPaperbaseTheme.palette.primary.main,
-                        color: extendedPaperbaseTheme.palette.primary.contrastText
-                    }}
-                >
-                    <Typography>Available Cameras</Typography>
-                </AccordionSummary>
-                <AccordionDetails
-                    sx={{
-                        backgroundColor: extendedPaperbaseTheme.palette.primary.main,
-                        color: extendedPaperbaseTheme.palette.primary.contrastText
-                    }}
-                >
-                    <ConfigView/>
-                </AccordionDetails>
-            </Accordion>
-
+                <Accordion>
+                    <AccordionSummary
+                        expandIcon={<ExpandMoreIcon sx={{color: extendedPaperbaseTheme.palette.primary.contrastText}}/>}
+                        sx={{
+                            backgroundColor: extendedPaperbaseTheme.palette.primary.main,
+                            color: extendedPaperbaseTheme.palette.primary.contrastText,
+                            boxShadow: `0 -1px 0 ${extendedPaperbaseTheme.palette.primary.light}`,
+                        }}
+                    >
+                        <Typography>Available Cameras</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails
+                        sx={{
+                            backgroundColor: extendedPaperbaseTheme.palette.primary.main,
+                            color: extendedPaperbaseTheme.palette.primary.contrastText
+                        }}
+                    >
+                        <ConfigView/>
+                    </AccordionDetails>
+                </Accordion>
+                <Paper/>
         </Box>
-    );
+);
 }

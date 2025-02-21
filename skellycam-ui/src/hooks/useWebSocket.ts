@@ -14,22 +14,41 @@ export const useWebSocket = (wsUrl: string) => {
     const [latestFrontendPayload, setLatestFrontendPayload] = useState<z.infer<typeof FrontendFramePayloadSchema> | null>(null);
     const [latestImages, setLatestImages] = useState<z.infer<typeof JpegImagesSchema> | null>(null);
     const [latestSkellyCamAppState, setLatestSkellyCamAppState] = useState<z.infer<typeof SkellyCamAppStateSchema> | null>(null);
+    const [latestLogs, setLatestLogs] = useState<object[] | null>(null);
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
+
     const [connectAttempt, setConnectAttempt] = useState(0);
 
     const dispatch = useAppDispatch();
 
-    const handleIncomingMessage = (data: Blob | string) => {
-        if (typeof data === 'string') {
-            parseAndValidateMessage(data);
-        } else if (data instanceof Blob) {
+    const handleIncomingMessage = (event: MessageEvent) => {
+        const data = event.data;
+        if (data instanceof Blob) {
             // If data is a Blob, convert it to text
             data.text().then(text => {
                 parseAndValidateMessage(text);
             }).catch(error => {
                 console.error('Error reading Blob data:', error);
             });
+        } else if (typeof data === 'string') {
+            parseAndValidateMessage(data);
+        } else {
+            try {
+                const parsedData = JSON.parse(event.data);
+                if (parsedData.formatted_message) {
+                    setLatestLogs(prevLogs => {
+                        if (prevLogs && prevLogs.length > 100) {
+                            return [...prevLogs.slice(1), parsedData];
+                        } else {
+                            return [...(prevLogs || []), parsedData];
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Error parsing JSON data:', e);
+            }
         }
+
     };
 
     const parseAndValidateMessage = (data: string) => {
@@ -100,7 +119,7 @@ export const useWebSocket = (wsUrl: string) => {
 
         ws.onmessage = (event) => {
             // console.log('Websocket message received with length: ', event.data.length);
-            handleIncomingMessage(event.data);
+            handleIncomingMessage(event);
         };
 
         ws.onerror = (error) => {
@@ -128,5 +147,5 @@ export const useWebSocket = (wsUrl: string) => {
         };
     }, [connect]);
 
-    return {isConnected, latestFrontendPayload, latestImages,  latestSkellyCamAppState ,connect, disconnect};
+    return {isConnected, latestFrontendPayload, latestImages,  latestSkellyCamAppState, latestLogs, connect, disconnect};
 };

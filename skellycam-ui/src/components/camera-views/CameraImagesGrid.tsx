@@ -1,13 +1,13 @@
-import { Box } from "@mui/material";
+import {Box, BoxProps} from "@mui/material";
 import React from "react";
 import {CameraImage} from "@/components/camera-views/CameraImage";
 
-interface CameraImagesGridProps {
+interface CameraImagesGridProps extends BoxProps { // Extend BoxProps
     images: { [cameraId: string]: string };
     showAnnotation: boolean;
 }
 
-export const CameraImagesGrid = ({ images, showAnnotation }: CameraImagesGridProps) => {
+export const CameraImagesGrid = ({ images, showAnnotation, sx }: CameraImagesGridProps) => {
     return (
         <Box
             sx={{
@@ -17,7 +17,8 @@ export const CameraImagesGrid = ({ images, showAnnotation }: CameraImagesGridPro
                 flexGrow: 1,
                 justifyContent: "center",
                 alignItems: "center",
-                overflow: "hidden"
+                overflow: "hidden",
+                    ...sx
             }}
         >
             {Object.entries(images).map(([cameraId, base64Image]) =>

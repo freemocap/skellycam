@@ -11,10 +11,6 @@ export const ConfigView = () => {
             backgroundColor: extendedPaperbaseTheme.palette.primary.dark,
             color: extendedPaperbaseTheme.palette.primary.contrastText
         }}>
-            {/*<Typography variant="h6" gutterBottom>*/}
-            {/*    Detected Cameras*/}
-            {/*</Typography>*/}
-            {/*<Divider sx={{ my: 2, bgcolor: 'divider' }} />*/}
 
             <List dense>
                 {detectedDevices.map(device => (
