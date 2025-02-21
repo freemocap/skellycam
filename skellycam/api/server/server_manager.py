@@ -83,7 +83,7 @@ class UvicornServerManager:
         # Kill child processes
         current_process = psutil.Process()
         for child in current_process.children(recursive=True):
-            logger.debug(f"Killing child process: {child}")
+            logger.warning(f"Killing child process: {child} - figure out how to make this shut down gracefully!")
             child.kill()
 
     def shutdown_listener_loop(self):
