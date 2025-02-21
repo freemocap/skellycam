@@ -17,8 +17,8 @@ MAX_DELTA_T_LEN = 10
 class LoggerBuilder:
 
     def __init__(self,
-                 level: LogLevels = LogLevels.DEBUG,
-                 queue: Optional[Queue] = create_websocket_log_queue()):
+                 level: LogLevels ,
+                 queue: Optional[Queue]):
         self.level = level
         self.queue = queue
         dictConfig({"version": 1, "disable_existing_loggers": False})

@@ -19,7 +19,7 @@ from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator im
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
     SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
-from skellycam.utilities.wait_functions import wait_1ms, wait_10ms, wait_1s
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +89,13 @@ class CameraProcess:
                      ipc_queue: multiprocessing.Queue,
                      should_close_self_flag: multiprocessing.Value
                      ):
-        config = camera_group_dto.camera_configs[camera_id]
+        # Configure logging in the child process
+        from skellycam.system.logging_configuration.configure_logging import configure_logging
+        from skellycam import LOG_LEVEL
 
+        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
+
+        config = camera_group_dto.camera_configs[camera_id]
 
         def heartbeat_thread_function():
             heartbeat_counter = 0
@@ -103,7 +108,7 @@ class CameraProcess:
         heartbeat_thread = threading.Thread(target=heartbeat_thread_function,
 
                                             name=f"Camera{camera_id}Heartbeat")
-        heartbeat_thread.start()
+        # heartbeat_thread.start()
 
         camera_shm = SingleSlotCameraSharedMemory.recreate(camera_config=config,
                                                            camera_shm_dto=camera_shm_dto,
@@ -123,8 +128,6 @@ class CameraProcess:
             frame_number = 0
             # Trigger listening loop
             while camera_group_dto.should_continue and not should_close_self_flag.value:
-                if frame_number % 100 == 0:
-                    logger.trace(f"Camera {config.camera_id} running frame loop# {frame_number}")
                 if frame_loop_flags.frame_loop_initialization_flag.value:
                     logger.loop(f"Camera {camera_id} received `initialization` signal for frame loop# {frame_number}")
                     frame_loop_flags.frame_loop_initialization_flag.value = False
@@ -160,7 +163,6 @@ class CameraProcess:
             if cv2_video_capture:
                 cv2_video_capture.release()
             camera_shm.close()
-
 
 
 def check_for_config_update(config: CameraConfig,

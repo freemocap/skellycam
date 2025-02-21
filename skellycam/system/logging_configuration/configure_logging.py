@@ -1,5 +1,8 @@
 import logging
+import multiprocessing
+from typing import Optional
 
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import create_websocket_log_queue
 from skellycam.system.logging_configuration.log_levels import LogLevels
 from skellycam.system.logging_configuration.package_log_quieters import suppress_noisy_package_logs
 from .log_test_messages import log_test_messages
@@ -22,14 +25,21 @@ def add_log_method(level: LogLevels, name: str):
     setattr(logging.Logger, name, log_method)
 
 
-def configure_logging(level: LogLevels = LogLevels.DEBUG):
+def configure_logging(level: LogLevels, ws_queue: Optional[multiprocessing.Queue] = None):
+    print( multiprocessing.current_process().name)
+    if ws_queue is None:
+        # do not create new queue if not main process
+        if not "main" in multiprocessing.current_process().name.lower():
+            return
+
+        ws_queue = create_websocket_log_queue()
     add_log_method(LogLevels.GUI, 'gui')
     add_log_method(LogLevels.LOOP, 'loop')
     add_log_method(LogLevels.TRACE, 'trace')
     add_log_method(LogLevels.API, 'api')
     add_log_method(LogLevels.SUCCESS, 'success')
 
-    builder = LoggerBuilder(level)
+    builder = LoggerBuilder(level, ws_queue)
     builder.configure()
 
 

@@ -10,6 +10,7 @@ class CameraGroupDTO:
     camera_configs: CameraConfigs
 
     ipc_queue: multiprocessing.Queue
+    logs_queue: multiprocessing.Queue
     ipc_flags: IPCFlags
 
     config_update_queue: multiprocessing.Queue

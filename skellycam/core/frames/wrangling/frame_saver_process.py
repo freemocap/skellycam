@@ -13,7 +13,7 @@ from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.system.default_paths import get_default_recording_folder_path
-from skellycam.utilities.wait_functions import wait_1ms, wait_1s
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,10 @@ class FrameSaverProcess:
                      multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
                      new_configs_queue: multiprocessing.Queue,
                      ):
-
+        # Configure logging in the child process
+        from skellycam.system.logging_configuration.configure_logging import configure_logging
+        from skellycam import LOG_LEVEL
+        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
         logger.debug(f"FrameRouter process started!")
 
         def heartbeat_thread_function():
@@ -62,7 +65,7 @@ class FrameSaverProcess:
         heartbeat_thread = threading.Thread(target=heartbeat_thread_function,
                                             daemon=True,
                                             name=f"FrameSaverProcess_heartbeat")
-        heartbeat_thread.start()
+        # heartbeat_thread.start()
 
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         recording_manager: Optional[RecordingManager] = None

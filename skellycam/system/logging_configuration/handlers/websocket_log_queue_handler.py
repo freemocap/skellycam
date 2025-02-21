@@ -1,6 +1,8 @@
 import logging
-from logging import LogRecord
-from queue import Queue
+import multiprocessing
+from multiprocessing import Queue
+from typing import Optional
+
 from ..formatters.custom_formatter import CustomFormatter
 from ..filters.delta_time import DeltaTimeFilter
 from ..log_format_string import LOG_FORMAT_STRING
@@ -32,10 +34,11 @@ class LogRecordModel(BaseModel):
     asctime: str
     formatted_message: str
     type: str
+
 class WebSocketQueueHandler(logging.Handler):
     """Formats logs and puts them in a queue for websocket distribution"""
 
-    def __init__(self, queue: Queue):
+    def __init__(self, queue: multiprocessing.Queue):
         super().__init__()
         self.queue = queue
         self.addFilter(DeltaTimeFilter())
@@ -48,7 +51,7 @@ class WebSocketQueueHandler(logging.Handler):
         self.queue.put(LogRecordModel(**log_record_dict).model_dump())
 
 MAX_WEBSOCKET_LOG_QUEUE_SIZE = 1000
-WEBSOCKET_LOG_QUEUE: Queue| None = None
+WEBSOCKET_LOG_QUEUE: Optional[Queue] = None
 def create_websocket_log_queue() -> Queue:
     global WEBSOCKET_LOG_QUEUE
     if WEBSOCKET_LOG_QUEUE is None:

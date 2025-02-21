@@ -22,6 +22,7 @@ from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramera
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, \
     available_cameras_to_default_camera_configs
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 class SkellycamAppState:
     ipc_flags: IPCFlags
     ipc_queue: multiprocessing.Queue
+    logs_queue: multiprocessing.Queue
     config_update_queue: multiprocessing.Queue
 
     shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
@@ -45,6 +47,7 @@ class SkellycamAppState:
                ) -> "SkellycamAppState":
         return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag),
                    ipc_queue=multiprocessing.Queue(),
+                   logs_queue=get_websocket_log_queue(),
                    config_update_queue=multiprocessing.Queue())
 
     @property
@@ -84,8 +87,10 @@ class SkellycamAppState:
         self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
                                             ipc_queue=self.ipc_queue,
                                             ipc_flags=self.ipc_flags,
+                                            logs_queue=self.logs_queue,
                                             config_update_queue=self.config_update_queue,
                                             group_uuid=str(uuid4())
+
                                             )
         self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.camera_group_dto,
                                                                           ipc_flags=self.ipc_flags,

@@ -6,9 +6,11 @@ export const startRecording = createAsyncThunk(
     async (_, { dispatch }) => {
         try {
             //TODO -get this URL from on high
-            const response = await fetch('http://localhost:8006/skellycam/cameras/record/start');
+            const response = await fetch(window.location.origin+'/skellycam/cameras/record/start');
             if (response.ok) {
                 dispatch(setIsRecording(true));
+            } else {
+                console.error('Recording start failed:', response);
             }
         } catch (error) {
             console.error('Recording start failed:', error);
@@ -22,9 +24,11 @@ export const stopRecording = createAsyncThunk(
     async (_, { dispatch }) => {
         try {
             //TODO -get this URL from on high
-            const response = await fetch('http://localhost:8006/skellycam/cameras/record/stop');
+            const response = await fetch(window.location.origin+'/skellycam/cameras/record/stop');
             if (response.ok) {
                 dispatch(setIsRecording(false));
+            } else {
+                console.error('Recording stop failed:', response);
             }
         } catch (error) {
             console.error('Recording stop failed:', error);

@@ -20,10 +20,13 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escap
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
+
 from skellycam.system.logging_configuration.configure_logging import configure_logging
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import create_websocket_log_queue
 from skellycam.system.logging_configuration.log_levels import LogLevels
 
-configure_logging(LogLevels.DEBUG)
+LOG_LEVEL = LogLevels.TRACE
+configure_logging(LOG_LEVEL)
 
 
 __all__ = [

@@ -50,6 +50,10 @@ class FrameListenerWorker:
                     shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                     new_configs_queue: multiprocessing.Queue,
                     ):
+        # Configure logging in the child process
+        from skellycam.system.logging_configuration.configure_logging import configure_logging
+        from skellycam import LOG_LEVEL
+        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
         logger.trace(f"Starting FrameListener loop...")
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
                                                                        shmorc_dto=shmorc_dto,

@@ -7,6 +7,7 @@ import time
 from skellycam.api.server.server_manager import UvicornServerManager
 from skellycam.api.server.server_singleton import create_server_manager
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,5 +43,6 @@ if __name__ == "__main__":
     shutdown_listener_thread.start()
     run_server(outer_global_kill_flag)
     outer_global_kill_flag.value = True
+
     logger.info("Server main process ended - Thank you for using SkellyCam 💀📸✨")
     print("Done!")
