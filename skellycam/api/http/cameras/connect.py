@@ -2,8 +2,8 @@ import logging
 
 from fastapi import APIRouter, Body
 
-from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, default_camera_configs_factory
+from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
 
 logger = logging.getLogger(__name__)
 

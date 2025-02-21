@@ -13,16 +13,19 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 
 
 class FrontendFramePayload(BaseModel):
-    type:str = 'FrontendFramePayload'
+    type: str = 'FrontendFramePayload'
     jpeg_images: Dict[CameraId, Optional[str]]
     camera_configs: Dict[CameraId, CameraConfig]
     multi_frame_metadata: MultiFrameMetadata
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
+    backend_framerate: CurrentFramerate | None = None
+    frontend_framerate: CurrentFramerate | None = None
 
     @property
     def camera_ids(self):
@@ -59,18 +62,19 @@ class FrontendFramePayload(BaseModel):
             jpeg_images[camera_id] = cls._image_to_jpeg_cv2(resized_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
-
         return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    jpeg_images=jpeg_images,
                    multi_frame_metadata=mf_metadata,
-                   camera_configs = multi_frame_payload.camera_configs)
+                   camera_configs=multi_frame_payload.camera_configs,
+                   backend_framerate=multi_frame_payload.backend_framerate,
+                   frontend_framerate=multi_frame_payload.frontend_framerate)
 
     @staticmethod
     def _resize_image(frame: FramePayload,
                       image_sizes: Dict[CameraId, Dict[str, int]],
                       fallback_resize_ratio: float) -> np.ndarray:
-            # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
+        # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
         image = frame.image
         camera_id = frame.camera_id
         if image_sizes is None or str(camera_id) not in image_sizes.keys():

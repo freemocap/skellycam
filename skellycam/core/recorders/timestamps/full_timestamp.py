@@ -1,7 +1,6 @@
 import calendar
 import time
 from datetime import datetime, timezone
-from typing import Tuple
 
 from pydantic import BaseModel, Field
 from tzlocal import get_localzone

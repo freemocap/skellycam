@@ -13,19 +13,20 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 __package_root__ = __file__.replace("/__init__.py", "")
 
 from skellycam.api.routers import SKELLYCAM_ROUTERS
-from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core import CameraId, CameraName
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.gui.qt.widgets.camera_widgets.camera_panel import SkellycamCameraPanel
-from skellycam.gui.qt.widgets.side_panel_widgets.camera_control_panel import SkellycamCameraControlPanel
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
-from skellycam.system.logging_configuration.configure_logging import configure_logging
-from skellycam.system.logging_configuration.logger_builder import LogLevels
 
-configure_logging(LogLevels.TRACE)
+from skellycam.system.logging_configuration.configure_logging import configure_logging
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import create_websocket_log_queue
+from skellycam.system.logging_configuration.log_levels import LogLevels
+
+LOG_LEVEL = LogLevels.INFO
+configure_logging(LOG_LEVEL)
 
 
 __all__ = [
@@ -37,13 +38,13 @@ __all__ = [
     "__repo_url__",
     "__repo_issues_url__",
     "__pypi_url__",
-    'SkellycamCameraPanel',
-    'SkellycamCameraControlPanel',
     'create_skellycam_app_controller',
     'SKELLYCAM_ROUTERS',
     'CameraId',
+    'CameraName',
     'SkellycamAppState',
     'MultiFrameEscapeSharedMemoryRingBuffer',
     'CameraConfigs',
+    'CameraConfig',
     'IPCFlags',
 ]

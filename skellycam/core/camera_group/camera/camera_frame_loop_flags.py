@@ -3,8 +3,8 @@ import multiprocessing
 import time
 from dataclasses import dataclass
 
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class CameraFrameLoopFlags:
 
     @property
     def should_continue(self):
-        return not self.ipc_flags.global_kill_flag.value and not self.ipc_flags.kill_camera_group_flag.value and not self.close_self_flag.value
+        return self.ipc_flags.camera_group_should_continue and not self.close_self_flag.value
 
     def await_initialization_signal(self):
         self._wait_loop(self.frame_loop_initialization_flag, waiting_for="frame_read_initialization_flag")

@@ -3,10 +3,10 @@ import multiprocessing
 from dataclasses import dataclass
 from typing import Dict
 
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroupOrchestrator:
     frame_loop_flags: Dict[CameraId, CameraFrameLoopFlags]
-    ipc_flags: IPCFlags
+    camera_group_dto: CameraGroupDTO
 
     pause_when_able: multiprocessing.Value
     frame_loop_paused: multiprocessing.Value
@@ -25,19 +25,22 @@ class CameraGroupOrchestrator:
     loop_count: int = 0
 
     @classmethod
-    def create(cls,
-               camera_group_dto: CameraGroupDTO,
-               ipc_flags: IPCFlags):
+    def from_dto(cls,
+               camera_group_dto: CameraGroupDTO,):
         return cls(
             frame_loop_flags={
                 camera_id: CameraFrameLoopFlags.create(camera_id=camera_id,
-                                                       ipc_flags=ipc_flags)
+                                                       ipc_flags=camera_group_dto.ipc_flags)
                 for camera_id, camera_config in camera_group_dto.camera_configs.items()
             },
-            ipc_flags=ipc_flags,
             pause_when_able=multiprocessing.Value("b", False),
             frame_loop_paused=multiprocessing.Value("b", False),
+            camera_group_dto=camera_group_dto,
         )
+
+    @property
+    def ipc_flags(self):
+        return self.camera_group_dto.ipc_flags
 
     @property
     def camera_ids(self):
@@ -45,7 +48,7 @@ class CameraGroupOrchestrator:
 
     @property
     def should_continue(self):
-        return not self.ipc_flags.kill_camera_group_flag.value and not self.ipc_flags.global_kill_flag.value
+        return self.ipc_flags.camera_group_should_continue
 
     @property
     def cameras_ready(self):
@@ -219,31 +222,34 @@ class CameraGroupOrchestrator:
         if not self.cameras_ready:
             raise AssertionError("Not all cameras are ready!")
 
-    def _verify_hunky_dory_after_read(self, max_attempts=5):
+    def _verify_hunky_dory_after_read(self, max_attempts=100):
         are_cameras_ready = False
         are_frame_grab_flags_reset = False
         are_frame_retrieve_flags_reset = False
         is_multi_frame_pulled_from_shm_reset = False
         are_camera_new_frame_available_flags_reset = False
         for attempt_number in range(max_attempts):
-            if self.should_continue:
-                are_cameras_ready = self.cameras_ready
-                are_frame_grab_flags_reset = self.frames_grabbed
-                are_frame_retrieve_flags_reset = self.frames_retrieved
-                is_multi_frame_pulled_from_shm_reset = not self.should_pull_multi_frame_from_shm.value
-                are_camera_new_frame_available_flags_reset = not any(
-                    [flags.new_frame_in_shm.value for flags in self.frame_loop_flags.values()])
+            if not self.should_continue:
+                logger.debug("Breaking out of frame loop verification due to kill flag being set")
+                self.ipc_flags.kill_camera_group_flag.value = True
+                return
+            are_cameras_ready = self.cameras_ready
+            are_frame_grab_flags_reset = self.frames_grabbed
+            are_frame_retrieve_flags_reset = self.frames_retrieved
+            is_multi_frame_pulled_from_shm_reset = not self.should_pull_multi_frame_from_shm.value
+            are_camera_new_frame_available_flags_reset = not any(
+                [flags.new_frame_in_shm.value for flags in self.frame_loop_flags.values()])
 
-                if all([are_cameras_ready,
-                        are_frame_grab_flags_reset,
-                        are_frame_retrieve_flags_reset,
-                        is_multi_frame_pulled_from_shm_reset,
-                        are_camera_new_frame_available_flags_reset]):
-                    logger.loop(f"Frame loop verification passed on attempt#{attempt_number + 1} of {max_attempts}")
-                    return  # All good, break out of loop
+            if all([are_cameras_ready,
+                    are_frame_grab_flags_reset,
+                    are_frame_retrieve_flags_reset,
+                    is_multi_frame_pulled_from_shm_reset,
+                    are_camera_new_frame_available_flags_reset]):
+                logger.loop(f"Frame loop verification passed on attempt#{attempt_number + 1} of {max_attempts}")
+                return  # All good, break out of loop
 
-                logger.warning(f"Frame loop verification failed on attempt {attempt_number + 1} - retrying...")
-                wait_1ms()
+            logger.warning(f"Frame loop verification failed on attempt {attempt_number + 1} - retrying...")
+            wait_1ms()
 
         raise AssertionError(f"Frame loop verification failed after {max_attempts} attempts -[\n"
                              f"are_cameras_ready: {are_cameras_ready}, \n"

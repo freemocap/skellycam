@@ -1,14 +1,13 @@
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Self
 
 import cv2
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
-from skellycam.core import BYTES_PER_MONO_PIXEL
+from skellycam.core import BYTES_PER_MONO_PIXEL, CameraName
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
-from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
 
 def get_video_file_type(fourcc_code: int) -> Optional[str]:
@@ -57,7 +56,7 @@ class CameraConfig(BaseModel):
         default=DefaultCameraConfig.CAMERA_ID.value,
         description="The id of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera",
     )
-    camera_name: str = Field(
+    camera_name: CameraName = Field(
         default=DefaultCameraConfig.CAMERA_NAME.value,
         description="The name of the camera, if known",
     )
@@ -79,7 +78,7 @@ class CameraConfig(BaseModel):
     pixel_format: str = Field(default="RGB",
                               description="How to interpret the color channels")
 
-    exposure_mode: str = Field(DefaultCameraConfig.EXPOSURE_MODE.value,
+    exposure_mode: str = Field(default=DefaultCameraConfig.EXPOSURE_MODE.value,
                                description="The exposure mode to use for the camera, "
                                            "AUTO for device automatic exposure, "
                                            "MANUAL to set the exposure manually, "
@@ -110,10 +109,12 @@ class CameraConfig(BaseModel):
         description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object",
     )
 
-    @field_validator("camera_id", mode="before")
-    @classmethod
-    def convert_camera_id(cls, v):
-        return CameraId(v)
+    @model_validator(mode="after")
+    def validate(cls, self) -> Self:
+        if self.camera_name is DefaultCameraConfig.CAMERA_NAME.value:
+            self.camera_name = f"Camera-{self.camera_id}"
+        self.camera_id = CameraId(self.camera_id)
+        return self
 
     @property
     def orientation(self) -> str:
@@ -142,14 +143,14 @@ class CameraConfig(BaseModel):
         return self.model_dump() == other.model_dump()
 
     def __str__(self):
-        out_str = f"BASE CONFIG:\n"
+        out_str = f"\n\tBASE CONFIG:\n"
         for key, value in self.model_dump().items():
-            out_str += f"\t{key} ({type(value).__name__}): {value} \n"
-        out_str += "COMPUTED:\n"
-        out_str += f"\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
-        out_str += f"\torientation: {self.orientation}\n"
-        out_str += f"\timage_shape: {self.image_shape}\n"
-        out_str += f"\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
+            out_str += f"\t\t{key} ({type(value).__name__}): {value} \n"
+        out_str += "\tCOMPUTED:\n"
+        out_str += f"\t\taspect_ratio(w/h): {self.aspect_ratio:.3f}\n"
+        out_str += f"\t\torientation: {self.orientation}\n"
+        out_str += f"\t\timage_shape: {self.image_shape}\n"
+        out_str += f"\t\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
         return out_str
 
 

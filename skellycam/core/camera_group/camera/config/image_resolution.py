@@ -53,3 +53,4 @@ class ImageResolution(BaseModel):
 
     def __str__(self) -> str:
         return f"({self.height}x{self.width})"
+

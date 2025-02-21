@@ -1,13 +1,12 @@
-import threading
+import logging
 import time
 from typing import List
 
+import cv2
 import numpy as np
 
 from skellycam.core import CameraId
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, CameraDeviceInfo
-import logging
-import cv2
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ def check_opencv_camera_port_available(port: int, check_images:int=5) -> bool:
             tik = time.perf_counter()
             success, image = cap.read()
             if not success:
-                logger.trace(f"Failed to grab image from camera on port: {port}")
+                logger.trace(f"No available camera on port: {port}")
                 return False
             tok = time.perf_counter()
             successes.append(success)

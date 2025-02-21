@@ -1,6 +1,8 @@
 import multiprocessing
 from dataclasses import dataclass
 
+from skellycam.utilities.check_shutdown_flag import get_server_shutdown_environment_flag
+
 
 @dataclass
 class IPCFlags:
@@ -13,7 +15,7 @@ class IPCFlags:
     playback_pause_flag: multiprocessing.Value
     playback_stop_flag: multiprocessing.Value
     playback_frame_number_flag: multiprocessing.Value
-
+    recording_nametag: multiprocessing.Array
 
     def __init__(self, global_kill_flag: multiprocessing.Value):
         self.global_kill_flag = global_kill_flag
@@ -25,4 +27,13 @@ class IPCFlags:
         self.playback_pause_flag: multiprocessing.Value = multiprocessing.Value("b", True)
         self.playback_stop_flag: multiprocessing.Value = multiprocessing.Value("b", False)
         self.playback_frame_number_flag: multiprocessing.Value = multiprocessing.Value("i", 0)
+        self.recording_nametag: multiprocessing.Array = multiprocessing.Array('c', 250)
+        self.recording_nametag.value = b""
 
+    @property
+    def camera_group_should_continue(self):
+        return not self.global_kill_flag.value and not self.kill_camera_group_flag.value and  not get_server_shutdown_environment_flag()
+
+    @property
+    def global_should_continue(self):
+        return not self.global_kill_flag.value and not get_server_shutdown_environment_flag()

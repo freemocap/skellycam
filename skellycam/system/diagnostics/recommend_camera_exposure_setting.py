@@ -81,13 +81,10 @@ def find_optimal_exposure_setting(cap: cv2.VideoCapture, exposure_settings: List
                              differences]
 
     # Print the results in a table format with right-justified difference column
-    headers = ["Exposure Setting", "Brightness", "Difference from Target (127.5)"]
-    table = tabulate(annotated_differences, headers=headers, floatfmt=".2f", colalign=("left", "center", "right"))
-    logger.debug("\n" + table)
 
-
-
-
+    headers = ["  Exposure Setting", "Brightness", "Difference from Target (127.5)"]
+    table = tabulate(annotated_differences, headers=headers, floatfmt=".2f", colalign=("center", "center", "right"))
+    logger.debug(table.replace("\n", "\n\t"))
     return int(best_setting[0])
 
 def get_recommended_cv2_cap_exposure(cap: cv2.VideoCapture | int, offset_from_midrange:int=-1) -> int | None:

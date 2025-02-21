@@ -9,10 +9,11 @@ from _pytest.terminal import TerminalReporter
 from fastapi import FastAPI
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory import GroupSharedMemoryNames
 from skellycam.core.camera_group.shmorchestrator.camera_shared_memory_manager import CameraGroupSharedMemory
+from skellycam.skellycam_app.skellycam_app_controller.app_controller import AppController, create_app_controller, \
+    get_skellycam_app_controller
 from starlette.testclient import TestClient
 
 from skellycam.api import create_app
-from skellycam.skellycam_app.skellycam_app_controller.app_controller import AppController, create_app_controller, get_skellycam_app_controller
 from skellycam.core import CameraId
 from skellycam.core.camera_group import CameraGroupOrchestrator
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags

@@ -1,7 +1,7 @@
 import multiprocessing
 import time
 
-from skellycam.__main__ import main
+from skellycam.run_qt_gui import main
 
 
 def test_main():

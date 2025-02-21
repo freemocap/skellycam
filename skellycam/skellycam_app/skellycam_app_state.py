@@ -6,9 +6,9 @@ from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel
-from skellycam.core import CameraId
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core import CameraId
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
@@ -22,10 +22,11 @@ from skellycam.core.playback.video_group import VideoGroup
 from skellycam.core.playback.video_group_dto import VideoGroupDTO
 from skellycam.core.playback.video_group_shmorchestrator import VideoGroupSharedMemoryOrchestrator
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFrameRate
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, \
     available_cameras_to_default_camera_configs
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +35,24 @@ logger = logging.getLogger(__name__)
 class SkellycamAppState:
     ipc_flags: IPCFlags
     ipc_queue: multiprocessing.Queue
+    logs_queue: multiprocessing.Queue
     config_update_queue: multiprocessing.Queue
-
-    shmorchestrator: Optional[CameraGroupSharedMemoryOrchestrator | VideoGroupSharedMemoryOrchestrator] = None
-    camera_group_dto: Optional[CameraGroupDTO] = None
-    camera_group: Optional[CameraGroup] = None
-    video_group_dto: Optional[VideoGroupDTO] = None
-    video_group: Optional[VideoGroup] = None
-    available_cameras: Optional[AvailableCameras] = None
-    current_framerate: Optional[CurrentFrameRate] = None
+    shmorchestrator: CameraGroupSharedMemoryOrchestrator | VideoGroupSharedMemoryOrchestrator | None = None
+    camera_group_dto: CameraGroupDTO | None = None
+    camera_group: CameraGroup | None = None
+    available_cameras: AvailableCameras | None = None
+    video_group_dto: VideoGroupDTO | None = None
+    video_group: VideoGroup | None = None
+    backend_framerate: CurrentFramerate | None = None
+    frontend_framerate: CurrentFramerate | None = None
 
     @classmethod
-    def create(cls, global_kill_flag: multiprocessing.Value):
+    def create(cls,
+               global_kill_flag: multiprocessing.Value,
+               ) -> "SkellycamAppState":
         return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag),
                    ipc_queue=multiprocessing.Queue(),
+                   logs_queue=get_websocket_log_queue(),
                    config_update_queue=multiprocessing.Queue())
 
     @property
@@ -102,7 +107,11 @@ class SkellycamAppState:
 
     def set_available_cameras(self, value: AvailableCameras):
         self.available_cameras = value
-        self.ipc_queue.put(self.state_dto())
+
+    def set_device_extracted_camera_config(self, config: CameraConfig):
+        if self.camera_group is None or self.camera_group.camera_configs is None:
+            raise ValueError("Cannot set device extracted camera config without CameraGroup!")
+        self.camera_group.camera_configs[config.camera_id] = config
 
     def create_camera_group(self, camera_configs: CameraConfigs):
         if camera_configs is None:
@@ -110,11 +119,13 @@ class SkellycamAppState:
         # if self.available_devices is None:
         #     raise ValueError("Cannot get CameraConfigs without available devices!")
         self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
-                                               ipc_queue=self.ipc_queue,
-                                               ipc_flags=self.ipc_flags,
-                                               config_update_queue=self.config_update_queue,
-                                               group_uuid=str(uuid4())
-                                               )
+                                            ipc_queue=self.ipc_queue,
+                                            ipc_flags=self.ipc_flags,
+                                            logs_queue=self.logs_queue,
+                                            config_update_queue=self.config_update_queue,
+                                            group_uuid=str(uuid4())
+
+                                            )
         self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.camera_group_dto,
                                                                           ipc_flags=self.ipc_flags,
                                                                           read_only=True)
@@ -134,7 +145,6 @@ class SkellycamAppState:
 
     def close_camera_group(self):
         if self.camera_group is None:
-            logger.warning("Camera group does not exist, so it cannot be closed!")
             return
         logger.debug("Closing existing camera group...")
         self.camera_group.close()
@@ -145,6 +155,9 @@ class SkellycamAppState:
     def start_recording(self, request: StartRecordingRequest):
         self.ipc_flags.mic_device_index.value = request.mic_device_index
         self.ipc_flags.record_frames_flag.value = True
+        name_to_store = request.recording_name if request.recording_name else ""
+        self.ipc_flags.recording_nametag.value = name_to_store.encode("utf-8")
+
         self.ipc_queue.put(self.state_dto())
 
     def stop_recording(self):
@@ -158,7 +171,6 @@ class SkellycamAppState:
         self.camera_group = None
         self.video_group = None
         self.shmorchestrator = None
-        self.current_framerate = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 
     def close(self):
@@ -231,12 +243,11 @@ class SkellycamAppStateDTO(BaseModel):
     """
     Serializable Data Transfer Object for the SkellycamAppState
     """
-    type: str = "SkellycamAppStateDTO"
+    type: str
     state_timestamp: str = datetime.now().isoformat()
 
     camera_configs: Optional[CameraConfigs]
     available_devices: Optional[AvailableCameras]
-    current_framerate: Optional[CurrentFrameRate]
     record_frames_flag_status: bool
 
     @classmethod
@@ -244,15 +255,16 @@ class SkellycamAppStateDTO(BaseModel):
         return cls(
             camera_configs=state.camera_group_configs,
             available_devices=state.available_cameras,
-            current_framerate=state.current_framerate,
             record_frames_flag_status=state.ipc_flags.record_frames_flag.value,
+            type=cls.__name__
         )
 
 
 SKELLYCAM_APP_STATE: Optional[SkellycamAppState] = None
 
 
-def create_skellycam_app_state(global_kill_flag: multiprocessing.Value) -> SkellycamAppState:
+def create_skellycam_app_state(global_kill_flag: multiprocessing.Value,
+                               ) -> SkellycamAppState:
     global SKELLYCAM_APP_STATE
     if not SKELLYCAM_APP_STATE:
         SKELLYCAM_APP_STATE = SkellycamAppState.create(global_kill_flag=global_kill_flag)

@@ -1,16 +1,18 @@
 import logging
 import multiprocessing
+import os
 import threading
 import time
 from typing import Optional
 
+import psutil
 import uvicorn
 from uvicorn import Server
 
 from skellycam.api.server.server_constants import HOSTNAME, PORT
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_lifespan.create_skellycam_app import create_skellycam_app
-from skellycam.skellycam_app.skellycam_app_state import create_skellycam_app_state
+from skellycam.utilities.check_shutdown_flag import get_server_shutdown_environment_flag
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
@@ -26,15 +28,20 @@ class UvicornServerManager:
         create_skellycam_app_controller(global_kill_flag=global_kill_flag)
         self.hostname: str = hostname
         self.port: int = port
-        self.server_thread: Optional[threading.Thread] = None
-        self.server: Optional[Server] = None
+        self.server_thread: threading.Thread|None = None
+        self.server: Server|None = None
         self.log_level: str = log_level
+        self.shutdown_listener_thread = threading.Thread(target=self.shutdown_listener_loop,
+                                                         name="UvicornServerManagerShutdownListenerThread",
+                                                         daemon=True)
+        self.shutdown_listener_thread.start()
+
 
     @property
     def is_running(self):
         return self.server_thread.is_alive() if self.server_thread else False
 
-    def start_server(self):
+    def run_server(self):
 
         config = uvicorn.Config(
             create_skellycam_app,
@@ -50,29 +57,42 @@ class UvicornServerManager:
         self.server = uvicorn.Server(config)
 
         def server_thread():
+            logger.debug("Server thread started")
             try:
-                self.server.run()
+                logger.debug("Running uvicorn server...")
+                self.server.run() #blocks until server is stopped
             except Exception as e:
                 logger.error(f"A fatal error occurred in the uvicorn server: {e}")
                 logger.exception(e)
                 raise
             finally:
-                logger.info(f"Shutting down uvicorn server")
+                logger.info(f"Uvicorn server thread completed")
 
-        self.server_thread = threading.Thread(target=server_thread)
+        self.server_thread = threading.Thread(target=server_thread, name="UvicornServerManagerThread", daemon=True)
         self.server_thread.start()
+        while not self._global_kill_flag.value and self.server_thread.is_alive():
+            time.sleep(1)
+        logger.debug("Server thread shutdown")
+        # kill_process_on_port(port=self.port)
 
     def shutdown_server(self):
         logger.info("Shutting down Uvicorn Server...")
         self._global_kill_flag.value = True
         if self.server:
             self.server.should_exit = True
-            waiting_time = 0
-            while self.server_thread.is_alive():
-                waiting_time += 1
-                time.sleep(1)
-                if waiting_time > 10:
-                    logger.debug("Server thread is not shutting down. Forcing exit...")
-                    self.server.force_exit = True
+        time.sleep(1)
+        # Kill child processes
+        current_process = psutil.Process()
+        for child in current_process.children(recursive=True):
+            logger.warning(f"Killing child process: {child} - figure out how to make this shut down gracefully!")
+            child.kill()
 
-            logger.info("Uvicorn Server shutdown successfully")
+    def shutdown_listener_loop(self):
+        while self._global_kill_flag.value is False and not get_server_shutdown_environment_flag():
+            time.sleep(1)
+        if get_server_shutdown_environment_flag():
+            logger.info("Detected SKELLYCAM_APP_SHUTDOWN environment variable - shutting down server")
+            self.shutdown_server()
+        if self._global_kill_flag.value:
+            logger.info("Detected global kill flag - shutting down server")
+            self.shutdown_server()

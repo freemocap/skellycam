@@ -1,0 +1,9 @@
+- module-name: 'skellycam.api.http.ui'
+  data-files:
+    patterns:
+      - 'skellycam/api/http/ui/ui.html'
+
+- module-name: 'shared.skellycam-logo'
+  data-files:
+    patterns:
+      - 'shared/skellycam-logo/skellycam-favicon.ico'

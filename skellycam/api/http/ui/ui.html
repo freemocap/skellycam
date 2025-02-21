@@ -3,44 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>SkellyCam API UI Tester</title>
+    <title>SkellyCam UI Tester</title>
     <style>
-        .image {
-            width: 640px;
-            height: auto;
-        }
-
-        div {
-            background-color: #654a7b;
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f4f4f9;
         }
 
         h1 {
             font-size: 24px;
+            background-color: #20212e;
+            color: white;
+            margin: 0;
+            padding: 10px;
+            text-align: center;
+        }
+
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #0b1522;
+            padding: 10px;
+            color: white;
+            justify-content: center;
+            //height: 50px;
+            border: 2px solid #1f467c;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+
+        #ws-status {
+            margin-right: 15px;
+            font-weight: bold;
         }
 
         button {
-            margin-right: 10px;
+            margin: 0 5px;
             padding: 10px;
             font-size: small;
+            background-color: #0f3c32;
+            color: #fafafa;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: #30806f 3px solid;
         }
+
+
+        button:hover {
+            background-color: #511981;
+            border: #800c4a 3px solid;
+        }
+
+        #content-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #images-container {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            overflow-y: auto;
+            background-color: #22223b;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        #bottom-panel {
+            display: flex;
+            height: 150px;
+            overflow-y: auto;
+            background-color: #4a4e69;
+            color: #fafafa;
+            padding: 10px;
+            justify-content: space-between;
+            border-top: 2px solid #05bca6;
+        }
+
+        #separator {
+            width: 2px;
+            background-color: #000210;
+            cursor: ew-resize;
+            margin: 0 8px;
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+            margin-bottom: 20px;
+        }
+
+        #config-container {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            height: 100%;
+            overflow: auto;
+        }
+
+        #log-container {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            height: 100%;
+            white-space: nowrap; /* Default behavior */
+        }
+
+        #info-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            color: #fafafa;
+            padding: 5px;
+            border-radius: 5px;
+            margin: 10px;
+            position: absolute;
+            top: 120px;
+            right: 10px;
+            background-color: rgba(50, 110, 120, 0.5);
+            z-index: 1;
+        }
+
+        .framerate-display {
+            text-align: center;
+            padding: 5px;
+        }
+
+        .framerate-text {
+            font-size: 14px;
+            background-color: #22223b;
+            padding: 5px;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        #vertical-resizer {
+            height: 5px;
+            background-color: #157362;
+            cursor: ns-resize;
+            position: relative;
+        }
+
+        .recording-path-box {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #1f467c;
+            height: 10px;
+            width: 200px;
+        }
+
 
     </style>
     <script>
         let ws;
         let isConnected = false;
-        const latestImages = {};
+
+        const http_url = window.location.origin;
+        const websocket_url = `${http_url.replace('http', 'ws')}/skellycam/websocket/connect`;
         const imageElements = {};
+        let isResizingHorizontally = false;
+        let isResizingVertically = false;
+        let paused = false;
+        let recording = false;
+        let defaultPath = `{{SKELLYCAM_DATA_FOLDER}}`;
+        let defaultName = getFormattedDate();
+
+        function getFormattedDate() {
+            // remove the fractional seconds
+            // return new Date().toISOString().replace(/:/g, '-');
+            const dateString = new Date().toISOString().split('.')[0].replace(/:/g, '-').replace('T', '_')
+            return 'skellycam-' + dateString;
+        }
 
         function updateStatus() {
-            document.getElementById('ws-status').innerText = isConnected ? 'Connected' : 'Disconnected';
+            document.getElementById('ws-status').innerText = isConnected ? 'Status: Connected ✔️' : 'Status: Disconnected ❌';
+            document.getElementById('ws-status').style.color = isConnected ? '#5aea5f' : '#f44336';
+        }
+
+        function handleNewFrontendPayload(data, jsonString) {
+            // the keys to the jpeg_images dict are the camera ids
+            // addLogEntry(`MultiFrame Payload# ${data.multi_frame_number} from camera ids ${Object.keys(data.jpeg_images)}`);
+            if (data.jpeg_images) {
+                updateImages(data.jpeg_images);
+            }
+
+            if (data.frontend_framerate) {
+                updateFrameRate(data.frontend_framerate);
+            }
+
+            if (data.backend_framerate) {
+                updateFrameRate(data.backend_framerate);
+            }
+
+            if (data.camera_configs) {
+                document.getElementById('config-container').innerText = JSON.stringify(data.camera_configs, null, 2);
+            }
         }
 
         function connectWebSocket() {
-            ws = new WebSocket('ws://localhost:8006/skellycam/websocket/connect');
-
-            // websocket helpers
-            const decoder = new TextDecoder('utf-8');
-
+            ws = new WebSocket(websocket_url);
 
             ws.onopen = () => {
                 isConnected = true;
@@ -51,45 +237,59 @@
                 updateStatus();
             };
             ws.onmessage = async (event) => {
-                // Ensure the event.data is a Blob
+
                 if (event.data instanceof Blob) {
-                    // Convert the incoming data to an ArrayBuffer
+                    // If it's a Blob, convert it to ArrayBuffer first, then to a string
                     const arrayBuffer = await event.data.arrayBuffer();
-
-                    // Convert ArrayBuffer to a string
-                    const jsonString = decoder.decode(arrayBuffer);
-
-                    // Parse the JSON string to a JavaScript object
+                    const jsonString = new TextDecoder('utf-8').decode(arrayBuffer);
                     const data = JSON.parse(jsonString);
-                    addLogEntry(`Received message with length: ${jsonString.length} from mf_payload# ${data.multi_frame_number}`);
-                    console.log(`Received message with length: ${jsonString.length} from mf_payload# ${data.multi_frame_number}`);
 
-                    // Now you can use the data object to update your UI
-                    updateImages(data.jpeg_images);
+
+                    if (data.multi_frame_number) {
+                        if (!paused) {
+                            handleNewFrontendPayload(data, jsonString);
+                        }
+
+                    }
+
+                } else if (event.data instanceof String) {
+                    addLogEntry(`Received message: ${event.data}`);
                 } else {
-                    console.error("Received data is not a Blob.");
+                    try {
+                        const parsedData = JSON.parse(event.data);
+                        if (parsedData.formatted_message) {
+                            addLogEntry(parsedData.formatted_message);
+                        }
+                    } catch (e) {
+                        addLogEntry(`Received non-JSON message: ${event.data}`);
+                    }
                 }
             };
         }
 
-        function sendMessage(message) {
-            if (isConnected) {
-                ws.send(message);
-            } else {
-                alert('WebSocket is not connected.');
+
+        function updateFrameRate(data) {
+            const {mean_frame_duration_ms, mean_frames_per_second, framerate_source} = data;
+            if (!mean_frame_duration_ms || !mean_frames_per_second) {
+                return;
+            }
+            if (framerate_source === 'backend') {
+                document.getElementById('backend-framerate').innerText =
+                    `Camera Backend Framerate (FPS): ${mean_frames_per_second.toFixed(2)}| Frame Duration: ${mean_frame_duration_ms.toFixed(2)} ms`;
+            } else if (framerate_source === 'frontend') {
+                document.getElementById('frontend-framerate').innerText =
+                    `GUI Frontend Framerate (FPS): ${mean_frames_per_second.toFixed(2)}| Frame Duration: ${mean_frame_duration_ms.toFixed(2)} ms`;
             }
         }
+
 
         function updateImages(images) {
             const container = document.getElementById('images-container');
             for (const cameraId in images) {
                 if (!imageElements[cameraId]) {
-                    const imgBox = document.createElement('div');
-                    imgBox.className = 'image-box';
                     const img = document.createElement('img');
                     img.className = 'image';
-                    imgBox.appendChild(img);
-                    container.appendChild(imgBox);
+                    container.appendChild(img);
                     imageElements[cameraId] = img;
                 }
                 if (images[cameraId]) {
@@ -101,44 +301,222 @@
         function addLogEntry(entry) {
             const logContainer = document.getElementById('log-container');
             const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
             logEntry.innerText = entry;
+            logEntry.style.marginBottom = '12px'; // Add some space between log entries
             logContainer.prepend(logEntry);
 
-            // Limit the number of log entries to 30
+
             if (logContainer.children.length > 30) {
                 logContainer.removeChild(logContainer.lastChild);
             }
         }
 
         async function callApi(endpoint, method = 'GET', body = null) {
-        try {
-            const options = { method };
-            if (body) {
-                options.headers = { 'Content-Type': 'application/json' };
-                options.body = JSON.stringify(body);
+            if (!isConnected) {
+                addLogEntry(`Error: Not connected to WebSocket`);
+                return;
+            }
+            if (method === 'POST' && body) {
+                body = JSON.stringify(body, null, 2);
+            }
+            console.log(`Calling API: ${endpoint} with method ${method} and body ${body}`);
+            try {
+
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: body,
+                });
+                const data = await response.json();
+                console.log('Request succeeded with JSON response', data);
+                addLogEntry(`Success: ${endpoint} - ${JSON.stringify(data)}`);
+            } catch (error) {
+                console.error('Request failed:', error);
+                addLogEntry(`Error: ${endpoint} - ${error.message}`);
             }
             const response = await fetch(endpoint, options);
             const data = await response.json();
             document.getElementById('result').innerText = JSON.stringify(data, null, 2);
             addLogEntry(`Success: ${endpoint} - ${JSON.stringify(data)}`);
-        } catch (error) {
-            document.getElementById('result').innerText = `Error: ${error.message}`;
-            addLogEntry(`Error: ${endpoint} - ${error.message}`);
         }
-    }
+
+        function togglePause() {
+            paused = !paused;
+            const button = document.getElementById('pause-button');
+            button.innerText = paused ? 'Resume' : 'Pause';
+            button.style.backgroundColor = paused ? '#bf7201' : '#0f3c32';
+            // button.style.color = paused ? '#000' : '#fafafa';
+        }
+
+        function toggleRecord() {
+            recording = !recording;
+            const button = document.getElementById('record-button');
+            button.innerText = recording ? 'Stop Recording' : 'Start Recording';
+            button.style.backgroundColor = recording ? '#9f0210' : '#0f3c32';
+
+            const recordingPath = document.getElementById('recording-path').value || defaultPath;
+            const recordingName = document.getElementById('recording-name').value || defaultName;
+            if (recording) {
+                console.log(`Starting recording to ${recordingPath} / ${recordingName}`);
+
+                const requestBody = {
+                    recording_path: recordingPath,
+                    recording_name: recordingName
+                };
+                callApi(`${http_url}/skellycam/cameras/record/start`, 'POST', requestBody);
+            } else {
+                callApi(`${http_url}/skellycam/cameras/record/stop`);
+            }
+        }
+
+
+        // async function getAvailableCameras() {
+        //     try {
+        //     const devices = await navigator.mediaDevices.enumerateDevices();
+        //     console.log('All devices:', devices); // Log all detected devices
+        //
+        //     const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        //     console.log('Video devices:', videoDevices); // Log only video devices
+        //
+        //         let cameraIndex = -1;
+        //         for (const device of videoDevices) {
+        //             cameraIndex++;
+        //             const constraints = {
+        //                 video: {deviceId: device.deviceId}
+        //             };
+        //
+        //             try {
+        //                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        //                 console.log(`Camera ${cameraIndex} ${device.label} is available!`);
+        //                 addLogEntry(`Camera ${cameraIndex} ${device.label} is available!`);
+        //                 availableCameras.push(`${cameraIndex} - ${device.label || 'Unnamed Camera'} (available)`);
+        //                 stream.getTracks().forEach(track => track.stop());
+        //             } catch (error) {
+        //                 console.error(`Error accessing camera ${device.label}:`, error);
+        //                 addLogEntry(`Could not access camera ${device.label}: ${error.message}`);
+        //                                 availableCameras.push(`${cameraIndex} - ${device.label || 'Unnamed Camera'} (not available)`);
+        //
+        //             }
+        //         }
+        //
+        //         const cameraListElement = document.getElementById('camera-list');
+        //         cameraListElement.innerHTML = ''; // Clear previous list
+        //         availableCameras.forEach(camera => {
+        //             const listItem = document.createElement('li');
+        //             listItem.textContent = camera;
+        //             cameraListElement.appendChild(listItem);
+        //         });
+        //
+        //         if (availableCameras.length === 0) {
+        //             const listItem = document.createElement('li');
+        //             listItem.textContent = 'No available cameras found';
+        //             cameraListElement.appendChild(listItem);
+        //         }
+        //     } catch (error) {
+        //         console.error('Error accessing media devices:', error);
+        //         addLogEntry(`Error accessing media devices: ${error.message}`);
+        //     }
+        // }
+
+
+        window.onload = function () {
+            connectWebSocket();
+            // getAvailableCameras();
+
+            const separator = document.getElementById('separator');
+            const bottomPanel = document.getElementById('bottom-panel');
+            const verticalResizer = document.getElementById('vertical-resizer');
+            const horizontalSeparators = document.querySelectorAll('.horizontal-separator');
+            const sections = document.querySelectorAll('.section');
+
+            horizontalSeparators.forEach((separator, index) => {
+                separator.addEventListener('mousedown', function () {
+                    isResizingHorizontally = true;
+                    document.addEventListener('mousemove', (e) => resizeHorizontally(e, index));
+                    document.addEventListener('mouseup', stopHorizontalResize);
+                });
+            });
+            separator.addEventListener('mousedown', function () {
+                isResizingHorizontally = true;
+                document.addEventListener('mousemove', resizeHorizontally);
+                document.addEventListener('mouseup', stopHorizontalResize);
+            });
+
+            verticalResizer.addEventListener('mousedown', function () {
+                isResizingVertically = true;
+                document.addEventListener('mousemove', resizeVertically);
+                document.addEventListener('mouseup', stopVerticalResize);
+            });
+
+            function resizeHorizontally(e, index) {
+                if (isResizingHorizontally) {
+                    const newWidth = e.clientX - sections[index].getBoundingClientRect().left;
+                    sections[index].style.flex = `0 0 ${newWidth}px`;
+                    sections[index + 1].style.flex = `1 1 auto`;
+                }
+            }
+
+            function stopHorizontalResize() {
+                isResizingHorizontally = false;
+                document.removeEventListener('mousemove', resizeHorizontally);
+                document.removeEventListener('mouseup', stopHorizontalResize);
+            }
+
+            function resizeVertically(e) {
+                if (isResizingVertically) {
+                    const newHeight = window.innerHeight - e.clientY;
+                    bottomPanel.style.height = `${newHeight}px`;
+                }
+            }
+
+            function stopVerticalResize() {
+                isResizingVertically = false;
+                document.removeEventListener('mousemove', resizeVertically);
+                document.removeEventListener('mouseup', stopVerticalResize);
+            }
+
+            // Set default values for the recording path and name
+            document.getElementById('recording-path').value = defaultPath;
+            document.getElementById('recording-name').value = defaultName;
+
+            // Update the recording name every second
+            setInterval(() => {
+                if (!document.getElementById('recording-name').value || document.getElementById('recording-name').value === defaultName) {
+                    defaultName = getFormattedDate();
+                    document.getElementById('recording-name').value = defaultName;
+                }
+            }, 1000);
+
+        }
+
     </script>
 </head>
 <body>
-<!-- Header Section -->
-<h1>SkellyCam API Tester with WebSocket</h1>
-<p> WebSocket status: <span id="ws-status">Disconnected</span></p>
+<h1>Skellycam Test UI</h1>
+<div id="controls">
+    <div class="button-group">
+        <button onclick="connectWebSocket()">Connect WebSocket</button>
+        <span id="ws-status">Status: Disconnected ❌</span>
 
-<!-- WebSocket Section -->
-<button onclick="connectWebSocket()">Connect WebSocket</button>
+        <button onclick="callApi(`${http_url}/skellycam/cameras/connect/detect`)">Connect to Cameras</button>
+        <button onclick="callApi(`${http_url}/skellycam/cameras/close`)">Close Cameras</button>
+        <button onclick="togglePause()" id="pause-button">Pause</button>
+        <button onclick="toggleRecord()" id="record-button">Start Recording</button>
+        <div class="recording-path-box">
+            <div class="text-input-box-pair">
+                <label for="recording-path"> Base Recording Path:</label>
+                <input type="text" id="recording-path" placeholder="Recording Path"/>
+            </div>
+            <div class="text-input-box-pair">
+                <label for="recording-name"> Recording Name:</label>
+                <input type="text" id="recording-name" placeholder="Recording Name"/>
+            </div>
 
-<!-- API Calls Section -->
-<!-- Camera Connection API Calls -->
-<button onclick="callApi('http://localhost:8006/skellycam/cameras/connect/detect')">/cameras/connect/detect</button>
+        </div>
+    </div>
 
 <div>
     <button onclick="callApi('http://localhost:8006/skellycam/cameras/connect/apply', 'POST')">/cameras/connect/apply</button>
@@ -164,13 +542,33 @@
     <button onclick="callApi('http://localhost:8006/skellycam/video_playback/pause_videos')">Pause Videos</button>
     <button onclick="callApi('http://localhost:8006/skellycam/video_playback/stop_videos')">Stop Videos</button>
     <button onclick="callApi('http://localhost:8006/skellycam/video_playback/seek_videos')">Seek Videos</button>
+    <div id="info-container">
+        <div class="framerate-display">
+            <div id="backend-framerate" class="framerate-text">Server/Backend - Frame Duration: N/A ms |
+                Framerate: N/A fps
+            </div>
+            <div id="frontend-framerate" class="framerate-text">GUI/Frontend - Frame Duration: N/A ms | Framerate:
+                N/A fps
+            </div>
+        </div>
+        <div class="section camera-section">
+            <h4>Connected Camera Configs</h4>
+            <div id="config-container"></div>
+        </div>
+    </div>
 </div>
-<!-- Results and Logs Section -->
-<pre id="result"></pre>
-<h2>Images</h2>
-<div id="images-container"></div>
+<div id="content-container">
+    <div id="images-container"></div>
+</div>
+<div id="separator"></div>
+<div id="vertical-resizer"></div>
 
-<h3>Loggs</h3>
-<div id="log-container"></div>
+<div id="bottom-panel">
+    <div class="section log-section">
+        <h4>Logs</h4>
+
+        <div id="log-container"></div>
+    </div>
+</div>
 </body>
 </html>

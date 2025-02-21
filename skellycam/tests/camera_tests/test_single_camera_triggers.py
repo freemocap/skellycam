@@ -52,7 +52,7 @@ def test_camera_triggers_exit_event(camera_id_fixture: CameraId,
                                     exit_event_fixture: multiprocessing.Event):
     camera_triggers = CameraFrameLoopFlags.create(camera_id=camera_id_fixture,
                                                   exit_event=exit_event_fixture)
-    assert camera_triggers.should_continue is True
+    assert camera_triggers.camera_group_should_continue is True
     wait_threads = [threading.Thread(target=camera_triggers.await_initialization_signal),
                     threading.Thread(target=camera_triggers.await_should_grab_signal),
                     threading.Thread(target=camera_triggers.await_should_retrieve),
@@ -61,5 +61,5 @@ def test_camera_triggers_exit_event(camera_id_fixture: CameraId,
     wait_1ms()
     assert any([thread.is_alive() for thread in wait_threads])
     exit_event_fixture.set()
-    assert camera_triggers.should_continue is False
+    assert camera_triggers.camera_group_should_continue is False
     [thread.join() for thread in wait_threads]

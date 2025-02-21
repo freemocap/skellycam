@@ -162,11 +162,14 @@ class SkellycamAppController(BaseModel):
 SKELLYCAM_APP_CONTROLLER = None
 
 
-def create_skellycam_app_controller(global_kill_flag: multiprocessing.Value) -> SkellycamAppController:
+def create_skellycam_app_controller(global_kill_flag: multiprocessing.Value
+                                    ) -> SkellycamAppController:
     global SKELLYCAM_APP_CONTROLLER
     if not SKELLYCAM_APP_CONTROLLER:
         SKELLYCAM_APP_CONTROLLER = SkellycamAppController.create(
             skellycam_app_state=create_skellycam_app_state(global_kill_flag=global_kill_flag))
+
+
     return SKELLYCAM_APP_CONTROLLER
 
 

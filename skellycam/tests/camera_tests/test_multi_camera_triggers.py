@@ -18,7 +18,7 @@ def test_multi_camera_triggers_exit_event(camera_configs_fixture: CameraConfigs,
     camera_group_orchestrator = CameraGroupOrchestrator.from_camera_configs(camera_configs=camera_configs_fixture,
                                                                             exit_event=exit_event_fixture)
 
-    assert camera_group_orchestrator.should_continue is True
+    assert camera_group_orchestrator.camera_group_should_continue is True
     wait_threads = [threading.Thread(target=camera_group_orchestrator.await_new_multi_frame_available),
                     threading.Thread(target=camera_group_orchestrator.await_cameras_ready),
                     threading.Thread(target=camera_group_orchestrator._await_frames_grabbed),
@@ -32,7 +32,7 @@ def test_multi_camera_triggers_exit_event(camera_configs_fixture: CameraConfigs,
     assert any(
         thread_statuses)  # TODO - get specific enough with the set up that we can assert that ALL threads are alive
     exit_event_fixture.set()
-    assert camera_group_orchestrator.should_continue is False
+    assert camera_group_orchestrator.camera_group_should_continue is False
     [thread.join() for thread in wait_threads]
 
 

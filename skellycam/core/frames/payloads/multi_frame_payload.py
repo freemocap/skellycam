@@ -12,6 +12,7 @@ from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     create_empty_frame_metadata
 from skellycam.core.playback.video_config import VideoConfigs
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 from skellycam.utilities.rotate_image import rotate_image
 
@@ -191,7 +192,8 @@ class MultiFramePayload(BaseModel):
     frames: Dict[CameraId, Optional[FramePayload]]
     utc_ns_to_perf_ns: UtcToPerfCounterMapping = Field(default_factory=UtcToPerfCounterMapping,
                                                        description=UtcToPerfCounterMapping.__doc__)
-
+    backend_framerate: CurrentFramerate|None = None
+    frontend_framerate: CurrentFramerate|None = None
     camera_configs: CameraConfigs | VideoConfigs
 
     @classmethod
