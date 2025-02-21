@@ -39,7 +39,7 @@ if (os.release().startsWith('6.1')) app.disableHardwareAcceleration()
 if (process.platform === 'win32') app.setAppUserModelId(app.getName())
 
 if (!app.requestSingleInstanceLock()) {
-    console.log('Another instance of the app is already running. Exiting...');
+    console.log(`Another instance of the app is already running. Exiting...`);
 
     app.quit()
     process.exit(0)
