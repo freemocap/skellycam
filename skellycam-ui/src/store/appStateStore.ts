@@ -2,14 +2,14 @@ import {configureStore} from '@reduxjs/toolkit'
 import counterReducer from './slices/counterSlice'
 import {availableCamerasSlice} from "@/store/slices/availableCamerasSlice";
 import {appStateSlice} from './slices/appState';
-import {cameraConfigsSlice} from "@/store/slices/cameraConfigsSlice";
+// import {cameraConfigsSlice} from "@/store/slices/cameraConfigsSlice";
 
 export const AppStateStore = configureStore({
     reducer: {
         counter: counterReducer, // demo/example
         availableCameras: availableCamerasSlice.reducer,
         appState: appStateSlice.reducer,
-        cameraConfigs: cameraConfigsSlice.reducer,
+        // cameraConfigs: cameraConfigsSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
