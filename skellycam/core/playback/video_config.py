@@ -6,9 +6,9 @@ import logging
 import sys
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellytracker.utilities.get_video_paths import get_video_paths
 
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
+from skellycam.utilities.get_video_paths import get_video_paths
 
 logger = logging.getLogger(__name__)
 
