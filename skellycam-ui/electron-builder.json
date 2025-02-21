@@ -15,7 +15,7 @@
     "**/skellycam_server.exe"
   ],
   "mac": {
-    "artifactName": "${productName}_${version}.${ext}",
+    "artifactName": "${productName}_${version}_installer.${ext}",
     "target": [
       "dmg",
       "zip"
@@ -30,7 +30,7 @@
         ]
       }
     ],
-    "artifactName": "${productName}_${version}.${ext}"
+    "artifactName": "${productName}_${version}_installer.${ext}"
   },
   "nsis": {
     "oneClick": false,

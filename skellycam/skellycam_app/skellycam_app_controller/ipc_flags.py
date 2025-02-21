@@ -1,6 +1,8 @@
 import multiprocessing
 from dataclasses import dataclass
 
+from skellycam.utilities.check_shutdown_flag import get_server_shutdown_environment_flag
+
 
 @dataclass
 class IPCFlags:
@@ -22,8 +24,8 @@ class IPCFlags:
 
     @property
     def camera_group_should_continue(self):
-        return not self.global_kill_flag.value and not self.kill_camera_group_flag.value
+        return not self.global_kill_flag.value and not self.kill_camera_group_flag.value and  not get_server_shutdown_environment_flag()
 
     @property
     def global_should_continue(self):
-        return not self.global_kill_flag.value
+        return not self.global_kill_flag.value and not get_server_shutdown_environment_flag()

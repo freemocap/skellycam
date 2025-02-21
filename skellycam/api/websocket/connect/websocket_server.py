@@ -15,6 +15,7 @@ from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
+from skellycam.utilities.check_shutdown_flag import get_server_shutdown_environment_flag
 from skellycam.utilities.wait_functions import async_wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class WebsocketServer:
 
     @property
     def should_continue(self):
-        return self._app_state.ipc_flags.global_should_continue and self._websocket_should_continue
+        return self._app_state.ipc_flags.global_should_continue and self._websocket_should_continue and not get_server_shutdown_environment_flag()
 
     async def run(self):
         logger.info("Starting websocket runner...")

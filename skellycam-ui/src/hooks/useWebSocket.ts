@@ -5,7 +5,7 @@ import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSche
 import {setAvailableCameras} from "@/store/slices/availableCamerasSlice";
 import {AvailableCamerasSchema} from "@/types/zod-schemas/AvailableCamerasSchema";
 import { useAppDispatch } from '@/store/hooks';
-import {setFramerate, setIsRecording, setRecordingDirectory} from "@/store/slices/appState";
+import {setCurrentFramerate, setIsRecording, setRecordingDirectory} from "@/store/slices/appState";
 // import {camerasSetAll} from "@/store/slices/cameraConfigsSlice";
 import {LogRecordSchema} from "@/types/zod-schemas/LogRecordSchema";
 const MAX_RECONNECT_ATTEMPTS = 20;
@@ -91,7 +91,7 @@ export const useWebSocket = (wsUrl: string) => {
             // dispatch(camerasSetAll(cameras));
         }
         if (skellycamAppState.current_framerate) {
-            dispatch(setFramerate(skellycamAppState.current_framerate));
+            dispatch(setCurrentFramerate(skellycamAppState.current_framerate));
         }
         if (skellycamAppState.is_recording_flag !== undefined) {
             dispatch(setIsRecording(skellycamAppState.is_recording_flag));

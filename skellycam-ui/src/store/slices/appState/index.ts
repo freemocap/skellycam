@@ -23,10 +23,10 @@ export const appStateSlice = createSlice({
         setRecordingDirectory: (state, action) => {
             state.recordingDirectory = action.payload;
         },
-        setFramerate: (state, action) => {
+        setCurrentFramerate: (state, action) => {
             state.framerate = action.payload;
         }
     }
 })
-export const { setIsRecording, setRecordingDirectory, setFramerate } = appStateSlice.actions;
+export const { setIsRecording, setRecordingDirectory, setCurrentFramerate } = appStateSlice.actions;
 export default appStateSlice.reducer;

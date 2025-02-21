@@ -48,7 +48,18 @@ async def main():
     logger.debug("Main server thread complete - exiting main function")
     original_global_kill_flag.value = True
 
+def set_shutdown_flag():
+    # Wait for 10 seconds
+    for _ in range(10):
+        time.sleep(1)
+        print(f"os.getenv('SKELLYCAM_SHOULD_SHUTDOWN'): {os.getenv('SKELLYCAM_SHOULD_SHUTDOWN')}")
+    # Set the environment variable
+    os.environ["SKELLYCAM_SHOULD_SHUTDOWN"] = "True"
+    print("Environment variable set to:", os.getenv("SKELLYCAM_SHOULD_SHUTDOWN"))
 
+# Create and start the thread
+shutdown_thread = threading.Thread(target=set_shutdown_flag)
+shutdown_thread.start()
 if __name__ == "__main__":
     asyncio.run(main())
     print("Done!  Thank you for using SkellyCam 💀📸✨")

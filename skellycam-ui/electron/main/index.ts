@@ -1,17 +1,15 @@
 import {app, BrowserWindow, ipcMain, shell} from 'electron'
-import {createRequire} from 'node:module'
 import {fileURLToPath} from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 import {update} from './update'
 import {exec} from 'child_process'
 import * as fs from "node:fs";
-import { ChildProcess } from 'node:child_process'
 
 console.log('Starting Electron main process...1');
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-process.env.LAUNCH_SKELLYCAM_PYTHON_SERVER = 'false';
+process.env.LAUNCH_SKELLYCAM_PYTHON_SERVER = 'true';
 process.env.SKELLYCAM_RUNNING_IN_ELECTRON = 'true';
 process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'false'; // Server will shutdown when this is set to 'true'
 // The built directory structure
@@ -41,7 +39,7 @@ if (os.release().startsWith('6.1')) app.disableHardwareAcceleration()
 if (process.platform === 'win32') app.setAppUserModelId(app.getName())
 
 if (!app.requestSingleInstanceLock()) {
-        console.log('Another instance of the app is already running. Exiting...');
+    console.log('Another instance of the app is already running. Exiting...');
 
     app.quit()
     process.exit(0)
@@ -50,7 +48,7 @@ console.log('Starting Electron main process...2');
 let win: BrowserWindow | null = null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
-let pythonServer:any = null;
+let pythonServer: any = null;
 let pythonServerExecutablePath = path.resolve(process.resourcesPath, 'app.asar.unpacked/skellycam_server.exe');
 
 
@@ -86,7 +84,7 @@ function startPythonServer() {
                 },
                 maxBuffer: 1024 * 1024 // 1MB buffer size
             });
-            if (pythonServer instanceof ChildProcess) {
+            if (!pythonServer) {
                 console.error('Failed to start python server');
                 app.quit();
             }
@@ -99,6 +97,7 @@ function startPythonServer() {
             });
             pythonServer.on('exit', (code: any) => {
                 process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'true';
+                console.log('Setting SKELLYCAM_SHOULD_SHUTDOWN to true');
                 console.log(`Python server exited with code: ${code}`);
             });
         }
@@ -154,21 +153,26 @@ async function createMainWindow() {
     // Auto update
     update(win)
 }
+
 console.log('Starting Electron main process...3');
 app.whenReady().then(createMainWindow)
 
 app.on('window-all-closed', async () => {
     if (pythonServer) {
         console.log('Shutting down python server...');
-        process.env.SKELLYCAM_SHUTDOWN = 'true';
-       let shutdownCounter = 0;
-       const maxShutdownTime = 10;
-       while (shutdownCounter < maxShutdownTime && pythonServer) {
+        process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'true';
+        console.log('Setting SKELLYCAM_SHOULD_SHUTDOWN to true from `app.on(all-windows-closed)');
+        let shutdownCounter = 0;
+        const maxShutdownTime = 10;
+        while (shutdownCounter < maxShutdownTime && pythonServer) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             console.log(`Waiting for python server to shutdown... ${shutdownCounter++} seconds elapsed`);
             shutdownCounter++;
         }
-                pythonServer.kill();
+        if (pythonServer) {
+            console.error('Python server did not shutdown in time. Killing the process...');
+            pythonServer.kill();
+        }
         console.log('Python server shutdown.');
     }
     win = null
