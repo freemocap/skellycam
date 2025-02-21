@@ -31,6 +31,6 @@ class ColorFormatter(CustomFormatter):
 
         # Format with parent class
         formatted = super().format(record)
-
+        formatted = f"{level_color}{formatted}\033[0m"
         # Add color to structural elements
         return formatted.replace(LOG_POINTER_STRING, f"{level_color}{LOG_POINTER_STRING}\033[0m")

@@ -7,14 +7,15 @@ import {AvailableCamerasSchema} from "@/types/zod-schemas/AvailableCamerasSchema
 import { useAppDispatch } from '@/store/hooks';
 import {setFramerate, setIsRecording, setRecordingDirectory} from "@/store/slices/appState";
 import {camerasSetAll} from "@/store/slices/cameraConfigsSlice";
+import {LogRecordSchema} from "@/types/zod-schemas/LogRecordSchema";
 const MAX_RECONNECT_ATTEMPTS = 20;
-
+const MAX_LOGS = 1000;
 export const useWebSocket = (wsUrl: string) => {
     const [isConnected, setIsConnected] = useState(false);
     const [latestFrontendPayload, setLatestFrontendPayload] = useState<z.infer<typeof FrontendFramePayloadSchema> | null>(null);
     const [latestImages, setLatestImages] = useState<z.infer<typeof JpegImagesSchema> | null>(null);
     const [latestSkellyCamAppState, setLatestSkellyCamAppState] = useState<z.infer<typeof SkellyCamAppStateSchema> | null>(null);
-    const [latestLogs, setLatestLogs] = useState<object[] | null>(null);
+    const [latestLogs, setLatestLogs] = useState<z.infer<typeof LogRecordSchema> []>([]);
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
 
     const [connectAttempt, setConnectAttempt] = useState(0);
@@ -37,7 +38,7 @@ export const useWebSocket = (wsUrl: string) => {
                 const parsedData = JSON.parse(event.data);
                 if (parsedData.formatted_message) {
                     setLatestLogs(prevLogs => {
-                        if (prevLogs && prevLogs.length > 100) {
+                        if (prevLogs && prevLogs.length > MAX_LOGS) {
                             return [...prevLogs.slice(1), parsedData];
                         } else {
                             return [...(prevLogs || []), parsedData];
@@ -61,6 +62,11 @@ export const useWebSocket = (wsUrl: string) => {
                 setLatestImages(frontendImagePayload.jpeg_images);
             } else if (parsedData.type === 'SkellycamAppStateDTO') {
                 handleNewSkellyCamAppState(parsedData);
+            } else if (parsedData.type === 'LogRecord') {
+                setLatestLogs(prevLogs => {
+                    const updatedLogs = prevLogs ? [...prevLogs, LogRecordSchema.parse(parsedData)] : [LogRecordSchema.parse(parsedData)];
+                    return updatedLogs.length > 100 ? updatedLogs.slice(1) : updatedLogs;
+                });
             } else {
                 console.warn('Received unknown message type:', parsedData.type);
             }

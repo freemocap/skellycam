@@ -3,13 +3,13 @@ import {useWebSocket} from "@/hooks/useWebSocket";
 import {z} from "zod";
 import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/types/zod-schemas/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
-
+import {LogRecordSchema} from "@/types/zod-schemas/LogRecordSchema";
 interface WebSocketContextProps {
     isConnected: boolean;
     latestFrontendPayload: z.infer<typeof FrontendFramePayloadSchema> | null;
     latestSkellyCamAppState: z.infer<typeof SkellyCamAppStateSchema> | null;
     latestImages:z.infer<typeof JpegImagesSchema> |null;
-    latestLogs: object[] | null;
+    latestLogs: z.infer<typeof LogRecordSchema>[];
     connect: () => void;
     disconnect: () => void;
 }

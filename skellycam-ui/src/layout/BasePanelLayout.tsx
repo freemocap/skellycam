@@ -8,7 +8,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     return (
         <PanelGroup
             direction="vertical"
-            autoSaveId="skellycam-panel-group"
+            // autoSaveId="skellycam-panel-group"
             style={{height: "100vh", width: "100vw"}}
         >
             {/* Top section (horizontal panels) - 80% height */}
@@ -29,7 +29,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                     />
 
                     {/*Main/Central Content Panel*/}
-                    <Panel defaultSize={50} minSize={10}>
+                    <Panel defaultSize={80} minSize={10}>
                         {children}
                     </Panel>
                 </PanelGroup>
