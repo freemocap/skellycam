@@ -12,8 +12,8 @@ class WebSocketQueueHandler(logging.Handler):
     def __init__(self, queue: Queue):
         super().__init__()
         self.queue = queue
-        self.setFormatter(CustomFormatter(LOG_FORMAT_STRING))
         self.addFilter(DeltaTimeFilter())
+        self.setFormatter(CustomFormatter(LOG_FORMAT_STRING))
 
     def emit(self, record: logging.LogRecord):
         log_record_dict =  record.__dict__

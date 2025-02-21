@@ -1,18 +1,14 @@
 import logging
 import os
-import sys
 from logging.config import dictConfig
 from multiprocessing import Queue
 from typing import Optional
 
-from .formatters.custom_formatter import CustomFormatter
+from .filters.delta_time import DeltaTimeFilter
 from .handlers.colored_console import ColoredConsoleHandler
 from .handlers.websocket_log_queue_handler import WebSocketQueueHandler, create_websocket_log_queue
 from .log_format_string import LOG_FORMAT_STRING
 from .log_levels import LogLevels
-from .logging_color_helpers import (
-    get_hashed_color,
-)
 from ..default_paths import get_log_file_path
 
 MAX_DELTA_T_LEN = 10
@@ -45,7 +41,6 @@ class LoggerBuilder:
             # only add console handler if not running in electron, otherwise logs will go through the websocket handler
             root.addHandler(self._build_console_handler())
 
-
     def _build_console_handler(self):
         handler = ColoredConsoleHandler()
         handler.setLevel(self.level.value)
@@ -53,7 +48,8 @@ class LoggerBuilder:
 
     def _build_file_handler(self):
         handler = logging.FileHandler(get_log_file_path(), encoding="utf-8")
-        handler.setFormatter(logging.Formatter(LOG_FORMAT_STRING))  # Use non-colored format
+        handler.setFormatter(logging.Formatter(LOG_FORMAT_STRING))
+        handler.addFilter(DeltaTimeFilter())  # Add this line
         handler.setLevel(LogLevels.TRACE.value)
         return handler
 
