@@ -4,10 +4,10 @@ on:
   push:
     branches: [jon/react-electron]
     paths-ignore:
-      - '**/**' # Ignore all paths, i.e. disable this workflow
-      - "skellycam/**"
+      - '../../..' # Ignore all paths, i.e. disable this workflow
+      - "../../../skellycam"
       - "build_pyinstaller_executables.yml"
-      - "pyproject.toml"
+      - "../../../pyproject.toml"
       - "../../build_executable/build_pyinstaller_executable.py"
       - "../../build_executable/skellycam.spec"
 #  workflow_dispatch:

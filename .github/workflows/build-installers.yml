@@ -1,0 +1,65 @@
+name: Nuitka Build
+
+on:
+  push:
+    branches: [ "nuitka-build" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Make scripts executable (Unix)
+        if: runner.os != 'Windows'
+        run: chmod +x scripts/*.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Create and activate venv
+        run: |
+          uv venv
+          source .venv/bin/activate
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install Nuitka
+        run: pip install nuitka
+
+
+
+      - name: Run build script
+        shell: bash
+        run: |
+          case "${{ runner.os }}" in
+            Windows)
+              scripts/nuitka_installer_windows.bat
+              ;;
+            macOS)
+              scripts/nuitka_installer_windows.sh
+              ;;
+            Linux)
+              scripts/nuitka_installer_windows.sh
+              ;;
+          esac
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: skellycam-${{ runner.os }}
+          path: |
+            skellycam_server*
+            skellycam-ui/skellycam_server*

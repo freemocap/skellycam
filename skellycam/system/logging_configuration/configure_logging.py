@@ -26,10 +26,9 @@ def add_log_method(level: LogLevels, name: str):
 
 
 def configure_logging(level: LogLevels, ws_queue: Optional[multiprocessing.Queue] = None):
-    print( multiprocessing.current_process().name)
     if ws_queue is None:
         # do not create new queue if not main process
-        if not "main" in multiprocessing.current_process().name.lower():
+        if not multiprocessing.current_process().name.lower() == 'mainprocess':
             return
 
         ws_queue = create_websocket_log_queue()
