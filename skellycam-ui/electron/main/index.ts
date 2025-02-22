@@ -10,7 +10,6 @@ import {APP_ENVIRONMENT} from "./helpers/app-environment";
 
 // Environment variables that `python` server will use for its lifecycle management
 process.env.SKELLYCAM_RUNNING_IN_ELECTRON = 'true';
-process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'false';
 
 // Platform config
 // Disable GPU Acceleration for Windows 7

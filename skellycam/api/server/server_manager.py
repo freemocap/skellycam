@@ -1,9 +1,7 @@
 import logging
 import multiprocessing
-import os
 import threading
 import time
-from typing import Optional
 
 import psutil
 import uvicorn
@@ -12,7 +10,6 @@ from uvicorn import Server
 from skellycam.api.server.server_constants import HOSTNAME, PORT
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_lifespan.create_skellycam_app import create_skellycam_app
-from skellycam.utilities.check_shutdown_flag import get_server_shutdown_environment_flag
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
@@ -88,11 +85,8 @@ class UvicornServerManager:
             child.kill()
 
     def shutdown_listener_loop(self):
-        while self._global_kill_flag.value is False and not get_server_shutdown_environment_flag():
+        while self._global_kill_flag.value is False :
             time.sleep(1)
-        if get_server_shutdown_environment_flag():
-            logger.info("Detected SKELLYCAM_APP_SHUTDOWN environment variable - shutting down server")
-            self.shutdown_server()
         if self._global_kill_flag.value:
             logger.info("Detected global kill flag - shutting down server")
             self.shutdown_server()

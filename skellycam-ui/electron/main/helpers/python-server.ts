@@ -35,23 +35,23 @@ export class PythonServer {
 
     static async shutdown() {
         if (!pythonProcess) return;
-        console.log('Shutting down python server - setting env variable `SKELLYCAM_SHOULD_SHUTDOWN` to `true`');
-        process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'true';
-        let shutdownTimer = 0;
+        console.log('Sending SIGTERM to python process');
+        pythonProcess.kill('SIGTERM');
 
-        while (pythonProcess && !pythonProcess.exitCode && shutdownTimer < 10) {
+        let shutdownTimer = 0;
+        const TIMEOUT = 10;
+        while (pythonProcess && !pythonProcess.exitCode && shutdownTimer < TIMEOUT) {
             await new Promise(r => setTimeout(r, 1000));
             shutdownTimer++;
-            console.log(`Waiting for python process to close for ${shutdownTimer}`)
+            console.log(`Waiting for graceful shutdown (${shutdownTimer}/${TIMEOUT}s)`);
         }
 
-        if (pythonProcess && !pythonProcess.exitCode) {
-            console.warn('Python server did not shut down gracefully - killing sub-process')
-            pythonProcess.kill();
-            pythonProcess = null;
-        } else {
-            console.log('Python server shut down with exit code:', pythonProcess.exitCode);
+        if (!pythonProcess?.exitCode) {
+            console.warn('Force killing python process');
+            pythonProcess?.kill('SIGKILL');
         }
+
+        pythonProcess = null;
     }
 
     private static validateExecutable() {
