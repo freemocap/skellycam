@@ -1,48 +1,52 @@
 import { app, BrowserWindow } from 'electron';
-import { ENV_CONFIG } from './constants';
+import {APP_ENVIRONMENT} from "./app-environment";
+import {APP_PATHS} from "./app-paths";
+import {exec} from "child_process";
 
 export class LifecycleLogger {
   static logProcessInfo() {
     console.log(`
     ============================================
     Starting SkellyCam v${app.getVersion()}
-    Environment: ${ENV_CONFIG.IS_DEV ? 'Development' : 'Production'}
-    Platform: ${process.platform}-${process.arch}
-    Node: ${process.versions.node}
-    Chrome: ${process.versions.chrome}
-    Electron: ${process.versions.electron}
-    Python Auto-Start: ${ENV_CONFIG.SHOULD_LAUNCH_PYTHON}
+    \t- Environment: ${APP_ENVIRONMENT.IS_DEV ? 'Development' : 'Production'}
+    \t- Platform: ${process.platform}-${process.arch}
+    \t- Node: ${process.versions.node}
+    \t- Chrome: ${process.versions.chrome}
+    \t- Electron: ${process.versions.electron}
+    \t- Python Auto-Start: ${APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON}
     ============================================`);
   }
 
   static logWindowCreation(win: BrowserWindow) {
     console.log(`
     [Window Manager] Created main window
-    ├── ID: ${win.id}
-    ├── DevTools: ${ENV_CONFIG.IS_DEV ? 'Open' : 'Closed'}
-    └── Load URL: ${win.webContents.getURL()}`);
+    \t- ID: ${win.id}
+    \t- DevTools: ${APP_ENVIRONMENT.IS_DEV ? 'Open' : 'Closed'}
+    \t- Load URL: ${win.webContents.getURL()}`);
   }
 
-  static logPythonProcess(pid: number) {
+  static logPythonProcess(pythonProcess:  ReturnType<typeof exec> ) {
     console.log(`
     [Python Server] Started external process
-    ├── PID: ${pid}
-    ├── Path: ${process.env.SKELLYCAM_PYTHON_PATH}
-    └── Environment: ${JSON.stringify(process.env, null, 2)}`);
+    \t- PID: ${pythonProcess.pid}
+    \t- Command: ${pythonProcess.spawnargs.join(' ')}
+    \t- Executable: ${pythonProcess.spawnfile}
+    \t- Executable Path: ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH};
+    \t- Environment: ${JSON.stringify(APP_ENVIRONMENT)}`);
   }
 
   static logIpcEvent(channel: string, sender: string) {
     console.log(`
     [IPC Event] ${new Date().toISOString()}
-    ├── Channel: ${channel}
-    └── Origin: ${sender}`);
+    \t- Channel: ${channel}
+    \t- Origin: ${sender}`);
   }
 
   static logShutdownSequence() {
     console.log(`
     [Shutdown] Initiating termination sequence
-    ├── Windows open: ${BrowserWindow.getAllWindows().length}
-    ├── Python running: ${process.env.SKELLYCAM_SHOULD_SHUTDOWN === 'true' ? 'No' : 'Yes'}
-    └── Reason: Application closure requested`);
+    \t- Windows open: ${BrowserWindow.getAllWindows().length}
+    \t- Python running: ${process.env.SKELLYCAM_SHOULD_SHUTDOWN === 'true' ? 'No' : 'Yes'}
+    \t- Reason: Application closure requested`);
   }
 }

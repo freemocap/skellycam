@@ -1,37 +1,52 @@
 import {app, BrowserWindow} from 'electron';
 import {update} from './update';
-import {configureApp} from "./helpers/setup";
 import {IpcManager} from "./helpers/ipc-manager";
 import {WindowManager} from "./helpers/window-manager";
-import {ENV_CONFIG} from "./helpers/constants";
 import {PythonServer} from "./helpers/python-server";
 import {LifecycleLogger} from "./helpers/logger";
-import {installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS} from 'electron-devtools-installer';
+import os from "node:os";
+import {APP_ENVIRONMENT} from "./helpers/app-environment";
+
+
+// Environment variables that `python` server will use for its lifecycle management
+process.env.SKELLYCAM_RUNNING_IN_ELECTRON = 'true';
+process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'false';
+
+// Platform config
+// Disable GPU Acceleration for Windows 7
+if (os.release().startsWith('6.1')) app.disableHardwareAcceleration()
+if (process.platform === 'win32') app.setAppUserModelId(app.getName());
 
 // Initialization Sequence
 function startApplication() {
     LifecycleLogger.logProcessInfo();
-    configureApp();
     IpcManager.initialize();
 
     app.whenReady()
         .then(() => {
-            const mainWindow = WindowManager.createMainWindow();
-            installExtension([REDUX_DEVTOOLS, REACT_DEVELOPER_TOOLS])
-                .then(([redux, react]) => console.log(`Added Extensions:  ${redux.name}, ${react.name}`))
-                .catch((err) => console.log('An error occurred: ', err));
-            update(mainWindow);
+            console.log('App is ready')
 
-            if (ENV_CONFIG.SHOULD_LAUNCH_PYTHON) {
+            console.log('SHOULD_LAUNCH_PYTHON:', APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON);
+            if (APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON) {
+                console.log('Launching Python Server');
                 PythonServer.start();
             }
+
+            const mainWindow = WindowManager.createMainWindow();
+
+            // TODO: Add Redux and React DevTools Extensions to Electron App BrowserWindow - the code below didn't work
+            // installExtension([REDUX_DEVTOOLS, REACT_DEVELOPER_TOOLS])
+            //     .then(([redux, react]) => console.log(`Added Extensions:  ${redux.name}, ${react.name}`))
+            //     .catch((err) => console.log('An error occurred: ', err));
+            update(mainWindow);
         });
 }
 
 // Lifecycle Handlers
 app.on('window-all-closed', async () => {
     await PythonServer.shutdown();
-    if (process.platform !== 'darwin') app.quit();
+    app.quit();
+    LifecycleLogger.logShutdownSequence();
 });
 
 app.on('activate', () => {
@@ -41,4 +56,5 @@ app.on('activate', () => {
 });
 
 // Start App
+console.log('Starting application');
 startApplication();

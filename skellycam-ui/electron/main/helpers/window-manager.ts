@@ -1,5 +1,7 @@
 import { BrowserWindow, shell } from 'electron';
-import {APP_PATHS, ENV_CONFIG} from "./constants";
+import {APP_PATHS} from "./app-paths";
+import {APP_ENVIRONMENT} from "./app-environment";
+import {LifecycleLogger} from "./logger";
 
 export class WindowManager {
   static createMainWindow() {
@@ -17,27 +19,34 @@ export class WindowManager {
 
     this.configureWindowHandlers(window);
     this.loadContent(window);
-
+    LifecycleLogger.logWindowCreation(window);
     return window;
   }
 
   private static configureWindowHandlers(window: BrowserWindow) {
+    console.log('Configuring window handlers');
+    window.on('closed', () => {
+      console.log('Window closed');
+    });
     window.webContents.on('did-finish-load', () => {
+        console.log('Window finished loading');
       window.webContents.send('app-ready', Date.now());
     });
 
     window.webContents.setWindowOpenHandler(({ url }) => {
+      console.log('Opening window', url);
       if (url.startsWith('https:')) shell.openExternal(url);
       return { action: 'deny' };
     });
   }
 
   private static loadContent(window: BrowserWindow) {
-    ENV_CONFIG.IS_DEV
+    console.log('Loading app content');
+    APP_ENVIRONMENT.IS_DEV
       ? window.loadURL(process.env.VITE_DEV_SERVER_URL!)
       : window.loadFile(APP_PATHS.RENDERER_HTML);
 
-    if (ENV_CONFIG.IS_DEV) {
+    if (APP_ENVIRONMENT.IS_DEV) {
       window.webContents.openDevTools();
     }
   }

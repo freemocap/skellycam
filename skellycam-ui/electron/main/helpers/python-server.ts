@@ -1,11 +1,13 @@
 import {exec} from 'child_process';
 import fs from 'node:fs';
-import {APP_PATHS} from "./constants";
+import {LifecycleLogger} from "./logger";
+import {APP_PATHS} from "./app-paths";
 
 let pythonProcess: ReturnType<typeof exec> | null = null;
 
 export class PythonServer {
     static async start() {
+        console.log('Starting python server subprocess');
         this.validateExecutable();
 
         pythonProcess = exec(`"${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH}"`, {
@@ -26,27 +28,34 @@ export class PythonServer {
         pythonProcess.on('exit', (code) => {
             console.log(`Python exited (code: ${code})`);
         });
+        if (!pythonProcess.pid) throw new Error('Python server failed to start!');
+        LifecycleLogger.logPythonProcess(pythonProcess);
+
     }
 
     static async shutdown() {
         if (!pythonProcess) return;
+        console.log('Shutting down python server - setting env variable `SKELLYCAM_SHOULD_SHUTDOWN` to `true`');
         process.env.SKELLYCAM_SHOULD_SHUTDOWN = 'true';
         let shutdownTimer = 0;
 
-        while (shutdownTimer < 10 && pythonProcess) {
+        while (pythonProcess && !pythonProcess.exitCode && shutdownTimer < 10) {
             await new Promise(r => setTimeout(r, 1000));
             shutdownTimer++;
             console.log(`Waiting for python process to close for ${shutdownTimer}`)
         }
 
-        if (pythonProcess) {
+        if (pythonProcess && !pythonProcess.exitCode) {
             console.warn('Python server did not shut down gracefully - killing sub-process')
             pythonProcess.kill();
             pythonProcess = null;
+        } else {
+            console.log('Python server shut down with exit code:', pythonProcess.exitCode);
         }
     }
 
     private static validateExecutable() {
+        console.log('Validating python server executable...');
         const checkPath = (path: string) => {
             if (!fs.existsSync(path)) throw new Error(`Missing Python server at ${path}`);
             console.log(`✓ Found python server executable at: ${path}`);

@@ -52,6 +52,7 @@
     "cross-env": "^7.0.3",
     "electron": "^29.1.1",
     "electron-builder": "^24.13.3",
+    "electron-devtools-installer": "^4.0.0",
     "postcss": "^8.4.35",
     "postcss-import": "^16.0.1",
     "react": "^18.2.0",
