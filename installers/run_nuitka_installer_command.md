@@ -10,7 +10,7 @@ From root (frontpage folder of the github repo, need copy-paste resulting exe to
 nuitka --onefile --windows-icon-from-ico=shared/skellycam-logo/skellycam-favicon.ico --user-package-configuration-file=installers/skellycam-nuitka.config.yml --remove-output --output-filename=skellycam_server.exe skellycam/__main__.py
 ```
 
-from skellycam-ui folder:
+from /skellycam-ui folder:
 ```
 nuitka --onefile --windows-icon-from-ico=../shared/skellycam-logo/skellycam-favicon.ico --user-package-configuration-file=../installers/skellycam-nuitka.config.yml --remove-output --output-filename=skellycam_server.exe ../skellycam/__main__.py
 ```

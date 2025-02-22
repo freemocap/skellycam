@@ -1,3 +1,4 @@
+// electron/main/update.ts
 import {app, ipcMain} from 'electron'
 import {createRequire} from 'node:module'
 import type {ProgressInfo, UpdateDownloadedEvent, UpdateInfo,} from 'electron-updater'

@@ -2,7 +2,8 @@
 
 ## Installation
 
-### Python server
+
+### Python Fastapi/Uvicorn server
 0. Install `uv` 
    - https://github.com/astral-sh/uv?tab=readme-ov-file#installation
 1. clone the repo 
@@ -19,19 +20,35 @@
 6. Install dependencies
   - `uv sync`
 
-#### Linux only (?)
+##### Linux only (?)
 You need to install `clang` and `portaudio` to get the audio recording stuff to work.
 ```
 sudo apt update
 sudo apt install clang
 sudo apt install portaudio19-dev
 ```
+
+### React/Electron UI
+
+#### Pre-requisites
+- install Node.js and npm
+  - https://nodejs.org/en/download/
+
+#### Installation
+1. Change to the `skellycam-ui` directory
+   - `cd skellycam-ui`
+   - `npm install`
+
+#### Running the UI in development mode
+- `npm run dev`
+
+
    
 
 
-## Run the SkellyCam application (QT GUI and FastAPI/Uvicorn server) i
+## Run the SkellyCam application (FastAPI/Uvicorn server) 
 1. - `python skellycam/__main__.py`
-   - The server should start on `http://localhost:8005`
+   - The server should start on `http://localhost:8006`
 
 - OR - To run the Skellycam server without the QT GUI, run:
   - `python skellycam/run_skellycam_server.py`
