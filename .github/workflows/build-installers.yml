@@ -58,7 +58,7 @@ jobs:
         run: uv sync
 
       - name: Install Nuitka
-        run: uv pip install nuitka
+        run: pip install nuitka
 
       - name: Check Nuitka installation
         run: nuitka --version
