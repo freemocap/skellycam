@@ -33,7 +33,7 @@ jobs:
 
       - name: Make scripts executable (Unix)
         if: runner.os != 'Windows'
-        run: chmod +x scripts/*.sh
+        run: chmod +x ../installers/nuitka_scripts/*.sh
 
       - name: Set up Python
         uses: actions/setup-python@v4
