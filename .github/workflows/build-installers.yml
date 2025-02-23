@@ -72,7 +72,7 @@ jobs:
       - name: Run nuitka build script (if not test mode)
         if: ${{ github.event.inputs.test-mode != 'true' }}
         working-directory: skellycam-ui
-        shell: ${{ contains(matrix.os, 'windows') && 'cmd' || 'bash' }}
+        shell: ${{ contains(runner.os, 'windows') && 'cmd' || 'bash' }}
         run: |
           ${{ matrix.nuitka-script }}
 
