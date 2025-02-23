@@ -15,35 +15,23 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        os: [windows-latest]  # Start with Windows first
         include:
-          - os: ubuntu-latest
-            venv-activate: source .venv/bin/activate
-            nuitka-script: ../installers/nuitka_scripts/nuitka_installer_linux.sh
-          - os: macos-latest
-            venv-activate: source .venv/bin/activate
-            nuitka-script: ../installers/nuitka_scripts/nuitka_installer_macos.sh
           - os: windows-latest
-            venv-activate: .venv\\Scripts\\activate
-            nuitka-script: ..\\installers\\nuitka_scripts\\nuitka_installer_windows.bat
-    continue-on-error: true  # let each OS run completely even if one fails
+            venv-activate: .venv\Scripts\activate
+#    continue-on-error: true
     steps:
 
-
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Make scripts executable (Unix)
-        if: runner.os != 'Windows'
-        run: chmod +x installers/nuitka_scripts/*.sh
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '20'
 
@@ -59,48 +47,34 @@ jobs:
       - name: Install Python dependencies
         run: uv sync
 
-      - name: Install Nuitka
-        run: pip install nuitka
-
-      - name: Check Nuitka installation
-        run: nuitka --version
-
-
       - name: Run test artifact generation (if test mode)
         if: ${{ github.event.inputs.test-mode == 'true' }}
         run: |
-          touch skellycam_server.exe  # Unix
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            echo "Dummy exe" > skellycam_server.exe
-            mkdir -p release/0.0.1-test
-            echo "Test installer" > release/0.0.1-test/skellycam_0.0.1-test_installer.exe
-          else
-            mkdir -p release/0.0.1-test
-            touch release/0.0.1-test/skellycam_0.0.1-test_installer
-          fi
+          # Keep your existing test artifact logic here
+          mkdir -p build
+          touch build/skellycam_server.exe
 
-      - name: Run nuitka build script (Linux)
-        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'ubuntu-latest' }}
-        run: |
-          cd skellycam-ui
-          pwd
-          bash ${{ matrix.nuitka-script }}
+      - name: Build with Nuitka
+        if: ${{ github.event.inputs.test-mode != 'true' }}
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: main
+          script-name: skellycam/__main__.py
+          mode: standalone
+          onefile: true
+          output-filename: skellycam_server.exe
+          windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
+          include-data-dir: |
+            shared/skellycam-logo/skellycam-favicon.ico
+            skellycam/api/http/ui/ui.html
 
-      - name: Run nuitka build script (macOS)
-        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'macos-latest' }}
+      - name: Check Nuitka build
+        if: ${{ github.event.inputs.test-mode != 'true' }}
         run: |
-          cd skellycam-ui
-          pwd
-          bash ${{ matrix.nuitka-script }}
-
-      - name: Run nuitka build script (Windows)
-        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'windows-latest' }}
-        env:
-          NUITKA_DOWNLOADS_DISABLED: 0
-        run: |
-          cd skellycam-ui
-          pwd
-          ${{ matrix.nuitka-script }}
+          ls -l skellycam_server.exe
+      - name: Move skellycam exe to build into `skellycam-ui` directory
+        run: |          
+          mv skellycam_server.exe skellycam-ui
 
       - name: Install UI dependencies
         run: |
@@ -117,5 +91,6 @@ jobs:
         with:
           name: skellycam-${{ runner.os }}
           path: |
-            skellycam-ui/skellycam_server*
-            skellycam-ui/release/**/*-installer*
+            build/skellycam_server.exe
+            build/*.dist/**
+          include-hidden-files: true
