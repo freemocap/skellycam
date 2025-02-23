@@ -33,7 +33,7 @@ jobs:
 
       - name: Make scripts executable (Unix)
         if: runner.os != 'Windows'
-        run: chmod +x ../installers/nuitka_scripts/*.sh
+        run: chmod +x installers/nuitka_scripts/*.sh
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -48,12 +48,15 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Create venv and install dependencies
-        run: |
-          uv venv
-          ${{ matrix.venv-activate }}
-          uv sync
-          pip install nuitka
+      - name: Create venv
+        run: uv venv
+
+      - name: Activate venv
+        run: ${{ matrix.venv-activate }}
+
+      - name: Install Python dependencies
+        run: uv sync
+
 
       - name: Run test artifact generation (if test mode)
         if: ${{ github.event.inputs.test-mode == 'true' }}
