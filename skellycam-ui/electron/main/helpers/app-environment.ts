@@ -1,6 +1,6 @@
 
 // Set the process.env values
-process.env.NODE_ENV = 'development';
+// process.env.NODE_ENV = 'development';
 process.env.SHOULD_LAUNCH_PYTHON = 'true';
 
 

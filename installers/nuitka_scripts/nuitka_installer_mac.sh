@@ -1,3 +1,7 @@
-# scripts/build_mac.sh
 #!/bin/bash
-nuitka --onefile --macos-create-app-bundle=1 --macos-app-icon=shared/skellycam-logo/skellycam-favicon.ico --user-package-configuration-file=installers/skellycam-nuitka.config.yml --output-filename=skellycam-ui/skellycam_server skellycam/__main__.py
+
+# Get the directory of the script
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo "Script is located in: $script_dir"
+
+nuitka --onefile --macos-create-app-bundle=1 --macos-app-icon="$script_dir/../shared/skellycam-logo/skellycam-favicon.ico" --user-package-configuration-file="$script_dir/../installers/skellycam-nuitka.config.yml" --output-filename="skellycam_server" "$script_dir/../skellycam/__main__.py"

@@ -41,7 +41,8 @@ export class WindowManager {
   }
 
   private static loadContent(window: BrowserWindow) {
-    console.log('Loading app content');
+    console.log('Loading app content - APP_ENVIRONMENT.IS_DEV:', APP_ENVIRONMENT.IS_DEV);
+
     APP_ENVIRONMENT.IS_DEV
       ? window.loadURL(process.env.VITE_DEV_SERVER_URL!)
       : window.loadFile(APP_PATHS.RENDERER_HTML);

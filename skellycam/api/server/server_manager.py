@@ -58,11 +58,13 @@ class UvicornServerManager:
             try:
                 logger.debug("Running uvicorn server...")
                 self.server.run() #blocks until server is stopped
+                logger.info("Running uvicorn server...")
             except Exception as e:
                 logger.error(f"A fatal error occurred in the uvicorn server: {e}")
                 logger.exception(e)
                 raise
             finally:
+                self._global_kill_flag.value = True
                 logger.info(f"Uvicorn server thread completed")
 
         self.server_thread = threading.Thread(target=server_thread, name="UvicornServerManagerThread", daemon=True)
@@ -78,15 +80,20 @@ class UvicornServerManager:
         if self.server:
             self.server.should_exit = True
         time.sleep(1)
-        # Kill child processes
-        current_process = psutil.Process()
-        for child in current_process.children(recursive=True):
-            logger.warning(f"Killing child process: {child} - figure out how to make this shut down gracefully!")
-            child.kill()
+        try:
+            # Kill child processes
+            current_process = psutil.Process()
+            for child in current_process.children(recursive=True):
+                logger.warning(f"Killing child process: {child} - figure out how to make this shut down gracefully!")
+                child.kill()
+        except Exception as e:
+            logger.exception(f"Error killing child processes: {e}")
 
     def shutdown_listener_loop(self):
+        logger.info("Starting shutdown listener loop")
         while self._global_kill_flag.value is False :
             time.sleep(1)
         if self._global_kill_flag.value:
             logger.info("Detected global kill flag - shutting down server")
             self.shutdown_server()
+        logger.info("Shutdown listener loop ended")
