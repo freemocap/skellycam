@@ -28,6 +28,8 @@ jobs:
             nuitka-script: ..\\installers\\nuitka_scripts\\nuitka_installer_windows.bat
     continue-on-error: true  # let each OS run completely even if one fails
     steps:
+
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -63,14 +65,6 @@ jobs:
       - name: Check Nuitka installation
         run: nuitka --version
 
-      - name: print folder contents
-        run: ls
-
-      - name: Change into the skellycam-ui directory
-        run: cd skellycam-ui
-
-      - name: Print the current working directory
-        run: pwd
 
       - name: Run test artifact generation (if test mode)
         if: ${{ github.event.inputs.test-mode == 'true' }}
@@ -88,28 +82,38 @@ jobs:
       - name: Run nuitka build script (Linux)
         if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'ubuntu-latest' }}
         run: |
+          cd skellycam-ui
+          pwd
           bash ${{ matrix.nuitka-script }}
 
       - name: Run nuitka build script (macOS)
         if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'macos-latest' }}
         run: |
+          cd skellycam-ui
+          pwd
           bash ${{ matrix.nuitka-script }}
 
       - name: Run nuitka build script (Windows)
         if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'windows-latest' }}
         run: |
+          cd skellycam-ui
+          pwd
           ${{ matrix.nuitka-script }}
 
       - name: Install UI dependencies
-        run: npm install
+        run: |
+          cd skellycam-ui
+          npm install
 
       - name: Build UI
-        run: npm run build
+        run: |
+          cd skellycam-ui
+          npm run build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: skellycam-${{ runner.os }}
           path: |
-            skellycam_server*
-            release/**/*-installer*
+            skellycam-ui/skellycam_server*
+            skellycam-ui/release/**/*-installer*
