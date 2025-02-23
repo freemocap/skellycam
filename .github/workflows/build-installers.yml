@@ -52,8 +52,8 @@ jobs:
           mode: standalone
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           include-data-dir: |
-            shared/skellycam-logo/skellycam-favicon.ico
-            skellycam/api/http/ui/ui.html
+            shared/skellycam-logo/skellycam-favicon.ico=shared/skellycam-logo/skellycam-favicon.ico
+            skellycam/api/http/ui/ui.html=skellycam/api/http/ui/ui.html
 
       - name: Check Nuitka build
         if: ${{ github.event.inputs.test-mode != 'true' }}
