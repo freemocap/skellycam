@@ -69,10 +69,21 @@ jobs:
             touch release/0.0.1-test/skellycam_0.0.1-test_installer
           fi
 
-      - name: Run nuitka build script (if not test mode)
-        if: ${{ github.event.inputs.test-mode != 'true' }}
+      - name: Run nuitka build script (Linux)
+        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'ubuntu-latest' }}
         working-directory: skellycam-ui
-        shell: ${{ contains(runner.os, 'windows') && 'cmd' || 'bash' }}
+        run: |
+          bash ${{ matrix.nuitka-script }}
+
+      - name: Run nuitka build script (macOS)
+        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'macos-latest' }}
+        working-directory: skellycam-ui
+        run: |
+          bash ${{ matrix.nuitka-script }}
+
+      - name: Run nuitka build script (Windows)
+        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'windows-latest' }}
+        working-directory: skellycam-ui
         run: |
           ${{ matrix.nuitka-script }}
 
