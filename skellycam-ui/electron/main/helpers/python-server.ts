@@ -2,7 +2,10 @@ import {exec} from 'child_process';
 import fs from 'node:fs';
 import {LifecycleLogger} from "./logger";
 import {APP_PATHS} from "./app-paths";
+import {promisify} from 'util';
+import treeKill from "tree-kill";
 
+const treeKillAsync = promisify(treeKill);
 let pythonProcess: ReturnType<typeof exec> | null = null;
 
 export class PythonServer {
@@ -34,21 +37,21 @@ export class PythonServer {
     }
 
     static async shutdown() {
-        if (!pythonProcess) return;
+        if (!pythonProcess || !pythonProcess.pid) return;
         console.log('Sending SIGTERM to python process');
-        pythonProcess.kill('SIGTERM');
 
-        let shutdownTimer = 0;
-        const TIMEOUT = 10;
-        while (pythonProcess && !pythonProcess.exitCode && shutdownTimer < TIMEOUT) {
-            await new Promise(r => setTimeout(r, 1000));
-            shutdownTimer++;
-            console.log(`Waiting for graceful shutdown (${shutdownTimer}/${TIMEOUT}s)`);
+        try {
+            // Kill entire process tree
+            await treeKillAsync(pythonProcess.pid);
+        } catch (error) {
+            console.error('Error killing process tree:', error);
+            pythonProcess?.kill('SIGKILL'); // Fallback
         }
-
-        if (!pythonProcess?.exitCode) {
-            console.warn('Force killing python process');
-            pythonProcess?.kill('SIGKILL');
+        if (!pythonProcess.exitCode) {
+            console.error('Python server did not exit cleanly');
+            treeKill(pythonProcess.pid, 'SIGKILL');
+        } else {
+            console.log('Python server exited cleanly');
         }
 
         pythonProcess = null;
