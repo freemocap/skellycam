@@ -2,6 +2,7 @@ import {Box} from "@mui/material";
 import React, {useEffect, useState} from "react";
 import {useWebSocketContext} from "@/context/WebSocketContext";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
+import {RecordButton} from "@/components/RecordButton";
 
 
 export const CamerasView = () => {
@@ -41,6 +42,7 @@ export const CamerasView = () => {
                     sx={{flex: 1, minHeight: 0}}
                 />
             )}
+            <RecordButton/>
         </Box>
     );
 };
