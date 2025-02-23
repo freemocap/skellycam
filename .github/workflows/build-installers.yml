@@ -63,9 +63,14 @@ jobs:
       - name: Check Nuitka installation
         run: nuitka --version
 
+      - name: Change into the skellycam-ui directory
+        run: cd skellycam-ui
+
+      - name: Print the current working directory
+        run: pwd
+
       - name: Run test artifact generation (if test mode)
         if: ${{ github.event.inputs.test-mode == 'true' }}
-        working-directory: skellycam-ui
         run: |
           touch skellycam_server.exe  # Unix
           if [ "$RUNNER_OS" == "Windows" ]; then
@@ -79,28 +84,23 @@ jobs:
 
       - name: Run nuitka build script (Linux)
         if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'ubuntu-latest' }}
-        working-directory: skellycam-ui
         run: |
           bash ${{ matrix.nuitka-script }}
 
       - name: Run nuitka build script (macOS)
         if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'macos-latest' }}
-        working-directory: skellycam-ui
         run: |
           bash ${{ matrix.nuitka-script }}
 
       - name: Run nuitka build script (Windows)
         if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'windows-latest' }}
-        working-directory: skellycam-ui
         run: |
           ${{ matrix.nuitka-script }}
 
       - name: Install UI dependencies
-        working-directory: skellycam-ui
         run: npm install
 
       - name: Build UI
-        working-directory: skellycam-ui
         run: npm run build
 
       - name: Upload artifacts
@@ -108,5 +108,5 @@ jobs:
         with:
           name: skellycam-${{ runner.os }}
           path: |
-            skellycam-ui/skellycam_server*
-            skellycam-ui/release/**/*-installer*
+            skellycam_server*
+            release/**/*-installer*
