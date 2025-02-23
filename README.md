@@ -36,26 +36,30 @@ sudo apt install portaudio19-dev
 
 #### Installation
 1. Change to the `skellycam-ui` directory
-   - `cd skellycam-ui`
-   - `npm install`
+- `cd skellycam-ui`
+- `npm install`
 
 #### Running the UI in development mode
 - `npm run dev`
 
 
    
-
-
 ## Run the SkellyCam application (FastAPI/Uvicorn server) 
 1. - `python skellycam/__main__.py`
    - The server should start on `http://localhost:8006`
 
-- OR - To run the Skellycam server without the QT GUI, run:
-  - `python skellycam/run_skellycam_server.py`
 
+# Build installer
+0. `cd skellycam-ui`
+1. Build Python installer with Nuitka  
+- `../installers/nutika_scripts/nuitka_installer_windows.bat`
+- NOTE - Mac and Linux installer scripts should presumably work without much effort, but haven't don't that yet
+- This step can take up to an hour and results in an executable called `skellycam_server[.exe]` in the `skellycam-ui/` folder
+2. Build electron app (which bundles the python server executable from the previous step
+- `npm install`
+- `npm run build`
 
-
-
+If all went well, the installer will be in `/skellycam-ui/releases/[version-number]/skellycam_[version-number]_installer[.exe]`!
 ---
 ---
 # STANDARD README CONTINUES BELOW
