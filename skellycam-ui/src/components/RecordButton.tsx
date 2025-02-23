@@ -1,8 +1,8 @@
 import React from 'react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { selectIsRecording } from '@/store/slices/appState/selectors';
-import { startRecording, stopRecording } from '@/store/thunks/recordingThunks';
-import { Button } from '@mui/material';
+import {useAppDispatch, useAppSelector} from '@/store/hooks';
+import {selectIsRecording} from '@/store/slices/appState/selectors';
+import {startRecording, stopRecording} from '@/store/thunks/recordingThunks';
+import {Button} from '@mui/material';
 
 export const RecordButton: React.FC = () => {
   const isRecording = useAppSelector(selectIsRecording);

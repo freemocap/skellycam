@@ -1,4 +1,4 @@
-import { z } from "zod";
+import {z} from "zod";
 import {CurrentFrameRateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 import {createSlice} from "@reduxjs/toolkit";
 

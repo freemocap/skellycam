@@ -13,11 +13,9 @@ function App() {
 
         <Provider store={AppStateStore}>
             <CameraProvider>
-            <WebSocketContextProvider url={wsUrl}>
-                <React.Fragment>
+                <WebSocketContextProvider url={wsUrl}>
                     <PaperbaseContent/>
-                </React.Fragment>
-            </WebSocketContextProvider>
+                </WebSocketContextProvider>
             </CameraProvider>
         </Provider>
     );

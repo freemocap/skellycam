@@ -3,6 +3,8 @@ import React, {useEffect, useState} from "react";
 import {useWebSocketContext} from "@/context/WebSocketContext";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
 import {RecordButton} from "@/components/RecordButton";
+import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
+import CameraButtonsGroup from "./CameraButtonsGroup";
 
 
 export const CamerasView = () => {
@@ -29,6 +31,7 @@ export const CamerasView = () => {
         <Box sx={{
             display: "flex",
             flexDirection: "column",
+            justifyContent: "center",
             height: "100%",
             width: "100%",
             overflow: "hidden"
@@ -42,7 +45,9 @@ export const CamerasView = () => {
                     sx={{flex: 1, minHeight: 0, height: "100%", width: "100%"}}
                 />
             )}
-            <RecordButton/>
+            <CameraButtonsGroup />
+
+
         </Box>
     );
 };

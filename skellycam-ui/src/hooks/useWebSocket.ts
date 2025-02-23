@@ -4,10 +4,11 @@ import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/types/zod-schemas/
 import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 import {setAvailableCameras} from "@/store/slices/availableCamerasSlice";
 import {AvailableCamerasSchema} from "@/types/zod-schemas/AvailableCamerasSchema";
-import { useAppDispatch } from '@/store/hooks';
+import {useAppDispatch} from '@/store/hooks';
 import {setCurrentFramerate, setIsRecording, setRecordingDirectory} from "@/store/slices/appState";
 // import {camerasSetAll} from "@/store/slices/cameraConfigsSlice";
 import {LogRecordSchema} from "@/types/zod-schemas/LogRecordSchema";
+
 const MAX_RECONNECT_ATTEMPTS = 20;
 const MAX_LOGS = 1000;
 export const useWebSocket = (wsUrl: string) => {

@@ -1,6 +1,7 @@
 import React from 'react';
-import {Box, Button} from '@mui/material';
+import {Button} from '@mui/material';
 import axios from 'axios';
+import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 
 export const ConnectToCamerasButton = () => {
     const sendConnectDetectRequest = async () => {
@@ -20,16 +21,16 @@ export const ConnectToCamerasButton = () => {
     };
 
     return (
-        <Box sx={{margin: '1rem'}}>
-            <Button
-                variant="contained"
-                onClick={sendConnectDetectRequest}
-                sx={{
-                    fontSize: '1.25rem'
-                }}
-            >
-                Detect/Connect to Cameras
-            </Button>
-        </Box>
+        <Button
+            variant="contained"
+            onClick={sendConnectDetectRequest}
+            sx={{
+                fontSize: '1.25rem',
+                color: extendedPaperbaseTheme.palette.primary.contrastText,
+                backgroundColor: extendedPaperbaseTheme.palette.primary.light,
+            }}
+        >
+            Detect/Connect to Cameras
+        </Button>
     );
 };
