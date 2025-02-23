@@ -60,6 +60,9 @@ jobs:
       - name: Install Nuitka
         run: uv pip install nuitka
 
+      - name: Check Nuitka installation
+        run: nuitka --version
+
       - name: Run test artifact generation (if test mode)
         if: ${{ github.event.inputs.test-mode == 'true' }}
         working-directory: skellycam-ui
