@@ -39,7 +39,7 @@ export const CamerasView = () => {
                 <CameraImagesGrid
                     images={latestImages}
                     showAnnotation={showAnnotation}
-                    sx={{flex: 1, minHeight: 0}}
+                    sx={{flex: 1, minHeight: 0, height: "100%", width: "100%"}}
                 />
             )}
             <RecordButton/>

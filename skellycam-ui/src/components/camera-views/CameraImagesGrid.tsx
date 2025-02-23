@@ -14,7 +14,7 @@ export const CameraImagesGrid = ({ images, showAnnotation, sx }: CameraImagesGri
                 display: "flex",
                 flexDirection: "row",
                 flexWrap: "wrap",
-                flexGrow: 1,
+                // flexGrow: 1,
                 justifyContent: "center",
                 alignItems: "center",
                 overflow: "hidden",
