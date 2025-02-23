@@ -95,6 +95,8 @@ jobs:
 
       - name: Run nuitka build script (Windows)
         if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'windows-latest' }}
+        env:
+          NUITKA_DOWNLOADS_DISABLED: 0
         run: |
           cd skellycam-ui
           pwd
