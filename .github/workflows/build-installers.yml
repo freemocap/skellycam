@@ -15,8 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-#        os: [ windows-latest, ubuntu-latest, macos-latest]
-        os: [ windows-latest]
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
         include:
           - os: ubuntu-latest
             venv-activate: source .venv/bin/activate
@@ -27,7 +26,7 @@ jobs:
           - os: windows-latest
             venv-activate: .venv\\Scripts\\activate
             nuitka-script: ..\\installers\\nuitka_scripts\\nuitka_installer_windows.bat
-
+    continue-on-error: true  # let each OS run completely even if one fails
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
