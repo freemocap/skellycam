@@ -5,10 +5,6 @@ on:
     branches: [ "jon/development" ]
   workflow_dispatch:
     inputs:
-      test-mode:
-        description: 'Run in test mode (skip Nuitka build)'
-        required: false
-        default: 'false'
 
 jobs:
   build:
@@ -47,22 +43,13 @@ jobs:
       - name: Install Python dependencies
         run: uv sync
 
-      - name: Run test artifact generation (if test mode)
-        if: ${{ github.event.inputs.test-mode == 'true' }}
-        run: |
-          # Keep your existing test artifact logic here
-          mkdir -p build
-          touch build/skellycam_server.exe
 
       - name: Build with Nuitka
-        if: ${{ github.event.inputs.test-mode != 'true' }}
         uses: Nuitka/Nuitka-Action@main
         with:
           nuitka-version: main
           script-name: skellycam/__main__.py
           mode: standalone
-          onefile: true
-          output-filename: skellycam_server.exe
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           include-data-dir: |
             shared/skellycam-logo/skellycam-favicon.ico
