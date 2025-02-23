@@ -63,6 +63,9 @@ jobs:
       - name: Check Nuitka installation
         run: nuitka --version
 
+      - name: print folder contents
+        run: ls
+
       - name: Change into the skellycam-ui directory
         run: cd skellycam-ui
 
