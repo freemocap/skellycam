@@ -15,8 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 def run_server(global_kill_flag: multiprocessing.Value):
+    logger.info("Starting server main process")
     server_manager: UvicornServerManager = create_server_manager(global_kill_flag=global_kill_flag)
     try:
+
         server_manager.run_server()
     except Exception as e:
         logger.error(f"Server main process ended with error: {e}")
@@ -29,11 +31,14 @@ def run_server(global_kill_flag: multiprocessing.Value):
 
 
 async def main(global_kill_flag: multiprocessing.Value):
-    active_elements_check_loop_task = asyncio.create_task(active_elements_check_loop(global_kill_flag=global_kill_flag,
 
-                                                                                     context="Skellycam Server"
-                                                                                     ),
-                                                          name="AppLifecycleCheckLoop")
+
+    active_elements_check_loop_task = asyncio.create_task(
+        active_elements_check_loop(global_kill_flag=global_kill_flag,
+
+                                   context="Skellycam Server"
+                                   ),
+        name="AppLifecycleCheckLoop")
     active_elements_check_loop_task.add_done_callback(lambda _: logger.info("Shutdown listener loop task ended"))
 
     main_server_thread = threading.Thread(target=run_server,
@@ -48,38 +53,41 @@ async def main(global_kill_flag: multiprocessing.Value):
     global_kill_flag.value = True
 
 
-# def set_shutdown_flag_after_10s():
-#     # Wait for 10 seconds
-#     for _ in range(10):
-#         time.sleep(1)
-#         print(f"os.getenv('SKELLYCAM_SHOULD_SHUTDOWN'): {os.getenv('SKELLYCAM_SHOULD_SHUTDOWN')}")
-#     # Set the environment variable
-#     os.environ["SKELLYCAM_SHOULD_SHUTDOWN"] = "True"
-#     print("Environment variable set to:", os.getenv("SKELLYCAM_SHOULD_SHUTDOWN"))
-#
-#
-# # Create and start the thread
-# shutdown_thread = threading.Thread(target=set_shutdown_flag_after_10s, name="ShutdownThread")
-# shutdown_thread.start()
-
-
-def check_shutdown_flag(global_kill_flag: multiprocessing.Value):
-    while not global_kill_flag.value:
+def listen_for_shutdown_signals(global_kill_flag: multiprocessing.Value):
+    logger.info(f"Starting shutdown signal listener thread...")
+    # Loop until the variable is explicitly "true" or kill flag is set
+    while os.getenv("SKELLYCAM_SHOULD_SHUTDOWN", "").lower() != "true" and not global_kill_flag.value:
         time.sleep(1)
-        if os.getenv("SKELLYCAM_SHOULD_SHUTDOWN"):
-            global_kill_flag.value = True
-            logger.info("Shutdown environment flag detected - setting global kill flag to True")
-            break
+
+    # Only set kill flag if the variable is "true"
+    if os.getenv("SKELLYCAM_SHOULD_SHUTDOWN", "").lower() == "true":
+        logger.info("Received valid shutdown signal from environment variable")
+        global_kill_flag.value = True
+
+def handle_shutdown_signal(signum, frame):
+    """Signal handler for termination signals."""
+    logger.info(f"Received shutdown signal {signum} - setting global kill flag to True")
+    original_global_kill_flag.value = True
 
 
 if __name__ == "__main__":
     original_global_kill_flag = multiprocessing.Value("b", False)
-    check_shutdown_flag_thread = threading.Thread(target=check_shutdown_flag,
-                                                  args=(original_global_kill_flag,),
-                                                  daemon=True,
-                                                  name="CheckShutdownFlagThread")
-    check_shutdown_flag_thread.start()
-    asyncio.run(main(global_kill_flag=original_global_kill_flag))
+
+    # Register signal handlers - these will set the global kill flag to True when the process receives a termination signal
+    signal.signal(signal.SIGTERM, handle_shutdown_signal)  # Normal termination signal
+    signal.signal(signal.SIGINT, handle_shutdown_signal)  # Ctrl+C
+    shutdown_listener_thread = threading.Thread(target=listen_for_shutdown_signals,
+                                                kwargs=dict(global_kill_flag=original_global_kill_flag),
+                                                daemon=True,
+                                                name="ShutdownListenerThread")
+    shutdown_listener_thread.start()
+    try:
+        asyncio.run(main(global_kill_flag=original_global_kill_flag))
+    finally:
+        original_global_kill_flag.value = True  # Ensure cleanup
+
     print("Done!  Thank you for using SkellyCam 💀📸✨")
+    logger.success("Done!  Thank you for using SkellyCam 💀📸✨")
     os.kill(os.getpid(), signal.SIGTERM)
+    print("shouldn't see this")
     sys.exit(0)

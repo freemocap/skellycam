@@ -8,7 +8,6 @@ import Box from "@mui/material/Box";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {List, ListItem, Paper} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
-import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
 import {ConfigView} from "@/components/config-views/ConfigView";
 
 
@@ -43,7 +42,6 @@ export const LeftSidePanelContent = () => {
             </List>
             <WebsocketConnectionStatus/>
 
-            <ConnectToCamerasButton/>
                 <Accordion>
                     <AccordionSummary
                         expandIcon={<ExpandMoreIcon sx={{color: extendedPaperbaseTheme.palette.primary.contrastText}}/>}

@@ -4,6 +4,7 @@ import {z} from "zod";
 import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/types/zod-schemas/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 import {LogRecordSchema} from "@/types/zod-schemas/LogRecordSchema";
+
 interface WebSocketContextProps {
     isConnected: boolean;
     latestFrontendPayload: z.infer<typeof FrontendFramePayloadSchema> | null;

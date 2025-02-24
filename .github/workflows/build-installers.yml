@@ -1,0 +1,81 @@
+name: Build installers
+
+on:
+  push:
+    branches: [ "jon/development" ]
+  workflow_dispatch:
+    inputs:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest]  # Start with Windows first
+        include:
+          - os: windows-latest
+            venv-activate: .venv\Scripts\activate
+#    continue-on-error: true
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Create venv
+        run: uv venv
+
+      - name: Activate venv
+        run: ${{ matrix.venv-activate }}
+
+      - name: Install Python dependencies
+        run: uv sync
+
+
+      - name: Build with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: main
+          script-name: skellycam/__main__.py
+          mode: standalone
+          windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
+
+
+      - name: Check Nuitka build
+        if: ${{ github.event.inputs.test-mode != 'true' }}
+        run: |
+          ls -l skellycam_server.exe
+      - name: Move skellycam exe to build into `skellycam-ui` directory
+        run: |          
+          mv skellycam_server.exe skellycam-ui
+
+      - name: Install UI dependencies
+        run: |
+          cd skellycam-ui
+          npm install
+
+      - name: Build UI
+        run: |
+          cd skellycam-ui
+          npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-${{ runner.os }}
+          path: |
+            build/skellycam_server.exe
+            build/*.dist/**
+          include-hidden-files: true

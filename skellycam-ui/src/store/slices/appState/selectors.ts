@@ -1,6 +1,6 @@
 // src/store/slices/appState/selectors.ts
-import { createSelector } from '@reduxjs/toolkit';
-import { RootState } from '@/store/appStateStore';
+import {createSelector} from '@reduxjs/toolkit';
+import {RootState} from '@/store/appStateStore';
 
 export const selectIsRecording = (state: RootState) => state.appState.isRecording;
 export const selectFrameRate = (state: RootState) => state.appState.framerate;

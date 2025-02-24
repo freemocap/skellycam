@@ -1,4 +1,4 @@
-import { z } from "zod";
+import {z} from "zod";
 
 // Define the schema for JPEG images with base64 strings
 export const JpegImagesSchema = z.record(

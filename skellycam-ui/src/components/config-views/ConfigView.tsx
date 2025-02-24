@@ -1,5 +1,5 @@
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
-import {Divider, List, ListItem, ListItemText, Paper, Typography} from "@mui/material";
+import {List, ListItem, ListItemText, Paper} from "@mui/material";
 import {useDetectedDevicesContext} from "@/context/detectedDevicesContext";
 
 export const ConfigView = () => {

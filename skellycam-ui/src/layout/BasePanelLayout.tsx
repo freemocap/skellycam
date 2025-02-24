@@ -2,7 +2,7 @@ import React from "react"
 import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
 import {paperbaseTheme} from "@/layout/paperbase_theme/paperbase-theme";
 import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
-import { TerminalPanelContent } from "@/components/ui-components/TerminalPanelContent";
+import {TerminalPanelContent} from "@/components/ui-components/TerminalPanelContent";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     return (

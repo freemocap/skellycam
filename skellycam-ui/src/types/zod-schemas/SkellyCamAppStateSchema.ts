@@ -1,4 +1,4 @@
-import { z } from "zod";
+import {z} from "zod";
 import {AvailableCamerasSchema} from "@/types/zod-schemas/AvailableCamerasSchema";
 
 export const CurrentFrameRateSchema = z.object({

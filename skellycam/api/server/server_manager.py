@@ -1,9 +1,7 @@
 import logging
 import multiprocessing
-import os
 import threading
 import time
-from typing import Optional
 
 import psutil
 import uvicorn
@@ -12,7 +10,6 @@ from uvicorn import Server
 from skellycam.api.server.server_constants import HOSTNAME, PORT
 from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_lifespan.create_skellycam_app import create_skellycam_app
-from skellycam.utilities.check_shutdown_flag import get_server_shutdown_environment_flag
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
@@ -61,11 +58,13 @@ class UvicornServerManager:
             try:
                 logger.debug("Running uvicorn server...")
                 self.server.run() #blocks until server is stopped
+                logger.info("Running uvicorn server...")
             except Exception as e:
                 logger.error(f"A fatal error occurred in the uvicorn server: {e}")
                 logger.exception(e)
                 raise
             finally:
+                self._global_kill_flag.value = True
                 logger.info(f"Uvicorn server thread completed")
 
         self.server_thread = threading.Thread(target=server_thread, name="UvicornServerManagerThread", daemon=True)
@@ -81,18 +80,20 @@ class UvicornServerManager:
         if self.server:
             self.server.should_exit = True
         time.sleep(1)
-        # Kill child processes
-        current_process = psutil.Process()
-        for child in current_process.children(recursive=True):
-            logger.warning(f"Killing child process: {child} - figure out how to make this shut down gracefully!")
-            child.kill()
+        try:
+            # Kill child processes
+            current_process = psutil.Process()
+            for child in current_process.children(recursive=True):
+                logger.warning(f"Killing child process: {child} - figure out how to make this shut down gracefully!")
+                child.kill()
+        except Exception as e:
+            logger.exception(f"Error killing child processes: {e}")
 
     def shutdown_listener_loop(self):
-        while self._global_kill_flag.value is False and not get_server_shutdown_environment_flag():
+        logger.info("Starting shutdown listener loop")
+        while self._global_kill_flag.value is False :
             time.sleep(1)
-        if get_server_shutdown_environment_flag():
-            logger.info("Detected SKELLYCAM_APP_SHUTDOWN environment variable - shutting down server")
-            self.shutdown_server()
         if self._global_kill_flag.value:
             logger.info("Detected global kill flag - shutting down server")
             self.shutdown_server()
+        logger.info("Shutdown listener loop ended")

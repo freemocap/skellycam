@@ -1,0 +1,119 @@
+name: Build installers
+
+on:
+#  push:
+#    branches: [ "jon/development" ]
+  workflow_dispatch:
+    inputs:
+      test-mode:
+        description: 'Run in test mode (skip Nuitka build)'
+        required: false
+        default: 'false'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        include:
+          - os: ubuntu-latest
+            venv-activate: source .venv/bin/activate
+            nuitka-script: ../installers/nuitka_scripts/nuitka_installer_linux.sh
+          - os: macos-latest
+            venv-activate: source .venv/bin/activate
+            nuitka-script: ../installers/nuitka_scripts/nuitka_installer_macos.sh
+          - os: windows-latest
+            venv-activate: .venv\\Scripts\\activate
+            nuitka-script: ..\\installers\\nuitka_scripts\\nuitka_installer_windows.bat
+    continue-on-error: true  # let each OS run completely even if one fails
+    steps:
+
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Make scripts executable (Unix)
+        if: runner.os != 'Windows'
+        run: chmod +x installers/nuitka_scripts/*.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Create venv
+        run: uv venv
+
+      - name: Activate venv
+        run: ${{ matrix.venv-activate }}
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Install Nuitka
+        run: pip install nuitka
+
+      - name: Check Nuitka installation
+        run: nuitka --version
+
+
+      - name: Run test artifact generation (if test mode)
+        if: ${{ github.event.inputs.test-mode == 'true' }}
+        run: |
+          touch skellycam_server.exe  # Unix
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "Dummy exe" > skellycam_server.exe
+            mkdir -p release/0.0.1-test
+            echo "Test installer" > release/0.0.1-test/skellycam_0.0.1-test_installer.exe
+          else
+            mkdir -p release/0.0.1-test
+            touch release/0.0.1-test/skellycam_0.0.1-test_installer
+          fi
+
+      - name: Run nuitka build script (Linux)
+        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'ubuntu-latest' }}
+        run: |
+          cd skellycam-ui
+          pwd
+          bash ${{ matrix.nuitka-script }}
+
+      - name: Run nuitka build script (macOS)
+        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'macos-latest' }}
+        run: |
+          cd skellycam-ui
+          pwd
+          bash ${{ matrix.nuitka-script }}
+
+      - name: Run nuitka build script (Windows)
+        if: ${{ github.event.inputs.test-mode != 'true' && matrix.os == 'windows-latest' }}
+        run: |
+          cd skellycam-ui
+          pwd
+          ${{ matrix.nuitka-script }}
+
+      - name: Install UI dependencies
+        run: |
+          cd skellycam-ui
+          npm install
+
+      - name: Build UI
+        run: |
+          cd skellycam-ui
+          npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-${{ runner.os }}
+          path: |
+            skellycam-ui/skellycam_server*
+            skellycam-ui/release/**/*-installer*

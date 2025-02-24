@@ -1,3 +1,4 @@
+// /electron/preload/index.ts
 import {contextBridge, ipcRenderer} from 'electron'
 
 // --------- Expose some API to the Renderer process ---------
@@ -25,6 +26,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
+  console.log('Document Object Model (DOM) is ready.')
   return new Promise(resolve => {
     if (condition.includes(document.readyState)) {
       resolve(true)

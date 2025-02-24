@@ -14,7 +14,7 @@ RUN choco install rust -y
 WORKDIR /app
 
 # Copy the PowerShell script and your project files into the container
-COPY installers/install-windows-pyapp.ps1 /app/
+chanCOPY installers/install-windows-pyapp.ps1 /app/
 COPY installers /app/
 
 # Run your PowerShell script
