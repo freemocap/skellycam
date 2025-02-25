@@ -518,31 +518,16 @@
 
         </div>
     </div>
+    <div class="button-group">
+        <button onclick="callApi(`${http_url}/skellycam/video_playback/open_videos`, 'POST', '/Users/philipqueen/freemocap_data/recording_sessions/freemocap_test_data/synchronized_videos')">Open Videos</button>
+        <button onclick="callApi(`${http_url}/skellycam/video_playback/close_videos`)">Close Videos</button>
+        <button onclick="callApi(`${http_url}/skellycam/video_playback/play_videos`)">Play Videos</button>
+        <button onclick="callApi(`${http_url}/skellycam/video_playback/pause_videos`)">Pause Videos</button>
+        <button onclick="callApi(`${http_url}/skellycam/video_playback/stop_videos`)">Stop Videos</button>
+        <button onclick="callApi(`${http_url}/skellycam/video_playback/seek_videos`, 'POST', '100')">Seek Videos</button>
+    </div>
 
 <div>
-    <button onclick="callApi('http://localhost:8006/skellycam/cameras/connect/apply', 'POST')">/cameras/connect/apply</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/cameras/close')">Close Camera Connections</button>
-
-    <!-- Root and App API Calls -->
-    <button onclick="sendMessage('Hello from the client')">Send WS Message</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/')">Read Root</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/app/state')">App State</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/app/healthcheck')">Hello👋</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/app_state/shutdown')">goodbye👋</button>
-
-
-    <!-- Camera Operation API Calls -->
-    <button onclick="callApi('http://localhost:8006/skellycam/cameras/detect')">Detect Cameras</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/cameras/record/start')">Start Recording</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/cameras/record/stop')">Stop Recording</button>
-
-    <!-- Video Playback API Calls -->
-    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/open_videos', 'POST', '/Users/philipqueen/freemocap_data/recording_sessions/freemocap_test_data/synchronized_videos')">Open Videos</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/close_videos')">Close Videos</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/play_videos')">Play Videos</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/pause_videos')">Pause Videos</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/stop_videos')">Stop Videos</button>
-    <button onclick="callApi('http://localhost:8006/skellycam/video_playback/seek_videos')">Seek Videos</button>
     <div id="info-container">
         <div class="framerate-display">
             <div id="backend-framerate" class="framerate-text">Server/Backend - Frame Duration: N/A ms |

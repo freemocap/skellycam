@@ -73,8 +73,6 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
                           camera_group_dto.configs.values()]
-        for config in camera_group_dto.configs.values():
-            logger.warning(config)
         logger.info(f"Creating shared memory with {len(example_images)} cameras, "
                     f"image shape: {example_images[0].shape}, "
                     f"image dtype: {example_images[0].dtype}, "
@@ -205,6 +203,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
             self.previous_read_mf_payload = mf_payload
             tok = time.perf_counter_ns()
         elif retrieve_type == "latest":
+            # TODO: may want to wrap this in a try/except, since pulling an invalid frame will be an unrecoverable error state (hit this in testing)
             mf_payload = MultiFramePayload.from_numpy_buffer(
                 buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_latest_payload(),
                                                           mf_metadata_buffer=self.mf_metadata_shm.get_latest_payload(),

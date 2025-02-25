@@ -55,7 +55,7 @@ class VideoGroupThread:
             video_playback_handler(video_group_dto=video_group_dto, multi_frame_escape_shm_dto=multi_frame_escape_shm_dto)
 
         except Exception as e:
-            logger.error(f"VideoGroupThread error: {e}")
+            logger.error(f"VideoGroupThread error: {str(e)}")
             logger.exception(e)
             raise
         finally:

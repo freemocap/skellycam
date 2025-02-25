@@ -12,7 +12,8 @@ seek_videos_router = APIRouter()
 def seek_videos(request: int = Body(..., examples=[400])): # TODO: make sure this is the right use of examples
     logger.api("Received `skellycam/video_playback/seek_videos` POST request...")
     try:
-        get_skellycam_app_controller().seek_videos(frame_number=request)
+        frame_number = int(request)
+        get_skellycam_app_controller().seek_videos(frame_number=frame_number)
         logger.api("`skellycam/video_playback/seek_videos` POST request handled successfully.")
     except Exception as e:
         logger.error(f"Error when processing `/seek_videos` request: {type(e).__name__} - {e}")

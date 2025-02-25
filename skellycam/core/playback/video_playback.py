@@ -61,6 +61,20 @@ class VideoPlayback:
             raise RuntimeError(f"Videos are not synchronized, frame counts do not match: {num_frames}")
 
         return num_frames.pop()
+    
+    @property
+    def current_payload_is_valid(self) -> bool:
+        if self.current_payload is None:
+            logger.warning("MultiFramePayload is None")
+            return False
+        if not self.current_payload.full:
+            logger.warning("MultiFramePayload is not full")
+            return False
+        if self.current_payload.multi_frame_number != self.frame_number:
+            logger.warning(f"MultiFramePayload has frame number {self.current_payload.multi_frame_number}, but current frame number is {self.frame_number}")
+            return False
+        
+        return True
 
     def close_video_captures(self):
         for video_capture in self.video_captures.values():
