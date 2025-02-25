@@ -232,9 +232,11 @@ class SkellycamAppState:
 
     def stop_videos(self):
         self.ipc_flags.playback_stop_flag.value = True
+        self.ipc_flags.playback_pause_flag.value = True
         self.ipc_flags.playback_run_flag.value = False
 
     def seek_videos(self, frame_number: int):
+        self.ipc_flags.playback_stop_flag.value = False  # if this is set it will default back to frame 0 after seeking
         self.ipc_flags.playback_frame_number_flag.value = frame_number
 
 
