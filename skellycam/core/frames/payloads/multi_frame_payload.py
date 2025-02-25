@@ -11,6 +11,7 @@ from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     create_empty_frame_metadata
+from skellycam.core.playback.video_config import VideoConfigs
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
 from skellycam.utilities.rotate_image import rotate_image
@@ -49,7 +50,7 @@ class MultiFrameNumpyBuffer(BaseModel):
             multi_frame_number=mf_number.pop()
         )
 
-    def to_multi_frame_payload(self, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+    def to_multi_frame_payload(self, camera_configs: CameraConfigs | VideoConfigs) -> 'MultiFramePayload':
         time_mapping = UtcToPerfCounterMapping.from_numpy_buffer(self.mf_time_mapping_buffer)
 
         if self.mf_metadata_buffer.shape[0] % FRAME_METADATA_SHAPE[0] != 0:
@@ -193,7 +194,7 @@ class MultiFramePayload(BaseModel):
                                                        description=UtcToPerfCounterMapping.__doc__)
     backend_framerate: CurrentFramerate|None = None
     frontend_framerate: CurrentFramerate|None = None
-    camera_configs: CameraConfigs
+    camera_configs: CameraConfigs | VideoConfigs
 
     @classmethod
     def create_initial(cls, camera_configs: CameraConfigs) -> 'MultiFramePayload':
@@ -203,7 +204,7 @@ class MultiFramePayload(BaseModel):
     @classmethod
     def from_previous(cls,
                       previous: 'MultiFramePayload',
-                      camera_configs: CameraConfigs) -> 'MultiFramePayload':
+                      camera_configs: CameraConfigs | VideoConfigs) -> 'MultiFramePayload':
         return cls(frames={CameraId(camera_id): None for camera_id in previous.frames.keys()},
                    utc_ns_to_perf_ns=previous.utc_ns_to_perf_ns,
                    camera_configs=camera_configs,
@@ -229,7 +230,7 @@ class MultiFramePayload(BaseModel):
         return MultiFrameNumpyBuffer.from_multi_frame_payload(self)
 
     @classmethod
-    def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+    def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs | VideoConfigs) -> 'MultiFramePayload':
         return buffer.to_multi_frame_payload(camera_configs=camera_configs)
 
     def add_frame(self, frame_dto: FramePayload) -> None:

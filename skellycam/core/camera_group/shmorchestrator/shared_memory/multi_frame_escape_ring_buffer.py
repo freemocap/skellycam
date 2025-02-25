@@ -14,13 +14,15 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_share
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
     create_empty_frame_metadata, FRAME_METADATA_DTYPE
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
+from skellycam.core.playback.video_config import VideoConfigs
+from skellycam.core.playback.video_group_dto import VideoGroupDTO
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class MultiFrameEscapeSharedMemoryRingBufferDTO:
-    camera_group_dto: CameraGroupDTO
+    camera_group_dto: CameraGroupDTO | VideoGroupDTO
     mf_time_mapping_shm_dto: SharedMemoryRingBufferDTO
     mf_metadata_shm_dto: SharedMemoryRingBufferDTO
     mf_image_shm_dto: SharedMemoryRingBufferDTO
@@ -30,7 +32,7 @@ class MultiFrameEscapeSharedMemoryRingBufferDTO:
 
 @dataclass
 class MultiFrameEscapeSharedMemoryRingBuffer:
-    camera_group_dto: CameraGroupDTO
+    camera_group_dto: CameraGroupDTO | VideoGroupDTO
 
     mf_time_mapping_shm: SharedMemoryRingBuffer
     mf_metadata_shm: SharedMemoryRingBuffer
@@ -45,7 +47,9 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @property
     def camera_ids(self) -> List[CameraId]:
-        return list(self.camera_group_dto.camera_ids.keys())
+        if isinstance(self.camera_group_dto, VideoGroupDTO):
+            return self.camera_group_dto.video_ids  # TODO: this could be handled better, but this property isn't being used right now
+        return self.camera_group_dto.camera_ids
 
     @property
     def valid(self) -> bool:
@@ -65,10 +69,14 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @classmethod
     def create(cls,
-               camera_group_dto: CameraGroupDTO,
+               camera_group_dto: CameraGroupDTO | VideoGroupDTO,
                read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
-                          camera_group_dto.camera_configs.values()]
+                          camera_group_dto.configs.values()]
+        logger.info(f"Creating shared memory with {len(example_images)} cameras, "
+                    f"image shape: {example_images[0].shape}, "
+                    f"image dtype: {example_images[0].dtype}, "
+                    f"image size: {example_images[0].nbytes / 1e6:.3f}MB")
         example_images_ravelled = [image.ravel() for image in example_images]
         example_mf_image_buffer = np.concatenate(
             example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated
@@ -76,14 +84,14 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         example_mf_metadatas = [create_empty_frame_metadata(camera_id=camera_id,
                                                             frame_number=0,
                                                             config=config)
-                                for camera_id, config in camera_group_dto.camera_configs.items()]
+                                for camera_id, config in camera_group_dto.configs.items()]
         example_mf_metadatas_ravelled = [metadata.ravel() for metadata in example_mf_metadatas]
         example_mf_metadata_buffer = np.concatenate(
             example_mf_metadatas_ravelled)  # Example metadata unravelled into 1D arrays and concatenated
 
         mf_image_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_image_buffer,
                                                      dtype=DEFAULT_IMAGE_DTYPE,
-                                                     memory_allocation=ONE_GIGABYTE*int(len(list(camera_group_dto.camera_configs.keys()))),
+                                                     memory_allocation=ONE_GIGABYTE*int(len(list(camera_group_dto.configs.keys()))),
                                                      read_only=read_only)
         mf_metadata_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_metadata_buffer,
                                                         dtype=FRAME_METADATA_DTYPE,
@@ -103,7 +111,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @classmethod
     def recreate(cls,
-                 camera_group_dto: CameraGroupDTO,
+                 camera_group_dto: CameraGroupDTO | VideoGroupDTO,
                  shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
                  read_only: bool):
         mf_image_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_image_shm_dto,
@@ -169,7 +177,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         #             f"\n\t\tput time mapping in shm: {(tik_put_time_mapping - tik_put_metadata)/1e6:.3f}ms)")
 
     def get_multi_frame_payload(self,
-                                camera_configs: CameraConfigs,
+                                camera_configs: CameraConfigs | VideoConfigs,
                                 retrieve_type: Literal["latest", "next"]
                                 ) -> MultiFramePayload:
         if retrieve_type == "next" and self.read_only:
@@ -195,6 +203,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
             self.previous_read_mf_payload = mf_payload
             tok = time.perf_counter_ns()
         elif retrieve_type == "latest":
+            # TODO: may want to wrap this in a try/except, since pulling an invalid frame will be an unrecoverable error state (hit this in testing)
             mf_payload = MultiFramePayload.from_numpy_buffer(
                 buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_latest_payload(),
                                                           mf_metadata_buffer=self.mf_metadata_shm.get_latest_payload(),
@@ -211,6 +220,16 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         #     print(f"\t\tGET MF FROM SHM -  multi-frame {mf_payload.multi_frame_number} from shared memory (took: {(tok - tik)/1e6:.3f}ms total, "
         #             f"\n\t\t\tfrom numpy: {(tik_from_numpy - tik)/1e6:.3f}ms)")
         return mf_payload
+    
+    def reset_last_written_indices(self, updated_index: int = 0):
+        """
+        Reset the last written indices of the shared memory buffers to a given index.
+        Intended to be used when seeking in a video.
+        """
+        self.mf_image_shm.last_written_index.value = updated_index
+        self.mf_metadata_shm.last_written_index.value = updated_index
+        self.mf_time_mapping_shm.last_written_index.value = updated_index
+        self.latest_mf_number.value = updated_index
 
     def close(self):
         self.mf_image_shm.close()

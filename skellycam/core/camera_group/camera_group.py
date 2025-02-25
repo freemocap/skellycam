@@ -47,6 +47,10 @@ class CameraGroup:
     @property
     def camera_configs(self) -> CameraConfigs:
         return self.dto.camera_configs
+    
+    @property
+    def configs(self) -> CameraConfigs:
+        return self.camera_configs
 
 
 

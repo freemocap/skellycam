@@ -17,6 +17,10 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escap
     MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_shared_memory import \
     RingBufferCameraSharedMemory
+from skellycam.core.playback.video_config import VideoConfigs
+from skellycam.core.playback.video_group import VideoGroup
+from skellycam.core.playback.video_group_dto import VideoGroupDTO
+from skellycam.core.playback.video_group_shmorchestrator import VideoGroupSharedMemoryOrchestrator
 from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
@@ -33,11 +37,12 @@ class SkellycamAppState:
     ipc_queue: multiprocessing.Queue
     logs_queue: multiprocessing.Queue
     config_update_queue: multiprocessing.Queue
-
-    shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
+    shmorchestrator: CameraGroupSharedMemoryOrchestrator | VideoGroupSharedMemoryOrchestrator | None = None
     camera_group_dto: CameraGroupDTO | None = None
     camera_group: CameraGroup | None = None
     available_cameras: AvailableCameras | None = None
+    video_group_dto: VideoGroupDTO | None = None
+    video_group: VideoGroup | None = None
     backend_framerate: CurrentFramerate | None = None
     frontend_framerate: CurrentFramerate | None = None
 
@@ -70,6 +75,35 @@ class SkellycamAppState:
                 raise ValueError("Cannot get CameraConfigs without available devices!")
             return available_cameras_to_default_camera_configs(self.available_cameras)
         return self.camera_group.camera_configs
+    
+    @property
+    def video_configs(self) -> Optional[VideoConfigs]:
+        if self.video_group is None:
+            logger.warning("Cannot get VideoConfigs without CameraGroup!")
+            return
+        return self.video_group.video_configs
+    
+    @property
+    def active_group(self) -> Optional[CameraGroup | VideoGroup]:
+        if self.camera_group is not None:
+            return self.camera_group
+        if self.video_group is not None:
+            return self.video_group
+        
+    @property
+    def active_group_dto(self) -> Optional[CameraGroupDTO | VideoGroupDTO]:
+        if self.camera_group_dto is not None:
+            return self.camera_group_dto
+        if self.video_group_dto is not None:
+            return self.video_group_dto
+        
+    @property
+    def active_group_type(self) -> Optional[str]:
+        # TODO: this could be an enum, or even just a bool for camera_group_is_active
+        if self.camera_group is not None:
+            return "CameraGroup"
+        if self.video_group is not None:
+            return "VideoGroup"
 
     def set_available_cameras(self, value: AvailableCameras):
         self.available_cameras = value
@@ -135,6 +169,7 @@ class SkellycamAppState:
 
     def _reset(self):
         self.camera_group = None
+        self.video_group = None
         self.shmorchestrator = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 
@@ -142,6 +177,68 @@ class SkellycamAppState:
         self.ipc_flags.global_kill_flag.value = True
         if self.camera_group:
             self.close_camera_group()
+        if self.video_group:
+            self.close_video_group()
+
+    def create_video_group(self, video_configs: VideoConfigs):
+        if video_configs is None:
+            raise ValueError("Cannot create VideoGroup without video_configs!")
+        self.video_group_dto = VideoGroupDTO(video_configs=video_configs,
+                                             ipc_queue=self.ipc_queue,
+                                             ipc_flags=self.ipc_flags,
+                                             group_uuid=str(uuid4())
+                                             )
+        self.shmorchestrator = VideoGroupSharedMemoryOrchestrator.create(video_group_dto=self.video_group_dto, 
+                                                                          read_only=True)
+        self.video_group = VideoGroup.create(video_group_dto=self.video_group_dto,
+                                             shmorc_dto=self.shmorchestrator.to_dto()
+                                             )
+
+        logger.info(f"Video group created successfully for cameras: {self.video_group.video_ids}")
+
+    def update_video_group(self,
+                           video_configs: VideoConfigs):
+        if self.video_group is None:
+            raise ValueError("Cannot update VideoGroup if it does not exist!")
+        self.shmorchestrator.recreate(video_group_dto=self.video_group_dto,
+                                      shmorc_dto=self.shmorchestrator.to_dto(),
+                                      read_only=True)
+        # TODO: may need to recreate or update frame escape shared memory based on new video configs, check how cameras do this
+        # camera group does this with different update parameters, including a full reset option
+        # we probably can scrap the update code and just always do a full reset
+        self.video_group.update_video_configs(video_configs=video_configs,
+                                              shmorc_dto=self.shmorchestrator.to_dto())
+
+    def close_video_group(self):
+        if self.video_group is None:
+            logger.warning("Video group does not exist, so it cannot be closed!")
+            return
+        logger.debug("Closing existing video group...")
+        self.video_group.close()
+        self.video_group = None # camera group doesn't do this
+        self.shmorchestrator.close_and_unlink()
+        self._reset()
+        logger.success("Camera group closed successfully")
+
+    # TODO: double check we don't need to the queue here
+    def play_videos(self):
+        self.ipc_flags.playback_run_flag.value = True
+        self.ipc_flags.playback_pause_flag.value = False
+        self.ipc_flags.playback_stop_flag.value = False
+
+    def pause_videos(self):
+        self.ipc_flags.playback_run_flag.value = False
+        self.ipc_flags.playback_pause_flag.value = True
+
+    def stop_videos(self):
+        self.ipc_flags.playback_stop_flag.value = True
+        self.ipc_flags.playback_pause_flag.value = True
+        self.ipc_flags.playback_run_flag.value = False
+
+    def seek_videos(self, frame_number: int):
+        self.ipc_flags.playback_stop_flag.value = False  # if this is set it will default back to frame 0 after seeking
+        self.ipc_flags.playback_frame_number_flag.value = frame_number
+
 
 
 class SkellycamAppStateDTO(BaseModel):

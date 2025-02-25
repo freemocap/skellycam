@@ -125,23 +125,26 @@ class WebsocketServer:
             while self.should_continue:
                 await async_wait_1ms()
 
+                if self._app_state.active_group is None:
+                    continue
+
                 if not self._app_state.shmorchestrator or not self._app_state.shmorchestrator.valid or not self._app_state.frame_escape_shm.ready_to_read:
                     latest_mf_number = -1
                     mf_payload = None
                     continue
 
-                if self._app_state.camera_group and camera_group_uuid != self._app_state.camera_group.uuid:
+                if self._app_state.active_group and camera_group_uuid != self._app_state.active_group.uuid:
                     latest_mf_number = -1
                     mf_payload = None
-                    camera_group_uuid = self._app_state.camera_group.uuid
+                    camera_group_uuid = self._app_state.active_group.uuid
                     continue
 
-                if not self._app_state.frame_escape_shm.latest_mf_number.value > latest_mf_number:
+                if not self._app_state.frame_escape_shm.latest_mf_number.value > latest_mf_number and self._app_state.active_group_type == "CameraGroup":
                     continue
 
-                mf_payload = self._app_state.frame_escape_shm.get_multi_frame_payload(
-                    camera_configs=self._app_state.camera_group.camera_configs,
-                    retrieve_type="latest")
+
+                mf_payload = self._app_state.frame_escape_shm.get_multi_frame_payload(camera_configs=self._app_state.active_group.configs,
+                                                                                      retrieve_type="latest")
                 frontend_framerate_tracker.update(time.perf_counter_ns())
                 if mf_payload.multi_frame_number % 10 == 0:
                     # update every 10 multi-frames to match backend framerate behavior
