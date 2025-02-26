@@ -230,3 +230,5 @@ output_timestamps.json
 pyapp-v*
 *.exe
 *onefile-build
+installers/nuitka_scripts/skellycam_server
+skellycam_app

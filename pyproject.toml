@@ -68,6 +68,7 @@ dependencies = [
     "pyaudio>=0.2.14",
     "tabulate>=0.9.0",
     "nuitka>=2.6.5",
+    "imageio>=2.37.0"; sys_platform != "darwin",
 ]
 requires-python = ">=3.10,<3.13"
 
