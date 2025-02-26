@@ -232,3 +232,4 @@ pyapp-v*
 *onefile-build
 installers/nuitka_scripts/skellycam_server
 skellycam_app
+skellycam-ui/skellycam_server
