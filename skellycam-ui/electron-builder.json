@@ -19,7 +19,11 @@
     "target": [
       "dmg",
       "zip"
-    ]
+    ],
+    "entitlements": "entitlements.mac.plist",
+    "extendInfo": {
+      "NSCameraUsageDescription": "This app needs camera access to record videos for motion capture."
+    }
   },
   "win": {
     "target": [
