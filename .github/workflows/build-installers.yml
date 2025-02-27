@@ -4,17 +4,24 @@ on:
   push:
     branches: [ "jon/development" ]
   workflow_dispatch:
-    inputs:
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]  # Start with Windows first
+        os: [windows-latest, macos-latest]  # Start with Windows first
         include:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
+            build-command: \\installers\\nuitka_scripts\\nuitka_installer_windows.bat
+            server-executable: \\installers\\nuitka_scripts\\skellycam_server.exe
+            electron-output: \\build\\skellycam_server.exe
+          - os: macos-latest
+            venv-activate: .venv/bin/activate
+            build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
+            server-executable: /installers/nuitka_scripts/skellycam_server
+            electron-output: /build/skellycam_server
 #    continue-on-error: true
     steps:
 
@@ -45,21 +52,15 @@ jobs:
 
 
       - name: Build with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: main
-          script-name: skellycam/__main__.py
-          mode: standalone
-          windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
-
+        run: ${{ matrix.build-command }}
 
       - name: Check Nuitka build
         if: ${{ github.event.inputs.test-mode != 'true' }}
         run: |
-          ls -l skellycam_server.exe
+          ls -l ${{ matrix.server-executable }}
       - name: Move skellycam exe to build into `skellycam-ui` directory
         run: |          
-          mv skellycam_server.exe skellycam-ui
+          mv ${{ matrix.server-executable }} skellycam-ui
 
       - name: Install UI dependencies
         run: |
@@ -76,6 +77,6 @@ jobs:
         with:
           name: skellycam-${{ runner.os }}
           path: |
-            build/skellycam_server.exe
+            ${{ matrix.electron-output }}
             build/*.dist/**
           include-hidden-files: true
