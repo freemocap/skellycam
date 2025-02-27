@@ -45,7 +45,12 @@ jobs:
         run: uv venv
 
       - name: Activate venv
-        run: ${{ matrix.venv-activate }}
+        run: if [ ${{ runner.os }} != 'Windows' ]; then
+          chmod +x ${{ matrix.venv-activate }}
+          fi
+
+          ${{ matrix.venv-activate }}
+
 
       - name: Install Python dependencies
         run: uv sync
