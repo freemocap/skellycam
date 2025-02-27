@@ -2,7 +2,7 @@ name: Build installers
 
 on:
   push:
-    branches: [ "jon/development" ]
+    branches: [ "jon/development", "philip/mac_app" ]
   workflow_dispatch:
 
 jobs:
