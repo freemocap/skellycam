@@ -15,7 +15,7 @@ jobs:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
             install-port-audio: echo "PortAudio is not needed on Windows"
-            build-command: \\installers\\nuitka_scripts\\nuitka_installer_windows.bat
+            build-command: installers\\nuitka_scripts\\nuitka_installer_windows.bat
             server-executable: \\installers\\nuitka_scripts\\skellycam_server.exe
             electron-output: \\build\\skellycam_server.exe
           - os: macos-latest
