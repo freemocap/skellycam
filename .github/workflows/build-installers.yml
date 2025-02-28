@@ -47,7 +47,7 @@ jobs:
         run: pip install -e.
 
       - name: Build with Nuitka
-        run: ${{ matrix.build-command }} --disable-ccache
+        run: ${{ matrix.build-command }}
 
       - name: Check Nuitka build
         if: ${{ github.event.inputs.test-mode != 'true' }}
