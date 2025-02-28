@@ -47,7 +47,7 @@ jobs:
         run: pip install -e.
 
       - name: Build with Nuitka
-        env: 
+        env:
           LD_LIBRARY_PATH: /opt/homebrew/Cellar/portaudio/lib
         run: ${{ matrix.build-command }}
 
