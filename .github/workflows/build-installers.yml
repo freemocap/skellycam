@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]  # Start with Windows first
+        os: [windows-latest, macos-13]
         include:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
@@ -24,7 +24,7 @@ jobs:
             build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
             server-executable: /installers/nuitka_scripts/skellycam_server
             electron-output: /build/skellycam_server
-    continue-on-error: true
+    # continue-on-error: true
     steps:
 
       - name: Checkout code
