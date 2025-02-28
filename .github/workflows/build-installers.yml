@@ -22,7 +22,7 @@ jobs:
           - os: macos-13
             venv-activate: .venv/bin/activate
             install-port-audio: brew install portaudio
-            export-DYLD_LIBRARY_PATH: export DYLD_LIBRARY_PATH="/usr/local/opt/portaudio/lib:$DYLD_LIBRARY_PATH"
+            export-PYTHON_PATH: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
             build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
             server-executable: /installers/nuitka_scripts/skellycam_server
             electron-output: /build/skellycam_server
@@ -50,7 +50,7 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          ${{ matrix.export-DYLD_LIBRARY_PATH }}
+          ${{ matrix.export-PYTHON_PATH }}
           ${{ matrix.build-command }}
 
       - name: Check Nuitka build
