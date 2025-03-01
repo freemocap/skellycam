@@ -7,11 +7,3 @@
   data-files:
     patterns:
       - 'shared/skellycam-logo/skellycam-favicon.ico'
-
-# - module-name: 'pyaudio'
-#   dlls:
-#     - from_filenames:
-#         relative_path: '_sounddevice_data/portaudio-binaries'
-#         prefixes:
-#           - 'libportaudio'
-#       when: 'macos'
