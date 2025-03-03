@@ -30,7 +30,7 @@ jobs:
             venv-activate: .venv/bin/activate
             install-port-audio: sudo apt-get update && sudo apt-get install -y clang portaudio19-dev
             export-PYTHON_PATH: echo "not sure where libportaudio2 is"
-            build-command: ./installers/nuitka_scripts/nuitka_installer_linux.sh
+            build-command: sudo ./installers/nuitka_scripts/nuitka_installer_linux.sh
             server-executable: skellycam_server
             electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.deb
     continue-on-error: true
