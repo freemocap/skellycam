@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-13]
+        os: [windows-latest, macos-13, ubuntu-22.04]
         include:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
@@ -25,7 +25,14 @@ jobs:
             export-PYTHON_PATH: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
             build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
             server-executable: skellycam_server
-            electron-output: /skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.dmg
+            electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.dmg
+          - os: ubuntu-22.04
+            venv-activate: .venv/bin/activate
+            install-port-audio: sudo apt-get update && sudo apt-get install -y clang portaudio19-dev
+            export-PYTHON_PATH: echo "not sure where libportaudio2 is"
+            build-command: ./installers/nuitka_scripts/nuitka_installer_linux.sh
+            server-executable: skellycam_server
+            electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.deb
     continue-on-error: true
     steps:
 
@@ -78,3 +85,4 @@ jobs:
           name: skellycam-${{ runner.os }}
           path: |
             ${{ matrix.electron-output }}
+          if-no-files-found: error
