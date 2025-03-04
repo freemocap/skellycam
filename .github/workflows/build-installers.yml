@@ -15,21 +15,21 @@ jobs:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
             install-port-audio: echo "PortAudio is not needed on Windows"
-            export-DYLD_LIBRARY_PATH: echo "PortAudio is not needed on Windows"
+            pre-build-command: echo "No pre-build command needed for Windows"
             build-command: installers\\nuitka_scripts\\nuitka_installer_windows.bat
             server-executable: skellycam_server.exe
             electron-output: skellycam-ui\\release\\2.0.0\\skellycam_2.0.0_installer.exe
           - os: macos-13
             venv-activate: .venv/bin/activate
             install-port-audio: brew install portaudio
-            export-PYTHON_PATH: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
+            pre-build-command: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
             build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
             server-executable: skellycam_server
             electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.dmg
           - os: ubuntu-22.04
             venv-activate: .venv/bin/activate
             install-port-audio: sudo apt-get update && sudo apt-get install -y clang portaudio19-dev
-            export-PYTHON_PATH: echo "skipping step"
+            pre-build-command: chmod +x ./installers/nuitka_scripts/nuitka_installer_linux.sh
             build-command: sudo ./installers/nuitka_scripts/nuitka_installer_linux.sh
             server-executable: skellycam_server
             electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.deb
@@ -57,7 +57,7 @@ jobs:
 
       - name: Build with Nuitka
         run: |
-          ${{ matrix.export-PYTHON_PATH }}
+          ${{ matrix.pre-build-command }}
           ${{ matrix.build-command }}
 
       - name: Check Nuitka build
