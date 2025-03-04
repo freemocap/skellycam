@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-13, ubuntu-22.04]
+        os: [windows-latest, macos-13, macos-15, ubuntu-22.04]
         include:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
@@ -21,6 +21,14 @@ jobs:
             electron-build-command: npm run build
             electron-output: skellycam-ui\\release\\2.0.0\\skellycam_2.0.0_installer.exe
           - os: macos-13
+            venv-activate: .venv/bin/activate
+            install-port-audio: brew install portaudio
+            pre-build-command: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
+            build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
+            server-executable: skellycam_server
+            electron-build-command: npm run build
+            electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.dmg
+          - os: macos-15
             venv-activate: .venv/bin/activate
             install-port-audio: brew install portaudio
             pre-build-command: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
@@ -85,7 +93,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-${{ runner.os }}
+          name: skellycam-${{ runner.os }}-${{ runner.arch }}
           path: |
             ${{ matrix.electron-output }}
           if-no-files-found: error
