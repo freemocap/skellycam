@@ -18,6 +18,7 @@ jobs:
             pre-build-command: echo "No pre-build command needed for Windows"
             build-command: installers\\nuitka_scripts\\nuitka_installer_windows.bat
             server-executable: skellycam_server.exe
+            electron-build-command: npm run build
             electron-output: skellycam-ui\\release\\2.0.0\\skellycam_2.0.0_installer.exe
           - os: macos-13
             venv-activate: .venv/bin/activate
@@ -25,6 +26,7 @@ jobs:
             pre-build-command: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
             build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
             server-executable: skellycam_server
+            electron-build-command: npm run build
             electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.dmg
           - os: ubuntu-22.04
             venv-activate: .venv/bin/activate
@@ -32,6 +34,7 @@ jobs:
             pre-build-command: chmod +x ./installers/nuitka_scripts/nuitka_installer_linux.sh && ln -s /opt/hostedtoolcache/Python/3.11.11/x64/bin/nuitka /usr/local/bin/nuitka
             build-command: sudo ./installers/nuitka_scripts/nuitka_installer_linux.sh
             server-executable: skellycam_server
+            electron-build-command: sudo npm run build
             electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.deb
     # continue-on-error: true
     steps:
@@ -77,7 +80,7 @@ jobs:
       - name: Build UI
         run: |
           cd skellycam-ui
-          npm run build
+          ${{ matrix.electron-build-command }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
