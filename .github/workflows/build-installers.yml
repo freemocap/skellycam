@@ -29,7 +29,7 @@ jobs:
           - os: ubuntu-22.04
             venv-activate: .venv/bin/activate
             install-port-audio: sudo apt-get update && sudo apt-get install -y clang portaudio19-dev
-            pre-build-command: chmod +x ./installers/nuitka_scripts/nuitka_installer_linux.sh | export PATH=$PATH:/opt/hostedtoolcache/Python/3.11.11/x64/bin | ls -l nuitka
+            pre-build-command: chmod +x ./installers/nuitka_scripts/nuitka_installer_linux.sh | export PATH=$PATH:/opt/hostedtoolcache/Python/3.11.11/x64/bin
             build-command: sudo ./installers/nuitka_scripts/nuitka_installer_linux.sh
             server-executable: skellycam_server
             electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.deb
