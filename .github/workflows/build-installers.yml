@@ -35,7 +35,7 @@ jobs:
             build-command: sudo ./installers/nuitka_scripts/nuitka_installer_linux.sh
             server-executable: skellycam_server
             electron-build-command: sudo npm run build
-            electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.deb
+            electron-output: skellycam-ui/release/2.0.0/skellycam-2.0.0.AppImage
     # continue-on-error: true
     steps:
 
