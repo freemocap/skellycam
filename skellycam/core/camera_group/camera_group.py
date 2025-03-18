@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 from pydantic import ConfigDict
 
+from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
+    MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
@@ -45,6 +47,12 @@ class CameraGroup:
                                                          frame_router_config_queue=frame_router_config_queue,
                                                          frame_listener_config_queue=frame_listener_config_queue),
                    group_uuid=camera_group_dto.group_uuid)
+
+    @property
+    def multi_frame_escape_ring_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer | None:
+        if self.shmorchestrator is None or not self.shmorchestrator.valid or not self.shmorchestrator.multiframe_escape_ring_shm.valid:
+            return None
+        return self.shmorchestrator.multiframe_escape_ring_shm
 
     @property
     def camera_ids(self) -> list[CameraId]:

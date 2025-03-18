@@ -50,7 +50,9 @@ class SkellycamAppState:
                    camera_group_update_queue=multiprocessing.Queue())
 
     @property
-    def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer:
+    def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer| None:
+        if not self.camera_group:
+            return None
         return self.camera_group.multi_frame_escape_ring_shm
 
     @property

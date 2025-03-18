@@ -23,7 +23,7 @@ class SingleSlotCameraGroupSharedMemoryDTO:
 
 
 @dataclass
-class SingleSlotCameraGroupSharedMemory:
+class CameraGroupSharedMemory:
     camera_configs: CameraConfigs
     camera_shms: Dict[CameraId, SingleSlotCameraSharedMemory]
     shm_valid_flag: multiprocessing.Value

@@ -59,8 +59,8 @@ class FrameEscaperWorker:
                                                                        shmorc_dto=shmorc_dto,
                                                                        read_only=False)
         orchestrator = shmorchestrator.orchestrator
-        frame_loop_shm = shmorchestrator.frame_loop_shm
-        multi_frame_escape_shm = shmorchestrator.multi_frame_escape_ring_shm
+        frame_loop_shm = shmorchestrator.camera_group_shm
+        multi_frame_escape_shm = shmorchestrator.multiframe_escape_ring_shm
 
         backend_framerate_tracker = FramerateTracker.create(framerate_source="backend")
         mf_payload: Optional[MultiFramePayload] = None

@@ -124,7 +124,7 @@ class WebsocketServer:
             while self.should_continue:
                 await async_wait_1ms()
 
-                if not self._app_state.shmorchestrator or not self._app_state.shmorchestrator.valid or not self._app_state.frame_escape_shm.ready_to_read:
+                if not self._app_state.frame_escape_shm:
                     latest_mf_number = -1
                     mf_payload = None
                     continue

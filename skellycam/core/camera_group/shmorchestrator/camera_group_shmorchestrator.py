@@ -7,7 +7,7 @@ from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator impor
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
-    SingleSlotCameraGroupSharedMemoryDTO, SingleSlotCameraGroupSharedMemory
+    SingleSlotCameraGroupSharedMemoryDTO, CameraGroupSharedMemory
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 
 logger = logging.getLogger(__name__)
@@ -22,20 +22,21 @@ class CameraGroupSharedMemoryOrchestratorDTO(BaseModel):
 
 class CameraGroupSharedMemoryOrchestrator(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    frame_loop_shm: SingleSlotCameraGroupSharedMemory
-    multi_frame_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer
+    camera_group_shm: CameraGroupSharedMemory
+    multiframe_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer
     orchestrator: CameraGroupOrchestrator
 
     @classmethod
     def create(cls,
                camera_group_dto: CameraGroupDTO,
                read_only: bool):
-        return cls(frame_loop_shm=SingleSlotCameraGroupSharedMemory.create(camera_configs=camera_group_dto.camera_configs,
-                                                                           read_only=read_only),
-                   multi_frame_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.create(camera_group_dto=camera_group_dto,
-                                                                                       read_only=read_only),
-                   orchestrator=CameraGroupOrchestrator.from_dto(camera_group_dto=camera_group_dto,)
-                   )
+        return cls(
+            camera_group_shm=CameraGroupSharedMemory.create(camera_configs=camera_group_dto.camera_configs,
+                                                            read_only=read_only),
+            multiframe_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.create(camera_group_dto=camera_group_dto,
+                                                                                     read_only=read_only),
+            orchestrator=CameraGroupOrchestrator.from_dto(camera_group_dto=camera_group_dto,)
+            )
 
     @classmethod
     def recreate(cls,
@@ -43,25 +44,25 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
                  shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                  read_only: bool):
         return cls(
-            frame_loop_shm=SingleSlotCameraGroupSharedMemory.recreate(shm_dto=shmorc_dto.frame_loop_shm_dto,
-                                                                      read_only=read_only),
-            multi_frame_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.recreate(camera_group_dto=camera_group_dto,
-                                                                                  shm_dto=shmorc_dto.multi_frame_escape_shm_dto,
-                                                                                  read_only=read_only),
+            camera_group_shm=CameraGroupSharedMemory.recreate(shm_dto=shmorc_dto.frame_loop_shm_dto,
+                                                              read_only=read_only),
+            multiframe_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.recreate(camera_group_dto=camera_group_dto,
+                                                                                       shm_dto=shmorc_dto.multi_frame_escape_shm_dto,
+                                                                                       read_only=read_only),
             orchestrator=shmorc_dto.camera_group_orchestrator,
         )
 
     @property
     def valid(self):
-        return self.frame_loop_shm.valid and self.multi_frame_escape_ring_shm.valid
+        return self.camera_group_shm.valid and self.multiframe_escape_ring_shm.valid
 
     def to_dto(self) -> CameraGroupSharedMemoryOrchestratorDTO:
-        return CameraGroupSharedMemoryOrchestratorDTO(frame_loop_shm_dto=self.frame_loop_shm.to_dto(),
-                                                      multi_frame_escape_shm_dto=self.multi_frame_escape_ring_shm.to_dto(),
+        return CameraGroupSharedMemoryOrchestratorDTO(frame_loop_shm_dto=self.camera_group_shm.to_dto(),
+                                                      multi_frame_escape_shm_dto=self.multiframe_escape_ring_shm.to_dto(),
                                                       camera_group_orchestrator=self.orchestrator)
 
     def close_and_unlink(self):
         logger.debug("Closing CameraGroupSharedMemoryOrchestrator...")
         self.orchestrator.pause_loop()
-        self.frame_loop_shm.close_and_unlink()
-        self.multi_frame_escape_ring_shm.close_and_unlink()
+        self.camera_group_shm.close_and_unlink()
+        self.multiframe_escape_ring_shm.close_and_unlink()
