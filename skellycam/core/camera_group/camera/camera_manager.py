@@ -37,7 +37,7 @@ class CameraManager(BaseModel):
                shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
 
         camera_processes = {}
-        for camera_id, camera_config in camera_group_dto.cameras_configs.items():
+        for camera_id, camera_config in camera_group_dto.camera_configs.items():
             frame_loop_flags = shmorc_dto.camera_group_orchestrator.frame_loop_flags[camera_id]
             camera_shm_dto = shmorc_dto.frame_loop_shm_dto.camera_shm_dtos[camera_id]
             camera_processes[camera_id] = CameraProcess.create(camera_config=camera_config,
@@ -47,12 +47,7 @@ class CameraManager(BaseModel):
 
         return cls(camera_group_dto=camera_group_dto,
                    orchestrator=shmorc_dto.camera_group_orchestrator,
-                   camera_processes={
-                       camera_id: CameraProcess.create(camera_config=camera_config,
-                                                       shmorc_dto=shmorc_dto,
-                                                       camera_group_dto=camera_group_dto)
-
-                   }
+                   camera_processes=camera_processes
                    )
 
 

@@ -78,17 +78,18 @@ class SkellycamAppState:
             raise ValueError("Cannot set device extracted camera config without CameraGroup!")
         self.camera_group.camera_configs[config.camera_id] = config
 
-    def create_camera_group(self):
+    def create_camera_group(self, camera_configs: CameraConfigs):
         if self.camera_group is not None:
             self.camera_group.close()
+        logger.info(f"Creating camera group with cameras: {camera_configs.keys()}")
         self.camera_group = CameraGroup.create(camera_group_dto=CameraGroupDTO(ipc_queue=self.ipc_queue,
-                                               ipc_flags=self.ipc_flags,
-                                               logs_queue=self.logs_queue,
-                                               update_queue=self.camera_group_update_queue,
-                                               group_uuid=str(uuid4())),
-                                               shmorc_dto=self.shmorchestrator.to_dto()
+                                                                               ipc_flags=self.ipc_flags,
+                                                                               logs_queue=self.logs_queue,
+                                                                               update_queue=self.camera_group_update_queue,
+                                                                               group_uuid=str(uuid4()),
+                                                                               camera_configs=camera_configs),
                                                )
-
+        self.camera_group.start()
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 
     def update_camera_group(self,
@@ -128,7 +129,7 @@ class SkellycamAppState:
         self.shmorchestrator = None
         self.ipc_flags = IPCFlags(global_kill_flag=self.ipc_flags.global_kill_flag)
 
-    def close(self):
+    def shutdown_skellycam(self):
         self.ipc_flags.global_kill_flag.value = True
         if self.camera_group:
             self.close_camera_group()

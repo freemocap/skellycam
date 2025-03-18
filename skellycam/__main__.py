@@ -9,7 +9,6 @@ import time
 
 from skellycam.api.server.server_manager import UvicornServerManager
 from skellycam.api.server.server_singleton import create_server_manager
-from skellycam.utilities.active_elements_check import active_elements_check_loop
 
 logger = logging.getLogger(__name__)
 

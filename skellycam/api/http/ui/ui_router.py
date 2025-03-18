@@ -9,7 +9,7 @@ from skellycam.api.server.server_constants import PORT, APP_URL
 
 logger = logging.getLogger(__name__)
 
-ui_router = APIRouter()
+ui_router = APIRouter(tags=['App'])
 
 
 @ui_router.get("/", response_class=HTMLResponse)

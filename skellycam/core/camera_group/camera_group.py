@@ -59,8 +59,9 @@ class CameraGroup:
         return self.group_uuid
 
     def start(self):
-        logger.info("Starting camera group")
+        logger.info("Starting camera group...")
         self.camera_group_worker.start()
+
 
     def close(self):
         logger.debug("Closing camera group")

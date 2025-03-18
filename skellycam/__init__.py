@@ -18,7 +18,6 @@ from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
-from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
 
 from skellycam.system.logging_configuration.configure_logging import configure_logging
@@ -38,7 +37,6 @@ __all__ = [
     "__repo_url__",
     "__repo_issues_url__",
     "__pypi_url__",
-    'create_skellycam_app_controller',
     'SKELLYCAM_ROUTERS',
     'CameraId',
     'CameraName',

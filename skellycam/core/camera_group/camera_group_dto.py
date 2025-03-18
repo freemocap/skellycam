@@ -7,7 +7,7 @@ from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 
 @dataclass
 class CameraGroupDTO:
-    cameras_configs: CameraConfigs
+    camera_configs: CameraConfigs
     ipc_queue: multiprocessing.Queue
     logs_queue: multiprocessing.Queue
     ipc_flags: IPCFlags

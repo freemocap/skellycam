@@ -369,58 +369,186 @@
         }
 
 
-        // async function getAvailableCameras() {
-        //     try {
-        //     const devices = await navigator.mediaDevices.enumerateDevices();
-        //     console.log('All devices:', devices); // Log all detected devices
-        //
-        //     const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        //     console.log('Video devices:', videoDevices); // Log only video devices
-        //
-        //         let cameraIndex = -1;
-        //         for (const device of videoDevices) {
-        //             cameraIndex++;
-        //             const constraints = {
-        //                 video: {deviceId: device.deviceId}
-        //             };
-        //
-        //             try {
-        //                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        //                 console.log(`Camera ${cameraIndex} ${device.label} is available!`);
-        //                 addLogEntry(`Camera ${cameraIndex} ${device.label} is available!`);
-        //                 availableCameras.push(`${cameraIndex} - ${device.label || 'Unnamed Camera'} (available)`);
-        //                 stream.getTracks().forEach(track => track.stop());
-        //             } catch (error) {
-        //                 console.error(`Error accessing camera ${device.label}:`, error);
-        //                 addLogEntry(`Could not access camera ${device.label}: ${error.message}`);
-        //                                 availableCameras.push(`${cameraIndex} - ${device.label || 'Unnamed Camera'} (not available)`);
-        //
-        //             }
-        //         }
-        //
-        //         const cameraListElement = document.getElementById('camera-list');
-        //         cameraListElement.innerHTML = ''; // Clear previous list
-        //         availableCameras.forEach(camera => {
-        //             const listItem = document.createElement('li');
-        //             listItem.textContent = camera;
-        //             cameraListElement.appendChild(listItem);
-        //         });
-        //
-        //         if (availableCameras.length === 0) {
-        //             const listItem = document.createElement('li');
-        //             listItem.textContent = 'No available cameras found';
-        //             cameraListElement.appendChild(listItem);
-        //         }
-        //     } catch (error) {
-        //         console.error('Error accessing media devices:', error);
-        //         addLogEntry(`Error accessing media devices: ${error.message}`);
-        //     }
-        // }
+        function detectOS() {
+            const userAgent = navigator.userAgent;
+            console.log(`User Agent: ${JSON.stringify(userAgent, null, 2)}`);
+            if (userAgent.indexOf("Win") !== -1) {
+                os = "Windows";
+            } else if (userAgent.indexOf("Mac") !== -1) {
+                os = "MacOS";
+            } else if (userAgent.indexOf("X11") !== -1) {
+                os = "UNIX";
+            } else if (userAgent.indexOf("Linux") !== -1) {
+                os = "Linux";
+            } else {
+                throw new Error(`Unrecognized OS: ${userAgent}`);
+            }
 
+            return os;
+        }
+
+        async function testCameraStream(device) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {deviceId: device.deviceId}
+                    });
+
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.style.display = 'none';  // Hide the video element
+                    document.body.appendChild(video);
+
+                    let frameCount = 0;
+                    const maxWaitTime = 3000;  // 3 seconds timeout
+                    const startTime = Date.now();
+
+                    video.onplay = () => {
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+
+                        const checkFrame = () => {
+                            if (frameCount >= 3) {  // We got 3 frames successfully
+                                cleanup(true);
+                                return;
+                            }
+
+                            if (Date.now() - startTime > maxWaitTime) {  // Timeout
+                                cleanup(false);
+                                return;
+                            }
+
+                            try {
+                                context.drawImage(video, 0, 0);
+                                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+                                // Check if the image data contains any non-zero pixels
+                                if (imageData.data.some(pixel => pixel !== 0)) {
+                                    frameCount++;
+                                }
+
+                                requestAnimationFrame(checkFrame);
+                            } catch (error) {
+                                cleanup(false);
+                            }
+                        };
+
+                        checkFrame();
+                    };
+
+                    video.play().catch(() => cleanup(false));
+
+                    function cleanup(success) {
+                        stream.getTracks().forEach(track => track.stop());
+                        video.remove();
+                        if (success) {
+                            resolve();
+                        } else {
+                            reject(new Error("Camera not sending valid frames"));
+                        }
+                    }
+
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+async function getAvailableCameras() {
+    const cameraListElement = document.getElementById('camera-list');
+    cameraListElement.innerHTML = 'Scanning for cameras...';
+    const os = detectOS();
+    const validCameras = [];
+        // Add delay to allow devices to initialize
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        // Log all found devices
+        console.log('All video devices found:', videoDevices.map(d => ({
+            deviceId: d.deviceId,
+            label: d.label,
+            groupId: d.groupId
+        })));
+        if (videoDevices.length === 0) {
+            cameraListElement.innerHTML = 'No cameras detected';
+            return;
+        }
+
+        cameraListElement.innerHTML = `Detected OS: ${os}<br>`;
+
+        // Process each camera
+        for (let i = 0; i < videoDevices.length; i++) {
+            const device = videoDevices[i];
+            const listItem = document.createElement('div');
+            listItem.style.marginBottom = '5px';
+
+            const opencvIndex = os.toLowerCase().includes('windows') ? i : i * 2;
+
+            // More detailed virtual camera detection
+            const isVirtual = [
+                'virtual',
+                'obs',
+                'manycam',
+                'snapcam',
+                'capture card',
+                'cam link',
+                'elgato'
+            ].some(term => device.label.toLowerCase().includes(term));
+
+
+            if (isVirtual) {
+                listItem.innerHTML = `🔵 Camera ${opencvIndex}: ${device.label || 'Unnamed Camera'} (virtual)`;
+                listItem.style.color = '#888888';
+            } else {
+                try {
+                    const result = await testCameraStream(device);
+                    listItem.innerHTML = `📸 Camera ${opencvIndex}: ${device.label || 'Unnamed Camera'} ✅`;
+                    listItem.style.color = '#5aea5f';
+                    validCameras.push(opencvIndex);
+                } catch (error) {
+                    const errorMsg = error.message?.includes("valid frames") ? "no video data" : "inaccessible";
+                    listItem.innerHTML = `❌ Camera ${opencvIndex}: ${device.label || 'Unnamed Camera'} (${errorMsg})`;
+                    listItem.style.color = '#f44336';
+                }
+            }
+
+            cameraListElement.appendChild(listItem);
+        }
+
+        // Add connect button if we found valid cameras
+        if (validCameras.length > 0) {
+            const connectButton = document.createElement('button');
+            connectButton.innerHTML = `Connect to ${validCameras.length} Valid Camera(s)`;
+            connectButton.onclick = () => callApi(
+                `${http_url}/skellycam/cameras/connect`,
+                'POST',
+                { camera_ids: validCameras }
+            );
+            connectButton.style.marginTop = '10px';
+            cameraListElement.appendChild(connectButton);
+        }
+
+        // Add OpenCV indexing note
+        const indexNote = document.createElement('div');
+        indexNote.style.marginTop = '10px';
+        indexNote.style.fontSize = '0.9em';
+        indexNote.style.color = '#888';
+        if (os.toLowerCase().includes('windows')) {
+            indexNote.innerHTML = 'Note: Windows uses sequential indexes (0,1,2...)';
+        } else {
+            indexNote.innerHTML = 'Note: Unix systems typically use even numbers (0,2,4...) for camera indexes';
+        }
+        cameraListElement.appendChild(indexNote);
+
+    } catch (error) {
+        cameraListElement.innerHTML = `Error scanning cameras: ${error.message}`;
+        addLogEntry(`Error scanning cameras: ${error.message}`);
+    }
+}
 
         window.onload = function () {
             connectWebSocket();
-            // getAvailableCameras();
+            getAvailableCameras();
 
             const separator = document.getElementById('separator');
             const bottomPanel = document.getElementById('bottom-panel');
@@ -496,8 +624,11 @@
     <div class="button-group">
         <button onclick="connectWebSocket()">Connect WebSocket</button>
         <span id="ws-status">Status: Disconnected ❌</span>
-
-        <button onclick="callApi(`${http_url}/skellycam/connect`)">Connect to Cameras</button>
+        <div class="button-group">
+            <button onclick="getAvailableCameras()">Check Available Cameras</button>
+            <div id="camera-list" style="color: white; text-align: left; margin: 10px;"></div>
+        </div>
+<!--        <button onclick="callApi(`${http_url}/skellycam/connect`)">Connect to Cameras</button>-->
         <button onclick="callApi(`${http_url}/skellycam/close`)">Close Cameras</button>
         <button onclick="callApi(`${http_url}/skellycam/app/shutdown`)">Shutdown App</button>
         <button onclick="togglePause()" id="pause-button">Pause</button>

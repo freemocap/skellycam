@@ -10,8 +10,7 @@ from skellycam.core.frames.payloads.frontend_image_payload import FrontendFrameP
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import get_skellycam_app_controller
-from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppStateDTO, SkellycamAppState, get_skellycam_app_state
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
 
@@ -22,7 +21,7 @@ class WebsocketServer:
     def __init__(self, websocket: WebSocket):
 
         self.websocket = websocket
-        self._app_state: SkellycamAppState = get_skellycam_app_controller().app_state
+        self._app_state: SkellycamAppState = get_skellycam_app_state()
 
         self.latest_backend_framerate: CurrentFramerate | None = None
         self.latest_frontend_framerate: CurrentFramerate | None = None

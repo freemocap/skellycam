@@ -8,8 +8,8 @@ import uvicorn
 from uvicorn import Server
 
 from skellycam.api.server.server_constants import HOSTNAME, PORT
-from skellycam.skellycam_app.skellycam_app_controller.skellycam_app_controller import create_skellycam_app_controller
 from skellycam.skellycam_app.skellycam_app_lifespan.create_skellycam_app import create_skellycam_app
+from skellycam.skellycam_app.skellycam_app_state import create_skellycam_app_state
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class UvicornServerManager:
                  port: int = PORT,
                  log_level: str = "info"):
         self._global_kill_flag = global_kill_flag
-        create_skellycam_app_controller(global_kill_flag=global_kill_flag)
+        create_skellycam_app_state(global_kill_flag=global_kill_flag)
         self.hostname: str = hostname
         self.port: int = port
         self.server_thread: threading.Thread|None = None

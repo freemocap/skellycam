@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 health_router = APIRouter()
 
 
-@health_router.get("/healthcheck", summary="Hello👋")
+@health_router.get("/healthcheck", summary="Hello👋", tags=['App'])
 def healthcheck_endpoint():
     """
     A simple endpoint to greet the user of the SkellyCam API.

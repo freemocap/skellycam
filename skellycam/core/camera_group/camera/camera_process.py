@@ -43,13 +43,12 @@ class CameraProcess:
                    should_close_self_flag=should_close_self_flag,
                    new_config_queue=new_config_queue,
                    process=multiprocessing.Process(target=cls._run_process,
-                                                   name=f"Camera{camera_config.camera_id}",
+                                                   name=f"Camera{camera_config.camera_id}-Process",
                                                    daemon=True,
-                                                   kwargs=dict(camera_id=camera_config.camera_id,
-                                                               camera_config=camera_config,
+                                                   kwargs=dict(camera_config=camera_config,
                                                                camera_group_dto=camera_group_dto,
                                                                frame_loop_flags=frame_loop_flags,
-                                                               camera_shared_memory_dto=camera_shared_memory_dto,
+                                                               camera_shm_dto=camera_shared_memory_dto,
                                                                new_config_queue=new_config_queue,
                                                                ipc_queue=camera_group_dto.ipc_queue,
                                                                should_close_self_flag=should_close_self_flag)
@@ -57,29 +56,8 @@ class CameraProcess:
 
                    )
 
-    def start(self):
-        self.process.start()
-
-    def close(self):
-        logger.info(f"Closing camera {self.camera_id}")
-        if self.camera_group_dto.should_continue and not self.should_close_self_flag.value == True:
-            raise ValueError(
-                f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc_flags.kill_camera_group_flag.value},"
-                f" global_kill_flag: {self.camera_group_dto.ipc_flags.global_kill_flag.value}, should_close_self_flag: {self.should_close_self_flag.value}")
-        self.should_close_self_flag.value = True
-        self.process.join()
-        logger.info(f"Camera {self.camera_id} closed!")
-
-    def is_alive(self) -> bool:
-        return self.process.is_alive()
-
-    def update_config(self, new_config: CameraConfig):
-        logger.debug(f"Updating camera {self.camera_id} with new config: {new_config}")
-        self.new_config_queue.put(new_config)
-
     @staticmethod
-    def _run_process(camera_id: CameraId,
-                     camera_config: CameraConfig,
+    def _run_process(camera_config: CameraConfig,
                      camera_group_dto: CameraGroupDTO,
                      frame_loop_flags: CameraFrameLoopFlags,
                      camera_shm_dto: CameraSharedMemoryDTO,
@@ -90,7 +68,7 @@ class CameraProcess:
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
-
+        camera_id = camera_config.camera_id
         configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
 
         def heartbeat_thread_function():
@@ -152,6 +130,26 @@ class CameraProcess:
             if cv2_video_capture:
                 cv2_video_capture.release()
             camera_shm.close()
+
+    def start(self):
+        self.process.start()
+
+    def close(self):
+        logger.info(f"Closing camera {self.camera_id}")
+        if self.camera_group_dto.should_continue and not self.should_close_self_flag.value == True:
+            raise ValueError(
+                f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc_flags.kill_camera_group_flag.value},"
+                f" global_kill_flag: {self.camera_group_dto.ipc_flags.global_kill_flag.value}, should_close_self_flag: {self.should_close_self_flag.value}")
+        self.should_close_self_flag.value = True
+        self.process.join()
+        logger.info(f"Camera {self.camera_id} closed!")
+
+    def is_alive(self) -> bool:
+        return self.process.is_alive()
+
+    def update_config(self, new_config: CameraConfig):
+        logger.debug(f"Updating camera {self.camera_id} with new config: {new_config}")
+        self.new_config_queue.put(new_config)
 
 
 def check_for_config_update(config: CameraConfig,

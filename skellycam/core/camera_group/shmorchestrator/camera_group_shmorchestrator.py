@@ -29,7 +29,6 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
     @classmethod
     def create(cls,
                camera_group_dto: CameraGroupDTO,
-               ipc_flags: IPCFlags,
                read_only: bool):
         return cls(frame_loop_shm=SingleSlotCameraGroupSharedMemory.create(camera_configs=camera_group_dto.camera_configs,
                                                                            read_only=read_only),
