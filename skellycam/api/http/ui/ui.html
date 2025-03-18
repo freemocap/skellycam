@@ -362,9 +362,9 @@
                     recording_path: recordingPath,
                     recording_name: recordingName
                 };
-                callApi(`${http_url}/skellycam/cameras/record/start`, 'POST', requestBody);
+                callApi(`${http_url}/skellycam/record/start`, 'POST', requestBody);
             } else {
-                callApi(`${http_url}/skellycam/cameras/record/stop`);
+                callApi(`${http_url}/skellycam/record/stop`);
             }
         }
 
@@ -497,8 +497,8 @@
         <button onclick="connectWebSocket()">Connect WebSocket</button>
         <span id="ws-status">Status: Disconnected ❌</span>
 
-        <button onclick="callApi(`${http_url}/skellycam/cameras/connect/detect`)">Connect to Cameras</button>
-        <button onclick="callApi(`${http_url}/skellycam/cameras/close`)">Close Cameras</button>
+        <button onclick="callApi(`${http_url}/skellycam/connect`)">Connect to Cameras</button>
+        <button onclick="callApi(`${http_url}/skellycam/close`)">Close Cameras</button>
         <button onclick="callApi(`${http_url}/skellycam/app/shutdown`)">Shutdown App</button>
         <button onclick="togglePause()" id="pause-button">Pause</button>
         <button onclick="toggleRecord()" id="record-button">Start Recording</button>

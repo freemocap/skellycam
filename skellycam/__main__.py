@@ -33,20 +33,20 @@ def run_server(global_kill_flag: multiprocessing.Value):
 async def main(global_kill_flag: multiprocessing.Value):
 
 
-    active_elements_check_loop_task = asyncio.create_task(
-        active_elements_check_loop(global_kill_flag=global_kill_flag,
-
-                                   context="Skellycam Server"
-                                   ),
-        name="AppLifecycleCheckLoop")
-    active_elements_check_loop_task.add_done_callback(lambda _: logger.info("Shutdown listener loop task ended"))
+    # active_elements_check_loop_task = asyncio.create_task(
+    #     active_elements_check_loop(global_kill_flag=global_kill_flag,
+    #
+    #                                context="Skellycam Server"
+    #                                ),
+    #     name="AppLifecycleCheckLoop")
+    # active_elements_check_loop_task.add_done_callback(lambda _: logger.info("Shutdown listener loop task ended"))
 
     main_server_thread = threading.Thread(target=run_server,
                                           kwargs=dict(global_kill_flag=global_kill_flag),
                                           name="MainServerThread")
     main_server_thread.start()
 
-    await asyncio.gather(active_elements_check_loop_task, return_exceptions=True)
+    # await asyncio.gather(active_elements_check_loop_task, return_exceptions=True)
     logger.debug("joining main server thread...")
     main_server_thread.join()
     logger.debug("Main server thread complete - exiting main function")
