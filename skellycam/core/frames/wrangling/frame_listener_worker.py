@@ -14,7 +14,7 @@ from skellycam.utilities.wait_functions import wait_1ms
 logger = logging.getLogger(__name__)
 
 
-class FrameListenerWorker:
+class FrameEscaperWorker:
     def __init__(
             self,
             camera_group_dto: CameraGroupDTO,
@@ -98,7 +98,7 @@ class FrameListenerWorker:
         except KeyboardInterrupt:
             logger.info(f"Frame exporter process received KeyboardInterrupt, shutting down gracefully...")
         finally:
-            logger.trace(f"{FrameListenerWorker.__class__.__name__} shutting down...")
+            logger.trace(f"{FrameEscaperWorker.__class__.__name__} shutting down...")
             if camera_group_dto.should_continue:
                 raise RuntimeError(
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")

@@ -7,18 +7,14 @@ from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 
 @dataclass
 class CameraGroupDTO:
-    camera_configs: CameraConfigs
-
+    cameras_configs: CameraConfigs
     ipc_queue: multiprocessing.Queue
     logs_queue: multiprocessing.Queue
     ipc_flags: IPCFlags
 
-    config_update_queue: multiprocessing.Queue
+    update_queue: multiprocessing.Queue
     group_uuid: str
 
-    @property
-    def camera_ids(self):
-        return list(self.camera_configs.keys())
 
     @property
     def should_continue(self):

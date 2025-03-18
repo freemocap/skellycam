@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_process import CameraProcess
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
@@ -18,34 +18,49 @@ from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)
 
+MAX_CAMERA_PORTS_TO_CHECK = 20
 
 class CameraManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     orchestrator: CameraGroupOrchestrator
     camera_group_dto: CameraGroupDTO
-    camera_processes: Dict[CameraId, CameraProcess]
+    camera_processes: Dict[CameraId, CameraProcess] = {}
+
+    @property
+    def camera_ids(self):
+        return list(self.camera_processes.keys())
 
     @classmethod
     def create(cls,
                camera_group_dto: CameraGroupDTO,
                shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
 
+        camera_processes = {}
+        for camera_id, camera_config in camera_group_dto.cameras_configs.items():
+            frame_loop_flags = shmorc_dto.camera_group_orchestrator.frame_loop_flags[camera_id]
+            camera_shm_dto = shmorc_dto.frame_loop_shm_dto.camera_shm_dtos[camera_id]
+            camera_processes[camera_id] = CameraProcess.create(camera_config=camera_config,
+                                                               camera_group_dto=camera_group_dto,
+                                                               frame_loop_flags=frame_loop_flags,
+                                                               camera_shared_memory_dto=camera_shm_dto)
+
         return cls(camera_group_dto=camera_group_dto,
                    orchestrator=shmorc_dto.camera_group_orchestrator,
-                   camera_processes={camera_id: CameraProcess.create(camera_id=camera_id,
-                                                                     camera_group_dto=camera_group_dto,
-                                                                     shmorc_dto=shmorc_dto
-                                                                     ) for camera_id in
-                                     camera_group_dto.camera_ids},
+                   camera_processes={
+                       camera_id: CameraProcess.create(camera_config=camera_config,
+                                                       shmorc_dto=shmorc_dto,
+                                                       camera_group_dto=camera_group_dto)
+
+                   }
                    )
 
-    @property
-    def camera_ids(self):
-        return self.camera_group_dto.camera_ids
 
     def start(self):
-        logger.info(f"Starting cameras: {list(self.camera_group_dto.camera_configs.keys())}")
+        if len(self.camera_ids) == 0:
+            raise ValueError("No cameras to start!")
+
+        logger.info(f"Starting camera manager for cameras: {self.camera_ids}...")
 
         [camera.start() for camera in self.camera_processes.values()]
         self.orchestrator.await_cameras_ready()
@@ -86,9 +101,9 @@ class CameraManager(BaseModel):
 
     def _check_handle_config_update(self):
         # Check for new camera configs
-        if not self.camera_group_dto.config_update_queue.empty():
+        if not self.camera_group_dto.update_queue.empty():
             logger.trace(f"Handling camera config updates for cameras: {self.camera_ids}")
-            update_instructions = self.camera_group_dto.config_update_queue.get()
+            update_instructions = self.camera_group_dto.update_queue.get()
 
             self.update_camera_configs(update_instructions)
             while any(

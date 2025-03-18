@@ -89,9 +89,9 @@ class CameraManager(BaseModel):
 
     def _check_handle_config_update(self):
         # Check for new camera configs
-        if not self.camera_group_dto.config_update_queue.empty():
+        if not self.camera_group_dto.update_queue.empty():
             logger.trace(f"Handling camera config updates for cameras: {self.camera_ids}")
-            update_instructions = self.camera_group_dto.config_update_queue.get()
+            update_instructions = self.camera_group_dto.update_queue.get()
 
             self.update_camera_configs(update_instructions)
             while any(

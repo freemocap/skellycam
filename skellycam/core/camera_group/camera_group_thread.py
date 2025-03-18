@@ -32,9 +32,6 @@ class CameraGroupThread:
                   )
         )
 
-    @property
-    def thread(self):
-        return self._thread
 
     @property
     def is_running(self) -> bool:

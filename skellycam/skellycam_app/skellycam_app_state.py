@@ -32,10 +32,9 @@ class SkellycamAppState:
     ipc_flags: IPCFlags
     ipc_queue: multiprocessing.Queue
     logs_queue: multiprocessing.Queue
-    config_update_queue: multiprocessing.Queue
+    camera_group_update_queue: multiprocessing.Queue
 
     shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
-    camera_group_dto: CameraGroupDTO | None = None
     camera_group: CameraGroup | None = None
     available_cameras: AvailableCameras | None = None
     backend_framerate: CurrentFramerate | None = None
@@ -48,11 +47,11 @@ class SkellycamAppState:
         return cls(ipc_flags=IPCFlags(global_kill_flag=global_kill_flag),
                    ipc_queue=multiprocessing.Queue(),
                    logs_queue=get_websocket_log_queue(),
-                   config_update_queue=multiprocessing.Queue())
+                   camera_group_update_queue=multiprocessing.Queue())
 
     @property
     def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer:
-        return self.shmorchestrator.multi_frame_escape_ring_shm
+        return self.camera_group.multi_frame_escape_ring_shm
 
     @property
     def camera_ring_buffer_shms(self) -> dict[CameraId, RingBufferCameraSharedMemory]:
@@ -79,23 +78,14 @@ class SkellycamAppState:
             raise ValueError("Cannot set device extracted camera config without CameraGroup!")
         self.camera_group.camera_configs[config.camera_id] = config
 
-    def create_camera_group(self, camera_configs: CameraConfigs):
-        if camera_configs is None:
-            raise ValueError("Cannot create CameraGroup without camera_configs!")
-        # if self.available_devices is None:
-        #     raise ValueError("Cannot get CameraConfigs without available devices!")
-        self.camera_group_dto = CameraGroupDTO(camera_configs=camera_configs,
-                                            ipc_queue=self.ipc_queue,
-                                            ipc_flags=self.ipc_flags,
-                                            logs_queue=self.logs_queue,
-                                            config_update_queue=self.config_update_queue,
-                                            group_uuid=str(uuid4())
-
-                                            )
-        self.shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=self.camera_group_dto,
-                                                                          ipc_flags=self.ipc_flags,
-                                                                          read_only=True)
-        self.camera_group = CameraGroup.create(camera_group_dto=self.camera_group_dto,
+    def create_camera_group(self):
+        if self.camera_group is not None:
+            self.camera_group.close()
+        self.camera_group = CameraGroup.create(camera_group_dto=CameraGroupDTO(ipc_queue=self.ipc_queue,
+                                               ipc_flags=self.ipc_flags,
+                                               logs_queue=self.logs_queue,
+                                               update_queue=self.camera_group_update_queue,
+                                               group_uuid=str(uuid4())),
                                                shmorc_dto=self.shmorchestrator.to_dto()
                                                )
 
