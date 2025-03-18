@@ -1,4 +1,4 @@
-import {AvailableCamerasSchema} from '@/types/zod-schemas/AvailableCamerasSchema';
+import {AvailableCamerasSchema} from '@/services/device-detection/AvailableCamerasSchema';
 import type {PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
 import {z} from 'zod';

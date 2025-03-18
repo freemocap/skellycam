@@ -1,6 +1,6 @@
 import {Box} from "@mui/material";
 import React, {useEffect, useState} from "react";
-import {useWebSocketContext} from "@/context/WebSocketContext";
+import {useWebSocketContext} from "@/services/websocket-connection/WebSocketContext";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
 import {RecordButton} from "@/components/RecordButton";
 import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";

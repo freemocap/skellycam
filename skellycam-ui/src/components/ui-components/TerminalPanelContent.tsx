@@ -1,6 +1,6 @@
 import {Box, darken, Typography} from "@mui/material";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
-import {useWebSocketContext} from "@/context/WebSocketContext";
+import {useWebSocketContext} from "@/services/websocket-connection/WebSocketContext";
 import {LogRecordSchema} from "@/types/zod-schemas/LogRecordSchema";
 import {z} from "zod";
 import {useEffect, useRef} from "react";

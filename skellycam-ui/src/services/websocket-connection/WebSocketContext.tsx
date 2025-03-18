@@ -1,5 +1,5 @@
 import React, {createContext, ReactNode, useContext} from "react";
-import {useWebSocket} from "@/hooks/useWebSocket";
+import {useWebSocket} from "@/services/websocket-connection/useWebSocket";
 import {z} from "zod";
 import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/types/zod-schemas/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";

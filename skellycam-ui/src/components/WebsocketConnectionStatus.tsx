@@ -1,6 +1,6 @@
 import React from 'react';
 import {Box, Typography} from '@mui/material';
-import {useWebSocketContext} from '@/context/WebSocketContext';
+import {useWebSocketContext} from '@/services/websocket-connection/WebSocketContext';
 
 const WebsocketConnectionStatus = () => {
     const {isConnected} = useWebSocketContext();

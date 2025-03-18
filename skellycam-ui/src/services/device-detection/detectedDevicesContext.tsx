@@ -1,5 +1,5 @@
 import React, {createContext, useContext, useEffect, useState} from 'react';
-import {useDetectDevices} from "@/hooks/useDetectDevices";
+import {useDetectDevices} from "@/services/device-detection/useDetectDevices";
 
 type CameraContextType = {
     detectedDevices: MediaDeviceInfo[];

@@ -1,6 +1,6 @@
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {List, ListItem, ListItemText, Paper} from "@mui/material";
-import {useDetectedDevicesContext} from "@/context/detectedDevicesContext";
+import {useDetectedDevicesContext} from "@/services/device-detection/detectedDevicesContext";
 
 export const ConfigView = () => {
     const { detectedDevices } = useDetectedDevicesContext();

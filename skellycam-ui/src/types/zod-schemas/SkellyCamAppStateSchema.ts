@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {AvailableCamerasSchema} from "@/types/zod-schemas/AvailableCamerasSchema";
+import {AvailableCamerasSchema} from "@/services/device-detection/AvailableCamerasSchema";
 
 export const CurrentFrameRateSchema = z.object({
     mean_frame_duration_ms: z.number(),

@@ -1,9 +1,9 @@
 import React from 'react';
 import {PaperbaseContent} from "@/layout/paperbase_theme/PaperbaseContent";
-import {WebSocketContextProvider} from "@/context/WebSocketContext";
+import {WebSocketContextProvider} from "@/services/websocket-connection/WebSocketContext";
 import {Provider} from "react-redux";
 import {AppStateStore} from "@/store/appStateStore";
-import {CameraProvider} from "@/context/detectedDevicesContext";
+import {CameraProvider} from "@/services/device-detection/detectedDevicesContext";
 
 
 function App() {

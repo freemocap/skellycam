@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {FrontendFramePayloadSchema, JpegImagesSchema} from "@/types/zod-schemas/FrontendFramePayloadSchema";
 import {SkellyCamAppStateSchema} from "@/types/zod-schemas/SkellyCamAppStateSchema";
 import {setAvailableCameras} from "@/store/slices/availableCamerasSlice";
-import {AvailableCamerasSchema} from "@/types/zod-schemas/AvailableCamerasSchema";
+import {AvailableCamerasSchema} from "@/services/device-detection/AvailableCamerasSchema";
 import {useAppDispatch} from '@/store/hooks';
 import {setCurrentFramerate, setIsRecording, setRecordingDirectory} from "@/store/slices/appState";
 // import {camerasSetAll} from "@/store/slices/cameraConfigsSlice";

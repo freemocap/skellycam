@@ -7,7 +7,9 @@ export const ConnectToCamerasButton = () => {
     const sendConnectDetectRequest = async () => {
         try {
 
-            const response = await axios.get(`http://localhost:8006/skellycam/cameras/connect/detect`);
+            const response = await axios.post(`http://localhost:8006/skellycam/cameras/connect`,{
+                camera_ids: [0]
+            });
 
             if (response.status === 200) {
                 console.log('Cameras detect/connect request sent successfully');
