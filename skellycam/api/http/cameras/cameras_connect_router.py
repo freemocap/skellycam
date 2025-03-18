@@ -10,21 +10,21 @@ logger = logging.getLogger(__name__)
 connect_cameras_router = APIRouter()
 
 
-@connect_cameras_router.post(
-    "/connect",
-
-    summary="Connect/Update specified cameras and apply provided configuration settings",
-)
-def cameras_connect_post_endpoint(
-        request: CameraConfigs = Body(..., examples=[default_camera_configs_factory()])
-):
-    logger.api("Received `skellycam/connect` POST request...")
-    try:
-        get_skellycam_app_controller().connect_to_cameras(camera_configs=request)
-        logger.api("`skellycam/connect` POST request handled successfully.")
-    except Exception as e:
-        logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
-        logger.exception(e)
+# @connect_cameras_router.post(
+#     "/connect",
+#
+#     summary="Connect/Update specified cameras and apply provided configuration settings",
+# )
+# def cameras_connect_post_endpoint(
+#         request: CameraConfigs = Body(..., examples=[default_camera_configs_factory()])
+# ):
+#     logger.api("Received `skellycam/connect` POST request...")
+#     try:
+#         get_skellycam_app_controller().connect_to_cameras(camera_configs=request)
+#         logger.api("`skellycam/connect` POST request handled successfully.")
+#     except Exception as e:
+#         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
+#         logger.exception(e)
 
 
 @connect_cameras_router.get(

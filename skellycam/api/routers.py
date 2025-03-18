@@ -6,7 +6,7 @@ from skellycam.api.http.cameras.cameras_record_router import record_cameras_rout
 SKELLYCAM_ROUTERS = {
     "/skellycam": {
         "connect": connect_cameras_router,
-        "configs": camera_configs_router,
+        # "configs": camera_configs_router,
         "record": record_cameras_router,
         "close": close_cameras_router
     },

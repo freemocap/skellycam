@@ -110,7 +110,7 @@ class CameraConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate(cls, self) -> Self:
+    def validate(self) -> Self:
         if self.camera_name is DefaultCameraConfig.CAMERA_NAME.value:
             self.camera_name = f"Camera-{self.camera_id}"
         self.camera_id = CameraId(self.camera_id)
