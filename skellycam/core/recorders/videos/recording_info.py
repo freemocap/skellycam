@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class RecordingInfo(BaseModel):
-    type: str = "RecordingInfo"
     recording_uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
     recording_name: str
     recording_folder: str

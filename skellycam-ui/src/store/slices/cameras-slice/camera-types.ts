@@ -18,7 +18,7 @@ export const CameraConfigSchema = z.object({
     writer_fourcc: z.string(),
 });
 
-export const CameraConfigsSchema = z.record(z.number(), CameraConfigSchema );
+export const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema );
 
 const CameraDeviceInfoSchema = z.object({
     name: z.string(),

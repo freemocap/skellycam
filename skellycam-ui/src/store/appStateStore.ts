@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit"
-import { logsSlice } from "./slices/LogsSlice"
+import { logsSlice } from "./slices/logs-slice/LogsSlice"
 import { detectedDevicesSlice } from "@/store/slices/cameras-slice/camerasSlice"
-import {latestFrontendPayloadSlice} from "./slices/latestFrontendPayloadSlice"
+import {latestFrontendPayloadSlice} from "./slices/frontend-payload-slice/latestFrontendPayloadSlice"
 import {recordingInfoSlice} from "./slices/recordingInfoSlice"
 import {framerateSlice} from "./slices/framerateSlice"
 

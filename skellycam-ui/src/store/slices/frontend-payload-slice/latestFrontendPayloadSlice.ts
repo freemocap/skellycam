@@ -5,7 +5,7 @@ import {
     FrontendFramePayloadSchema,
     JpegImages,
     JpegImagesSchema
-} from "@/types/zod-schemas/FrontendFramePayloadSchema"
+} from "@/store/slices/frontend-payload-slice/FrontendFramePayloadSchema"
 import { z } from 'zod'
 import {CameraConfigs} from "@/store/slices/cameras-slice/camera-types";
 

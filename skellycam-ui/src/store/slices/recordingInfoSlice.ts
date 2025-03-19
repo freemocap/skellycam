@@ -4,7 +4,8 @@ import {z} from 'zod';
 
 export const RecordingInfoSchema = z.object({
     isRecording: z.boolean(),
-    recordingDirectory: z.string().nullable()
+    recordingDirectory: z.string().nullable(),
+    recordingTag: z.string().nullable()
 });
 export type RecordingInfo = z.infer<typeof RecordingInfoSchema>;
 
@@ -15,7 +16,8 @@ interface RecordingStatusState {
 const initialState: RecordingStatusState = {
     currentRecordingInfo: RecordingInfoSchema.parse({
         isRecording: false,
-        recordingDirectory: null
+        recordingDirectory: null,
+        recordingTag: null
     })
 }
 
@@ -24,7 +26,7 @@ export const recordingInfoSlice = createSlice({
     initialState,
     reducers: {
         setRecordingInfo: (state, action: PayloadAction<RecordingInfo>) => {
-            state.currentRecordingInfo = RecordingInfoSchema.parse(action.payload);
+            state.currentRecordingInfo = action.payload;
         }
     }
 })

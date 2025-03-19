@@ -1,11 +1,11 @@
 import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
-import {FrontendFramePayloadSchema} from "@/types/zod-schemas/FrontendFramePayloadSchema";
+import {FrontendFramePayloadSchema} from "@/store/slices/frontend-payload-slice/FrontendFramePayloadSchema";
 import {useAppDispatch} from '@/store/hooks';
-import {LogRecordSchema} from "@/types/zod-schemas/LogRecordSchema";
+import {LogRecordSchema} from "@/store/slices/logs-slice/LogRecordSchema";
 import {setConnectedCameras} from "@/store/slices/cameras-slice/camerasSlice";
-import {addLog} from "@/store/slices/LogsSlice";
-import {setLatestFrontendPayload} from '@/store/slices/latestFrontendPayloadSlice';
+import {addLog} from "@/store/slices/logs-slice/LogsSlice";
+import {setLatestFrontendPayload} from '@/store/slices/frontend-payload-slice/latestFrontendPayloadSlice';
 import {
     setBackendFramerate,
     setFrontendFramerate
@@ -40,17 +40,8 @@ export const useWebSocket = (wsUrl: string) => {
     const parseAndValidateMessage = useCallback((data: string) => {
         try {
             const parsedData = JSON.parse(data);
-
+            console.log(`Parsed websocket message with keys: ${Object.keys(parsedData)}`);
             // Try each schema in sequence, catching validation errors
-            try {
-                const frontendPayload = FrontendFramePayloadSchema.parse(parsedData);
-                dispatch(setLatestFrontendPayload(frontendPayload));
-                dispatch(setFrontendFramerate(frontendPayload.frontend_framerate));
-                dispatch(setBackendFramerate(frontendPayload.backend_framerate));
-                return;
-            } catch (e) {
-                if (!(e instanceof z.ZodError)) throw e; // Re-throw if not a validation error
-            }
 
             try {
                 const connectedCameraConfigs = CameraConfigsSchema.parse(parsedData);
@@ -80,9 +71,28 @@ export const useWebSocket = (wsUrl: string) => {
             } catch (e) {
                 if (!(e instanceof z.ZodError)) throw e;
             }
+            try {
+                console.log(`Attempting to validate FrontendFramePayload...`);
+                const frontendPayload = FrontendFramePayloadSchema.parse(parsedData);
+                dispatch(setLatestFrontendPayload(frontendPayload));
+                if (frontendPayload.frontend_framerate) {
+                    dispatch(setFrontendFramerate(frontendPayload.frontend_framerate));
+                }
+                if (frontendPayload.backend_framerate) {
+                    dispatch(setBackendFramerate(frontendPayload.backend_framerate));
+                }
+                return;
+            } catch (e) {
+                if (e instanceof z.ZodError) {
+                    console.error('FrontendFramePayload validation failed:', {
+                        errors: e.errors,
+                        receivedData: parsedData
+                    });
+                }
+                if (!(e instanceof z.ZodError)) throw e; // Re-throw if not a validation error
+            }
 
-            console.error('Message did not match any known schema:', data);
-
+            console.error('Message did not match any known schema. Message keys:', Object.keys(parsedData));
         } catch (e) {
             if (e instanceof z.ZodError) {
                 console.error('Validation failed with errors:', JSON.stringify(e.errors, null, 2));

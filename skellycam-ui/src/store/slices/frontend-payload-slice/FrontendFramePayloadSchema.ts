@@ -3,18 +3,18 @@ import { CameraConfigsSchema} from "@/store/slices/cameras-slice/camera-types";
 import {CurrentFramerateSchema} from "@/store/slices/framerateSlice";
 
 export const JpegImagesSchema = z.record(
-    z.number(),
+    z.string(),
     z.string()
 );
 
 export const FrontendFramePayloadSchema = z.object({
     jpeg_images: JpegImagesSchema,
     camera_configs: CameraConfigsSchema,
-    multi_frame_metadata: z.record(z.number(), z.any()),
+    multi_frame_metadata: z.record(z.string(), z.unknown()),
     utc_ns_to_perf_ns: z.record(z.string(), z.number()),
     multi_frame_number: z.number().int(),
-    backend_framerate: CurrentFramerateSchema,
-    frontend_framerate: CurrentFramerateSchema
+    backend_framerate: CurrentFramerateSchema.nullable(),
+    frontend_framerate: CurrentFramerateSchema.nullable(),
 });
 
 export type JpegImages = z.infer<typeof JpegImagesSchema>;

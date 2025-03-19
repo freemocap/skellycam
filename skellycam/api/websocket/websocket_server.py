@@ -80,6 +80,9 @@ class WebsocketServer:
                         await self._handle_ipc_queue_message(message=self._app_state.ipc_queue.get())
                     except multiprocessing.queues.Empty:
                         continue
+                    except Exception as e:
+                        logger.exception(f"Error handling IPC queue message: {e.__class__}: {e}")
+                        raise
                 else:
                     await async_wait_1ms()
 
@@ -98,6 +101,8 @@ class WebsocketServer:
 
         elif isinstance(message, RecordingInfo):
             logger.trace(f"Relaying RecordingInfo to frontend")
+        elif isinstance(message, CurrentFramerate):
+            self.latest_backend_framerate = message
 
         else:
             raise ValueError(f"Unknown message type: {type(message)}")

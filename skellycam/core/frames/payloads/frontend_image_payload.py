@@ -18,7 +18,6 @@ from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcTo
 
 Base64JPEGImage = str  # Base64 encoded JPEG image
 class FrontendFramePayload(BaseModel):
-    type: str = 'FrontendFramePayload'
     jpeg_images: dict[CameraId, Base64JPEGImage ]
     camera_configs: dict[CameraId, CameraConfig]
     multi_frame_metadata: MultiFrameMetadata

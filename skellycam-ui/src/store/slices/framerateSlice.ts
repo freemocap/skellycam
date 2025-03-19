@@ -3,10 +3,10 @@ import { createSlice } from '@reduxjs/toolkit'
 import { z } from 'zod'
 
 export const CurrentFramerateSchema = z.object({
-    mean_frame_duration_ms: z.number(),
-    mean_frames_per_second: z.number(),
-    recent_frames_per_second: z.number(),
-    recent_mean_frame_duration_ms: z.number(),
+    mean_frame_duration_ms: z.number().nullable(),
+    mean_frames_per_second: z.number().nullable(),
+    calculation_window_size: z.number(),
+    framerate_source: z.string(),
 });
 
 interface FramerateState {

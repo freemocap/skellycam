@@ -5,15 +5,23 @@ import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
 import {RecordButton} from "@/components/RecordButton";
 import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
 import CameraButtonsGroup from "./CameraButtonsGroup";
+import {useAppSelector} from "@/store/hooks";
 
 
 export const CamerasView = () => {
-    const {latestImages} = useWebSocketContext();
+    const latestImages = useAppSelector(state => state.frontendPayload.latestImages);
     const [showAnnotation, setShowAnnotation] = useState(true);
     const toggleAnnotation = () => {
         setShowAnnotation(prev => !prev);
     };
 
+    if (!latestImages) {
+        return (
+            <Box sx={{p: 2}}>
+                Waiting for camera feed...
+            </Box>
+        );
+    }
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'a') {
@@ -45,7 +53,6 @@ export const CamerasView = () => {
                     sx={{flex: 1, minHeight: 0, height: "100%", width: "100%"}}
                 />
             )}
-            <CameraButtonsGroup />
 
 
         </Box>
