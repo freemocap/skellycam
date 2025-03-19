@@ -95,17 +95,10 @@ class WebsocketServer:
         if isinstance(message, CameraConfig):
             logger.trace(f"Updating device extracted camera config for camera {message.camera_id}")
             self._app_state.set_device_extracted_camera_config(message)
-            message = self._app_state.state_dto()
-
-        if isinstance(message, SkellycamAppStateDTO):
-            logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
 
         elif isinstance(message, RecordingInfo):
             logger.trace(f"Relaying RecordingInfo to frontend")
 
-        elif isinstance(message, CurrentFramerate):
-            self.latest_backend_framerate = message
-            return
         else:
             raise ValueError(f"Unknown message type: {type(message)}")
 
@@ -126,12 +119,10 @@ class WebsocketServer:
 
                 if not self._app_state.frame_escape_shm:
                     latest_mf_number = -1
-                    mf_payload = None
                     continue
 
                 if self._app_state.camera_group and camera_group_uuid != self._app_state.camera_group.uuid:
                     latest_mf_number = -1
-                    mf_payload = None
                     camera_group_uuid = self._app_state.camera_group.uuid
                     continue
 

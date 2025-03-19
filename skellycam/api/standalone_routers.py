@@ -3,7 +3,7 @@ from skellycam.api.http.app.health import health_router
 from skellycam.api.http.app.shutdown import app_shutdown_router
 from skellycam.api.http.app.state import state_router
 from skellycam.api.http.ui.ui_router import ui_router
-from skellycam.api.websocket.connect.websocket_connect import websocket_router
+from skellycam.api.websocket.websocket_connect import websocket_router
 
 SKELLYCAM_STANDALONE_ROUTES = {
     "/skellycam/ui": {
