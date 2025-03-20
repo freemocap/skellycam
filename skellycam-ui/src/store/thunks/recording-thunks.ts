@@ -17,14 +17,12 @@ export const startRecording = createAsyncThunk<void, string>(
     'appState/startRecording',
     async  (recordingTag: string, {dispatch}) => {
         try {
-            const recStartUrl = 'http://localhost:8006/skellycam/cameras/record/start';
+            const recStartUrl = 'http://localhost:8006/skellycam/record/start';
             const timestampName = getTimestampRecordingName();
             const recordingName = recordingTag ? `${timestampName}_${recordingTag}` : timestampName;
 
             const requestPayload = RecordStartRequestSchema.parse({
                 recording_name: recordingName,
-                recording_path: '~/skellycam_data/recordings',
-                mic_device_index: -1
             });
 
             const response = await fetch(recStartUrl, {
@@ -55,7 +53,7 @@ export const stopRecording = createAsyncThunk<void, void>(
     'appState/stopRecording',
     async (_, {dispatch}) => {
         try {
-            const recStopUrl = 'http://localhost:8006/skellycam/cameras/record/stop';
+            const recStopUrl = 'http://localhost:8006/skellycam/record/stop';
             const response = await fetch(recStopUrl, {
                 method: 'GET',
             });

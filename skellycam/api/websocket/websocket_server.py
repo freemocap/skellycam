@@ -103,7 +103,7 @@ class WebsocketServer:
             logger.trace(f"Relaying RecordingInfo to frontend")
         elif isinstance(message, CurrentFramerate):
             self.latest_backend_framerate = message
-
+            return # will send framerate update bundled with frontend payload
         else:
             raise ValueError(f"Unknown message type: {type(message)}")
 

@@ -9,8 +9,8 @@ import {useAppSelector} from "@/store/hooks";
 
 
 export const CamerasView = () => {
-    const latestImages = useAppSelector(state => state.frontendPayload.latestImages);
     const [showAnnotation, setShowAnnotation] = useState(true);
+    const latestImages = useAppSelector(state => state.frontendPayload.latestImages);
     const toggleAnnotation = () => {
         setShowAnnotation(prev => !prev);
     };
@@ -22,18 +22,6 @@ export const CamerasView = () => {
             </Box>
         );
     }
-    useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'a') {
-                toggleAnnotation();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, []);
 
     return (
         <Box sx={{

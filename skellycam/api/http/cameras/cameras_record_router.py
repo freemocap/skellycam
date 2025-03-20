@@ -22,5 +22,5 @@ def start_recording(request: StartRecordingRequest = Body(..., examples=[     St
                            summary="Stop recording video from cameras")
 def stop_recording():
     logger.api("Received `/record/stop` request...")
-    get_skellycam_app_controller().stop_recording()
+    get_skellycam_app_state().stop_recording()
     logger.api("`/record/stop` request handled successfully.")

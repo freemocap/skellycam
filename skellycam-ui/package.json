@@ -51,7 +51,7 @@
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.18",
     "cross-env": "^7.0.3",
-    "electron": "^29.1.1",
+    "electron": "^35.0.3",
     "electron-builder": "^24.13.3",
     "electron-devtools-installer": "^4.0.0",
     "postcss": "^8.4.35",

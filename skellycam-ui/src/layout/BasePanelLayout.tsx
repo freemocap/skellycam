@@ -2,7 +2,7 @@ import React from "react"
 import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
 import {paperbaseTheme} from "@/layout/paperbase_theme/paperbase-theme";
 import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
-import {TerminalPanelContent} from "@/components/ui-components/TerminalPanelContent";
+import {LogTerminal} from "@/components/ui-components/LogTerminal";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     return (
@@ -48,7 +48,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
 
             <Panel collapsible defaultSize={20} minSize={10} collapsedSize={4}>
-                <TerminalPanelContent/>
+                <LogTerminal/>
             </Panel>
         </PanelGroup>
     )
