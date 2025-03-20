@@ -2,8 +2,7 @@ import React from 'react';
 import {PaperbaseContent} from "@/layout/paperbase_theme/PaperbaseContent";
 import {WebSocketContextProvider} from "@/services/websocket-connection/WebSocketContext";
 import {Provider} from "react-redux";
-import {AppStateStore} from "@/store/appStateStore";
-import {CameraProvider} from "@/services/device-detection/detectedDevicesContext";
+import {AppStateStore} from "@/store/AppStateStore";
 
 
 function App() {
@@ -12,11 +11,9 @@ function App() {
     return (
 
         <Provider store={AppStateStore}>
-            <CameraProvider>
                 <WebSocketContextProvider url={wsUrl}>
                     <PaperbaseContent/>
                 </WebSocketContextProvider>
-            </CameraProvider>
         </Provider>
     );
 }

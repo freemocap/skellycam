@@ -50,6 +50,11 @@ class CameraFrameLoopFlags:
     def should_continue(self):
         return self.ipc_flags.camera_group_should_continue and not self.close_self_flag.value
 
+    def shutdown(self):
+        logger.info(f"Camera {self.camera_id} process shutting down...")
+        self.camera_ready_flag.value = False
+        self.close_self_flag.value = True
+
     def await_initialization_signal(self):
         self._wait_loop(self.frame_loop_initialization_flag, waiting_for="frame_read_initialization_flag")
 

@@ -1,35 +1,47 @@
 import React from 'react';
 import {Button} from '@mui/material';
-import axios from 'axios';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
+import {useAppDispatch, useAppSelector} from "@/store/hooks";
+import {connectToCameras, detectBrowserDevices} from "@/store/thunks/camera-thunks";
 
 export const ConnectToCamerasButton = () => {
-    const sendConnectDetectRequest = async () => {
+    const dispatch = useAppDispatch();
+    const isLoading = useAppSelector(state => state.cameras.isLoading);
+    const browserDetectedCameras = useAppSelector(state => state.cameras.browser_detected_devices);
+
+    const handleConnectAndDetect = async () => {
+        if (isLoading) {
+            console.log('Camera connection is already in progress.');
+            return;
+        }
+
         try {
+            // First detect browser devices
+            const detectedCameras = await dispatch(detectBrowserDevices(true)).unwrap();
 
-            const response = await axios.post(`http://localhost:8006/skellycam/cameras/connect`,{
-                camera_ids: [0]
-            });
-
-            if (response.status === 200) {
-                console.log('Cameras detect/connect request sent successfully');
-
+            // Only proceed with connection if we actually found cameras
+            if (detectedCameras && detectedCameras.length > 0) {
+                await dispatch(connectToCameras(detectedCameras)).unwrap();
+                console.log('Camera detection and connection completed successfully');
             } else {
-                console.error(`Error sending cameras detect/connect request: ${response.status}`);
+                console.log('No cameras detected to connect to');
             }
         } catch (error) {
-            console.error('Error detecting cameras:', error);
+            console.error('Error during camera detection and connection:', error);
         }
     };
 
     return (
         <Button
             variant="contained"
-            onClick={sendConnectDetectRequest}
+            onClick={handleConnectAndDetect}
             sx={{
+                m: 2,
+                p: 2,
                 fontSize: '1.25rem',
                 color: extendedPaperbaseTheme.palette.primary.contrastText,
-                backgroundColor: extendedPaperbaseTheme.palette.primary.light,
+                backgroundColor: "#900078",
+                border: `2px solid ${extendedPaperbaseTheme.palette.primary.main}`,
             }}
         >
             Detect/Connect to Cameras

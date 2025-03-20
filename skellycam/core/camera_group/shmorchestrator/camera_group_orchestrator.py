@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CameraGroupOrchestrator:
-    frame_loop_flags: Dict[CameraId, CameraFrameLoopFlags]
+    frame_loop_flags: dict[CameraId, CameraFrameLoopFlags]
     camera_group_dto: CameraGroupDTO
 
     pause_when_able: multiprocessing.Value
@@ -195,6 +196,14 @@ class CameraGroupOrchestrator:
         logger.trace("Waiting for all cameras to be ready...")
         while not all([triggers.camera_ready_flag.value for triggers in
                        self.frame_loop_flags.values()]) and self.should_continue:
+            for camera_id, flags in self.frame_loop_flags.items():
+                if not flags.close_self_flag.value:
+                    logger.warning(f"Camera {camera_id} shut itself down - removing from camera group")
+                    self.frame_loop_flags.pop(camera_id)
+                    camera_configs = deepcopy(self.camera_group_dto.camera_configs)
+                    camera_configs[camera_id].use_this_camera = False
+                    self.camera_group_dto.ipc_queue.put(camera_configs)
+
             wait_10ms()
         logger.debug("All cameras are ready!")
 
@@ -220,7 +229,8 @@ class CameraGroupOrchestrator:
 
     def _ensure_cameras_ready(self):
         if not self.cameras_ready:
-            raise AssertionError("Not all cameras are ready!")
+            logger.warning("Not all cameras are ready - waiting for them to be ready...")
+            self.await_cameras_ready()
 
     def _verify_hunky_dory_after_read(self, max_attempts=100):
         are_cameras_ready = False

@@ -63,8 +63,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
         logger.trace(f"Camera {config.camera_id} configuration applied, extracted config: {extracted_config}")
         return extracted_config
     except Exception as e:
-        logger.error(f"Problem applying configuration for camera: {config.camera_id}")
-        traceback.print_exc()
+        logger.exception(f"Problem applying configuration for camera: {config},\n\nReceived error:    {e}")
         raise FailedToApplyCameraConfigurationError(
             f"Failed to apply configuration to Camera {config.camera_id} - {type(e).__name__} - {e}"
         )

@@ -9,6 +9,7 @@ export const CurrentFramerateSchema = z.object({
     framerate_source: z.string(),
 });
 
+export type CurrentFramerate = z.infer<typeof CurrentFramerateSchema>;
 interface FramerateState {
     currentFrontendFramerate: z.infer<typeof CurrentFramerateSchema> | null;
     currentBackendFramerate: z.infer<typeof CurrentFramerateSchema> | null;
@@ -27,11 +28,11 @@ export const framerateSlice = createSlice({
     name: 'framerate',
     initialState,
     reducers: {
-        setFrontendFramerate: (state, action: PayloadAction<z.infer<typeof CurrentFramerateSchema>>) => {
+        setFrontendFramerate: (state, action: PayloadAction<CurrentFramerate>) => {
             state.currentFrontendFramerate = CurrentFramerateSchema.parse(action.payload);
             state.loggedFrontendFramerate.push(action.payload);
         },
-        setBackendFramerate: (state, action: PayloadAction<z.infer<typeof CurrentFramerateSchema>>) => {
+        setBackendFramerate: (state, action: PayloadAction<CurrentFramerate>) => {
             state.currentBackendFramerate = CurrentFramerateSchema.parse(action.payload);
             state.loggedBackendFramerate.push(action.payload);
         },

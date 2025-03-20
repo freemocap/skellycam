@@ -7,7 +7,7 @@ from skellycam.skellycam_app.skellycam_app_state import get_skellycam_app_state
 
 logger = logging.getLogger(__name__)
 
-record_cameras_router = APIRouter()
+record_cameras_router = APIRouter(tags=["Recording"])
 
 
 @record_cameras_router.post("/record/start",

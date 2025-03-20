@@ -1,20 +1,12 @@
 import {Box} from "@mui/material";
-import React, {useEffect, useState} from "react";
-import {useWebSocketContext} from "@/services/websocket-connection/WebSocketContext";
+import React  from "react";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
-import {RecordButton} from "@/components/RecordButton";
-import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
-import CameraButtonsGroup from "./CameraButtonsGroup";
 import {useAppSelector} from "@/store/hooks";
 
 
 export const CamerasView = () => {
-    const [showAnnotation, setShowAnnotation] = useState(true);
-    const latestImages = useAppSelector(state => state.frontendPayload.latestImages);
-    const toggleAnnotation = () => {
-        setShowAnnotation(prev => !prev);
-    };
-
+    const latestImages = useAppSelector(state => state.latestPayload.latestImages);
+    const showAnnotation = true
     if (!latestImages) {
         return (
             <Box sx={{p: 2}}>

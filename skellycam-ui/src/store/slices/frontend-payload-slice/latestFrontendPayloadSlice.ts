@@ -1,13 +1,12 @@
-import type { PayloadAction } from '@reduxjs/toolkit'
-import { createSlice } from '@reduxjs/toolkit'
+import type {PayloadAction} from '@reduxjs/toolkit'
+import {createSlice} from '@reduxjs/toolkit'
 import {
     FrontendFramePayload,
     FrontendFramePayloadSchema,
-    JpegImages,
-    JpegImagesSchema
+    JpegImages
 } from "@/store/slices/frontend-payload-slice/FrontendFramePayloadSchema"
-import { z } from 'zod'
-import {CameraConfigs} from "@/store/slices/cameras-slice/camera-types";
+import {z} from 'zod'
+import {CameraConfigs} from "@/store/slices/cameras-slice/camerasSlice";
 
 interface FrontendPayloadState {
     latestFrontendPayload: FrontendFramePayload | null;
@@ -27,10 +26,10 @@ export const latestFrontendPayloadSlice = createSlice({
     reducers: {
         setLatestFrontendPayload: (state, action: PayloadAction<z.infer<typeof FrontendFramePayloadSchema>>) => {
             state.latestFrontendPayload = action.payload;
-            state.latestImages = action.payload.jpeg_images;
+            state.latestImages = action.payload.jpeg_images as JpegImages;
 
             if (action.payload.camera_configs) {
-                state.cameraConfigs = action.payload.camera_configs;
+                state.cameraConfigs = action.payload.camera_configs as CameraConfigs;
             }
         }
     }

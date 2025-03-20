@@ -2,10 +2,11 @@ import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
 import {FrontendFramePayloadSchema} from "@/store/slices/frontend-payload-slice/FrontendFramePayloadSchema";
 import {useAppDispatch} from '@/store/hooks';
-import {setConnectedCameras} from "@/store/slices/cameras-slice/camerasSlice";
+import {CameraConfigsSchema, setConnectedCameras} from "@/store/slices/cameras-slice/camerasSlice";
 import {addLog, LogRecordSchema} from "@/store/slices/logs-slice/LogsSlice";
 import {setLatestFrontendPayload} from '@/store/slices/frontend-payload-slice/latestFrontendPayloadSlice';
 import {
+    CurrentFramerate,
     setBackendFramerate,
     setFrontendFramerate
 } from "@/store/slices/framerateSlice";
@@ -13,7 +14,6 @@ import {
     RecordingInfoSchema,
     setRecordingInfo
 } from "@/store/slices/recordingInfoSlice";
-import {CameraConfigsSchema} from "@/store/slices/cameras-slice/camera-types";
 
 const MAX_RECONNECT_ATTEMPTS = 20;
 export const useWebSocket = (wsUrl: string) => {
@@ -43,10 +43,10 @@ export const useWebSocket = (wsUrl: string) => {
                 const frontendPayload = FrontendFramePayloadSchema.parse(parsedData);
                 dispatch(setLatestFrontendPayload(frontendPayload));
                 if (frontendPayload.frontend_framerate) {
-                    dispatch(setFrontendFramerate(frontendPayload.frontend_framerate));
+                    dispatch(setFrontendFramerate(frontendPayload.frontend_framerate as CurrentFramerate));
                 }
                 if (frontendPayload.backend_framerate) {
-                    dispatch(setBackendFramerate(frontendPayload.backend_framerate));
+                    dispatch(setBackendFramerate(frontendPayload.backend_framerate as CurrentFramerate));
                 }
                 return;
             } catch (e) {

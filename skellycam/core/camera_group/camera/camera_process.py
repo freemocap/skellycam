@@ -71,14 +71,6 @@ class CameraProcess:
         camera_id = camera_config.camera_id
         configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
 
-        def heartbeat_thread_function():
-            heartbeat_counter = 0
-            while camera_group_dto.should_continue and not should_close_self_flag.value:
-                heartbeat_counter += 1
-                if heartbeat_counter % 10 == 0:
-                    logger.trace(f"Camera#{camera_id} Process heartbeat says 'beep'")
-                time.sleep(1)
-
         camera_shm = SingleSlotCameraSharedMemory.recreate(camera_config=camera_config,
                                                            camera_shm_dto=camera_shm_dto,
                                                            read_only=False)
@@ -88,10 +80,21 @@ class CameraProcess:
             cv2_video_capture = create_cv2_video_capture(camera_config)
 
             logger.trace(f"Camera {camera_config.camera_id} process started")
-            camera_config = apply_camera_configuration(cv2_video_capture, camera_config, initial=True)
+            camera_config = apply_camera_configuration(cv2_vid_capture = cv2_video_capture,
+                                                       config = camera_config,
+                                                       initial=True)
             ipc_queue.put(camera_config)
             frame_loop_flags.set_camera_ready()
+        except Exception as e:
+            logger.exception(f"Failed to create `cv2.VideoCapture` for camera {camera_id} - {e}")
+            if cv2_video_capture:
+                cv2_video_capture.release()
+            camera_shm.close()
+            should_close_self_flag.value = True
 
+            return
+
+        try:
             logger.info(f"Camera {camera_config.camera_id} trigger listening loop started!")
             frame_number = 0
             # Trigger listening loop
@@ -123,7 +126,7 @@ class CameraProcess:
 
             logger.debug(f"Camera {camera_config.camera_id} process completed")
         except Exception as e:
-            logger.exception(f"Exception occured when running Camera Process for Camera: {camera_id} - {e}")
+            logger.exception(f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}")
             raise
         finally:
             logger.debug(f"Releasing camera {camera_id} `cv2.VideoCapture` and shutting down CameraProcess")

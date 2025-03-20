@@ -1,9 +1,9 @@
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {List, ListItem, ListItemText, Paper} from "@mui/material";
-import {useDetectedDevicesContext} from "@/services/device-detection/detectedDevicesContext";
+import {useAppSelector} from "@/store/hooks";
 
 export const ConfigView = () => {
-    const { detectedDevices } = useDetectedDevicesContext();
+    const browserDetectedDevices = useAppSelector(state => state.cameras.browser_detected_devices);
 
     return (
         <Paper elevation={3} sx={{
@@ -13,7 +13,7 @@ export const ConfigView = () => {
         }}>
 
             <List dense>
-                {detectedDevices.map(device => (
+                {browserDetectedDevices.map(device => (
                     <ListItem key={device.deviceId} sx={{ py: 0.5 }}>
                         <ListItemText
                             primary={device.label}

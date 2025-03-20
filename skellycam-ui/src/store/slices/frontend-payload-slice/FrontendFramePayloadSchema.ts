@@ -1,5 +1,5 @@
 import {z} from "zod";
-import { CameraConfigsSchema} from "@/store/slices/cameras-slice/camera-types";
+import {CameraConfigsSchema} from "@/store/slices/cameras-slice/camerasSlice";
 import {CurrentFramerateSchema} from "@/store/slices/framerateSlice";
 
 export const JpegImagesSchema = z.record(
