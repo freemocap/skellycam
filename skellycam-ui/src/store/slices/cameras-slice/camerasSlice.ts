@@ -3,10 +3,12 @@ import {createSlice} from '@reduxjs/toolkit'
 import { z } from 'zod';
 
 export interface SerializedMediaDeviceInfo {
+    index: number;
     deviceId: string;
     groupId: string;
     kind: string;
     label: string;
+    selected: boolean;
 }
 
 export const CameraConfigSchema = z.object({
@@ -60,7 +62,7 @@ export const camerasSlice = createSlice({
         setUserSelectedCameraConfigs: (state, action: PayloadAction<CameraConfigs>) => {
             state.user_selected_camera_configs = action.payload
         },
-        setBrowserDetectedDevices: (state, action: PayloadAction<MediaDeviceInfo[]>) => {
+        setBrowserDetectedDevices: (state, action: PayloadAction<SerializedMediaDeviceInfo[]>) => {
             state.browser_detected_devices = action.payload;
         },
         setLoading: (state, action: PayloadAction<boolean>) => {
@@ -69,6 +71,14 @@ export const camerasSlice = createSlice({
         setError: (state, action: PayloadAction<string | null>) => {
             state.error = action.payload;
         },
+        toggleCameraSelection: (state, action: PayloadAction<string>) => {
+            state.browser_detected_devices = state.browser_detected_devices.map( device =>
+                device.deviceId === action.payload
+                    ? { ...device, selected: !device.selected }
+                    : device
+
+            )
+        }
     },
 })
 
@@ -77,6 +87,7 @@ export const {
     setUserSelectedCameraConfigs,
     setBrowserDetectedDevices,
     setLoading,
+    toggleCameraSelection,
     setError
 } = camerasSlice.actions
 

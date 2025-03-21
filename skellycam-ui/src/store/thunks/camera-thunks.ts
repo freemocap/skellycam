@@ -1,6 +1,7 @@
 // store/thunks/camera-thunks.ts
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {
+    SerializedMediaDeviceInfo,
     setBrowserDetectedDevices,
     setConnectedCameras,
     setError,
@@ -86,8 +87,11 @@ export const detectBrowserDevices = createAsyncThunk(
                 }
             }
             console.log(`After validation, ${validatedCameras.length} camera(s) remain`, validatedCameras);
-            // Convert MediaDeviceInfo objects to plain serializable objects
-            const serializableCameras = validatedCameras.map(device => device.toJSON());
+            // Convert MediaDeviceInfo objects to plain serializable objects and add index
+            const serializableCameras = validatedCameras.map((device, index) => ({
+                ...device.toJSON(),
+                index: index
+            }));
             console.log(`Detected ${serializableCameras.length} camera(s)`, serializableCameras);
             dispatch(setBrowserDetectedDevices(serializableCameras));
             dispatch(setError(null));
@@ -104,7 +108,7 @@ export const detectBrowserDevices = createAsyncThunk(
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',
-    async (cameraDevices: MediaDeviceInfo[], {dispatch}) => {
+    async (cameraDevices: SerializedMediaDeviceInfo[], {dispatch}) => {
         try {
             if (!cameraDevices || cameraDevices.length === 0) {
                 throw new Error('No camera devices provided for connection');

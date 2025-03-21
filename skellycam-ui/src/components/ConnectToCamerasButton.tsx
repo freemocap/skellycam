@@ -7,7 +7,7 @@ import {connectToCameras, detectBrowserDevices} from "@/store/thunks/camera-thun
 export const ConnectToCamerasButton = () => {
     const dispatch = useAppDispatch();
     const isLoading = useAppSelector(state => state.cameras.isLoading);
-    const browserDetectedCameras = useAppSelector(state => state.cameras.browser_detected_devices);
+    const detectedCameras = useAppSelector(state => state.cameras.browser_detected_devices);
 
     const handleConnectAndDetect = async () => {
         if (isLoading) {
@@ -16,10 +16,7 @@ export const ConnectToCamerasButton = () => {
         }
 
         try {
-            // First detect browser devices
-            const detectedCameras = await dispatch(detectBrowserDevices(true)).unwrap();
 
-            // Only proceed with connection if we actually found cameras
             if (detectedCameras && detectedCameras.length > 0) {
                 await dispatch(connectToCameras(detectedCameras)).unwrap();
                 console.log('Camera detection and connection completed successfully');

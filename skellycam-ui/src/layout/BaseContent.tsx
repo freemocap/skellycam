@@ -1,11 +1,21 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {CamerasView} from "@/components/camera-views/CamerasView";
+import {useAppDispatch} from "@/store/hooks";
+import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
 
 export const BaseContent = () => {
+    const dispatch = useAppDispatch();
+
+    useEffect(() => {
+        dispatch(detectBrowserDevices(true));
+        navigator.mediaDevices.addEventListener('devicechange', () => {
+            dispatch(detectBrowserDevices(true));
+        });
+    }, [dispatch]);
     return (
         <React.Fragment>
             <Box sx={{
