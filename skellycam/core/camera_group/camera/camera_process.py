@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -26,8 +25,8 @@ class CameraProcess:
     camera_id: CameraId
     process: multiprocessing.Process
     camera_group_dto: CameraGroupDTO
-    should_close_self_flag: multiprocessing.Value
     new_config_queue: multiprocessing.Queue
+    frame_loop_flags:CameraFrameLoopFlags
 
     @classmethod
     def create(cls,
@@ -36,12 +35,11 @@ class CameraProcess:
                frame_loop_flags: CameraFrameLoopFlags,
                camera_shared_memory_dto: CameraSharedMemoryDTO):
 
-        should_close_self_flag = multiprocessing.Value('b', False)
         new_config_queue = multiprocessing.Queue()
         return cls(camera_id=camera_config.camera_id,
                    camera_group_dto=camera_group_dto,
-                   should_close_self_flag=should_close_self_flag,
                    new_config_queue=new_config_queue,
+                   frame_loop_flags=frame_loop_flags,
                    process=multiprocessing.Process(target=cls._run_process,
                                                    name=f"Camera{camera_config.camera_id}-Process",
                                                    daemon=True,
@@ -50,11 +48,11 @@ class CameraProcess:
                                                                frame_loop_flags=frame_loop_flags,
                                                                camera_shm_dto=camera_shared_memory_dto,
                                                                new_config_queue=new_config_queue,
-                                                               ipc_queue=camera_group_dto.ipc_queue,
-                                                               should_close_self_flag=should_close_self_flag)
+                                                               ipc_queue=camera_group_dto.ipc_queue)
                                                    ),
 
                    )
+
 
     @staticmethod
     def _run_process(camera_config: CameraConfig,
@@ -63,19 +61,22 @@ class CameraProcess:
                      camera_shm_dto: CameraSharedMemoryDTO,
                      new_config_queue: multiprocessing.Queue,
                      ipc_queue: multiprocessing.Queue,
-                     should_close_self_flag: multiprocessing.Value
                      ):
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
-        camera_id = camera_config.camera_id
         configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
 
+        def should_continue() -> bool:
+            return camera_group_dto.should_continue and not frame_loop_flags.close_self_flag.value
+
+        camera_id = camera_config.camera_id
         camera_shm = SingleSlotCameraSharedMemory.recreate(camera_config=camera_config,
                                                            camera_shm_dto=camera_shm_dto,
                                                            read_only=False)
         logger.debug(f"Camera {camera_id} shared memory re-created in CameraProcess for camera {camera_id}")
-        cv2_video_capture: Optional[cv2.VideoCapture] = None
+
+        cv2_video_capture: cv2.VideoCapture|None = None
         try:
             cv2_video_capture = create_cv2_video_capture(camera_config)
 
@@ -90,15 +91,14 @@ class CameraProcess:
             if cv2_video_capture:
                 cv2_video_capture.release()
             camera_shm.close()
-            should_close_self_flag.value = True
-
+            frame_loop_flags.close_self_flag.value = True
             return
 
         try:
             logger.info(f"Camera {camera_config.camera_id} trigger listening loop started!")
             frame_number = 0
             # Trigger listening loop
-            while camera_group_dto.should_continue and not should_close_self_flag.value:
+            while should_continue():
                 if frame_loop_flags.frame_loop_initialization_flag.value:
                     logger.loop(f"Camera {camera_id} received `initialization` signal for frame loop# {frame_number}")
                     frame_loop_flags.frame_loop_initialization_flag.value = False
@@ -130,6 +130,7 @@ class CameraProcess:
             raise
         finally:
             logger.debug(f"Releasing camera {camera_id} `cv2.VideoCapture` and shutting down CameraProcess")
+            frame_loop_flags.close_self_flag.value = True
             if cv2_video_capture:
                 cv2_video_capture.release()
             camera_shm.close()
@@ -139,11 +140,11 @@ class CameraProcess:
 
     def close(self):
         logger.info(f"Closing camera {self.camera_id}")
-        if self.camera_group_dto.should_continue and not self.should_close_self_flag.value == True:
+        if self.camera_group_dto.should_continue and not self.frame_loop_flags.close_self_flag.value == True:
             raise ValueError(
                 f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc_flags.kill_camera_group_flag.value},"
-                f" global_kill_flag: {self.camera_group_dto.ipc_flags.global_kill_flag.value}, should_close_self_flag: {self.should_close_self_flag.value}")
-        self.should_close_self_flag.value = True
+                f" global_kill_flag: {self.camera_group_dto.ipc_flags.global_kill_flag.value}, should_close_self_flag: { self.frame_loop_flags.close_self_flag.value}")
+        self.frame_loop_flags.close_self_flag.value = True
         self.process.join()
         logger.info(f"Camera {self.camera_id} closed!")
 

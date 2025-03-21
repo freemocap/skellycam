@@ -45,4 +45,5 @@ __all__ = [
     'CameraConfigs',
     'CameraConfig',
     'IPCFlags',
+    'LOG_LEVEL'
 ]
