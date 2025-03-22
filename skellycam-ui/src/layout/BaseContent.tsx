@@ -10,12 +10,6 @@ import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
 export const BaseContent = () => {
     const dispatch = useAppDispatch();
 
-    useEffect(() => {
-        dispatch(detectBrowserDevices(true));
-        navigator.mediaDevices.addEventListener('devicechange', () => {
-            dispatch(detectBrowserDevices(true));
-        });
-    }, [dispatch]);
     return (
         <React.Fragment>
             <Box sx={{
@@ -23,7 +17,7 @@ export const BaseContent = () => {
                 px: 4,
                 flex: 1,
                 height: '100%',
-                bgcolor: extendedPaperbaseTheme.palette.primary.main,
+                backgroundColor: extendedPaperbaseTheme.palette.primary.main,
                 borderStyle: 'solid', borderWidth: '1px', borderColor: extendedPaperbaseTheme.palette.divider
             }}>
                 <ErrorBoundary>

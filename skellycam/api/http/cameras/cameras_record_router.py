@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from fastapi import APIRouter, Body
 
@@ -14,6 +15,9 @@ record_cameras_router = APIRouter(tags=["Recording"])
                            summary="Start recording video from cameras")
 def start_recording(request: StartRecordingRequest = Body(..., examples=[     StartRecordingRequest()])):
     logger.api("Received `/record/start` request...")
+    if request.recording_path.startswith("~"):
+        request.recording_path = request.recording_path.replace("~", str(Path.home()), 1)
+
     get_skellycam_app_state().start_recording(request)
     logger.api("`/record/start` request handled successfully.")
 

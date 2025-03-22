@@ -1,15 +1,14 @@
 import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
-import {FrontendFramePayloadSchema} from "@/store/slices/frontend-payload-slice/FrontendFramePayloadSchema";
 import {useAppDispatch} from '@/store/hooks';
-import {CameraConfigsSchema, setConnectedCameras} from "@/store/slices/cameras-slice/camerasSlice";
-import {addLog, LogRecordSchema} from "@/store/slices/logs-slice/LogsSlice";
-import {setLatestFrontendPayload} from '@/store/slices/frontend-payload-slice/latestFrontendPayloadSlice';
+import {CameraConfigsSchema, setConnectedCameras} from "@/store/slices/cameraDevicesSlice";
+import {addLog, LogRecordSchema} from "@/store/slices/LogRecordsSlice";
+import {FrontendFramePayloadSchema, setLatestFrontendPayload} from '@/store/slices/latestFrontendPayloadSlice';
 import {
     CurrentFramerate,
     setBackendFramerate,
     setFrontendFramerate
-} from "@/store/slices/framerateSlice";
+} from "@/store/slices/framerateTrackerSlice";
 import {
     RecordingInfoSchema,
     setRecordingInfo
@@ -40,13 +39,13 @@ export const useWebSocket = (wsUrl: string) => {
         try {
             const parsedData = JSON.parse(data);
             try {
-                const frontendPayload = FrontendFramePayloadSchema.parse(parsedData);
-                dispatch(setLatestFrontendPayload(frontendPayload));
-                if (frontendPayload.frontend_framerate) {
-                    dispatch(setFrontendFramerate(frontendPayload.frontend_framerate as CurrentFramerate));
+                const latestPayload = FrontendFramePayloadSchema.parse(parsedData);
+                dispatch(setLatestFrontendPayload(latestPayload));
+                if (latestPayload.frontend_framerate) {
+                    dispatch(setFrontendFramerate(latestPayload.frontend_framerate as CurrentFramerate));
                 }
-                if (frontendPayload.backend_framerate) {
-                    dispatch(setBackendFramerate(frontendPayload.backend_framerate as CurrentFramerate));
+                if (latestPayload.backend_framerate) {
+                    dispatch(setBackendFramerate(latestPayload.backend_framerate as CurrentFramerate));
                 }
                 return;
             } catch (e) {

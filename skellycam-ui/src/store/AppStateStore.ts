@@ -1,17 +1,17 @@
 import { configureStore } from "@reduxjs/toolkit"
-import { logsSlice } from "./slices/logs-slice/LogsSlice"
-import {latestFrontendPayloadSlice} from "./slices/frontend-payload-slice/latestFrontendPayloadSlice"
+import { logRecordsSlice } from "./slices/LogRecordsSlice"
+import {latestFrontendPayloadSlice} from "./slices/latestFrontendPayloadSlice"
 import {recordingInfoSlice} from "./slices/recordingInfoSlice"
-import {framerateSlice} from "./slices/framerateSlice"
-import {camerasSlice} from "@/store/slices/cameras-slice/camerasSlice";
+import {framerateTrackerSlice} from "./slices/framerateTrackerSlice"
+import {cameraDevicesSlice} from "@/store/slices/cameraDevicesSlice";
 
 export const AppStateStore = configureStore({
     reducer: {
-        cameras: camerasSlice.reducer,
+        cameraDevices: cameraDevicesSlice.reducer,
         latestPayload: latestFrontendPayloadSlice.reducer,
-        logs: logsSlice.reducer,
+        logRecords: logRecordsSlice.reducer,
         recordingStatus: recordingInfoSlice.reducer,
-        framerate: framerateSlice.reducer,
+        framerateTracker: framerateTrackerSlice.reducer,
     },
 })
 

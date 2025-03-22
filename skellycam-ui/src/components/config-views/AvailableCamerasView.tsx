@@ -1,4 +1,3 @@
-// ConfigView.tsx - Updated with selection and styling
 import {
     List,
     ListItem,
@@ -7,16 +6,26 @@ import {
     Paper,
     Checkbox,
     Typography,
-    Box
+    Box, Stack
 } from "@mui/material";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { toggleCameraSelection } from "@/store/slices/cameras-slice/camerasSlice";
-
-export const ConfigView = () => {
+import { toggleCameraSelection } from "@/store/slices/cameraDevicesSlice";
+import {useEffect} from "react";
+import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
+import IconButton from "@mui/material/IconButton";
+import RefreshIcon from '@mui/icons-material/Refresh';
+export const AvailableCamerasView = () => {
     const dispatch = useAppDispatch();
-    const browserDetectedDevices = useAppSelector(state => state.cameras.browser_detected_devices);
-    const isLoading = useAppSelector(state => state.cameras.isLoading);
+    const browserDetectedDevices = useAppSelector(state => state.cameraDevices.browser_detected_devices);
+    const isLoading = useAppSelector(state => state.cameraDevices.isLoading);
 
+    const handleRefresh = () => {
+        dispatch(detectBrowserDevices(true));
+    };
+
+    useEffect(() => {
+        dispatch(detectBrowserDevices(true));
+    }, [dispatch]);
     return (
         <Paper elevation={3} sx={{
             p: 2,
@@ -24,6 +33,24 @@ export const ConfigView = () => {
             borderRadius: 2,
             maxWidth: 600,
         }}>
+            <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1 }}
+            >
+                <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                    Available Cameras
+                </Typography>
+                <IconButton
+                    onClick={handleRefresh}
+                    size="small"
+                    color="primary"
+                    disabled={isLoading}
+                >
+                    <RefreshIcon />
+                </IconButton>
+            </Stack>
             <List dense sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
                 {browserDetectedDevices.map(device => (
                     <ListItem
@@ -39,7 +66,7 @@ export const ConfigView = () => {
                         <ListItemIcon>
                             <Checkbox
                                 edge="start"
-                                checked={device.selected}
+                                checked={device.selected || false}
                                 onChange={() => dispatch(toggleCameraSelection(device.deviceId))}
                                 sx={{ color: 'primary.main' }}
                             />

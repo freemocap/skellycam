@@ -69,7 +69,7 @@ class CameraGroupThread:
             camera_manager.start()
 
         except Exception as e:
-            logger.error(f"CameraGroupThread error: {e}")
+            logger.error(f"CameraGroupThread error: {e.__dict__}")
             logger.exception(e)
             raise
         finally:

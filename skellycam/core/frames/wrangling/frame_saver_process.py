@@ -79,7 +79,6 @@ class FrameSaverProcess:
         previous_mf_payload_pulled_from_shm: Optional[MultiFramePayload] = None
         previous_mf_payload_pulled_from_deque: Optional[MultiFramePayload] = None
 
-
         audio_recorder: Optional[AudioRecorder] = None
         try:
             while camera_group_dto.should_continue:
@@ -106,7 +105,8 @@ class FrameSaverProcess:
                 if camera_group_dto.ipc_flags.record_frames_flag.value:
                     while len(mf_payloads_to_process) > 0:
                         if not camera_group_dto.ipc_flags.global_should_continue:
-                            logger.critical("FrameSaverProcess received kill signal before recording was complete!! Recording may be incomplete or corrupt!")
+                            logger.critical(
+                                "FrameSaverProcess received kill signal before recording was complete!! Recording may be incomplete or corrupt!")
                             break
                         mf_payload = mf_payloads_to_process.popleft()
                         if previous_mf_payload_pulled_from_deque:
@@ -115,11 +115,11 @@ class FrameSaverProcess:
                                     f"FrameRouter expected mf_payload #{previous_mf_payload_pulled_from_deque.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
                         previous_mf_payload_pulled_from_deque = mf_payload
                         if not recording_manager:
-                            nametag = camera_group_dto.ipc_flags.recording_nametag.value.decode("utf-8")
                             recording_manager = RecordingManager.create(multi_frame_payload=mf_payload,
                                                                         camera_configs=camera_group_dto.camera_configs,
-                                                                        recording_folder=get_default_recording_folder_path(
-                                                                            tag=nametag))
+                                                                        recording_folder=camera_group_dto.ipc_flags.recording_name.value.decode(
+                                                                                "utf-8")
+                                                                        )
                             if camera_group_dto.ipc_flags.mic_device_index.value != -1:
                                 audio_file_path = str(Path(
                                     recording_manager.videos_folder) / f"{recording_manager.recording_name}_audio.wav")

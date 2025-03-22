@@ -197,9 +197,8 @@ class CameraGroupOrchestrator:
         while not all([triggers.camera_ready_flag.value for triggers in
                        self.frame_loop_flags.values()]) and self.should_continue:
             for camera_id, flags in self.frame_loop_flags.items():
-                if not flags.close_self_flag.value:
+                if flags.close_self_flag.value:
                     logger.warning(f"Camera {camera_id} shut itself down - removing from camera group")
-                    self.frame_loop_flags.pop(camera_id)
                     camera_configs = deepcopy(self.camera_group_dto.camera_configs)
                     camera_configs[camera_id].use_this_camera = False
                     self.camera_group_dto.ipc_queue.put(camera_configs)

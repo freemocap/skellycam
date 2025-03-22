@@ -1,6 +1,7 @@
 import type {PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
 import { z } from 'zod';
+import {RootState} from "@/store/AppStateStore";
 
 export interface SerializedMediaDeviceInfo {
     index: number;
@@ -52,7 +53,7 @@ const initialState: CamerasState = {
     error: null
 }
 
-export const camerasSlice = createSlice({
+export const cameraDevicesSlice = createSlice({
     name: 'cameras',
     initialState,
     reducers: {
@@ -78,9 +79,11 @@ export const camerasSlice = createSlice({
                     : device
 
             )
-        }
+        },
     },
 })
+export const selectSelectedCameras = (state: RootState) =>
+    state.cameraDevices.browser_detected_devices.filter(device => device.selected);
 
 export const {
     setConnectedCameras,
@@ -89,6 +92,6 @@ export const {
     setLoading,
     toggleCameraSelection,
     setError
-} = camerasSlice.actions
+} = cameraDevicesSlice.actions
 
-export default camerasSlice.reducer
+export default cameraDevicesSlice.reducer

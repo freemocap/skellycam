@@ -4,12 +4,15 @@ import {Button, Stack, TextField, Typography} from '@mui/material';
 import {getTimestampRecordingName, startRecording, stopRecording} from "@/store/thunks/recording-thunks";
 import Box from "@mui/material/Box";
 
-export const RecordButton: React.FC = () => {
+export const RecordingPanel: React.FC = () => {
     const recordingInfo = useAppSelector(state => state.recordingStatus.currentRecordingInfo);
     const isRecording = recordingInfo?.isRecording ?? false;
     const dispatch = useAppDispatch();
     const [recordingTag, setRecordingTag] = useState('');
     const [timestampRecordingName, setTimestampRecordingName] = useState(getTimestampRecordingName());
+
+    const recordingFullName = `${timestampRecordingName}${recordingTag ? `_${recordingTag}` : ''}`
+
     // Update the timestamp every second when not recording
     useEffect(() => {
         if (!isRecording) {
@@ -24,7 +27,7 @@ export const RecordButton: React.FC = () => {
         if (isRecording) {
             dispatch(stopRecording());
         } else {
-            dispatch(startRecording(recordingTag || ''));
+            dispatch(startRecording(recordingFullName));
         }
     };
     return (

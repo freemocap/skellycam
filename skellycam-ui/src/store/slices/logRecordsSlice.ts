@@ -22,8 +22,8 @@ export const LogRecordSchema = z.object({
     relativeCreated: z.number(),
     thread: z.number(),
     threadName: z.string(),
-    processName: z.string(),
     process: z.number(),
+    processName: z.string(),
     delta_t: z.string(),
     message: z.string(),
     asctime: z.string(),
@@ -46,8 +46,12 @@ export interface LogEntry {
     lineNumber: number
     functionName: string
     threadName: string
+    thread: number
     processName: string
+    process: number
     stackTrace: string | null
+    exc_info: string| null
+    exc_text: string| null
     delta_t: string
 }
 interface LogsState {
@@ -58,7 +62,7 @@ const initialState: LogsState = {
     entries: [],
 }
 const MAX_LOG_ENTRIES = 1000
-export const logsSlice = createSlice({
+export const logRecordsSlice = createSlice({
     name: "logs",
     initialState,
     reducers: {
@@ -77,5 +81,5 @@ export const logsSlice = createSlice({
     },
 })
 
-export const {addLog} = logsSlice.actions
-export default logsSlice.reducer
+export const {addLog} = logRecordsSlice.actions
+export default logRecordsSlice.reducer

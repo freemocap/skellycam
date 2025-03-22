@@ -12,26 +12,22 @@ export const CameraImage = ({cameraId, base64Image, showAnnotation}: CameraImage
         <Box
             key={cameraId}
             sx={{
-                position: "relative",
-                // display: "flex",
-                // justifyContent: "center",
-                // alignItems: "center",
-                // flexBasis: "calc(50% - 5px)",
-                // margin: "1px",
-                // width: "100%",
-                // height: "auto",
-                boxSizing: "border-box",
-                border: "1px solid #a0a",
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
             }}
         >
             <img
                 src={`data:image/jpeg;base64,${base64Image}`}
                 alt={`Camera ${cameraId}`}
                 style={{
-                    // width: "100%",
-                    // height: "auto",
-                    // maxHeight: "100%",
-                    // objectFit: "contain"
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                    display: 'block', // Remove any extra space below the image
                 }}
             />
             {showAnnotation && (
@@ -39,7 +35,7 @@ export const CameraImage = ({cameraId, base64Image, showAnnotation}: CameraImage
                     variant="caption"
                     sx={{
                         position: "absolute",
-                        bottom: 8,
+                        bottom: 30,
                         left: 8,
                         color: "white",
                         backgroundColor: "rgba(0, 0, 0, 0.75)",

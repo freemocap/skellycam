@@ -24,7 +24,7 @@ const initialState: FramerateState = {
     loggedBackendFramerate: []
 }
 
-export const framerateSlice = createSlice({
+export const framerateTrackerSlice = createSlice({
     name: 'framerate',
     initialState,
     reducers: {
@@ -39,5 +39,5 @@ export const framerateSlice = createSlice({
     }
 })
 
-export const { setFrontendFramerate,setBackendFramerate } = framerateSlice.actions
-export default framerateSlice.reducer
+export const { setFrontendFramerate,setBackendFramerate } = framerateTrackerSlice.actions
+export default framerateTrackerSlice.reducer

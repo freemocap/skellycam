@@ -51,6 +51,7 @@ class WebSocketQueueHandler(logging.Handler):
         log_record_dict['exc_info'] = str(log_record_dict['exc_info']) if log_record_dict['exc_info'] else None
         self.queue.put(LogRecordModel(**log_record_dict).model_dump())
 
+
 MAX_WEBSOCKET_LOG_QUEUE_SIZE = 1000
 WEBSOCKET_LOG_QUEUE: Optional[Queue] = None
 def create_websocket_log_queue() -> Queue:

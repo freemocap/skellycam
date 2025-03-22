@@ -1,13 +1,15 @@
+// ConnectToCamerasButton.tsx
 import React from 'react';
-import {Button} from '@mui/material';
+import {Button, darken, lighten} from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppDispatch, useAppSelector} from "@/store/hooks";
-import {connectToCameras, detectBrowserDevices} from "@/store/thunks/camera-thunks";
+import {connectToCameras} from "@/store/thunks/camera-thunks";
+import {selectSelectedCameras} from "@/store/slices/cameraDevicesSlice";
 
 export const ConnectToCamerasButton = () => {
     const dispatch = useAppDispatch();
-    const isLoading = useAppSelector(state => state.cameras.isLoading);
-    const detectedCameras = useAppSelector(state => state.cameras.browser_detected_devices);
+    const isLoading = useAppSelector(state => state.cameraDevices.isLoading);
+    const selectedCameras = useAppSelector(selectSelectedCameras);
 
     const handleConnectAndDetect = async () => {
         if (isLoading) {
@@ -16,15 +18,15 @@ export const ConnectToCamerasButton = () => {
         }
 
         try {
-
-            if (detectedCameras && detectedCameras.length > 0) {
-                await dispatch(connectToCameras(detectedCameras)).unwrap();
-                console.log('Camera detection and connection completed successfully');
+            if (selectedCameras && selectedCameras.length > 0) {
+                // Pass only the selected cameras to the thunk
+                await dispatch(connectToCameras(selectedCameras)).unwrap();
+                console.log('Connected to selected cameras:', selectedCameras);
             } else {
-                console.log('No cameras detected to connect to');
+                console.log('No cameras selected to connect to');
             }
         } catch (error) {
-            console.error('Error during camera detection and connection:', error);
+            console.error('Error connecting to cameras:', error);
         }
     };
 
@@ -32,6 +34,7 @@ export const ConnectToCamerasButton = () => {
         <Button
             variant="contained"
             onClick={handleConnectAndDetect}
+            disabled={!selectedCameras || selectedCameras.length === 0} // Disable if no cameras selected
             sx={{
                 m: 2,
                 p: 2,
@@ -39,9 +42,13 @@ export const ConnectToCamerasButton = () => {
                 color: extendedPaperbaseTheme.palette.primary.contrastText,
                 backgroundColor: "#900078",
                 border: `2px solid ${extendedPaperbaseTheme.palette.primary.main}`,
+                '&:disabled': {
+                    backgroundColor:"#9d729c",
+                    color: "#333",
+                }
             }}
         >
-            Detect/Connect to Cameras
+            Connect to Selected Cameras
         </Button>
     );
 };

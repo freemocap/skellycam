@@ -8,8 +8,9 @@ import Box from "@mui/material/Box";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {List, ListItem, Paper} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
-import {ConfigView} from "@/components/config-views/ConfigView";
-import CameraButtonsGroup from "@/components/camera-views/CameraButtonsGroup";
+import {AvailableCamerasView} from "@/components/config-views/AvailableCamerasView";
+import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
+import {RecordingPanel} from "@/components/RecordingPanel";
 
 
 const item = {
@@ -42,8 +43,9 @@ export const LeftSidePanelContent = () => {
                 </ListItem>
             </List>
             <WebsocketConnectionStatus/>
-
-            <Accordion>
+            <RecordingPanel/>
+            <ConnectToCamerasButton/>
+            <Accordion defaultExpanded>
                 <AccordionSummary
                     expandIcon={<ExpandMoreIcon sx={{color: extendedPaperbaseTheme.palette.primary.contrastText}}/>}
                     sx={{
@@ -60,12 +62,12 @@ export const LeftSidePanelContent = () => {
                         color: extendedPaperbaseTheme.palette.primary.contrastText
                     }}
                 >
-                    <ConfigView/>
+                    <AvailableCamerasView/>
                 </AccordionDetails>
             </Accordion>
             <Paper/>
-            <CameraButtonsGroup/>
 
         </Box>
     );
 }
+

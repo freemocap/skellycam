@@ -16,10 +16,12 @@ def extract_config_from_cv2_capture(camera_id: CameraId,
                                     exposure_mode: str = ExposureModes.RECOMMENDED.name,
                                     rotation: RotationTypes = RotationTypes.NO_ROTATION,
                                     use_this_camera: bool = True) -> CameraConfig:
+
     width = int(cv2_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cv2_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
     exposure = int(cv2_capture.get(cv2.CAP_PROP_EXPOSURE))
     framerate = cv2_capture.get(cv2.CAP_PROP_FPS)
+
 
     if any([width == 0, height == 0, exposure == 0, framerate == 0]):
         logger.error(f"Failed to extract configuration from cv2.VideoCapture object - "

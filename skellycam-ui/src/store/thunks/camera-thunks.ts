@@ -6,7 +6,7 @@ import {
     setConnectedCameras,
     setError,
     setLoading
-} from '../slices/cameras-slice/camerasSlice';
+} from '../slices/cameraDevicesSlice';
 
 const isVirtualCamera = (label: string): boolean => {
     const virtualCameraKeywords = ['virtual'];
@@ -90,7 +90,8 @@ export const detectBrowserDevices = createAsyncThunk(
             // Convert MediaDeviceInfo objects to plain serializable objects and add index
             const serializableCameras = validatedCameras.map((device, index) => ({
                 ...device.toJSON(),
-                index: index
+                index: index,
+                selected: true
             }));
             console.log(`Detected ${serializableCameras.length} camera(s)`, serializableCameras);
             dispatch(setBrowserDetectedDevices(serializableCameras));

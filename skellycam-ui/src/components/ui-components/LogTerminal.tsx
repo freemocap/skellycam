@@ -1,19 +1,15 @@
-import {Box, Chip, Collapse, darken, Stack, ToggleButton, ToggleButtonGroup, Tooltip, Typography} from "@mui/material";
-import {useRef, useState} from "react";
+import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup} from "@mui/material";
+import {useEffect, useRef, useState} from "react";
 import {useAppSelector} from "@/store/hooks";
-import {LogEntry, LogSeverity} from "@/store/slices/logs-slice/LogsSlice";
-import IconButton from "@mui/material/IconButton";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
+import {LogEntry, LogSeverity} from "@/store/slices/LogRecordsSlice";
 
 const LOG_LEVELS = ["LOOP", "TRACE", "DEBUG", "INFO", "SUCCESS", "API", "WARNING", "ERROR"] as const;
 type LogLevel = typeof LOG_LEVELS[number];
 
-
 const LOG_COLORS = {
-    "LOOP": "#555555",
-    "TRACE": "#888888",
-    "DEBUG": "#3399FF",
+    "LOOP": "#999",
+    "TRACE": "#ccc",
+    "DEBUG": "#88ccFF",
     "INFO": "#00E5FF",
     "SUCCESS": "#FF66FF",
     "API": "#66FF66",
@@ -21,92 +17,175 @@ const LOG_COLORS = {
     "ERROR": "#FF6666"
 } as const;
 
-const LogEntryComponent = ({ log, showDetails }: { log: LogEntry, showDetails: boolean }) => {
+
+const LogEntryComponent = ({log}: { log: LogEntry }) => {
     const [expanded, setExpanded] = useState(false);
     const color = LOG_COLORS[log.severity.toUpperCase() as keyof typeof LOG_COLORS];
 
+    const renderWithFormatting = (text: string) => {
+        return text.split('\n').map((line, i) => (
+            <span key={i}>
+                {line.split('\t').map((segment, j) => (
+                    <span key={j}>
+                        {segment}
+                        {j < line.split('\t').length - 1 && <span style={{ marginRight: '2em' }} />}
+                    </span>
+                ))}
+                {i < text.split('\n').length - 1 && <br />}
+            </span>
+        ));
+    };
+
     return (
-        <Box sx={{ mb: 0.5, borderLeft: `2px solid ${color}`, pl: 1, backgroundColor: 'rgba(0,0,0,0.2)' }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <span style={{color: '#888'}}>{new Date(log.timestamp).toLocaleTimeString()}</span>
+        <Box
+            sx={{
+                mb: 0.5,
+                borderLeft: `2px solid ${color}`,
+                pl: 1,
+                backgroundColor: expanded ? alpha(color, 0.1) : 'rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                '&:hover': {
+                    backgroundColor: alpha(color, 0.05)
+                }
+            }}
+            onClick={() => setExpanded(!expanded)}
+        >
+            <Box sx={{display: 'flex', gap: 1, alignItems: 'center', py: 0.5}}>
+                <span style={{color: '#888', fontSize: '0.9em'}}>{new Date(log.timestamp).toLocaleTimeString()}</span>
                 <Chip size="small" label={log.severity} sx={{
                     backgroundColor: color,
                     color: '#000',
-                    height: 20
+                    height: 16,
+                    fontSize: '0.8em',
+                    '.MuiChip-label': {
+                        px: 1,
+                    }
                 }}/>
-                <span style={{color: '#fff', flexGrow: 1}}>{log.message}</span>
-                {showDetails && (
-                    <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{color: '#fff'}}>
-                        <ExpandMoreIcon sx={{
-                            transform: expanded ? 'rotate(180deg)' : 'none',
-                            transition: '0.2s'
-                        }}/>
-                    </IconButton>
-                )}
+                <span style={{color: '#fff', flexGrow: 1, fontSize: '0.9em'}}>
+                    {renderWithFormatting(log.message)}
+                </span>
             </Box>
 
-            {showDetails && (
-                <Collapse in={expanded}>
-                    <Box sx={{pl: 2, mt: 1, fontSize: '0.8em', color: '#888'}}>
-                        <div>Module: {log.module} ({log.filename}:{log.lineNumber})</div>
-                        <div>Function: {log.functionName}</div>
-                        <div>Thread: {log.threadName} | Process: {log.processName}</div>
-                        {log.stackTrace && (
+            <Collapse in={expanded}>
+                <Box
+                    sx={{
+                        pl: 2,
+                        py: 1,
+                        fontSize: '0.8em',
+                        color: '#888',
+                        borderTop: '1px solid rgba(255,255,255,0.1)'
+                    }}
+                >
+                    <div>Location: {log.module}:{log.functionName}:Line#{log.lineNumber}</div>
+                    <div>File: {log.filename}</div>
+                    <div>Time delta: {log.delta_t}</div>
+                    <div>Path: {log.pathname}</div>
+                    <div>Raw message: {renderWithFormatting(log.rawMessage)}</div>
+                    <div>Thread: {log.threadName} (ID: {log.thread})</div>
+                    <div>Process: {log.processName} (ID: {log.process})</div>
+
+                    {(log.exc_info || log.exc_text) && (
+                        <div>
+                            <div>Exception details:</div>
+                            {log.exc_info && <div>{renderWithFormatting(log.exc_info)}</div>}
+                            {log.exc_text && <div>{renderWithFormatting(log.exc_text)}</div>}
+                        </div>
+                    )}
+
+                    {log.stackTrace && (
+                        <div>
+                            <div>Stack Trace:</div>
                             <pre style={{
                                 whiteSpace: 'pre-wrap',
                                 background: '#111',
                                 padding: 8,
-                                borderRadius: 4
-                            }}>{log.stackTrace}</pre>
-                        )}
-                    </Box>
-                </Collapse>
-            )}
+                                borderRadius: 4,
+                                margin: '8px 0'
+                            }}>
+                                {renderWithFormatting(log.stackTrace)}
+                            </pre>
+                        </div>
+                    )}
+                </Box>
+            </Collapse>
         </Box>
     );
 };
 
 export const LogTerminal = () => {
-    const logs = useAppSelector(state => state.logs.entries);
+    const logs = useAppSelector(state => state.logRecords.entries);
     const [selectedLevels, setSelectedLevels] = useState<LogSeverity[]>([]);
-    const [showDetails, setShowDetails] = useState(false);
     const logEndRef = useRef<HTMLDivElement>(null);
 
     const filteredLogs = logs.filter(log =>
         selectedLevels.length === 0 || selectedLevels.includes(log.severity)
     );
 
+    useEffect(() => {
+        logEndRef.current?.scrollIntoView({behavior: 'smooth'});
+    }, [filteredLogs]);
+
     return (
         <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1a1a1a'}}>
-            <Box sx={{p: 1, borderBottom: '1px solid #333', display: 'flex', gap: 2}}>
-                <span style={{color: '#fff'}}>Server Logs</span>
-                <ToggleButtonGroup size="small" value={selectedLevels} onChange={(_, val) => setSelectedLevels(val)}>
+            <Box sx={{
+                p: 0.5,
+                borderBottom: '1px solid #333',
+                display: 'flex',
+                gap: 1,
+                alignItems: 'center'
+            }}>
+                <span style={{color: '#fff', fontSize: '0.9em'}}>Server Logs</span>
+                <ToggleButtonGroup
+                    size="small"
+                    value={selectedLevels}
+                    onChange={(_, val) => setSelectedLevels(val)}
+                    sx={{
+                        '.MuiToggleButtonGroup-grouped': {
+                            border: '1px solid #333 !important',
+                            mx: '1px',
+                            '&:not(:first-of-type)': {
+                                borderRadius: '2px',
+                            },
+                            '&:first-of-type': {
+                                borderRadius: '2px',
+                            },
+                        }
+                    }}
+                >
                     {Object.entries(LOG_COLORS).map(([level, color]) => (
-                        <ToggleButton key={level} value={level.toLowerCase()} sx={{
-                            color: '#fff',
-                            borderColor: '#444',
-                            '&.Mui-selected': {
-                                backgroundColor: darken(color, 0.6),
-                                color: color
-                            }
-                        }}>
+                        <ToggleButton
+                            key={level}
+                            value={level.toLowerCase()}
+                            sx={{
+                                py: 0.25,
+                                px: 1,
+                                minWidth: 0,
+                                fontSize: '0.75em',
+                                color: alpha(color, 0.7),
+                                '&.Mui-selected': {
+                                    backgroundColor: alpha(color, 0.15),
+                                    color: color,
+                                    '&:hover': {
+                                        backgroundColor: alpha(color, 0.2),
+                                    }
+                                },
+                                '&:hover': {
+                                    backgroundColor: alpha(color, 0.1),
+                                }
+                            }}
+                        >
                             {level}
                         </ToggleButton>
                     ))}
                 </ToggleButtonGroup>
-                <Tooltip title="Toggle Details">
-                    <IconButton size="small" onClick={() => setShowDetails(!showDetails)}
-                                sx={{color: showDetails ? '#fff' : '#666'}}>
-                        <ExpandMoreIcon />
-                    </IconButton>
-                </Tooltip>
             </Box>
 
             <Box sx={{flex: 1, overflowY: 'auto', p: 1}}>
                 {filteredLogs.map((log, i) => (
-                    <LogEntryComponent key={i} log={log} showDetails={showDetails} />
+                    <LogEntryComponent key={i} log={log}/>
                 ))}
-                <div ref={logEndRef} />
+                <div ref={logEndRef}/>
             </Box>
         </Box>
     );

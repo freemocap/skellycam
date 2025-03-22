@@ -47,7 +47,7 @@ def capture_frame_with_exposure(cap: cv2.VideoCapture,
     success, image = cap.read()
     if success:
         brightness = np.mean(image)
-        return brightness
+        return float(brightness)
     else:
         logger.error("Failed to capture frame")
         raise Exception("Failed to capture frame")
@@ -88,10 +88,6 @@ def find_optimal_exposure_setting(cap: cv2.VideoCapture, exposure_settings: List
     return int(best_setting[0])
 
 def get_recommended_cv2_cap_exposure(cap: cv2.VideoCapture | int, offset_from_midrange:int=-1) -> int | None:
-    release_cap = False
-    if isinstance(cap, int):
-        cap = cv2.VideoCapture(cap)
-        release_cap = True
 
     # List of exposure settings to test
     exposure_settings = list(range(MIN_EXPOSURE, MAX_EXPOSURE + 1))
@@ -103,17 +99,7 @@ def get_recommended_cv2_cap_exposure(cap: cv2.VideoCapture | int, offset_from_mi
         recommended_exposure = midrange_exposure + offset_from_midrange
         logger.debug(f"The exposure setting that results in mid-range brightness is: {midrange_exposure}, recommended exposure setting is: {recommended_exposure}")
     except Exception as e:
-        logger.exception("An error occurred during exposure optimization")
-        if release_cap:
-            cap.release()
-        return None
-    finally:
-        if release_cap:
-            cap.release()
+        logger.exception("An error occurred during exposure optimization", exc_info=e)
+        raise
     return recommended_exposure
 
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("Starting exposure optimization...")
-    get_recommended_cv2_cap_exposure(0)

@@ -114,8 +114,8 @@ class SkellycamAppState:
     def start_recording(self, request: StartRecordingRequest):
         self.ipc_flags.mic_device_index.value = request.mic_device_index
         self.ipc_flags.record_frames_flag.value = True
-        name_to_store = request.recording_name if request.recording_name else ""
-        self.ipc_flags.recording_nametag.value = name_to_store.encode("utf-8")
+        recording_name_string = request.recording_name if request.recording_name else ""
+        self.ipc_flags.recording_name.value = recording_name_string.encode("utf-8")
 
         self.ipc_queue.put(self.state_dto())
 

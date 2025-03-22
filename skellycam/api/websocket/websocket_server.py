@@ -10,7 +10,7 @@ from skellycam.core.frames.payloads.frontend_image_payload import FrontendFrameP
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.skellycam_app.skellycam_app_state import  SkellycamAppState, get_skellycam_app_state
+from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState, get_skellycam_app_state, SkellycamAppStateDTO
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
 
@@ -98,9 +98,10 @@ class WebsocketServer:
         if isinstance(message, CameraConfig):
             logger.trace(f"Updating device extracted camera config for camera {message.camera_id}")
             self._app_state.set_device_extracted_camera_config(message)
-
         elif isinstance(message, RecordingInfo):
             logger.trace(f"Relaying RecordingInfo to frontend")
+        elif isinstance(message, SkellycamAppStateDTO):
+            logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
         elif isinstance(message, CurrentFramerate):
             self.latest_backend_framerate = message
             return # will send framerate update bundled with frontend payload
