@@ -1,9 +1,4 @@
 import * as React from 'react';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import Typography from '@mui/material/Typography';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Box from "@mui/material/Box";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {List, ListItem, Paper} from "@mui/material";
@@ -28,45 +23,52 @@ const itemCategory = {
     px: 3,
 };
 
+
 export const LeftSidePanelContent = () => {
     return (
         <Box sx={{
             width: '100%',
             height: '100%',
             backgroundColor: extendedPaperbaseTheme.palette.primary.dark,
-            color: extendedPaperbaseTheme.palette.primary.contrastText
+            color: extendedPaperbaseTheme.palette.primary.contrastText,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
         }}>
-
             <List disablePadding>
                 <ListItem sx={{...item, ...itemCategory, fontSize: 22, color: '#fafafa'}}>
                     SkellyCam💀📸
                 </ListItem>
             </List>
-            <WebsocketConnectionStatus/>
-            <RecordingPanel/>
-            <ConnectToCamerasButton/>
-            <Accordion defaultExpanded>
-                <AccordionSummary
-                    expandIcon={<ExpandMoreIcon sx={{color: extendedPaperbaseTheme.palette.primary.contrastText}}/>}
-                    sx={{
-                        backgroundColor: extendedPaperbaseTheme.palette.primary.main,
-                        color: extendedPaperbaseTheme.palette.primary.contrastText,
-                        boxShadow: `0 -1px 0 ${extendedPaperbaseTheme.palette.primary.light}`,
-                    }}
-                >
-                    <Typography>Available Cameras</Typography>
-                </AccordionSummary>
-                <AccordionDetails
-                    sx={{
-                        backgroundColor: extendedPaperbaseTheme.palette.primary.main,
-                        color: extendedPaperbaseTheme.palette.primary.contrastText
-                    }}
-                >
-                    <AvailableCamerasView/>
-                </AccordionDetails>
-            </Accordion>
-            <Paper/>
 
+            <Box sx={{
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                '&::-webkit-scrollbar': {
+                    width: '8px',
+                    backgroundColor: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '4px',
+                    '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                    },
+                },
+                '&::-webkit-scrollbar-track': {
+                    backgroundColor: 'transparent',
+                },
+                // For Firefox
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+            }}>
+                <WebsocketConnectionStatus/>
+                <RecordingPanel/>
+                <ConnectToCamerasButton/>
+                <AvailableCamerasView/>
+                <Paper/>
+            </Box>
         </Box>
     );
 }

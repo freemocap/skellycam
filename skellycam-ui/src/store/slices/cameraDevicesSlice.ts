@@ -15,19 +15,19 @@ export interface SerializedMediaDeviceInfo {
 export const CameraConfigSchema = z.object({
     camera_id: z.number(),
     camera_name: z.string(),
-    use_this_camera: z.boolean(),
-    resolution: z.object({
-        width: z.number(),
-        height: z.number(),
+    use_this_camera: z.boolean(), // checkbox
+    resolution: z.object({ //dropdown of available resolutions, or custom resolution
+        width: z.number().int(),
+        height: z.number().int()
     }),
     color_channels: z.number(),
     pixel_format: z.string(),
-    exposure_mode: z.string(),
-    exposure: z.union([z.number(), z.string()]),
-    framerate: z.number(),
-    rotation: z.string(),
-    capture_fourcc: z.string(),
-    writer_fourcc: z.string(),
+    exposure_mode: z.string(), // dropdown of available exposure modes, Manual, Auto, Recommended
+    exposure: z.union([z.number(), z.string()]), // either AUTO or a number between -12 and -5
+    framerate: z.number(), // dropdown of available framerates
+    rotation: z.string(), // dropdown of available rotation options, 0, 90, 180, 270
+    capture_fourcc: z.string(), // dropdown of available capture fourcc options
+    writer_fourcc: z.string(), // dropdown of available writer fourcc options
 });
 
 export const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema );

@@ -181,7 +181,28 @@ export const LogTerminal = () => {
                 </ToggleButtonGroup>
             </Box>
 
-            <Box sx={{flex: 1, overflowY: 'auto', p: 1}}>
+            <Box sx={{
+                flex: 1,
+                overflowY: 'auto',
+                p: 1,
+                '&::-webkit-scrollbar': {
+                    width: '8px',
+                    backgroundColor: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '4px',
+                    '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                    },
+                },
+                '&::-webkit-scrollbar-track': {
+                    backgroundColor: 'transparent',
+                },
+                // For Firefox
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+            }}>
                 {filteredLogs.map((log, i) => (
                     <LogEntryComponent key={i} log={log}/>
                 ))}
