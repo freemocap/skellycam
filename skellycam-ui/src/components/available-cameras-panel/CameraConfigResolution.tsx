@@ -1,7 +1,7 @@
 // skellycam-ui/src/components/config-views/camera-config/CameraConfigResolution.tsx
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import * as React from "react";
-import { CameraConfig } from "@/store/slices/cameraDevicesSlice";
+import { CameraConfig } from "@/store/slices/cameras-slices/cameraDevicesSlice";
 
 interface CameraConfigResolutionProps {
     resolution: CameraConfig['resolution'];

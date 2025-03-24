@@ -8,13 +8,12 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     return (
         <PanelGroup
             direction="vertical"
-            // autoSaveId="skellycam-panel-group"
             style={{height: "100vh", width: "100vw"}}
         >
             {/* Top section (horizontal panels) - 80% height */}
             <Panel defaultSize={80} minSize={20}>
                 <PanelGroup direction="horizontal">
-                    <Panel collapsible defaultSize={20} minSize={10} collapsedSize={4}>
+                    <Panel collapsible defaultSize={40} minSize={10} collapsedSize={4}>
                         <LeftSidePanelContent/>
                     </Panel>
                     {/* Horizontal Resize Handle
@@ -29,7 +28,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                     />
 
                     {/*Main/Central Content Panel*/}
-                    <Panel defaultSize={80} minSize={10}>
+                    <Panel defaultSize={60} minSize={10}>
                         {children}
                     </Panel>
                 </PanelGroup>

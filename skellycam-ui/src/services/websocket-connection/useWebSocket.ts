@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
 import {useAppDispatch} from '@/store/hooks';
-import {CameraConfigsSchema, setConnectedCameras} from "@/store/slices/cameraDevicesSlice";
+import {CameraConfigsSchema, setConnectedCameras} from "@/store/slices/cameras-slices/cameraDevicesSlice";
 import {addLog, LogRecordSchema} from "@/store/slices/LogRecordsSlice";
 import {FrontendFramePayloadSchema, setLatestFrontendPayload} from '@/store/slices/latestFrontendPayloadSlice';
 import {

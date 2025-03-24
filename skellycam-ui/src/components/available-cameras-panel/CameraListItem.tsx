@@ -2,7 +2,7 @@
 import { Box, Checkbox, IconButton, ListItem, ListItemIcon, ListItemText, Typography } from "@mui/material";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { SerializedMediaDeviceInfo } from "@/store/slices/cameraDevicesSlice";
+import { SerializedMediaDeviceInfo } from "@/store/slices/cameras-slices/cameraDevicesSlice";
 import * as React from "react";
 
 interface CameraListItemProps {

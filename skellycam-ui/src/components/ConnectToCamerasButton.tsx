@@ -4,7 +4,7 @@ import {Button, darken, lighten} from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppDispatch, useAppSelector} from "@/store/hooks";
 import {connectToCameras} from "@/store/thunks/camera-thunks";
-import {selectSelectedCameras} from "@/store/slices/cameraDevicesSlice";
+import {selectSelectedCameras} from "@/store/slices/cameras-slices/cameraDevicesSlice";
 
 export const ConnectToCamerasButton = () => {
     const dispatch = useAppDispatch();

@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {List, ListItem, Paper} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
-import {AvailableCamerasView} from "@/components/config-views/AvailableCamerasView";
+import {AvailableCamerasView} from "@/components/available-cameras-panel/AvailableCamerasView";
 import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
 import {RecordingPanel} from "@/components/RecordingPanel";
 

@@ -1,6 +1,6 @@
-import { Box, Collapse, useTheme } from "@mui/material";
+import {Box, Collapse, TextField, useTheme} from "@mui/material";
 import Grid from '@mui/material/Grid2'; // Updated import
-import { CameraConfig } from "@/store/slices/cameraDevicesSlice";
+import { CameraConfig } from "@/store/slices/cameras-slices/cameraDevicesSlice";
 import * as React from "react";
 import { CameraConfigResolution } from "./CameraConfigResolution";
 import { CameraConfigExposure } from "./CameraConfigExposure";
@@ -35,7 +35,6 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                     ml: 7,
                     mr: 2,
                     mb: 1,
-                    bgcolor: 'background.paper',
                     borderRadius: 1,
                     border: `1px solid ${theme.palette.divider}`,
                 }}
@@ -48,6 +47,7 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                                 handleChange('resolution', { width, height })}
                         />
                     </Grid>
+
                     <Grid size={{ xs: 12, sm: 6 }}>
                         <CameraConfigRotation
                             rotation={config.rotation}
@@ -64,16 +64,7 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                                 handleChange('exposure', value)}
                         />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                        <CameraConfigBasicControls
-                            framerate={config.framerate}
-                            colorChannels={config.color_channels}
-                            onFramerateChange={(value) =>
-                                handleChange('framerate', value)}
-                            onColorChannelsChange={(value) =>
-                                handleChange('color_channels', value)}
-                        />
-                    </Grid>
+
                 </Grid>
             </Box>
         </Collapse>
