@@ -1,6 +1,11 @@
 // /electron/preload/index.ts
 import {contextBridge, ipcRenderer} from 'electron'
-
+// Expose a limited API to the renderer process
+contextBridge.exposeInMainWorld('electronAPI', {
+  // Specific functionality
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  // Add other specific functions here
+})
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
   on(...args: Parameters<typeof ipcRenderer.on>) {

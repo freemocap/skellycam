@@ -36,12 +36,12 @@ export const ConnectToCamerasButton = () => {
             onClick={handleConnectAndDetect}
             disabled={!selectedCameras || selectedCameras.length === 0} // Disable if no cameras selected
             sx={{
-                m: 2,
+                m: 1,
                 p: 2,
-                fontSize: '1.25rem',
+                fontSize: 'small',
                 color: extendedPaperbaseTheme.palette.primary.contrastText,
                 backgroundColor: "#900078",
-                border: `2px solid ${extendedPaperbaseTheme.palette.primary.main}`,
+                border: `2px solid ${extendedPaperbaseTheme.palette.primary.light}`,
                 '&:disabled': {
                     backgroundColor:"#9d729c",
                     color: "#333",

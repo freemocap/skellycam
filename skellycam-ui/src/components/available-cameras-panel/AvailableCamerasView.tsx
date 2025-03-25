@@ -12,6 +12,7 @@ import {createDefaultCameraConfig, SerializedMediaDeviceInfo} from "@/store/slic
 import {toggleCameraSelection} from "@/store/slices/cameras-slices/detectedCamerasSlice";
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {setUserSelectedCameraConfigs} from "@/store/slices/cameras-slices/userCameraConfigs";
+import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
 
 export const AvailableCamerasView = () => {
     const theme = useTheme();
@@ -78,6 +79,8 @@ export const AvailableCamerasView = () => {
                         </Typography>
                     </Stack>
                 </AccordionSummary>
+                <ConnectToCamerasButton/>
+
                 <Box sx={{ pr: 2 }}>
                     <RefreshDetectedCamerasButton isLoading={isLoading} />
                 </Box>

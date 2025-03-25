@@ -1,12 +1,7 @@
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {z} from 'zod';
-import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
+import {getTimestampRecordingName, setRecordingInfo} from "@/store/slices/recordingInfoSlice";
 
-
-export function getTimestampRecordingName() {
-    const dateString = new Date().toISOString().split('.')[0].replace(/:/g, '-').replace('T', '_')
-    return 'skellycam-' + dateString;
-}
 
 const RecordStartRequestSchema = z.object({
     recording_name: z.string(),

@@ -4,8 +4,8 @@ import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {List, ListItem, Paper} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
 import {AvailableCamerasView} from "@/components/available-cameras-panel/AvailableCamerasView";
-import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
-import {RecordingPanel} from "@/components/RecordingPanel";
+import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
+import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 
 
 const item = {
@@ -64,9 +64,8 @@ export const LeftSidePanelContent = () => {
                 scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
             }}>
                 <WebsocketConnectionStatus/>
-                <RecordingPanel/>
-                <ConnectToCamerasButton/>
                 <AvailableCamerasView/>
+                <RecordingInfoPanel/>
                 <Paper/>
             </Box>
         </Box>

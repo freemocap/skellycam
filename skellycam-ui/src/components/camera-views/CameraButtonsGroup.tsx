@@ -1,6 +1,6 @@
 import {Box, ButtonGroup} from "@mui/material";
-import {RecordingPanel} from "@/components/RecordingPanel";
-import {ConnectToCamerasButton} from "@/components/ConnectToCamerasButton";
+import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
+import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
 import React from "react";
 
 export default function CameraButtonsGroup() {

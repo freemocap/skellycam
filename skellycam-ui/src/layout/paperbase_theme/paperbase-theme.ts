@@ -100,7 +100,7 @@ const extendedPaperbaseTheme = {
         MuiDivider: {
             styleOverrides: {
                 root: {
-                    backgroundColor: 'rgb(255,255,255,0.15)',
+                    backgroundColor: 'rgb(255,255,255,0.55)',
                 },
             },
         },
@@ -160,7 +160,40 @@ const extendedPaperbaseTheme = {
                 },
             },
         },
-
+        MuiTextField: {
+            styleOverrides: {
+                root: {
+                    '& .MuiOutlinedInput-root': {
+                        color: 'white',
+                        '& fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.5)',
+                        },
+                        '&:hover fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.7)',
+                        },
+                        '&.Mui-focused fieldset': {
+                            borderColor: 'white',
+                        },
+                    },
+                    '& .MuiInputLabel-root': {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                    },
+                    '& .MuiInputBase-input': {
+                        color: 'white',
+                    },
+                    '& .MuiIconButton-root': {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                    },
+                },
+            },
+        },
+        MuiTypography: {
+            styleOverrides: {
+                root: {
+                    color: 'white',
+                },
+            },
+        },
     },
 };
 
