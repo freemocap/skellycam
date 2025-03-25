@@ -2,13 +2,13 @@
 import React from 'react';
 import {Button, darken, lighten} from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
-import {useAppDispatch, useAppSelector} from "@/store/hooks";
 import {connectToCameras} from "@/store/thunks/camera-thunks";
-import {selectSelectedCameras} from "@/store/slices/cameras-slices/cameraDevicesSlice";
+import {selectSelectedCameras} from "@/store/slices/cameras-slices/detectedCamerasSlice";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 
 export const ConnectToCamerasButton = () => {
     const dispatch = useAppDispatch();
-    const isLoading = useAppSelector(state => state.cameraDevices.isLoading);
+    const isLoading = useAppSelector(state => state.detectedCameras.isLoading);
     const selectedCameras = useAppSelector(selectSelectedCameras);
 
     const handleConnectAndDetect = async () => {

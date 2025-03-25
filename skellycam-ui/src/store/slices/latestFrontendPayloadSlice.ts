@@ -2,8 +2,8 @@ import type {PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
 
 import {z} from 'zod'
-import {CameraConfigs, CameraConfigsSchema} from "@/store/slices/cameraDevicesSlice";
 import {CurrentFramerateSchema} from "@/store/slices/framerateTrackerSlice";
+import {CameraConfigs, CameraConfigsSchema} from "@/store/slices/cameras-slices/camera-types";
 export const JpegImagesSchema = z.record(
     z.string(),
     z.string()

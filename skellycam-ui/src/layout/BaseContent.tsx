@@ -4,8 +4,8 @@ import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {CamerasView} from "@/components/camera-views/CamerasView";
-import {useAppDispatch} from "@/store/hooks";
 import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
+import {useAppDispatch} from "@/store/AppStateStore";
 
 export const BaseContent = () => {
     const dispatch = useAppDispatch();

@@ -1,0 +1,48 @@
+import type {PayloadAction} from '@reduxjs/toolkit'
+import {createSlice} from '@reduxjs/toolkit'
+import {RootState} from "@/store/AppStateStore";
+import {SerializedMediaDeviceInfo} from "@/store/slices/cameras-slices/camera-types";
+
+
+export interface CamerasState {
+    browserDetectedCameras: SerializedMediaDeviceInfo[];
+    isLoading: boolean;
+    error: string | null;
+}
+
+const initialState: CamerasState = {
+    browserDetectedCameras: [],
+    isLoading: false,
+    error: null
+}
+
+export const detectedCamerasSlice = createSlice({
+    name: 'cameras',
+    initialState,
+    reducers: {
+        setBrowserDetectedDevices: (state, action: PayloadAction<SerializedMediaDeviceInfo[]>) => {
+            state.browserDetectedCameras = action.payload;
+        },
+        setLoading: (state, action: PayloadAction<boolean>) => {
+            state.isLoading = action.payload;
+        },
+        setError: (state, action: PayloadAction<string | null>) => {
+            state.error = action.payload;
+        },
+        toggleCameraSelection: (state, action: PayloadAction<string>) => {
+            state.browserDetectedCameras = state.browserDetectedCameras.map(device =>
+                device.deviceId === action.payload
+                    ? { ...device, selected: !device.selected }
+                    : device
+            );
+        },
+    },
+});
+export const selectSelectedCameras = (state: RootState) =>
+    state.detectedCameras.browserDetectedCameras.filter(device => device.selected);
+export const {
+    setBrowserDetectedDevices,
+    setLoading,
+    toggleCameraSelection,
+    setError
+} = detectedCamerasSlice.actions;

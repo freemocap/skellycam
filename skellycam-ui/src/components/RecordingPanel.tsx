@@ -1,8 +1,8 @@
 import React, {useEffect, useState} from 'react';
-import {useAppDispatch, useAppSelector} from '@/store/hooks';
 import {Button, Stack, TextField, Typography} from '@mui/material';
 import {getTimestampRecordingName, startRecording, stopRecording} from "@/store/thunks/recording-thunks";
 import Box from "@mui/material/Box";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 
 export const RecordingPanel: React.FC = () => {
     const recordingInfo = useAppSelector(state => state.recordingStatus.currentRecordingInfo);

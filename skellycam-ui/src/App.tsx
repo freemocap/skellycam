@@ -2,9 +2,8 @@ import React, {useEffect} from 'react';
 import {PaperbaseContent} from "@/layout/paperbase_theme/PaperbaseContent";
 import {WebSocketContextProvider} from "@/services/websocket-connection/WebSocketContext";
 import {Provider} from "react-redux";
-import {AppStateStore} from "@/store/AppStateStore";
+import {AppStateStore, useAppDispatch} from "@/store/AppStateStore";
 import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
-import {useAppDispatch} from "@/store/hooks";
 
 
 function App() {

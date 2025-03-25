@@ -1,8 +1,8 @@
 import IconButton from "@mui/material/IconButton";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useTheme } from "@mui/material";
-import { useAppDispatch } from "@/store/hooks";
 import { detectBrowserDevices } from "@/store/thunks/camera-thunks";
+import {useAppDispatch} from "@/store/AppStateStore";
 
 interface RefreshCamerasButtonProps {
     isLoading: boolean;

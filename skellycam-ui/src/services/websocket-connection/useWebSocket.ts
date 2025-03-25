@@ -1,8 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
 import {z} from 'zod';
-import {useAppDispatch} from '@/store/hooks';
-import {CameraConfigsSchema, setConnectedCameras} from "@/store/slices/cameras-slices/cameraDevicesSlice";
-import {addLog, LogRecordSchema} from "@/store/slices/LogRecordsSlice";
 import {FrontendFramePayloadSchema, setLatestFrontendPayload} from '@/store/slices/latestFrontendPayloadSlice';
 import {
     CurrentFramerate,
@@ -13,6 +10,10 @@ import {
     RecordingInfoSchema,
     setRecordingInfo
 } from "@/store/slices/recordingInfoSlice";
+import {CameraConfigsSchema} from "@/store/slices/cameras-slices/camera-types";
+import {addLog, LogRecordSchema} from "@/store/slices/logRecordsSlice";
+import {setConnectedCameraConfigs} from "@/store/slices/cameras-slices/connectedCameraConfigsSlice";
+import {useAppDispatch} from "@/store/AppStateStore";
 
 const MAX_RECONNECT_ATTEMPTS = 20;
 export const useWebSocket = (wsUrl: string) => {
@@ -49,11 +50,17 @@ export const useWebSocket = (wsUrl: string) => {
                 }
                 return;
             } catch (e) {
+                if (e instanceof z.ZodError) {
+                    console.error('FrontendFramePayload validation failed:', {
+                        received: parsedData,
+                        errors: e.errors
+                    });
+                }
                 if (!(e instanceof z.ZodError)) throw e; // Re-throw if not a validation error
             }
             try {
                 const connectedCameraConfigs = CameraConfigsSchema.parse(parsedData);
-                dispatch(setConnectedCameras(connectedCameraConfigs));
+                dispatch(setConnectedCameraConfigs(connectedCameraConfigs));
                 return;
             } catch (e) {
                 if (!(e instanceof z.ZodError)) throw e;
@@ -69,29 +76,33 @@ export const useWebSocket = (wsUrl: string) => {
             }
 
 
-            try {
-                const logRecord = LogRecordSchema.parse(parsedData);
-                dispatch(addLog({
-                    message: logRecord.msg,
-                    formatted_message: logRecord.formatted_message,
-                    severity: logRecord.levelname.toLowerCase() as any,
-                    name: logRecord.name,
-                    rawMessage: logRecord.msg,
-                    args: logRecord.args,
-                    pathname: logRecord.pathname,
-                    filename: logRecord.filename,
-                    module: logRecord.module,
-                    lineNumber: logRecord.lineno,
-                    functionName: logRecord.funcName,
-                    threadName: logRecord.threadName,
-                    processName: logRecord.processName,
-                    stackTrace: logRecord.stack_info,
-                    delta_t: logRecord.delta_t,
-                }));
-                return;
-            } catch (e) {
-                if (!(e instanceof z.ZodError)) throw e;
-            }
+try {
+    const logRecord = LogRecordSchema.parse(parsedData);
+    dispatch(addLog({
+        message: logRecord.msg,
+        formatted_message: logRecord.formatted_message,
+        severity: logRecord.levelname.toLowerCase() as any,
+        name: logRecord.name,
+        rawMessage: logRecord.msg,
+        args: logRecord.args,
+        pathname: logRecord.pathname,
+        filename: logRecord.filename,
+        module: logRecord.module,
+        lineNumber: logRecord.lineno,
+        functionName: logRecord.funcName,
+        threadName: logRecord.threadName,
+        thread: logRecord.thread,
+        processName: logRecord.processName,
+        process: logRecord.process,
+        stackTrace: logRecord.stack_info,
+        exc_info: logRecord.exc_info,
+        exc_text: logRecord.exc_text,
+        delta_t: logRecord.delta_t,
+    }));
+    return;
+} catch (e) {
+    if (!(e instanceof z.ZodError)) throw e;
+}
 
 
             console.error('Message did not match any known schema. Message keys:', Object.keys(parsedData));

@@ -1,13 +1,15 @@
 // CameraConfigExposure.tsx
 import * as React from 'react';
 import {Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography} from '@mui/material';
+import {CAMERA_DEFAULTS, ExposureMode} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraConfigExposureProps {
-    exposureMode: string;
+    exposureMode: ExposureMode;
     exposure: number;
-    onExposureModeChange: (mode: string) => void;
+    onExposureModeChange: (mode: ExposureMode) => void;
     onExposureValueChange: (value: number) => void;
 }
+
 const ValueLabelComponent = (props: {
     children: React.ReactElement;
     value: number;
@@ -37,7 +39,7 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
         newMode: string,
     ) => {
         if (newMode !== null) {
-            onExposureModeChange(newMode);
+            onExposureModeChange(newMode as ExposureMode);
         }
     };
 
@@ -50,10 +52,10 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
         return value;
     };
     const marks = [
-        { value: -12, label: '-12' },
-        { value: -7, label: '-7 (default)' },
-        { value: -5, label: '-5' }
-    ]
+        { value: CAMERA_DEFAULTS.exposure.min, label: String(CAMERA_DEFAULTS.exposure.min) },
+        { value: CAMERA_DEFAULTS.exposure.default, label: `${CAMERA_DEFAULTS.exposure.default} (default)` },
+        { value: CAMERA_DEFAULTS.exposure.max, label: String(CAMERA_DEFAULTS.exposure.max) }
+    ];
 
     return (
         <Box>

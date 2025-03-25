@@ -1,32 +1,24 @@
-import {
-    Accordion,
-    AccordionDetails,
-    Box,
-    List,
-    Paper,
-    Stack,
-    Typography,
-    useTheme
-} from "@mui/material";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setUserSelectedCameraConfigs, toggleCameraSelection } from "@/store/slices/cameraDevicesSlice";
+import {Accordion, AccordionDetails, Box, List, Paper, Stack, Typography, useTheme} from "@mui/material";
 import * as React from "react";
-import { useEffect, useState } from "react";
-import { detectBrowserDevices } from "@/store/thunks/camera-thunks";
-import IconButton from "@mui/material/IconButton";
-import RefreshIcon from '@mui/icons-material/Refresh';
+import {useEffect, useState} from "react";
+import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import {CameraConfigPanel} from "@/components/config-views/CameraConfigPanel";
-import {CameraListItem} from "@/components/config-views/CameraListItem";
+import {CameraConfigPanel} from "@/components/available-cameras-panel/CameraConfigPanel";
+import {CameraListItem} from "@/components/available-cameras-panel/CameraListItem";
+import {RefreshDetectedCamerasButton} from "@/components/available-cameras-panel/RefreshDetectedCameras";
+import {createDefaultCameraConfig, SerializedMediaDeviceInfo} from "@/store/slices/cameras-slices/camera-types";
+import {toggleCameraSelection} from "@/store/slices/cameras-slices/detectedCamerasSlice";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {setUserSelectedCameraConfigs} from "@/store/slices/cameras-slices/userCameraConfigs";
 
 export const AvailableCamerasView = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
-    const browserDetectedDevices = useAppSelector(state => state.cameraDevices.browser_detected_devices);
-    const userConfigs = useAppSelector(state => state.cameraDevices.user_selected_camera_configs);
-    const isLoading = useAppSelector(state => state.cameraDevices.isLoading);
+    const browserDetectedDevices = useAppSelector(state => state.detectedCameras.browserDetectedCameras);
+    const userConfigs = useAppSelector(state => state.userCameraConfigs.userConfigs);
+    const isLoading = useAppSelector(state => state.detectedCameras.isLoading);
     const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set());
 
     // Handle expanding/collapsing camera config panels
@@ -42,11 +34,6 @@ export const AvailableCamerasView = () => {
         });
     };
 
-    // Handle refresh button click
-    const handleRefresh = (event: React.MouseEvent) => {
-        event.stopPropagation();
-        dispatch(detectBrowserDevices(true));
-    };
 
     // Initial camera detection
     useEffect(() => {
@@ -54,20 +41,8 @@ export const AvailableCamerasView = () => {
     }, [dispatch]);
 
     // Generate default config for a camera
-    const getDefaultConfig = (device: typeof browserDetectedDevices[0]) => ({
-        camera_id: device.index,
-        camera_name: device.label || `Camera ${device.index}`,
-        use_this_camera: true,
-        resolution: { width: 1280, height: 720 },
-        color_channels: 3,
-        pixel_format: "BGR",
-        exposure_mode: "Manual",
-        exposure:  -7,
-        framerate: 30,
-        rotation: "0",
-        capture_fourcc: "MJPG",
-        writer_fourcc: "MJPG"
-    });
+    const getDefaultConfig = (device: SerializedMediaDeviceInfo) =>
+        createDefaultCameraConfig(device.index, device.label);
 
     return (
         <Accordion
@@ -78,40 +53,35 @@ export const AvailableCamerasView = () => {
                 boxShadow: theme.shadows[3]
             }}
         >
-            <AccordionSummary
-                expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.contrastText }} />}
-                sx={{
-                    backgroundColor: theme.palette.primary.main,
-                    color: theme.palette.primary.contrastText,
-                    borderTopLeftRadius: 8,
-                    borderTopRightRadius: 8,
-                    '&:hover': {
-                        backgroundColor: theme.palette.primary.light,
-                    }
-                }}
-            >
-                <Stack direction="row" alignItems="center" spacing={1}>
-                    <VideocamIcon />
-                    <Typography variant="subtitle1" fontWeight="medium">
-                        Available Cameras
-                    </Typography>
-                    <IconButton
-                        onClick={handleRefresh}
-                        size="small"
-                        sx={{
-                            color: theme.palette.primary.contrastText,
-                            ml: 1,
-                            '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            }
-                        }}
-                        disabled={isLoading}
-                        title="Refresh available cameras"
-                    >
-                        <RefreshIcon fontSize="small" />
-                    </IconButton>
-                </Stack>
-            </AccordionSummary>
+            <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: theme.palette.primary.main,
+                borderTopLeftRadius: 8,
+                borderTopRightRadius: 8,
+            }}>
+
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.contrastText }} />}
+                    sx={{
+                        flex: 1,
+                        color: theme.palette.primary.contrastText,
+                        '&:hover': {
+                            backgroundColor: theme.palette.primary.light,
+                        }
+                    }}
+                >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <VideocamIcon />
+                        <Typography variant="subtitle1" fontWeight="medium">
+                            Available Cameras
+                        </Typography>
+                    </Stack>
+                </AccordionSummary>
+                <Box sx={{ pr: 2 }}>
+                    <RefreshDetectedCamerasButton isLoading={isLoading} />
+                </Box>
+            </Box>
 
             <AccordionDetails sx={{ p: 2, bgcolor: 'background.default' }}>
                 <Paper
@@ -137,8 +107,8 @@ export const AvailableCamerasView = () => {
                                         config={userConfigs?.[device.deviceId] || getDefaultConfig(device)}
                                         onConfigChange={(newConfig) => {
                                             dispatch(setUserSelectedCameraConfigs({
-                                                ...userConfigs,
-                                                [device.deviceId]: newConfig
+                                                deviceId: device.deviceId,
+                                                config: newConfig
                                             }));
                                         }}
                                         isExpanded={expandedConfigs.has(device.deviceId)}

@@ -1,7 +1,8 @@
 import {Box} from "@mui/material";
 import React  from "react";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
-import {useAppSelector} from "@/store/hooks";
+
+import {useAppSelector} from "@/store/AppStateStore";
 
 
 export const CamerasView = () => {

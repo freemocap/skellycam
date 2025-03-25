@@ -2,11 +2,13 @@
 import * as React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { Box, Typography, Tooltip } from '@mui/material';
+import {Box, Tooltip} from '@mui/material';
+import {RotationOptionSchema} from "@/store/slices/cameras-slices/camera-types";
+import {z} from 'zod';
 
 interface CameraConfigRotationProps {
-    rotation: string;
-    onChange: (rotation: string) => void;
+    rotation: z.infer<typeof RotationOptionSchema>;
+    onChange: (rotation: z.infer<typeof RotationOptionSchema>) => void;
 }
 
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
@@ -18,7 +20,7 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
         newRotation: string,
     ) => {
         if (newRotation !== null) {
-            onChange(newRotation);
+            onChange(newRotation as z.infer<typeof RotationOptionSchema>);
         }
     };
 

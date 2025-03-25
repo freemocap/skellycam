@@ -1,12 +1,12 @@
 // store/thunks/camera-thunks.ts
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {
-    SerializedMediaDeviceInfo,
     setBrowserDetectedDevices,
-    setConnectedCameras,
     setError,
     setLoading
-} from '../slices/cameraDevicesSlice';
+} from '../slices/cameras-slices/detectedCamerasSlice';
+import {clearPendingChanges, setApplying} from "@/store/slices/cameras-slices/userCameraConfigs";
+import { SerializedMediaDeviceInfo, CameraConfigs } from '../slices/cameras-slices/camera-types';
 
 const isVirtualCamera = (label: string): boolean => {
     const virtualCameraKeywords = ['virtual'];
@@ -137,6 +137,41 @@ export const connectToCameras = createAsyncThunk(
             throw error;
         } finally {
             dispatch(setLoading(false));
+        }
+    }
+);
+
+// This thunk handles applying user-selected configurations to the cameras
+export const applyUserConfigurations = createAsyncThunk(
+    'userCameraConfigs/apply',
+    async (configurations: CameraConfigs, { dispatch }) => {
+        try {
+            dispatch(setApplying(true));
+
+            const response = await fetch(
+                'http://localhost:8006/skellycam/cameras/configure',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ configurations }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to apply configurations: ${response.statusText}`);
+            }
+
+            // Clear pending changes after successful apply
+            dispatch(clearPendingChanges());
+            dispatch(setError(null));
+
+        } catch (error) {
+            dispatch(setError(error instanceof Error ? error.message : 'Unknown error'));
+            throw error;
+        } finally {
+            dispatch(setApplying(false));
         }
     }
 );

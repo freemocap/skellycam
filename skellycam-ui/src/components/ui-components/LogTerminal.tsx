@@ -1,7 +1,7 @@
 import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup} from "@mui/material";
 import {useEffect, useRef, useState} from "react";
-import {useAppSelector} from "@/store/hooks";
-import {LogEntry, LogSeverity} from "@/store/slices/LogRecordsSlice";
+import {LogEntry, LogSeverity} from "@/store/slices/logRecordsSlice";
+import {useAppSelector} from "@/store/AppStateStore";
 
 const LOG_LEVELS = ["LOOP", "TRACE", "DEBUG", "INFO", "SUCCESS", "API", "WARNING", "ERROR"] as const;
 type LogLevel = typeof LOG_LEVELS[number];

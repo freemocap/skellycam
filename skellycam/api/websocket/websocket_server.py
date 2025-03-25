@@ -11,7 +11,8 @@ from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState, get_skellycam_app_state, SkellycamAppStateDTO
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue, \
+    LogRecordModel
 from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -181,7 +182,7 @@ class WebsocketServer:
             while self.should_continue:
                 if not websocket_log_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
                     try:
-                        log_record = websocket_log_queue.get_nowait()
+                        log_record:LogRecordModel = websocket_log_queue.get_nowait()
                         await self.websocket.send_json(log_record)
                     except (multiprocessing.queues.Empty, websocket_log_queue.Empty):
                         await async_wait_1ms()
