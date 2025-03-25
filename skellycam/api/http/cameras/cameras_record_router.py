@@ -3,20 +3,32 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body
 
-from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.skellycam_app.skellycam_app_state import get_skellycam_app_state
+from pydantic import BaseModel, Field
+
+from skellycam.system.default_paths import get_default_recording_folder_path
 
 logger = logging.getLogger(__name__)
 
 record_cameras_router = APIRouter(tags=["Recording"])
 
 
+class StartRecordingRequest(BaseModel):
+    recording_name: str = Field(..., description="Name of the recording")
+    recording_directory: str = Field(default_factory=get_default_recording_folder_path,
+                                     description="Path to save the recording ")
+    mic_device_index: int = Field(default=-1,
+                                  description="Index of the microphone device to record audio from (0 for default, -1 for no audio recording)")
+
+    def recording_full_path(self):
+        return str(Path(self.recording_directory) / self.recording_name)
+
 @record_cameras_router.post("/record/start",
                            summary="Start recording video from cameras")
 def start_recording(request: StartRecordingRequest = Body(..., examples=[     StartRecordingRequest()])):
     logger.api("Received `/record/start` request...")
-    if request.recording_path.startswith("~"):
-        request.recording_path = request.recording_path.replace("~", str(Path.home()), 1)
+    if request.recording_directory.startswith("~"):
+        request.recording_directory = request.recording_directory.replace("~", str(Path.home()), 1)
 
     get_skellycam_app_state().start_recording(request)
     logger.api("`/record/start` request handled successfully.")

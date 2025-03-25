@@ -1,23 +1,29 @@
+// recording-thunks.ts
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {z} from 'zod';
-import {getTimestampRecordingName, setRecordingInfo} from "@/store/slices/recordingInfoSlice";
-
+import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
 
 const RecordStartRequestSchema = z.object({
     recording_name: z.string(),
-    recording_path: z.string().optional().default('~/skellycam_data/recordings'),
-    mic_device_index: z.number().default(-1),// default to -1 for default mic
-})
-export const startRecording = createAsyncThunk<void, string>(
+    recording_directory: z.string(),
+    mic_device_index: z.number().default(-1),
+});
+
+type StartRecordingParams = {
+    recordingName: string;
+    recordingDirectory: string;
+};
+
+export const startRecording = createAsyncThunk<void, StartRecordingParams>(
     'appState/startRecording',
-    async  (recordingTag: string, {dispatch}) => {
+    async ({recordingName, recordingDirectory}, {dispatch}) => {
+        console.log(`Starting recording with name: ${recordingName} in directory: ${recordingDirectory}`);
         try {
             const recStartUrl = 'http://localhost:8006/skellycam/record/start';
-            const timestampName = getTimestampRecordingName();
-            const recordingName = recordingTag ? `${timestampName}_${recordingTag}` : timestampName;
-
+            
             const requestPayload = RecordStartRequestSchema.parse({
                 recording_name: recordingName,
+                recording_directory: recordingDirectory,
             });
 
             const response = await fetch(recStartUrl, {
@@ -31,9 +37,10 @@ export const startRecording = createAsyncThunk<void, string>(
             if (response.ok) {
                 dispatch(setRecordingInfo({
                     isRecording: true,
-                    recordingDirectory: requestPayload.recording_path,
-                    recordingTag: recordingTag
+                    recordingName,
+                    recordingDirectory,
                 }));
+                console.log('Recording started successfully');
             } else {
                 throw new Error(`Failed to start recording: ${response.statusText}`);
             }
@@ -47,6 +54,7 @@ export const startRecording = createAsyncThunk<void, string>(
 export const stopRecording = createAsyncThunk<void, void>(
     'appState/stopRecording',
     async (_, {dispatch}) => {
+        console.log('Stopping recording...');
         try {
             const recStopUrl = 'http://localhost:8006/skellycam/record/stop';
             const response = await fetch(recStopUrl, {
@@ -56,9 +64,9 @@ export const stopRecording = createAsyncThunk<void, void>(
             if (response.ok) {
                 dispatch(setRecordingInfo({
                     isRecording: false,
-                    recordingDirectory: null,
-                    recordingTag: null
+                    recordingName: null,
                 }));
+                console.log('Recording stopped successfully');
             } else {
                 throw new Error(`Failed to stop recording: ${response.statusText}`);
             }

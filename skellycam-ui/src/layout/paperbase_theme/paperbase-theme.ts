@@ -187,6 +187,7 @@ const extendedPaperbaseTheme = {
                 },
             },
         },
+
         MuiTypography: {
             styleOverrides: {
                 root: {
