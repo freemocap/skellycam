@@ -1,4 +1,4 @@
-import type {PayloadAction} from '@reduxjs/toolkit'
+import {createSelector, PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
 import {RootState} from "@/store/AppStateStore";
 import {SerializedMediaDeviceInfo} from "@/store/slices/cameras-slices/camera-types";
@@ -38,8 +38,12 @@ export const detectedCamerasSlice = createSlice({
         },
     },
 });
-export const selectSelectedCameras = (state: RootState) =>
-    state.detectedCameras.browserDetectedCameras.filter(device => device.selected);
+const selectDetectedCameras = (state: RootState) => state.detectedCameras.browserDetectedCameras;
+
+export const selectSelectedCameras = createSelector(
+    [selectDetectedCameras],
+    (cameras) => cameras.filter(device => device.selected)
+);
 export const {
     setBrowserDetectedDevices,
     setLoading,

@@ -50,12 +50,13 @@ export const useWebSocket = (wsUrl: string) => {
                 }
                 return;
             } catch (e) {
-                if (e instanceof z.ZodError) {
-                    console.error('FrontendFramePayload validation failed:', {
-                        received: parsedData,
-                        errors: e.errors
-                    });
-                }
+                // // Uncomment to log validation errors
+                // if (e instanceof z.ZodError) {
+                //     console.error('FrontendFramePayload validation failed:', {
+                //         received: parsedData,
+                //         errors: e.errors
+                //     });
+                // }
                 if (!(e instanceof z.ZodError)) throw e; // Re-throw if not a validation error
             }
             try {

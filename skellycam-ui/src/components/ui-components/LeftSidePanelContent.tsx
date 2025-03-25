@@ -59,7 +59,6 @@ export const LeftSidePanelContent = () => {
                 '&::-webkit-scrollbar-track': {
                     backgroundColor: 'transparent',
                 },
-                // For Firefox
                 scrollbarWidth: 'thin',
                 scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
             }}>

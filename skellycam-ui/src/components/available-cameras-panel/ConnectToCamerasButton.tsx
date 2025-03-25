@@ -48,7 +48,7 @@ export const ConnectToCamerasButton = () => {
                 }
             }}
         >
-            Connect to Selected Cameras
+            Connect/Apply
         </Button>
     );
 };
