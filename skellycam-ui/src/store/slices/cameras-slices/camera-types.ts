@@ -33,8 +33,8 @@ export const CAMERA_DEFAULTS = {
         available: [15, 30, 60]
     },
     pixel_formats: ['RGB', 'BGR', 'GRAY'] as const,
-    exposure_modes: ['MANUAL', 'AUTO','RECOMMENDED' ] as const,
-    rotation_options: ['No Rotation', '90 Clockwise', '90 Counterclockwise', '180'] as const,
+    exposure_modes: ['MANUAL', 'AUTO','RECOMMEND' ] as const,
+    rotation_options: ['0', '90', '180', '270'] as const,
     fourcc_options: [ 'X264','MJPG', 'YUYV', 'H264'] as const
 } as const;
 

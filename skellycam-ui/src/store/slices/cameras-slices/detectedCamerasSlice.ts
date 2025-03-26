@@ -4,13 +4,13 @@ import {RootState} from "@/store/AppStateStore";
 import {SerializedMediaDeviceInfo} from "@/store/slices/cameras-slices/camera-types";
 
 
-export interface CamerasState {
+export interface DetectedCamerasState {
     browserDetectedCameras: SerializedMediaDeviceInfo[];
     isLoading: boolean;
     error: string | null;
 }
 
-const initialState: CamerasState = {
+const initialState: DetectedCamerasState = {
     browserDetectedCameras: [],
     isLoading: false,
     error: null

@@ -95,10 +95,12 @@ class SkellycamAppState:
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 
     def update_camera_group(self,
-                            camera_configs: CameraConfigs,
-                            update_instructions: UpdateInstructions):
-        if self.camera_group is None:
+                            camera_configs: CameraConfigs):
+        if self.camera_group is None or self.camera_group.camera_configs is None:
             raise ValueError("Cannot update CameraGroup if it does not exist!")
+        update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
+                                                              old_configs=self.camera_group.camera_configs)
+        logger.trace(f"Camera Config Update instructions: {update_instructions}")
         self.camera_group.update_camera_configs(camera_configs=camera_configs,
                                                 update_instructions=update_instructions)
 

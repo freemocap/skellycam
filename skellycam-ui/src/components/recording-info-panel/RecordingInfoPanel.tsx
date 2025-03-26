@@ -3,7 +3,6 @@ import {Box, IconButton, Stack} from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
-import {startRecording, stopRecording} from "@/store/thunks/recording-thunks";
 import {
     RecordingSettingsSection
 } from "@/components/recording-info-panel/recording-subcomponents/RecordingSettingsSection";
@@ -18,6 +17,7 @@ import {
     BaseRecordingDirectoryInput
 } from "@/components/recording-info-panel/recording-subcomponents/BaseRecordingDirectoryInput";
 import {RecordingNamePreview} from "@/components/recording-info-panel/recording-subcomponents/RecordingNamePreview";
+import {startRecording, stopRecording} from "@/store/thunks/start-stop-recording-thunks";
 
 export const RecordingInfoPanel: React.FC = () => {
     const dispatch = useAppDispatch();

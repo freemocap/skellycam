@@ -1,7 +1,6 @@
 import {Accordion, AccordionDetails, Box, List, Paper, Stack, Typography, useTheme} from "@mui/material";
 import * as React from "react";
 import {useEffect, useState} from "react";
-import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -13,6 +12,7 @@ import {toggleCameraSelection} from "@/store/slices/cameras-slices/detectedCamer
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {setUserSelectedCameraConfigs} from "@/store/slices/cameras-slices/userCameraConfigs";
 import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
+import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
 
 export const AvailableCamerasView = () => {
     const theme = useTheme();

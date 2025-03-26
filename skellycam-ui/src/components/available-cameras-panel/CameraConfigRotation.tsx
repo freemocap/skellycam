@@ -7,12 +7,12 @@ import {RotationOptionSchema} from "@/store/slices/cameras-slices/camera-types";
 import {z} from 'zod';
 
 interface CameraConfigRotationProps {
-    rotation: z.infer<typeof RotationOptionSchema>;
+    rotation?: z.infer<typeof RotationOptionSchema>; // Make rotation optional
     onChange: (rotation: z.infer<typeof RotationOptionSchema>) => void;
 }
 
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
-    rotation,
+    rotation = "0", // Set default value to "0"
     onChange
 }) => {
     const handleChange = (
@@ -26,7 +26,6 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
 
     return (
         <Box>
-
             <Tooltip title="Select camera image rotation">
                 <ToggleButtonGroup
                     color="primary"

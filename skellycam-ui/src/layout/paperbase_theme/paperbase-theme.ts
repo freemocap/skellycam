@@ -196,6 +196,7 @@ const extendedPaperbaseTheme = {
             },
         },
     },
+
 };
 
 export default extendedPaperbaseTheme;

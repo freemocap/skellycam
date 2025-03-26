@@ -14,12 +14,12 @@ const ValueLabelComponent = (props: {
     children: React.ReactElement;
     value: number;
 }) => {
-    const { children, value } = props;
+    const {children, value} = props;
 
     return (
         <Tooltip title={
             <span>
-                {`${(1000/Math.pow(2, -1*value)).toFixed(3)}ms (1/2`}
+                {`${(1000 / Math.pow(2, -1 * value)).toFixed(3)}ms (1/2`}
                 <sup>{value}</sup>
                 {` sec)`}
             </span>
@@ -29,11 +29,12 @@ const ValueLabelComponent = (props: {
     );
 };
 export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
-    exposureMode,
-    exposure,
-    onExposureModeChange,
-    onExposureValueChange
-}) => {
+                                                                              exposureMode = CAMERA_DEFAULTS.exposure_modes[0], // MANUAL
+                                                                              exposure = CAMERA_DEFAULTS.exposure.default,
+                                                                              onExposureModeChange,
+                                                                              onExposureValueChange
+                                                                          }) => {
+    const [currentExposure, setCurrentExposure] = React.useState<number>(exposure);
     const handleModeChange = (
         event: React.MouseEvent<HTMLElement>,
         newMode: string,
@@ -44,19 +45,32 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
     };
 
     const formatExposureValue = (value: number, type: 'label' | 'tooltip') => {
+        setCurrentExposure(value)
         if (type === 'tooltip') {
-            return `${(1000/Math.pow(2, -1*value)).toFixed(3)}ms (1/2`
+            return `${(1000 / Math.pow(2, -1 * value)).toFixed(3)}ms (1/2`
                 + String.fromCharCode(8203)  // zero-width space to ensure proper rendering
                 + `<sup>${value}</sup> sec)`;
         }
         return value;
     };
-    const marks = [
-        { value: CAMERA_DEFAULTS.exposure.min, label: String(CAMERA_DEFAULTS.exposure.min) },
-        { value: CAMERA_DEFAULTS.exposure.default, label: `${CAMERA_DEFAULTS.exposure.default} (default)` },
-        { value: CAMERA_DEFAULTS.exposure.max, label: String(CAMERA_DEFAULTS.exposure.max) }
+    const baseMarks = [
+        {value: CAMERA_DEFAULTS.exposure.min, label: String(CAMERA_DEFAULTS.exposure.min)},
+        {value: CAMERA_DEFAULTS.exposure.default, label: `${CAMERA_DEFAULTS.exposure.default} (default)`},
+        {value: CAMERA_DEFAULTS.exposure.max, label: String(CAMERA_DEFAULTS.exposure.max)}
     ];
-
+    // Add current exposure value to marks if it doesn't match any existing marks
+    const marks = [
+        ...baseMarks,
+        ...(![CAMERA_DEFAULTS.exposure.min as number,
+                CAMERA_DEFAULTS.exposure.default as number,
+                CAMERA_DEFAULTS.exposure.max as number].includes(exposure)
+                ? [{
+                    value: exposure,
+                    label: `(${exposure}`,
+                }]
+                : []
+        )
+    ].sort((a, b) => a.value - b.value); // Sort marks by value
     return (
         <Box>
             <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -70,31 +84,31 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                     onChange={handleModeChange}
                     size="small"
                 >
-                    <ToggleButton value="Manual">Manual</ToggleButton>
-                    <ToggleButton value="Auto">Auto</ToggleButton>
-                    <ToggleButton value="Recommend">Recommend</ToggleButton>
+                    <ToggleButton value="MANUAL">Manual</ToggleButton>
+                    <ToggleButton value="AUTO">Auto</ToggleButton>
+                    <ToggleButton value="RECOMMEND">Recommend</ToggleButton>
                 </ToggleButtonGroup>
             </Tooltip>
-                <Tooltip title="Adjust exposure time, e.g. cv2.VideoCapture.set(cv2.CAP_PROP_EXPOSURE, value)">
-                    <Box sx={{flexGrow: 1}}>
-                        <Slider
-                            value={exposure}
-                            disabled={exposureMode === 'Auto' || exposureMode === 'Recommend'}
-                            min={-12}
-                            max={-5}
-                            step={1}
-                            marks={marks}
-                            valueLabelDisplay="auto"
-                            onChange={(_, value) => onExposureValueChange(value as number)}
-                            components={{
-                                ValueLabel: ValueLabelComponent
-                            }}
-                        />
+            <Tooltip title="Adjust exposure time, e.g. cv2.VideoCapture.set(cv2.CAP_PROP_EXPOSURE, value)">
+                <Box sx={{flexGrow: 1}}>
+                    <Slider
+                        value={exposure}
+                        disabled={exposureMode === 'AUTO' || exposureMode === 'RECOMMEND'}
+                        min={-12}
+                        max={-5}
+                        step={1}
+                        marks={marks}
+                        valueLabelDisplay="auto"
+                        onChange={(_, value) => onExposureValueChange(value as number)}
+                        components={{
+                            ValueLabel: ValueLabelComponent
+                        }}
+                    />
 
-                    </Box>
-                </Tooltip>
+                </Box>
+            </Tooltip>
 
 
-            </Box>
+        </Box>
     );
 };
