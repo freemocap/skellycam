@@ -3,10 +3,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body
 
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app_state import get_skellycam_app_state
 from pydantic import BaseModel, Field
 
-from skellycam.system.default_paths import get_default_recording_folder_path
+from skellycam.system.default_paths import get_default_recording_folder_path, default_recording_name
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,8 @@ record_cameras_router = APIRouter(tags=["Recording"])
 
 
 class StartRecordingRequest(BaseModel):
-    recording_name: str = Field(..., description="Name of the recording")
+    recording_name: str = Field(default_factory=default_recording_name,
+                                description="Name of the recording")
     recording_directory: str = Field(default_factory=get_default_recording_folder_path,
                                      description="Path to save the recording ")
     mic_device_index: int = Field(default=-1,
@@ -30,7 +32,7 @@ def start_recording(request: StartRecordingRequest = Body(..., examples=[     St
     if request.recording_directory.startswith("~"):
         request.recording_directory = request.recording_directory.replace("~", str(Path.home()), 1)
 
-    get_skellycam_app_state().start_recording(request)
+    get_skellycam_app_state().start_recording(RecordingInfo(**request.model_dump()))
     logger.api("`/record/start` request handled successfully.")
 
 

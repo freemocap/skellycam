@@ -17,8 +17,8 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escap
     MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_camera_shared_memory import \
     RingBufferCameraSharedMemory
-from skellycam.core.recorders.start_recording_request import StartRecordingRequest
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, \
     available_cameras_to_default_camera_configs
@@ -111,10 +111,10 @@ class SkellycamAppState:
         self._reset()
         logger.success("Camera group closed successfully")
 
-    def start_recording(self, request: StartRecordingRequest):
-        self.ipc_flags.mic_device_index.value = request.mic_device_index
+    def start_recording(self, recording_info:RecordingInfo):
+        self.ipc_flags.mic_device_index.value = recording_info.mic_device_index
         self.ipc_flags.record_frames_flag.value = True
-        recording_name_string = request.recording_name if request.recording_name else ""
+        recording_name_string = recording_info.recording_name if recording_info.recording_name else ""
         self.ipc_flags.recording_name.value = recording_name_string.encode("utf-8")
 
         self.ipc_queue.put(self.state_dto())

@@ -8,7 +8,7 @@ interface DelayStartControlProps {
     onDelayChange: (seconds: number) => void;
 }
 
-export const DelayStartControl: React.FC<DelayStartControlProps> = ({
+export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
     useDelay,
     delaySeconds,
     onDelayToggle,

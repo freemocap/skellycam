@@ -1,8 +1,7 @@
 import React from 'react';
 import {Box, Paper, Tooltip, Typography} from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
-import VideoFileIcon from '@mui/icons-material/VideoFile';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 interface FullPathPreviewProps {
     directory: string;
@@ -18,7 +17,7 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
     const parts = [
         {icon: <FolderIcon/>, text: directory},
         ...(subfolder ? [{icon: <FolderIcon/>, text: subfolder}] : []),
-        {icon: <VideoFileIcon/>, text: filename}
+        {icon: <FolderSpecialIcon/>, text: filename}
     ];
 
     const fullPath = parts.map(p => p.text).join('/');
@@ -33,7 +32,7 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
                 borderColor: 'rgba(0, 0, 0, 0.12)',
             }}
         >
-            <Typography variant="h6" gutterBottom sx={{color: 'text.secondary', mb: 1}}>
+            <Typography variant="body1" gutterBottom sx={{color: "#fff", mb: 1}}>
                 Full Recording Path:
             </Typography>
 

@@ -10,7 +10,7 @@ import {
 import {
     StartStopRecordingButton
 } from "@/components/recording-info-panel/recording-subcomponents/StartStopRecordingButton";
-import {DelayStartControl} from "@/components/recording-info-panel/recording-subcomponents/DelayStartControl";
+import {DelayRecordingStartControl} from "@/components/recording-info-panel/recording-subcomponents/DelayRecordingStartControl";
 import {
     FullRecordingPathPreview
 } from "@/components/recording-info-panel/recording-subcomponents/FullRecordingPathPreview";
@@ -150,7 +150,7 @@ export const RecordingInfoPanel: React.FC = () => {
                 {/* Settings Panel */}
                 {showSettings && (
                     <>
-                        <DelayStartControl
+                        <DelayRecordingStartControl
                             useDelay={useDelayStart}
                             delaySeconds={delaySeconds}
                             onDelayToggle={setUseDelayStart}
