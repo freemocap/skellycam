@@ -1,7 +1,7 @@
 // CameraConfigExposure.tsx
 import * as React from 'react';
 import {Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography} from '@mui/material';
-import {CAMERA_DEFAULTS, ExposureMode} from "@/store/slices/cameras-slices/camera-types";
+import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;
@@ -29,8 +29,8 @@ const ValueLabelComponent = (props: {
     );
 };
 export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
-                                                                              exposureMode = CAMERA_DEFAULTS.exposure_modes[0], // MANUAL
-                                                                              exposure = CAMERA_DEFAULTS.exposure.default,
+                                                                              exposureMode = CAMERA_DEFAULT_CONSTRAINTS.exposure_modes[0], // MANUAL
+                                                                              exposure = CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
                                                                               onExposureModeChange,
                                                                               onExposureValueChange
                                                                           }) => {
@@ -54,16 +54,16 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
         return value;
     };
     const baseMarks = [
-        {value: CAMERA_DEFAULTS.exposure.min, label: String(CAMERA_DEFAULTS.exposure.min)},
-        {value: CAMERA_DEFAULTS.exposure.default, label: `${CAMERA_DEFAULTS.exposure.default} (default)`},
-        {value: CAMERA_DEFAULTS.exposure.max, label: String(CAMERA_DEFAULTS.exposure.max)}
+        {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.min, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.min)},
+        {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.default, label: `${CAMERA_DEFAULT_CONSTRAINTS.exposure.default} (default)`},
+        {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.max, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.max)}
     ];
     // Add current exposure value to marks if it doesn't match any existing marks
     const marks = [
         ...baseMarks,
-        ...(![CAMERA_DEFAULTS.exposure.min as number,
-                CAMERA_DEFAULTS.exposure.default as number,
-                CAMERA_DEFAULTS.exposure.max as number].includes(exposure)
+        ...(![CAMERA_DEFAULT_CONSTRAINTS.exposure.min as number,
+                CAMERA_DEFAULT_CONSTRAINTS.exposure.default as number,
+                CAMERA_DEFAULT_CONSTRAINTS.exposure.max as number].includes(exposure)
                 ? [{
                     value: exposure,
                     label: `(${exposure}`,

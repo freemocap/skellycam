@@ -1,6 +1,6 @@
 // store/thunks/camera-thunks.ts
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import {setBrowserDetectedDevices, setError, setLoading} from '../slices/cameras-slices/detectedCamerasSlice';
+import {setDetectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
 
 const isVirtualCamera = (label: string): boolean => {
     const virtualCameraKeywords = ['virtual'];
@@ -10,7 +10,7 @@ export const validateVideoStream = async (deviceId: string): Promise<boolean> =>
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
-                deviceId: { exact: deviceId }
+                deviceId: {exact: deviceId}
             }
         });
 
@@ -88,13 +88,13 @@ export const detectBrowserDevices = createAsyncThunk(
                 selected: true
             }));
             console.log(`Detected ${serializableCameras.length} camera(s)`, serializableCameras);
-            dispatch(setBrowserDetectedDevices(serializableCameras));
+            dispatch(setDetectedDevices(serializableCameras));
             dispatch(setError(null));
             return serializableCameras;
-
         } catch (error) {
             dispatch(setError('Failed to detect browser devices'));
             console.error('Error detecting browser devices:', error);
+
         } finally {
             dispatch(setLoading(false));
         }

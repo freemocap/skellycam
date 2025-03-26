@@ -1,18 +1,15 @@
-import {configureStore} from "@reduxjs/toolkit"
-import {latestFrontendPayloadSlice} from "./slices/latestFrontendPayloadSlice"
-import {recordingInfoSlice} from "./slices/recordingInfoSlice"
-import {framerateTrackerSlice} from "./slices/framerateTrackerSlice"
-import {detectedCamerasSlice} from "@/store/slices/cameras-slices/detectedCamerasSlice";
-import {connectedCamerasSlice} from "@/store/slices/cameras-slices/connectedCameraConfigsSlice";
-import {userCameraConfigsSlice} from "@/store/slices/cameras-slices/userCameraConfigs";
-import {logRecordsSlice} from "@/store/slices/logRecordsSlice";
-import {type TypedUseSelectorHook, useDispatch, useSelector} from "react-redux";
+// skellycam-ui/src/store/AppStateStore.ts
+import { configureStore } from "@reduxjs/toolkit"
+import { latestFrontendPayloadSlice } from "./slices/latestFrontendPayloadSlice"
+import { recordingInfoSlice } from "./slices/recordingInfoSlice"
+import { framerateTrackerSlice } from "./slices/framerateTrackerSlice"
+import { logRecordsSlice } from "@/store/slices/logRecordsSlice";
+import { type TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
+import {camerasSlice} from "@/store/slices/cameras-slices/camerasSlice";
 
 export const AppStateStore = configureStore({
     reducer: {
-        detectedCameras: detectedCamerasSlice.reducer,
-        connectedCameras: connectedCamerasSlice.reducer,
-        userCameraConfigs: userCameraConfigsSlice.reducer,
+        cameras: camerasSlice.reducer,
         latestPayload: latestFrontendPayloadSlice.reducer,
         logRecords: logRecordsSlice.reducer,
         recordingStatus: recordingInfoSlice.reducer,

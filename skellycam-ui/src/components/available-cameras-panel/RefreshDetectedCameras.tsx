@@ -1,37 +1,34 @@
-import IconButton from "@mui/material/IconButton";
+// RefreshDetectedCameras.tsx
+import React from 'react';
+import { IconButton, CircularProgress } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useTheme } from "@mui/material";
-import {useAppDispatch} from "@/store/AppStateStore";
-import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
+import { useAppDispatch } from '@/store/AppStateStore';
+import { detectBrowserDevices } from '@/store/thunks/camera-thunks';
 
-interface RefreshCamerasButtonProps {
+interface RefreshDetectedCamerasButtonProps {
     isLoading: boolean;
 }
 
-export const RefreshDetectedCamerasButton = ({ isLoading }: RefreshCamerasButtonProps) => {
-    const theme = useTheme();
+export const RefreshDetectedCamerasButton: React.FC<RefreshDetectedCamerasButtonProps> = ({ isLoading }) => {
     const dispatch = useAppDispatch();
 
-    const handleRefresh = (event: React.MouseEvent) => {
-        event.stopPropagation();
-        dispatch(detectBrowserDevices(true));
+    const handleRefresh = () => {
+        if (!isLoading) {
+            dispatch(detectBrowserDevices(true));
+        }
     };
 
     return (
         <IconButton
+            color="inherit"
             onClick={handleRefresh}
-            size="small"
-            sx={{
-                color: theme.palette.primary.contrastText,
-                ml: 1,
-                '&:hover': {
-                    backgroundColor: 'rgba(255, 155, 255, 0.1)',
-                }
-            }}
             disabled={isLoading}
-            title="Refresh available cameras"
         >
-            <RefreshIcon fontSize="small" />
+            {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+            ) : (
+                <RefreshIcon />
+            )}
         </IconButton>
     );
 };

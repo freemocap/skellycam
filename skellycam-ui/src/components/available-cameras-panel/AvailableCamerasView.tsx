@@ -1,25 +1,27 @@
-import {Accordion, AccordionDetails, Box, List, Paper, Stack, Typography, useTheme} from "@mui/material";
+// skellycam-ui/src/components/available-cameras-panel/AvailableCamerasView.tsx
+import { Accordion, AccordionDetails, Box, List, Paper, Stack, Typography, useTheme } from "@mui/material";
 import * as React from "react";
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import {CameraConfigPanel} from "@/components/available-cameras-panel/CameraConfigPanel";
-import {CameraListItem} from "@/components/available-cameras-panel/CameraListItem";
-import {RefreshDetectedCamerasButton} from "@/components/available-cameras-panel/RefreshDetectedCameras";
-import {createDefaultCameraConfig, SerializedMediaDeviceInfo} from "@/store/slices/cameras-slices/camera-types";
-import {toggleCameraSelection} from "@/store/slices/cameras-slices/detectedCamerasSlice";
-import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
-import {setUserSelectedCameraConfigs} from "@/store/slices/cameras-slices/userCameraConfigs";
-import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
-import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
+import { CameraConfigPanel } from "@/components/available-cameras-panel/CameraConfigPanel";
+import { CameraListItem } from "@/components/available-cameras-panel/CameraListItem";
+import { RefreshDetectedCamerasButton } from "@/components/available-cameras-panel/RefreshDetectedCameras";
+import { useAppDispatch, useAppSelector } from "@/store/AppStateStore";
+import { ConnectToCamerasButton } from "@/components/available-cameras-panel/ConnectToCamerasButton";
+import { detectBrowserDevices, connectToCameras } from "@/store/thunks/camera-thunks";
+import {selectAllDevices, toggleCameraSelection, updateCameraConfig} from "@/store/slices/cameras-slices/camerasSlice";
 
 export const AvailableCamerasView = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
-    const browserDetectedDevices = useAppSelector(state => state.detectedCameras.browserDetectedCameras);
-    const userConfigs = useAppSelector(state => state.userCameraConfigs.userConfigs);
-    const isLoading = useAppSelector(state => state.detectedCameras.isLoading);
+
+    // Get data from the unified slice
+    const detectedCameras = useAppSelector(selectAllDevices);
+    const cameraConfigs = useAppSelector(state => state.cameras.configs);
+    const isLoading = useAppSelector(state => state.cameras.isLoading);
+
     const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set());
 
     // Handle expanding/collapsing camera config panels
@@ -35,15 +37,15 @@ export const AvailableCamerasView = () => {
         });
     };
 
-
     // Initial camera detection
     useEffect(() => {
         dispatch(detectBrowserDevices(true));
     }, [dispatch]);
 
-    // Generate default config for a camera
-    const getDefaultConfig = (device: SerializedMediaDeviceInfo) =>
-        createDefaultCameraConfig(device.index, device.label);
+    // Handle connection to selected cameras
+    const handleConnectCameras = () => {
+        dispatch(connectToCameras());
+    };
 
     return (
         <Accordion
@@ -79,7 +81,10 @@ export const AvailableCamerasView = () => {
                         </Typography>
                     </Stack>
                 </AccordionSummary>
-                <ConnectToCamerasButton/>
+
+                <Box sx={{ pr: 2 }}>
+                    <ConnectToCamerasButton onClick={handleConnectCameras} />
+                </Box>
 
                 <Box sx={{ pr: 2 }}>
                     <RefreshDetectedCamerasButton isLoading={isLoading} />
@@ -96,20 +101,20 @@ export const AvailableCamerasView = () => {
                     }}
                 >
                     <List dense disablePadding>
-                        {browserDetectedDevices.map((device, index) => (
+                        {detectedCameras.map((device, index) => (
                             <React.Fragment key={device.deviceId}>
                                 <CameraListItem
                                     device={device}
-                                    isLast={index === browserDetectedDevices.length - 1}
+                                    isLast={index === detectedCameras.length - 1}
                                     isConfigExpanded={expandedConfigs.has(device.deviceId)}
                                     onToggleSelect={() => dispatch(toggleCameraSelection(device.deviceId))}
                                     onToggleConfig={() => toggleConfig(device.deviceId)}
                                 />
                                 {device.selected && (
                                     <CameraConfigPanel
-                                        config={userConfigs?.[device.deviceId] || getDefaultConfig(device)}
+                                        config={cameraConfigs[device.deviceId]}
                                         onConfigChange={(newConfig) => {
-                                            dispatch(setUserSelectedCameraConfigs({
+                                            dispatch(updateCameraConfig({
                                                 deviceId: device.deviceId,
                                                 config: newConfig
                                             }));
@@ -121,7 +126,7 @@ export const AvailableCamerasView = () => {
                         ))}
                     </List>
 
-                    {browserDetectedDevices.length === 0 && (
+                    {detectedCameras.length === 0 && (
                         <Box
                             sx={{
                                 p: 3,

@@ -154,7 +154,7 @@ class CameraConfig(BaseModel):
         return out_str
 
 
-CameraConfigs = Dict[CameraId, CameraConfig]
+CameraConfigs = dict[CameraId|str, CameraConfig]
 
 
 def default_camera_configs_factory():

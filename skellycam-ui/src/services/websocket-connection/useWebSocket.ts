@@ -12,7 +12,6 @@ import {
 } from "@/store/slices/recordingInfoSlice";
 import {CameraConfigsSchema} from "@/store/slices/cameras-slices/camera-types";
 import {addLog, LogRecordSchema} from "@/store/slices/logRecordsSlice";
-import {setConnectedCameraConfigs} from "@/store/slices/cameras-slices/connectedCameraConfigsSlice";
 import {useAppDispatch} from "@/store/AppStateStore";
 
 const MAX_RECONNECT_ATTEMPTS = 20;
@@ -59,13 +58,13 @@ export const useWebSocket = (wsUrl: string) => {
                 // }
                 if (!(e instanceof z.ZodError)) throw e; // Re-throw if not a validation error
             }
-            try {
-                const connectedCameraConfigs = CameraConfigsSchema.parse(parsedData);
-                dispatch(setConnectedCameraConfigs(connectedCameraConfigs));
-                return;
-            } catch (e) {
-                if (!(e instanceof z.ZodError)) throw e;
-            }
+            // TODO - add update config handling
+            // try {
+            //     dispatch(setCameraConfigs(CameraConfigsSchema.parse(parsedData)));
+            //     return;
+            // } catch (e) {
+            //     if (!(e instanceof z.ZodError)) throw e;
+            // }
 
 
             try {
