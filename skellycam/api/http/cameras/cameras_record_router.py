@@ -30,8 +30,8 @@ class StartRecordingRequest(BaseModel):
 def start_recording(request: StartRecordingRequest = Body(..., examples=[     StartRecordingRequest()])):
     logger.api("Received `/record/start` request...")
     if request.recording_directory.startswith("~"):
-        request.recording_directory = request.recording_directory.replace("~", str(Path.home()), 1)
-
+        request.recording_directory = str(Path(request.recording_directory.replace("~", str(Path.home()), 1)))
+    Path(request.recording_directory).mkdir(parents=True, exist_ok=True)
     get_skellycam_app_state().start_recording(RecordingInfo(**request.model_dump()))
     logger.api("`/record/start` request handled successfully.")
 

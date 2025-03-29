@@ -20,12 +20,12 @@ export const startRecording = createAsyncThunk<void, StartRecordingParams>(
         console.log(`Starting recording with name: ${recordingName} in directory: ${recordingDirectory}`);
         try {
             const recStartUrl = 'http://localhost:8006/skellycam/record/start';
-            
+
             const requestPayload = RecordStartRequestSchema.parse({
                 recording_name: recordingName,
                 recording_directory: recordingDirectory,
             });
-
+            console.log(`Request payload: ${JSON.stringify(requestPayload, null, 2)}`);
             const response = await fetch(recStartUrl, {
                 method: 'POST',
                 headers: {

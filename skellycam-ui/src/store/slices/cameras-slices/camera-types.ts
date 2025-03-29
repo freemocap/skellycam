@@ -24,10 +24,10 @@ export const CAMERA_DEFAULT_CONSTRAINTS = {
         default: 30,
         available: [15, 30, 60]
     },
-    pixel_formats: ['RGB', 'BGR', 'GRAY'] as const,
-    exposure_modes: ['MANUAL', 'AUTO','RECOMMEND' ] as const,
-    rotation_options: ['0', '90', '180', '270'] as const,
-    fourcc_options: [ 'MJPG','X264', 'YUYV', 'H264'] as const
+    pixel_formats: ['RGB', 'BGR', 'GRAY'],
+    exposure_modes: ['MANUAL', 'AUTO', 'RECOMMEND'],
+    rotation_options: ['0', '90', '180', '270'],
+    fourcc_options: ['MJPG', 'X264', 'YUYV', 'H264']
 } as const;
 
 export interface SerializedMediaDeviceInfo {

@@ -26,7 +26,10 @@ export const camerasSlice = createSlice({
     initialState,
     reducers: {
         setDetectedDevices: (state, action: PayloadAction<SerializedMediaDeviceInfo[]>) => {
-            state.devices = action.payload;
+            // Deep clone the devices to ensure all nested properties are properly copied
+            state.devices = action.payload.map(device => {
+                return JSON.parse(JSON.stringify(device));
+            });
 
             // Initialize config for each device if it doesn't exist
             action.payload.forEach(device => {

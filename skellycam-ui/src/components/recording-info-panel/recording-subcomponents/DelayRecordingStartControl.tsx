@@ -32,7 +32,7 @@ export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
                     type="number"
                     value={delaySeconds}
                     onChange={(e) => onDelayChange(Math.max(1, parseInt(e.target.value) || 1))}
-                    inputProps={{min: 1, max: 10}}
+                    inputProps={{min: 1, step: 1}}
                     size="small"
                     sx={{width: 100}}
                 />

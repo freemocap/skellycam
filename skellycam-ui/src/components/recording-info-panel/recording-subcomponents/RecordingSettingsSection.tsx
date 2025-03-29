@@ -1,7 +1,7 @@
-// RecordingSettingsSection.tsx
-import {Box, Checkbox, FormControlLabel, Stack, TextField} from "@mui/material";
+import React from 'react';
+import {Box, Checkbox, FormControlLabel, Grid, TextField, Typography} from '@mui/material';
 
-interface SettingsSectionProps {
+interface RecordingSettingsProps {
     useTimestamp: boolean;
     baseName: string;
     useIncrement: boolean;
@@ -16,7 +16,7 @@ interface SettingsSectionProps {
     onCustomSubfolderNameChange: (value: string) => void;
 }
 
-export const RecordingSettingsSection: React.FC<SettingsSectionProps> = ({
+export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
     useTimestamp,
     baseName,
     useIncrement,
@@ -28,84 +28,86 @@ export const RecordingSettingsSection: React.FC<SettingsSectionProps> = ({
     onUseIncrementChange,
     onIncrementChange,
     onCreateSubfolderChange,
-    onCustomSubfolderNameChange
+    onCustomSubfolderNameChange,
 }) => {
     return (
-        <Stack spacing={2} sx={{pt: 1}}>
-            {/* Base name input - always visible but disabled when timestamp is used */}
-            <TextField
-                label="Base Name"
-                value={baseName}
-                onChange={(e) => onBaseNameChange(e.target.value)}
-                disabled={useTimestamp}
-                fullWidth
-                size="small"
-            />
+        <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0, 0, 0, 0.04)', borderRadius: 1 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>Recording Settings</Typography>
 
-            {/* Custom subfolder input - always visible but disabled when not creating subfolder */}
-            <TextField
-                label="Custom Subfolder Name"
-                value={customSubfolderName}
-                onChange={(e) => onCustomSubfolderNameChange(e.target.value)}
-                disabled={!createSubfolder}
-                size="small"
-                placeholder="Leave empty for timestamp"
-                fullWidth
-            />
+            <Grid container spacing={2} alignItems="center">
+                {/* Timestamp & Base name row */}
+                <Grid item xs={12} sm={4}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={useTimestamp}
+                                onChange={(e) => onUseTimestampChange(e.target.checked)}
+                            />
+                        }
+                        label="Use Timestamp"
+                    />
+                </Grid>
+                <Grid item xs={12} sm={8}>
+                    <TextField
+                        label="Base Recording Name"
+                        value={baseName}
+                        onChange={(e) => onBaseNameChange(e.target.value)}
+                        disabled={useTimestamp}
+                        size="small"
+                        fullWidth
+                    />
+                </Grid>
 
-            {/* Increment number - always visible but disabled when not using increment */}
-            <TextField
-                label="Auto Increment Number"
-                value={currentIncrement}
-                onChange={(e) => onIncrementChange(Math.max(1, parseInt(e.target.value) || 1))}
-                disabled={!useIncrement}
-                type="number"
-                inputProps={{min: 1}}
-                size="small"
-                fullWidth
-            />
+                {/* Subfolder row */}
+                <Grid item xs={12} sm={4}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={createSubfolder}
+                                onChange={(e) => onCreateSubfolderChange(e.target.checked)}
+                            />
+                        }
+                        label="Use Subfolder"
+                    />
+                </Grid>
+                <Grid item xs={12} sm={8}>
+                    <TextField
+                        label="Custom Subfolder Name"
+                        value={customSubfolderName}
+                        onChange={(e) => onCustomSubfolderNameChange(e.target.value)}
+                        disabled={!createSubfolder}
+                        size="small"
+                        fullWidth
+                        placeholder="Leave empty to use timestamp"
+                    />
+                </Grid>
 
-            {/* Compact checkbox group */}
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: 1,
-                }}
-            >
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={useTimestamp}
-                            onChange={(e) => onUseTimestampChange(e.target.checked)}
-                            size="small"
-                        />
-                    }
-                    label="Use Timestamp"
-                />
+                {/* Auto increment row */}
+                <Grid item xs={12} sm={4}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={useIncrement}
+                                onChange={(e) => onUseIncrementChange(e.target.checked)}
+                            />
+                        }
+                        label="Auto Increment"
+                    />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                    <TextField
+                        label="Increment Number"
+                        type="number"
+                        value={currentIncrement}
+                        onChange={(e) => onIncrementChange(parseInt(e.target.value) || 1)}
+                        disabled={!useIncrement}
+                        inputProps={{ min: 1, step: 1 }}
+                        size="small"
+                        fullWidth
+                    />
+                </Grid>
 
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={useIncrement}
-                            onChange={(e) => onUseIncrementChange(e.target.checked)}
-                            size="small"
-                        />
-                    }
-                    label="Auto Increment"
-                />
-
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={createSubfolder}
-                            onChange={(e) => onCreateSubfolderChange(e.target.checked)}
-                            size="small"
-                        />
-                    }
-                    label="Create Subfolder"
-                />
-            </Box>
-        </Stack>
+            </Grid>
+        </Box>
     );
 };

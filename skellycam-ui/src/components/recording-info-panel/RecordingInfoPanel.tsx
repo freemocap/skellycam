@@ -25,8 +25,8 @@ export const RecordingInfoPanel: React.FC = () => {
 
     // Local UI state
     const [showSettings, setShowSettings] = useState(false);
-    const [createSubfolder, setCreateSubfolder] = useState(true);
-    const [useDelayStart, setUseDelayStart] = useState(true);
+    const [createSubfolder, setCreateSubfolder] = useState(false);
+    const [useDelayStart, setUseDelayStart] = useState(false);
     const [delaySeconds, setDelaySeconds] = useState(3);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [recordingTag, setRecordingTag] = useState('');
@@ -57,6 +57,8 @@ export const RecordingInfoPanel: React.FC = () => {
             .split('.')[0];
     };
 
+
+
     const buildRecordingName = (): string => {
         const parts: string[] = [];
 
@@ -72,13 +74,11 @@ export const RecordingInfoPanel: React.FC = () => {
             parts.push(recordingTag);
         }
 
-        // Add increment if enabled
-        if (useIncrement) {
-            parts.push(currentIncrement.toString().padStart(3, '0'));
-        }
+
 
         return parts.join('_');
     };
+
     const getFullRecordingPath = (): string => {
         const recordingName = buildRecordingName();
         if (!createSubfolder) {
@@ -110,6 +110,7 @@ export const RecordingInfoPanel: React.FC = () => {
             recordingDirectory: recordingPath
         }));
     };
+
     const handleButtonClick = () => {
         if (recordingInfo.isRecording) {
             console.log('Stopping recording...');

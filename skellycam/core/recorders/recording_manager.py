@@ -98,12 +98,13 @@ class RecordingManager(BaseModel):
             self.video_recorders[camera_id].add_frame(frame=frame)
         self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
 
-    def save_one_frame(self) -> Optional[bool]:
+    def save_one_frame(self) -> bool|None:
         """
         saves one frame from one video recorder
         """
         if not self.frames_to_save:
-            return
+            return None
+
         if not Path(self.recording_folder).exists():
             self._create_video_recording_folder()
 

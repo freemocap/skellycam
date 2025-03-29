@@ -114,10 +114,15 @@ class SkellycamAppState:
         logger.success("Camera group closed successfully")
 
     def start_recording(self, recording_info:RecordingInfo):
-        self.ipc_flags.mic_device_index.value = recording_info.mic_device_index
-        self.ipc_flags.record_frames_flag.value = True
-        recording_name_string = recording_info.recording_name if recording_info.recording_name else ""
-        self.ipc_flags.recording_name.value = recording_name_string.encode("utf-8")
+        if self.camera_group is None:
+            raise ValueError("Cannot start recording without CameraGroup!")
+        if self.ipc_flags.record_frames_flag.value:
+            raise ValueError("Cannot start recording when already recording!")
+        self.ipc_flags.start_recording_queue.put(recording_info)
+        # self.ipc_flags.mic_device_index.value = recording_info.mic_device_index
+        # recording_name_string = recording_info.recording_name if recording_info.recording_name else ""
+        # self.ipc_flags.recording_name.value = recording_name_string.encode("utf-8")
+        # self.ipc_flags.record_frames_flag.value = True
 
         self.ipc_queue.put(self.state_dto())
 

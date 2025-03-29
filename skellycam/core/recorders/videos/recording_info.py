@@ -1,5 +1,6 @@
 import logging
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 
 from pydantic import BaseModel, Field
@@ -16,17 +17,22 @@ logger = logging.getLogger(__name__)
 class RecordingInfo(BaseModel):
     recording_uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
     recording_name: str
-    recording_folder: str
+    recording_directory: str
+    mic_device_index: int = -1
 
     recording_start_timestamp: FullTimestamp = Field(default_factory=FullTimestamp.now)
 
+    @property
+    def recording_path(self) -> str:
+        return str(Path(f"{self.recording_directory}/{self.recording_name}"))
+
     @classmethod
-    def from_recording_manager(cls, frame_saver: 'RecordingManager'):
-        camera_configs = {camera_id: config.model_dump() for camera_id, config in frame_saver.camera_configs.items()}
-        return cls(recording_name=frame_saver.recording_name,
-                   recording_folder=frame_saver.recording_folder)
+    def from_recording_manager(cls, recording_manager: 'RecordingManager'):
+        return cls(recording_name=recording_manager.recording_name,
+                   recording_directory=recording_manager.recording_folder
+                     )
 
     def save_to_file(self):
-        logger.debug(f"Saving recording info to [{self.recording_folder}/{self.recording_name}_info.json]")
-        with open(f"{self.recording_folder}/{self.recording_name}_info.json", "w") as f:
+        logger.debug(f"Saving recording info to [{self.recording_directory}/{self.recording_name}_info.json]")
+        with open(f"{self.recording_directory}/{self.recording_name}_info.json", "w") as f:
             f.write(self.model_dump_json(indent=4))
