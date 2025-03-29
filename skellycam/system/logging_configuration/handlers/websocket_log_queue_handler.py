@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 class LogRecordModel(BaseModel):
     name: str
-    msg: str
+    msg: str|None = None
     args: list
     levelname: str
     levelno: int
@@ -49,7 +49,7 @@ class WebSocketQueueHandler(logging.Handler):
         log_record_dict["formatted_message"] = self.format(record)
         log_record_dict['type'] = record.__class__.__name__
         log_record_dict['exc_info'] = str(log_record_dict['exc_info']) if log_record_dict['exc_info'] else None
-        self.queue.put(LogRecordModel(**log_record_dict).model_dump())
+        # self.queue.put(LogRecordModel(**log_record_dict).model_dump())
 
 
 MAX_WEBSOCKET_LOG_QUEUE_SIZE = 1000

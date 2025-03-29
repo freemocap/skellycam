@@ -38,7 +38,8 @@ def cameras_connect_post_endpoint(
         logger.error("No cameras provided in the request body.")
         return {"error": "No cameras provided."}
     try:
-        background_tasks.add_task(get_skellycam_app_state().create_camera_group, camera_configs=request.camera_configs)
+        configs = {CameraId(camera_id): config for camera_id, config in request.camera_configs.items()}
+        background_tasks.add_task(get_skellycam_app_state().create_camera_group, camera_configs=configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")

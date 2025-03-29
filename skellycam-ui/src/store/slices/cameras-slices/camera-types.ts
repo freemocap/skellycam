@@ -27,7 +27,7 @@ export const CAMERA_DEFAULT_CONSTRAINTS = {
     pixel_formats: ['RGB', 'BGR', 'GRAY'] as const,
     exposure_modes: ['MANUAL', 'AUTO','RECOMMEND' ] as const,
     rotation_options: ['0', '90', '180', '270'] as const,
-    fourcc_options: [ 'X264','MJPG', 'YUYV', 'H264'] as const
+    fourcc_options: [ 'MJPG','X264', 'YUYV', 'H264'] as const
 } as const;
 
 export interface SerializedMediaDeviceInfo {
@@ -64,8 +64,8 @@ export const createDefaultCameraConfig = (index: number, label: string) => ({
     exposure: CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
     framerate: CAMERA_DEFAULT_CONSTRAINTS.framerate.default,
     rotation: CAMERA_DEFAULT_CONSTRAINTS.rotation_options[0], // 'No Rotation'
-    capture_fourcc: CAMERA_DEFAULT_CONSTRAINTS.fourcc_options[0],
-    writer_fourcc: CAMERA_DEFAULT_CONSTRAINTS.fourcc_options[0], // 'X264'
+    capture_fourcc: CAMERA_DEFAULT_CONSTRAINTS.fourcc_options[0], // 'MJPG'
+    writer_fourcc: CAMERA_DEFAULT_CONSTRAINTS.fourcc_options[1], // 'X264'
 });
 
 export const CameraConfigSchema = z.object({

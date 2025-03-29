@@ -23,7 +23,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
     logger.info(
         f"Applying configuration to Camera {config.camera_id}:\n"
         f"\tExposure Mode: {config.exposure_mode},\n"
-        f"\tExposure: {config.exposure if config.exposure_mode == ExposureModes.MANUAL else 'N/A'},\n"
+        f"\tExposure: {config.exposure if config.exposure_mode == ExposureModes.MANUAL.name else 'N/A'},\n"
         f"\tResolution height: {config.resolution.height},\n"
         f"\tResolution width: {config.resolution.width},\n"
         f"\tFramerate: {config.framerate},\n"

@@ -60,7 +60,7 @@ class CameraManager(BaseModel):
         [camera.start() for camera in self.camera_processes.values()]
         self.orchestrator.await_cameras_ready()
         self.camera_group_frame_loop()
-        logger.success(f"Cameras {self.camera_ids} frame loop ended.")
+        logger.info(f"Cameras {self.camera_ids} frame loop ended.")
 
     def camera_group_frame_loop(self):
         self.orchestrator.await_cameras_ready()
