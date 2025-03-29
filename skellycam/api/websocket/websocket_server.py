@@ -10,7 +10,7 @@ from skellycam.core.frames.payloads.frontend_image_payload import FrontendFrameP
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState, get_skellycam_app_state, SkellycamAppStateDTO
+from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app, SkellycamAppStateDTO
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue, \
     LogRecordModel
 from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
@@ -22,7 +22,7 @@ class WebsocketServer:
     def __init__(self, websocket: WebSocket):
 
         self.websocket = websocket
-        self._app_state: SkellycamAppState = get_skellycam_app_state()
+        self._app: SkellycamApplication = get_skellycam_app()
 
         self.latest_backend_framerate: CurrentFramerate | None = None
         self.latest_frontend_framerate: CurrentFramerate | None = None
@@ -46,7 +46,7 @@ class WebsocketServer:
     @property
     def should_continue(self):
         return (
-                self._app_state.ipc_flags.global_should_continue
+                self._app.ipc.global_should_continue
                 and self._websocket_should_continue
                 and self.websocket.client_state == WebSocketState.CONNECTED
         )
@@ -76,9 +76,9 @@ class WebsocketServer:
 
         try:
             while self.should_continue:
-                if not self._app_state.ipc_queue.empty():
+                if not self._app.ipc.ws_ipc_relay_queue.empty():
                     try:
-                        await self._handle_ipc_queue_message(message=self._app_state.ipc_queue.get())
+                        await self._handle_ipc_queue_message(message=self._app.ipc.ws_ipc_relay_queue.get())
                     except multiprocessing.queues.Empty:
                         continue
                     except Exception as e:
@@ -98,9 +98,8 @@ class WebsocketServer:
     async def _handle_ipc_queue_message(self, message: object|None = None):
         if isinstance(message, CameraConfig):
             logger.trace(f"Updating device extracted camera config for camera {message.camera_id}")
-            self._app_state.set_device_extracted_camera_config(message)
-        elif isinstance(message, RecordingInfo):
-            logger.trace(f"Relaying RecordingInfo to frontend")
+            self._app.set_device_extracted_camera_config(message)
+            message = self._app.state_dto()
         elif isinstance(message, SkellycamAppStateDTO):
             logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
         elif isinstance(message, CurrentFramerate):
@@ -124,20 +123,20 @@ class WebsocketServer:
             while self.should_continue:
                 await async_wait_1ms()
 
-                if not self._app_state.frame_escape_shm:
+                if not self._app.frame_escape_shm:
                     latest_mf_number = -1
                     continue
 
-                if self._app_state.camera_group and camera_group_uuid != self._app_state.camera_group.uuid:
+                if self._app.camera_group and camera_group_uuid != self._app.camera_group.uuid:
                     latest_mf_number = -1
-                    camera_group_uuid = self._app_state.camera_group.uuid
+                    camera_group_uuid = self._app.camera_group.uuid
                     continue
 
-                if not self._app_state.frame_escape_shm.latest_mf_number.value > latest_mf_number:
+                if not self._app.frame_escape_shm.latest_mf_number.value > latest_mf_number:
                     continue
 
-                mf_payload = self._app_state.frame_escape_shm.get_multi_frame_payload(
-                    camera_configs=self._app_state.camera_group.camera_configs,
+                mf_payload = self._app.frame_escape_shm.get_multi_frame_payload(
+                    camera_configs=self._app.camera_group.camera_configs,
                     retrieve_type="latest")
                 frontend_framerate_tracker.update(time.perf_counter_ns())
                 if mf_payload.multi_frame_number % 10 == 0:
@@ -176,15 +175,13 @@ class WebsocketServer:
 
     async def _logs_relay(self):
         logger.info("Starting websocket log relay listener...")
-        websocket_log_queue = get_websocket_log_queue()
-
         try:
             while self.should_continue:
-                if not websocket_log_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
+                if not self._app.ipc.ws_logs_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
                     try:
-                        log_record:LogRecordModel = websocket_log_queue.get_nowait()
+                        log_record:LogRecordModel = self._app.ipc.ws_logs_queue.get_nowait()
                         await self.websocket.send_json(log_record)
-                    except (multiprocessing.queues.Empty, websocket_log_queue.Empty):
+                    except (multiprocessing.queues.Empty, self._app.ipc.ws_logs_queue.Empty):
                         await async_wait_1ms()
                 else:
                     await async_wait_10ms()

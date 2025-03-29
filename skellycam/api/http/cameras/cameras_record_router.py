@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Body
 
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.skellycam_app.skellycam_app_state import get_skellycam_app_state
+from skellycam.skellycam_app.skellycam_app import get_skellycam_app
 from pydantic import BaseModel, Field
 
 from skellycam.system.default_paths import get_default_recording_folder_path, default_recording_name
@@ -32,7 +32,7 @@ def start_recording(request: StartRecordingRequest = Body(..., examples=[     St
     if request.recording_directory.startswith("~"):
         request.recording_directory = str(Path(request.recording_directory.replace("~", str(Path.home()), 1)))
     Path(request.recording_directory).mkdir(parents=True, exist_ok=True)
-    get_skellycam_app_state().start_recording(RecordingInfo(**request.model_dump()))
+    get_skellycam_app().start_recording(RecordingInfo(**request.model_dump()))
     logger.api("`/record/start` request handled successfully.")
 
 
@@ -40,5 +40,5 @@ def start_recording(request: StartRecordingRequest = Body(..., examples=[     St
                            summary="Stop recording video from cameras")
 def stop_recording():
     logger.api("Received `/record/stop` request...")
-    get_skellycam_app_state().stop_recording()
+    get_skellycam_app().stop_recording()
     logger.api("`/record/stop` request handled successfully.")

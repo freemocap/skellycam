@@ -96,9 +96,9 @@ class CameraManager(BaseModel):
 
     def _check_handle_config_update(self):
         # Check for new camera configs
-        if not self.camera_group_dto.update_queue.empty():
+        if not self.camera_group_dto.ipc.update_camera_configs_queue.empty():
             logger.trace(f"Handling camera config updates for cameras: {self.camera_ids}")
-            update_instructions = self.camera_group_dto.update_queue.get()
+            update_instructions = self.camera_group_dto.ipc.update_camera_configs_queue.get()
 
             self.update_camera_configs(update_instructions)
             while any(
@@ -109,9 +109,9 @@ class CameraManager(BaseModel):
 
     def close(self):
         logger.info(f"Stopping cameras: {self.camera_ids}")
-        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value and not self.camera_group_dto.ipc_flags.global_kill_flag.value:
+        if not self.camera_group_dto.ipc.kill_camera_group_flag.value and not self.camera_group_dto.ipc.global_kill_flag.value:
             logger.warning("Camera group was closed without kill flag set!")
-            self.camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
+            self.camera_group_dto.ipc.kill_camera_group_flag.value = True
         self._close_cameras()
 
     def update_camera_configs(self, update_instructions: UpdateInstructions):

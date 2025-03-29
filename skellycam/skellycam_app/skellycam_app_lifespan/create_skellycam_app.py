@@ -10,7 +10,7 @@ from skellycam.skellycam_app.skellycam_app_lifespan.skellycam_app_setup import r
 logger = logging.getLogger(__name__)
 
 
-def create_skellycam_app() -> FastAPI:
+def create_skellycam_fastapi_app() -> FastAPI:
     logger.api("Creating FastAPI app")
     app = FastAPI(lifespan=lifespan)
     cors(app)

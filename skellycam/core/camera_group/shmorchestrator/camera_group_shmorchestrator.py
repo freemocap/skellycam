@@ -8,7 +8,7 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escap
     MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_group_shared_memory import \
     SingleSlotCameraGroupSharedMemoryDTO, CameraGroupSharedMemory
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
 

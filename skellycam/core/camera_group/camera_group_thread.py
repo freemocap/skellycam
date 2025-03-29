@@ -43,9 +43,9 @@ class CameraGroupThread:
 
     def close(self):
         logger.debug("Closing `CameraGroupThread`...")
-        if not self.dto.ipc_flags.kill_camera_group_flag.value == True:
+        if not self.dto.ipc.kill_camera_group_flag.value == True:
             logger.warning("CameraGroupThread was closed before the kill flag was set.")
-        self.dto.ipc_flags.kill_camera_group_flag.value = True
+        self.dto.ipc.kill_camera_group_flag.value = True
         self._thread.join()
         logger.debug("CameraGroupThread closed.")
 

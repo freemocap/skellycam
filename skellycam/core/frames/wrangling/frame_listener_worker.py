@@ -53,7 +53,7 @@ class FrameEscaperWorker:
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
-        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
+        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.ipc.ws_logs_queue)
         logger.trace(f"Starting FrameListener loop...")
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
                                                                        shmorc_dto=shmorc_dto,
@@ -84,7 +84,7 @@ class FrameEscaperWorker:
                     multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
                     if mf_payload.multi_frame_number % 10 == 0:
                         # update every 10  multi-frames to avoid overloading the queue
-                        camera_group_dto.ipc_queue.put(backend_framerate_tracker.current)
+                        camera_group_dto.ipc.ws_ipc_relay_queue.put(backend_framerate_tracker.current)
                 else:
                     wait_1ms()
 
@@ -102,9 +102,9 @@ class FrameEscaperWorker:
             if camera_group_dto.should_continue:
                 raise RuntimeError(
                     "FrameListenerProcess was closed before the camera group or global kill flag(s) were set.")
-            if not camera_group_dto.ipc_flags.kill_camera_group_flag.value:
+            if not camera_group_dto.ipc.kill_camera_group_flag.value:
                 logger.trace(f"FrameListenerProcess shutting down - setting kill_camera_group_flag to True")
-                camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
+                camera_group_dto.ipc.kill_camera_group_flag.value = True
             frame_loop_shm.close()
             multi_frame_escape_shm.close()
 

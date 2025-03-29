@@ -17,8 +17,8 @@ from skellycam.core import CameraId, CameraName
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
-from skellycam.skellycam_app.skellycam_app_state import SkellycamAppState
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
+from skellycam.skellycam_app.skellycam_app import SkellycamApplication
 
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import create_websocket_log_queue
@@ -40,10 +40,10 @@ __all__ = [
     'SKELLYCAM_ROUTERS',
     'CameraId',
     'CameraName',
-    'SkellycamAppState',
+    'SkellycamApplication',
     'MultiFrameEscapeSharedMemoryRingBuffer',
     'CameraConfigs',
     'CameraConfig',
-    'IPCFlags',
+    'InterProcessCommunicationManager',
     'LOG_LEVEL'
 ]

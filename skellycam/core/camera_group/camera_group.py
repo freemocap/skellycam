@@ -73,7 +73,7 @@ class CameraGroup:
 
     def close(self):
         logger.debug("Closing camera group")
-        self.dto.ipc_flags.kill_camera_group_flag.value = True
+        self.dto.ipc.kill_camera_group_flag.value = True
         if self.camera_group_worker:
             self.camera_group_worker.close()
         self.shmorchestrator.close_and_unlink()
@@ -85,6 +85,6 @@ class CameraGroup:
         logger.debug(
             f"Updating Camera Configs with instructions: {update_instructions}")
         self.dto.camera_configs = camera_configs
-        self.dto.update_queue.put(update_instructions)
+        self.dto.ipc.update_camera_configs_queue.put(update_instructions)
         self.frame_router_config_queue.put(update_instructions.new_configs)
         self.frame_listener_config_queue.put(update_instructions.new_configs)

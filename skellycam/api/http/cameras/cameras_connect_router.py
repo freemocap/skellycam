@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.skellycam_app.skellycam_app_state import get_skellycam_app_state
+from skellycam.skellycam_app.skellycam_app import get_skellycam_app
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def cameras_connect_post_endpoint(
         return {"error": "No cameras provided."}
     try:
         configs = {CameraId(camera_id): config for camera_id, config in request.camera_configs.items()}
-        background_tasks.add_task(get_skellycam_app_state().create_camera_group, camera_configs=configs)
+        background_tasks.add_task(get_skellycam_app().create_camera_group, camera_configs=configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
@@ -47,7 +47,7 @@ def cameras_connect_post_endpoint(
 
 def handle_connect_request(self, camera_configs: dict[CameraId, CameraConfig]):
     logger.debug("Handling cameras/connect request...")
-    app_state = get_skellycam_app_state()
+    app_state = get_skellycam_app()
     if app_state.camera_group:
         logger.debug("Updating existing camera group with new camera configurations...")
         app_state.camera_group.update_camera_configs(camera_configs)

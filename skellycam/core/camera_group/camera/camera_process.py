@@ -46,9 +46,7 @@ class CameraProcess:
                                                    kwargs=dict(camera_config=camera_config,
                                                                camera_group_dto=camera_group_dto,
                                                                frame_loop_flags=frame_loop_flags,
-                                                               camera_shm_dto=camera_shared_memory_dto,
-                                                               new_config_queue=new_config_queue,
-                                                               ipc_queue=camera_group_dto.ipc_queue)
+                                                               camera_shm_dto=camera_shared_memory_dto)
                                                    ),
 
                    )
@@ -59,13 +57,11 @@ class CameraProcess:
                      camera_group_dto: CameraGroupDTO,
                      frame_loop_flags: CameraFrameLoopFlags,
                      camera_shm_dto: CameraSharedMemoryDTO,
-                     new_config_queue: multiprocessing.Queue,
-                     ipc_queue: multiprocessing.Queue,
                      ):
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
-        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.logs_queue)
+        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.ipc.ws_logs_queue)
 
         def should_continue() -> bool:
             return camera_group_dto.should_continue and not frame_loop_flags.close_self_flag.value
@@ -84,7 +80,7 @@ class CameraProcess:
             camera_config = apply_camera_configuration(cv2_vid_capture = cv2_video_capture,
                                                        config = camera_config,
                                                        initial=True)
-            ipc_queue.put(camera_config)
+            camera_group_dto.ipc.ws_ipc_relay_queue.put(camera_config)
             frame_loop_flags.set_camera_ready()
         except Exception as e:
             logger.exception(f"Failed to create `cv2.VideoCapture` for camera {camera_id} - {e}")
@@ -117,8 +113,8 @@ class CameraProcess:
                 else:
                     check_for_config_update(config=camera_config,
                                             cv2_video_capture=cv2_video_capture,
-                                            new_config_queue=new_config_queue,
-                                            ipc_queue=ipc_queue,
+                                            new_config_queue=camera_group_dto.ipc.update_camera_configs_queue,
+                                            ipc_queue=camera_group_dto.ipc.ws_ipc_relay_queue,
                                             frame_loop_flags=frame_loop_flags,
                                             )
 
@@ -142,8 +138,8 @@ class CameraProcess:
         logger.info(f"Closing camera {self.camera_id}")
         if self.camera_group_dto.should_continue and not self.frame_loop_flags.close_self_flag.value == True:
             raise ValueError(
-                f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc_flags.kill_camera_group_flag.value},"
-                f" global_kill_flag: {self.camera_group_dto.ipc_flags.global_kill_flag.value}, should_close_self_flag: { self.frame_loop_flags.close_self_flag.value}")
+                f"Camera {self.camera_id} was closed for an unexpected reason! - kill_camera_group_flag: {self.camera_group_dto.ipc.kill_camera_group_flag.value},"
+                f" global_kill_flag: {self.camera_group_dto.ipc.global_kill_flag.value}, should_close_self_flag: { self.frame_loop_flags.close_self_flag.value}")
         self.frame_loop_flags.close_self_flag.value = True
         self.process.join()
         logger.info(f"Camera {self.camera_id} closed!")

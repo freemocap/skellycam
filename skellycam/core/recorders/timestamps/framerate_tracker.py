@@ -4,11 +4,18 @@ from typing import List
 from pydantic import BaseModel
 
 
+
+
 class CurrentFramerate(BaseModel):
     mean_frame_duration_ms: float|None
     mean_frames_per_second: float|None
     calculation_window_size: int
     framerate_source: str
+
+
+class FramerateTrackers(BaseModel):
+    backend: CurrentFramerate
+    frontend: CurrentFramerate
 
 MAX_FRAMERATE_TRACKER_WINDOW = 300
 class FramerateTracker(BaseModel):

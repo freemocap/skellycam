@@ -152,7 +152,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                 self.mf_metadata_shm.last_written_index.value,
                 self.mf_time_mapping_shm.last_written_index.value,
                 multi_frame_payload.multi_frame_number} == {multi_frame_payload.multi_frame_number}:
-            self.camera_group_dto.ipc_flags.kill_camera_group_flag.value = True
+            self.camera_group_dto.ipc.kill_camera_group_flag.value = True
             raise ValueError("Multi-frame number mismatch! "
                              f"Image: {self.mf_image_shm.last_written_index.value}, "
                              f"Metadata: {self.mf_metadata_shm.last_written_index.value}, "

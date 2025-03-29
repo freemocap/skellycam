@@ -49,8 +49,8 @@ class WebSocketQueueHandler(logging.Handler):
         log_record_dict["formatted_message"] = self.format(record)
         log_record_dict['type'] = record.__class__.__name__
         log_record_dict['exc_info'] = str(log_record_dict['exc_info']) if log_record_dict['exc_info'] else None
-        if not log_record_dict['msg']:
-            log_record_dict['msg'] = log_record_dict['formatted_message']
+        if not isinstance(log_record_dict['msg'], str):
+            log_record_dict['msg'] = str(log_record_dict['msg'])
         self.queue.put(LogRecordModel(**log_record_dict).model_dump())
 
 

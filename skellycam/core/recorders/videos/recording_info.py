@@ -23,7 +23,7 @@ class RecordingInfo(BaseModel):
     recording_start_timestamp: FullTimestamp = Field(default_factory=FullTimestamp.now)
 
     @property
-    def recording_path(self) -> str:
+    def full_recording_path(self) -> str:
         return str(Path(f"{self.recording_directory}/{self.recording_name}"))
 
     @classmethod

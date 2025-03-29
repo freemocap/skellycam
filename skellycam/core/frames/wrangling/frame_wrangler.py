@@ -48,7 +48,7 @@ class FrameWrangler:
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
-        if not self.camera_group_dto.ipc_flags.kill_camera_group_flag.value == True and not self.camera_group_dto.ipc_flags.global_kill_flag.value == True:
+        if not self.camera_group_dto.ipc.kill_camera_group_flag.value == True and not self.camera_group_dto.ipc.global_kill_flag.value == True:
             raise ValueError("FrameWrangler was closed before the kill flag was set.")
         if self.is_alive():
             self.join()

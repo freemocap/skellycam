@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 
 from skellycam.core import CameraId
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -25,12 +25,12 @@ class CameraFrameLoopFlags:
     new_frame_in_shm: multiprocessing.Value
     close_self_flag: multiprocessing.Value
 
-    ipc_flags: IPCFlags
+    ipc_flags: InterProcessCommunicationManager
 
     @classmethod
     def create(cls,
                camera_id: CameraId,
-               ipc_flags: IPCFlags
+               ipc_flags: InterProcessCommunicationManager
                ):
         return cls(
             camera_id=camera_id,

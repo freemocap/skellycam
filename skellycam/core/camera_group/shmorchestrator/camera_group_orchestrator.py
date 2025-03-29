@@ -7,7 +7,7 @@ from typing import Dict
 from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import IPCFlags
+from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class CameraGroupOrchestrator:
         return cls(
             frame_loop_flags={
                 camera_id: CameraFrameLoopFlags.create(camera_id=camera_id,
-                                                       ipc_flags=camera_group_dto.ipc_flags)
+                                                       ipc_flags=camera_group_dto.ipc)
                 for camera_id, camera_config in camera_group_dto.camera_configs.items()
             },
             pause_when_able=multiprocessing.Value("b", False),
@@ -41,7 +41,7 @@ class CameraGroupOrchestrator:
 
     @property
     def ipc_flags(self):
-        return self.camera_group_dto.ipc_flags
+        return self.camera_group_dto.ipc
 
     @property
     def camera_ids(self):
