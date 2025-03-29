@@ -1,6 +1,12 @@
-// store/thunks/camera-thunks.ts
-import {createAsyncThunk} from '@reduxjs/toolkit';
-import {setDetectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
+// skellycam-ui/src/store/thunks/camera-thunks.ts
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import {
+    selectConfigsForSelectedDevices,
+    setDetectedDevices, setError,
+    setLoading
+} from "@/store/slices/cameras-slices/camerasSlice";
+import {CAMERA_DEFAULT_CONSTRAINTS, CameraConfig} from "@/store/slices/cameras-slices/camera-types";
+
 
 const isVirtualCamera = (label: string): boolean => {
     const virtualCameraKeywords = ['virtual'];
@@ -10,7 +16,7 @@ export const validateVideoStream = async (deviceId: string): Promise<boolean> =>
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
-                deviceId: {exact: deviceId}
+                deviceId: { exact: deviceId }
             }
         });
 
@@ -51,25 +57,27 @@ export const validateVideoStream = async (deviceId: string): Promise<boolean> =>
     }
 };
 
-export const detectBrowserDevices = createAsyncThunk(
+export const  detectBrowserDevices = createAsyncThunk(
     'cameras/detectBrowserDevices',
-    async (filterVirtual: boolean = true, {dispatch}) => {
+    async (filterVirtual: boolean = true, { dispatch }) => {
         try {
             dispatch(setLoading(true));
             const devices = await navigator.mediaDevices.enumerateDevices();
             // Get the video input devices (cameras)
-            const cameras = devices.filter(({kind}) => kind === "videoinput");
+            const cameras = devices.filter(({ kind }) => kind === "videoinput");
             if (cameras.length === 0) {
                 dispatch(setError('No camera devices found'));
                 console.warn('No camera devices found');
                 return [];
             }
             console.log(`Found ${cameras.length} camera(s) `, cameras);
+
             // First filter out virtual cameras if requested
             const initialFiltered = filterVirtual ?
-                cameras.filter(({label}) => !isVirtualCamera(label)) :
+                cameras.filter(({ label }) => !isVirtualCamera(label)) :
                 cameras;
             console.log(`After removing virtual cameras, ${initialFiltered.length} camera(s) remain`, initialFiltered);
+
             // Now validate each camera
             const validatedCameras = [];
             for (const camera of initialFiltered) {
@@ -81,20 +89,22 @@ export const detectBrowserDevices = createAsyncThunk(
                 }
             }
             console.log(`After validation, ${validatedCameras.length} camera(s) remain`, validatedCameras);
+
             // Convert MediaDeviceInfo objects to plain serializable objects and add index
             const serializableCameras = validatedCameras.map((device, index) => ({
                 ...device.toJSON(),
                 index: index,
-                selected: true
+                selected: true,
+                constraints: CAMERA_DEFAULT_CONSTRAINTS
             }));
             console.log(`Detected ${serializableCameras.length} camera(s)`, serializableCameras);
+
             dispatch(setDetectedDevices(serializableCameras));
             dispatch(setError(null));
             return serializableCameras;
         } catch (error) {
             dispatch(setError('Failed to detect browser devices'));
             console.error('Error detecting browser devices:', error);
-
         } finally {
             dispatch(setLoading(false));
         }

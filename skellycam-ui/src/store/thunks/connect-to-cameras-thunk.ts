@@ -1,22 +1,29 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
-import {CameraConfigs} from "@/store/slices/cameras-slices/camera-types";
-import {setError, setLoading} from "@/store/slices/cameras-slices/detectedCamerasSlice";
-
-interface ConnectCamerasPayload {
-    camera_configs: CameraConfigs;
-}
+import {selectConfigsForSelectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
+import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',
-    async (cameraConfigs: CameraConfigs, {dispatch}) => {
-        if (!cameraConfigs || Object.keys(cameraConfigs).length === 0) {
-            throw new Error('No camera devices provided for connection');
-        }
-        dispatch(setLoading(true));
-        const connectUrl = 'http://localhost:8006/skellycam/cameras/connect'
+    async (_, { dispatch, getState }) => {
+        const state = getState() as any;
+        const cameraConfigs = selectConfigsForSelectedDevices(state);
 
-        const payload: ConnectCamerasPayload = {
-            camera_configs: cameraConfigs
+        if (!cameraConfigs || Object.keys(cameraConfigs).length === 0) {
+            const errorMsg = 'No camera devices selected for connection';
+            dispatch(setError(errorMsg));
+            throw new Error(errorMsg);
+        }
+
+        dispatch(setLoading(true));
+        const connectUrl = 'http://localhost:8006/skellycam/cameras/connect';
+        const convertedConfigs: Record<number, CameraConfig> = Object.entries(cameraConfigs).reduce(
+            (accumulator, [_, config]) => {
+                accumulator[config.camera_id] = config;
+                return accumulator;
+            },{} as Record<string, CameraConfig>,
+        );
+        const payload = {
+            camera_configs: convertedConfigs
         };
 
         const requestBody = JSON.stringify(payload, null, 2);
@@ -30,12 +37,25 @@ export const connectToCameras = createAsyncThunk(
                 body: requestBody
             });
 
+            // Parse the response body
+            const data = await response.json();
+
+            // Check for different error status codes
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let errorMsg = 'Failed to connect to cameras';
+                console.error('Errors:', data.detail);
+                dispatch(setError(errorMsg));
+                throw new Error(errorMsg);
             }
+
             dispatch(setError(null));
+            return data;
         } catch (error) {
-            const errorMessage = 'Failed to connect to cameras';
+            // Handle network errors and JSON parsing errors
+            const errorMessage = error instanceof Error
+                ? `Failed to connect to cameras: ${error.message}`
+                : 'Failed to connect to cameras: Unknown error';
+
             dispatch(setError(errorMessage));
             console.error(errorMessage, error);
             throw error;

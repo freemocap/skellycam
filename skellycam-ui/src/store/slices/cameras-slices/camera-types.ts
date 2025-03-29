@@ -40,7 +40,6 @@ export interface SerializedMediaDeviceInfo {
     constraints: typeof CAMERA_DEFAULT_CONSTRAINTS
 }
 
-// Then define your schemas based on these constants
 export const ResolutionPresetSchema = z.object({
     width: z.number().int(),
     height: z.number().int(),
@@ -80,7 +79,7 @@ export const CameraConfigSchema = z.object({
     color_channels: z.number(),
     pixel_format: PixelFormatSchema,
     exposure_mode: ExposureModeSchema,
-    exposure: z.union([z.number(), z.literal('AUTO')]),
+    exposure:z.number(),
     framerate: z.number(),
     rotation: RotationOptionSchema,
     capture_fourcc: FourccOptionSchema,

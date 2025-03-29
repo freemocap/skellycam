@@ -10,8 +10,9 @@ import { CameraListItem } from "@/components/available-cameras-panel/CameraListI
 import { RefreshDetectedCamerasButton } from "@/components/available-cameras-panel/RefreshDetectedCameras";
 import { useAppDispatch, useAppSelector } from "@/store/AppStateStore";
 import { ConnectToCamerasButton } from "@/components/available-cameras-panel/ConnectToCamerasButton";
-import { detectBrowserDevices, connectToCameras } from "@/store/thunks/camera-thunks";
 import {selectAllDevices, toggleCameraSelection, updateCameraConfig} from "@/store/slices/cameras-slices/camerasSlice";
+import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
+import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 
 export const AvailableCamerasView = () => {
     const theme = useTheme();

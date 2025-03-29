@@ -3,7 +3,7 @@ import React from 'react';
 import { IconButton, CircularProgress } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAppDispatch } from '@/store/AppStateStore';
-import { detectBrowserDevices } from '@/store/thunks/camera-thunks';
+import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
 
 interface RefreshDetectedCamerasButtonProps {
     isLoading: boolean;

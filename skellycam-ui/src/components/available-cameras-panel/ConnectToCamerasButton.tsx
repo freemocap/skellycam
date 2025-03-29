@@ -3,8 +3,8 @@ import React from 'react';
 import { Button } from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import { useAppDispatch, useAppSelector } from "@/store/AppStateStore";
-import { connectToCameras } from "@/store/thunks/camera-thunks";
 import { selectSelectedDevices } from "@/store/slices/cameras-slices/camerasSlice";
+import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 
 interface ConnectToCamerasButtonProps {
     onClick?: () => void;

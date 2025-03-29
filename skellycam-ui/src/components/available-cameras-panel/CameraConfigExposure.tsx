@@ -5,7 +5,7 @@ import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras-s
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;
-    exposure: number;
+    exposure: number ;
     onExposureModeChange: (mode: ExposureMode) => void;
     onExposureValueChange: (value: number) => void;
 }
