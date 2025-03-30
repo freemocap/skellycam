@@ -4,14 +4,14 @@ import React, {useEffect, useRef, useState} from "react";
 import {CameraImage} from "@/components/camera-views/CameraImage";
 
 interface CameraImagesGridProps extends BoxProps {
-    images: { [cameraId: string]: string };
+    latestImageUrls: { [cameraId: string]: string };
     showAnnotation: boolean;
 }
 
-export const CameraImagesGrid = ({ images, showAnnotation, sx }: CameraImagesGridProps) => {
+export const CameraImagesGrid = ({ latestImageUrls, showAnnotation, sx }: CameraImagesGridProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [gridDimensions, setGridDimensions] = useState({ columns: 1, rows: 1 });
-    const imageCount = Object.keys(images).length;
+    const imageCount = Object.keys(latestImageUrls).length;
 
     useEffect(() => {
         const updateLayout = () => {
@@ -73,8 +73,8 @@ export const CameraImagesGrid = ({ images, showAnnotation, sx }: CameraImagesGri
                 ...sx
             }}
         >
-            {Object.entries(images).map(([cameraId, base64Image]) =>
-                base64Image ? (
+            {Object.entries(latestImageUrls).map(([cameraId, imageUrl]) =>
+                imageUrl ? (
                     <Box
                         key={cameraId}
                         sx={{
@@ -88,7 +88,7 @@ export const CameraImagesGrid = ({ images, showAnnotation, sx }: CameraImagesGri
                     >
                         <CameraImage
                             cameraId={cameraId}
-                            base64Image={base64Image}
+                            imageUrl={imageUrl}
                             showAnnotation={showAnnotation}
                         />
                     </Box>

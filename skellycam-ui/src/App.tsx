@@ -1,9 +1,9 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {PaperbaseContent} from "@/layout/paperbase_theme/PaperbaseContent";
-import {WebSocketContextProvider} from "@/services/websocket-connection/WebSocketContext";
 import {Provider} from "react-redux";
-import {AppStateStore, useAppDispatch} from "@/store/AppStateStore";
-import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
+import {AppStateStore} from "@/store/AppStateStore";
+import {LatestImagesContextProvider} from "@/context/latest-images-context/LatestImagesContext";
+import {WebSocketContextProvider} from "@/context/websocket-context/WebSocketContext";
 
 
 function App() {
@@ -12,9 +12,11 @@ function App() {
 
     return (
         <Provider store={AppStateStore}>
+            <LatestImagesContextProvider>
                 <WebSocketContextProvider url={wsUrl}>
                     <PaperbaseContent/>
                 </WebSocketContextProvider>
+            </LatestImagesContextProvider>
         </Provider>
     );
 }

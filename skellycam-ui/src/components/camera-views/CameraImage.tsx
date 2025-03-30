@@ -3,11 +3,11 @@ import React from "react";
 
 interface CameraImageProps {
     cameraId: string;
-    base64Image: string;
+    imageUrl: string;
     showAnnotation: boolean;
 }
 
-export const CameraImage = ({cameraId, base64Image, showAnnotation}: CameraImageProps) => {
+export const CameraImage = ({cameraId, imageUrl, showAnnotation}: CameraImageProps) => {
     return (
         <Box
             key={cameraId}
@@ -21,7 +21,7 @@ export const CameraImage = ({cameraId, base64Image, showAnnotation}: CameraImage
             }}
         >
             <img
-                src={`data:image/jpeg;base64,${base64Image}`}
+                src={imageUrl}
                 alt={`Camera ${cameraId}`}
                 style={{
                     maxWidth: '100%',

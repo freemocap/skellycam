@@ -43,6 +43,11 @@ class WebsocketServer:
         if self.websocket.client_state == WebSocketState.CONNECTED:
             await self.websocket.close()
 
+        if not self._app.ipc.global_kill_flag.value:
+            logger.error("Websocket connection closed, but global kill flag is not set. "
+                "This indicates a potential issue with the application state."
+            )
+
     @property
     def should_continue(self):
         return (

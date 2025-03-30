@@ -79,15 +79,6 @@ export const RecordingInfoPanel: React.FC = () => {
         return parts.join('_');
     };
 
-    const getFullRecordingPath = (): string => {
-        const recordingName = buildRecordingName();
-        if (!createSubfolder) {
-            return `${recordingInfo.recordingDirectory}/${recordingName}`;
-        }
-
-        const subfolderName = customSubfolderName || getTimestampString();
-        return `${recordingInfo.recordingDirectory}/${subfolderName}/${recordingName}`;
-    };
 
     const handleStartRecording = () => {
         console.log('Starting recording...');

@@ -1,17 +1,20 @@
-import {Box} from "@mui/material";
+import {Box, Typography} from "@mui/material";
 import React  from "react";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
+import {useLatestImages} from "@/context/latest-images-context/useLatestImages";
+import {useLatestImagesContext} from "@/context/latest-images-context/LatestImagesContext";
 
-import {useAppSelector} from "@/store/AppStateStore";
 
 
 export const CamerasView = () => {
-    const latestImages = useAppSelector(state => state.latestPayload.latestImages);
+    const {latestImageUrls} = useLatestImagesContext();
     const showAnnotation = true
-    if (!latestImages) {
+    if (!latestImageUrls) {
         return (
             <Box sx={{p: 2}}>
-                Waiting for camera feed...
+                <Typography variant="h6" color="secondary">
+                    Waiting for cameras to connect...
+                </Typography>
             </Box>
         );
     }
@@ -27,9 +30,9 @@ export const CamerasView = () => {
 
         }}>
             cameras
-            {latestImages && (
+            {latestImageUrls && (
                 <CameraImagesGrid
-                    images={latestImages}
+                    latestImageUrls={latestImageUrls}
                     showAnnotation={showAnnotation}
                     sx={{flex: 1, minHeight: 0, height: "100%", width: "100%"}}
                 />
