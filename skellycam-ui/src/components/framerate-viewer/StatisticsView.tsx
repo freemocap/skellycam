@@ -1,6 +1,6 @@
 // src/components/framerate-viewer/StatisticsView.tsx
-import { Box, Grid, Paper, Typography } from "@mui/material"
-import { alpha, useTheme } from "@mui/material/styles"
+import {Box, Grid, Paper, Typography} from "@mui/material"
+import {alpha, useTheme} from "@mui/material/styles"
 
 type StatisticsPanelProps = {
   statistics: {

@@ -1,11 +1,7 @@
 // skellycam-ui/src/store/thunks/camera-thunks.ts
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import {
-    selectConfigsForSelectedDevices,
-    setDetectedDevices, setError,
-    setLoading
-} from "@/store/slices/cameras-slices/camerasSlice";
-import {CAMERA_DEFAULT_CONSTRAINTS, CameraConfig} from "@/store/slices/cameras-slices/camera-types";
+import {createAsyncThunk} from '@reduxjs/toolkit';
+import {setDetectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
+import {CAMERA_DEFAULT_CONSTRAINTS} from "@/store/slices/cameras-slices/camera-types";
 
 
 const isVirtualCamera = (label: string): boolean => {

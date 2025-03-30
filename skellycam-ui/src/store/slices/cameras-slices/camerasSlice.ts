@@ -1,10 +1,10 @@
 // skellycam-ui/src/store/slices/camerasSlice.ts
-import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { RootState } from "@/store/AppStateStore";
+import {createSelector, createSlice, PayloadAction} from '@reduxjs/toolkit'
+import {RootState} from "@/store/AppStateStore";
 import {
-    SerializedMediaDeviceInfo,
     CameraConfig,
-    createDefaultCameraConfig
+    createDefaultCameraConfig,
+    SerializedMediaDeviceInfo
 } from "@/store/slices/cameras-slices/camera-types";
 
 export interface CamerasState {

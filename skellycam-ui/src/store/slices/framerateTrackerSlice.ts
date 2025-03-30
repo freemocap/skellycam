@@ -1,6 +1,6 @@
-import type { PayloadAction } from '@reduxjs/toolkit'
-import { createSlice } from '@reduxjs/toolkit'
-import { z } from 'zod'
+import type {PayloadAction} from '@reduxjs/toolkit'
+import {createSlice} from '@reduxjs/toolkit'
+import {z} from 'zod'
 
 export const CurrentFramerateSchema = z.object({
     mean_frame_duration_ms: z.number().nullable(),

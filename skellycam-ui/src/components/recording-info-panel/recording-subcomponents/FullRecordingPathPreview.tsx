@@ -1,7 +1,8 @@
 import React from 'react';
-import {Box, Paper, Tooltip, Typography} from '@mui/material';
+import {Box, Paper, Tooltip, Typography, useTheme} from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
-import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 interface FullPathPreviewProps {
     directory: string;
@@ -14,6 +15,8 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
                                                                              filename,
                                                                              subfolder
                                                                          }) => {
+    const theme = useTheme();
+
     const parts = [
         {icon: <FolderIcon/>, text: directory},
         ...(subfolder ? [{icon: <FolderIcon/>, text: subfolder}] : []),
@@ -26,13 +29,18 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
             elevation={0}
             sx={{
                 p: 1.5,
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                backgroundColor: theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.05)'
+                    : 'rgba(0, 0, 0, 0.04)',
                 borderRadius: 1,
                 borderStyle: 'solid',
-                borderColor: 'rgba(0, 0, 0, 0.12)',
+                borderColor: theme.palette.divider,
             }}
         >
-            <Typography variant="body1" gutterBottom sx={{color: "#fff", mb: 1}}>
+            <Typography variant="body1" gutterBottom sx={{
+                color: theme.palette.text.primary,
+                mb: 1
+            }}>
                 Full Recording Path:
             </Typography>
 

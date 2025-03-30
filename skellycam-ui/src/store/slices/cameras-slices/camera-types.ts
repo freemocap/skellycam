@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import {z} from 'zod';
 
 // First define all the constant configurations
 export const CAMERA_DEFAULT_CONSTRAINTS = {

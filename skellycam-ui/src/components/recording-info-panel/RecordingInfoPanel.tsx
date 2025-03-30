@@ -9,7 +9,9 @@ import {
 import {
     StartStopRecordingButton
 } from "@/components/recording-info-panel/recording-subcomponents/StartStopRecordingButton";
-import {DelayRecordingStartControl} from "@/components/recording-info-panel/recording-subcomponents/DelayRecordingStartControl";
+import {
+    DelayRecordingStartControl
+} from "@/components/recording-info-panel/recording-subcomponents/DelayRecordingStartControl";
 import {
     FullRecordingPathPreview
 } from "@/components/recording-info-panel/recording-subcomponents/FullRecordingPathPreview";

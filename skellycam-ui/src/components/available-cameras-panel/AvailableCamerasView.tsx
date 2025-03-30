@@ -1,15 +1,15 @@
 // skellycam-ui/src/components/available-cameras-panel/AvailableCamerasView.tsx
-import { Accordion, AccordionDetails, Box, List, Paper, Stack, Typography, useTheme } from "@mui/material";
+import {Accordion, AccordionDetails, Box, List, Paper, Stack, Typography, useTheme} from "@mui/material";
 import * as React from "react";
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import { CameraConfigPanel } from "@/components/available-cameras-panel/CameraConfigPanel";
-import { CameraListItem } from "@/components/available-cameras-panel/CameraListItem";
-import { RefreshDetectedCamerasButton } from "@/components/available-cameras-panel/RefreshDetectedCameras";
-import { useAppDispatch, useAppSelector } from "@/store/AppStateStore";
-import { ConnectToCamerasButton } from "@/components/available-cameras-panel/ConnectToCamerasButton";
+import {CameraConfigPanel} from "@/components/available-cameras-panel/CameraConfigPanel";
+import {CameraListItem} from "@/components/available-cameras-panel/CameraListItem";
+import {RefreshDetectedCamerasButton} from "@/components/available-cameras-panel/RefreshDetectedCameras";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
 import {selectAllDevices, toggleCameraSelection, updateCameraConfig} from "@/store/slices/cameras-slices/camerasSlice";
 import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";

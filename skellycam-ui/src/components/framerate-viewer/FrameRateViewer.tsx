@@ -1,12 +1,11 @@
 // src/components/framerate-viewer/FrameRateViewer.tsx
-import { useState, useMemo } from "react"
-import { Box, Typography, Paper, Grid, ToggleButtonGroup, ToggleButton, Divider } from "@mui/material"
-import { alpha, useTheme } from "@mui/material/styles"
+import {useMemo, useState} from "react"
+import {Box, Grid, Paper, ToggleButton, ToggleButtonGroup, Typography} from "@mui/material"
+import {useTheme} from "@mui/material/styles"
 import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
 import StatisticsView from "./StatisticsView"
-import { useAppSelector } from "@/store/AppStateStore"
-import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
+import {useAppSelector} from "@/store/AppStateStore"
 
 type ViewType = "timeseries" | "histogram" | "both"
 

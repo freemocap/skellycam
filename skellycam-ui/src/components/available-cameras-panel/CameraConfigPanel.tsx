@@ -1,9 +1,9 @@
-import {Box, Collapse, TextField, useTheme} from "@mui/material";
+import {Box, Collapse, useTheme} from "@mui/material";
 import Grid from '@mui/material/Grid2'; // Updated import
 import * as React from "react";
-import { CameraConfigResolution } from "./CameraConfigResolution";
-import { CameraConfigExposure } from "./CameraConfigExposure";
-import { CameraConfigRotation } from "./CameraConfigRotation";
+import {CameraConfigResolution} from "./CameraConfigResolution";
+import {CameraConfigExposure} from "./CameraConfigExposure";
+import {CameraConfigRotation} from "./CameraConfigRotation";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraConfigPanelProps {

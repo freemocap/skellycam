@@ -1,5 +1,5 @@
 // skellycam-ui/src/store/slices/themeSlice.ts
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {createSlice, PayloadAction} from "@reduxjs/toolkit";
 
 export type ThemeMode = 'light' | 'dark';
 

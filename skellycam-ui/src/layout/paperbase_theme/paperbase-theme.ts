@@ -1,5 +1,5 @@
 // skellycam-ui/src/layout/paperbase_theme/paperbase-theme.ts
-import { createTheme, PaletteMode } from '@mui/material/styles';
+import {createTheme, PaletteMode} from '@mui/material/styles';
 
 // Define common theme settings
 const getBaseTheme = (mode: PaletteMode) => ({

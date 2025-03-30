@@ -1,6 +1,6 @@
 import type {PayloadAction} from "@reduxjs/toolkit";
 import {createSlice} from "@reduxjs/toolkit"
-import { z } from "zod";
+import {z} from "zod";
 
 export type LogSeverity = "loop" | "trace" | "debug" | "info" | "success" | "warning" | "error" | "critical"
 export const LogRecordSchema = z.object({

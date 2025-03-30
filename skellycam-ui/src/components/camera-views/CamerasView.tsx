@@ -1,9 +1,7 @@
 import {Box, Typography} from "@mui/material";
-import React  from "react";
+import React from "react";
 import {CameraImagesGrid} from "@/components/camera-views/CameraImagesGrid";
-import {useLatestImages} from "@/context/latest-images-context/useLatestImages";
 import {useLatestImagesContext} from "@/context/latest-images-context/LatestImagesContext";
-
 
 
 export const CamerasView = () => {

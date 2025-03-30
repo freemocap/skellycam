@@ -1,9 +1,9 @@
 // src/components/framerate-viewer/FramerateHistogramView.tsx
-import { useRef, useEffect, useState } from "react"
+import {useEffect, useRef, useState} from "react"
 import * as d3 from "d3"
-import { Box, IconButton, Tooltip, Typography } from "@mui/material"
-import { useTheme } from "@mui/material/styles"
-import { ZoomIn, ZoomOut, RestartAlt } from "@mui/icons-material"
+import {Box, IconButton, Tooltip, Typography} from "@mui/material"
+import {useTheme} from "@mui/material/styles"
+import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material"
 
 type FrameRateHistogramData = {
   id: string

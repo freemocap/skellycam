@@ -1,5 +1,5 @@
 // skellycam-ui/src/components/config-views/camera-config/CameraListItem.tsx
-import { Box, Checkbox, IconButton, ListItem, ListItemIcon, ListItemText, Typography } from "@mui/material";
+import {Box, Checkbox, IconButton, ListItem, ListItemIcon, ListItemText, Typography} from "@mui/material";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import * as React from "react";

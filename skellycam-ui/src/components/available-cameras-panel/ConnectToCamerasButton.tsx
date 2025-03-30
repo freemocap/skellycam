@@ -1,9 +1,9 @@
 // ConnectToCamerasButton.tsx
 import React from 'react';
-import { Button } from '@mui/material';
+import {Button} from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
-import { useAppDispatch, useAppSelector } from "@/store/AppStateStore";
-import { selectSelectedDevices } from "@/store/slices/cameras-slices/camerasSlice";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {selectSelectedDevices} from "@/store/slices/cameras-slices/camerasSlice";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 
 interface ConnectToCamerasButtonProps {

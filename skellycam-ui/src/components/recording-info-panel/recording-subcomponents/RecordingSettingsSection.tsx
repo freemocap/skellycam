@@ -1,5 +1,5 @@
 import React from 'react';
-import {Box, Checkbox, FormControlLabel, Grid, TextField, Typography} from '@mui/material';
+import {Box, Checkbox, FormControlLabel, Grid, TextField, Typography, useTheme} from '@mui/material';
 
 interface RecordingSettingsProps {
     useTimestamp: boolean;
@@ -30,8 +30,17 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
     onCreateSubfolderChange,
     onCustomSubfolderNameChange,
 }) => {
+    const theme = useTheme();
+
     return (
-        <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(0, 0, 0, 0.04)', borderRadius: 1 }}>
+        <Box sx={{
+            mt: 2,
+            p: 2,
+            bgcolor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(0, 0, 0, 0.04)',
+            borderRadius: 1
+        }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>Recording Settings</Typography>
 
             <Grid container spacing={2} alignItems="center">

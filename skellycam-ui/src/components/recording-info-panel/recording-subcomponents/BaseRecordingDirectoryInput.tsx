@@ -1,9 +1,5 @@
 import React from 'react';
-import {
-    IconButton,
-    InputAdornment,
-    TextField
-} from '@mui/material';
+import {IconButton, InputAdornment, TextField} from '@mui/material';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import {useAppDispatch} from "@/store/AppStateStore";
 import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";

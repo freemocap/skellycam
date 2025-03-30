@@ -1,8 +1,8 @@
 // RefreshDetectedCameras.tsx
 import React from 'react';
-import { IconButton, CircularProgress } from '@mui/material';
+import {CircularProgress, IconButton} from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useAppDispatch } from '@/store/AppStateStore';
+import {useAppDispatch} from '@/store/AppStateStore';
 import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
 
 interface RefreshDetectedCamerasButtonProps {

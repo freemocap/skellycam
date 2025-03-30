@@ -4,7 +4,7 @@ import {HashRouter} from 'react-router-dom';
 import {CssBaseline} from "@mui/material";
 import {BaseContent} from "@/layout/BaseContent";
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
-import extendedPaperbaseTheme, {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
+import {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppSelector} from "@/store/AppStateStore";
 
 export const PaperbaseContent = function () {
