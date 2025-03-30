@@ -1,14 +1,13 @@
-import React, {useEffect} from 'react';
+// skellycam-ui/src/layout/BaseContent.tsx
+import React from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
-import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {CamerasView} from "@/components/camera-views/CamerasView";
-import {detectBrowserDevices} from "@/store/thunks/camera-thunks";
-import {useAppDispatch} from "@/store/AppStateStore";
+import {useTheme} from "@mui/material/styles";
 
 export const BaseContent = () => {
-    const dispatch = useAppDispatch();
+    const theme = useTheme();
 
     return (
         <React.Fragment>
@@ -17,8 +16,12 @@ export const BaseContent = () => {
                 px: 4,
                 flex: 1,
                 height: '100%',
-                backgroundColor: extendedPaperbaseTheme.palette.primary.main,
-                borderStyle: 'solid', borderWidth: '1px', borderColor: extendedPaperbaseTheme.palette.divider
+                backgroundColor: theme.palette.mode === 'dark'
+                    ? theme.palette.background.default
+                    : theme.palette.background.paper,
+                borderStyle: 'solid',
+                borderWidth: '1px',
+                borderColor: theme.palette.divider
             }}>
                 <ErrorBoundary>
                     <CamerasView/>

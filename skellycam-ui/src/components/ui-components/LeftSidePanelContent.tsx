@@ -6,6 +6,7 @@ import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
 import {AvailableCamerasView} from "@/components/available-cameras-panel/AvailableCamerasView";
 import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
+import ThemeToggle from "@/components/ui-components/ThemeToggle";
 
 
 const item = {
@@ -62,6 +63,7 @@ export const LeftSidePanelContent = () => {
                 scrollbarWidth: 'thin',
                 scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
             }}>
+                <ThemeToggle />
                 <WebsocketConnectionStatus/>
                 <AvailableCamerasView/>
                 <RecordingInfoPanel/>

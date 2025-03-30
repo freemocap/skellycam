@@ -4,12 +4,19 @@ import {HashRouter} from 'react-router-dom';
 import {CssBaseline} from "@mui/material";
 import {BaseContent} from "@/layout/BaseContent";
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
-import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
+import extendedPaperbaseTheme, {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
+import {useAppSelector} from "@/store/AppStateStore";
 
 export const PaperbaseContent = function () {
+    const themeMode = useAppSelector(state => state.theme.mode);
 
+    // Create theme dynamically based on current mode
+    const theme = React.useMemo(() =>
+            createExtendedTheme(themeMode),
+        [themeMode]
+    );
     return (
-        <ThemeProvider theme={extendedPaperbaseTheme}>
+        <ThemeProvider theme={theme}>
             <CssBaseline/>
             <HashRouter>
                 <BasePanelLayout>

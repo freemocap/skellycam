@@ -1,7 +1,7 @@
+// skellycam-ui/src/components/recording-info-panel/RecordingInfoPanel.tsx
 import React, {useEffect, useState} from 'react';
-import {Box, IconButton, Stack} from '@mui/material';
+import {alpha, Box, IconButton, Stack, useTheme} from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
-import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {
     RecordingSettingsSection
@@ -20,6 +20,7 @@ import {RecordingNamePreview} from "@/components/recording-info-panel/recording-
 import {startRecording, stopRecording} from "@/store/thunks/start-stop-recording-thunks";
 
 export const RecordingInfoPanel: React.FC = () => {
+    const theme = useTheme();
     const dispatch = useAppDispatch();
     const recordingInfo = useAppSelector(state => state.recordingStatus.currentRecordingInfo);
 
@@ -57,8 +58,6 @@ export const RecordingInfoPanel: React.FC = () => {
             .split('.')[0];
     };
 
-
-
     const buildRecordingName = (): string => {
         const parts: string[] = [];
 
@@ -74,11 +73,8 @@ export const RecordingInfoPanel: React.FC = () => {
             parts.push(recordingTag);
         }
 
-
-
         return parts.join('_');
     };
-
 
     const handleStartRecording = () => {
         console.log('Starting recording...');
@@ -121,8 +117,9 @@ export const RecordingInfoPanel: React.FC = () => {
             borderRadius: 1,
             borderStyle: 'solid',
             borderWidth: 2,
-            borderColor: extendedPaperbaseTheme.palette.primary.light,
-            backgroundColor: extendedPaperbaseTheme.palette.primary.light
+            borderColor: theme.palette.primary.light,
+            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+            boxShadow: theme.shadows[2]
         }}>
             <Stack spacing={2}>
                 {/* Controls Bar - Always Visible */}
@@ -132,10 +129,15 @@ export const RecordingInfoPanel: React.FC = () => {
                         countdown={countdown}
                         onClick={handleButtonClick}
                     />
-                    <IconButton onClick={() => setShowSettings(!showSettings)}>
-                        <SettingsIcon
-                            sx={{color: showSettings ? extendedPaperbaseTheme.palette.primary.main : "#ccc"}}
-                        />
+                    <IconButton
+                        onClick={() => setShowSettings(!showSettings)}
+                        sx={{
+                            color: showSettings
+                                ? theme.palette.primary.main
+                                : theme.palette.mode === 'dark' ? "#ccc" : "#777"
+                        }}
+                    >
+                        <SettingsIcon />
                     </IconButton>
                 </Box>
 

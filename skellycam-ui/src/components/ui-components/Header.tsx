@@ -32,21 +32,7 @@ export const Header =  function(props: HeaderProps) {
             </Grid>
             <Grid item xs />
             <Grid item>
-              {/*<Link*/}
-              {/*  href="/"*/}
-              {/*  variant="body2"*/}
-              {/*  sx={{*/}
-              {/*    textDecoration: 'none',*/}
-              {/*    color: lightColor,*/}
-              {/*    '&:hover': {*/}
-              {/*      color: 'common.white',*/}
-              {/*    },*/}
-              {/*  }}*/}
-              {/*  rel="noopener noreferrer"*/}
-              {/*  target="_blank"*/}
-              {/*>*/}
-              {/*  Go to docs*/}
-              {/*</Link>*/}
+
             </Grid>
           </Grid>
         </Toolbar>

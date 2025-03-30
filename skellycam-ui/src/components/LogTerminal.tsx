@@ -1,4 +1,4 @@
-import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup} from "@mui/material";
+import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup, useTheme} from "@mui/material";
 import {useEffect, useRef, useState} from "react";
 import {LogEntry, LogSeverity} from "@/store/slices/logRecordsSlice";
 import {useAppSelector} from "@/store/AppStateStore";
@@ -21,6 +21,7 @@ const LOG_COLORS = {
 const LogEntryComponent = ({log}: { log: LogEntry }) => {
     const [expanded, setExpanded] = useState(false);
     const color = LOG_COLORS[log.severity.toUpperCase() as keyof typeof LOG_COLORS];
+    const theme = useTheme();
 
     const renderWithFormatting = (text: string) => {
         return text.split('\n').map((line, i) => (
@@ -42,17 +43,26 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                 mb: 0.5,
                 borderLeft: `2px solid ${color}`,
                 pl: 1,
-                backgroundColor: expanded ? alpha(color, 0.1) : 'rgba(0,0,0,0.2)',
+                backgroundColor: expanded
+                    ? alpha(color, 0.1)
+                    : theme.palette.mode === 'dark'
+                        ? 'rgba(0,0,0,0.2)'
+                        : 'rgba(0,0,0,0.05)',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s',
                 '&:hover': {
-                    backgroundColor: alpha(color, 0.05)
+                    backgroundColor: alpha(color, theme.palette.mode === 'dark' ? 0.05 : 0.1)
                 }
             }}
             onClick={() => setExpanded(!expanded)}
         >
             <Box sx={{display: 'flex', gap: 1, alignItems: 'center', py: 0.5}}>
-                <span style={{color: '#888', fontSize: '0.9em'}}>{new Date(log.timestamp).toLocaleTimeString()}</span>
+                <span style={{
+                    color: theme.palette.mode === 'dark' ? '#888' : '#555',
+                    fontSize: '0.9em'
+                }}>
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                </span>
                 <Chip size="small" label={log.severity} sx={{
                     backgroundColor: color,
                     color: '#000',
@@ -62,7 +72,11 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                         px: 1,
                     }
                 }}/>
-                <span style={{color: '#fff', flexGrow: 1, fontSize: '0.9em'}}>
+                <span style={{
+                    color: theme.palette.mode === 'dark' ? '#fff' : '#000',
+                    flexGrow: 1,
+                    fontSize: '0.9em'
+                }}>
                     {renderWithFormatting(log.message)}
                 </span>
             </Box>
@@ -73,8 +87,11 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                         pl: 2,
                         py: 1,
                         fontSize: '0.8em',
-                        color: '#888',
-                        borderTop: '1px solid rgba(255,255,255,0.1)'
+                        color: theme.palette.mode === 'dark' ? '#888' : '#555',
+                        borderTop: '1px solid',
+                        borderColor: theme.palette.mode === 'dark'
+                            ? 'rgba(255,255,255,0.1)'
+                            : 'rgba(0,0,0,0.1)'
                     }}
                 >
                     <div>Location: {log.module}:{log.functionName}:Line#{log.lineNumber}</div>
@@ -98,7 +115,7 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                             <div>Stack Trace:</div>
                             <pre style={{
                                 whiteSpace: 'pre-wrap',
-                                background: '#111',
+                                background: theme.palette.mode === 'dark' ? '#111' : '#f5f5f5',
                                 padding: 8,
                                 borderRadius: 4,
                                 margin: '8px 0'
@@ -114,6 +131,7 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
 };
 
 export const LogTerminal = () => {
+    const theme = useTheme();
     const logs = useAppSelector(state => state.logRecords.entries);
     const [selectedLevels, setSelectedLevels] = useState<LogSeverity[]>([]);
     const logEndRef = useRef<HTMLDivElement>(null);
@@ -127,22 +145,35 @@ export const LogTerminal = () => {
     }, [filteredLogs]);
 
     return (
-        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#1a1a1a'}}>
+        <Box sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: theme.palette.mode === 'dark'
+                ? '#1a1a1a'
+                : theme.palette.grey[100]
+        }}>
             <Box sx={{
                 p: 0.5,
-                borderBottom: '1px solid #333',
+                borderBottom: '1px solid',
+                borderColor: theme.palette.divider,
                 display: 'flex',
                 gap: 1,
                 alignItems: 'center'
             }}>
-                <span style={{color: '#fff', fontSize: '0.9em'}}>Server Logs</span>
+                <span style={{
+                    color: theme.palette.text.primary,
+                    fontSize: '0.9em'
+                }}>
+                    Server Logs
+                </span>
                 <ToggleButtonGroup
                     size="small"
                     value={selectedLevels}
                     onChange={(_, val) => setSelectedLevels(val)}
                     sx={{
                         '.MuiToggleButtonGroup-grouped': {
-                            border: '1px solid #333 !important',
+                            border: `1px solid ${theme.palette.divider} !important`,
                             mx: '1px',
                             '&:not(:first-of-type)': {
                                 borderRadius: '2px',
@@ -190,10 +221,14 @@ export const LogTerminal = () => {
                     backgroundColor: 'transparent',
                 },
                 '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    backgroundColor: theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.2)'
+                        : 'rgba(0, 0, 0, 0.2)',
                     borderRadius: '4px',
                     '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                        backgroundColor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.3)'
+                            : 'rgba(0, 0, 0, 0.3)',
                     },
                 },
                 '&::-webkit-scrollbar-track': {
@@ -201,7 +236,9 @@ export const LogTerminal = () => {
                 },
                 // For Firefox
                 scrollbarWidth: 'thin',
-                scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+                scrollbarColor: theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.2) transparent'
+                    : 'rgba(0, 0, 0, 0.2) transparent',
             }}>
                 {filteredLogs.map((log, i) => (
                     <LogEntryComponent key={i} log={log}/>

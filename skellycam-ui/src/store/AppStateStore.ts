@@ -6,6 +6,7 @@ import { framerateTrackerSlice } from "./slices/framerateTrackerSlice"
 import { logRecordsSlice } from "@/store/slices/logRecordsSlice";
 import { type TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import {camerasSlice} from "@/store/slices/cameras-slices/camerasSlice";
+import {themeSlice} from "@/store/slices/themeSlice";
 
 export const AppStateStore = configureStore({
     reducer: {
@@ -14,6 +15,7 @@ export const AppStateStore = configureStore({
         logRecords: logRecordsSlice.reducer,
         recordingStatus: recordingInfoSlice.reducer,
         framerateTracker: framerateTrackerSlice.reducer,
+        theme: themeSlice.reducer,
     },
 })
 
