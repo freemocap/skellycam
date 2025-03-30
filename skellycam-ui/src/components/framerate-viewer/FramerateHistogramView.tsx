@@ -11,6 +11,8 @@ type FramerateHistogramProps = {
   backendFramerate: CurrentFramerate | null
   recentFrontendFrameDurations: number[]
   recentBackendFrameDurations: number[]
+  frontendColor: string
+    backendColor: string
   title?: string
 }
 
@@ -19,6 +21,8 @@ export default function FramerateHistogramView({
   backendFramerate,
   recentFrontendFrameDurations,
   recentBackendFrameDurations,
+    frontendColor,
+    backendColor,
   title = "Frame Duration Distribution",
 }: FramerateHistogramProps) {
   const svgRef = useRef<SVGSVGElement>(null)
@@ -35,7 +39,7 @@ export default function FramerateHistogramView({
 
     // Create local histogram data based on recent frame durations
     // This is a good place to create a histogram now that we don't get it directly from the backend
-    const generateHistogram = (data: number[], binCount = 20) => {
+    const generateHistogram = (data: number[], binCount = 60) => {
       if (data.length === 0) return null;
 
       // Calculate bins using d3's histogram generator
@@ -62,14 +66,14 @@ export default function FramerateHistogramView({
       {
         id: 'frontend',
         name: frontendFramerate?.framerate_source || 'Frontend',
-        color: theme.palette.primary.main,
+        color: frontendColor,
         histogram: generateHistogram(recentFrontendFrameDurations),
         totalSamples: recentFrontendFrameDurations.length
       },
       {
         id: 'backend',
         name: backendFramerate?.framerate_source || 'Backend',
-        color: theme.palette.secondary.main,
+        color: backendColor,
         histogram: generateHistogram(recentBackendFrameDurations),
         totalSamples: recentBackendFrameDurations.length
       }

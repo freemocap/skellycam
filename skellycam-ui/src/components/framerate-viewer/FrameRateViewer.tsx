@@ -9,6 +9,8 @@ import FramerateStatisticsView from "./FramerateStatisticsView"
 import {useAppSelector} from "@/store/AppStateStore";
 
 type ViewType = "timeseries" | "histogram" | "both"
+export const frontendColor: string = "#1976D2"
+export const backendColor: string = "#ff4d00"
 
 export const FramerateViewerPanel = () => {
   const theme = useTheme()
@@ -126,6 +128,8 @@ export const FramerateViewerPanel = () => {
               backendFramerate={currentBackendFramerate}
               recentFrontendFrameDurations={recentFrontendFrameDurations}
               recentBackendFrameDurations={recentBackendFrameDurations}
+              frontendColor={frontendColor}
+                backendColor={backendColor}
               title="Frame Duration Timeline"
             />
           </Paper>
@@ -148,6 +152,8 @@ export const FramerateViewerPanel = () => {
               backendFramerate={currentBackendFramerate}
               recentFrontendFrameDurations={recentFrontendFrameDurations}
               recentBackendFrameDurations={recentBackendFrameDurations}
+              frontendColor={frontendColor}
+              backendColor={backendColor}
               title="Frame Duration Distribution"
             />
           </Paper>

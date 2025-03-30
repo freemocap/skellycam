@@ -11,6 +11,8 @@ type FramerateTimeseriesProps = {
   backendFramerate: CurrentFramerate | null
   recentFrontendFrameDurations: number[]
   recentBackendFrameDurations: number[]
+  frontendColor: string
+    backendColor: string
   title?: string
 }
 
@@ -19,6 +21,8 @@ export default function FramerateTimeseriesView({
   backendFramerate,
   recentFrontendFrameDurations,
   recentBackendFrameDurations,
+    frontendColor,
+    backendColor,
   title = "Frame Duration Over Time"
 }: FramerateTimeseriesProps) {
   const svgRef = useRef<SVGSVGElement>(null)
@@ -38,7 +42,7 @@ export default function FramerateTimeseriesView({
       {
         id: "frontend",
         name: frontendFramerate?.framerate_source || "Frontend",
-        color: theme.palette.primary.main,
+        color: frontendColor,
         data: recentFrontendFrameDurations.map((value, index) => ({
           timestamp: Date.now() - (recentFrontendFrameDurations.length - index) *
                       (frontendFramerate?.mean_frame_duration_ms || 16.67),
@@ -48,7 +52,7 @@ export default function FramerateTimeseriesView({
       {
         id: "backend",
         name: backendFramerate?.framerate_source || "Backend",
-        color: theme.palette.secondary.main,
+        color: backendColor,
         data: recentBackendFrameDurations.map((value, index) => ({
           timestamp: Date.now() - (recentBackendFrameDurations.length - index) *
                       (backendFramerate?.mean_frame_duration_ms || 33.33),
