@@ -146,7 +146,7 @@ class WebsocketServer:
                 frontend_framerate_tracker.update(time.perf_counter_ns())
                 if mf_payload.multi_frame_number % 10 == 0:
                     # update every 10 multi-frames to match backend framerate behavior
-                    self.latest_frontend_framerate = frontend_framerate_tracker.current
+                    self.latest_frontend_framerate = frontend_framerate_tracker.current_framerate
                 await self._send_frontend_payload(mf_payload)
                 latest_mf_number = mf_payload.multi_frame_number
 

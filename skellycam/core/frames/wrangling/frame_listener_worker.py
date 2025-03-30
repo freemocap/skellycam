@@ -84,7 +84,7 @@ class FrameEscaperWorker:
                     multi_frame_escape_shm.put_multi_frame_payload(mf_payload)
                     if mf_payload.multi_frame_number % 10 == 0:
                         # update every 10  multi-frames to avoid overloading the queue
-                        camera_group_dto.ipc.ws_ipc_relay_queue.put(backend_framerate_tracker.current)
+                        camera_group_dto.ipc.ws_ipc_relay_queue.put(backend_framerate_tracker.current_framerate)
                 else:
                     wait_1ms()
 

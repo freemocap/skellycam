@@ -1,34 +1,61 @@
+# skellycam/core/recorders/timestamps/framerate_tracker.py
 from collections import deque
-from typing import List
+from platform import mac_ver
 
+import numpy as np
 from pydantic import BaseModel
 
+MAX_FRAMERATE_TRACKER_WINDOW = 1000
 
 
 
 class CurrentFramerate(BaseModel):
-    mean_frame_duration_ms: float|None
-    mean_frames_per_second: float|None
+    mean_frame_duration_ms: float
+    mean_frames_per_second: float
+    frame_duration_max: float
+    frame_duration_min: float
+    frame_duration_mean: float
+    frame_duration_stddev: float
+    frame_duration_median: float
+    frame_duration_coefficient_of_variation: float
     calculation_window_size: int
-    framerate_source: str
+    framerate_source: str = ""
+
+    @classmethod
+    def from_timestamps_ns(cls, timestamps_ns: list[int], framerate_source: str) -> "CurrentFramerate":
+        timestamps_ms = [t / 1e6 for t in timestamps_ns]
+        frame_durations_ms = [timestamps_ms[i] - timestamps_ms[i-1] for i in range(1, len(timestamps_ms))]
+        frame_durations_ms.insert(0, 0)
+        return cls(
+            mean_frame_duration_ms=float(np.mean(frame_durations_ms)),
+            mean_frames_per_second=1e3 / np.mean(frame_durations_ms) if len(frame_durations_ms) > 0 and np.mean(frame_durations_ms) > 0 else 0,
+            frame_duration_max=np.max(frame_durations_ms),
+            frame_duration_min=np.min(frame_durations_ms[1:]) if len(frame_durations_ms) > 1 else 0,
+            frame_duration_mean=float(np.mean(frame_durations_ms)),
+            frame_duration_stddev=float(np.std(frame_durations_ms)),
+            frame_duration_median=float(np.median(frame_durations_ms)),
+            frame_duration_coefficient_of_variation=np.std(frame_durations_ms) / np.mean(frame_durations_ms) if len(frame_durations_ms) > 0 and np.mean(frame_durations_ms) > 0 else 0,
+            calculation_window_size=len(timestamps_ns),
+            framerate_source=framerate_source
+        )
 
 
 class FramerateTrackers(BaseModel):
     backend: CurrentFramerate
     frontend: CurrentFramerate
 
-MAX_FRAMERATE_TRACKER_WINDOW = 300
+
+
 class FramerateTracker(BaseModel):
     frames_received_timestamps_ns: deque[int]
     frame_durations_ns: deque[int]
     framerate_source: str
 
     @classmethod
-    def create(cls, framerate_source:str, recency_window_size: int = MAX_FRAMERATE_TRACKER_WINDOW):
+    def create(cls, framerate_source: str, recency_window_size: int = MAX_FRAMERATE_TRACKER_WINDOW):
         return cls(frames_received_timestamps_ns=deque(maxlen=recency_window_size),
                    frame_durations_ns=deque(maxlen=recency_window_size),
                    framerate_source=framerate_source)
-
 
     def update(self, timestamp_ns: int) -> None:
         if not isinstance(timestamp_ns, int):
@@ -41,33 +68,22 @@ class FramerateTracker(BaseModel):
             )
 
     @property
-    def mean_frame_duration_ms(self) -> float|None:
-        if len(self.frame_durations_ns) == 0:
-            return None
-        return sum(self.frame_durations_ns) / len(self.frame_durations_ns) / 1e6
+    def current_framerate(self) -> CurrentFramerate:
+        return CurrentFramerate.from_timestamps_ns(list(self.frames_received_timestamps_ns), self.framerate_source)
 
-    @property
-    def mean_frames_per_second(self) -> float|None:
-        if self.mean_frame_duration_ms is None:
-            return None
-        return 1e3 / self.mean_frame_duration_ms
 
-    @property
-    def current(self) -> CurrentFramerate:
-        return CurrentFramerate(
-            mean_frame_duration_ms=self.mean_frame_duration_ms,
-            mean_frames_per_second=self.mean_frames_per_second,
-            calculation_window_size=len(self.frames_received_timestamps_ns),
-            framerate_source=self.framerate_source
-        )
 
-    def to_string_list(self) -> List[str]:
+    def to_string_list(self) -> list[str]:
+        current = self.current
         return [
-            f"Mean Frame Duration (ms): {self.mean_frame_duration_ms:.2f}",
-            f"Mean FPS: {self.mean_frames_per_second:.2f}",
-            f"Recent FPS: {self.recent_frames_per_second:.2f}",
-            f"Recent Mean Frame Duration (ms): {self.recent_mean_frame_duration_ms:.2f}",
+            f"Mean Frame Duration (ms): {current.mean_frame_duration_ms:.2f}" if current.mean_frame_duration_ms else "Mean Frame Duration (ms): N/A",
+            f"Mean FPS: {current.mean_frames_per_second:.2f}" if current.mean_frames_per_second else "Mean FPS: N/A",
+            f"Min Frame Duration (ms): {current.frame_duration_min:.2f}" if len(self.frame_durations_ns) > 0 else "Min Frame Duration (ms): N/A",
+            f"Max Frame Duration (ms): {current.frame_duration_max:.2f}" if len(self.frame_durations_ns) > 0 else "Max Frame Duration (ms): N/A",
+            f"Median Frame Duration (ms): {current.frame_duration_median:.2f}" if len(self.frame_durations_ns) > 0 else "Median Frame Duration (ms): N/A",
+            f"Frame Duration Jitter (ms): {current.frame_durtation_jitter:.2f}" if len(self.frame_durations_ns) > 0 else "Frame Duration Jitter (ms): N/A",
         ]
+
     def __str__(self):
         return "\n".join(self.to_string_list())
 
@@ -75,15 +91,32 @@ class FramerateTracker(BaseModel):
 if __name__ == "__main__":
     import time
 
-    frt = FramerateTracker.create(30)
+    frt = FramerateTracker.create("test_source")
+    max_window_size = 300
+    switch_at = max_window_size // 2
+    pre_switch_delay = .01
+    post_switch_delay = .033
+    print(f"Starting FramerateTracker test with {max_window_size} frames, starting delay {pre_switch_delay} seconds")
+    swtiched_yet = False
     for i in range(300):
-        if i > 50:
-            delay = .033
+        if i > switch_at:
+            if not swtiched_yet:
+                print(f"Switching to {post_switch_delay} seconds delay")
+                swtiched_yet = True
+            delay = post_switch_delay
         else:
-            delay = .01
+            delay = pre_switch_delay
 
         time.sleep(delay)
         frt.update(time.perf_counter_ns())
-        if i % 10 == 0 and frt.mean_frame_duration_ms and frt.mean_frames_per_second:
-            print(
-                f"Frame #{i} (delay: {delay}) - Mean FPS: {frt.mean_frames_per_second:.3f}, Mean Frame Duration: {frt.mean_frame_duration_ms:.3f} ms")
+        if i % 10 == 0 :            # Print all the statistics at this point
+
+            stats = frt.current
+            print("\nDetailed Statistics:")
+            print(f"Mean FPS: {stats.mean_frames_per_second:.2f}")
+            print(f"Min Duration: {stats.frame_duration_min:.2f} ms")
+            print(f"Max Duration: {stats.frame_duration_max:.2f} ms")
+            print(f"Mean Duration: {stats.frame_duration_mean:.2f} ms")
+            print(f"Median Duration: {stats.frame_duration_median:.2f} ms")
+            print(f"Standard Deviation: {stats.frame_duration_stddev:.2f} ms")
+            print(f"Coefficient of Variation: {stats.frame_duration_coefficient_of_variation:.2f}")

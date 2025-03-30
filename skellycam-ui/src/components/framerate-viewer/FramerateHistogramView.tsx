@@ -1,32 +1,31 @@
 // src/components/framerate-viewer/FramerateHistogramView.tsx
 import {useEffect, useRef, useState} from "react"
 import * as d3 from "d3"
-import {Box, IconButton, Tooltip, Typography} from "@mui/material"
+import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material"
 import {useTheme} from "@mui/material/styles"
 import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material"
+import { CurrentFramerate } from "../../store/slices/framerateTrackerSlice"
 
-type FrameRateHistogramData = {
-  id: string
-  name: string
-  color: string
-  data: number[]
-}
-
-type FrameRateHistogramProps = {
-  sources: FrameRateHistogramData[]
-  binCount: number
+type FramerateHistogramProps = {
+  frontendFramerate: CurrentFramerate | null
+  backendFramerate: CurrentFramerate | null
+  recentFrontendFrameDurations: number[]
+  recentBackendFrameDurations: number[]
   title?: string
 }
 
 export default function FramerateHistogramView({
-  sources,
-  binCount = 100,
+  frontendFramerate,
+  backendFramerate,
+  recentFrontendFrameDurations,
+  recentBackendFrameDurations,
   title = "Frame Duration Distribution",
-}: FrameRateHistogramProps) {
+}: FramerateHistogramProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const theme = useTheme()
   const [transform, setTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity)
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+  const [showControls, setShowControls] = useState(false)
 
   useEffect(() => {
     if (!svgRef.current) return
@@ -34,7 +33,50 @@ export default function FramerateHistogramView({
     // Clear previous chart
     d3.select(svgRef.current).selectAll("*").remove()
 
-    if (sources.length === 0 || sources.every((s) => s.data.length === 0)) {
+    // Create local histogram data based on recent frame durations
+    // This is a good place to create a histogram now that we don't get it directly from the backend
+    const generateHistogram = (data: number[], binCount = 20) => {
+      if (data.length === 0) return null;
+
+      // Calculate bins using d3's histogram generator
+      const histGenerator = d3.histogram()
+        .domain([0, d3.max(data) as number * 1.1]) // Add 10% padding to max
+        .thresholds(binCount);
+
+      const bins = histGenerator(data);
+
+      // Calculate densities (normalized counts)
+      const totalCount = data.length;
+      const binCounts = bins.map(bin => bin.length);
+      const binDensities = binCounts.map(count => count / totalCount);
+
+      return {
+        bin_edges: bins.map(bin => bin.x0 as number),
+        bin_counts: binCounts,
+        bin_densities: binDensities
+      };
+    };
+
+    // Prepare the sources with histogram data
+    const sources = [
+      {
+        id: 'frontend',
+        name: frontendFramerate?.framerate_source || 'Frontend',
+        color: theme.palette.primary.main,
+        histogram: generateHistogram(recentFrontendFrameDurations),
+        totalSamples: recentFrontendFrameDurations.length
+      },
+      {
+        id: 'backend',
+        name: backendFramerate?.framerate_source || 'Backend',
+        color: theme.palette.secondary.main,
+        histogram: generateHistogram(recentBackendFrameDurations),
+        totalSamples: recentBackendFrameDurations.length
+      }
+    ];
+
+    // Check if we have valid histogram data
+    if (sources.every(s => !s.histogram)) {
       // Draw empty chart with axes
       const margin = { top: 20, right: 30, bottom: 30, left: 60 }
       const width = svgRef.current.clientWidth - margin.left - margin.right
@@ -44,12 +86,10 @@ export default function FramerateHistogramView({
 
       // Create empty scales
       const xScale = d3.scaleLinear().domain([0, 100]).range([0, width])
-
       const yScale = d3.scaleLinear().domain([0, 10]).range([height, 0])
 
       // Create axes
       const xAxis = d3.axisBottom(xScale).ticks(10).tickSize(-height)
-
       const yAxis = d3.axisLeft(yScale).ticks(5).tickSize(-width)
 
       // Add X axis
@@ -83,13 +123,10 @@ export default function FramerateHistogramView({
         .style("font-family", "monospace")
         .style("font-size", "14px")
         .style("fill", theme.palette.text.disabled)
-        .text("No data available")
+        .text("No histogram data available")
 
       return
     }
-
-    // Combine all data points to determine overall domain
-    const allData = sources.flatMap((s) => s.data)
 
     // Set up dimensions
     const margin = { top: 20, right: 100, bottom: 30, left: 60 }
@@ -111,33 +148,39 @@ export default function FramerateHistogramView({
     // Create a group for the chart content that will be clipped
     const chartArea = svg.append("g").attr("clip-path", "url(#clip-histogram)")
 
-    // Calculate histogram domain
-    const xMin = d3.min(allData) as number
-    const xMax = d3.max(allData) as number
-    const xPadding = Math.max(1, (xMax - xMin) * 0.1)
+    // Find domain bounds from all histograms
+    let minX = Infinity
+    let maxX = -Infinity
+    let maxDensity = 0
 
-    // For framerate data, we want to start from 0 or slightly before xMin
-    const xDomain = [Math.max(0, xMin - xPadding), xMax + xPadding]
+    sources.forEach(source => {
+      if (source.histogram) {
+        const edges = source.histogram.bin_edges
+        const densities = source.histogram.bin_densities
 
-    // Create histogram generator
-    const histogram = d3.bin().domain(xDomain).thresholds(binCount)
+        if (edges.length > 0) {
+          minX = Math.min(minX, edges[0])
+          maxX = Math.max(maxX, edges[edges.length - 1])
+        }
 
-    // Generate bins for each source
-    const sourceBins = sources.map((source) => ({
-      id: source.id,
-      name: source.name,
-      color: source.color,
-      bins: histogram(source.data),
-      totalCount: source.data.length,
-    }))
+        if (densities.length > 0) {
+          maxDensity = Math.max(maxDensity, Math.max(...densities))
+        }
+      }
+    })
 
-    // Find the maximum bin height across all sources
-    const maxBinHeight = d3.max(sourceBins.flatMap((sb) => d3.max(sb.bins, (b) => b.length) || 0)) as number
+    // If we couldn't determine bounds, use defaults
+    if (minX === Infinity) minX = 0
+    if (maxX === -Infinity) maxX = 100
+    if (maxDensity === 0) maxDensity = 1
+
+    // Add padding to domain
+    const xPadding = (maxX - minX) * 0.1
+    const xDomain = [Math.max(0, minX - xPadding), maxX + xPadding]
 
     // Set up scales
     const xScale = d3.scaleLinear().domain(xDomain).range([0, width])
-
-    const yScale = d3.scaleLinear().domain([0, maxBinHeight * 1.1]).range([height, 0])
+    const yScale = d3.scaleLinear().domain([0, maxDensity * 1.1]).range([height, 0])
 
     // Apply the current zoom transform
     const xScaleZoomed = transform.rescaleX(xScale)
@@ -145,48 +188,47 @@ export default function FramerateHistogramView({
 
     // Create axes
     const xAxis = d3.axisBottom(xScaleZoomed).ticks(10).tickSize(-height)
-
     const yAxis = d3.axisLeft(yScaleZoomed).ticks(5).tickSize(-width)
 
     // Add X axis with label
     const xAxisGroup = svg
-        .append("g")
-        .attr("class", "x-axis")
-        .style("font-family", "monospace")
-        .style("font-size", "10px")
-        .style("color", theme.palette.text.secondary)
-        .attr("transform", `translate(0,${height})`)
-        .call(xAxis)
+      .append("g")
+      .attr("class", "x-axis")
+      .style("font-family", "monospace")
+      .style("font-size", "10px")
+      .style("color", theme.palette.text.secondary)
+      .attr("transform", `translate(0,${height})`)
+      .call(xAxis)
 
     svg
-        .append("text")
-        .attr("transform", `translate(${width / 2}, ${height + margin.bottom - 5})`)
-        .style("text-anchor", "middle")
-        .style("font-family", "monospace")
-        .style("font-size", "10px")
-        .style("fill", theme.palette.text.secondary)
-        .text("Frame Duration (ms)")
+      .append("text")
+      .attr("transform", `translate(${width / 2}, ${height + margin.bottom - 5})`)
+      .style("text-anchor", "middle")
+      .style("font-family", "monospace")
+      .style("font-size", "10px")
+      .style("fill", theme.palette.text.secondary)
+      .text("Frame Duration (ms)")
 
     // Add Y axis with label
     const yAxisGroup = svg
-        .append("g")
-        .attr("class", "y-axis")
-        .style("font-family", "monospace")
-        .style("font-size", "10px")
-        .style("color", theme.palette.text.secondary)
-        .call(yAxis)
+      .append("g")
+      .attr("class", "y-axis")
+      .style("font-family", "monospace")
+      .style("font-size", "10px")
+      .style("color", theme.palette.text.secondary)
+      .call(yAxis)
 
     svg
-        .append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 0 - margin.left)
-        .attr("x", 0 - height / 2)
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .style("font-family", "monospace")
-        .style("font-size", "10px")
-        .style("fill", theme.palette.text.secondary)
-        .text("Frequency")
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x", 0 - height / 2)
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .style("font-family", "monospace")
+      .style("font-size", "10px")
+      .style("fill", theme.palette.text.secondary)
+      .text("Density")
 
     // Style grid lines
     svg.selectAll(".tick line").attr("stroke", theme.palette.divider).attr("stroke-dasharray", "2,2")
@@ -198,7 +240,7 @@ export default function FramerateHistogramView({
     ]
 
     thresholds.forEach((threshold) => {
-      if (threshold.value <= xMax + xPadding) {
+      if (threshold.value <= maxX + xPadding) {
         // Add threshold line
         chartArea
             .append("line")
@@ -223,20 +265,29 @@ export default function FramerateHistogramView({
       }
     })
 
-    // Create a group for each source's histogram
-    sourceBins.forEach((sourceBin) => {
+    // Draw histograms using our calculated values
+    sources.forEach(source => {
+      if (!source.histogram || source.histogram.bin_edges.length === 0) return
+
+      const bins = source.histogram.bin_edges.map((edge, i) => ({
+        x0: edge,
+        x1: i < source.histogram!.bin_edges.length - 1 ? source.histogram!.bin_edges[i + 1] : edge + 0.1,
+        density: i < source.histogram!.bin_densities.length ? source.histogram!.bin_densities[i] : 0,
+        count: i < source.histogram!.bin_counts.length ? source.histogram!.bin_counts[i] : 0
+      }))
+
       // Add histogram bars
       chartArea
-          .selectAll(`.bar-${sourceBin.id}`)
-          .data(sourceBin.bins)
+          .selectAll(`.bar-${source.id}`)
+          .data(bins)
           .enter()
           .append("rect")
-          .attr("class", `bar-${sourceBin.id}`)
-          .attr("x", (d) => xScaleZoomed(d.x0 as number))
-          .attr("y", (d) => yScaleZoomed(d.length))
-          .attr("width", (d) => Math.max(0, xScaleZoomed(d.x1 as number) - xScaleZoomed(d.x0 as number) - 1))
-          .attr("height", (d) => height - yScaleZoomed(d.length))
-          .attr("fill", sourceBin.color)
+          .attr("class", `bar-${source.id}`)
+          .attr("x", d => xScaleZoomed(d.x0))
+          .attr("y", d => yScaleZoomed(d.density))
+          .attr("width", d => Math.max(0, xScaleZoomed(d.x1) - xScaleZoomed(d.x0) - 1))
+          .attr("height", d => height - yScaleZoomed(d.density))
+          .attr("fill", source.color)
           .attr("stroke", theme.palette.background.paper)
           .attr("stroke-width", 0.5)
           .attr("opacity", 0.7)
@@ -250,11 +301,15 @@ export default function FramerateHistogramView({
         .attr("font-size", "10px")
 
     sources.forEach((source, i) => {
+      if (!source.histogram) return
+
       const legendItem = legend.append("g").attr("transform", `translate(0, ${i * 20})`)
-
       legendItem.append("rect").attr("width", 12).attr("height", 12).attr("fill", source.color)
-
-      legendItem.append("text").attr("x", 20).attr("y", 10).style("fill", theme.palette.text.primary).text(source.name)
+      legendItem.append("text")
+          .attr("x", 20)
+          .attr("y", 10)
+          .style("fill", theme.palette.text.primary)
+          .text(`${source.name} (${source.totalSamples})`)
     })
 
     // Add tooltip functionality
@@ -273,11 +328,13 @@ export default function FramerateHistogramView({
         .style("z-index", 1000)
         .style("color", theme.palette.text.primary)
 
-    // Add tooltip for all histogram bars
-    sourceBins.forEach((sourceBin) => {
+    // Add tooltip for histogram bars
+    sources.forEach(source => {
+      if (!source.histogram) return
+
       chartArea
-          .selectAll(`.bar-${sourceBin.id}`)
-          .on("mouseover", function (event, d) {
+          .selectAll(`.bar-${source.id}`)
+          .on("mouseover", function (event, d: any) {
             d3.select(this).attr("opacity", 1).attr("stroke-width", 1)
 
             tooltip
@@ -285,13 +342,15 @@ export default function FramerateHistogramView({
                 .html(`
               <div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
                 <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                <span style="color: ${sourceBin.color};">${sourceBin.name}</span>
+                <span style="color: ${source.color};">${source.name}</span>
                 <span style="color: ${theme.palette.text.secondary};">RANGE:</span>
-                <span>${(d.x0 as number).toFixed(2)} - ${(d.x1 as number).toFixed(2)} ms</span>
+                <span>${d.x0.toFixed(2)} - ${d.x1.toFixed(2)} ms</span>
                 <span style="color: ${theme.palette.text.secondary};">COUNT:</span>
-                <span>${d.length} samples</span>
+                <span>${d.count} samples</span>
                 <span style="color: ${theme.palette.text.secondary};">PERCENTAGE:</span>
-                <span>${((d.length / sourceBin.totalCount) * 100).toFixed(1)}%</span>
+                <span>${(d.density * 100).toFixed(1)}%</span>
+                <span style="color: ${theme.palette.text.secondary};">FPS RANGE:</span>
+                <span>${(1000 / d.x1).toFixed(1)} - ${(1000 / d.x0).toFixed(1)} fps</span>
               </div>
             `)
                 .style("left", event.pageX + 10 + "px")
@@ -299,7 +358,6 @@ export default function FramerateHistogramView({
           })
           .on("mouseout", function () {
             d3.select(this).attr("opacity", 0.7).attr("stroke-width", 0.5)
-
             tooltip.style("opacity", 0)
           })
     })
@@ -320,20 +378,21 @@ export default function FramerateHistogramView({
           xAxisGroup.call(xAxis.scale(event.transform.rescaleX(xScale)))
           yAxisGroup.call(yAxis.scale(event.transform.rescaleY(yScale)))
 
-          // Update all elements that depend on scales
-          sourceBins.forEach((sourceBin) => {
-            // Update histogram bars
+          // Update histogram bars
+          sources.forEach(source => {
+            if (!source.histogram) return
+
             chartArea
-                .selectAll(`.bar-${sourceBin.id}`)
-                .attr("x", (d) => event.transform.applyX(xScale(d.x0 as number)))
-                .attr("y", (d) => event.transform.applyY(yScale(d.length)))
-                .attr("width", (d) => Math.max(0, event.transform.k * (xScale(d.x1 as number) - xScale(d.x0 as number)) - 1))
-                .attr("height", (d) => height - event.transform.applyY(yScale(d.length)))
+                .selectAll(`.bar-${source.id}`)
+                .attr("x", (d: any) => event.transform.applyX(xScale(d.x0)))
+                .attr("y", (d: any) => event.transform.applyY(yScale(d.density)))
+                .attr("width", (d: any) => Math.max(0, event.transform.k * (xScale(d.x1) - xScale(d.x0)) - 1))
+                .attr("height", (d: any) => height - event.transform.applyY(yScale(d.density)))
           })
 
           // Update threshold lines
           thresholds.forEach((threshold) => {
-            if (threshold.value <= xMax + xPadding) {
+            if (threshold.value <= maxX + xPadding) {
               chartArea
                   .selectAll("line")
                   .filter(function () {
@@ -362,7 +421,7 @@ export default function FramerateHistogramView({
     return () => {
       tooltip.remove()
     }
-  }, [sources, binCount, theme, transform])
+  }, [frontendFramerate, backendFramerate, recentFrontendFrameDurations, recentBackendFrameDurations, theme, transform])
 
   // Zoom control handlers
   const handleZoomIn = () => {
@@ -384,38 +443,72 @@ export default function FramerateHistogramView({
   }
 
   return (
-      <Box sx={{ width: "100%", height: "100%", bgcolor: "background.paper", position: "relative" }}>
-        <Typography variant="subtitle2" sx={{ position: "absolute", top: 5, left: 10 }}>
-          {title}
-        </Typography>
-        <Box
+      <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            overflow: "hidden" // Prevent overflow
+          }}
+          onMouseEnter={() => setShowControls(true)}
+          onMouseLeave={() => setShowControls(false)}
+      >
+        <Typography
+            variant="caption"
             sx={{
               position: "absolute",
               top: 5,
-              right: 5,
-              zIndex: 10,
-              bgcolor: "background.paper",
-              borderRadius: 1,
-              boxShadow: 1,
+              left: 10,
+              fontSize: '0.7rem',
+              opacity: 0.8
             }}
         >
-          <Tooltip title="Zoom In">
-            <IconButton size="small" onClick={handleZoomIn}>
-              <ZoomIn fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Zoom Out">
-            <IconButton size="small" onClick={handleZoomOut}>
-              <ZoomOut fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Reset Zoom">
-            <IconButton size="small" onClick={handleResetZoom}>
-              <RestartAlt fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-        <svg ref={svgRef} width="100%" height="100%" style={{ overflow: "visible" }} />
+          {title}
+        </Typography>
+
+        {/* Zoom controls that fade in/out on hover */}
+        <Fade in={showControls}>
+          <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                right: 5,
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                bgcolor: "background.paper",
+                borderRadius: 1,
+                boxShadow: 1,
+                display: "flex",
+                flexDirection: "column",
+              }}
+          >
+            <Tooltip title="Zoom In" placement="right">
+              <IconButton size="small" onClick={handleZoomIn} sx={{ p: 0.5 }}>
+                <ZoomIn fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Zoom Out" placement="right">
+              <IconButton size="small" onClick={handleZoomOut} sx={{ p: 0.5 }}>
+                <ZoomOut fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Reset Zoom" placement="right">
+              <IconButton size="small" onClick={handleResetZoom} sx={{ p: 0.5 }}>
+                <RestartAlt fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Fade>
+
+        <svg
+            ref={svgRef}
+            width="100%"
+            height="100%"
+            style={{
+              display: 'block', // Important for proper sizing
+              overflow: "visible"
+            }}
+        />
       </Box>
   )
 }

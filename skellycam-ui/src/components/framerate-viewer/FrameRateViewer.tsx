@@ -1,11 +1,12 @@
 // src/components/framerate-viewer/FrameRateViewer.tsx
-import {useMemo, useState} from "react"
-import {Box, Grid, Paper, ToggleButton, ToggleButtonGroup, Typography} from "@mui/material"
-import {useTheme} from "@mui/material/styles"
+import { useState } from "react"
+import { Box, IconButton, Paper, Stack, Tooltip, Typography } from "@mui/material"
+import { BarChart, ShowChart, ViewCompact, ViewDay } from "@mui/icons-material"
+import { alpha, useTheme } from "@mui/material/styles"
 import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
-import StatisticsView from "./StatisticsView"
-import {useAppSelector} from "@/store/AppStateStore"
+import FramerateStatisticsView from "./FramerateStatisticsView"
+import {useAppSelector} from "@/store/AppStateStore";
 
 type ViewType = "timeseries" | "histogram" | "both"
 
@@ -13,248 +14,145 @@ export const FramerateViewerPanel = () => {
   const theme = useTheme()
   const [viewType, setViewType] = useState<ViewType>("both")
 
-  const frontendFramerates = useAppSelector(state => state.framerateTracker.loggedFrontendFramerate)
-  const backendFramerates = useAppSelector(state => state.framerateTracker.loggedBackendFramerate)
-
-  // Transform frontend data for our components
-  const frontendTimeseriesData = useMemo(() => {
-    if (!frontendFramerates || frontendFramerates.length === 0) return []
-
-    return frontendFramerates.map((entry, index) => ({
-      timestamp: Date.now() - (frontendFramerates.length - index) * 1000, // Approximation
-      value: entry.mean_frame_duration_ms || 0
-    }))
-  }, [frontendFramerates])
-
-  // Transform backend data for our components
-  const backendTimeseriesData = useMemo(() => {
-    if (!backendFramerates || backendFramerates.length === 0) return []
-
-    return backendFramerates.map((entry, index) => ({
-      timestamp: Date.now() - (backendFramerates.length - index) * 1000, // Approximation
-      value: entry.mean_frame_duration_ms || 0
-    }))
-  }, [backendFramerates])
-
-  // Extract frontend histogram data
-  const frontendHistogramData = useMemo(() => {
-    if (!frontendFramerates || frontendFramerates.length === 0) return []
-
-    return frontendFramerates
-      .filter(entry => entry.mean_frame_duration_ms !== null)
-      .map(entry => entry.mean_frame_duration_ms || 0)
-  }, [frontendFramerates])
-
-  // Extract backend histogram data
-  const backendHistogramData = useMemo(() => {
-    if (!backendFramerates || backendFramerates.length === 0) return []
-
-    return backendFramerates
-      .filter(entry => entry.mean_frame_duration_ms !== null)
-      .map(entry => entry.mean_frame_duration_ms || 0)
-  }, [backendFramerates])
-
-  // Calculate frontend statistics
-  const frontendStatistics = useMemo(() => {
-    const values = frontendHistogramData
-
-    if (values.length === 0) {
-      return {
-        min: 0,
-        max: 0,
-        avg: 0,
-        stdDev: 0,
-        current: 0,
-        samples: 0
-      }
-    }
-
-    const min = Math.min(...values)
-    const max = Math.max(...values)
-    const sum = values.reduce((a, b) => a + b, 0)
-    const avg = sum / values.length
-    const variance = values.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / values.length
-    const stdDev = Math.sqrt(variance)
-    const current = values[values.length - 1]
-
-    return {
-      min,
-      max,
-      avg,
-      stdDev,
-      current,
-      samples: values.length
-    }
-  }, [frontendHistogramData])
-
-  // Calculate backend statistics
-  const backendStatistics = useMemo(() => {
-    const values = backendHistogramData
-
-    if (values.length === 0) {
-      return {
-        min: 0,
-        max: 0,
-        avg: 0,
-        stdDev: 0,
-        current: 0,
-        samples: 0
-      }
-    }
-
-    const min = Math.min(...values)
-    const max = Math.max(...values)
-    const sum = values.reduce((a, b) => a + b, 0)
-    const avg = sum / values.length
-    const variance = values.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / values.length
-    const stdDev = Math.sqrt(variance)
-    const current = values[values.length - 1]
-
-    return {
-      min,
-      max,
-      avg,
-      stdDev,
-      current,
-      samples: values.length
-    }
-  }, [backendHistogramData])
-
-  // Define time series data sources
-  const timeseriesSources = [
-    {
-      id: "frontend",
-      name: "Frontend Framerate",
-      color: theme.palette.primary.main,
-      data: frontendTimeseriesData
-    },
-    {
-      id: "backend",
-      name: "Backend Framerate",
-      color: theme.palette.secondary.main,
-      data: backendTimeseriesData
-    }
-  ]
-
-  // Define histogram data sources
-  const histogramSources = [
-    {
-      id: "frontend",
-      name: "Frontend",
-      color: theme.palette.primary.main,
-      data: frontendHistogramData
-    },
-    {
-      id: "backend",
-      name: "Backend",
-      color: theme.palette.secondary.main,
-      data: backendHistogramData
-    }
-  ]
-
+  const {
+    currentFrontendFramerate,
+    currentBackendFramerate,
+    recentFrontendFrameDurations,
+    recentBackendFrameDurations
+  } = useAppSelector((state) => state.framerateTracker);
   return (
     <Box sx={{
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
       backgroundColor: theme.palette.background.default,
-      p: 1
+      p: 0.5,
+      overflow: 'hidden'  // Prevent content overflow
     }}>
-      {/* Header with controls */}
+      {/* Ultra-compact header with controls */}
       <Box sx={{
-        pb: 1,
-        mb: 1,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        mb: 0.25,
+        px: 0.5
       }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+        <Typography variant="body2" fontWeight="medium" noWrap sx={{ fontSize: '0.75rem' }}>
           Camera Performance Metrics
         </Typography>
 
-        {/* View type selector */}
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={viewType}
-          onChange={(_, newValue) => {
-            if (newValue !== null) setViewType(newValue);
-          }}
-        >
-          <ToggleButton value="timeseries">Timeline</ToggleButton>
-          <ToggleButton value="histogram">Distribution</ToggleButton>
-          <ToggleButton value="both">Combined View</ToggleButton>
-        </ToggleButtonGroup>
+        {/* View type selector as icon buttons */}
+        <Stack direction="row" spacing={0.25}>
+          <Tooltip title="Timeline View">
+            <IconButton
+              size="small"
+              onClick={() => setViewType("timeseries")}
+              color={viewType === "timeseries" ? "primary" : "default"}
+              sx={{ padding: '2px' }}
+            >
+              <ShowChart sx={{ fontSize: '1rem' }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Distribution View">
+            <IconButton
+              size="small"
+              onClick={() => setViewType("histogram")}
+              color={viewType === "histogram" ? "primary" : "default"}
+              sx={{ padding: '2px' }}
+            >
+              <BarChart sx={{ fontSize: '1rem' }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Combined View">
+            <IconButton
+              size="small"
+              onClick={() => setViewType("both")}
+              color={viewType === "both" ? "primary" : "default"}
+              sx={{ padding: '2px' }}
+            >
+              {theme.direction === 'ltr' ? (
+                <ViewDay sx={{ fontSize: '1rem' }} />
+              ) : (
+                <ViewCompact sx={{ fontSize: '1rem' }} />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Box>
 
-      {/* Main content area with flexible layout based on view type */}
-      <Grid container spacing={1} sx={{ flex: 1, overflow: 'hidden' }}>
-        {/* Statistics panels */}
-        <Grid item xs={12} sx={{ display: 'flex', gap: 1 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" sx={{
-              pl: 1,
-              borderLeft: `4px solid ${theme.palette.primary.main}`,
-              color: theme.palette.primary.main
-            }}>
-              Frontend Frame Timing
-            </Typography>
-            <StatisticsView statistics={frontendStatistics} />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" sx={{
-              pl: 1,
-              borderLeft: `4px solid ${theme.palette.secondary.main}`,
-              color: theme.palette.secondary.main
-            }}>
-              Backend Frame Timing
-            </Typography>
-            <StatisticsView statistics={backendStatistics} />
-          </Box>
-        </Grid>
+      {/* Stats section - ultra compact */}
+      <Box sx={{
+        px: 0.25,
+        mb: 0.25,
+      }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 0.25,
+            bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.15 : 0.05),
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+          }}
+        >
+          <FramerateStatisticsView
+            frontendFramerate={currentFrontendFramerate}
+            backendFramerate={currentBackendFramerate}
+            compact={true}
+          />
+        </Paper>
+      </Box>
 
-        {/* Visualization area */}
+      {/* Main visualization area with flex-based layout */}
+      <Box sx={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: viewType === 'both' ? 'row' : 'column',
+        gap: 0.25,
+        overflow: 'hidden'  // Critical to prevent overflow
+      }}>
         {(viewType === 'timeseries' || viewType === 'both') && (
-          <Grid item xs={12} md={viewType === 'both' ? 6 : 12} sx={{ height: viewType === 'both' ? 350 : 500 }}>
-            <Paper
-              elevation={0}
-              sx={{
-                height: '100%',
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                p: 1
-              }}
-            >
-              <FramerateTimeseriesView
-                sources={timeseriesSources}
-                title="Frame Duration Timeline"
-              />
-            </Paper>
-          </Grid>
+          <Paper
+            elevation={0}
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              border: '1px solid',
+              borderColor: alpha(theme.palette.divider, 0.2),
+              overflow: 'hidden'  // Ensure chart doesn't overflow
+            }}
+          >
+            <FramerateTimeseriesView
+              frontendFramerate={currentFrontendFramerate}
+              backendFramerate={currentBackendFramerate}
+              recentFrontendFrameDurations={recentFrontendFrameDurations}
+              recentBackendFrameDurations={recentBackendFrameDurations}
+              title="Frame Duration Timeline"
+            />
+          </Paper>
         )}
 
         {(viewType === 'histogram' || viewType === 'both') && (
-          <Grid item xs={12} md={viewType === 'both' ? 6 : 12} sx={{ height: viewType === 'both' ? 350 : 500 }}>
-            <Paper
-              elevation={0}
-              sx={{
-                height: '100%',
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                p: 1
-              }}
-            >
-              <FramerateHistogramView
-                sources={histogramSources}
-                binCount={20}
-                title="Frame Duration Distribution"
-              />
-            </Paper>
-          </Grid>
+          <Paper
+            elevation={0}
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              border: '1px solid',
+              borderColor: alpha(theme.palette.divider, 0.2),
+              overflow: 'hidden'  // Ensure chart doesn't overflow
+            }}
+          >
+            <FramerateHistogramView
+              frontendFramerate={currentFrontendFramerate}
+              backendFramerate={currentBackendFramerate}
+              recentFrontendFrameDurations={recentFrontendFrameDurations}
+              recentBackendFrameDurations={recentBackendFrameDurations}
+              title="Frame Duration Distribution"
+            />
+          </Paper>
         )}
-      </Grid>
+      </Box>
     </Box>
   )
 }

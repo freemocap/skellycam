@@ -1,31 +1,26 @@
 // src/components/framerate-viewer/FramerateTimeseriesView.tsx
 import {useEffect, useRef, useState} from "react"
 import * as d3 from "d3"
-import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material"
 import {useTheme} from "@mui/material/styles"
-import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material"
+import {CurrentFramerate} from "@/store/slices/framerateTrackerSlice"
+import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material"
+import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material";
 
-type FrameRateData = {
-  timestamp: number
-  value: number
-}
-
-type FrameRateSource = {
-  id: string
-  name: string
-  color: string
-  data: FrameRateData[]
-}
-
-type FrameRateTimeseriesProps = {
-  sources: FrameRateSource[]
+type FramerateTimeseriesProps = {
+  frontendFramerate: CurrentFramerate | null
+  backendFramerate: CurrentFramerate | null
+  recentFrontendFrameDurations: number[]
+  recentBackendFrameDurations: number[]
   title?: string
 }
 
 export default function FramerateTimeseriesView({
-  sources,
+  frontendFramerate,
+  backendFramerate,
+  recentFrontendFrameDurations,
+  recentBackendFrameDurations,
   title = "Frame Duration Over Time"
-}: FrameRateTimeseriesProps) {
+}: FramerateTimeseriesProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const theme = useTheme()
   const [transform, setTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity)
@@ -38,7 +33,31 @@ export default function FramerateTimeseriesView({
     // Clear previous chart
     d3.select(svgRef.current).selectAll("*").remove()
 
-    if (sources.length === 0 || sources.every((s) => s.data.length === 0)) {
+    // Prepare data sources - using the recent frame durations arrays
+    const sources = [
+      {
+        id: "frontend",
+        name: frontendFramerate?.framerate_source || "Frontend",
+        color: theme.palette.primary.main,
+        data: recentFrontendFrameDurations.map((value, index) => ({
+          timestamp: Date.now() - (recentFrontendFrameDurations.length - index) *
+                      (frontendFramerate?.mean_frame_duration_ms || 16.67),
+          value
+        }))
+      },
+      {
+        id: "backend",
+        name: backendFramerate?.framerate_source || "Backend",
+        color: theme.palette.secondary.main,
+        data: recentBackendFrameDurations.map((value, index) => ({
+          timestamp: Date.now() - (recentBackendFrameDurations.length - index) *
+                      (backendFramerate?.mean_frame_duration_ms || 33.33),
+          value
+        }))
+      }
+    ];
+
+    if (sources.every((s) => s.data.length === 0)) {
       // Draw empty chart with axes
       const margin = { top: 20, right: 30, bottom: 30, left: 60 }
       const width = svgRef.current.clientWidth - margin.left - margin.right
@@ -147,7 +166,6 @@ export default function FramerateTimeseriesView({
       .axisBottom(xScaleZoomed)
       .ticks(5)
       .tickSize(-height)
-      // .tickFormat(d3.timeFormat("%S.%L") as any)
 
     const yAxis = d3.axisLeft(yScaleZoomed).ticks(10).tickSize(-width)
 
@@ -195,7 +213,7 @@ export default function FramerateTimeseriesView({
 
     // Create line generator
     const line = d3
-      .line<FrameRateData>()
+      .line<{timestamp: number, value: number}>()
       .x((d) => xScaleZoomed(new Date(d.timestamp)))
       .y((d) => yScaleZoomed(d.value))
       .curve(d3.curveLinear)
@@ -270,6 +288,8 @@ export default function FramerateTimeseriesView({
       .attr("font-size", "10px")
 
     sources.forEach((source, i) => {
+      if (source.data.length === 0) return
+
       const legendItem = legend.append("g").attr("transform", `translate(0, ${i * 20})`)
 
       legendItem.append("rect").attr("width", 12).attr("height", 12).attr("fill", source.color)
@@ -295,35 +315,35 @@ export default function FramerateTimeseriesView({
 
     // Add tooltip for all data points (if we're displaying them)
     sources.forEach((source) => {
-      if (source.data.length < 200) {
-        chartArea
-          .selectAll(`.data-point-${source.id}`)
-          .on("mouseover", function (event, d) {
-            d3.select(this).attr("r", 5).attr("fill", d3.color(source.color)!.brighter(0.5).toString())
+      if (source.data.length === 0) return
 
-            tooltip
-              .style("opacity", 1)
-              .html(`
-                <div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
-                  <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                  <span style="color: ${source.color};">${source.name}</span>
-                  <span style="color: ${theme.palette.text.secondary};">TIME:</span>
-                  <span>${new Date(d.timestamp).toISOString().substr(11, 12)}</span>
-                  <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
-                  <span>${d.value.toFixed(2)} ms</span>
-                  <span style="color: ${theme.palette.text.secondary};">FPS:</span>
-                  <span>${(1000 / d.value).toFixed(2)}</span>
-                </div>
-              `)
-              .style("left", event.pageX + 10 + "px")
-              .style("top", event.pageY - 28 + "px")
-          })
-          .on("mouseout", function () {
-            d3.select(this).attr("r", 3).attr("fill", source.color)
+      chartArea
+        .selectAll(`.data-point-${source.id}`)
+        .on("mouseover", function (event, d) {
+          d3.select(this).attr("r", 5).attr("fill", d3.color(source.color)!.brighter(0.5).toString())
 
-            tooltip.style("opacity", 0)
-          })
-      }
+          tooltip
+            .style("opacity", 1)
+            .html(`
+              <div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
+                <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
+                <span style="color: ${source.color};">${source.name}</span>
+                <span style="color: ${theme.palette.text.secondary};">TIME:</span>
+                <span>${new Date(d.timestamp).toISOString().substr(11, 12)}</span>
+                <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
+                <span>${d.value.toFixed(2)} ms</span>
+                <span style="color: ${theme.palette.text.secondary};">FPS:</span>
+                <span>${(1000 / d.value).toFixed(2)}</span>
+              </div>
+            `)
+            .style("left", event.pageX + 10 + "px")
+            .style("top", event.pageY - 28 + "px")
+        })
+        .on("mouseout", function () {
+          d3.select(this).attr("r", 3).attr("fill", source.color)
+
+          tooltip.style("opacity", 0)
+        })
     })
 
     // Define zoom behavior
@@ -355,7 +375,7 @@ export default function FramerateTimeseriesView({
             .attr(
               "d",
               d3
-                .line<FrameRateData>()
+                .line<{timestamp: number, value: number}>()
                 .x((d) => event.transform.applyX(xScale(new Date(d.timestamp))))
                 .y((d) => event.transform.applyY(yScale(d.value)))
                 .curve(d3.curveLinear),
@@ -365,8 +385,8 @@ export default function FramerateTimeseriesView({
           if (source.data.length < 200) {
             chartArea
               .selectAll(`.data-point-${source.id}`)
-              .attr("cx", (d) => event.transform.applyX(xScale(new Date((d as FrameRateData).timestamp))))
-              .attr("cy", (d) => event.transform.applyY(yScale((d as FrameRateData).value)))
+              .attr("cx", (d) => event.transform.applyX(xScale(new Date((d as any).timestamp))))
+              .attr("cy", (d) => event.transform.applyY(yScale((d as any).value)))
           }
         })
 
@@ -401,7 +421,7 @@ export default function FramerateTimeseriesView({
     return () => {
       tooltip.remove()
     }
-  }, [sources, theme, transform])
+  }, [frontendFramerate, backendFramerate, recentFrontendFrameDurations, recentBackendFrameDurations, theme, transform])
 
   // Zoom control handlers
   const handleZoomIn = () => {
@@ -423,55 +443,72 @@ export default function FramerateTimeseriesView({
   }
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        height: "100%",
-        bgcolor: "background.paper",
-        position: "relative"
-      }}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
-    >
-      <Typography variant="subtitle2" sx={{ position: "absolute", top: 5, left: 10 }}>
-        {title}
-      </Typography>
-
-      {/* Zoom controls that fade in/out on hover */}
-      <Fade in={showControls}>
-        <Box
+      <Box
           sx={{
-            position: "absolute",
-            top: "50%",
-            left: 10,
-            transform: "translateY(-50%)",
-            zIndex: 10,
-            bgcolor: "background.paper",
-            borderRadius: 1,
-            boxShadow: 1,
-            display: "flex",
-            flexDirection: "column",
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            overflow: "hidden" // Prevent overflow
           }}
+          onMouseEnter={() => setShowControls(true)}
+          onMouseLeave={() => setShowControls(false)}
+      >
+        <Typography
+            variant="caption"
+            sx={{
+              position: "absolute",
+              top: 5,
+              left: 10,
+              fontSize: '0.7rem',
+              opacity: 0.8
+            }}
         >
-          <Tooltip title="Zoom In" placement="right">
-            <IconButton size="small" onClick={handleZoomIn}>
-              <ZoomIn fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Zoom Out" placement="right">
-            <IconButton size="small" onClick={handleZoomOut}>
-              <ZoomOut fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Reset Zoom" placement="right">
-            <IconButton size="small" onClick={handleResetZoom}>
-              <RestartAlt fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Fade>
+          {title}
+        </Typography>
 
-      <svg ref={svgRef} width="100%" height="100%" style={{ overflow: "visible" }} />
-    </Box>
+        {/* Zoom controls that fade in/out on hover */}
+        <Fade in={showControls}>
+          <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                right: 5,
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                bgcolor: "background.paper",
+                borderRadius: 1,
+                boxShadow: 1,
+                display: "flex",
+                flexDirection: "column",
+              }}
+          >
+            <Tooltip title="Zoom In" placement="right">
+              <IconButton size="small" onClick={handleZoomIn} sx={{ p: 0.5 }}>
+                <ZoomIn fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Zoom Out" placement="right">
+              <IconButton size="small" onClick={handleZoomOut} sx={{ p: 0.5 }}>
+                <ZoomOut fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Reset Zoom" placement="right">
+              <IconButton size="small" onClick={handleResetZoom} sx={{ p: 0.5 }}>
+                <RestartAlt fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Fade>
+
+        <svg
+            ref={svgRef}
+            width="100%"
+            height="100%"
+            style={{
+              display: 'block', // Important for proper sizing
+              overflow: "visible"
+            }}
+        />
+      </Box>
   )
 }

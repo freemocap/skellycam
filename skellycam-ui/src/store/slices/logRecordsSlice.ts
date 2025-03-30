@@ -61,7 +61,7 @@ interface LogsState {
 const initialState: LogsState = {
     entries: [],
 }
-const MAX_LOG_ENTRIES = 1000
+const MAX_LOG_ENTRIES = 300
 export const logRecordsSlice = createSlice({
     name: "logs",
     initialState,
@@ -72,10 +72,13 @@ export const logRecordsSlice = createSlice({
                 ...action.payload,
                 timestamp: Date.now(),
             }
-            state.entries.push(newLogEntry)
-            if (state.entries.length > MAX_LOG_ENTRIES) {
+
+            // More efficient approach: if we're at the limit, remove the oldest entry first
+            if (state.entries.length >= MAX_LOG_ENTRIES) {
                 state.entries.shift() // Remove the oldest log entry
             }
+
+            state.entries.push(newLogEntry)
         },
 
     },
