@@ -1,3 +1,4 @@
+// skellycam-ui/src/components/camera-views/CameraImage.tsx
 import {Box, Typography} from "@mui/material";
 import React from "react";
 
@@ -24,10 +25,10 @@ export const CameraImage = ({cameraId, imageUrl, showAnnotation}: CameraImagePro
                 src={imageUrl}
                 alt={`Camera ${cameraId}`}
                 style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
-                    display: 'block', // Remove any extra space below the image
+                    width: '100%',         // Fill available width
+                    height: '100%',        // Fill available height
+                    objectFit: 'contain',  // Ensure the entire image is visible without cropping
+                    display: 'block',      // Remove any extra space below the image
                 }}
             />
             {showAnnotation && (
