@@ -28,7 +28,7 @@ export default function FramerateHistogramView({
   const theme = useTheme()
 
   // Generate histogram data
-  const generateHistogram = (data: number[], binCount = 200) => {
+  const generateHistogram = (data: number[], binCount = 100) => {
     if (data.length === 0) return null;
 
     // Calculate bins using d3's histogram generator
