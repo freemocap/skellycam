@@ -36,7 +36,7 @@ class FrontendFramePayload(BaseModel):
                                  multi_frame_payload: MultiFramePayload,
                                  image_sizes: Optional[Dict[CameraId, Dict[str, int]]] = None,
                                  resize_image: float = .5,
-                                 jpeg_quality: int = 90):
+                                 jpeg_quality: int = 80):
 
         if not multi_frame_payload.full:
             raise ValueError("MultiFramePayload must be full to convert to FrontendImagePayload")

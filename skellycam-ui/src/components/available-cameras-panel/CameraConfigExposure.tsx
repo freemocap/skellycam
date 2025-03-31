@@ -1,6 +1,6 @@
 // CameraConfigExposure.tsx
 import * as React from 'react';
-import {Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography} from '@mui/material';
+import {Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme} from '@mui/material';
 import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraConfigExposureProps {
@@ -34,6 +34,8 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                                                                               onExposureModeChange,
                                                                               onExposureValueChange
                                                                           }) => {
+    const theme = useTheme();
+
     const [currentExposure, setCurrentExposure] = React.useState<number>(exposure);
     const handleModeChange = (
         event: React.MouseEvent<HTMLElement>,
@@ -45,7 +47,7 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
     };
 
     const formatExposureValue = (value: number, type: 'label' | 'tooltip') => {
-        setCurrentExposure(value)
+        setCurrentExposure(value);
         if (type === 'tooltip') {
             return `${(1000 / Math.pow(2, -1 * value)).toFixed(3)}ms (1/2`
                 + String.fromCharCode(8203)  // zero-width space to ensure proper rendering
@@ -53,12 +55,12 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
         }
         return value;
     };
+
     const baseMarks = [
         {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.min, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.min)},
         {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.default, label: `${CAMERA_DEFAULT_CONSTRAINTS.exposure.default} (default)`},
         {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.max, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.max)}
     ];
-    // Add current exposure value to marks if it doesn't match any existing marks
     const marks = [
         ...baseMarks,
         ...(![CAMERA_DEFAULT_CONSTRAINTS.exposure.min as number,
@@ -66,11 +68,12 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                 CAMERA_DEFAULT_CONSTRAINTS.exposure.max as number].includes(exposure)
                 ? [{
                     value: exposure,
-                    label: `(${exposure}`,
+                    label: `${exposure}`,
                 }]
                 : []
         )
-    ].sort((a, b) => a.value - b.value); // Sort marks by value
+    ].sort((a, b) => a.value - b.value);
+
     return (
         <Box>
             <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -78,11 +81,21 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
             </Typography>
             <Tooltip title="Choose between automatic or manual exposure control">
                 <ToggleButtonGroup
-                    color="primary"
+                    color={theme.palette.primary.main as any}
                     value={exposureMode}
                     exclusive
                     onChange={handleModeChange}
                     size="small"
+                    sx={{
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            backgroundColor: theme.palette.primary.main,
+                            border: `1px solid ${theme.palette.text.secondary}`,
+                            color: theme.palette.primary.contrastText,
+                            '&:hover': {
+                                backgroundColor: theme.palette.primary.light,
+                            },
+                        }
+                    }}
                 >
                     <ToggleButton value="MANUAL">Manual</ToggleButton>
                     <ToggleButton value="AUTO">Auto</ToggleButton>
@@ -103,12 +116,19 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                         components={{
                             ValueLabel: ValueLabelComponent
                         }}
-                    />
+                        sx={{
+                            color: theme.palette.primary.light,
+                            '& .MuiSlider-thumb': {
+                                '&:hover, &.Mui-focusVisible': {
+                                    boxShadow: `0px 0px 0px 8px ${theme.palette.primary.light}33`, // Adding a cool effect on hover and focus
+                                },
+                            },
 
+                        }}
+                    />
                 </Box>
             </Tooltip>
-
-
         </Box>
     );
 };
+

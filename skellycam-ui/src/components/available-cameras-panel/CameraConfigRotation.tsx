@@ -2,7 +2,7 @@
 import * as React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import {Box, Tooltip} from '@mui/material';
+import {Box, Tooltip, useTheme} from '@mui/material';
 import {RotationOptionSchema} from "@/store/slices/cameras-slices/camera-types";
 import {z} from 'zod';
 
@@ -15,6 +15,7 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
     rotation = "0", // Set default value to "0"
     onChange
 }) => {
+    const  theme = useTheme();
     const handleChange = (
         event: React.MouseEvent<HTMLElement>,
         newRotation: string,
@@ -28,12 +29,22 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
         <Box>
             <Tooltip title="Select camera image rotation">
                 <ToggleButtonGroup
-                    color="primary"
+                    color={theme.palette.primary.main as any}
                     value={rotation}
                     size="small"
                     exclusive
                     onChange={handleChange}
                     aria-label="camera rotation"
+                    sx={{
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            backgroundColor: theme.palette.primary.main,
+                            color: theme.palette.primary.contrastText,
+                            border: `1px solid ${theme.palette.text.secondary}`,
+                            '&:hover': {
+                                backgroundColor: theme.palette.primary.light,
+                            },
+                        }
+                    }}
                 >
                     <ToggleButton value="0">0°</ToggleButton>
                     <ToggleButton value="90">90°</ToggleButton>

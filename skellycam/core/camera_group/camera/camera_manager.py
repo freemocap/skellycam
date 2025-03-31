@@ -133,11 +133,11 @@ class CameraManager(BaseModel):
 
         logger.trace(f"Cameras closed: {self.camera_ids}")
 
-
 def log_time_stats(camera_configs: CameraConfigs,
                    elapsed_per_loop_ns: List[int]):
     number_of_cameras = len(camera_configs)
-    resolution = str(camera_configs[0].resolution)
+    first_camera_config = next(iter(camera_configs.values()))
+    resolution = str(first_camera_config.resolution)
     number_of_frames = len(elapsed_per_loop_ns) + 1
     ideal_framerate = min([camera_config.framerate for camera_config in camera_configs.values()])
 

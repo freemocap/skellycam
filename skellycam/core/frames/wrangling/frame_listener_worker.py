@@ -20,7 +20,7 @@ class FrameEscaperWorker:
             camera_group_dto: CameraGroupDTO,
             shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
             new_configs_queue: multiprocessing.Queue,
-            use_thread: bool = True,
+            use_thread: bool = False,
     ):
         if use_thread:
             self._worker = threading.Thread(target=self._run_worker,
