@@ -1,6 +1,6 @@
 from enum import Enum
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
@@ -12,14 +12,14 @@ DEFAULT_IMAGE_WIDTH: int = 1280
 DEFAULT_IMAGE_CHANNELS: int = 3
 DEFAULT_FRAME_RATE: float = 30.0
 DEFAULT_IMAGE_SHAPE: tuple = (DEFAULT_IMAGE_HEIGHT, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_CHANNELS)
-DEFAULT_CAMERA_ID: CameraId = CameraId(0)
+DEFAULT_CAMERA_INDEX: CameraIndex = CameraIndex(0)
 DEFAULT_CAMERA_NAME: str = "Default Camera"
 DEFAULT_RESOLUTION: ImageResolution = ImageResolution(height=DEFAULT_IMAGE_HEIGHT, width=DEFAULT_IMAGE_WIDTH)
 
 
 class DefaultCameraConfig(Enum):
     CAMERA_NAME = DEFAULT_CAMERA_NAME
-    CAMERA_ID = DEFAULT_CAMERA_ID
+    CAMERA_INDEX = DEFAULT_CAMERA_INDEX
     USE_THIS_CAMERA = True
     RESOLUTION = DEFAULT_RESOLUTION
     COLOR_CHANNELS: int = DEFAULT_IMAGE_CHANNELS

@@ -13,7 +13,7 @@ class FRAME_METADATA_MODEL(Enum):
     We will store the metadata in a numpy array while we're doing the shared memory nonsense, and
     convert to a Pydantic model when we're safely away from Camera land.
     """
-    CAMERA_ID: int = 0  # CameraId (as an int corresponding the int used to create the cv2.VideoCapture object)
+    CAMERA_INDEX: int = 0  # CameraId (as an int corresponding the int used to create the cv2.VideoCapture object)
     IMAGE_HEIGHT: int = 1  # Height of the frame in pixels
     IMAGE_WIDTH: int = 2  # Width of the frame in pixels
     IMAGE_COLOR_CHANNELS: int = 3  # Number of color channels in the image
@@ -38,7 +38,6 @@ FRAME_METADATA_SIZE_BYTES = np.dtype(FRAME_METADATA_DTYPE).itemsize * np.prod(FR
 
 
 def create_empty_frame_metadata(
-        camera_id: int,
         frame_number: int,
         config: CameraConfig
 ) -> np.ndarray:
@@ -46,7 +45,7 @@ def create_empty_frame_metadata(
                               dtype=FRAME_METADATA_DTYPE)
     metadata_array[FRAME_METADATA_MODEL.FRAME_METADATA_INITIALIZED.value] = time.perf_counter_ns()
 
-    metadata_array[FRAME_METADATA_MODEL.CAMERA_ID.value] = camera_id
+    metadata_array[FRAME_METADATA_MODEL.CAMERA_INDEX.value] = config.camera_index
     metadata_array[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value] = config.image_shape[0]
     metadata_array[FRAME_METADATA_MODEL.IMAGE_WIDTH.value] = config.image_shape[1]
     metadata_array[FRAME_METADATA_MODEL.IMAGE_COLOR_CHANNELS.value] = config.image_shape[2]
@@ -62,7 +61,7 @@ if __name__ == "__main__":
     print(FRAME_METADATA_DTYPE)
     print(FRAME_METADATA_SHAPE)
     print(FRAME_METADATA_SIZE_BYTES)
-    empty_metadata = create_empty_frame_metadata(camera_id=0, frame_number=0)
+    empty_metadata = create_empty_frame_metadata(frame_number=0, config=CameraConfig())
     print(f"empty_metadata: {empty_metadata}")
     print(f"empty_metadata dtype: {empty_metadata.dtype}")
 

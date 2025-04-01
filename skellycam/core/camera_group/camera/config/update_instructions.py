@@ -3,8 +3,7 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +23,8 @@ class UpdateInstructions(BaseModel):
     # close_these_cameras: List[CameraId] = Field(
     #     default_factory=list)  # TODO - support closing cameras w/o reset (requires handling shm deletion and camera process deletion)
     # create: List[CameraId] = Field(default_factory=list) #TODO - support creating new cams w/o reset (requires handling shm recreation)
-    update_these_cameras: List[CameraId] = Field(default_factory=list)
+    update_these_cameras: List[CameraIdString] = Field(default_factory=list)
 
-    @classmethod
-    def reset_camera_group(cls, configs: CameraConfigs):
-        # Reset all cameras using specified configs
-        return cls(new_configs=configs, reset_all=True)
 
     @classmethod
     def from_configs(cls,
@@ -79,3 +74,8 @@ class UpdateInstructions(BaseModel):
         return cls(reset_all=reset_all,
                    new_configs=new_configs,
                    update_these_cameras=cameras_to_update)
+
+    @classmethod
+    def reset_camera_group(cls, configs: CameraConfigs):
+        # Reset all cameras using specified configs
+        return cls(new_configs=configs, reset_all=True)

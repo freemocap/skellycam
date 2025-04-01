@@ -3,7 +3,8 @@ import multiprocessing
 import time
 from dataclasses import dataclass
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
+from skellycam.core.camera_group.camera.config.camera_config import CameraIdString
 from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
 from skellycam.utilities.wait_functions import wait_1ms
 
@@ -15,7 +16,7 @@ MAX_WAIT_TIME_S = 600.0
 @dataclass
 class CameraFrameLoopFlags:
 
-    camera_id: CameraId
+    camera_id: CameraIdString
 
     camera_ready_flag: multiprocessing.Value
     frame_loop_initialization_flag: multiprocessing.Value
@@ -29,7 +30,7 @@ class CameraFrameLoopFlags:
 
     @classmethod
     def create(cls,
-               camera_id: CameraId,
+               camera_id: CameraIdString,
                ipc_flags: InterProcessCommunicationManager
                ):
         return cls(

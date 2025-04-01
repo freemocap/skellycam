@@ -1,14 +1,13 @@
 import logging
 import threading
 import time
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.camera_process import CameraProcess
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
@@ -20,12 +19,13 @@ logger = logging.getLogger(__name__)
 
 MAX_CAMERA_PORTS_TO_CHECK = 20
 
+
 class CameraManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     orchestrator: CameraGroupOrchestrator
     camera_group_dto: CameraGroupDTO
-    camera_processes: Dict[CameraId, CameraProcess] = {}
+    camera_processes: dict[CameraIdString, CameraProcess] = {}
 
     @property
     def camera_ids(self):
@@ -40,7 +40,8 @@ class CameraManager(BaseModel):
         for camera_id, camera_config in camera_group_dto.camera_configs.items():
             frame_loop_flags = shmorc_dto.camera_group_orchestrator.frame_loop_flags[camera_id]
             camera_shm_dto = shmorc_dto.frame_loop_shm_dto.camera_shm_dtos[camera_id]
-            camera_processes[camera_id] = CameraProcess.create(camera_config=camera_config,
+            camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
+                                                               camera_config=camera_config,
                                                                camera_group_dto=camera_group_dto,
                                                                frame_loop_flags=frame_loop_flags,
                                                                camera_shared_memory_dto=camera_shm_dto)
@@ -49,7 +50,6 @@ class CameraManager(BaseModel):
                    orchestrator=shmorc_dto.camera_group_orchestrator,
                    camera_processes=camera_processes
                    )
-
 
     def start(self):
         if len(self.camera_ids) == 0:
@@ -71,7 +71,7 @@ class CameraManager(BaseModel):
 
             logger.debug(f"Starting camera trigger loop for cameras: {self.camera_ids}...")
 
-            while  self.camera_group_dto.should_continue:
+            while self.camera_group_dto.should_continue:
 
                 tik = time.perf_counter_ns()
 
@@ -102,7 +102,8 @@ class CameraManager(BaseModel):
 
             self.update_camera_configs(update_instructions)
             while any(
-                    [not camera_process.new_config_queue.empty() for camera_process in self.camera_processes.values()]) and self.camera_group_dto.should_continue:
+                    [not camera_process.new_config_queue.empty() for camera_process in
+                     self.camera_processes.values()]) and self.camera_group_dto.should_continue:
                 wait_100ms()
             self.orchestrator.await_cameras_ready()
             logger.trace(f"Camera configs updated for cameras: {self.camera_ids}")
@@ -132,6 +133,7 @@ class CameraManager(BaseModel):
             wait_10ms()
 
         logger.trace(f"Cameras closed: {self.camera_ids}")
+
 
 def log_time_stats(camera_configs: CameraConfigs,
                    elapsed_per_loop_ns: List[int]):

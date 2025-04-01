@@ -1,7 +1,11 @@
 // skellycam-ui/src/store/thunks/camera-thunks.ts
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {setDetectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
-import {CAMERA_DEFAULT_CONSTRAINTS} from "@/store/slices/cameras-slices/camera-types";
+import {
+    CAMERA_DEFAULT_CONSTRAINTS,
+    createDefaultCameraConfig,
+    CameraDevice
+} from "@/store/slices/cameras-slices/camera-types";
 
 
 const isVirtualCamera = (label: string): boolean => {
@@ -53,7 +57,7 @@ export const validateVideoStream = async (deviceId: string): Promise<boolean> =>
     }
 };
 
-export const  detectBrowserDevices = createAsyncThunk(
+export const  detectCameraDevices = createAsyncThunk(
     'cameras/detectBrowserDevices',
     async (filterVirtual: boolean = true, { dispatch }) => {
         try {
@@ -87,14 +91,16 @@ export const  detectBrowserDevices = createAsyncThunk(
             console.log(`After validation, ${validatedCameras.length} camera(s) remain`, validatedCameras);
 
             // Convert MediaDeviceInfo objects to plain serializable objects and add index
-            const serializableCameras = validatedCameras.map((device, index) => ({
+            const serializableCameras: CameraDevice[] = validatedCameras.map((device, index) => ({
                 ...device.toJSON(),
                 index: index,
+                cameraId: device.deviceId.slice(-5), // Camera ID is the last 5 characters of the device ID
                 selected: true,
-                constraints: CAMERA_DEFAULT_CONSTRAINTS
+                status: 'IDLE',
+                constraints: CAMERA_DEFAULT_CONSTRAINTS,
+                config: createDefaultCameraConfig(index, device.label)
             }));
             console.log(`Detected ${serializableCameras.length} camera(s)`, serializableCameras);
-
             dispatch(setDetectedDevices(serializableCameras));
             dispatch(setError(null));
             return serializableCameras;

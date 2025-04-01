@@ -2,11 +2,10 @@ import logging
 import multiprocessing
 import time
 from dataclasses import dataclass
-from typing import List, Literal, Optional
+from typing import Literal
 
 import numpy as np
 
-from skellycam.core import CameraId
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE, \
@@ -41,11 +40,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     read_only: bool
 
-    previous_read_mf_payload: Optional[MultiFramePayload] = None
-
-    @property
-    def camera_ids(self) -> List[CameraId]:
-        return list(self.camera_group_dto.camera_ids.keys())
+    previous_read_mf_payload: MultiFramePayload|None = None
 
     @property
     def valid(self) -> bool:
@@ -73,8 +68,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         example_mf_image_buffer = np.concatenate(
             example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated
 
-        example_mf_metadatas = [create_empty_frame_metadata(camera_id=camera_id,
-                                                            frame_number=0,
+        example_mf_metadatas = [create_empty_frame_metadata(frame_number=0,
                                                             config=config)
                                 for camera_id, config in camera_group_dto.camera_configs.items()]
         example_mf_metadatas_ravelled = [metadata.ravel() for metadata in example_mf_metadatas]

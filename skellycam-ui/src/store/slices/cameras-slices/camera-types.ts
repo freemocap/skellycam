@@ -1,16 +1,22 @@
-import {z} from 'zod';
+import { z } from 'zod';
 
-// First define all the constant configurations
+// Define string literals as const for better type safety
+export const PixelFormats = ['RGB', 'BGR', 'GRAY'] ;
+export const ExposureModes = ['MANUAL', 'AUTO', 'RECOMMEND'];
+export const CameraStatus = ['IDLE', 'CONNECTED', 'ERROR'];
+export const RotationOptions = ['0', '90', '180', '270'];
+export const FourccOptions = ['MJPG', 'X264', 'YUYV', 'H264'];
+export const ResolutionPresets = [
+    { width: 640, height: 480, label: "VGA (4:3)" },
+    { width: 1280, height: 720, label: "HD 720p (16:9)" },
+    { width: 1920, height: 1080, label: "Full HD 1080p(16:9)" }
+];
 export const CAMERA_DEFAULT_CONSTRAINTS = {
     resolution: {
         min: { width: 640, height: 480 },
         max: { width: 1920, height: 1080 },
         default: { width: 1280, height: 720 },
-        presets: [
-            { width: 640, height: 480, label: "VGA (4:3)" },
-            { width: 1280, height: 720, label: "HD 720p (16:9)" },
-            { width: 1920, height: 1080, label: "Full HD 1080p(16:9)" }
-        ]
+        presets: ResolutionPresets
     },
     exposure: {
         min: -12,
@@ -24,52 +30,47 @@ export const CAMERA_DEFAULT_CONSTRAINTS = {
         default: 30,
         available: [15, 30, 60]
     },
-    pixel_formats: ['RGB', 'BGR', 'GRAY'],
-    exposure_modes: ['MANUAL', 'AUTO', 'RECOMMEND'],
-    rotation_options: ['0', '90', '180', '270'],
-    fourcc_options: ['MJPG', 'X264', 'YUYV', 'H264']
-} as const;
+    pixel_formats: PixelFormats,
+    exposure_modes: ExposureModes,
+    status_options: CameraStatus,
+    rotation_options: RotationOptions,
+    fourcc_options: FourccOptions
+};
 
-export interface SerializedMediaDeviceInfo {
+export interface CameraDevice {
     index: number;
     deviceId: string;
+    cameraId: string; // Camera ID is the last 5 characters of the device ID
+    status: string;
     groupId: string;
     kind: string;
     label: string;
     selected: boolean;
-    constraints: typeof CAMERA_DEFAULT_CONSTRAINTS
+    constraints: typeof CAMERA_DEFAULT_CONSTRAINTS;
+    config: CameraConfig;
 }
 
-export const ResolutionPresetSchema = z.object({
-    width: z.number().int(),
-    height: z.number().int(),
-    label: z.string()
-});
-
-export const ExposureModeSchema = z.enum(CAMERA_DEFAULT_CONSTRAINTS.exposure_modes);
-export const RotationOptionSchema = z.enum(CAMERA_DEFAULT_CONSTRAINTS.rotation_options);
-export const PixelFormatSchema = z.enum(CAMERA_DEFAULT_CONSTRAINTS.pixel_formats);
-export const FourccOptionSchema = z.enum(CAMERA_DEFAULT_CONSTRAINTS.fourcc_options);
 
 
-// Helper function updated to use new enum values
-export const createDefaultCameraConfig = (index: number, label: string) => ({
-    camera_id: index,
+
+// Helper function
+export const createDefaultCameraConfig = (index: number, label: string): CameraConfig => ({
+    camera_index: index,
     camera_name: label || `Camera ${index}`,
     use_this_camera: true,
     resolution: CAMERA_DEFAULT_CONSTRAINTS.resolution.default,
     color_channels: 3,
-    pixel_format: CAMERA_DEFAULT_CONSTRAINTS.pixel_formats[0],
-    exposure_mode: CAMERA_DEFAULT_CONSTRAINTS.exposure_modes[0], // MANUAL
+    pixel_format: PixelFormats[0],
+    exposure_mode: ExposureModes[0], // MANUAL
     exposure: CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
     framerate: CAMERA_DEFAULT_CONSTRAINTS.framerate.default,
-    rotation: CAMERA_DEFAULT_CONSTRAINTS.rotation_options[0], // 'No Rotation'
-    capture_fourcc: CAMERA_DEFAULT_CONSTRAINTS.fourcc_options[0], // 'MJPG'
-    writer_fourcc: CAMERA_DEFAULT_CONSTRAINTS.fourcc_options[1], // 'X264'
+    rotation: RotationOptions[0], // '0'
+    capture_fourcc: FourccOptions[0], // 'MJPG'
+    writer_fourcc: FourccOptions[1], // 'X264'
 });
 
 export const CameraConfigSchema = z.object({
-    camera_id: z.number(),
+    camera_index: z.number(),
     camera_name: z.string(),
     use_this_camera: z.boolean(),
     resolution: z.object({
@@ -77,24 +78,16 @@ export const CameraConfigSchema = z.object({
         height: z.number().int()
     }),
     color_channels: z.number(),
-    pixel_format: PixelFormatSchema,
-    exposure_mode: ExposureModeSchema,
-    exposure:z.number(),
+    pixel_format: z.string(),
+    exposure_mode: z.string(),
+    exposure: z.number(),
     framerate: z.number(),
-    rotation: RotationOptionSchema,
-    capture_fourcc: FourccOptionSchema,
-    writer_fourcc: FourccOptionSchema,
+    rotation: z.string(),
+    capture_fourcc: z.string(),
+    writer_fourcc: z.string(),
 });
 
-export const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema );
+export const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema);
 
-
-// Export the types
 export type CameraConfig = z.infer<typeof CameraConfigSchema>;
 export type CameraConfigs = z.infer<typeof CameraConfigsSchema>;
-export type CameraDefaults = typeof CAMERA_DEFAULT_CONSTRAINTS;
-export type ResolutionPreset = z.infer<typeof ResolutionPresetSchema>;
-export type ExposureMode = z.infer<typeof ExposureModeSchema>;
-export type RotationOption = z.infer<typeof RotationOptionSchema>;
-export type PixelFormat = z.infer<typeof PixelFormatSchema>;
-export type FourccOption = z.infer<typeof FourccOptionSchema>;

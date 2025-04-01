@@ -1,17 +1,16 @@
 import logging
 import multiprocessing
 from dataclasses import dataclass
-from typing import Dict, Optional, List
 
-from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core import CameraIndex
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
 from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
     SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 
 logger = logging.getLogger(__name__)
 
-CameraSharedMemoryDTOs = Dict[CameraId, CameraSharedMemoryDTO]
+CameraSharedMemoryDTOs = dict[CameraIdString, CameraSharedMemoryDTO]
 
 
 @dataclass
@@ -25,7 +24,7 @@ class SingleSlotCameraGroupSharedMemoryDTO:
 @dataclass
 class CameraGroupSharedMemory:
     camera_configs: CameraConfigs
-    camera_shms: Dict[CameraId, SingleSlotCameraSharedMemory]
+    camera_shms: dict[CameraIdString, SingleSlotCameraSharedMemory]
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
     read_only: bool
@@ -66,7 +65,7 @@ class CameraGroupSharedMemory:
                 self.camera_shms.items()}
 
     @property
-    def camera_ids(self) -> List[CameraId]:
+    def camera_ids(self) -> list[CameraIdString]:
         return list(self.camera_shms.keys())
 
     @property
@@ -80,7 +79,7 @@ class CameraGroupSharedMemory:
                                                     latest_mf_number=self.latest_mf_number)
 
     def get_multi_frame_payload(self,
-                                previous_payload: Optional[MultiFramePayload],
+                                previous_payload: MultiFramePayload | None,
                                 camera_configs: CameraConfigs,
                                 ) -> MultiFramePayload:
 

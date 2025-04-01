@@ -4,7 +4,7 @@ from typing import Tuple, Dict, List
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.recorders.timestamps.old.camera_timestamp_log import CameraTimestampLog
 
 
@@ -32,7 +32,7 @@ class MultiFrameTimestampLog(BaseModel):
         description="The standard deviation of timestamps between cameras, in seconds"
     )
 
-    camera_logs: Dict[CameraId, CameraTimestampLog] = Field(
+    camera_logs: Dict[CameraIndex, CameraTimestampLog] = Field(
         description="Individual CameraTimestampLog objects for each camera in the multi-frame"
     )
 
@@ -46,7 +46,7 @@ class MultiFrameTimestampLog(BaseModel):
     @classmethod
     def from_timestamp_logs(
             cls,
-            timestamp_logs: Dict[CameraId, CameraTimestampLog],
+            timestamp_logs: Dict[CameraIndex, CameraTimestampLog],
             timestamp_mapping: Tuple[int, int],
             first_frame_timestamp_ns: int,
             multi_frame_number: int,
@@ -99,7 +99,7 @@ class MultiFrameTimestampLog(BaseModel):
         )
 
     @classmethod
-    def as_csv_header(cls, camera_ids: List[CameraId]) -> str:
+    def as_csv_header(cls, camera_ids: List[CameraIndex]) -> str:
         column_names = list(cls.model_fields.keys())
         column_names.remove("camera_logs")
         for camera_id in camera_ids:
@@ -128,7 +128,7 @@ class MultiFrameTimestampLog(BaseModel):
 
 
 if __name__ == "__main__":
-    cam_timestamp_logs = {camera_number: CameraTimestampLog(camera_id=CameraId(camera_number)) for camera_number in
+    cam_timestamp_logs = {camera_number: CameraTimestampLog(camera_id=CameraIndex(camera_number)) for camera_number in
                           range(3)}
     MultiFrameTimestampLog.from_timestamp_logs(timestamp_logs=cam_timestamp_logs,
                                                timestamp_mapping=(0, 0),

@@ -1,16 +1,16 @@
-from typing import Tuple, Dict, Optional, Self
+from typing import Tuple,  Self
 
 import cv2
 from pydantic import BaseModel, Field, model_validator
 
 from skellycam.core import BYTES_PER_MONO_PIXEL, CameraName
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 
 
-def get_video_file_type(fourcc_code: int) -> Optional[str]:
+def get_video_file_type(fourcc_code: int) ->str:
     """
     Get the video file type based on an OpenCV FOURCC code.
 
@@ -52,9 +52,9 @@ def get_video_file_type(fourcc_code: int) -> Optional[str]:
 
 
 class CameraConfig(BaseModel):
-    camera_id: CameraId = Field(
-        default=DefaultCameraConfig.CAMERA_ID.value,
-        description="The id of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera",
+    camera_index: CameraIndex = Field(
+        default=DefaultCameraConfig.CAMERA_INDEX.value,
+        description="The index of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera",
     )
     camera_name: CameraName = Field(
         default=DefaultCameraConfig.CAMERA_NAME.value,
@@ -112,8 +112,8 @@ class CameraConfig(BaseModel):
     @model_validator(mode="after")
     def validate(self) -> Self:
         if self.camera_name is DefaultCameraConfig.CAMERA_NAME.value:
-            self.camera_name = f"Camera-{self.camera_id}"
-        self.camera_id = CameraId(self.camera_id)
+            self.camera_name = f"Camera-{self.camera_index}"
+        self.camera_index = CameraIndex(self.camera_index)
         return self
 
     @property
@@ -153,15 +153,15 @@ class CameraConfig(BaseModel):
         out_str += f"\t\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
         return out_str
 
-
-CameraConfigs = dict[CameraId|str, CameraConfig]
+CameraIdString = str
+CameraConfigs = dict[CameraIdString, CameraConfig]
 
 
 def default_camera_configs_factory():
     return {
-        DefaultCameraConfig.CAMERA_ID: CameraConfig()
+        "dummy": CameraConfig()
     }
 
 
 if __name__ == "__main__":
-    print(CameraConfig(camera_id=0))
+    print(CameraConfig(camera_index=0))

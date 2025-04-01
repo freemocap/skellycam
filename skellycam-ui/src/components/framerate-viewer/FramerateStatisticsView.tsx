@@ -55,7 +55,6 @@ export const ProgressiveTooltip = ({ shortInfo, longInfo, children }: Progressiv
           }
         }
       }}
-      interactive
     >
       {children}
     </Tooltip>
@@ -302,126 +301,125 @@ export default function FramerateStatisticsView({ frontendFramerate, backendFram
   };
 
   return (
-    <TableContainer component={Paper} elevation={0} sx={{
-      backgroundColor: 'transparent',
-      border: 'none',
-      overflowX: 'auto'
-    }}>
-      <Table size="small" padding="none" sx={{
-        '& .MuiTableCell-root': {
-          fontSize: '0.65rem',
-          lineHeight: '1.1',
-          whiteSpace: 'nowrap'
-        }
+      <TableContainer component={Paper} elevation={0} sx={{
+        backgroundColor: 'transparent',
+        border: 'none',
+        overflowX: 'auto'
       }}>
-        <TableHead>
-          <TableRow>
-            <HeaderCellWithTooltip
-              label="Source"
-              shortInfo={tooltips.source.short}
-              longInfo={tooltips.source.long}
-              style={{
-                ...headerCellStyle,
-                width: '12%',
-                color: theme.palette.text.primary
-              }}
-              align="left"
-            />
-            <HeaderCellWithTooltip
-              label="Current"
-              shortInfo={tooltips.current.short}
-              longInfo={tooltips.current.long}
-              style={{
-                ...headerCellStyle,
-                ...getCellStyle('current')
-              }}
-            />
-            <HeaderCellWithTooltip
-              label="Min"
-              shortInfo={tooltips.min.short}
-              longInfo={tooltips.min.long}
-              style={{
-                ...headerCellStyle,
-                ...getCellStyle('min')
-              }}
-            />
-            <HeaderCellWithTooltip
-              label="Max"
-              shortInfo={tooltips.max.short}
-              longInfo={tooltips.max.long}
-              style={{
-                ...headerCellStyle,
-                ...getCellStyle('max')
-              }}
-            />
-            <HeaderCellWithTooltip
-              label="Mean"
-              shortInfo={tooltips.mean.short}
-              longInfo={tooltips.mean.long}
-              style={{
-                ...headerCellStyle,
-                ...getCellStyle('mean')
-              }}
-            />
-            <HeaderCellWithTooltip
-              label="Median"
-              shortInfo={tooltips.median.short}
-              longInfo={tooltips.median.long}
-              style={{
-                ...headerCellStyle,
-                ...getCellStyle('median')
-              }}
-            />
-            <HeaderCellWithTooltip
-              label="StdDev/CV"
-              shortInfo={tooltips.stdDev.short}
-              longInfo={tooltips.stdDev.long}
-              style={{
-                ...headerCellStyle,
-                ...getCellStyle('stdDev')
-              }}
-            />
-          </TableRow>
-        </TableHead>
+        <Table size="small" padding="none" sx={{
+          '& .MuiTableCell-root': {
+            fontSize: '0.65rem',
+            lineHeight: '1.1',
+            whiteSpace: 'nowrap'
+          }
+        }}>
+          <TableHead>
+            <TableRow>
+              <HeaderCellWithTooltip
+                  label="Source"
+                  shortInfo={tooltips.source.short}
+                  longInfo={tooltips.source.long}
+                  style={{
+                    ...headerCellStyle,
+                    width: '12%',
+                    color: theme.palette.text.primary
+                  }}
+                  align="left"
+              />
+              <HeaderCellWithTooltip
+                  label="Current"
+                  shortInfo={tooltips.current.short}
+                  longInfo={tooltips.current.long}
+                  style={{
+                    ...headerCellStyle,
+                    ...getCellStyle('current')
+                  }}
+              />
+              <HeaderCellWithTooltip
+                  label="Min"
+                  shortInfo={tooltips.min.short}
+                  longInfo={tooltips.min.long}
+                  style={{
+                    ...headerCellStyle,
+                    ...getCellStyle('min')
+                  }}
+              />
+              <HeaderCellWithTooltip
+                  label="Max"
+                  shortInfo={tooltips.max.short}
+                  longInfo={tooltips.max.long}
+                  style={{
+                    ...headerCellStyle,
+                    ...getCellStyle('max')
+                  }}
+              />
+              <HeaderCellWithTooltip
+                  label="Mean"
+                  shortInfo={tooltips.mean.short}
+                  longInfo={tooltips.mean.long}
+                  style={{
+                    ...headerCellStyle,
+                    ...getCellStyle('mean')
+                  }}
+              />
+              <HeaderCellWithTooltip
+                  label="Median"
+                  shortInfo={tooltips.median.short}
+                  longInfo={tooltips.median.long}
+                  style={{
+                    ...headerCellStyle,
+                    ...getCellStyle('median')
+                  }}
+              />
+              <HeaderCellWithTooltip
+                  label="StdDev/CV"
+                  shortInfo={tooltips.stdDev.short}
+                  longInfo={tooltips.stdDev.long}
+                  style={{
+                    ...headerCellStyle,
+                    ...getCellStyle('stdDev')
+                  }}
+              />
+            </TableRow>
+            {/* Add the divider inside TableHead */}
+            <TableRow>
+              <TableCell colSpan={7} sx={{ padding: 0 }}>
+                <Divider sx={{ borderColor: theme.palette.divider }} />
+              </TableCell>
+            </TableRow>
+          </TableHead>
 
-        {/* Divider after header */}
-        <TableRow>
-          <TableCell colSpan={7} sx={{ padding: 0 }}>
-            <Divider sx={{ borderColor: theme.palette.divider }} />
-          </TableCell>
-        </TableRow>
+          <TableBody>
+            {/* Frontend Row */}
+            <FramerateRow
+                framerateData={frontendFramerate}
+                colorMap={colorMap}
+                getCellStyle={getCellStyle}
+                isDarkMode={isDarkMode}
+                theme={theme}
+                shortTooltip="Displays received frames."
+                longTooltip="Frontend represents the UI rendering performance. It shows how quickly your display receives and renders frames. Performance issues here won't affect recording quality but may impact your ability to monitor cameras in real-time."
+            />
 
-        <TableBody>
-          {/* Frontend Row */}
-          <FramerateRow
-            framerateData={frontendFramerate}
-            colorMap={colorMap}
-            getCellStyle={getCellStyle}
-            isDarkMode={isDarkMode}
-            theme={theme}
-            shortTooltip="Displays received frames."
-            longTooltip="Frontend represents the UI rendering performance. It shows how quickly your display receives and renders frames. Performance issues here won't affect recording quality but may impact your ability to monitor cameras in real-time."
-          />
+            {/* Divider between rows - now properly inside TableBody */}
+            <TableRow>
+              <TableCell colSpan={7} sx={{ padding: 0 }}>
+                <Divider sx={{ borderColor: theme.palette.divider }} />
+              </TableCell>
+            </TableRow>
 
-          {/* Divider between rows */}
-          <TableRow>
-            <TableCell colSpan={7} sx={{ padding: 0 }}>
-              <Divider sx={{ borderColor: theme.palette.divider }} />
-            </TableCell>
-          </TableRow>
-
-          {/* Backend Row */}
-          <FramerateRow
-            framerateData={backendFramerate}
-            colorMap={colorMap}
-            getCellStyle={getCellStyle}
-            isDarkMode={isDarkMode}
-            theme={theme}
-            shortTooltip="Captures frames from camera."
-            longTooltip="Backend represents the camera frame-grabbing performance. This is the true rate at which frames are pulled from the camera and saved during recording. This is the most important metric for recording quality and should remain stable even if frontend performance fluctuates."
-          />
-        </TableBody>
-      </Table>
-    </TableContainer>
+            {/* Backend Row */}
+            <FramerateRow
+                framerateData={backendFramerate}
+                colorMap={colorMap}
+                getCellStyle={getCellStyle}
+                isDarkMode={isDarkMode}
+                theme={theme}
+                shortTooltip="Captures frames from camera."
+                longTooltip="Backend represents the camera frame-grabbing performance. This is the true rate at which frames are pulled from the camera and saved during recording. This is the most important metric for recording quality and should remain stable even if frontend performance fluctuates."
+            />
+          </TableBody>
+        </Table>
+      </TableContainer>
   )
 }

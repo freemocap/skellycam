@@ -4,7 +4,7 @@ from typing import List, Dict
 
 from pydantic import BaseModel
 
-from skellycam.core import CameraId, CameraName
+from skellycam.core import CameraIndex, CameraName
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
@@ -146,10 +146,10 @@ class CameraDeviceInfo(BaseModel):
         return f"{self.description}"
 
 
-AvailableCameras = Dict[CameraId, CameraDeviceInfo]
+AvailableCameras = Dict[CameraIndex, CameraDeviceInfo]
 
 
 def available_cameras_to_default_camera_configs(available_devices: AvailableCameras) -> CameraConfigs:
-    return {camera_id: CameraConfig(camera_id=camera_id,
+    return {camera_id: CameraConfig(camera_index=camera_id,
                                     camera_name=camera_info.description,
                                     ) for camera_id, camera_info in available_devices.items()}

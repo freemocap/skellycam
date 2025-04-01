@@ -10,8 +10,8 @@ import {CameraListItem} from "@/components/available-cameras-panel/CameraListIte
 import {RefreshDetectedCamerasButton} from "@/components/available-cameras-panel/RefreshDetectedCameras";
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
-import {selectAllDevices, toggleCameraSelection, updateCameraConfig} from "@/store/slices/cameras-slices/camerasSlice";
-import {detectBrowserDevices} from "@/store/thunks/detect-cameras-thunks";
+import {selectAllCameras, toggleCameraSelection, updateCameraConfig} from "@/store/slices/cameras-slices/camerasSlice";
+import {detectCameraDevices} from "@/store/thunks/detect-cameras-thunks";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 
 export const AvailableCamerasView = () => {
@@ -19,20 +19,22 @@ export const AvailableCamerasView = () => {
     const dispatch = useAppDispatch();
 
     // Get data from the unified slice
-    const detectedCameras = useAppSelector(selectAllDevices);
-    const cameraConfigs = useAppSelector(state => state.cameras.configs);
+    const camerasRecord = useAppSelector(selectAllCameras);
     const isLoading = useAppSelector(state => state.cameras.isLoading);
+
+    // Convert cameras record to array for easier rendering
+    const camerasArray = Object.values(camerasRecord);
 
     const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set());
 
     // Handle expanding/collapsing camera config panels
-    const toggleConfig = (deviceId: string) => {
+    const toggleConfig = (cameraId: string) => {
         setExpandedConfigs(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(deviceId)) {
-                newSet.delete(deviceId);
+            if (newSet.has(cameraId)) {
+                newSet.delete(cameraId);
             } else {
-                newSet.add(deviceId);
+                newSet.add(cameraId);
             }
             return newSet;
         });
@@ -40,7 +42,7 @@ export const AvailableCamerasView = () => {
 
     // Initial camera detection
     useEffect(() => {
-        dispatch(detectBrowserDevices(true));
+        dispatch(detectCameraDevices(true));
     }, [dispatch]);
 
     // Handle connection to selected cameras
@@ -102,32 +104,32 @@ export const AvailableCamerasView = () => {
                     }}
                 >
                     <List dense disablePadding>
-                        {detectedCameras.map((device, index) => (
-                            <React.Fragment key={device.deviceId}>
+                        {camerasArray.map((camera, index) => (
+                            <React.Fragment key={camera.cameraId}>
                                 <CameraListItem
-                                    device={device}
-                                    isLast={index === detectedCameras.length - 1}
-                                    isConfigExpanded={expandedConfigs.has(device.deviceId)}
-                                    onToggleSelect={() => dispatch(toggleCameraSelection(device.deviceId))}
-                                    onToggleConfig={() => toggleConfig(device.deviceId)}
+                                    device={camera}
+                                    isLast={index === camerasArray.length - 1}
+                                    isConfigExpanded={expandedConfigs.has(camera.cameraId)}
+                                    onToggleSelect={() => dispatch(toggleCameraSelection(camera.cameraId))}
+                                    onToggleConfig={() => toggleConfig(camera.cameraId)}
                                 />
-                                {device.selected && (
+                                {camera.selected && (
                                     <CameraConfigPanel
-                                        config={cameraConfigs[device.deviceId]}
+                                        config={camera.config}
                                         onConfigChange={(newConfig) => {
                                             dispatch(updateCameraConfig({
-                                                deviceId: device.deviceId,
+                                                cameraId: camera.cameraId,
                                                 config: newConfig
                                             }));
                                         }}
-                                        isExpanded={expandedConfigs.has(device.deviceId)}
+                                        isExpanded={expandedConfigs.has(camera.cameraId)}
                                     />
                                 )}
                             </React.Fragment>
                         ))}
                     </List>
 
-                    {detectedCameras.length === 0 && (
+                    {camerasArray.length === 0 && (
                         <Box
                             sx={{
                                 p: 3,

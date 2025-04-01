@@ -95,7 +95,7 @@ class SingleSlotCameraSharedMemory:
         self.metadata_shm.put_data(metadata)
         self.last_written_frame_number.value = metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
         logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} put frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} into shared memory"
+            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} put frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} into shared memory"
         )
 
     def retrieve_frame(self) -> FramePayload:
@@ -104,7 +104,7 @@ class SingleSlotCameraSharedMemory:
         metadata = self.metadata_shm.get_data()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
+            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
         self.last_read_frame_number.value = metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
         return FramePayload.create(image=image, metadata=metadata)

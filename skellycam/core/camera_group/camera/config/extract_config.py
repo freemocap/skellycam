@@ -2,8 +2,8 @@ import logging
 
 import cv2
 
-from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
+from skellycam.core import CameraIndex
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraIdString
 from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
@@ -11,7 +11,7 @@ from skellycam.system.diagnostics.recommend_camera_exposure_setting import Expos
 logger = logging.getLogger(__name__)
 
 
-def extract_config_from_cv2_capture(camera_id: CameraId,
+def extract_config_from_cv2_capture(camera_id: CameraIdString,
                                     cv2_capture: cv2.VideoCapture,
                                     exposure_mode: str = ExposureModes.RECOMMENDED.name,
                                     rotation: RotationTypes = RotationTypes.NO_ROTATION,
@@ -29,7 +29,7 @@ def extract_config_from_cv2_capture(camera_id: CameraId,
         raise ValueError("Invalid camera configuration detected. Please check the camera settings.")
     try:
         return CameraConfig(
-            camera_id=camera_id,
+            camera_index=camera_id,
             use_this_camera=use_this_camera,
             resolution=ImageResolution(
                 width=width,

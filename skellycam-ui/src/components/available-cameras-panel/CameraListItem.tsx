@@ -3,10 +3,10 @@ import {Box, Checkbox, IconButton, ListItem, ListItemIcon, ListItemText, Typogra
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import * as React from "react";
-import {SerializedMediaDeviceInfo} from "@/store/slices/cameras-slices/camera-types";
+import {CameraDevice} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraListItemProps {
-    device: SerializedMediaDeviceInfo;
+    device: CameraDevice;
     isLast: boolean;
     isConfigExpanded: boolean;
     onToggleSelect: () => void;

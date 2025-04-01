@@ -5,14 +5,12 @@ import time
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
-from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app, SkellycamAppStateDTO
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue, \
-    LogRecordModel
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel
 from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -101,9 +99,9 @@ class WebsocketServer:
         logger.info("Ending listener for client messages...")
 
     async def _handle_ipc_queue_message(self, message: object|None = None):
-        if isinstance(message, CameraConfig):
-            logger.trace(f"Updating device extracted camera config for camera {message.camera_id}")
-            self._app.set_device_extracted_camera_config(message)
+        if isinstance(message, dict) and isinstance(list(message.values())[0], CameraConfig):
+            logger.trace(f"Updating device extracted camera configs")
+            self._app.set_device_extracted_camera_configs(message)
             message = self._app.state_dto()
         elif isinstance(message, SkellycamAppStateDTO):
             logger.trace(f"Relaying SkellycamAppStateDTO to frontend")

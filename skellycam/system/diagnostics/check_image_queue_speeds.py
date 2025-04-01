@@ -88,7 +88,7 @@ def measure_time(iterations: int = 100) -> Tuple[float, float]:
     queue = multiprocessing.Queue()
     pipe1, pipe2 = multiprocessing.Pipe()
     bytes_pipe1, bytes_pipe2 = multiprocessing.Pipe(duplex=True)
-    config = CameraConfig(camera_id=0)
+    config = CameraConfig(camera_index=0)
 
     sender_process = multiprocessing.Process(target=sender, args=(queue,
                                                                   pipe1,

@@ -1,12 +1,12 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
-import {selectConfigsForSelectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
+import {selectConfigsForSelectedCameras, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',
     async (_, { dispatch, getState }) => {
         const state = getState() as any;
-        const cameraConfigs = selectConfigsForSelectedDevices(state);
+        const cameraConfigs = selectConfigsForSelectedCameras(state);
 
         if (!cameraConfigs || Object.keys(cameraConfigs).length === 0) {
             const errorMsg = 'No camera devices selected for connection';
@@ -16,14 +16,9 @@ export const connectToCameras = createAsyncThunk(
 
         dispatch(setLoading(true));
         const connectUrl = 'http://localhost:8006/skellycam/cameras/connect';
-        const convertedConfigs: Record<number, CameraConfig> = Object.entries(cameraConfigs).reduce(
-            (accumulator, [_, config]) => {
-                accumulator[config.camera_id] = config;
-                return accumulator;
-            },{} as Record<string, CameraConfig>,
-        );
+
         const payload = {
-            camera_configs: convertedConfigs
+            camera_configs: cameraConfigs
         };
 
         const requestBody = JSON.stringify(payload, null, 2);

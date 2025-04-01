@@ -6,8 +6,8 @@ from pydantic import ConfigDict
 
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core import CameraIndex
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.camera_group_thread import CameraGroupThread
@@ -55,7 +55,7 @@ class CameraGroup:
         return self.shmorchestrator.multiframe_escape_ring_shm
 
     @property
-    def camera_ids(self) -> list[CameraId]:
+    def camera_ids(self) -> list[CameraIdString]:
         return list(self.dto.camera_configs.keys())
 
     @property

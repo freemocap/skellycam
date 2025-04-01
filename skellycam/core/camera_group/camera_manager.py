@@ -6,7 +6,7 @@ from typing import Dict, List
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.camera_group.camera.camera_process import CameraProcess
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
@@ -24,7 +24,7 @@ class CameraManager(BaseModel):
 
     orchestrator: CameraGroupOrchestrator
     camera_group_dto: CameraGroupDTO
-    camera_processes: Dict[CameraId, CameraProcess]
+    camera_processes: Dict[CameraIndex, CameraProcess]
 
     @classmethod
     def create(cls,

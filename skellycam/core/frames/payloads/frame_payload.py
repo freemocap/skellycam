@@ -18,7 +18,7 @@ class FramePayload(BaseModel):
 
     @property
     def camera_id(self):
-        return self.metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]
+        return self.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
 
     @property
     def frame_number(self):

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def create_cv2_video_capture(config: CameraConfig):
     cap_backend = determine_backend()
-    capture = cv2.VideoCapture(int(config.camera_id), cap_backend.value)
+    capture = cv2.VideoCapture(int(config.camera_index), cap_backend.value)
     if not capture.isOpened():
         raise FailedToOpenCameraException()
     success, image = capture.read()
@@ -28,5 +28,5 @@ def create_cv2_video_capture(config: CameraConfig):
     if not success or image is None:
         raise FailedToReadFrameFromCameraException()
 
-    logger.info(f"Created `cv2.VideoCapture` object for Camera: {config.camera_id}")
+    logger.info(f"Created `cv2.VideoCapture` object for Camera: {config.camera_index}")
     return capture

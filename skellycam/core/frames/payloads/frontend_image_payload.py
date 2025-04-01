@@ -8,8 +8,8 @@ import numpy as np
 from PIL import Image
 from pydantic import BaseModel
 
-from skellycam.core import CameraId
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
+from skellycam.core import CameraIndex
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
@@ -18,8 +18,8 @@ from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcTo
 
 Base64JPEGImage = str  # Base64 encoded JPEG image
 class FrontendFramePayload(BaseModel):
-    jpeg_images: dict[CameraId, Base64JPEGImage ]
-    camera_configs: dict[CameraId, CameraConfig]
+    jpeg_images: dict[CameraIndex, Base64JPEGImage]
+    camera_configs: CameraConfigs
     multi_frame_metadata: MultiFrameMetadata
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
     multi_frame_number: int = 0
@@ -34,7 +34,7 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
-                                 image_sizes: Optional[Dict[CameraId, Dict[str, int]]] = None,
+                                 image_sizes: dict[CameraIndex, dict[str, int]]|None = None,
                                  resize_image: float = .5,
                                  jpeg_quality: int = 80):
 
@@ -63,7 +63,7 @@ class FrontendFramePayload(BaseModel):
 
     @staticmethod
     def _resize_image(frame: FramePayload,
-                      image_sizes: Dict[CameraId, Dict[str, int]],
+                      image_sizes: Dict[CameraIndex, Dict[str, int]],
                       fallback_resize_ratio: float) -> np.ndarray:
         # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
         image = frame.image
@@ -73,8 +73,8 @@ class FrontendFramePayload(BaseModel):
             new_width = int(og_width * fallback_resize_ratio)
             new_height = int(og_height * fallback_resize_ratio)
         else:
-            new_width = image_sizes[str(camera_id)]["width"]
-            new_height = image_sizes[str(camera_id)]["height"]
+            new_width = image_sizes[camera_id]["width"]
+            new_height = image_sizes[camera_id]["height"]
 
         return cv2.resize(image, dsize=(new_width, new_height))
 

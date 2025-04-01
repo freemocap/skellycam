@@ -16,6 +16,7 @@ export const ConnectToCamerasButton: React.FC<ConnectToCamerasButtonProps> = ({ 
     const selectedCameras = useAppSelector(selectSelectedDevices);
 
     const handleConnectClick = async () => {
+        console.log("ConnectToCamerasButton handleConnectClick", selectedCameras, isLoading);
         if (isLoading) {
             console.log('Camera connection is already in progress');
             return;

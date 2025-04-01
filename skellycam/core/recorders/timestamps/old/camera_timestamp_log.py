@@ -4,12 +4,13 @@ from typing import Tuple
 
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
+from skellycam.core.camera_group.camera.config.camera_config import CameraIdString
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 
 
 class CameraTimestampLog(BaseModel):
-    camera_id: CameraId = Field(
+    camera_id: CameraIdString = Field(
         description="- Camera ID of the camera that recorded the frame"
     )
     multi_frame_number: int = Field(
@@ -76,7 +77,7 @@ class CameraTimestampLog(BaseModel):
     @classmethod
     def create_test_instance(cls):
         return cls(
-            camera_id=CameraId(0),
+            camera_id=CameraIndex(0),
             multi_frame_number=0,
             camera_frame_number=1,
             perf_counter_ns_timestamp=time.perf_counter_ns(),

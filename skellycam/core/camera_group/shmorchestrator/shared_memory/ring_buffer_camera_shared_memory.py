@@ -93,7 +93,7 @@ class RingBufferCameraSharedMemory(BaseModel):
         self.image_shm.put_data(image)
         self.metadata_shm.put_data(metadata)
         logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} put frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} into shared memory"
+            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} put frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} into shared memory"
         )
 
     def retrieve_latest_frame(self) -> FramePayload:
@@ -101,7 +101,7 @@ class RingBufferCameraSharedMemory(BaseModel):
         metadata = self.metadata_shm.get_latest_payload()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
+            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
         return FramePayload.create(image=image, metadata=metadata)
 
@@ -110,7 +110,7 @@ class RingBufferCameraSharedMemory(BaseModel):
         metadata = self.metadata_shm.get_next_payload()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_ID.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
+            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
         return FramePayload.create(image=image, metadata=metadata)
 

@@ -5,7 +5,7 @@ from typing import List
 import cv2
 import numpy as np
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, CameraDeviceInfo
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def get_available_cameras_opencv() -> AvailableCameras:
     available_cameras = {}
     for port in detect_opencv_ports():
-        available_cameras[CameraId(port)] = CameraDeviceInfo.from_opencv_port_number(port)
+        available_cameras[CameraIndex(port)] = CameraDeviceInfo.from_opencv_port_number(port)
     return available_cameras
 
 

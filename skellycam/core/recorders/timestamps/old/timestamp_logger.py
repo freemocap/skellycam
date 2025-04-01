@@ -4,7 +4,7 @@ from typing import List
 import polars as pl
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.recorders.timestamps.old.camera_timestamp_log import CameraTimestampLog
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class CameraTimestampLogger(BaseModel):
-    camera_id: CameraId
+    camera_id: CameraIdString
     timestamp_logs: List[CameraTimestampLog] = Field(default_factory=list)
 
     # self._csv_header = CameraTimestampLog.as_csv_header()

@@ -1,7 +1,7 @@
 import numpy as np
 from pydantic import BaseModel, computed_field
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_SHAPE
 
@@ -88,7 +88,7 @@ class FrameMetadata(BaseModel):
     """
     A Pydantic model to represent the metadata associated with a frame of image data, we will build this from the numpy array once we've cleared the camera/shm whackiness.
     """
-    camera_id: int = CameraId(0)
+    camera_id: int = CameraIndex(0)
     frame_number: int = 0
     frame_lifespan_timestamps_ns: FrameLifespanTimestamps
 
@@ -103,7 +103,7 @@ class FrameMetadata(BaseModel):
                              f"Expected: {FRAME_METADATA_SHAPE}, "
                              f"Actual: {metadata_array.shape}")
         return cls(
-            camera_id=metadata_array[FRAME_METADATA_MODEL.CAMERA_ID.value],
+            camera_id=metadata_array[FRAME_METADATA_MODEL.CAMERA_INDEX.value],
             frame_number=metadata_array[FRAME_METADATA_MODEL.FRAME_NUMBER.value],
             frame_lifespan_timestamps_ns=FrameLifespanTimestamps.from_frame_metadata(metadata_array)
         )

@@ -5,7 +5,7 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 
@@ -16,7 +16,7 @@ class FrameMetadataSaver(BaseModel):
     """
     Holds a list of FrameMetadata objects, one per frame of a recording
     """
-    camera_id: CameraId
+    camera_id: CameraIdString
     frame_metadata_list: List[FrameMetadata] = Field(default_factory=list)
 
     file_handle: TextIOWrapper

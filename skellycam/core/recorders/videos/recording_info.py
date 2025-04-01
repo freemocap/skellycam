@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict
 
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraId
+from skellycam.core import CameraIndex
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 
 if TYPE_CHECKING:
