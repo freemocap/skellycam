@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
@@ -14,32 +15,21 @@ from skellycam.utilities.wait_functions import wait_1ms
 logger = logging.getLogger(__name__)
 
 
-class FrameEscaperWorker:
+class FrameLoopManager:
     def __init__(
             self,
             camera_group_dto: CameraGroupDTO,
             shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
             new_configs_queue: multiprocessing.Queue,
-            use_thread: bool = False,
     ):
-        if use_thread:
-            self._worker = threading.Thread(target=self._run_worker,
-                                            name=self.__class__.__name__,
-                                            daemon=True,
-                                            kwargs=dict(camera_group_dto=camera_group_dto,
-                                                        shmorc_dto=shmorc_dto,
-                                                        new_configs_queue=new_configs_queue
-                                                        )
-                                            )
-        else:
-            self._worker = multiprocessing.Process(target=self._run_worker,
-                                                   name=self.__class__.__name__,
-                                                   daemon=True,
-                                                   kwargs=dict(camera_group_dto=camera_group_dto,
-                                                               shmorc_dto=shmorc_dto,
-                                                               new_configs_queue=new_configs_queue
-                                                               )
-                                                   )
+        self._worker = multiprocessing.Process(target=self._run_worker,
+                                               name=self.__class__.__name__,
+                                               daemon=True,
+                                               kwargs=dict(camera_group_dto=camera_group_dto,
+                                                           shmorc_dto=shmorc_dto,
+                                                           new_configs_queue=new_configs_queue
+                                                           )
+                                               )
 
     def start(self):
         logger.trace(f"Starting frame listener worker...")
@@ -54,26 +44,31 @@ class FrameEscaperWorker:
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.ipc.ws_logs_queue)
-        logger.trace(f"Starting FrameListener loop...")
+        logger.trace(f"Starting frame loop...")
         shmorchestrator = CameraGroupSharedMemoryOrchestrator.recreate(camera_group_dto=camera_group_dto,
                                                                        shmorc_dto=shmorc_dto,
                                                                        read_only=False)
         orchestrator = shmorchestrator.orchestrator
-        frame_loop_shm = shmorchestrator.camera_group_shm
+        camera_group_shm = shmorchestrator.camera_group_shm
         multi_frame_escape_shm = shmorchestrator.multiframe_escape_ring_shm
 
+        frame_loop_trigger_thread = threading.Thread(target=frame_read_trigger_loop,
+                                                     kwargs=dict(orchestrator=orchestrator,
+                                                                 camera_group_dto=camera_group_dto),
+                                                     daemon=True)
+        frame_loop_trigger_thread.start()
+
         backend_framerate_tracker = FramerateTracker.create(framerate_source="backend")
-        mf_payload: Optional[MultiFramePayload] = None
+        mf_payload: MultiFramePayload|None = None
         camera_configs = camera_group_dto.camera_configs
         try:
-
             while camera_group_dto.should_continue:
                 if not new_configs_queue.empty():
                     camera_configs = new_configs_queue.get()
 
                 if orchestrator.should_pull_multi_frame_from_shm.value and orchestrator.new_multi_frame_available:
 
-                    mf_payload: MultiFramePayload = frame_loop_shm.get_multi_frame_payload(
+                    mf_payload: MultiFramePayload = camera_group_shm.get_multi_frame_payload(
                         previous_payload=mf_payload,
                         camera_configs=camera_configs,
                     )
@@ -105,7 +100,7 @@ class FrameEscaperWorker:
             if not camera_group_dto.ipc.kill_camera_group_flag.value:
                 logger.trace(f"FrameListenerProcess shutting down - setting kill_camera_group_flag to True")
                 camera_group_dto.ipc.kill_camera_group_flag.value = True
-            frame_loop_shm.close()
+            camera_group_shm.close()
             multi_frame_escape_shm.close()
 
     def is_alive(self) -> bool:
@@ -113,3 +108,16 @@ class FrameEscaperWorker:
 
     def join(self):
         self._worker.join()
+
+def frame_read_trigger_loop(orchestrator: CameraGroupOrchestrator, camera_group_dto: CameraGroupDTO):
+    orchestrator.await_cameras_ready()
+    current_loop = orchestrator.loop_count.value
+    logger.debug("Triggering initial multi-frame read...")
+    orchestrator.trigger_multi_frame_read()
+    logger.debug("Multi-frame read loop started...")
+    while camera_group_dto.should_continue:
+        if current_loop != orchestrator.loop_count.value:
+            current_loop = orchestrator.loop_count.value
+            orchestrator.trigger_multi_frame_read()
+        else:
+            wait_1ms()

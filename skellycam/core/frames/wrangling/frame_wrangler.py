@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
-from skellycam.core.frames.wrangling.frame_listener_worker import FrameEscaperWorker
+from skellycam.core.frames.wrangling.frame_loop_manager import FrameLoopManager
 from skellycam.core.frames.wrangling.frame_saver_process import FrameSaverProcess
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FrameWrangler:
     camera_group_dto: CameraGroupDTO
-    frame_escaper: FrameEscaperWorker
+    frame_escaper: FrameLoopManager
     frame_saver: FrameSaverProcess
 
     @classmethod
@@ -24,14 +24,13 @@ class FrameWrangler:
                frame_saver_config_queue: multiprocessing.Queue,
                frame_listener_config_queue: multiprocessing.Queue):
 
-        return cls(frame_escaper=FrameEscaperWorker(camera_group_dto=camera_group_dto,
-                                                    shmorc_dto=shmorc_dto,
-                                                    new_configs_queue=frame_listener_config_queue,
-                                                    use_thread=True),  # use a thread instead of a process for the listener, since its job is pretty simple
+        return cls(frame_escaper=FrameLoopManager(camera_group_dto=camera_group_dto,
+                                                  shmorc_dto=shmorc_dto,
+                                                  new_configs_queue=frame_listener_config_queue),
 
                    frame_saver=FrameSaverProcess(camera_group_dto=camera_group_dto,
                                                  multi_frame_escape_shm_dto=shmorc_dto.multi_frame_escape_shm_dto,
-                                                 new_configs_queue=frame_saver_config_queue),  #this needs to be a process becuase saving is IO blocking
+                                                 new_configs_queue=frame_saver_config_queue),
                    camera_group_dto=camera_group_dto)
 
     def start(self):

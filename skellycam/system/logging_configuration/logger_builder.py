@@ -1,12 +1,11 @@
 import logging
-import os
 from logging.config import dictConfig
 from multiprocessing import Queue
 from typing import Optional
 
 from .filters.delta_time import DeltaTimeFilter
 from .handlers.colored_console import ColoredConsoleHandler
-from .handlers.websocket_log_queue_handler import WebSocketQueueHandler, create_websocket_log_queue
+from .handlers.websocket_log_queue_handler import WebSocketQueueHandler
 from .log_format_string import LOG_FORMAT_STRING
 from .log_levels import LogLevels
 from ..default_paths import get_log_file_path

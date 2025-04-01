@@ -53,7 +53,7 @@ class FrameSaverProcess:
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.ipc.ws_logs_queue)
-        logger.debug(f"FrameRouter process started!")
+        logger.debug(f"FrameSaver process started!")
 
 
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
@@ -86,7 +86,7 @@ class FrameSaverProcess:
                     if previous_mf_payload_pulled_from_shm:
                         if not mf_payload.multi_frame_number == previous_mf_payload_pulled_from_shm.multi_frame_number + 1:
                             raise ValueError(
-                                f"FrameRouter expected mf_payload #{previous_mf_payload_pulled_from_shm.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
+                                f"FrameSaver expected mf_payload #{previous_mf_payload_pulled_from_shm.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
                     previous_mf_payload_pulled_from_shm = mf_payload
                     mf_payloads_to_process.append(mf_payload)
 
@@ -111,7 +111,7 @@ class FrameSaverProcess:
                         if previous_mf_payload_pulled_from_deque:
                             if not mf_payload.multi_frame_number == previous_mf_payload_pulled_from_deque.multi_frame_number + 1:
                                 raise ValueError(
-                                    f"FrameRouter expected mf_payload #{previous_mf_payload_pulled_from_deque.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
+                                    f"FrameSaver expected mf_payload #{previous_mf_payload_pulled_from_deque.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
                         previous_mf_payload_pulled_from_deque = mf_payload
                         if camera_group_dto.ipc.record_frames_flag.value:
                             if not recording_manager:

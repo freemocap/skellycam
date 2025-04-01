@@ -47,7 +47,7 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                         ? 'rgba(0,0,0,0.2)'
                         : 'rgba(0,0,0,0.05)',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s',
+                transition: 'background-color 0.1s',
                 '&:hover': {
                     backgroundColor: alpha(color, theme.palette.mode === 'dark' ? 0.05 : 0.1)
                 }
@@ -139,7 +139,7 @@ export const LogTerminal = () => {
     );
 
     useEffect(() => {
-        logEndRef.current?.scrollIntoView({behavior: 'smooth'});
+        logEndRef.current?.scrollIntoView({behavior: 'instant'});
     }, [filteredLogs]);
 
     return (

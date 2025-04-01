@@ -3,6 +3,7 @@ import multiprocessing
 from multiprocessing import Queue
 from typing import Optional
 
+from skellycam.system.logging_configuration.log_levels import LogLevels
 from ..formatters.custom_formatter import CustomFormatter
 from ..filters.delta_time import DeltaTimeFilter
 from ..log_format_string import LOG_FORMAT_STRING
@@ -45,13 +46,14 @@ class WebSocketQueueHandler(logging.Handler):
         self.setFormatter(CustomFormatter(LOG_FORMAT_STRING))
 
     def emit(self, record: logging.LogRecord):
-        log_record_dict =  record.__dict__
-        log_record_dict["formatted_message"] = self.format(record)
-        log_record_dict['type'] = record.__class__.__name__
-        log_record_dict['exc_info'] = str(log_record_dict['exc_info']) if log_record_dict['exc_info'] else None
-        if not isinstance(log_record_dict['msg'], str):
-            log_record_dict['msg'] = str(log_record_dict['msg'])
-        self.queue.put(LogRecordModel(**log_record_dict).model_dump())
+        if record.levelno > LogLevels.LOOP.value:
+            log_record_dict =  record.__dict__
+            log_record_dict["formatted_message"] = self.format(record)
+            log_record_dict['type'] = record.__class__.__name__
+            log_record_dict['exc_info'] = str(log_record_dict['exc_info']) if log_record_dict['exc_info'] else None
+            if not isinstance(log_record_dict['msg'], str):
+                log_record_dict['msg'] = str(log_record_dict['msg'])
+            self.queue.put(LogRecordModel(**log_record_dict).model_dump())
 
 
 MAX_WEBSOCKET_LOG_QUEUE_SIZE = 1000

@@ -45,6 +45,7 @@ class CameraProcess:
                                                    kwargs=dict(camera_id=camera_id,
                                                                camera_config=camera_config,
                                                                camera_group_dto=camera_group_dto,
+                                                                new_config_queue=new_config_queue,
                                                                frame_loop_flags=frame_loop_flags,
                                                                camera_shm_dto=camera_shared_memory_dto)
                                                    ),
@@ -55,6 +56,7 @@ class CameraProcess:
     def _run_process(camera_id: CameraIdString,
                      camera_config: CameraConfig,
                      camera_group_dto: CameraGroupDTO,
+                     new_config_queue: multiprocessing.Queue,
                      frame_loop_flags: CameraFrameLoopFlags,
                      camera_shm_dto: CameraSharedMemoryDTO,
                      ):
@@ -106,11 +108,11 @@ class CameraProcess:
                         frame_loop_flags=frame_loop_flags,
                         frame_number=frame_number,
                     )
-                    logger.loop(f"Camera {camera_config.camera_index} got frame# {frame_number} successfully")
+                    logger.loop(f"Camera {camera_config.camera_index} got frame# {frame_number-1} successfully")
                 else:
                     check_for_config_update(config=camera_config,
                                             cv2_video_capture=cv2_video_capture,
-                                            new_config_queue=camera_group_dto.ipc.update_camera_configs_queue,
+                                            new_config_queue=new_config_queue,
                                             ipc_queue=camera_group_dto.ipc.ws_ipc_relay_queue,
                                             frame_loop_flags=frame_loop_flags,
                                             )
