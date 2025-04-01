@@ -109,7 +109,7 @@ class WebsocketServer:
             self.latest_backend_framerate = message
             return # will send framerate update bundled with frontend payload
         else:
-            raise ValueError(f"Unknown message type: {type(message)}")
+            logger.warning(f"Unknown message type: {type(message)}")
 
         await self.websocket.send_json(message.model_dump())
 

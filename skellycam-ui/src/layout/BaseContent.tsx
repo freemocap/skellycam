@@ -3,7 +3,7 @@ import React from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
-import {CamerasView} from "@/components/camera-views/CamerasView";
+import {CamerasView} from "@/components/CamerasView";
 import {useTheme} from "@mui/material/styles";
 
 export const BaseContent = () => {
@@ -12,9 +12,11 @@ export const BaseContent = () => {
     return (
         <React.Fragment>
             <Box sx={{
-                py: 6,
-                px: 4,
+                py: 1,
+                px: 1,
                 flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
                 height: '100%',
                 backgroundColor: theme.palette.mode === 'dark'
                     ? theme.palette.background.default
@@ -23,9 +25,16 @@ export const BaseContent = () => {
                 borderWidth: '1px',
                 borderColor: theme.palette.divider
             }}>
-                <ErrorBoundary>
-                    <CamerasView/>
-                </ErrorBoundary>
+                <Box sx={{
+                    flex: 1,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}>
+                    <ErrorBoundary>
+                        <CamerasView/>
+                    </ErrorBoundary>
+                </Box>
                 <Box component="footer" sx={{p: 1}}>
                     <Copyright />
                 </Box>
