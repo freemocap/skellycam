@@ -34,7 +34,7 @@ export const camerasSlice = createSlice({
                 state.cameras[cameraId] = {
                     ...device,
                     // Preserve the existing selection state or default to false
-                    selected: existingCamera ? existingCamera.selected : false,
+                    selected: existingCamera ? existingCamera.selected : true,
                     // Preserve the existing config or create a new default one
                     config: existingCamera?.config || createDefaultCameraConfig(device.index, device.label)
                 };

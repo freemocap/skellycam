@@ -98,7 +98,6 @@ export const AvailableCamerasView = () => {
                 <Paper
                     elevation={0}
                     sx={{
-                        bgcolor: 'background.paper',
                         borderRadius: 2,
                         overflow: 'hidden'
                     }}
@@ -107,7 +106,7 @@ export const AvailableCamerasView = () => {
                         {camerasArray.map((camera, index) => (
                             <React.Fragment key={camera.cameraId}>
                                 <CameraListItem
-                                    device={camera}
+                                    camera={camera}
                                     isLast={index === camerasArray.length - 1}
                                     isConfigExpanded={expandedConfigs.has(camera.cameraId)}
                                     onToggleSelect={() => dispatch(toggleCameraSelection(camera.cameraId))}

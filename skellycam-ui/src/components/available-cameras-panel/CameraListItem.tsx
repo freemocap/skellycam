@@ -6,7 +6,7 @@ import * as React from "react";
 import {CameraDevice} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraListItemProps {
-    device: CameraDevice;
+    camera: CameraDevice;
     isLast: boolean;
     isConfigExpanded: boolean;
     onToggleSelect: () => void;
@@ -14,12 +14,12 @@ interface CameraListItemProps {
 }
 
 export const CameraListItem: React.FC<CameraListItemProps> = ({
-    device,
-    isLast,
-    isConfigExpanded,
-    onToggleSelect,
-    onToggleConfig
-}) => {
+                                                                  camera,
+                                                                  isLast,
+                                                                  isConfigExpanded,
+                                                                  onToggleSelect,
+                                                                  onToggleConfig
+                                                              }) => {
     // Move useTheme() inside the component body
     const theme = useTheme();
 
@@ -36,40 +36,40 @@ export const CameraListItem: React.FC<CameraListItemProps> = ({
             <ListItemIcon>
                 <Checkbox
                     edge="start"
-                    checked={device.selected || false}
+                    checked={camera.selected || false}
                     onChange={onToggleSelect}
                     color={theme.palette.primary.main as any}
                 />
             </ListItemIcon>
             <ListItemText
                 primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <Typography
                             component="span"
                             variant="body2"
                             color={theme.palette.text.primary}
-                            sx={{ mr: 1, fontWeight: 600 }}
+                            sx={{mr: 1, fontWeight: 600}}
                         >
-                            Camera {device.index}
+                            Camera {camera.index}
                         </Typography>
                         <Typography
                             component="span"
                             variant="body2"
                             color={theme.palette.text.secondary}
                         >
-                            {device.label || `Unknown Device ${device.index}`}
+                            {`${camera.label}, id: ${camera.cameraId}` || `Unknown Device ${camera.index}`}
                         </Typography>
                     </Box>
                 }
             />
-            {device.selected && (
+            {camera.selected && (
                 <IconButton
                     size="small"
                     onClick={onToggleConfig}
                 >
                     {isConfigExpanded
-                        ? <KeyboardArrowUpIcon />
-                        : <KeyboardArrowDownIcon />}
+                        ? <KeyboardArrowUpIcon/>
+                        : <KeyboardArrowDownIcon/>}
                 </IconButton>
             )}
         </ListItem>

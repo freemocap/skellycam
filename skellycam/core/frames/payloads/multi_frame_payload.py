@@ -15,6 +15,8 @@ from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcTo
 from skellycam.utilities.rotate_image import rotate_image
 
 
+
+
 class MultiFrameNumpyBuffer(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     mf_time_mapping_buffer: np.ndarray
@@ -71,7 +73,9 @@ class MultiFrameNumpyBuffer(BaseModel):
                     f"Metadata frame number {metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} does not match expected frame number {self.multi_frame_number}"
                 )
             camera_index = metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
-            camera_id = self.camera_index_to_camera_id(camera_index=camera_index)
+            camera_id = camera_index_to_camera_id(camera_index=camera_index,
+                                                  camera_configs=camera_configs)
+
             image_shape = (metadata[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value],
                            metadata[FRAME_METADATA_MODEL.IMAGE_WIDTH.value],
                            metadata[FRAME_METADATA_MODEL.IMAGE_COLOR_CHANNELS.value])
@@ -162,15 +166,11 @@ class MultiFramePayload(BaseModel):
     def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs) -> 'MultiFramePayload':
         return buffer.to_multi_frame_payload(camera_configs=camera_configs)
 
-    def camera_index_to_camera_id(self, camera_index: int) -> CameraIdString:
-        for camera_id, camera_config in self.camera_configs.items():
-            if camera_config.camera_index == camera_index:
-                return camera_id
-        raise ValueError(f"Camera index {camera_index} not found in camera configs")
 
     def add_frame(self, frame_dto: FramePayload) -> None:
         camera_index = frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
-        camera_id = self.camera_index_to_camera_id(camera_index=camera_index)
+        camera_id = camera_index_to_camera_id(camera_index=camera_index,
+                                               camera_configs=self.camera_configs)
         for frame in self.frames.values():
             if frame:
                 if frame.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value] == camera_index:
@@ -248,6 +248,11 @@ class MultiFrameMetadata(BaseModel):
         return row
 
 
+def camera_index_to_camera_id(camera_index: int, camera_configs:CameraConfigs) -> CameraIdString:
+    for camera_id, camera_config in camera_configs.items():
+        if camera_config.camera_index == camera_index:
+            return camera_id
+    raise ValueError(f"Camera index {camera_index} not found in camera configs")
 
 
 if __name__ == "__main__":

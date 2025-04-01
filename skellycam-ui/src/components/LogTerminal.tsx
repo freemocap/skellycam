@@ -3,8 +3,6 @@ import {useEffect, useRef, useState} from "react";
 import {LogEntry, LogSeverity} from "@/store/slices/logRecordsSlice";
 import {useAppSelector} from "@/store/AppStateStore";
 
-const LOG_LEVELS = ["LOOP", "TRACE", "DEBUG", "INFO", "SUCCESS", "API", "WARNING", "ERROR"] as const;
-type LogLevel = typeof LOG_LEVELS[number];
 
 const LOG_COLORS = {
     "LOOP": "#999",

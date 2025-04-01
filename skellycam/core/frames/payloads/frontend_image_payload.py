@@ -9,7 +9,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs, CameraIdString
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
@@ -18,7 +18,7 @@ from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcTo
 
 Base64JPEGImage = str  # Base64 encoded JPEG image
 class FrontendFramePayload(BaseModel):
-    jpeg_images: dict[CameraIndex, Base64JPEGImage]
+    jpeg_images: dict[CameraIdString, Base64JPEGImage]
     camera_configs: CameraConfigs
     multi_frame_metadata: MultiFrameMetadata
     utc_ns_to_perf_ns: UtcToPerfCounterMapping
