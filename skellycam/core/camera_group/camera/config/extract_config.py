@@ -11,7 +11,7 @@ from skellycam.system.diagnostics.recommend_camera_exposure_setting import Expos
 logger = logging.getLogger(__name__)
 
 
-def extract_config_from_cv2_capture(camera_id: CameraIdString,
+def extract_config_from_cv2_capture(camera_index: CameraIndex,
                                     cv2_capture: cv2.VideoCapture,
                                     exposure_mode: str = ExposureModes.RECOMMENDED.name,
                                     rotation: RotationTypes = RotationTypes.NO_ROTATION,
@@ -29,7 +29,7 @@ def extract_config_from_cv2_capture(camera_id: CameraIdString,
         raise ValueError("Invalid camera configuration detected. Please check the camera settings.")
     try:
         return CameraConfig(
-            camera_index=camera_id,
+            camera_index=camera_index,
             use_this_camera=use_this_camera,
             resolution=ImageResolution(
                 width=width,

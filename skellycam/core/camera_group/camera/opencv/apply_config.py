@@ -51,7 +51,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
         cv2_vid_capture.set(
             cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc)
         )
-        extracted_config = extract_config_from_cv2_capture(camera_id=config.camera_index,
+        extracted_config = extract_config_from_cv2_capture(camera_index=config.camera_index,
                                                            cv2_capture=cv2_vid_capture,
                                                            exposure_mode=ExposureModes.MANUAL.name,  # set to manual after running recommended routine the first time
                                                            rotation=config.rotation,

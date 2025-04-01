@@ -76,6 +76,9 @@ class CameraManager(BaseModel):
         # Check for new camera configs
         if not self.camera_group_dto.ipc.update_camera_configs_queue.empty():
             logger.trace(f"Handling camera config updates for cameras: {self.camera_ids}")
+            self.orchestrator.pause_loop()
+            while not self.orchestrator.frame_loop_paused:
+                wait_100ms()
             update_instructions = self.camera_group_dto.ipc.update_camera_configs_queue.get()
 
             self.update_camera_configs(update_instructions)
@@ -83,7 +86,9 @@ class CameraManager(BaseModel):
                     [not camera_process.new_config_queue.empty() for camera_process in
                      self.camera_processes.values()]) and self.camera_group_dto.should_continue:
                 wait_100ms()
-            self.orchestrator.await_cameras_ready()
+            self.orchestrator.unpause_loop()
+            while self.orchestrator.frame_loop_paused:
+                wait_100ms()
             logger.trace(f"Camera configs updated for cameras: {self.camera_ids}")
 
     def close(self):
