@@ -1,11 +1,15 @@
 // recordingInfoSlice.ts
-import type {PayloadAction} from '@reduxjs/toolkit'
+import {createAsyncThunk, PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
 import {z} from 'zod';
 
-export const getDefaultRecordingDirectory = (): string => {
-    return '~/skellycam_data/recordings';
+export const getDefaultRecordingDirectory = async () => {
+    const homePath =   await window.electronAPI.getHomeDirectory()
+    const defaultSkellycamDataHFolder =  '/skellycam_data/recordings';
+    return `${homePath}${defaultSkellycamDataHFolder}`;
 };
+
+
 
 // Simplified schema to match server expectations
 export const RecordingInfoSchema = z.object({
@@ -23,7 +27,7 @@ interface RecordingStatusState {
 const initialState: RecordingStatusState = {
     currentRecordingInfo: RecordingInfoSchema.parse({
         isRecording: false,
-        recordingDirectory: getDefaultRecordingDirectory(),
+        recordingDirectory: await getDefaultRecordingDirectory(),
         recordingName: null,
     })
 };

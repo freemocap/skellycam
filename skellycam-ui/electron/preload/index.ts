@@ -4,7 +4,10 @@ import {contextBridge, ipcRenderer} from 'electron'
 contextBridge.exposeInMainWorld('electronAPI', {
   // Specific functionality
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
-  // Add other specific functions here
+  openFolder: (folderPath: string) => ipcRenderer.invoke('open-folder', folderPath),
+  getHomeDirectory: () => ipcRenderer.invoke('get-home-directory'),
+  getFolderContents: (folderPath: string) => ipcRenderer.invoke('get-folder-contents', folderPath),
+
 })
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {

@@ -5,12 +5,15 @@ import {CssBaseline} from "@mui/material";
 import {BaseContent} from "@/layout/BaseContent";
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
 import {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
-import {useAppSelector} from "@/store/AppStateStore";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {useEffect} from "react";
+import {initializeWithExpandedPath} from "@/store/slices/recordingInfoSlice";
 
 export const PaperbaseContent = function () {
-    const themeMode = useAppSelector(state => state.theme.mode);
 
+    const themeMode = useAppSelector(state => state.theme.mode);
     // Create theme dynamically based on current mode
+
     const theme = React.useMemo(() =>
             createExtendedTheme(themeMode),
         [themeMode]

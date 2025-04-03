@@ -1,5 +1,5 @@
 import React from 'react';
-import {Box, Checkbox, FormControlLabel, TextField} from '@mui/material';
+import {Box, Checkbox, FormControlLabel, TextField, useTheme} from '@mui/material';
 
 interface DelayStartControlProps {
     useDelay: boolean;
@@ -14,6 +14,7 @@ export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
     onDelayToggle,
     onDelayChange
 }) => {
+    const theme = useTheme();
     return (
         <Box display="flex" alignItems="center" gap={2}>
             <FormControlLabel
@@ -21,7 +22,8 @@ export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
                     <Checkbox
                         checked={useDelay}
                         onChange={(e) => onDelayToggle(e.target.checked)}
-                        color="primary"
+                        color={theme.palette.primary.contrastText}
+
                     />
                 }
                 label="Delay Start"

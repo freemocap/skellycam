@@ -14,7 +14,7 @@ import {selectAllCameras, toggleCameraSelection, updateCameraConfig} from "@/sto
 import {detectCameraDevices} from "@/store/thunks/detect-cameras-thunks";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 
-export const AvailableCamerasView = () => {
+export const AvailableCamerasPanel = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
 

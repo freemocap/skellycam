@@ -1,11 +1,37 @@
+// skellycam-ui/src/components/ui-components/LeftSidePanelContent.tsx
 import * as React from 'react';
 import Box from "@mui/material/Box";
-import {List, ListItem, Paper, useTheme} from "@mui/material";
+import {List, ListItem, useTheme} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
-import {AvailableCamerasView} from "@/components/available-cameras-panel/AvailableCamerasView";
+import {AvailableCamerasPanel} from "@/components/available-cameras-panel/AvailableCamerasPanel";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import ThemeToggle from "@/components/ui-components/ThemeToggle";
 
+// Extract reusable scrollbar styles
+const scrollbarStyles = {
+  '&::-webkit-scrollbar': {
+    width: '8px',
+    backgroundColor: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
+      ? 'rgba(255, 255, 255, 0.2)'
+      : 'rgba(0, 0, 0, 0.2)',
+    borderRadius: '4px',
+    '&:hover': {
+      backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
+        ? 'rgba(255, 255, 255, 0.3)'
+        : 'rgba(0, 0, 0, 0.3)',
+    },
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: 'transparent',
+  },
+  scrollbarWidth: 'thin',
+  scrollbarColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
+    ? 'rgba(255, 255, 255, 0.2) transparent'
+    : 'rgba(0, 0, 0, 0.2) transparent',
+};
 
 export const LeftSidePanelContent = () => {
     const theme = useTheme();
@@ -50,36 +76,13 @@ export const LeftSidePanelContent = () => {
                 flex: 1,
                 overflowY: 'auto',
                 overflowX: 'hidden',
-                '&::-webkit-scrollbar': {
-                    width: '8px',
-                    backgroundColor: 'transparent',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.2)'
-                        : 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '4px',
-                    '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.3)'
-                            : 'rgba(0, 0, 0, 0.3)',
-                    },
-                },
-                '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'transparent',
-                },
-                scrollbarWidth: 'thin',
-                scrollbarColor: theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.2) transparent'
-                    : 'rgba(0, 0, 0, 0.2) transparent',
+                ...scrollbarStyles
             }}>
                 <ThemeToggle />
                 <WebsocketConnectionStatus/>
-                <AvailableCamerasView/>
+                <AvailableCamerasPanel/>
                 <RecordingInfoPanel/>
-                <Paper/>
             </Box>
         </Box>
     );
 }
-
