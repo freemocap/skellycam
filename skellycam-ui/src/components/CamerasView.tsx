@@ -1,317 +1,333 @@
-// skellycam-ui/src/components/CamerasView.tsx
-import { Box, Typography } from "@mui/material";
-import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { useLatestImagesContext } from "@/context/latest-images-context/LatestImagesContext";
-import { RowsPhotoAlbum } from "react-photo-album";
-import "react-photo-album/rows.css";
-import { useAppSelector } from "@/store/AppStateStore";
+import React, {useEffect, useRef, useState} from 'react';
+import {Box, CircularProgress, Grid, Paper, Typography, useTheme} from '@mui/material';
+import {useAppSelector} from '@/store/AppStateStore';
+import {useLatestImagesContext} from '@/context/latest-images-context/LatestImagesContext';
 
-interface CameraImage {
-    src: string;
-    width: number;
-    height: number;
-    key?: string;
-    alt?: string;
+// Represents image data for a camera
+interface ImageData {
+  src: string;
+  cameraId: string;
+  aspectRatio: number; // width / height
 }
 
-// Default dimensions as fallback
-const DEFAULT_WIDTH = 640;
-const DEFAULT_HEIGHT = 480;
+const ImageGrid: React.FC = () => {
+  const theme = useTheme();
+  const { latestImageUrls} = useLatestImagesContext();
+  const cameraConfigs = useAppSelector(state => state.latestPayload.cameraConfigs);
 
-export const CamerasView = () => {
-    const { latestImageUrls } = useLatestImagesContext();
-    const [cameraImages, setCameraImages] = useState<CameraImage[]>([]);
-    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-    const containerRef = useRef<HTMLDivElement>(null);
-    const cameraConfigs = useAppSelector(state => state.latestPayload.cameraConfigs);
-    // Store previous camera configs for comparison
-    const prevCameraConfigsRef = useRef<typeof cameraConfigs>(null);
+  const [processedImages, setProcessedImages] = useState<ImageData[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
 
-    // Persistent dimension cache that survives across renders
-    const dimensionCache = useRef<Record<string, { width: number, height: number }>>({});
+  // Process the incoming images
+  useEffect(() => {
+    if (!latestImageUrls || Object.keys(latestImageUrls).length === 0) return;
 
-    // Track which camera IDs we've already processed to avoid redundant loading
-    const processedCameraIds = useRef<Set<string>>(new Set());
+    const images: ImageData[] = [];
 
-    // Setup resize observer to track container dimensions
-    useEffect(() => {
-        if (!containerRef.current) return;
+    Object.entries(latestImageUrls).forEach(([cameraId, imageData]) => {
+      // Convert base64 to data URL if needed
+      const isBase64 = imageData.startsWith('data:image');
+      const src = isBase64 ? imageData : `data:image/jpeg;base64,${imageData}`;
 
-        const resizeObserver = new ResizeObserver(entries => {
-            const { width, height } = entries[0].contentRect;
-            setContainerSize({ width, height });
+      // Create a temporary image to get dimensions
+      const img = new Image();
+      img.src = src;
+
+      // Use camera configs if available or use default aspect ratio
+      const config = cameraConfigs?.cameras?.[cameraId];
+      const aspectRatio = config ? config.resolution.width / config.resolution.height : 4/3;
+
+      images.push({
+        src,
+        cameraId,
+        aspectRatio,
+      });
+    });
+
+    setProcessedImages(images);
+  }, [latestImageUrls, cameraConfigs]);
+
+  // Update container dimensions on resize
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setContainerDimensions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight,
         });
+      }
+    };
 
-        resizeObserver.observe(containerRef.current);
-        return () => resizeObserver.disconnect();
-    }, []);
+    updateDimensions();
+    const resizeObserver = new ResizeObserver(updateDimensions);
 
-    useEffect(() => {
-        if (!cameraConfigs) return;
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
 
-        const prevConfigs = prevCameraConfigsRef.current;
-        prevCameraConfigsRef.current = cameraConfigs;
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+    };
+  }, []);
 
-        // If we have previous configs and they're different from current ones, reset cache
-        if (prevConfigs && JSON.stringify(prevConfigs) !== JSON.stringify(cameraConfigs)) {
-            console.log("Camera config changes detected, resetting dimension cache");
-            dimensionCache.current = {};
-            processedCameraIds.current.clear();
-        }
-    }, [cameraConfigs]);
+  // Calculate optimal grid layout
+  const calculateGridLayout = (images: ImageData[], containerWidth: number, containerHeight: number) => {
+    if (images.length === 0) return { cols: 1, rows: 1 };
 
-    // Process individual image once loaded - extracted as memoized callback
-    const processImage = useCallback((cameraId: string, imageUrl: string): Promise<CameraImage> => {
-        // Use cached dimensions if available
-        if (dimensionCache.current[cameraId]) {
-            const { width, height } = dimensionCache.current[cameraId];
-            return Promise.resolve({
-                src: imageUrl,
-                width,
-                height,
-                key: cameraId,
-                alt: `Camera ${cameraId}`
-            });
-        }
+    // Find the grid configuration that maximizes image size
+    let bestLayout = { cols: 1, rows: 1, area: 0 };
 
-        // Otherwise load the image to get dimensions
-        return new Promise<CameraImage>(resolve => {
-            const img = new Image();
+    // Try different grid configurations
+    for (let cols = 1; cols <= images.length; cols++) {
+      const rows = Math.ceil(images.length / cols);
 
-            img.onload = () => {
-                const dimensions = {
-                    width: img.naturalWidth,
-                    height: img.naturalHeight
-                };
-                dimensionCache.current[cameraId] = dimensions;
+      // Calculate the area each image would get
+      const cellWidth = containerWidth / cols;
+      const cellHeight = containerHeight / rows;
 
-                resolve({
-                    src: imageUrl,
-                    ...dimensions,
-                    key: cameraId,
-                    alt: `Camera ${cameraId}`
-                });
-            };
+      // Calculate minimum scaling factor across all images
+      let minScale = Infinity;
+      images.forEach(image => {
+        const scaleWidth = cellWidth / (image.aspectRatio * cellHeight);
+        const scaleHeight = cellHeight / (image.aspectRatio === 0 ? 1 : cellWidth / image.aspectRatio);
+        minScale = Math.min(minScale, Math.min(scaleWidth, scaleHeight));
+      });
 
-            img.onerror = () => {
-                dimensionCache.current[cameraId] = {
-                    width: DEFAULT_WIDTH,
-                    height: DEFAULT_HEIGHT
-                };
+      // Calculate effective area
+      const effectiveArea = minScale * (cellWidth * cellHeight);
 
-                resolve({
-                    src: imageUrl,
-                    width: DEFAULT_WIDTH,
-                    height: DEFAULT_HEIGHT,
-                    key: cameraId,
-                    alt: `Camera ${cameraId}`
-                });
-            };
+      if (effectiveArea > bestLayout.area) {
+        bestLayout = { cols, rows, area: effectiveArea };
+      }
+    }
 
-            img.src = imageUrl;
-        });
-    }, []);
+    return { cols: bestLayout.cols, rows: bestLayout.rows };
+  };
 
-// Load and process camera images - optimized for frequent updates
-    useEffect(() => {
-        if (!latestImageUrls) return;
+  const { cols, rows } = calculateGridLayout(
+    processedImages,
+    containerDimensions.width || 1200,
+    containerDimensions.height || 800
+  );
 
-        const currentCameraIds = new Set(Object.keys(latestImageUrls));
-
-        // Fast path: dimensions are already cached for all cameras
-        const allCamerasDimensionsCached = Object.keys(latestImageUrls).every(
-            id => dimensionCache.current[id]
-        );
-
-        if (allCamerasDimensionsCached) {
-            // Just update URLs without re-measuring
-            setCameraImages(prevImages => {
-                // Create new array only if URLs have changed
-                const needsUpdate = prevImages.some(img =>
-                    img.key && latestImageUrls[img.key] !== img.src
-                );
-
-                if (!needsUpdate) return prevImages;
-
-                // Update just the image URLs, maintain same objects otherwise
-                const updatedImages = prevImages.map(img => {
-                    if (img.key && latestImageUrls[img.key] !== img.src) {
-                        return { ...img, src: latestImageUrls[img.key] };
-                    }
-                    return img;
-                });
-
-                // Add any new cameras
-                const existingIds = new Set(updatedImages.map(img => img.key));
-                const newImages = Object.entries(latestImageUrls)
-                    .filter(([id]) => !existingIds.has(id))
-                    .map(([id, url]) => ({
-                        src: url,
-                        width: dimensionCache.current[id]?.width || DEFAULT_WIDTH,
-                        height: dimensionCache.current[id]?.height || DEFAULT_HEIGHT,
-                        key: id,
-                        alt: `Camera ${id}`
-                    }));
-
-                // Filter out removed cameras and add new ones
-                return [
-                    ...updatedImages.filter(img => img.key && currentCameraIds.has(img.key)),
-                    ...newImages
-                ];
-            });
-            return;
-        }
-
-        // Slow path: need to measure dimensions for some cameras
-        const measureCameras = async () => {
-            const camerasToMeasure = Object.entries(latestImageUrls)
-                .filter(([id]) => !dimensionCache.current[id]);
-
-            if (camerasToMeasure.length === 0) return;
-
-            const newPhotos = await Promise.all(
-                camerasToMeasure.map(([cameraId, imageUrl]) =>
-                    processImage(cameraId, imageUrl)
-                )
-            );
-
-            // Update with newly measured photos
-            setCameraImages(prevPhotos => {
-                const updatedPhotos = [...prevPhotos];
-
-                // Update or add new photos
-                newPhotos.forEach(newPhoto => {
-                    const index = updatedPhotos.findIndex(p => p.key === newPhoto.key);
-                    if (index >= 0) {
-                        updatedPhotos[index] = newPhoto;
-                    } else {
-                        updatedPhotos.push(newPhoto);
-                    }
-                });
-
-                // Also update URLs for any other cameras
-                updatedPhotos.forEach(photo => {
-                    if (photo.key && latestImageUrls[photo.key] !== photo.src) {
-                        photo.src = latestImageUrls[photo.key];
-                    }
-                });
-
-                // Remove photos that no longer exist
-                return updatedPhotos.filter(photo =>
-                    photo.key && currentCameraIds.has(photo.key)
-                );
-            });
-        };
-
-        measureCameras();
-    }, [latestImageUrls, processImage]);
-    // Calculate layout parameters based on container size and photo count
-    const layoutConfig = useMemo(() => {
-        if (!containerSize.width || !containerSize.height || !cameraImages.length) {
-            return {
-                targetRowHeight: 300,
-                maxPhotosPerRow: 3
-            };
-        }
-
-        const cameraCount = cameraImages.length;
-        const containerAspect = containerSize.width / containerSize.height;
-
-        // Calculate optimal number of rows based on container aspect ratio and photo count
-        const optimalRows = Math.max(
-            1,
-            Math.min(
-                Math.ceil(Math.sqrt(cameraCount / containerAspect)),
-                cameraCount
-            )
-        );
-
-        // Calculate the maximum photos per row to force a good distribution
-        const optimalPhotosPerRow = Math.ceil(cameraCount / optimalRows);
-
-        // Calculate target row height with safety margin
-        const safeHeight = containerSize.height - 40; // 40px safety margin
-        const rowHeight = Math.floor(safeHeight / optimalRows);
-
-        return {
-            targetRowHeight: Math.max(150, rowHeight),
-            maxPhotosPerRow: optimalPhotosPerRow
-        };
-    }, [cameraImages.length, containerSize.width, containerSize.height]);
-
-    // Memoize the cameraImage renderer to prevent recreating on every render
-    const renderCameraImage = useCallback(({ cameraImage, imageProps, wrapperStyle }) => (
-        <div style={{
-            ...wrapperStyle,
-            position: 'relative',
-            marginBottom: '5px'
-        }}>
-            <img
-                {...imageProps}
-                style={{
-                    ...imageProps.style,
-                    objectFit: 'contain',
-                    border: '1px solid rgba(0,0,0,0.1)',
-                    borderRadius: '4px',
-                    maxHeight: '100%'
+  return (
+    <Box
+      ref={containerRef}
+      sx={{
+        width: '100%',
+        height: '100%',
+        backgroundColor: theme.palette.background.default,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {processedImages.length === 0 ? (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+          }}
+        >
+          <Typography variant="h6" color="text.secondary">
+            Waiting for camera feeds...
+          </Typography>
+        </Box>
+      ) : (
+        <Grid
+          container
+          spacing={1}
+          sx={{
+            height: '100%',
+            width: '100%',
+            padding: 1,
+            boxSizing: 'border-box',
+          }}
+        >
+          {processedImages.map((image, index) => (
+            <Grid
+              item
+              key={image.cameraId}
+              xs={12 / cols}
+              sx={{
+                height: `${100 / rows}%`,
+                padding: '4px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Paper
+                elevation={3}
+                sx={{
+                  height: '100%',
+                  width: '100%',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative',
                 }}
-            />
-            {cameraImage.key && (
-                <div style={{
+              >
+                <Box
+                  sx={{
                     position: 'absolute',
-                    bottom: 0,
+                    top: 0,
                     left: 0,
                     backgroundColor: 'rgba(0,0,0,0.5)',
                     color: 'white',
-                    padding: '4px 8px',
-                    fontSize: '14px',
-                    borderRadius: '0 4px 0 0'
-                }}>
-                    Camera {cameraImage.key}
-                </div>
-            )}
-        </div>
-    ), []);
-
-    if (!latestImageUrls || Object.keys(latestImageUrls).length === 0) {
-        return (
-            <Box sx={{ p: 2 }}>
-                <Typography variant="h6" color="secondary">
-                    Waiting for cameras to connect...
-                </Typography>
-            </Box>
-        );
-    }
-
-    return (
-        <Box
-            ref={containerRef}
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100%",
-                width: "100%",
-                overflow: "hidden",
-                padding: 2
-
-            }}
-        >
-            {cameraImages.length > 0 && (
-                <RowsPhotoAlbum
-                    photos={cameraImages}
-                    layout="rows"
-                    spacing={8}
-                    targetRowHeight={layoutConfig.targetRowHeight}
-                    rowConstraints={{
-                        minPhotos: 1,
-                        maxPhotos: layoutConfig.maxPhotosPerRow
+                    padding: '2px 8px',
+                    borderBottomRightRadius: '4px',
+                    fontSize: '0.8rem',
+                    zIndex: 1,
+                  }}
+                >
+                  {image.cameraId}
+                </Box>
+                <Box
+                  sx={{
+                    height: '100%',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={image.src}
+                    alt={`Camera ${image.cameraId}`}
+                    sx={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
                     }}
-                    layoutOptions={{
-                        padding: { top: 10, right: 10, bottom: 10, left: 10 }
-                    }}
-                    renderPhoto={renderCameraImage}
-                />
-            )}
-        </Box>
-    );
+                  />
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Box>
+  );
 };
+
+
+/**
+ * Calculates the optimal grid layout for a set of images
+ * to maximize view area without cropping
+ */
+export function calculateOptimalGrid(
+  imageCount: number,
+  containerAspectRatio: number,
+  imageAspectRatios: number[]
+): { cols: number; rows: number } {
+  if (imageCount <= 0) return { cols: 1, rows: 1 };
+  if (imageCount === 1) return { cols: 1, rows: 1 };
+
+  let bestArea = 0;
+  let bestLayout = { cols: 1, rows: Math.ceil(imageCount) };
+
+  // Try all possible grid configurations
+  for (let cols = 1; cols <= imageCount; cols++) {
+    const rows = Math.ceil(imageCount / cols);
+
+    // Skip if we have empty cells
+    if (rows * cols > imageCount * 1.5) continue;
+
+    // Calculate cell dimensions based on container
+    const cellWidth = 1 / cols;
+    const cellHeight = 1 / rows;
+
+    // Calculate how much of the total area would be utilized
+    let minAreaUtilization = Infinity;
+
+    // For each image, calculate how efficiently it would fit
+    imageAspectRatios.forEach(aspectRatio => {
+      // If cell is wider than the image aspect ratio
+      if (cellWidth / cellHeight > aspectRatio) {
+        // Image height will touch top and bottom, width won't fill cell
+        const utilization = (aspectRatio * cellHeight) / cellWidth;
+        minAreaUtilization = Math.min(minAreaUtilization, utilization);
+      } else {
+        // Image width will touch sides, height won't fill cell
+        const utilization = cellWidth / (aspectRatio * cellHeight);
+        minAreaUtilization = Math.min(minAreaUtilization, utilization);
+      }
+    });
+
+    // Calculate effective area
+    const area = (cellWidth * cellHeight * minAreaUtilization) * imageCount;
+
+    if (area > bestArea) {
+      bestArea = area;
+      bestLayout = { cols, rows };
+    }
+  }
+
+  return bestLayout;
+}
+const CameraGridDisplay: React.FC = () => {
+  const { latestImageUrls } = useLatestImagesContext();
+
+  const hasImages = latestImageUrls && Object.keys(latestImageUrls).length > 0;
+
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            gap: 2,
+          }}
+        >
+          <CircularProgress />
+          <Typography variant="h6" color="text.secondary">
+            Connecting to camera feed...
+          </Typography>
+        </Box>
+      ) : !hasImages ? (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+          }}
+        >
+          <Typography variant="h6" color="text.secondary">
+            No camera feeds available
+          </Typography>
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            flexGrow: 1,
+            width: '100%',
+            overflow: 'hidden',
+          }}
+        >
+          <ImageGrid />
+        </Box>
+    </Box>
+  );
+};
+
+export default CameraGridDisplay;
