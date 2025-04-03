@@ -20,7 +20,7 @@ export const CAMERA_DEFAULT_CONSTRAINTS = {
     },
     exposure: {
         min: -12,
-        max: -5,
+        max: -4,
         default: -7,
         step: 1
     },

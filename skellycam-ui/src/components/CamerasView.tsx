@@ -24,6 +24,8 @@ export const CamerasView = () => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
     const cameraConfigs = useAppSelector(state => state.latestPayload.cameraConfigs);
+    // Store previous camera configs for comparison
+    const prevCameraConfigsRef = useRef<typeof cameraConfigs>(null);
 
     // Persistent dimension cache that survives across renders
     const dimensionCache = useRef<Record<string, { width: number, height: number }>>({});
@@ -44,19 +46,15 @@ export const CamerasView = () => {
         return () => resizeObserver.disconnect();
     }, []);
 
-    // Only reset dimension cache when camera configs change
     useEffect(() => {
         if (!cameraConfigs) return;
 
-        // Check if we have new cameras that aren't in our dimension cache
-        const currentCameraIds = new Set(Object.keys(dimensionCache.current));
-        const newCameraIds = new Set(Object.keys(cameraConfigs));
+        const prevConfigs = prevCameraConfigsRef.current;
+        prevCameraConfigsRef.current = cameraConfigs;
 
-        // Only clear cache if camera IDs have changed
-        const hasNewCameras = Array.from(newCameraIds).some(id => !currentCameraIds.has(id));
-        const hasRemovedCameras = Array.from(currentCameraIds).some(id => !newCameraIds.has(id));
-
-        if (hasNewCameras || hasRemovedCameras) {
+        // If we have previous configs and they're different from current ones, reset cache
+        if (prevConfigs && JSON.stringify(prevConfigs) !== JSON.stringify(cameraConfigs)) {
+            console.log("Camera config changes detected, resetting dimension cache");
             dimensionCache.current = {};
             processedCameraIds.current.clear();
         }
@@ -295,6 +293,7 @@ export const CamerasView = () => {
                 width: "100%",
                 overflow: "hidden",
                 padding: 2
+
             }}
         >
             {cameraImages.length > 0 && (

@@ -107,8 +107,8 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                     <Slider
                         value={exposure}
                         disabled={exposureMode === 'AUTO' || exposureMode === 'RECOMMEND'}
-                        min={-12}
-                        max={-5}
+                        min={CAMERA_DEFAULT_CONSTRAINTS.exposure.min}
+                        max={CAMERA_DEFAULT_CONSTRAINTS.exposure.max}
                         step={1}
                         marks={marks}
                         valueLabelDisplay="auto"
