@@ -123,6 +123,7 @@ const ImageGrid: React.FC = () => {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative',
       }}
     >
       {processedImages.length === 0 ? (
@@ -217,60 +218,6 @@ const ImageGrid: React.FC = () => {
 };
 
 
-/**
- * Calculates the optimal grid layout for a set of images
- * to maximize view area without cropping
- */
-export function calculateOptimalGrid(
-  imageCount: number,
-  containerAspectRatio: number,
-  imageAspectRatios: number[]
-): { cols: number; rows: number } {
-  if (imageCount <= 0) return { cols: 1, rows: 1 };
-  if (imageCount === 1) return { cols: 1, rows: 1 };
-
-  let bestArea = 0;
-  let bestLayout = { cols: 1, rows: Math.ceil(imageCount) };
-
-  // Try all possible grid configurations
-  for (let cols = 1; cols <= imageCount; cols++) {
-    const rows = Math.ceil(imageCount / cols);
-
-    // Skip if we have empty cells
-    if (rows * cols > imageCount * 1.5) continue;
-
-    // Calculate cell dimensions based on container
-    const cellWidth = 1 / cols;
-    const cellHeight = 1 / rows;
-
-    // Calculate how much of the total area would be utilized
-    let minAreaUtilization = Infinity;
-
-    // For each image, calculate how efficiently it would fit
-    imageAspectRatios.forEach(aspectRatio => {
-      // If cell is wider than the image aspect ratio
-      if (cellWidth / cellHeight > aspectRatio) {
-        // Image height will touch top and bottom, width won't fill cell
-        const utilization = (aspectRatio * cellHeight) / cellWidth;
-        minAreaUtilization = Math.min(minAreaUtilization, utilization);
-      } else {
-        // Image width will touch sides, height won't fill cell
-        const utilization = cellWidth / (aspectRatio * cellHeight);
-        minAreaUtilization = Math.min(minAreaUtilization, utilization);
-      }
-    });
-
-    // Calculate effective area
-    const area = (cellWidth * cellHeight * minAreaUtilization) * imageCount;
-
-    if (area > bestArea) {
-      bestArea = area;
-      bestLayout = { cols, rows };
-    }
-  }
-
-  return bestLayout;
-}
 
 const CameraGridDisplay: React.FC = () => {
   const { latestImageUrls } = useLatestImagesContext();
@@ -290,10 +237,11 @@ const CameraGridDisplay: React.FC = () => {
     <Box
       sx={{
         width: '100%',
-        height: '100vh',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
       {isLoading ? (

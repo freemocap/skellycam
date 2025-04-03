@@ -29,7 +29,8 @@ export const BaseContent = () => {
                     flex: 1,
                     display: 'flex',
                     justifyContent: 'center',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    overflow: 'hidden',
                 }}>
                     <ErrorBoundary>
                         <CameraGridDisplay/>
