@@ -6,7 +6,7 @@ import { RowsPhotoAlbum } from "react-photo-album";
 import "react-photo-album/rows.css";
 import { useAppSelector } from "@/store/AppStateStore";
 
-interface Photo {
+interface CameraImage {
     src: string;
     width: number;
     height: number;
@@ -20,7 +20,7 @@ const DEFAULT_HEIGHT = 480;
 
 export const CamerasView = () => {
     const { latestImageUrls } = useLatestImagesContext();
-    const [photos, setPhotos] = useState<Photo[]>([]);
+    const [cameraImages, setCameraImages] = useState<CameraImage[]>([]);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
     const cameraConfigs = useAppSelector(state => state.latestPayload.cameraConfigs);
@@ -44,7 +44,7 @@ export const CamerasView = () => {
         return () => resizeObserver.disconnect();
     }, []);
 
-    // Only reset dimension cache when camera configs structurally change
+    // Only reset dimension cache when camera configs change
     useEffect(() => {
         if (!cameraConfigs) return;
 
@@ -63,7 +63,7 @@ export const CamerasView = () => {
     }, [cameraConfigs]);
 
     // Process individual image once loaded - extracted as memoized callback
-    const processImage = useCallback((cameraId: string, imageUrl: string): Promise<Photo> => {
+    const processImage = useCallback((cameraId: string, imageUrl: string): Promise<CameraImage> => {
         // Use cached dimensions if available
         if (dimensionCache.current[cameraId]) {
             const { width, height } = dimensionCache.current[cameraId];
@@ -77,7 +77,7 @@ export const CamerasView = () => {
         }
 
         // Otherwise load the image to get dimensions
-        return new Promise<Photo>(resolve => {
+        return new Promise<CameraImage>(resolve => {
             const img = new Image();
 
             img.onload = () => {
@@ -114,29 +114,71 @@ export const CamerasView = () => {
         });
     }, []);
 
-    // Load and process camera images - optimized to avoid redundant work
+// Load and process camera images - optimized for frequent updates
     useEffect(() => {
         if (!latestImageUrls) return;
 
-        const loadImages = async () => {
-            const currentCameraIds = new Set(Object.keys(latestImageUrls));
+        const currentCameraIds = new Set(Object.keys(latestImageUrls));
 
-            // Detect which camera images are new or have changed
-            const imagesToProcess = Object.entries(latestImageUrls).filter(([cameraId, imageUrl]) => {
-                const photo = photos.find(p => p.key === cameraId);
-                return !photo || photo.src !== imageUrl;
+        // Fast path: dimensions are already cached for all cameras
+        const allCamerasDimensionsCached = Object.keys(latestImageUrls).every(
+            id => dimensionCache.current[id]
+        );
+
+        if (allCamerasDimensionsCached) {
+            // Just update URLs without re-measuring
+            setCameraImages(prevImages => {
+                // Create new array only if URLs have changed
+                const needsUpdate = prevImages.some(img =>
+                    img.key && latestImageUrls[img.key] !== img.src
+                );
+
+                if (!needsUpdate) return prevImages;
+
+                // Update just the image URLs, maintain same objects otherwise
+                const updatedImages = prevImages.map(img => {
+                    if (img.key && latestImageUrls[img.key] !== img.src) {
+                        return { ...img, src: latestImageUrls[img.key] };
+                    }
+                    return img;
+                });
+
+                // Add any new cameras
+                const existingIds = new Set(updatedImages.map(img => img.key));
+                const newImages = Object.entries(latestImageUrls)
+                    .filter(([id]) => !existingIds.has(id))
+                    .map(([id, url]) => ({
+                        src: url,
+                        width: dimensionCache.current[id]?.width || DEFAULT_WIDTH,
+                        height: dimensionCache.current[id]?.height || DEFAULT_HEIGHT,
+                        key: id,
+                        alt: `Camera ${id}`
+                    }));
+
+                // Filter out removed cameras and add new ones
+                return [
+                    ...updatedImages.filter(img => img.key && currentCameraIds.has(img.key)),
+                    ...newImages
+                ];
             });
+            return;
+        }
 
-            if (imagesToProcess.length === 0) return;
+        // Slow path: need to measure dimensions for some cameras
+        const measureCameras = async () => {
+            const camerasToMeasure = Object.entries(latestImageUrls)
+                .filter(([id]) => !dimensionCache.current[id]);
+
+            if (camerasToMeasure.length === 0) return;
 
             const newPhotos = await Promise.all(
-                imagesToProcess.map(([cameraId, imageUrl]) =>
+                camerasToMeasure.map(([cameraId, imageUrl]) =>
                     processImage(cameraId, imageUrl)
                 )
             );
 
-            // Merge with existing photos
-            setPhotos(prevPhotos => {
+            // Update with newly measured photos
+            setCameraImages(prevPhotos => {
                 const updatedPhotos = [...prevPhotos];
 
                 // Update or add new photos
@@ -149,6 +191,13 @@ export const CamerasView = () => {
                     }
                 });
 
+                // Also update URLs for any other cameras
+                updatedPhotos.forEach(photo => {
+                    if (photo.key && latestImageUrls[photo.key] !== photo.src) {
+                        photo.src = latestImageUrls[photo.key];
+                    }
+                });
+
                 // Remove photos that no longer exist
                 return updatedPhotos.filter(photo =>
                     photo.key && currentCameraIds.has(photo.key)
@@ -156,19 +205,18 @@ export const CamerasView = () => {
             });
         };
 
-        loadImages();
-    }, [latestImageUrls, processImage, photos]);
-
+        measureCameras();
+    }, [latestImageUrls, processImage]);
     // Calculate layout parameters based on container size and photo count
     const layoutConfig = useMemo(() => {
-        if (!containerSize.width || !containerSize.height || !photos.length) {
+        if (!containerSize.width || !containerSize.height || !cameraImages.length) {
             return {
                 targetRowHeight: 300,
                 maxPhotosPerRow: 3
             };
         }
 
-        const cameraCount = photos.length;
+        const cameraCount = cameraImages.length;
         const containerAspect = containerSize.width / containerSize.height;
 
         // Calculate optimal number of rows based on container aspect ratio and photo count
@@ -191,10 +239,10 @@ export const CamerasView = () => {
             targetRowHeight: Math.max(150, rowHeight),
             maxPhotosPerRow: optimalPhotosPerRow
         };
-    }, [photos.length, containerSize.width, containerSize.height]);
+    }, [cameraImages.length, containerSize.width, containerSize.height]);
 
-    // Memoize the photo renderer to prevent recreating on every render
-    const renderPhoto = useCallback(({ photo, imageProps, wrapperStyle }) => (
+    // Memoize the cameraImage renderer to prevent recreating on every render
+    const renderCameraImage = useCallback(({ cameraImage, imageProps, wrapperStyle }) => (
         <div style={{
             ...wrapperStyle,
             position: 'relative',
@@ -210,7 +258,7 @@ export const CamerasView = () => {
                     maxHeight: '100%'
                 }}
             />
-            {photo.key && (
+            {cameraImage.key && (
                 <div style={{
                     position: 'absolute',
                     bottom: 0,
@@ -221,7 +269,7 @@ export const CamerasView = () => {
                     fontSize: '14px',
                     borderRadius: '0 4px 0 0'
                 }}>
-                    Camera {photo.key}
+                    Camera {cameraImage.key}
                 </div>
             )}
         </div>
@@ -249,9 +297,9 @@ export const CamerasView = () => {
                 padding: 2
             }}
         >
-            {photos.length > 0 && (
+            {cameraImages.length > 0 && (
                 <RowsPhotoAlbum
-                    photos={photos}
+                    photos={cameraImages}
                     layout="rows"
                     spacing={8}
                     targetRowHeight={layoutConfig.targetRowHeight}
@@ -262,7 +310,7 @@ export const CamerasView = () => {
                     layoutOptions={{
                         padding: { top: 10, right: 10, bottom: 10, left: 10 }
                     }}
-                    renderPhoto={renderPhoto}
+                    renderPhoto={renderCameraImage}
                 />
             )}
         </Box>
