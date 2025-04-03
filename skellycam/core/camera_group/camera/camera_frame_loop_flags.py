@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from skellycam.core import CameraIndex
 from skellycam.core.camera_group.camera.config.camera_config import CameraIdString
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
+from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)

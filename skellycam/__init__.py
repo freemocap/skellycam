@@ -17,7 +17,7 @@ from skellycam.core import CameraIndex, CameraName
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
+from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication
 
 from skellycam.system.logging_configuration.configure_logging import configure_logging

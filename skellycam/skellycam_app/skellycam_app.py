@@ -16,7 +16,7 @@ from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escap
     MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.recorders.timestamps.framerate_tracker import FramerateTrackers
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
+from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
 

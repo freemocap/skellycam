@@ -2,7 +2,7 @@ import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
-from skellycam.skellycam_app.skellycam_app_controller.ipc_flags import InterProcessCommunicationManager
+from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 
 @dataclass

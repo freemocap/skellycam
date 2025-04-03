@@ -5,7 +5,7 @@ import time
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
 from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
