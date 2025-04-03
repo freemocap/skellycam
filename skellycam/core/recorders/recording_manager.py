@@ -8,7 +8,7 @@ from typing import Dict
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
@@ -38,7 +38,7 @@ class RecordingManager(BaseModel):
     camera_configs: CameraConfigs
     fresh: bool = True
 
-    video_recorders: Dict[CameraIndex, VideoRecorder]
+    video_recorders: dict[CameraIdString, VideoRecorder]
     multi_frame_timestamp_logger: MultiframeTimestampLogger
 
     class Config:
