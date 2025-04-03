@@ -271,10 +271,20 @@ export function calculateOptimalGrid(
 
   return bestLayout;
 }
+
 const CameraGridDisplay: React.FC = () => {
   const { latestImageUrls } = useLatestImagesContext();
-
+  const [isLoading, setIsLoading] = useState(true);
   const hasImages = latestImageUrls && Object.keys(latestImageUrls).length > 0;
+
+  // Simulate checking connection status
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000); // Set loading state to false after 3 seconds
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   return (
     <Box
@@ -286,7 +296,7 @@ const CameraGridDisplay: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-
+      {isLoading ? (
         <Box
           sx={{
             display: 'flex',
@@ -326,6 +336,7 @@ const CameraGridDisplay: React.FC = () => {
         >
           <ImageGrid />
         </Box>
+      )}
     </Box>
   );
 };

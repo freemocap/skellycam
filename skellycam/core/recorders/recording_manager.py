@@ -3,7 +3,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 from pydantic import BaseModel, ValidationError
 
@@ -67,10 +67,10 @@ class RecordingManager(BaseModel):
         recording_name = Path(recording_folder).name
         videos_folder = str(Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
 
-
         video_recorders = {}
         for camera_id, config in camera_configs.items():
-            video_recorders[camera_id] = VideoRecorder.create(frame=multi_frame_payload.get_frame(camera_id),
+            video_recorders[camera_id] = VideoRecorder.create(camera_id=camera_id,
+                                                              frame=multi_frame_payload.get_frame(camera_id),
                                                               recording_name=recording_name,
                                                               videos_folder=videos_folder,
                                                               config=camera_configs[camera_id],
@@ -98,7 +98,7 @@ class RecordingManager(BaseModel):
             self.video_recorders[camera_id].add_frame(frame=frame)
         self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
 
-    def save_one_frame(self) -> bool|None:
+    def save_one_frame(self) -> bool | None:
         """
         saves one frame from one video recorder
         """

@@ -3,8 +3,8 @@ import React from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
-import {CamerasView} from "@/components/CamerasView";
 import {useTheme} from "@mui/material/styles";
+import CameraGridDisplay from '@/components/CamerasView';
 
 export const BaseContent = () => {
     const theme = useTheme();
@@ -32,7 +32,7 @@ export const BaseContent = () => {
                     alignItems: 'center'
                 }}>
                     <ErrorBoundary>
-                        <CamerasView/>
+                        <CameraGridDisplay/>
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{p: 1}}>
