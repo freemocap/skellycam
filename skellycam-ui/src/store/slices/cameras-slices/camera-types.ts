@@ -91,4 +91,4 @@ export const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema);
 
 export type CameraConfig = z.infer<typeof CameraConfigSchema>;
 export type CameraConfigs = z.infer<typeof CameraConfigsSchema>;
-export type E 
+export type ExposureMode = typeof ExposureModes[number];
