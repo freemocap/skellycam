@@ -1,10 +1,9 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {PaperbaseContent} from "@/layout/paperbase_theme/PaperbaseContent";
 import {Provider} from "react-redux";
-import {AppStateStore, useAppDispatch} from "@/store/AppStateStore";
+import {AppStateStore} from "@/store/AppStateStore";
 import {LatestImagesContextProvider} from "@/context/latest-images-context/LatestImagesContext";
 import {WebSocketContextProvider} from "@/context/websocket-context/WebSocketContext";
-import {initializeWithExpandedPath} from "@/store/slices/recordingInfoSlice";
 
 
 function App() {

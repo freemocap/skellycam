@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import {z} from 'zod';
 
 // Define string literals as const for better type safety
 export const PixelFormats = ['RGB', 'BGR', 'GRAY'] ;
@@ -91,3 +91,4 @@ export const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema);
 
 export type CameraConfig = z.infer<typeof CameraConfigSchema>;
 export type CameraConfigs = z.infer<typeof CameraConfigsSchema>;
+export type E 

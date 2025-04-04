@@ -6,7 +6,7 @@ import {PythonServer} from "./helpers/python-server";
 import {LifecycleLogger} from "./helpers/logger";
 import os from "node:os";
 import {APP_ENVIRONMENT} from "./helpers/app-environment";
-import { installExtension, REDUX_DEVTOOLS } from 'electron-devtools-installer';
+import {installExtension, REDUX_DEVTOOLS} from 'electron-devtools-installer';
 
 
 // Environment variables that `python` server will use for its lifecycle management

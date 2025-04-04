@@ -1,5 +1,5 @@
 // skellycam-ui/src/components/recording-info-panel/RecordingInfoPanel.tsx
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -15,7 +15,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useAppDispatch, useAppSelector } from "@/store/AppStateStore";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {
   RecordingSettingsSection
 } from "@/components/recording-info-panel/recording-subcomponents/RecordingSettingsSection";
@@ -31,8 +31,8 @@ import {
 import {
   BaseRecordingDirectoryInput
 } from "@/components/recording-info-panel/recording-subcomponents/BaseRecordingDirectoryInput";
-import { RecordingNamePreview } from "@/components/recording-info-panel/recording-subcomponents/RecordingNamePreview";
-import { startRecording, stopRecording } from "@/store/thunks/start-stop-recording-thunks";
+import {RecordingNamePreview} from "@/components/recording-info-panel/recording-subcomponents/RecordingNamePreview";
+import {startRecording, stopRecording} from "@/store/thunks/start-stop-recording-thunks";
 
 export const RecordingInfoPanel: React.FC = () => {
   const theme = useTheme();

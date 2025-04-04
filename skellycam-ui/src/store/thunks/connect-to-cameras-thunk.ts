@@ -1,6 +1,5 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
 import {selectConfigsForSelectedCameras, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
-import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',

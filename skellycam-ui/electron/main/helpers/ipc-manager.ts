@@ -1,7 +1,6 @@
-import {app, ipcMain, shell} from 'electron';
+import {app, dialog, ipcMain, shell} from 'electron';
 import {WindowManager} from "./window-manager";
 import {PythonServer} from "./python-server";
-import {dialog} from 'electron';
 import path from "node:path";
 import fs from "node:fs";
 

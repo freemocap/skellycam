@@ -1,8 +1,8 @@
 // src/components/framerate-viewer/FramerateHistogramView.tsx
-import { useCallback } from "react"
+import {useCallback} from "react"
 import * as d3 from "d3"
-import { useTheme } from "@mui/material/styles"
-import { createTooltip, applyAxisStyles, renderEmptyChart, renderThresholdLines } from "./d3ChartUtils"
+import {useTheme} from "@mui/material/styles"
+import {applyAxisStyles, createTooltip, renderEmptyChart, renderThresholdLines} from "./d3ChartUtils"
 import {CurrentFramerate} from "@/store/slices/framerateTrackerSlice";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
 

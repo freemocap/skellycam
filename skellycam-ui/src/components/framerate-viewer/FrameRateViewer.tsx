@@ -1,8 +1,8 @@
 // src/components/framerate-viewer/FrameRateViewer.tsx
-import { useState } from "react"
-import { Box, IconButton, Paper, Stack, Tooltip, Typography } from "@mui/material"
-import { BarChart, ShowChart, ViewCompact, ViewDay } from "@mui/icons-material"
-import { alpha, useTheme } from "@mui/material/styles"
+import {useState} from "react"
+import {Box, IconButton, Paper, Stack, Tooltip, Typography} from "@mui/material"
+import {BarChart, ShowChart, ViewCompact, ViewDay} from "@mui/icons-material"
+import {alpha, useTheme} from "@mui/material/styles"
 import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
 import FramerateStatisticsView from "./FramerateStatisticsView"

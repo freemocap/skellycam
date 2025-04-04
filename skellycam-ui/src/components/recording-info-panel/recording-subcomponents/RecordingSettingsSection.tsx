@@ -49,6 +49,7 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
                     <FormControlLabel
                         control={
                             <Checkbox
+                                color={theme.palette.primary.contrastText}
                                 checked={useTimestamp}
                                 onChange={(e) => onUseTimestampChange(e.target.checked)}
                             />
@@ -72,6 +73,8 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
                     <FormControlLabel
                         control={
                             <Checkbox
+                                color={theme.palette.primary.contrastText}
+
                                 checked={createSubfolder}
                                 onChange={(e) => onCreateSubfolderChange(e.target.checked)}
                             />
@@ -96,6 +99,7 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
                     <FormControlLabel
                         control={
                             <Checkbox
+                                color={theme.palette.primary.contrastText}
                                 checked={useIncrement}
                                 onChange={(e) => onUseIncrementChange(e.target.checked)}
                             />

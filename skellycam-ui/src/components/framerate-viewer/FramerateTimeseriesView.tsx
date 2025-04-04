@@ -1,13 +1,13 @@
 // src/components/framerate-viewer/FramerateTimeseriesView.tsx
-import { useCallback } from "react"
+import {useCallback} from "react"
 import * as d3 from "d3"
-import { useTheme } from "@mui/material/styles"
-import { CurrentFramerate } from "@/store/slices/framerateTrackerSlice"
+import {useTheme} from "@mui/material/styles"
+import {CurrentFramerate} from "@/store/slices/framerateTrackerSlice"
 import {
-  applyAxisStyles,
-  createTooltip,
-  renderEmptyChart,
-  renderThresholdLines
+    applyAxisStyles,
+    createTooltip,
+    renderEmptyChart,
+    renderThresholdLines
 } from "@/components/framerate-viewer/d3ChartUtils";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
 

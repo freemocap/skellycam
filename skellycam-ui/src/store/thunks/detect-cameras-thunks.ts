@@ -3,8 +3,8 @@ import {createAsyncThunk} from '@reduxjs/toolkit';
 import {setDetectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
 import {
     CAMERA_DEFAULT_CONSTRAINTS,
-    createDefaultCameraConfig,
-    CameraDevice
+    CameraDevice,
+    createDefaultCameraConfig
 } from "@/store/slices/cameras-slices/camera-types";
 
 

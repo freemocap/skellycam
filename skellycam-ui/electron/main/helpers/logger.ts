@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import {app, BrowserWindow} from 'electron';
 import {APP_ENVIRONMENT} from "./app-environment";
 import {APP_PATHS} from "./app-paths";
 import {exec} from "child_process";

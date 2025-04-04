@@ -1,8 +1,20 @@
 // src/components/framerate-viewer/FramerateStatisticsView.tsx
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Tooltip, Box, Divider } from "@mui/material"
-import { alpha, useTheme } from "@mui/material/styles"
-import { CurrentFramerate } from "@/store/slices/framerateTrackerSlice";
-import { useState } from "react";
+import {
+    Box,
+    Divider,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Tooltip,
+    Typography
+} from "@mui/material"
+import {alpha, useTheme} from "@mui/material/styles"
+import {CurrentFramerate} from "@/store/slices/framerateTrackerSlice";
+import {useState} from "react";
 
 type FramerateStatisticsViewProps = {
   frontendFramerate: CurrentFramerate | null,

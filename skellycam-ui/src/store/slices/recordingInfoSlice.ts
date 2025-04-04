@@ -1,6 +1,5 @@
 // recordingInfoSlice.ts
-import {createAsyncThunk, PayloadAction} from '@reduxjs/toolkit'
-import {createSlice} from '@reduxjs/toolkit'
+import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {z} from 'zod';
 
 export const getDefaultRecordingDirectory = async () => {

@@ -1,6 +1,6 @@
 // src/components/framerate-viewer/d3ChartUtils.ts
 import * as d3 from "d3"
-import { Theme } from "@mui/material/styles"
+import {Theme} from "@mui/material/styles"
 
 export function createTooltip(theme: Theme) {
   return d3

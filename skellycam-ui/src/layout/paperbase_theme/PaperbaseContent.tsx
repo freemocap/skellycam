@@ -5,9 +5,7 @@ import {CssBaseline} from "@mui/material";
 import {BaseContent} from "@/layout/BaseContent";
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
 import {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
-import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
-import {useEffect} from "react";
-import {initializeWithExpandedPath} from "@/store/slices/recordingInfoSlice";
+import {useAppSelector} from "@/store/AppStateStore";
 
 export const PaperbaseContent = function () {
 

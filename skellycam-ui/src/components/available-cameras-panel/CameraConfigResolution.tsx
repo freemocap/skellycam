@@ -1,6 +1,6 @@
-import { FormControl, InputLabel, MenuItem, Select, useTheme } from "@mui/material";
+import {FormControl, InputLabel, MenuItem, Select, useTheme} from "@mui/material";
 import * as React from "react";
-import { CameraConfig } from "@/store/slices/cameras-slices/camera-types";
+import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraConfigResolutionProps {
     resolution: CameraConfig['resolution'];
