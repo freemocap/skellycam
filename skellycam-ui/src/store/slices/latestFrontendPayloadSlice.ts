@@ -19,12 +19,10 @@ export type FrontendFramePayload = z.infer<typeof FrontendFramePayloadSchema>;
 
 interface FrontendPayloadState {
     latestFrontendPayload: FrontendFramePayload | null;
-    cameraConfigs: CameraConfigs | null;
 }
 
 const initialState: FrontendPayloadState = {
     latestFrontendPayload: null,
-    cameraConfigs: null
 }
 
 export const latestFrontendPayloadSlice = createSlice({
@@ -33,10 +31,6 @@ export const latestFrontendPayloadSlice = createSlice({
     reducers: {
         setLatestFrontendPayload: (state, action: PayloadAction<z.infer<typeof FrontendFramePayloadSchema>>) => {
             state.latestFrontendPayload = action.payload;
-
-            if (action.payload.camera_configs) {
-                state.cameraConfigs = action.payload.camera_configs as CameraConfigs;
-            }
         }
     }
 })

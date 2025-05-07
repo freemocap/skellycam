@@ -90,6 +90,7 @@ export const camerasSlice = createSlice({
                 };
             }
         },
+
     },
 });
 

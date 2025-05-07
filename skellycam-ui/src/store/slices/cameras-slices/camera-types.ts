@@ -3,7 +3,7 @@ import {z} from 'zod';
 // Define string literals as const for better type safety
 export const PixelFormats = ['RGB', 'BGR', 'GRAY'] ;
 export const ExposureModes = ['MANUAL', 'AUTO', 'RECOMMEND'];
-export const CameraStatus = ['IDLE', 'CONNECTED', 'ERROR'];
+export const CameraStatus = ['CONNECTED', 'AVAILABLE', 'UNAVAILABLE', 'ERROR'];
 export const RotationOptions = ['0', '90', '180', '270'];
 export const FourccOptions = ['MJPG', 'X264', 'YUYV', 'H264'];
 export const ResolutionPresets = [
