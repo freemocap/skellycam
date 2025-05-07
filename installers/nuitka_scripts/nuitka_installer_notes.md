@@ -14,7 +14,7 @@ nuitka --onefile --windows-icon-from-ico=../shared/skellycam-logo/skellycam-favi
 
 ## Mac
 ```
-nuitka --onefile --macos-create-app-bundle=1 --macos-app-icon=shared/skellycam-logo/skellycam-favicon.ico --user-package-configuration-file=installers/skellycam-nuitka.config.yml --output-filename=skellycam-ui/skellycam_server.exe skellycam/__main__.py
+nuitka --onefile --macos-create-app-bundle --macos-app-icon=shared/skellycam-logo/skellycam-favicon.ico --user-package-configuration-file=installers/nuitka_scripts/skellycam-nuitka.config.yml --output-filename=skellycam_server skellycam/__main__.py
 ```
 ## Linux
 ```

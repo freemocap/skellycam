@@ -46,7 +46,8 @@
     "react-router-dom": "^6.26.2",
     "react-use": "^17.5.1",
     "react-webcam": "^7.2.0",
-    "tree-kill": "^1.2.2"
+    "tree-kill": "^1.2.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.1",

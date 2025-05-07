@@ -2,20 +2,49 @@ name: Build installers
 
 on:
   push:
-    branches: [ "jon/development" ]
+    branches: [ "jon/development", "philip/mac_app" ]
   workflow_dispatch:
-    inputs:
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]  # Start with Windows first
+        os: [windows-latest, macos-13, macos-15, ubuntu-22.04]
         include:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
-#    continue-on-error: true
+            install-port-audio: echo "PortAudio is not needed on Windows"
+            pre-build-command: echo "No pre-build command needed for Windows"
+            build-command: installers\\nuitka_scripts\\nuitka_installer_windows.bat
+            server-executable: skellycam_server.exe
+            electron-build-command: npm run build
+            electron-output: skellycam-ui\\release\\2.0.0\\skellycam_2.0.0_installer.exe
+          - os: macos-13
+            venv-activate: .venv/bin/activate
+            install-port-audio: brew install portaudio
+            pre-build-command: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
+            build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
+            server-executable: skellycam_server
+            electron-build-command: npm run build
+            electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.dmg
+          - os: macos-15
+            venv-activate: .venv/bin/activate
+            install-port-audio: brew install portaudio
+            pre-build-command: export PYTHONPATH=/opt/homebrew/opt/portaudio/lib/:/usr/local/opt/portaudio/lib/:$PYTHONPATH
+            build-command: ./installers/nuitka_scripts/nuitka_installer_mac.sh
+            server-executable: skellycam_server
+            electron-build-command: npm run build
+            electron-output: skellycam-ui/release/2.0.0/skellycam_2.0.0_installer.dmg
+          - os: ubuntu-22.04
+            venv-activate: .venv/bin/activate
+            install-port-audio: sudo apt-get update && sudo apt-get install -y clang portaudio19-dev
+            pre-build-command: chmod +x ./installers/nuitka_scripts/nuitka_installer_linux.sh && ln -s /opt/hostedtoolcache/Python/3.11.11/x64/bin/nuitka /usr/local/bin/nuitka
+            build-command: sudo ./installers/nuitka_scripts/nuitka_installer_linux.sh
+            server-executable: skellycam_server
+            electron-build-command: sudo npm run build
+            electron-output: skellycam-ui/release/2.0.0/skellycam-2.0.0.AppImage
+    # continue-on-error: true
     steps:
 
       - name: Checkout code
@@ -24,42 +53,32 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
-      - name: Install uv
-        run: pip install uv
-
-      - name: Create venv
-        run: uv venv
-
-      - name: Activate venv
-        run: ${{ matrix.venv-activate }}
+      - name: Install portaudio
+        run: ${{ matrix.install-port-audio }}
 
       - name: Install Python dependencies
-        run: uv sync
-
+        run: which pip && pip install -e.
 
       - name: Build with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: main
-          script-name: skellycam/__main__.py
-          mode: standalone
-          windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
-
+        run: |
+          ${{ matrix.pre-build-command }}
+          ${{ matrix.build-command }}
 
       - name: Check Nuitka build
         if: ${{ github.event.inputs.test-mode != 'true' }}
         run: |
-          ls -l skellycam_server.exe
+          pwd
+          ls -l ${{ matrix.server-executable }}
       - name: Move skellycam exe to build into `skellycam-ui` directory
         run: |          
-          mv skellycam_server.exe skellycam-ui
+          mv ${{ matrix.server-executable }} skellycam-ui
 
       - name: Install UI dependencies
         run: |
@@ -69,13 +88,12 @@ jobs:
       - name: Build UI
         run: |
           cd skellycam-ui
-          npm run build
+          ${{ matrix.electron-build-command }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-${{ runner.os }}
+          name: skellycam-${{ runner.os }}-${{ runner.arch }}
           path: |
-            build/skellycam_server.exe
-            build/*.dist/**
-          include-hidden-files: true
+            ${{ matrix.electron-output }}
+          if-no-files-found: error
