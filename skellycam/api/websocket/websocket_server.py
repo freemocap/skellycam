@@ -64,12 +64,12 @@ class WebsocketServer:
             await asyncio.gather(*self.ws_tasks, return_exceptions=True)
         except Exception as e:
             logger.exception(f"Error in websocket runner: {e.__class__}: {e}")
-            raise
-        finally:
             # Cancel all tasks when exiting
             for task in self.ws_tasks:
                 if not task.done():
                     task.cancel()
+            raise
+
 
     async def _ipc_queue_relay(self):
         """

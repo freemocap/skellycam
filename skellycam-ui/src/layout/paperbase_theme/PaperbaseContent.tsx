@@ -2,10 +2,10 @@ import * as React from 'react';
 import {ThemeProvider} from '@mui/material/styles';
 import {HashRouter} from 'react-router-dom';
 import {CssBaseline} from "@mui/material";
-import {BaseContent} from "@/layout/BaseContent";
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
 import {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppSelector} from "@/store/AppStateStore";
+import {BaseRouter} from "@/layout/BaseContent";
 
 export const PaperbaseContent = function () {
 
@@ -21,7 +21,7 @@ export const PaperbaseContent = function () {
             <CssBaseline/>
             <HashRouter>
                 <BasePanelLayout>
-                    <BaseContent/>
+                    <BaseRouter/>
                 </BasePanelLayout>
             </HashRouter>
         </ThemeProvider>

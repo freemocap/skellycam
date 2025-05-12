@@ -1,13 +1,26 @@
 // skellycam-ui/src/layout/BasePanelLayout.tsx
-import React from "react"
-import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
-import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
+import React from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { LeftSidePanelContent } from "@/components/ui-components/LeftSidePanelContent";
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
-import {useTheme} from "@mui/material/styles";
-import {Box} from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { Box } from "@mui/material";
+import { useLocation } from "react-router-dom";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const theme = useTheme();
+    const location = useLocation();
+    
+    // Only show panels on cameras and videos pages
+    const showPanels = location.pathname === '/cameras' || location.pathname === '/videos';
+    
+    if (!showPanels) {
+        return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+                {children}
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -51,5 +64,5 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                 </Panel>
             </PanelGroup>
         </Box>
-    )
-}
+    );
+};

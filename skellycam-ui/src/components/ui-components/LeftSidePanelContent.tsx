@@ -1,12 +1,13 @@
 // skellycam-ui/src/components/ui-components/LeftSidePanelContent.tsx
 import * as React from 'react';
 import Box from "@mui/material/Box";
-import {List, ListItem, useTheme} from "@mui/material";
+import {Button, IconButton, List, ListItem, useTheme} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
 import {AvailableCamerasPanel} from "@/components/available-cameras-panel/AvailableCamerasPanel";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import ThemeToggle from "@/components/ui-components/ThemeToggle";
-
+import HomeIcon from '@mui/icons-material/Home';
+import {useNavigate} from "react-router-dom";
 // Extract reusable scrollbar styles
 const scrollbarStyles = {
   '&::-webkit-scrollbar': {
@@ -35,6 +36,7 @@ const scrollbarStyles = {
 
 export const LeftSidePanelContent = () => {
     const theme = useTheme();
+    const navigate = useNavigate();
 
     // Dynamic styles based on theme
     const item = {
@@ -67,8 +69,26 @@ export const LeftSidePanelContent = () => {
             overflow: 'hidden'
         }}>
             <List disablePadding>
-                <ListItem sx={{...item, ...itemCategory, fontSize: 22, color: theme.palette.common.white}}>
-                    SkellyCam💀📸
+                <ListItem
+                    sx={{
+                        ...item,
+                        ...itemCategory,
+                        fontSize: 22,
+                        color: theme.palette.common.white,
+                        display: 'flex',
+                        justifyContent: 'space-between'
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <IconButton
+                            color="inherit"
+                            onClick={() => navigate('/')}
+                        >
+                            <HomeIcon />
+                        </IconButton>
+                        <Box component="span" sx={{ ml: 1 }}>SkellyCam💀📸</Box>
+                    </Box>
+                    <ThemeToggle />
                 </ListItem>
             </List>
 
@@ -78,7 +98,6 @@ export const LeftSidePanelContent = () => {
                 overflowX: 'hidden',
                 ...scrollbarStyles
             }}>
-                <ThemeToggle />
                 <WebsocketConnectionStatus/>
                 <AvailableCamerasPanel/>
                 <RecordingInfoPanel/>
