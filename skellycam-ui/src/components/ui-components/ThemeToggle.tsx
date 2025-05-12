@@ -19,7 +19,6 @@ export const ThemeToggle: React.FC = () => {
         aria-label="toggle theme"
         edge="end"
         sx={{
-          ml: 1,
           '&:hover': {
             backgroundColor: theme.palette.action.hover,
           },

@@ -5,7 +5,7 @@ import {Copyright} from "@/components/ui-components/Copyright";
 import {useTheme} from "@mui/material/styles";
 import { Typography } from '@mui/material';
 
-const LoadVideosPage: React.FC = () => {
+const VideosPage: React.FC = () => {
     const theme = useTheme();
 
     return (
@@ -50,4 +50,4 @@ const LoadVideosPage: React.FC = () => {
     );
 };
 
-export default LoadVideosPage;
+export default VideosPage;

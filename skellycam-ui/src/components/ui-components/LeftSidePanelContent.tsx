@@ -1,42 +1,46 @@
 // skellycam-ui/src/components/ui-components/LeftSidePanelContent.tsx
 import * as React from 'react';
 import Box from "@mui/material/Box";
-import {Button, IconButton, List, ListItem, useTheme} from "@mui/material";
+import {IconButton, List, ListItem, useTheme} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
 import {AvailableCamerasPanel} from "@/components/available-cameras-panel/AvailableCamerasPanel";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import ThemeToggle from "@/components/ui-components/ThemeToggle";
 import HomeIcon from '@mui/icons-material/Home';
-import {useNavigate} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
+import VideocamIcon from '@mui/icons-material/Videocam';
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import {VideoFolderPanel} from "@/components/video-folder-panel/VideoFolderPanel";
 // Extract reusable scrollbar styles
 const scrollbarStyles = {
-  '&::-webkit-scrollbar': {
-    width: '8px',
-    backgroundColor: 'transparent',
-  },
-  '&::-webkit-scrollbar-thumb': {
-    backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
-      ? 'rgba(255, 255, 255, 0.2)'
-      : 'rgba(0, 0, 0, 0.2)',
-    borderRadius: '4px',
-    '&:hover': {
-      backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
-        ? 'rgba(255, 255, 255, 0.3)'
-        : 'rgba(0, 0, 0, 0.3)',
+    '&::-webkit-scrollbar': {
+        width: '8px',
+        backgroundColor: 'transparent',
     },
-  },
-  '&::-webkit-scrollbar-track': {
-    backgroundColor: 'transparent',
-  },
-  scrollbarWidth: 'thin',
-  scrollbarColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
-    ? 'rgba(255, 255, 255, 0.2) transparent'
-    : 'rgba(0, 0, 0, 0.2) transparent',
+    '&::-webkit-scrollbar-thumb': {
+        backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
+            ? 'rgba(255, 255, 255, 0.2)'
+            : 'rgba(0, 0, 0, 0.2)',
+        borderRadius: '4px',
+        '&:hover': {
+            backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.3)'
+                : 'rgba(0, 0, 0, 0.3)',
+        },
+    },
+    '&::-webkit-scrollbar-track': {
+        backgroundColor: 'transparent',
+    },
+    scrollbarWidth: 'thin',
+    scrollbarColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
+        ? 'rgba(255, 255, 255, 0.2) transparent'
+        : 'rgba(0, 0, 0, 0.2) transparent',
 };
 
 export const LeftSidePanelContent = () => {
     const theme = useTheme();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Dynamic styles based on theme
     const item = {
@@ -79,29 +83,58 @@ export const LeftSidePanelContent = () => {
                         justifyContent: 'space-between'
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box component="span" sx={{ml: 1}}>SkellyCam💀📸</Box>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <IconButton
                             color="inherit"
                             onClick={() => navigate('/')}
                         >
-                            <HomeIcon />
+                            <HomeIcon/>
                         </IconButton>
-                        <Box component="span" sx={{ ml: 1 }}>SkellyCam💀📸</Box>
+                        <IconButton
+                            color="inherit"
+                            onClick={() => navigate('/cameras')}
+                        >
+                            <VideocamIcon/>
+                        </IconButton>
+                        <IconButton
+                            color="inherit"
+                            onClick={() => navigate('/videos')}
+                        >
+                            <VideoLibraryIcon/>
+                        </IconButton>
+
+                        <ThemeToggle/>
                     </Box>
-                    <ThemeToggle />
+
                 </ListItem>
             </List>
 
-            <Box sx={{
-                flex: 1,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                ...scrollbarStyles
-            }}>
-                <WebsocketConnectionStatus/>
-                <AvailableCamerasPanel/>
-                <RecordingInfoPanel/>
-            </Box>
+            <WebsocketConnectionStatus/>
+
+            {location.pathname === '/cameras' && (
+                <Box sx={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    ...scrollbarStyles
+                }}>
+                    <AvailableCamerasPanel/>
+                    <RecordingInfoPanel/>
+                </Box>
+            )}
+
+
+            {location.pathname === '/videos' && (
+                <Box sx={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    ...scrollbarStyles
+                }}>
+                    <VideoFolderPanel/>
+                </Box>
+            )}
         </Box>
     );
 }

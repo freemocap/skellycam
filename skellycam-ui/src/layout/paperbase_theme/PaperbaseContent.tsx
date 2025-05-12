@@ -5,7 +5,7 @@ import {CssBaseline} from "@mui/material";
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
 import {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppSelector} from "@/store/AppStateStore";
-import {BaseRouter} from "@/layout/BaseContent";
+import {BaseContentRouter} from "@/layout/BaseContentRouter";
 
 export const PaperbaseContent = function () {
 
@@ -21,7 +21,7 @@ export const PaperbaseContent = function () {
             <CssBaseline/>
             <HashRouter>
                 <BasePanelLayout>
-                    <BaseRouter/>
+                    <BaseContentRouter/>
                 </BasePanelLayout>
             </HashRouter>
         </ThemeProvider>
