@@ -11,7 +11,7 @@ from skellycam.system.default_paths import get_default_recording_folder_path, de
 
 logger = logging.getLogger(__name__)
 
-record_cameras_router = APIRouter(tags=["Recording"])
+record_cameras_router = APIRouter(tags=["Cameras"])
 
 
 class StartRecordingRequest(BaseModel):

@@ -101,8 +101,6 @@ class WebsocketServer:
     async def _handle_ipc_queue_message(self, message: object|None = None):
         if isinstance(message, dict) and isinstance(list(message.values())[0], CameraConfig):
             logger.trace(f"Updating device extracted camera configs")
-            self._app.set_device_extracted_camera_configs(message)
-            message = self._app.state_dto()
         elif isinstance(message, SkellycamAppStateDTO):
             logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
         elif isinstance(message, CurrentFramerate):

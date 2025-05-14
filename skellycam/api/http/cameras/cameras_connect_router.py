@@ -23,7 +23,7 @@ class CameraConnectRequest(BaseModel):
 
 
 @connect_cameras_router.post(
-    "/cameras/connect",
+    "/connect",
     summary="Connect/Update specified cameras and apply provided configuration settings",
     tags=['Cameras']
 )

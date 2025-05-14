@@ -1,24 +1,31 @@
 import logging
 from pathlib import Path
-from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Body
-from pydantic import BaseModel, DirectoryPath, Field
+from pydantic import BaseModel, Field
 
 from skellycam.skellycam_app.skellycam_app import get_skellycam_app
 
 logger = logging.getLogger(__name__)
 load_videos_router = APIRouter()
+DEFAULT_VIDEOS_PATH = Path().home() / "freemocap_data" / "recording_sessions" / "freemocap_test_data" / "synchronized_videos"
 
+def get_test_videos() -> list[str]:
+    # case insensitive glob all video files in the directory
+    video_paths = []
+    for ext in ['*.mp4', '*.avi', '*.mov']:
+        for video_path in DEFAULT_VIDEOS_PATH.glob(ext):
+            video_paths.append(str(video_path))
+    return video_paths
 
 class LoadRecordingRequest(BaseModel):
-    video_paths: list[str] = Field(default=[], description="List of paths to synchronized videos that all have exactly the same number of frames")
+    video_paths: list[str] = Field(default_factory=get_test_videos, description="List of paths to synchronized videos that all have exactly the same number of frames")
 
 class LoadRecordingResponse(BaseModel):
     frame_count: int = Field(default=0, ge=0, description="Total number of frames across all videos in the recording session.")
 
 
-@load_videos_router.post("/load_videos", response_model=LoadRecordingResponse)
+@load_videos_router.post("/load_videos", response_model=LoadRecordingResponse, tags=["Videos"])
 async def load_recording_endpoint(request: LoadRecordingRequest = Body(..., description="Request body containing the path to the recording directory",
                                                                        examples=[LoadRecordingRequest()])
                                   ) -> LoadRecordingResponse:

@@ -65,11 +65,6 @@ class SkellycamApplication:
         self.camera_group.start()
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 
-    def set_device_extracted_camera_configs(self, configs: CameraConfigs):
-        if self.camera_group is None or self.camera_group.camera_configs is None:
-            raise ValueError("Cannot set device extracted camera config without CameraGroup!")
-        self.camera_group.camera_configs.update(configs)
-        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
 
 
     def update_camera_group(self,
@@ -86,8 +81,6 @@ class SkellycamApplication:
         if self.camera_group is None:
             return
         logger.debug("Closing existing camera group...")
-        self.camera_group.close()
-        self.shmorchestrator.close_and_unlink()
         self._reset()
         logger.success("Camera group closed successfully")
 
@@ -108,6 +101,10 @@ class SkellycamApplication:
         return SkellycamAppStateDTO.from_state(self)
 
     def _reset(self):
+        if self.camera_group:
+            self.close_camera_group()
+        if self.shmorchestrator:
+            self.shmorchestrator.close_and_unlink()
         self.camera_group = None
         self.shmorchestrator = None
         self.ipc = InterProcessCommunicationManager(global_kill_flag=self.ipc.global_kill_flag)
@@ -125,13 +122,13 @@ class SkellycamAppStateDTO(BaseModel):
     type: str
     state_timestamp: str = datetime.now().isoformat()
 
-    camera_configs: Optional[CameraConfigs]
+    camera_configs: CameraConfigs | None
     record_frames_flag_status: bool
 
     @classmethod
     def from_state(cls, state: SkellycamApplication):
         return cls(
-            camera_configs=state.camera_group_configs,
+            camera_configs=state.camera_group.camera_configs if state.camera_group else None,
             record_frames_flag_status=state.ipc.record_frames_flag.value,
             type=cls.__name__
         )
