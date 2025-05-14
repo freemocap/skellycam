@@ -50,11 +50,6 @@ class CameraGroupOrchestrator:
     def should_continue(self):
         return self.ipc_flags.camera_group_should_continue
 
-    @property
-    def cameras_ready(self):
-        self.ipc_flags.cameras_connected_flag.value = all(
-            [triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
-        return self.ipc_flags.cameras_connected_flag.value
 
     @property
     def new_multi_frame_available(self):
@@ -190,18 +185,28 @@ class CameraGroupOrchestrator:
     def _await_frames_retrieved(self):
         while not self.frames_retrieved and self.should_continue:
             wait_1ms()
+    @property
+    def cameras_ready(self):
+        self.ipc_flags.cameras_connected_flag.value = all(
+            [triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
+        return self.ipc_flags.cameras_connected_flag.value
 
     def await_cameras_ready(self):
         logger.trace("Waiting for all cameras to be ready...")
-        while not all([triggers.camera_ready_flag.value for triggers in
-                       self.frame_loop_flags.values()]) and self.should_continue:
+        while not self.cameras_ready and self.should_continue:
+            cameras_to_remove = []
             for camera_id, flags in self.frame_loop_flags.items():
                 if flags.close_self_flag.value:
                     logger.warning(f"Camera {camera_id} shut itself down - removing from camera group")
                     camera_configs = deepcopy(self.camera_group_dto.camera_configs)
                     camera_configs[camera_id].use_this_camera = False
+                    cameras_to_remove.append(camera_id)
                     self.camera_group_dto.ipc.ws_ipc_relay_queue.put(camera_configs)
 
+            for camera_id in cameras_to_remove:
+                self.frame_loop_flags.pop(camera_id)
+                self.camera_group_dto.camera_configs.pop(camera_id)
+                logger.info(f"Camera {camera_id} removed from camera group")
             wait_10ms()
         logger.debug("All cameras are ready!")
 

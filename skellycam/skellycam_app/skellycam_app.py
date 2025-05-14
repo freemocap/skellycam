@@ -65,6 +65,11 @@ class SkellycamApplication:
         self.camera_group.start()
         logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
 
+    def set_device_extracted_camera_configs(self, configs: CameraConfigs):
+        if self.camera_group is None or self.camera_group.camera_configs is None:
+            raise ValueError("Cannot set device extracted camera config without CameraGroup!")
+        self.camera_group.camera_configs.update(configs)
+        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
 
 
     def update_camera_group(self,

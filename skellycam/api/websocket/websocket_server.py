@@ -99,10 +99,12 @@ class WebsocketServer:
         logger.info("Ending listener for client messages...")
 
     async def _handle_ipc_queue_message(self, message: object|None = None):
-        if isinstance(message, dict) and isinstance(list(message.values())[0], CameraConfig):
-            logger.trace(f"Updating device extracted camera configs")
-        elif isinstance(message, SkellycamAppStateDTO):
+        if isinstance(message, SkellycamAppStateDTO):
             logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
+        elif isinstance(message, dict) and isinstance(list(message.values())[0], CameraConfig):
+            logger.trace(f"Updating device extracted camera configs")
+            self._app.set_device_extracted_camera_configs(message)
+            return
         elif isinstance(message, CurrentFramerate):
             self.latest_backend_framerate = message
             return # will send framerate update bundled with frontend payload
