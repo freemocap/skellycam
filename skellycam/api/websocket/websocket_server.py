@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import multiprocessing
 import time
@@ -43,8 +44,8 @@ class WebsocketServer:
 
         if not self._app.ipc.global_kill_flag.value:
             logger.error("Websocket connection closed, but global kill flag is not set. "
-                "This indicates a potential issue with the application state."
-            )
+                         "This indicates a potential issue with the application state."
+                         )
 
     @property
     def should_continue(self):
@@ -58,7 +59,8 @@ class WebsocketServer:
         logger.info("Starting websocket runner...")
         self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
                          asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
-                         asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"), ]
+                         asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
+                         asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler")]
 
         try:
             await asyncio.gather(*self.ws_tasks, return_exceptions=True)
@@ -69,7 +71,6 @@ class WebsocketServer:
                 if not task.done():
                     task.cancel()
             raise
-
 
     async def _ipc_queue_relay(self):
         """
@@ -98,7 +99,7 @@ class WebsocketServer:
             logger.info("Ending listener for frontend payload messages in queue...")
         logger.info("Ending listener for client messages...")
 
-    async def _handle_ipc_queue_message(self, message: object|None = None):
+    async def _handle_ipc_queue_message(self, message: object | None = None):
         if isinstance(message, SkellycamAppStateDTO):
             logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
         elif isinstance(message, dict) and isinstance(list(message.values())[0], CameraConfig):
@@ -107,7 +108,7 @@ class WebsocketServer:
             return
         elif isinstance(message, CurrentFramerate):
             self.latest_backend_framerate = message
-            return # will send framerate update bundled with frontend payload
+            return  # will send framerate update bundled with frontend payload
         else:
             logger.warning(f"Unknown message type: {type(message)}")
 
@@ -175,14 +176,13 @@ class WebsocketServer:
             logger.error("Websocket shut down while sending payload!")
             raise RuntimeError("Websocket shut down while sending payload!")
 
-
     async def _logs_relay(self):
         logger.info("Starting websocket log relay listener...")
         try:
             while self.should_continue:
                 if not self._app.ipc.ws_logs_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
                     try:
-                        log_record:LogRecordModel = self._app.ipc.ws_logs_queue.get_nowait()
+                        log_record: LogRecordModel = self._app.ipc.ws_logs_queue.get_nowait()
                         await self.websocket.send_json(log_record)
                     except (multiprocessing.queues.Empty, self._app.ipc.ws_logs_queue.Empty):
                         await async_wait_1ms()
@@ -191,3 +191,26 @@ class WebsocketServer:
 
         except asyncio.CancelledError:
             logger.debug("Log relay task cancelled")
+
+    async def _client_message_handler(self):
+        """
+        Handle messages from the client.
+        """
+        logger.info("Starting client message handler...")
+        try:
+            while self.should_continue:
+                try:
+                    message = await self.websocket.receive_text()
+                    data = json.loads(message)
+                    logger.info(f"Received message from client: {data}")
+
+
+                except WebSocketDisconnect:
+                    logger.api("Client disconnected, ending client message handler...")
+                    break
+                except Exception as e:
+                    logger.exception(f"Error handling client message: {e.__class__}: {e}")
+        except asyncio.CancelledError:
+            pass
+        finally:
+            logger.info("Ending client message handler...")

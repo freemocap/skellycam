@@ -35,7 +35,7 @@ class FrontendFramePayload(BaseModel):
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
                                  image_sizes: dict[CameraIndex, dict[str, int]]|None = None,
-                                 resize_image: float = .5,
+                                 resize_image: float = .25,
                                  jpeg_quality: int = 80):
 
         if not multi_frame_payload.full:
