@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 Z_SCORE_95_CI = 1.96  # Z-score for 95% confidence interval
 
-SamplesType = Union[List[Union[float, int]], np.ndarray]
+SamplesType = list[float|int]|np.ndarray
 
 
 def validate_samples(data: np.ndarray) -> None:
@@ -89,14 +89,20 @@ class VariabilityMeasures(BaseModel):
 
 class DescriptiveStatistics(BaseModel):
     name: str = ""
+    units: str = ""
     sample_data: SampleData
 
     class Config:
         arbitrary_types_allowed = True
 
     @classmethod
-    def from_samples(cls, sample_data: SamplesType, name: str) -> 'DescriptiveStatistics':
-        return cls(name=name, sample_data=SampleData.from_samples(sample_data))
+    def from_samples(cls, sample_data: SamplesType,
+                     name: str,
+                     units: str
+                     ) -> 'DescriptiveStatistics':
+        return cls(name=name,
+                   units=units,
+                   sample_data=SampleData.from_samples(sample_data))
 
     @property
     def samples(self) -> SamplesType:
@@ -144,6 +150,8 @@ class DescriptiveStatistics(BaseModel):
 
     def to_dict(self):
         return {
+            "name": self.name,
+            "units": self.units,
             "mean": self.mean,
             "median": self.median,
             "stddev": self.standard_deviation,
@@ -156,6 +164,7 @@ class DescriptiveStatistics(BaseModel):
     def __str__(self) -> str:
         return (
             f"{self.name} Descriptive Statistics:\n"
+            f"\tUnits: {self.units}\n"
             f"\tNumber of Samples: {self.number_of_samples}\n"
             f"\tMean: {self.mean:.3f}\n"
             f"\tMedian: {self.median:.3f}\n"

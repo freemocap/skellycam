@@ -90,7 +90,7 @@ class SingleSlotCameraSharedMemory:
     def put_frame(self, image: np.ndarray, metadata: np.ndarray):
         if self.read_only:
             raise ValueError("Cannot put new frame into read-only instance of shared memory!")
-        metadata[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
+        metadata[FRAME_METADATA_MODEL.COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         self.image_shm.put_data(image)
         self.metadata_shm.put_data(metadata)
         self.last_written_frame_number.value = metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
@@ -102,12 +102,12 @@ class SingleSlotCameraSharedMemory:
 
         image = self.image_shm.get_data()
         metadata = self.metadata_shm.get_data()
-        metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
+        metadata[FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
         self.last_read_frame_number.value = metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
-        return FramePayload.create(image=image, metadata=metadata)
+        return FramePayload(image=image, metadata=metadata)
 
     def close(self):
         self.image_shm.close()

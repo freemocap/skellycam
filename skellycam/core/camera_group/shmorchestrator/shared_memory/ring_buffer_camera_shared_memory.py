@@ -89,7 +89,7 @@ class RingBufferCameraSharedMemory(BaseModel):
     def put_frame(self, image: np.ndarray, metadata: np.ndarray):
         if self.read_only:
             raise ValueError("Cannot put new frame into read-only instance of shared memory!")
-        metadata[FRAME_METADATA_MODEL.COPY_TO_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
+        metadata[FRAME_METADATA_MODEL.COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         self.image_shm.put_data(image)
         self.metadata_shm.put_data(metadata)
         logger.loop(
@@ -99,7 +99,7 @@ class RingBufferCameraSharedMemory(BaseModel):
     def retrieve_latest_frame(self) -> FramePayload:
         image = self.image_shm.get_latest_payload()
         metadata = self.metadata_shm.get_latest_payload()
-        metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
+        metadata[FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
@@ -108,7 +108,7 @@ class RingBufferCameraSharedMemory(BaseModel):
     def retrieve_next_frame(self) -> FramePayload:
         image = self.image_shm.get_next_payload()
         metadata = self.metadata_shm.get_next_payload()
-        metadata[FRAME_METADATA_MODEL.COPY_FROM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
+        metadata[FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )

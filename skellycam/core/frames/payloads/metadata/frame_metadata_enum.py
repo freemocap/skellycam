@@ -23,12 +23,14 @@ class FRAME_METADATA_MODEL(Enum):
     POST_GRAB_TIMESTAMP_NS: int = 7  # (timestamp after calling cv2.VideoCapture.grab())
     PRE_RETRIEVE_TIMESTAMP_NS: int = 8  # (timestamp before calling cv2.VideoCapture.retrieve())
     POST_RETRIEVE_TIMESTAMP_NS: int = 9  # (timestamp after calling cv2.VideoCapture.retrieve())
-    COPY_TO_BUFFER_TIMESTAMP_NS: int = 10  # (timestamp when frame was copied to shared memory)
-    COPY_FROM_BUFFER_TIMESTAMP_NS: int = 11  # (timestamp when frame was copied from shared memory)
-    START_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 12  # (timestamp before compressing to jpeg)
-    END_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 13  # (timestamp_ns (timestamp after compressing to jpeg)
-    START_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 14  # (timestamp before annotating image)
-    END_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 15  # (timestamp after annotating image)
+    COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS: int = 10  # (timestamp when frame was copied to shared memory)
+    COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS: int = 11  # (timestamp when frame was copied from shared memory)
+    COPY_TO_MULTI_FRAME_ESCAPE_SHM_BUFFER_TIMESTAMP_NS: int = 12  # (timestamp when frame was copied to multi-frame escape shared memory)
+    COPY_FROM_MULTI_FRAME_ESCAPE_SHM_BUFFER_TIMESTAMP_NS: int = 13  # (timestamp when frame was copied from multi-frame escape shared memory)
+    START_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 13  # (timestamp before compressing to jpeg)
+    END_COMPRESS_TO_JPEG_TIMESTAMP_NS: int = 14  # (timestamp_ns (timestamp after compressing to jpeg)
+    START_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 15  # (timestamp before annotating image)
+    END_IMAGE_ANNOTATION_TIMESTAMP_NS: int = 16  # (timestamp after annotating image)
 
 
 DEFAULT_IMAGE_DTYPE = np.uint8

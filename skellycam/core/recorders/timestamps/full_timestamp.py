@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
-from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
 
 
 class FullTimestamp(BaseModel):
@@ -76,7 +76,7 @@ class FullTimestamp(BaseModel):
         return cls.from_datetime(datetime.now(), perf_counter_ns=time.perf_counter_ns())
 
     @classmethod
-    def from_perf_to_unix_mapping(cls, utc_to_perf_mapping: UtcToPerfCounterMapping):
+    def from_timebase_mapping(cls, utc_to_perf_mapping: TimeBaseMapping):
         # Convert perf_counter_ns to seconds and add to the base UTC timestamp
         base_utc_timestamp = utc_to_perf_mapping.utc_time_ns / 1e9
         perf_counter_seconds = utc_to_perf_mapping.perf_counter_ns / 1e9
@@ -126,8 +126,8 @@ if __name__ == "__main__":
         "Printing `Timestamp.from_mapping(perf_counter_to_unix_mapping=(time.perf_counter_ns(), time.time_ns()))`:"
     )
     print(
-        FullTimestamp.from_perf_to_unix_mapping(
-            UtcToPerfCounterMapping(
+        FullTimestamp.from_timebase_mapping(
+            TimeBaseMapping(
                 perf_counter_ns=time.perf_counter_ns(),
                 utc_ns=time.time_ns()
             )

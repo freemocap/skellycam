@@ -4,6 +4,7 @@ from typing import Tuple, Any, List
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE
 
@@ -16,6 +17,7 @@ class FramePayload(BaseModel):
     image: np.ndarray
     metadata: np.ndarray
 
+
     @property
     def camera_id(self):
         return self.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
@@ -25,6 +27,12 @@ class FramePayload(BaseModel):
         return self.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
 
     @property
+    def timestamp_ns(self) -> int:
+        """
+        De facto timestamp for this frame is defined as the average of the pre-grab and post-grab timestamps (i.e. the hypothetical moment the image was grabbed).
+        """
+        return int((self.metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] + self.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value]) // 2)
+    @property
     def height(self):
         return self.image.shape[0]
 
@@ -32,12 +40,11 @@ class FramePayload(BaseModel):
     def width(self):
         return self.image.shape[1]
 
-    @classmethod
-    def create(cls, image: np.ndarray, metadata: np.ndarray):
-        return cls(image=image,
-                   image_shape=image.shape,
-                   metadata=metadata,
-                   metadata_shape=metadata.shape)
+    @property
+    def frame_metadata(self) -> FrameMetadata:
+        return FrameMetadata.from_frame_metadata_array(self.metadata)
+
+
 
     @classmethod
     def from_bytes_list(cls, bytes_list: List[Any]) -> 'FramePayload':

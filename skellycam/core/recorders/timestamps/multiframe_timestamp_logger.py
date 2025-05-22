@@ -2,25 +2,32 @@ import json
 import logging
 import pprint
 from pathlib import Path
-from typing import Dict, List, Any, Hashable, Optional
+from typing import Hashable
 
+import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.recorders.timestamps.old.multi_frame_timestamp_log import (
+from skellycam.core.recorders.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
+from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
 logger = logging.getLogger(__name__)
-
+from   pydantic import ConfigDict
 
 class MultiframeTimestampLogger(BaseModel):
-    multi_frame_metadatas: List[MultiFrameMetadata] = Field(default_factory=List[MultiFrameMetadata])
-    starting_frame_full_timestamp: Optional[FullTimestamp] = None
+    multi_frame_metadatas: list[MultiFrameMetadata] = Field(default_factory=list[MultiFrameMetadata])
     csv_save_path: str
     starting_timestamp_json_path: str
+    first_multi_frame_payload: MultiFramePayload | None = None
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+
+    )
 
     @classmethod
     def create(cls,
@@ -39,10 +46,15 @@ class MultiframeTimestampLogger(BaseModel):
             multi_frame_metadatas=[],
         )
 
+    @property
+    def camera_ids(self) -> list[str]:
+        if len(self.multi_frame_metadatas) == 0:
+            return []
+        return list(self.multi_frame_metadatas[0].camera_ids)
+
     def log_multiframe(self, multi_frame_payload: MultiFramePayload):
         if len(self.multi_frame_metadatas) == 0:
-            self.starting_frame_full_timestamp = FullTimestamp.from_perf_to_unix_mapping(
-                multi_frame_payload.utc_ns_to_perf_ns)
+            self.first_multi_frame_payload = multi_frame_payload
         self.multi_frame_metadatas.append(multi_frame_payload.to_metadata())
 
     def close(self):
@@ -51,45 +63,47 @@ class MultiframeTimestampLogger(BaseModel):
         )
         self._save_starting_timestamp()
         self._convert_to_dataframe_and_save()
-
+        # self.save_timestamp_stats()
+        # self.save_documentation()
         logger.success("Timestamp logs saved successfully!")
 
     def _save_starting_timestamp(self):
         # save starting timestamp to JSON file
         with open(self.starting_timestamp_json_path, "w", ) as f:
             f.write(
-                json.dumps(self.starting_frame_full_timestamp.to_descriptive_dict(), indent=4)
+                json.dumps(
+                    FullTimestamp.from_timebase_mapping(
+                        self.first_multi_frame_payload.timebase_mapping).to_descriptive_dict(), indent=2)
             )
 
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(
-            [mf_metadata.to_df_row() for mf_metadata in self.multi_frame_metadatas]
+            [MultiFrameTimestampLog.from_multi_frame_metadata(multi_frame_metadata=mf_metadata,
+                                                              first_multi_frame_payload=self.first_multi_frame_payload).to_df_row()
+             for mf_metadata in self.multi_frame_metadatas],
         )
         return df
 
     def _convert_to_dataframe_and_save(self):
         df = self.to_dataframe()
         df.to_csv(path_or_buf=self.csv_save_path, index=True)
+
         logger.info(
             f"Saved multi-frame timestamp logs to {self.csv_save_path}"
         )
 
     def save_timestamp_stats(self):
-        stats = self._get_timestamp_stats()
+        stats = self._calculate_stats()
 
-        stats["timestamp_stats_by_camera_id"] = self._get_camera_stats(stats)
-
-        with open(self._stats_path, "w", encoding="utf-8") as f:
+        with open(self.csv_save_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(stats, indent=4))
-
-        self.save_documentation()
 
         logger.info(
             f"Saved multi-frame timestamp stats to {self._stats_path} -\n\n"
             f"{pprint.pformat(stats, indent=4)})\n\n"
         )
 
-    def _get_camera_stats(self, stats) -> Dict[Hashable, Dict[str, float]]:
+    def _get_camera_stats(self) -> dict[Hashable, dict[str, float]]:
         camera_stats_by_id = {}
         try:
             for camera_id, timestamp_logger in self._timestamp_loggers.items():
@@ -104,37 +118,6 @@ class MultiframeTimestampLogger(BaseModel):
             raise
         return camera_stats_by_id
 
-    def _get_timestamp_stats(self) -> Dict[Hashable, Any]:
-        stats = {
-            "total_frames": len(self.multi_frame_metadatas),
-            "total_recording_duration_s": self.multi_frame_metadatas[
-                -1
-            ].seconds_since_cameras_connected,
-        }
-        stats.update(self._calculate_stats())
-        return stats
-
-    def _calculate_stats(self) -> Dict[str, Any]:
-        df = self.to_dataframe()  # get the dataframe to avoid recalculating
-        return {
-            "todo:addstats", "todo:addstats"
-            # "mean_frame_duration_s": df["mean_frame_duration_s"].mean(),
-            # "std_frame_duration_s": df["mean_frame_duration_s"].std(),
-            # "mean_frames_per_second": df["mean_frame_duration_s"].mean() ** -1,
-            # "mean_inter_camera_timestamp_range_s": df[
-            #     "inter_camera_timestamp_range_s"
-            # ].mean(),
-            # "std_dev_inter_camera_timestamp_range_s": df[
-            #     "inter_camera_timestamp_range_s"
-            # ].std(),
-            # "mean_inter_camera_timestamp_stddev_s": df[
-            #     "inter_camera_timestamp_stddev_s"
-            # ].mean(),
-            # "std_dev_inter_camera_timestamp_stddev_s": df[
-            #     "inter_camera_timestamp_stddev_s"
-            # ].std(),
-        }
-
     def save_documentation(self):
         if not self._documentation_path.exists():
             with open(self._documentation_path, "w") as f:
@@ -143,3 +126,15 @@ class MultiframeTimestampLogger(BaseModel):
         logger.info(
             f"Saved multi_frame_timestamp descriptions to {self._documentation_path}"
         )
+
+    def _calculate_stats(self) -> dict[str, object]:
+        df = self.to_dataframe()  # get the dataframe to avoid recalculating
+
+        # Basic frame rate statistics
+        frame_intervals = df['timestamp_from_zero_s'].diff().dropna()
+        frame_duration_stats = DescriptiveStatistics.from_samples(sample_data=frame_intervals.to_numpy(na_value=np.nan),
+                                                                  name="frame_duration",
+                                                                  units="seconds").model_dump()
+
+
+        return frame_duration_stats

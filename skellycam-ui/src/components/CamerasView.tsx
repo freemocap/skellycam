@@ -35,7 +35,6 @@ const ImageGrid: React.FC = () => {
 
     // Calculate image info (just cameraId and aspectRatio) from bitmaps
     const processedImages = useMemo(() => {
-        console.log('Processing bitmaps, keys:', Object.keys(latestImageBitmaps));
         const images: Record<string, ProcessedImageInfo> = {};
 
         Object.entries(latestImageBitmaps).forEach(([cameraId, bitmap]) => {
@@ -50,7 +49,6 @@ const ImageGrid: React.FC = () => {
 
     // Draw bitmaps to canvases whenever they change
     useEffect(() => {
-        console.log('Drawing bitmaps to canvases, bitmap keys:', Object.keys(latestImageBitmaps));
 
         Object.entries(latestImageBitmaps).forEach(([cameraId, bitmap]) => {
             const canvas = canvasRefs.current[cameraId];

@@ -12,7 +12,7 @@ import pyaudio
 from pydantic import BaseModel
 
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class AudioRecorder:
     def _initialize_audio_data(self):
         self.audio_recording_info = AudioRecordingInfo(
             file_name=self.audio_filename.replace(str(Path.home()), "~"),
-            utc_to_perf_counter_ns_mapping=UtcToPerfCounterMapping().model_dump(),
+            utc_to_perf_counter_ns_mapping=TimeBaseMapping().model_dump(),
             audio_record_start_time=FullTimestamp.now().model_dump(),
             rate=self.rate,
             channels=self.channels,

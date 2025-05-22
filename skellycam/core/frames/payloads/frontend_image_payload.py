@@ -14,14 +14,16 @@ from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
-from skellycam.core.recorders.timestamps.utc_to_perfcounter_mapping import UtcToPerfCounterMapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
 
 Base64JPEGImage = str  # Base64 encoded JPEG image
+DEFAULT_FRONTEND_IMAGE_RESIZE = 0.5
+DEFAULT_JPEG_QUALITY = 85
 class FrontendFramePayload(BaseModel):
     jpeg_images: dict[CameraIdString, Base64JPEGImage]
     camera_configs: CameraConfigs
     multi_frame_metadata: MultiFrameMetadata
-    utc_ns_to_perf_ns: UtcToPerfCounterMapping
+    timebase_mapping: TimeBaseMapping
     multi_frame_number: int = 0
     backend_framerate: CurrentFramerate | None = None
     frontend_framerate: CurrentFramerate | None = None
@@ -35,8 +37,8 @@ class FrontendFramePayload(BaseModel):
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
                                  image_sizes: dict[CameraIndex, dict[str, int]]|None = None,
-                                 resize_image: float = .25,
-                                 jpeg_quality: int = 80):
+                                 resize_image: float = DEFAULT_FRONTEND_IMAGE_RESIZE,
+                                 jpeg_quality: int = DEFAULT_JPEG_QUALITY) -> "FrontendFramePayload":
 
         if not multi_frame_payload.full:
             raise ValueError("MultiFramePayload must be full to convert to FrontendImagePayload")
@@ -53,7 +55,7 @@ class FrontendFramePayload(BaseModel):
             jpeg_images[camera_id] = cls._image_to_jpeg_cv2(resized_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
-        return cls(utc_ns_to_perf_ns=multi_frame_payload.utc_ns_to_perf_ns,
+        return cls(timebase_mapping=multi_frame_payload.timebase_mapping,
                    multi_frame_number=multi_frame_payload.multi_frame_number,
                    jpeg_images=jpeg_images,
                    multi_frame_metadata=mf_metadata,
@@ -65,7 +67,6 @@ class FrontendFramePayload(BaseModel):
     def _resize_image(frame: FramePayload,
                       image_sizes: Dict[CameraIndex, Dict[str, int]],
                       fallback_resize_ratio: float) -> np.ndarray:
-        # TODO - Pydantic model for images sizes (NOT the same as the frontend CameraViewSizes, to avoid circular imports)
         image = frame.image
         camera_id = frame.camera_id
         if image_sizes is None or str(camera_id) not in image_sizes.keys():
