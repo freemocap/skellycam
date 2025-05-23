@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from skellycam.core.camera_group.camera.opencv.determine_backend import BackendSelection
+from skellycam.core.camera.opencv.determine_backend import BackendSelection
 
 
 def check_resolution(video_capture: cv2.VideoCapture, width: int, height: int) -> bool:

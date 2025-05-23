@@ -1,7 +1,7 @@
 import numpy as np
 from pydantic import BaseModel, computed_field
 
-from skellycam.core import CameraIndex
+from skellycam import CameraIndex
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_SHAPE
 

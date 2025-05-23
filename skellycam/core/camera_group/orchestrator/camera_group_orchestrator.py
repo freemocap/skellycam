@@ -2,13 +2,10 @@ import logging
 import multiprocessing
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict
 
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.camera_frame_loop_flags import CameraFrameLoopFlags
-from skellycam.core.camera_group.camera.config.camera_config import CameraIdString
+from skellycam.core.camera.camera_frame_loop_flags import CameraFrameLoopFlags
+from skellycam.core.types import CameraIdString
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1ms
 
 logger = logging.getLogger(__name__)

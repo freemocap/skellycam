@@ -1,6 +1,6 @@
 import cv2
 
-from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes, \
+from skellycam.core.camera.config import RotationTypes, \
     OPENCV_NO_ROTATION_PLACEHOLDER_VALUE
 
 

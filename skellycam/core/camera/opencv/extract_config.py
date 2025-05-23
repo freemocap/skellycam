@@ -2,10 +2,10 @@ import logging
 
 import cv2
 
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraIdString
-from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
-from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
+from skellycam import CameraIndex
+from skellycam.core.camera.config import CameraConfig
+from skellycam.core.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera.config import RotationTypes
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
 logger = logging.getLogger(__name__)

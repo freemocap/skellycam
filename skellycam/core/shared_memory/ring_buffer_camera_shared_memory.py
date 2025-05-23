@@ -4,8 +4,8 @@ import time
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
+from skellycam.core.camera.config import CameraConfig
+from skellycam.core.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
     SharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \

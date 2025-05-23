@@ -1,11 +1,10 @@
 from datetime import datetime
-from typing import Tuple, Dict, List
 
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraIndex
-from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
+from skellycam import CameraIndex
+from skellycam.core.types import CameraIdString
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFrameMetadata, MultiFramePayload
 from skellycam.core.recorders.timestamps.camera_timestamp_log import CameraTimestampLog
 
@@ -27,72 +26,78 @@ class MultiFrameTimestampLog(BaseModel):
     timestamp_local_iso8601: str = Field(
         description="The mean timestamp of the frames in this multi-frame, made by converting `mean_timestamp_local_s` in ISO 8601 format, e.g. 2021-01-01T00:00:00.000000"
     )
-    inter_camera_timestamp_range_ms: float = Field(
+    inter_camera_timestamp_range_ns: float = Field(
         description="The range of timestamps between cameras, in milliseconds"
     )
-    inter_camera_timestamp_stddev_ms: float = Field(
+    inter_camera_timestamp_stddev_ns: float = Field(
         description="The standard deviation of timestamps between cameras, in milliseconds"
     )
 
-    camera_logs: Dict[CameraIndex, CameraTimestampLog] = Field(
+
+    mean_time_before_grab_signal_ns: float = Field(
+        description="The mean time between frame initialzation and when the grab signal is sent to each camera, in nanoseconds"
+    )
+    stddev_time_before_grab_signal_ns: float = Field(
+        description="The standard deviation of the time between frame initialzation and when the grab signal is sent to each camera, in nanoseconds"
+    )
+    mean_time_spent_grabbing_frame_ns: float = Field(
+        description="The mean time spent grabbing the frame for each camera, in nanoseconds"
+    )
+    stddev_time_spent_grabbing_frame_ns: float = Field(
+        description="The standard deviation of the time spent grabbing the frame for each camera, in nanoseconds"
+    )
+    mean_time_waiting_to_retrieve_ns: float = Field(
+        description="The mean time spent waiting to retrieve the frame for each camera, in nanoseconds"
+    )
+    stddev_time_waiting_to_retrieve_ns: float = Field(
+        description="The standard deviation of the time spent waiting to retrieve the frame for each camera, in nanoseconds"
+    )
+    mean_time_spent_retrieving_ns: float = Field(
+        description="The mean time spent retrieving the frame for each camera, in nanoseconds"
+    )
+    stddev_time_spent_retrieving_ns: float = Field(
+        description="The standard deviation of the time spent retrieving the frame for each camera, in nanoseconds"
+    )
+    mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns: float = Field(
+        description="The mean time spent waiting to be put into the camera shared memory buffer for each camera, in nanoseconds"
+    )
+    stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns: float = Field(
+        description="The standard deviation of the time spent waiting to be put into the camera shared memory buffer for each camera, in nanoseconds"
+    )
+    mean_time_spent_in_camera_shm_buffer_ns: float = Field(
+        description="The mean time spent in the camera shared memory buffer for each camera, in nanoseconds"
+    )
+    stddev_time_spent_in_camera_shm_buffer_ns: float = Field(
+        description="The standard deviation of the time spent in the camera shared memory buffer for each camera, in nanoseconds"
+    )
+    mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns: float = Field(
+        description="The mean time spent waiting to be put into the multi-frame escape shared memory buffer for each camera, in nanoseconds"
+    )
+    stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns: float = Field(
+        description="The standard deviation of the time spent waiting to be put into the multi-frame escape shared memory buffer for each camera, in nanoseconds"
+    )
+    mean_time_spent_in_multi_frame_escape_shm_buffer_ns: float = Field(
+        description="The mean time spent in the multi-frame escape shared memory buffer for each camera, in nanoseconds"
+    )
+    stddev_time_spent_in_multi_frame_escape_shm_buffer_ns: float = Field(
+        description="The standard deviation of the time spent in the multi-frame escape shared memory buffer for each camera, in nanoseconds"
+    )
+    mean_time_spent_waiting_to_start_compress_to_jpeg_ns:float = Field(
+        description="The mean time spent waiting to start compressing to JPEG for each camera, in nanoseconds"
+    )
+    stddev_time_spent_waiting_to_start_compress_to_jpeg_ns:float = Field(
+        description="The standard deviation of the time spent waiting to start compressing to JPEG for each camera, in nanoseconds"
+    )
+    mean_time_spent_in_compress_to_jpeg_ns: float = Field(
+        description="The mean time spent compressing to JPEG for each camera, in nanoseconds"
+    )
+    stddev_time_spent_in_compress_to_jpeg_ns: float = Field(
+        description="The standard deviation of the time spent compressing to JPEG for each camera, in nanoseconds"
+    )
+
+    camera_logs: dict[CameraIdString, CameraTimestampLog] = Field(
         description="Individual CameraTimestampLog objects for each camera in the multi-frame"
     )
-
-    mean_time_before_grab_signal_ms: float = Field(
-        description="The mean time between frame initialzation and when the grab signal is sent to each camera, in milliseconds"
-    )
-    stddev_time_before_grab_signal_ms: float = Field(
-        description="The standard deviation of the time between frame initialzation and when the grab signal is sent to each camera, in milliseconds"
-    )
-    mean_time_spent_grabbing_frame_ms: float = Field(
-        description="The mean time spent grabbing the frame for each camera, in milliseconds"
-    )
-    stddev_time_spent_grabbing_frame_ms: float = Field(
-        description="The standard deviation of the time spent grabbing the frame for each camera, in milliseconds"
-    )
-    mean_time_waiting_to_retrieve_ms: float = Field(
-        description="The mean time spent waiting to retrieve the frame for each camera, in milliseconds"
-    )
-    stddev_time_waiting_to_retrieve_ms: float = Field(
-        description="The standard deviation of the time spent waiting to retrieve the frame for each camera, in milliseconds"
-    )
-    mean_time_spent_retrieving_ms: float = Field(
-        description="The mean time spent retrieving the frame for each camera, in milliseconds"
-    )
-    stddev_time_spent_retrieving_ms: float = Field(
-        description="The standard deviation of the time spent retrieving the frame for each camera, in milliseconds"
-    )
-    mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms: float = Field(
-        description="The mean time spent waiting to be put into the camera shared memory buffer for each camera, in milliseconds"
-    )
-    stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms: float = Field(
-        description="The standard deviation of the time spent waiting to be put into the camera shared memory buffer for each camera, in milliseconds"
-    )
-    mean_time_spent_in_camera_shm_buffer_ms: float = Field(
-        description="The mean time spent in the camera shared memory buffer for each camera, in milliseconds"
-    )
-    stddev_time_spent_in_camera_shm_buffer_ms: float = Field(
-        description="The standard deviation of the time spent in the camera shared memory buffer for each camera, in milliseconds"
-    )
-    mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms: float = Field(
-        description="The mean time spent waiting to be put into the multi-frame escape shared memory buffer for each camera, in milliseconds"
-    )
-    stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms: float = Field(
-        description="The standard deviation of the time spent waiting to be put into the multi-frame escape shared memory buffer for each camera, in milliseconds"
-    )
-    mean_time_spent_waiting_to_start_compress_to_jpeg_ms:float = Field(
-        description="The mean time spent waiting to start compressing to JPEG for each camera, in milliseconds"
-    )
-    stddev_time_spent_waiting_to_start_compress_to_jpeg_ms:float = Field(
-        description="The standard deviation of the time spent waiting to start compressing to JPEG for each camera, in milliseconds"
-    )
-    mean_time_spent_in_compress_to_jpeg_ms: float = Field(
-        description="The mean time spent compressing to JPEG for each camera, in milliseconds"
-    )
-    stddev_time_spent_in_compress_to_jpeg_ms: float = Field(
-        description="The standard deviation of the time spent compressing to JPEG for each camera, in milliseconds"
-    )
-
 
 
 
@@ -111,14 +116,14 @@ class MultiFrameTimestampLog(BaseModel):
             for camera_id, frame_metadata in multi_frame_metadata.frame_metadatas.items()}
 
 
-        timestamps_per_camera_ms = [
-            timestamp_log.timestamp_utc_ns / 1e6
+        timestamps_per_camera_ns = [
+            timestamp_log.timestamp_utc_ns
             for timestamp_log in camera_timestamp_logs.values()
         ]
-        inter_camera_timestamp_range_ms = np.max(timestamps_per_camera_ms) - np.min(
-            timestamps_per_camera_ms
+        inter_camera_timestamp_range_ns = np.max(timestamps_per_camera_ns) - np.min(
+            timestamps_per_camera_ns
         )
-        inter_camera_timestamp_stddev_ms = float(np.std(timestamps_per_camera_ms))
+        inter_camera_timestamp_stddev_ns = float(np.std(timestamps_per_camera_ns))
 
         timestamp_perf_counter_ns = int(np.mean(
             [
@@ -146,111 +151,123 @@ class MultiFrameTimestampLog(BaseModel):
         timebase_local_iso8601 = datetime.fromtimestamp(timestamp_local_ns / 1e9).isoformat()
 
         # Calculate the mean and stddev of the time spent in each stage for each camera frame's lifecycle
-        mean_time_before_grab_signal_ms = np.mean(
+        mean_time_before_grab_signal_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_before_grab_signal_ns / 1e6
+                timestamp_log.frame_lifespan.time_before_grab_signal_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_before_grab_signal_ms = np.std(
+        stddev_time_before_grab_signal_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_before_grab_signal_ns / 1e6
+                timestamp_log.frame_lifespan.time_before_grab_signal_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_spent_grabbing_frame_ms = np.mean(
+        mean_time_spent_grabbing_frame_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_grabbing_frame_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_grabbing_frame_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_spent_grabbing_frame_ms = np.std(
+        stddev_time_spent_grabbing_frame_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_grabbing_frame_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_grabbing_frame_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_waiting_to_retrieve_ms = np.mean(
+        mean_time_waiting_to_retrieve_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_waiting_to_retrieve_ns / 1e6
+                timestamp_log.frame_lifespan.time_waiting_to_retrieve_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_waiting_to_retrieve_ms = np.std(
+        stddev_time_waiting_to_retrieve_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_waiting_to_retrieve_ns / 1e6
+                timestamp_log.frame_lifespan.time_waiting_to_retrieve_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_spent_retrieving_ms = np.mean(
+        mean_time_spent_retrieving_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_retrieving_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_retrieving_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_spent_retrieving_ms = np.std(
+        stddev_time_spent_retrieving_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_retrieving_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_retrieving_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms = np.mean(
+        mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_camera_shm_buffer_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_camera_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms = np.std(
+        stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_camera_shm_buffer_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_camera_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_spent_in_camera_shm_buffer_ms = np.mean(
+        mean_time_spent_in_camera_shm_buffer_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_in_camera_shm_buffer_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_in_camera_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_spent_in_camera_shm_buffer_ms = np.std(
+        stddev_time_spent_in_camera_shm_buffer_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_in_camera_shm_buffer_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_in_camera_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms = np.mean(
+        mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms = np.std(
+        stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_spent_waiting_to_start_compress_to_jpeg_ms = np.mean(
+        mean_time_spent_in_multi_frame_escape_shm_buffer_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_waiting_to_start_compress_to_jpeg_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_in_multi_frame_escape_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_spent_waiting_to_start_compress_to_jpeg_ms = np.std(
+        stddev_time_spent_in_multi_frame_escape_shm_buffer_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_waiting_to_start_compress_to_jpeg_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_in_multi_frame_escape_shm_buffer_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        mean_time_spent_in_compress_to_jpeg_ms = np.mean(
+        mean_time_spent_waiting_to_start_compress_to_jpeg_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_in_compress_to_jpeg_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_waiting_to_start_compress_to_jpeg_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
-        stddev_time_spent_in_compress_to_jpeg_ms = np.std(
+        stddev_time_spent_waiting_to_start_compress_to_jpeg_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_in_compress_to_jpeg_ns / 1e6
+                timestamp_log.frame_lifespan.time_spent_waiting_to_start_compress_to_jpeg_ns
+                for timestamp_log in camera_timestamp_logs.values()
+            ]
+        )
+        mean_time_spent_in_compress_to_jpeg_ns = np.mean(
+            [
+                timestamp_log.frame_lifespan.time_spent_in_compress_to_jpeg_ns
+                for timestamp_log in camera_timestamp_logs.values()
+            ]
+        )
+        stddev_time_spent_in_compress_to_jpeg_ns = np.std(
+            [
+                timestamp_log.frame_lifespan.time_spent_in_compress_to_jpeg_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
@@ -260,28 +277,30 @@ class MultiFrameTimestampLog(BaseModel):
             timestamp_from_zero_s=timestamp_from_zero_s,
             timestamp_utc_s=timestamp_utc_ns / 1e9,
             timestamp_utc_iso8601=timestamp_utc_iso8601,
-            inter_camera_timestamp_range_ms=inter_camera_timestamp_range_ms,
-            inter_camera_timestamp_stddev_ms=inter_camera_timestamp_stddev_ms,
+            inter_camera_timestamp_range_ns=inter_camera_timestamp_range_ns,
+            inter_camera_timestamp_stddev_ns=inter_camera_timestamp_stddev_ns,
             camera_logs=camera_timestamp_logs,
             timestamp_local_iso8601=timebase_local_iso8601,
-            mean_time_before_grab_signal_ms=float(mean_time_before_grab_signal_ms),
-            stddev_time_before_grab_signal_ms=float(stddev_time_before_grab_signal_ms),
-            mean_time_spent_grabbing_frame_ms=float(mean_time_spent_grabbing_frame_ms),
-            stddev_time_spent_grabbing_frame_ms=float(stddev_time_spent_grabbing_frame_ms),
-            mean_time_waiting_to_retrieve_ms=float(mean_time_waiting_to_retrieve_ms),
-            stddev_time_waiting_to_retrieve_ms=float(stddev_time_waiting_to_retrieve_ms),
-            mean_time_spent_retrieving_ms=float(mean_time_spent_retrieving_ms),
-            stddev_time_spent_retrieving_ms=float(stddev_time_spent_retrieving_ms),
-            mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms=float(mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms),
-            stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms=float(stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ms),
-            mean_time_spent_in_camera_shm_buffer_ms=float(mean_time_spent_in_camera_shm_buffer_ms),
-            stddev_time_spent_in_camera_shm_buffer_ms=float(stddev_time_spent_in_camera_shm_buffer_ms),
-            mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms=float(mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms),
-            stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms=float(stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ms),
-            mean_time_spent_waiting_to_start_compress_to_jpeg_ms=float(mean_time_spent_waiting_to_start_compress_to_jpeg_ms),
-            stddev_time_spent_waiting_to_start_compress_to_jpeg_ms=float(stddev_time_spent_waiting_to_start_compress_to_jpeg_ms),
-            mean_time_spent_in_compress_to_jpeg_ms=float(mean_time_spent_in_compress_to_jpeg_ms),
-            stddev_time_spent_in_compress_to_jpeg_ms=float(stddev_time_spent_in_compress_to_jpeg_ms),
+            mean_time_before_grab_signal_ns=float(mean_time_before_grab_signal_ns),
+            stddev_time_before_grab_signal_ns=float(stddev_time_before_grab_signal_ns),
+            mean_time_spent_grabbing_frame_ns=float(mean_time_spent_grabbing_frame_ns),
+            stddev_time_spent_grabbing_frame_ns=float(stddev_time_spent_grabbing_frame_ns),
+            mean_time_waiting_to_retrieve_ns=float(mean_time_waiting_to_retrieve_ns),
+            stddev_time_waiting_to_retrieve_ns=float(stddev_time_waiting_to_retrieve_ns),
+            mean_time_spent_retrieving_ns=float(mean_time_spent_retrieving_ns),
+            stddev_time_spent_retrieving_ns=float(stddev_time_spent_retrieving_ns),
+            mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns=float(mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns),
+            stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns=float(stddev_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns),
+            mean_time_spent_in_camera_shm_buffer_ns=float(mean_time_spent_in_camera_shm_buffer_ns),
+            stddev_time_spent_in_camera_shm_buffer_ns=float(stddev_time_spent_in_camera_shm_buffer_ns),
+            mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns=float(mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns),
+            stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns=float(stddev_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns),
+            mean_time_spent_in_multi_frame_escape_shm_buffer_ns=float(mean_time_spent_in_multi_frame_escape_shm_buffer_ns),
+            stddev_time_spent_in_multi_frame_escape_shm_buffer_ns=float(stddev_time_spent_in_multi_frame_escape_shm_buffer_ns),
+            mean_time_spent_waiting_to_start_compress_to_jpeg_ns=float(mean_time_spent_waiting_to_start_compress_to_jpeg_ns),
+            stddev_time_spent_waiting_to_start_compress_to_jpeg_ns=float(stddev_time_spent_waiting_to_start_compress_to_jpeg_ns),
+            mean_time_spent_in_compress_to_jpeg_ns=float(mean_time_spent_in_compress_to_jpeg_ns),
+            stddev_time_spent_in_compress_to_jpeg_ns=float(stddev_time_spent_in_compress_to_jpeg_ns),
         )
 
 

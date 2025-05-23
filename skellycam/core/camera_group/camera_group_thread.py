@@ -2,10 +2,10 @@ import logging
 import multiprocessing
 import threading
 
-from skellycam.core.camera_group.camera.camera_manager import CameraManager
+from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
 

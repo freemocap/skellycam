@@ -5,8 +5,8 @@ import time
 from typing import Optional
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload

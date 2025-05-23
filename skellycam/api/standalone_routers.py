@@ -2,7 +2,7 @@ from skellycam import SKELLYCAM_ROUTERS
 from skellycam.api.http.app.health import health_router
 from skellycam.api.http.app.shutdown import app_shutdown_router
 from skellycam.api.http.app.state import state_router
-from skellycam.api.http.cameras.cameras_connect_router import connect_cameras_router
+from skellycam.api.http.cameras.camera_router import connect_cameras_router
 from skellycam.api.http.cameras.cameras_record_router import record_cameras_router
 from skellycam.api.http.ui.ui_router import ui_router
 from skellycam.api.http.videos.videos_router import load_videos_router

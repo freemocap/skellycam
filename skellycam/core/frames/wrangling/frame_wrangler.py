@@ -3,7 +3,7 @@ import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.core.frames.wrangling.frame_loop_manager import FrameLoopManager
 from skellycam.core.frames.wrangling.frame_saver_process import FrameSaverProcess

@@ -95,6 +95,7 @@ class DescriptiveStatistics(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+
     @classmethod
     def from_samples(cls, sample_data: SamplesType,
                      name: str,

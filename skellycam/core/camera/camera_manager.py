@@ -1,17 +1,14 @@
 import logging
 import threading
-import time
-from typing import List
 
-import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.camera_group.camera.camera_process import CameraProcess
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
-from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
+from skellycam.core.camera.camera_process import CameraProcess
+from skellycam.core.types import CameraIdString
+from skellycam.core.camera.config import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 

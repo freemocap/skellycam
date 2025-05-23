@@ -2,9 +2,9 @@ import logging
 import multiprocessing
 from dataclasses import dataclass
 
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
-from skellycam.core.camera_group.shmorchestrator.shared_memory.single_slot_camera_shared_memory import \
+from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.types import CameraIdString
+from skellycam.core.shared_memory.single_slot_camera_shared_memory import \
     SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 

@@ -3,16 +3,15 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Dict
 
 from pydantic import BaseModel, ValidationError
 
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
+from skellycam.core.types import CameraIdString
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
@@ -81,8 +80,7 @@ class RecordingManager(BaseModel):
                    recording_name=recording_name,
                    camera_configs=camera_configs,
                    video_recorders=video_recorders,
-                   multi_frame_timestamp_logger=MultiframeTimestampLogger.create(video_save_directory=videos_folder,
-                                                                                 recording_name=recording_name),
+                   multi_frame_timestamp_logger=MultiframeTimestampLogger(videos_base_path=videos_folder),
                    )
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):

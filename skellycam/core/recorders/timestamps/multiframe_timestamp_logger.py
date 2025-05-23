@@ -16,12 +16,12 @@ from skellycam.core.recorders.timestamps.multi_frame_timestamp_log import (
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
 logger = logging.getLogger(__name__)
-from   pydantic import ConfigDict
+from pydantic import ConfigDict
+
 
 class MultiframeTimestampLogger(BaseModel):
+    videos_base_path: str
     multi_frame_metadatas: list[MultiFrameMetadata] = Field(default_factory=list[MultiFrameMetadata])
-    csv_save_path: str
-    starting_timestamp_json_path: str
     first_multi_frame_payload: MultiFramePayload | None = None
 
     model_config = ConfigDict(
@@ -29,23 +29,31 @@ class MultiframeTimestampLogger(BaseModel):
 
     )
 
-    @classmethod
-    def create(cls,
-               video_save_directory: str,
-               recording_name: str):
+    @property
+    def timestamps_base_path(self) -> str:
+        path= Path(self.videos_base_path).parent / "timestamps"
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
 
-        logger.debug(f"Creating MultiFrameTimestampLogger for video save directory {video_save_directory}...")
-        video_save_path = Path(video_save_directory)
-        video_save_path.mkdir(parents=True, exist_ok=True)
+    @property
+    def csv_save_path(self) -> str:
+        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_timestamps.csv")
 
-        csv_save_path = str(video_save_path / f"{recording_name}_timestamps.csv")
-        starting_timestamp_json_path = str(video_save_path / f"{recording_name}_starting_timestamp.json")
-        return cls(
-            csv_save_path=csv_save_path,
-            starting_timestamp_json_path=starting_timestamp_json_path,
-            multi_frame_metadatas=[],
-        )
+    @property
+    def starting_timestamp_json_path(self) -> str:
+        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_starting_timestamp.json")
 
+    @property
+    def recording_name(self) -> str:
+        return Path(self.videos_base_path).stem
+
+    @property
+    def stats_path(self) -> str:
+        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_timestamps_stats.json")
+
+    @property
+    def documentation_path(self) -> str:
+        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_timestamps_README.md")
     @property
     def camera_ids(self) -> list[str]:
         if len(self.multi_frame_metadatas) == 0:
@@ -63,8 +71,8 @@ class MultiframeTimestampLogger(BaseModel):
         )
         self._save_starting_timestamp()
         self._convert_to_dataframe_and_save()
-        # self.save_timestamp_stats()
-        # self.save_documentation()
+        self.save_stats()
+        self.save_documentation()
         logger.success("Timestamp logs saved successfully!")
 
     def _save_starting_timestamp(self):
@@ -92,14 +100,14 @@ class MultiframeTimestampLogger(BaseModel):
             f"Saved multi-frame timestamp logs to {self.csv_save_path}"
         )
 
-    def save_timestamp_stats(self):
+    def save_stats(self):
         stats = self._calculate_stats()
 
-        with open(self.csv_save_path, "w", encoding="utf-8") as f:
+        with open(self.stats_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(stats, indent=4))
 
         logger.info(
-            f"Saved multi-frame timestamp stats to {self._stats_path} -\n\n"
+            f"Saved multi-frame timestamp stats to {self.stats_path} -\n\n"
             f"{pprint.pformat(stats, indent=4)})\n\n"
         )
 
@@ -119,12 +127,11 @@ class MultiframeTimestampLogger(BaseModel):
         return camera_stats_by_id
 
     def save_documentation(self):
-        if not self._documentation_path.exists():
-            with open(self._documentation_path, "w") as f:
-                f.write(MultiFrameTimestampLog.to_document())
+        with open(self.documentation_path, "w") as f:
+            f.write(MultiFrameTimestampLog.to_document())
 
         logger.info(
-            f"Saved multi_frame_timestamp descriptions to {self._documentation_path}"
+            f"Saved multi_frame_timestamp descriptions to {self.documentation_path}"
         )
 
     def _calculate_stats(self) -> dict[str, object]:
@@ -132,9 +139,57 @@ class MultiframeTimestampLogger(BaseModel):
 
         # Basic frame rate statistics
         frame_intervals = df['timestamp_from_zero_s'].diff().dropna()
-        frame_duration_stats = DescriptiveStatistics.from_samples(sample_data=frame_intervals.to_numpy(na_value=np.nan),
-                                                                  name="frame_duration",
-                                                                  units="seconds").model_dump()
-
-
-        return frame_duration_stats
+        return dict(
+            framerate_stats=DescriptiveStatistics.from_samples(
+                sample_data=frame_intervals.to_numpy(na_value=np.nan)**-1,
+                name="frame_duration",
+                units="milliseconds").to_dict(),
+            frame_duration_stats=DescriptiveStatistics.from_samples(
+                sample_data=frame_intervals.to_numpy(na_value=np.nan),
+                name="frame_duration",
+                units="milliseconds").to_dict(),
+            finter_camera_timestamp_range_stats_ms=DescriptiveStatistics.from_samples(
+                sample_data=df['inter_camera_timestamp_range_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="inter_camera_timestamp_range_ns",
+                units="milliseconds").to_dict(),
+            time_before_grab_signal_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_before_grab_signal_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_before_grab_signal",
+                units="milliseconds").to_dict(),
+            time_spent_grabbing_frame_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_grabbing_frame_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_grabbing_frame",
+                units="milliseconds").to_dict(),
+            time_waiting_to_retrieve_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_waiting_to_retrieve_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_waiting_to_retrieve",
+                units="milliseconds").to_dict(),
+            time_spent_retrieving_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_retrieving_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_retrieving",
+                units="milliseconds").to_dict(),
+            time_spent_waiting_to_be_put_into_camera_shm_buffer_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_waiting_to_be_put_into_camera_shm_buffer_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_waiting_to_be_put_into_camera_shm_buffer",
+                units="milliseconds").to_dict(),
+            time_spent_in_camera_shm_buffer_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_in_camera_shm_buffer_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_in_camera_shm_buffer",
+                units="milliseconds").to_dict(),
+            time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_waiting_to_be_put_into_multi_frame_escape_shm_buffer",
+                units="milliseconds").to_dict(),
+            time_spent_in_multi_frame_escape_shm_buffer_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_in_multi_frame_escape_shm_buffer_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_in_multi_frame_escape_shm_buffer",
+                units="milliseconds").to_dict(),
+            time_spent_waiting_to_start_compress_to_jpeg_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_waiting_to_start_compress_to_jpeg_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_waiting_to_start_compress_to_jpeg",
+                units="milliseconds").to_dict(),
+            time_spent_in_compress_to_jpeg_stats=DescriptiveStatistics.from_samples(
+                sample_data=df['mean_time_spent_in_compress_to_jpeg_ns'].to_numpy(na_value=np.nan) / 1e6,
+                name="time_spent_in_compress_to_jpeg",
+                units="milliseconds").to_dict(),
+        )

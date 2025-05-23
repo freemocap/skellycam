@@ -6,9 +6,9 @@ from typing import Literal
 
 import numpy as np
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE, \
+from skellycam.core.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE, \
     SharedMemoryRingBuffer, SharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
     create_empty_frame_metadata, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL

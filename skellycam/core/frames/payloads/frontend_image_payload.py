@@ -1,22 +1,23 @@
 import base64
 import time
 from io import BytesIO
-from typing import Dict, Optional
+from typing import Dict
 
 import cv2
 import numpy as np
 from PIL import Image
 from pydantic import BaseModel
 
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs, CameraIdString
+from skellycam.core.camera.config.camera_config import CameraConfigs
+
+from skellycam.core.types import CameraIndex, Base64JPEGImage
+from skellycam.core.types import CameraIdString
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
 
-Base64JPEGImage = str  # Base64 encoded JPEG image
 DEFAULT_FRONTEND_IMAGE_RESIZE = 0.5
 DEFAULT_JPEG_QUALITY = 85
 class FrontendFramePayload(BaseModel):

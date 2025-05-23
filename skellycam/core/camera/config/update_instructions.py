@@ -3,7 +3,8 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
+from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.types import CameraIdString
 
 logger = logging.getLogger(__name__)
 

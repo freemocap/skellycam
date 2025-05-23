@@ -3,12 +3,26 @@ from typing import Tuple,  Self
 import cv2
 from pydantic import BaseModel, Field, model_validator
 
-from skellycam.core import BYTES_PER_MONO_PIXEL, CameraName
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
-from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
-from skellycam.core.camera_group.camera.config.image_rotation_types import RotationTypes
+from skellycam.core.types import CameraIndex, CameraName
+from skellycam.core.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera.config import RotationTypes
+from skellycam.core.types import CameraIdString, BYTES_PER_MONO_PIXEL, CameraNameString
+from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
+DEFAULT_IMAGE_HEIGHT: int = 720
+DEFAULT_IMAGE_WIDTH: int = 1280
+DEFAULT_IMAGE_CHANNELS: int = 3
+DEFAULT_IMAGE_SHAPE: tuple = (DEFAULT_IMAGE_HEIGHT, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_CHANNELS)
+DEFAULT_CAMERA_INDEX: CameraIndex = CameraIndex(0)
+DEFAULT_CAMERA_ID: CameraIdString = "000"
+DEFAULT_CAMERA_NAME: CameraNameString = "Default Camera"
+DEFAULT_RESOLUTION: ImageResolution = ImageResolution(height=DEFAULT_IMAGE_HEIGHT, width=DEFAULT_IMAGE_WIDTH)
+DEFAULT_EXPOSURE_MODE: str = ExposureModes.MANUAL.name
+DEFAULT_EXPOSURE: int = -7
+DEFAULT_FRAMERATE: float = 30.0
+DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
+DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
+DEFAULT_WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
 
 def get_video_file_type(fourcc_code: int) ->str:
     """
@@ -52,25 +66,25 @@ def get_video_file_type(fourcc_code: int) ->str:
 
 
 class CameraConfig(BaseModel):
+    camera_id: CameraIdString = Field(
+        default=DEFAULT_CAMERA_ID,
+        description="The ID of the camera, if known. May be used for display purposes, must be unique.")
+
     camera_index: CameraIndex = Field(
-        default=DefaultCameraConfig.CAMERA_INDEX.value,
-        description="The index of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera",
+        default=DEFAULT_CAMERA_INDEX,
+        description="The index of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera. Must be unique.",
     )
     camera_name: CameraName = Field(
-        default=DefaultCameraConfig.CAMERA_NAME.value,
-        description="The name of the camera, if known",
+        default=DEFAULT_CAMERA_NAME,
+        description="The name of the camera, if known. May be used for display purposes, does not need to be unique.",
     )
 
-    use_this_camera: bool = Field(
-        default=DefaultCameraConfig.USE_THIS_CAMERA.value,
-        description="Whether or not to use this camera for streaming/recording",
-    )
     resolution: ImageResolution = Field(
-        default=DefaultCameraConfig.RESOLUTION.value,
+        default=DEFAULT_RESOLUTION,
         description="The current resolution of the camera, in pixels.",
     )
     color_channels: int = Field(
-        default=DefaultCameraConfig.COLOR_CHANNELS.value,
+        default=DEFAULT_IMAGE_CHANNELS,
         description="The number of color channels in the image (3 for RGB, 1 for monochrome)",
     )
 
@@ -78,41 +92,41 @@ class CameraConfig(BaseModel):
     pixel_format: str = Field(default="RGB",
                               description="How to interpret the color channels")
 
-    exposure_mode: str = Field(default=DefaultCameraConfig.EXPOSURE_MODE.value,
+    exposure_mode: str = Field(default=DEFAULT_EXPOSURE_MODE,
                                description="The exposure mode to use for the camera, "
                                            "AUTO for device automatic exposure, "
                                            "MANUAL to set the exposure manually, "
                                            "or RECOMMENDED to use the find the setting "
                                            "that puts mean pixel intensity at 128 (255/2).")
     exposure: int | str = Field(
-        default=DefaultCameraConfig.EXPOSURE.value,
+        default=DEFAULT_EXPOSURE,
         description="The exposure of the camera using the opencv convention (the number is the exposure time in ms, raised to the power of -2). "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/ "
                     " (Hint! Set this as low as possible to avoid blur."
                     " Mocap likes BRIGHT environments and FAST/LOW exposure settings!)",
     )
 
-    framerate: float = Field(default=DefaultCameraConfig.FRAMERATE.value,
+    framerate: float = Field(default=DEFAULT_FRAMERATE,
                              description="The frame rate of the camera (in frames per second).")
 
     rotation: RotationTypes = Field(
-        default=DefaultCameraConfig.ROTATION.value,
+        default=DEFAULT_ROTATION,
         description="The rotation to apply to the images of this camera (after they are captured)",
     )
     capture_fourcc: str = Field(
-        default=DefaultCameraConfig.CAPTURE_FOURCC.value,
+        default=DEFAULT_CAPTURE_FOURCC,
         description="The fourcc code to use for the video codec in the `cv2.VideoCapture` object",
     )
 
     writer_fourcc: str = Field(
-        default=DefaultCameraConfig.WRITER_FOURCC.value,
+        default=DEFAULT_WRITER_FOURCC,
         description="The fourcc code to use for the video codec in the `cv2.VideoWriter` object",
     )
 
     @model_validator(mode="after")
     def validate(self) -> Self:
-        if self.camera_name is DefaultCameraConfig.CAMERA_NAME.value:
-            self.camera_name = f"Camera-{self.camera_index}"
+        if self.camera_name is DEFAULT_CAMERA_NAME:
+            self.camera_name = f"Camera-{self.camera_index}-{self.camera_id}"
         self.camera_index = CameraIndex(self.camera_index)
         return self
 
@@ -153,15 +167,13 @@ class CameraConfig(BaseModel):
         out_str += f"\t\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
         return out_str
 
-CameraIdString = str
-CameraConfigs = dict[CameraIdString, CameraConfig]
-
 
 def default_camera_configs_factory():
     return {
         "dummy": CameraConfig()
     }
 
+CameraConfigs = dict[CameraIdString, CameraConfig]
 
 if __name__ == "__main__":
     print(CameraConfig(camera_index=0))

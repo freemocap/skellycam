@@ -3,7 +3,7 @@ import platform
 from enum import Enum
 from typing import List, Tuple
 
-from skellycam.core import CameraIndex
+from skellycam import CameraIndex
 from skellycam.system.device_detection.camera_device_info import CameraDeviceInfo, AvailableCameras
 from skellycam.system.device_detection.detection_strategies.detect_opencv_ports import detect_opencv_ports, \
     get_available_cameras_opencv

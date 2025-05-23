@@ -4,14 +4,14 @@ from dataclasses import dataclass
 
 from pydantic import ConfigDict
 
-from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
+from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
-from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
+from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.types import CameraIdString
+from skellycam.core.camera.config import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.camera_group_thread import CameraGroupThread
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import \
+from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator
 
 logger = logging.getLogger(__name__)

@@ -3,8 +3,8 @@ from typing import Tuple, Optional
 
 import numpy as np
 
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.camera_group.shmorchestrator.shared_memory.shared_memory_number import SharedMemoryNumber
+from skellycam.core.shared_memory.shared_memory_element import SharedMemoryElement
+from skellycam.core.shared_memory.shared_memory_number import SharedMemoryNumber
 
 ONE_GIGABYTE = 1024 ** 3
 

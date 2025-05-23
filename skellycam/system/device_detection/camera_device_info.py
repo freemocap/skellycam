@@ -4,10 +4,10 @@ from typing import List, Dict
 
 from pydantic import BaseModel
 
-from skellycam.core import CameraIndex, CameraName
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.camera_group.camera.config.default_config import DefaultCameraConfig
-from skellycam.core.camera_group.camera.config.image_resolution import ImageResolution
+from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs, DEFAULT_CAPTURE_FOURCC, \
+    DEFAULT_FRAMERATE
+from skellycam.core.types import CameraIndex, CameraName
+from skellycam.core.camera.config.image_resolution import ImageResolution
 
 logger = logging.getLogger(__name__)
 
@@ -26,21 +26,21 @@ class DeviceVideoFormat(BaseModel):
 video_format_1080 = DeviceVideoFormat(
     width=1920,
     height=1080,
-    pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
-    framerate=DefaultCameraConfig.FRAMERATE.value
+    pixel_format=DEFAULT_CAPTURE_FOURCC,
+    framerate=DEFAULT_FRAMERATE
 )
 video_format_480 = DeviceVideoFormat(
     width=640,
     height=480,
-    pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
-    framerate=DefaultCameraConfig.FRAMERATE.value
+    pixel_format=DEFAULT_CAPTURE_FOURCC,
+    framerate=DEFAULT_FRAMERATE
 )
 
 video_format_720 = DeviceVideoFormat(
     width=1280,
     height=720,
-    pixel_format=DefaultCameraConfig.CAPTURE_FOURCC.value,
-    framerate=DefaultCameraConfig.FRAMERATE.value
+    pixel_format=DEFAULT_CAPTURE_FOURCC,
+    framerate=DEFAULT_FRAMERATE
 )
 
 DEFAULT_VIDEO_FORMATS = [video_format_1080, video_format_720, video_format_480]
@@ -145,11 +145,3 @@ class CameraDeviceInfo(BaseModel):
     def __str__(self):
         return f"{self.description}"
 
-
-AvailableCameras = Dict[CameraIndex, CameraDeviceInfo]
-
-
-def available_cameras_to_default_camera_configs(available_devices: AvailableCameras) -> CameraConfigs:
-    return {camera_id: CameraConfig(camera_index=camera_id,
-                                    camera_name=camera_info.description,
-                                    ) for camera_id, camera_info in available_devices.items()}

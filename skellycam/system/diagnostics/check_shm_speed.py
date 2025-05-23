@@ -5,7 +5,7 @@ from typing import Tuple
 
 import numpy as np
 
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import \
+from skellycam.core.shared_memory.ring_buffer_shared_memory import \
     SharedMemoryRingBufferDTO, SharedMemoryRingBuffer
 
 
