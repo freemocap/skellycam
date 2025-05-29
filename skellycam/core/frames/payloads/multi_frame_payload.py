@@ -5,10 +5,10 @@ import numpy as np
 from pydantic import BaseModel, Field
 from pydantic import ConfigDict
 
-from skellycam.core.camera.config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.types import CameraIdString
-from skellycam.core.camera.config import RotationTypes
+from skellycam.core.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \

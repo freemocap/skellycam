@@ -1,9 +1,7 @@
-import cv2
-
-from skellycam.core.camera.config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.determine_backend import determine_backend
-
-
+import cv2
+import logging
 
 class FailedToReadFrameFromCameraException(Exception):
     pass
@@ -12,8 +10,6 @@ class FailedToReadFrameFromCameraException(Exception):
 class FailedToOpenCameraException(Exception):
     pass
 
-
-import logging
 
 logger = logging.getLogger(__name__)
 

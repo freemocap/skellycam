@@ -1,4 +1,3 @@
-import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfigs

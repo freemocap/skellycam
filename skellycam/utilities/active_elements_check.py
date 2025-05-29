@@ -1,10 +1,9 @@
 import asyncio
+import logging
 import multiprocessing
-import os
 import threading
 import time
 
-import logging
 logger = logging.getLogger(__name__)
 from tabulate import tabulate
 

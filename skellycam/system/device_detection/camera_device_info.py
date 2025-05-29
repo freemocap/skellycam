@@ -1,13 +1,13 @@
 import logging
 import platform
-from typing import List, Dict
+from typing import List
 
 from pydantic import BaseModel
 
-from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs, DEFAULT_CAPTURE_FOURCC, \
+from skellycam.core.camera.config.camera_config import DEFAULT_CAPTURE_FOURCC, \
     DEFAULT_FRAMERATE
-from skellycam.core.types import CameraIndex, CameraName
 from skellycam.core.camera.config.image_resolution import ImageResolution
+from skellycam.core.types import CameraName
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,8 @@ from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
-from skellycam.core.shared_memory import \
-    SingleSlotCameraGroupSharedMemoryDTO, CameraGroupSharedMemory
+from skellycam.core.shared_memory.single_slot_camera_group_shared_memory import CameraGroupSharedMemory, \
+    SingleSlotCameraGroupSharedMemoryDTO
 
 logger = logging.getLogger(__name__)
 

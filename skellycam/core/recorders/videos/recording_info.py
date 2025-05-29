@@ -1,11 +1,10 @@
 import logging
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from skellycam import CameraIndex
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 
 if TYPE_CHECKING:

@@ -1,6 +1,5 @@
 # skellycam/core/recorders/timestamps/framerate_tracker.py
 from collections import deque
-from platform import mac_ver
 
 import numpy as np
 from pydantic import BaseModel

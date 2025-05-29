@@ -14,7 +14,7 @@ from skellycam.system.default_paths import default_recording_name, get_default_r
 
 logger = logging.getLogger(__name__)
 
-camera_router = APIRouter(prefix=f"{skellycam.__package_name__}/camera",
+camera_router = APIRouter(prefix=f"/{skellycam.__package_name__}/camera",
                           tags=["Cameras"])
 
 
@@ -53,7 +53,7 @@ def camera_group_create_post_endpoint(
         request: CameraGroupCreateRequest = Body(...,
                                                  description="Request body containing desired camera configuration",
                                                  examples=[
-                                                     CameraGroupCreateRequest.example()]), ) -> CameraGroupIdString | HTTPException:
+                                                     CameraGroupCreateRequest.example()]), ) -> CameraGroupIdString :
     logger.api(f"Received `/camera/group` POST request with config:  {request.camera_configs}...")
     try:
         camera_group_id = get_skellycam_app().create_or_update_camera_group(camera_configs=request.camera_configs)
@@ -62,11 +62,11 @@ def camera_group_create_post_endpoint(
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)
-        return HTTPException(status_code=500,
+        raise HTTPException(status_code=500,
                              detail=f"Error when processing `/camera/group` request: {type(e).__name__} - {e}")
 
 
-@camera_router.post("group/all/record/start",
+@camera_router.post("/group/all/record/start",
                             summary="Start recording video from all camera groups")
 def start_recording(request: StartRecordingRequest = Body(..., examples=[StartRecordingRequest()])):
     logger.api("Received `/record/start` request...")
@@ -77,7 +77,7 @@ def start_recording(request: StartRecordingRequest = Body(..., examples=[StartRe
     logger.api("`/record/start` request handled successfully.")
 
 
-@camera_router.get("group/all/record/stop",
+@camera_router.get("/group/all/record/stop",
                            summary="Stop recording video from camera groups")
 def stop_recording():
     logger.api("Received `/record/stop` request...")

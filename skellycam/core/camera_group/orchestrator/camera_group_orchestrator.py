@@ -4,8 +4,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from skellycam.core.camera.camera_frame_loop_flags import CameraFrameLoopFlags
-from skellycam.core.types import CameraIdString
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1ms
 
 logger = logging.getLogger(__name__)

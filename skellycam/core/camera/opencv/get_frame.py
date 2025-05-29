@@ -4,11 +4,11 @@ import time
 import cv2
 import numpy as np
 
-from skellycam import CameraIndex
+from skellycam.core.types import CameraIndex
 from skellycam.core.camera.camera_frame_loop_flags import CameraFrameLoopFlags
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.shared_memory.single_slot_camera_shared_memory import \
     SingleSlotCameraSharedMemory
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 
 logger = logging.getLogger(__name__)
 

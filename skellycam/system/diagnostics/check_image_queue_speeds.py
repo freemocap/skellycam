@@ -4,7 +4,7 @@ from typing import Tuple
 
 import numpy as np
 
-from skellycam.core.camera.config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig
 
 
 def create_fake_image() -> np.ndarray:

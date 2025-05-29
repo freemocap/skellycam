@@ -6,7 +6,7 @@ from typing import Optional
 import cv2
 from pydantic import BaseModel, ValidationError
 
-from skellycam.core.camera.config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.types import CameraIdString
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 

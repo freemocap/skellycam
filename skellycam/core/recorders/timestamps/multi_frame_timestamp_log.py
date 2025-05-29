@@ -3,10 +3,9 @@ from datetime import datetime
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam import CameraIndex
-from skellycam.core.types import CameraIdString
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFrameMetadata, MultiFramePayload
 from skellycam.core.recorders.timestamps.camera_timestamp_log import CameraTimestampLog
+from skellycam.core.types import CameraIdString
 
 
 class MultiFrameTimestampLog(BaseModel):

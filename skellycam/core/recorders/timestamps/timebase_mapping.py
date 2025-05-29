@@ -5,6 +5,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
+
 def get_utc_offset() -> int:
     return int(datetime.now(get_localzone()).utcoffset().total_seconds())
 

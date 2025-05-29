@@ -4,12 +4,12 @@ import threading
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.camera_process import CameraProcess
-from skellycam.core.types import CameraIdString
-from skellycam.core.camera.config import UpdateInstructions
+from skellycam.core.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestratorDTO
+from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)

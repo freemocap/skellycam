@@ -4,12 +4,12 @@ from collections import deque
 from pathlib import Path
 
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
+    MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)

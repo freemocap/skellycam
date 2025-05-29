@@ -5,15 +5,15 @@ from dataclasses import dataclass
 import cv2
 
 from skellycam.core.camera.camera_frame_loop_flags import CameraFrameLoopFlags
-from skellycam.core.camera.config import CameraConfig
-from skellycam.core.types import CameraIdString
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.apply_config import apply_camera_configuration
 from skellycam.core.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.camera.opencv.get_frame import get_frame
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
 from skellycam.core.shared_memory.single_slot_camera_shared_memory import \
     SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
+from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)

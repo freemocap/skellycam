@@ -1,8 +1,9 @@
-import sys
 import logging
-from ..formatters.color_formatter import ColorFormatter
+import sys
+
 from ..filters.delta_time import DeltaTimeFilter
-from ..log_format_string import LOG_FORMAT_STRING, COLOR_LOG_FORMAT_STRING
+from ..formatters.color_formatter import ColorFormatter
+from ..log_format_string import COLOR_LOG_FORMAT_STRING
 
 
 class ColoredConsoleHandler(logging.StreamHandler):

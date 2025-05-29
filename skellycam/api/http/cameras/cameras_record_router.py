@@ -2,11 +2,10 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Body
+from pydantic import BaseModel, Field
 
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app import get_skellycam_app
-from pydantic import BaseModel, Field
-
 from skellycam.system.default_paths import get_default_recording_folder_path, default_recording_name
 
 logger = logging.getLogger(__name__)

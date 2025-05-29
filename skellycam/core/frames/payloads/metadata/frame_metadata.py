@@ -1,11 +1,11 @@
 import numpy as np
 from pydantic import BaseModel, computed_field
+from pydantic import Field
 
-from skellycam import CameraIndex
+from skellycam.core.types import CameraIndex
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_SHAPE
 
-from  pydantic import Field
 
 class FrameLifespanTimestamps(BaseModel):
     initialized_timestamp_ns: int = Field(description="Timestamp when the frame was initialized")

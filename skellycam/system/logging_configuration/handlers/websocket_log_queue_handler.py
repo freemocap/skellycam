@@ -3,11 +3,13 @@ import multiprocessing
 from multiprocessing import Queue
 from typing import Optional
 
-from skellycam.system.logging_configuration.log_levels import LogLevels
-from ..formatters.custom_formatter import CustomFormatter
-from ..filters.delta_time import DeltaTimeFilter
-from ..log_format_string import LOG_FORMAT_STRING
 from pydantic import BaseModel
+
+from skellycam.system.logging_configuration.log_levels import LogLevels
+from ..filters.delta_time import DeltaTimeFilter
+from ..formatters.custom_formatter import CustomFormatter
+from ..log_format_string import LOG_FORMAT_STRING
+
 
 class LogRecordModel(BaseModel):
     name: str

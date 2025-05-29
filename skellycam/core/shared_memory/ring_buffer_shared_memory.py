@@ -53,7 +53,7 @@ class SharedMemoryRingBuffer:
                  dto: SharedMemoryRingBufferDTO,
                  read_only: bool):
 
-        instance = cls(ring_buffer_shm=SharedMemoryElement.recreate(shm_name=dto.shm_element_name,
+        return cls(ring_buffer_shm=SharedMemoryElement.recreate(shm_name=dto.shm_element_name,
                                                                     shape=dto.ring_buffer_shape,
                                                                     dtype=dto.dtype),
                        ring_buffer_shape=dto.ring_buffer_shape,
@@ -62,7 +62,6 @@ class SharedMemoryRingBuffer:
                        last_read_index=SharedMemoryNumber.recreate(shm_name=dto.last_read_index_shm_name),
                        read_only=read_only)
 
-        return instance
 
     def to_dto(self) -> SharedMemoryRingBufferDTO:
         return SharedMemoryRingBufferDTO(
@@ -126,9 +125,9 @@ class SharedMemoryRingBuffer:
         """
         NOTE - this method does NOT update the 'last_read_index' value.
 
-        'Get Latest ...'  is intended to get the most up-to-date data (i.e. to keep the images displayed on the screen up-to-date)
+        'Get Latest ...'  is intended to get the most up-to-date data (e.g. to keep the images displayed on the screen up-to-date)
 
-        The task of making sure we get ALL the data without overwriting to the 'get_next_payload' method (i.e. making sure we save all the frames to disk/video).
+        The task of making sure we get ALL the data without overwriting to the 'get_next_payload' method (e.g. making sure we save all the frames to disk/video).
         """
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")

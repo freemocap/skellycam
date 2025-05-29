@@ -8,14 +8,14 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera.config import UpdateInstructions
+from skellycam.core.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
 from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
-from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.recorders.timestamps.framerate_tracker import FramerateTrackers
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
+    MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
