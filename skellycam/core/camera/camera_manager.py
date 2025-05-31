@@ -5,10 +5,9 @@ from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.camera_process import CameraProcess
 from skellycam.core.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
-    CameraGroupSharedMemoryOrchestratorDTO
+from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
 from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
@@ -21,30 +20,28 @@ class CameraManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     orchestrator: CameraGroupOrchestrator
-    camera_group_dto: CameraGroupDTO
-    camera_processes: dict[CameraIdString, CameraProcess] = {}
+    ipc: CameraGroupIPC
+    camera_processes: dict[CameraIdString, CameraProcess]
 
     @property
     def camera_ids(self):
         return list(self.camera_processes.keys())
 
     @classmethod
-    def create(cls,
-               camera_group_dto: CameraGroupDTO,
-               shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO):
+    def create_cameras(cls,
+                       ipc: CameraGroupIPC,
+                       camera_shm: CameraGroupSharedMemory,
+                       orchestrator: CameraGroupOrchestrator):
 
         camera_processes = {}
-        for camera_id, camera_config in camera_group_dto.camera_configs.items():
-            frame_loop_flags = shmorc_dto.camera_group_orchestrator.frame_loop_flags[camera_id]
-            camera_shm_dto = shmorc_dto.frame_loop_shm_dto.camera_shm_dtos[camera_id]
+        for camera_id, camera_config in ipc.camera_configs.items():
             camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
-                                                               camera_config=camera_config,
-                                                               camera_group_dto=camera_group_dto,
-                                                               frame_loop_flags=frame_loop_flags,
-                                                               camera_shared_memory_dto=camera_shm_dto)
+                                                               ipc=ipc,
+                                                               frame_loop_flags=orchestrator.flags_by_camera_id[camera_id],
+                                                               camera_shared_memory_dto=camera_shm.dto_by_camera_id(camera_id=camera_id))
 
-        return cls(camera_group_dto=camera_group_dto,
-                   orchestrator=shmorc_dto.camera_group_orchestrator,
+        return cls(ipc=ipc,
+                   orchestrator=orchestrator,
                    camera_processes=camera_processes
                    )
 
@@ -54,39 +51,10 @@ class CameraManager(BaseModel):
 
         logger.info(f"Starting camera manager for cameras: {self.camera_ids}...")
 
-        [camera.start() for camera in self.camera_processes.values()]
-        self._config_update_listener_loop()
+        self.orchestrator.start_frame_loop()
         logger.info(f"Cameras {self.camera_ids} frame loop ended.")
 
-    def _config_update_listener_loop(self):
 
-        try:
-            while self.camera_group_dto.should_continue:
-                self._check_handle_config_update()
-                wait_10ms()
-            logger.trace(f"Camera config update listener loop for cameras: {self.camera_ids} exited")
-        finally:
-            logger.debug(f"Closing camera manager for cameras: {self.camera_ids}...")
-            self.close()
-
-    def _check_handle_config_update(self):
-        # Check for new camera configs
-        if not self.camera_group_dto.ipc.update_camera_configs_queue.empty():
-            logger.trace(f"Handling camera config updates for cameras: {self.camera_ids}")
-            self.orchestrator.pause_loop()
-            while not self.orchestrator.frame_loop_paused.value:
-                wait_100ms()
-            update_instructions = self.camera_group_dto.ipc.update_camera_configs_queue.get()
-
-            self.update_camera_configs(update_instructions)
-            while any(
-                    [not camera_process.new_config_queue.empty() for camera_process in
-                     self.camera_processes.values()]) and self.camera_group_dto.should_continue:
-                wait_100ms()
-            self.orchestrator.unpause_loop()
-            while self.orchestrator.frame_loop_paused.value:
-                wait_100ms()
-            logger.trace(f"Camera configs updated for cameras: {self.camera_ids}")
 
     def close(self):
         logger.info(f"Stopping cameras: {self.camera_ids}")
@@ -114,5 +82,3 @@ class CameraManager(BaseModel):
             wait_10ms()
 
         logger.trace(f"Cameras closed: {self.camera_ids}")
-
-

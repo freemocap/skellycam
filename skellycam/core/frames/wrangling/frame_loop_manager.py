@@ -3,7 +3,7 @@ import multiprocessing
 import threading
 import time
 
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
     CameraGroupSharedMemoryOrchestrator, CameraGroupSharedMemoryOrchestratorDTO
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class FrameLoopManager:
     def __init__(
             self,
-            camera_group_dto: CameraGroupDTO,
+            camera_group_dto: CameraGroupIPC,
             shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
             new_configs_queue: multiprocessing.Queue,
     ):
@@ -35,7 +35,7 @@ class FrameLoopManager:
         self._worker.start()
 
     @staticmethod
-    def _run_worker(camera_group_dto: CameraGroupDTO,
+    def _run_worker(camera_group_dto: CameraGroupIPC,
                     shmorc_dto: CameraGroupSharedMemoryOrchestratorDTO,
                     new_configs_queue: multiprocessing.Queue,
                     ):
@@ -108,7 +108,7 @@ class FrameLoopManager:
     def join(self):
         self._worker.join()
 
-def frame_read_trigger_loop(orchestrator: CameraGroupOrchestrator, camera_group_dto: CameraGroupDTO):
+def frame_read_trigger_loop(orchestrator: CameraGroupOrchestrator, camera_group_dto: CameraGroupIPC):
     orchestrator.await_cameras_ready()
     current_loop = orchestrator.loop_count.value
     logger.debug("Triggering initial multi-frame read...")

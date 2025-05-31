@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from skellycam.core.camera.camera_frame_loop_flags import CameraFrameLoopFlags
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1ms
 
@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroupOrchestrator:
     frame_loop_flags: dict[CameraIdString, CameraFrameLoopFlags]
-    camera_group_dto: CameraGroupDTO
 
     loop_count: multiprocessing.Value = multiprocessing.Value("i", 0)
     pause_when_able: multiprocessing.Value = multiprocessing.Value("b", False)
@@ -22,17 +21,13 @@ class CameraGroupOrchestrator:
 
     should_pull_multi_frame_from_shm: multiprocessing.Value = multiprocessing.Value("b", False)
 
-
     @classmethod
-    def from_dto(cls,
-               camera_group_dto: CameraGroupDTO,):
+    def from_camera_ids(cls, camera_ids: list[CameraIdString]):
         return cls(
             frame_loop_flags={
-                camera_id: CameraFrameLoopFlags.create(camera_id=camera_id,
-                                                       ipc_flags=camera_group_dto.ipc)
-                for camera_id, camera_config in camera_group_dto.camera_configs.items()
+                camera_id: CameraFrameLoopFlags()
+                for camera_id in camera_ids
             },
-            camera_group_dto=camera_group_dto,
         )
 
     @property
@@ -46,7 +41,6 @@ class CameraGroupOrchestrator:
     @property
     def should_continue(self):
         return self.ipc_flags.camera_group_should_continue
-
 
     @property
     def new_multi_frame_available(self):
@@ -63,7 +57,6 @@ class CameraGroupOrchestrator:
     def pause_loop(self):
         logger.trace("Pause requested, setting `pause_when_able` flag to True.")
         self.pause_when_able.value = True
-
 
     def unpause_loop(self):
         self.pause_when_able.value = False
@@ -91,7 +84,8 @@ class CameraGroupOrchestrator:
         self._ensure_cameras_ready()
         wait_1ms()
 
-        logger.loop(f"**Frame Loop#{self.loop_count.value}** - Step #0 (start)  - Send frame read initialization triggers")
+        logger.loop(
+            f"**Frame Loop#{self.loop_count.value}** - Step #0 (start)  - Send frame read initialization triggers")
         self.send_initialization_signal()
         wait_1ms()
         self._await_initialization_flag_reset()
@@ -117,7 +111,8 @@ class CameraGroupOrchestrator:
         logger.loop(f"**Frame Loop#{self.loop_count.value}** - Step #3 (finish) - RETRIEVE triggers fired!")
 
         # 4 - wait for all cameras to retrieve the frame
-        logger.loop(f"**Frame Loop#{self.loop_count.value}** - Step #4 (start) - Wait for all cameras to RETRIEVE the frame")
+        logger.loop(
+            f"**Frame Loop#{self.loop_count.value}** - Step #4 (start) - Wait for all cameras to RETRIEVE the frame")
         self._await_frames_retrieved()
         wait_1ms()
         logger.loop(
@@ -139,7 +134,8 @@ class CameraGroupOrchestrator:
             f"**Frame Loop#{self.loop_count.value}** - Step #6 (start) - Wait for multi-frame to be copied from shared memory")
         self._await_multi_frame_pulled_from_shm()
         wait_1ms()
-        logger.loop(f"**Frame Loop#{self.loop_count.value}** - Step #6 (finish) - Multi-frame copied from shared memory!")
+        logger.loop(
+            f"**Frame Loop#{self.loop_count.value}** - Step #6 (finish) - Multi-frame copied from shared memory!")
 
         # 7 - Make sure all the triggers are as they should be
         logger.loop(
@@ -182,9 +178,10 @@ class CameraGroupOrchestrator:
     def _await_frames_retrieved(self):
         while not self.frames_retrieved and self.should_continue:
             wait_1ms()
+
     @property
     def cameras_ready(self):
-        self.ipc_flags.cameras_connected_flag.value = all(
+        self.ipc.cameras_connected_flag.value = all(
             [triggers.camera_ready_flag.value for triggers in self.frame_loop_flags.values()])
         return self.ipc_flags.cameras_connected_flag.value
 

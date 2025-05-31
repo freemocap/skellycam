@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from skellycam.core.types import CameraIdString
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
@@ -14,41 +14,19 @@ MAX_WAIT_TIME_S = 600.0
 
 @dataclass
 class CameraFrameLoopFlags:
+    camera_ready_flag: multiprocessing.Value=field(default_factory=lambda:multiprocessing.Value('b', False))
+    frame_loop_initialization_flag: multiprocessing.Value=field(default_factory=lambda:multiprocessing.Value('b', False))
+    should_grab_frame_flag: multiprocessing.Value=field(default_factory=lambda:multiprocessing.Value('b', False))
+    should_retrieve_frame_flag: multiprocessing.Value=field(default_factory=lambda:multiprocessing.Value('b', False))
+    should_copy_frame_into_shm_flag: multiprocessing.Value=field(default_factory=lambda:multiprocessing.Value('b', False))
+    new_frame_in_shm: multiprocessing.Value=field(default_factory=lambda:multiprocessing.Value('b', False))
+    close_self_flag: multiprocessing.Value=field(default_factory=lambda:multiprocessing.Value('b', False))
 
-    camera_id: CameraIdString
 
-    camera_ready_flag: multiprocessing.Value
-    frame_loop_initialization_flag: multiprocessing.Value
-    should_grab_frame_flag: multiprocessing.Value
-    should_retrieve_frame_flag: multiprocessing.Value
-    should_copy_frame_into_shm_flag: multiprocessing.Value
-    new_frame_in_shm: multiprocessing.Value
-    close_self_flag: multiprocessing.Value
-
-    ipc_flags: InterProcessCommunicationManager
-
-    @classmethod
-    def create(cls,
-               camera_id: CameraIdString,
-               ipc_flags: InterProcessCommunicationManager
-               ):
-        return cls(
-            camera_id=camera_id,
-            ipc_flags=ipc_flags,
-
-            camera_ready_flag=multiprocessing.Value('b', False),
-            frame_loop_initialization_flag=multiprocessing.Value('b', False),
-            should_grab_frame_flag=multiprocessing.Value('b', False),
-            should_retrieve_frame_flag=multiprocessing.Value('b', False),
-            should_copy_frame_into_shm_flag=multiprocessing.Value('b', False),
-            new_frame_in_shm=multiprocessing.Value('b', False),
-            close_self_flag=multiprocessing.Value('b', False),
-
-        )
 
     @property
     def should_continue(self):
-        return self.ipc_flags.camera_group_should_continue and not self.close_self_flag.value
+        return not self.close_self_flag.value
 
     def shutdown(self):
         logger.info(f"Camera {self.camera_id} process shutting down...")

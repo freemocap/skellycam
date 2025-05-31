@@ -9,7 +9,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.apply_config import apply_camera_configuration
 from skellycam.core.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.camera.opencv.get_frame import get_frame
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
 from skellycam.core.shared_memory.single_slot_camera_shared_memory import \
     SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class CameraProcess:
     camera_id: CameraIdString
     process: multiprocessing.Process
-    camera_group_dto: CameraGroupDTO
+    camera_group_dto: CameraGroupIPC
     new_config_queue: multiprocessing.Queue
     frame_loop_flags: CameraFrameLoopFlags
 
@@ -31,7 +31,7 @@ class CameraProcess:
     def create(cls,
                camera_id: CameraIdString,
                camera_config: CameraConfig,
-               camera_group_dto: CameraGroupDTO,
+               camera_group_dto: CameraGroupIPC,
                frame_loop_flags: CameraFrameLoopFlags,
                camera_shared_memory_dto: CameraSharedMemoryDTO):
 
@@ -56,7 +56,7 @@ class CameraProcess:
     @staticmethod
     def _run_process(camera_id: CameraIdString,
                      camera_config: CameraConfig,
-                     camera_group_dto: CameraGroupDTO,
+                     camera_group_dto: CameraGroupIPC,
                      new_config_queue: multiprocessing.Queue,
                      frame_loop_flags: CameraFrameLoopFlags,
                      camera_shm_dto: CameraSharedMemoryDTO,

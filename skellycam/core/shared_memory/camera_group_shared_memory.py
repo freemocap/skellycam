@@ -3,18 +3,19 @@ import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.shared_memory.single_slot_camera_shared_memory import \
-    SingleSlotCameraSharedMemory, CameraSharedMemoryDTO
+from skellycam.core.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer, \
+    FramePayloadSharedMemoryRingBufferDTO
 from skellycam.core.types import CameraIdString
 
 logger = logging.getLogger(__name__)
 
-CameraSharedMemoryDTOs = dict[CameraIdString, CameraSharedMemoryDTO]
+CameraSharedMemoryDTOs = dict[CameraIdString, FramePayloadSharedMemoryRingBufferDTO]
 
 
 @dataclass
-class SingleSlotCameraGroupSharedMemoryDTO:
+class CameraGroupSharedMemoryDTO:
     camera_configs: CameraConfigs
     camera_shm_dtos: CameraSharedMemoryDTOs
     shm_valid_flag: multiprocessing.Value
@@ -23,37 +24,37 @@ class SingleSlotCameraGroupSharedMemoryDTO:
 
 @dataclass
 class CameraGroupSharedMemory:
-    camera_configs: CameraConfigs
-    camera_shms: dict[CameraIdString, SingleSlotCameraSharedMemory]
+    ipc: CameraGroupIPC
+    camera_shms: dict[CameraIdString, FramePayloadSharedMemoryRingBuffer]
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
     read_only: bool
 
     @classmethod
-    def create(cls,
-               camera_configs: CameraConfigs,
-               read_only: bool = False):
-        camera_shms = {camera_id: SingleSlotCameraSharedMemory.create(camera_config=config,
-                                                                      read_only=read_only)
-                       for camera_id, config in camera_configs.items()}
+    def from_ipc(cls,
+                 camera_group_ipc: CameraGroupIPC,
+                 read_only: bool = False):
+        camera_shms = {camera_id: FramePayloadSharedMemoryRingBuffer.create(camera_config=config,
+                                                                            read_only=read_only)
+                       for camera_id, config in camera_group_ipc.camera_configs.items()}
 
-        return cls(camera_configs=camera_configs,
+        return cls(ipc=camera_group_ipc,
                    camera_shms=camera_shms,
                    shm_valid_flag=multiprocessing.Value('b', True),
                    latest_mf_number=multiprocessing.Value("l", -1),
                    read_only=read_only)
 
     @classmethod
-    def recreate(cls,
-                 shm_dto: SingleSlotCameraGroupSharedMemoryDTO,
-                 read_only: bool):
-        camera_shms = {camera_id: SingleSlotCameraSharedMemory.recreate(camera_config=config,
-                                                                        camera_shm_dto=shm_dto.camera_shm_dtos[
-                                                                            camera_id],
-                                                                        read_only=read_only)
+    def recreate_from_dto(cls,
+                          ipc: CameraGroupIPC,
+                          shm_dto: CameraGroupSharedMemoryDTO,
+                          read_only: bool):
+        camera_shms = {camera_id: FramePayloadSharedMemoryRingBuffer.recreate(dto=shm_dto.camera_shm_dtos[
+                                                                                  camera_id],
+                                                                              read_only=read_only)
                        for camera_id, config in shm_dto.camera_configs.items()}
 
-        return cls(camera_configs=shm_dto.camera_configs,
+        return cls(ipc=ipc,
                    camera_shms=camera_shms,
                    shm_valid_flag=shm_dto.shm_valid_flag,
                    latest_mf_number=shm_dto.latest_mf_number,
@@ -72,11 +73,11 @@ class CameraGroupSharedMemory:
     def valid(self) -> bool:
         return self.shm_valid_flag.value
 
-    def to_dto(self) -> SingleSlotCameraGroupSharedMemoryDTO:
-        return SingleSlotCameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
-                                                    camera_shm_dtos=self.camera_shm_dtos,
-                                                    shm_valid_flag=self.shm_valid_flag,
-                                                    latest_mf_number=self.latest_mf_number)
+    def to_dto(self) -> CameraGroupSharedMemoryDTO:
+        return CameraGroupSharedMemoryDTO(camera_configs=self.camera_configs,
+                                          camera_shm_dtos=self.camera_shm_dtos,
+                                          shm_valid_flag=self.shm_valid_flag,
+                                          latest_mf_number=self.latest_mf_number)
 
     def get_multi_frame_payload(self,
                                 previous_payload: MultiFramePayload | None,
@@ -99,7 +100,7 @@ class CameraGroupSharedMemory:
             frame = camera_shared_memory.retrieve_frame()
             if frame.frame_number != self.latest_mf_number.value + 1:
                 raise ValueError(
-                    f"Frame number mismatch! Expected {self.latest_mf_number.value+1}, got {frame.frame_number}")
+                    f"Frame number mismatch! Expected {self.latest_mf_number.value + 1}, got {frame.frame_number}")
             mf_payload.add_frame(frame)
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")

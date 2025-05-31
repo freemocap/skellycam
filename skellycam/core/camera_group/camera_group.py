@@ -1,90 +1,77 @@
+import enum
 import logging
-import multiprocessing
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
+from multiprocessing.managers import DictProxy
 
-from pydantic import ConfigDict
-
+from skellycam import MultiFrameEscapeSharedMemoryRingBuffer
+from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.camera_group_thread import CameraGroupThread
-from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import \
-    CameraGroupSharedMemoryOrchestrator
-from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.core.types import CameraIdString
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.frames.wrangling.frame_wrangler import FrameWrangler
+from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
+from skellycam.core.types import CameraIdString, CameraGroupIdString
 
 logger = logging.getLogger(__name__)
 
 
+class CameraGroupWorkerStrategies(enum.Enum):
+    THREAD = "THREAD"
+    PROCESS = "PROCESS"
+
+
 @dataclass
 class CameraGroup:
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    # Key attributes
-    shmorchestrator: CameraGroupSharedMemoryOrchestrator
-    camera_group_worker: CameraGroupThread
-
-    # Utility attributes
-    dto: CameraGroupDTO
-    frame_router_config_queue: multiprocessing.Queue
-    frame_listener_config_queue: multiprocessing.Queue
-    group_uuid: str
+    ipc: CameraGroupIPC
+    camera_shm: CameraGroupSharedMemory
+    multiframe_shm: MultiFrameEscapeSharedMemoryRingBuffer
+    cameras: CameraManager
+    orchestrator: CameraGroupOrchestrator
+    frame_wrangler: FrameWrangler
+    id: CameraGroupIdString = field(default_factory=lambda: uuid.uuid4()[:6])  # Shortened UUID for readability
 
     @classmethod
-    def create(cls,
-               camera_group_dto: CameraGroupDTO):
-        shmorchestrator = CameraGroupSharedMemoryOrchestrator.create(camera_group_dto=camera_group_dto,
-                                                                     read_only=True)
-        frame_router_config_queue = multiprocessing.Queue()
-        frame_listener_config_queue = multiprocessing.Queue()
-        return cls(dto=camera_group_dto,
-                   shmorchestrator=shmorchestrator,
-                   frame_router_config_queue=frame_router_config_queue,
-                   frame_listener_config_queue=frame_listener_config_queue,
-                   camera_group_worker=CameraGroupThread(camera_group_dto=camera_group_dto,
-                                                         shmorc_dto=shmorchestrator.to_dto(),
-                                                         frame_router_config_queue=frame_router_config_queue,
-                                                         frame_listener_config_queue=frame_listener_config_queue),
-                   group_uuid=camera_group_dto.group_uuid)
+    def from_configs(cls, camera_configs: CameraConfigs):
+        ipc: CameraGroupIPC = CameraGroupIPC.from_configs(camera_configs=camera_configs)
+        camera_shm = CameraGroupSharedMemory.from_ipc(camera_group_ipc=ipc,
+                                               read_only=True)
+        multiframe_shm = MultiFrameEscapeSharedMemoryRingBuffer.create_from_ipc(ipc=ipc,
+                                                                                read_only=True)
 
-    @property
-    def multi_frame_escape_ring_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer | None:
-        if self.shmorchestrator is None or not self.shmorchestrator.valid or not self.shmorchestrator.multiframe_escape_ring_shm.valid:
-            return None
-        return self.shmorchestrator.multiframe_escape_ring_shm
+        orchestrator = CameraGroupOrchestrator.from_camera_ids(ipc.camera_ids)
+        cameras = CameraManager.create_cameras(ipc=ipc,
+                                               camera_shm=camera_shm,
+                                               orchestrator=orchestrator)
+        frame_wrangler = FrameWrangler.from_ipc(ipc=ipc,
+                                                multi_frame_shm_dto=multiframe_shm.to_dto(),
+                                                )
+        return cls(
+            ipc=ipc,
+            camera_shm=camera_shm,
+            multiframe_shm=multiframe_shm,
+            cameras=cameras,
+            orchestrator=orchestrator,
+            frame_wrangler=frame_wrangler,
+        )
 
     @property
     def camera_ids(self) -> list[CameraIdString]:
-        return list(self.dto.camera_configs.keys())
+        return list(self.ipc.camera_configs.keys())
 
     @property
-    def camera_configs(self) -> CameraConfigs:
-        return self.dto.camera_configs
-
-    @property
-    def uuid(self) -> str:
-        return self.group_uuid
+    def camera_configs(self) -> DictProxy:
+        return self.ipc.camera_configs
 
     def start(self):
         logger.info("Starting camera group...")
-        self.camera_group_worker.start()
-
+        self.frame_wrangler.start()
+        self.orchestrator.start()
 
     def close(self):
         logger.debug("Closing camera group")
-        self.dto.ipc.kill_camera_group_flag.value = True
-        if self.camera_group_worker:
-            self.camera_group_worker.close()
-        self.shmorchestrator.close_and_unlink()
+        self.ipc.should_close_camera_group_flag.value = True
+        self.cameras.close()
+        self.frame_wrangler.close()
+        self.shm.close_and_unlink()
         logger.info("Camera group closed.")
-
-    def update_camera_configs(self,
-                              camera_configs: CameraConfigs,
-                              update_instructions: UpdateInstructions):
-        logger.debug(
-            f"Updating Camera Configs with instructions: {update_instructions}")
-        self.dto.camera_configs = camera_configs
-        self.dto.ipc.update_camera_configs_queue.put(update_instructions)
-        self.frame_router_config_queue.put(update_instructions.new_configs)
-        self.frame_listener_config_queue.put(update_instructions.new_configs)

@@ -10,67 +10,59 @@ from pydantic import BaseModel
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group import CameraGroup
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.orchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
-from skellycam.core.recorders.timestamps.framerate_tracker import FramerateTrackers
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
 
 
-
 @dataclass
 class SkellycamApplication:
-
     ipc: InterProcessCommunicationManager
-    camera_group: CameraGroup | None = None
-    shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
-    framerate: FramerateTrackers| None = None
+    camera_group_manager: CameraGroupManager = CameraGroupManager()
+
+    # shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
+    # framerate: FramerateTrackers| None = None
 
     @classmethod
-    def create(cls, global_kill_flag: multiprocessing.Value) -> "SkellycamApplication":
+    def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):
         return cls(ipc=InterProcessCommunicationManager(global_kill_flag=global_kill_flag))
 
-    @property
-    def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer| None:
-        if not self.camera_group:
-            return None
-        return self.camera_group.multi_frame_escape_ring_shm
-
-
-    @property
-    def camera_group_configs(self) -> CameraConfigs | None:
-        if self.camera_group is None:
-            return  None
-        return self.camera_group.camera_configs
-
-    def create_or_update_camera_group(self,
-                                        camera_configs: CameraConfigs):
-            if self.camera_group is None:
-                self.create_camera_group(camera_configs=camera_configs)
-            else:
-                self.update_camera_group(camera_configs=camera_configs)
+    # @property
+    # def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer| None:
+    #     if not self.camera_group:
+    #         return None
+    #     return self.camera_group.multi_frame_escape_ring_shm
+    #
+    #
+    # @property
+    # def camera_group_configs(self) -> CameraConfigs | None:
+    #     if self.camera_group is None:
+    #         return  None
+    #     return self.camera_group.camera_configs
+    #
+    # def create_camera_group(self,
+    #                         camera_configs: CameraConfigs):
+    #     if self.camera_group is None:
+    #         self.create_camera_group(camera_configs=camera_configs)
+    #     else:
+    #         self.update_camera_group(camera_configs=camera_configs)
 
     def create_camera_group(self, camera_configs: CameraConfigs):
         if self.camera_group is not None:
             self.camera_group.close()
         logger.info(f"Creating camera group with cameras: {camera_configs.keys()}")
-        self.camera_group = CameraGroup.create(camera_group_dto=CameraGroupDTO(ipc=self.ipc,
-                                                                               group_uuid=str(uuid4()),
-                                                                               camera_configs=camera_configs),
-                                               )
-        self.camera_group.start()
-        logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
+        camera_group_id = self.camera_group_manager.create_camera_group(camera_configs=camera_configs)
+        self.camera_group_manager.get_camera_group(camera_group_id).start()
+        logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {camera_configs.keys()}")
 
     def set_device_extracted_camera_configs(self, configs: CameraConfigs):
         if self.camera_group is None or self.camera_group.camera_configs is None:
             raise ValueError("Cannot set device extracted camera config without CameraGroup!")
         self.camera_group.camera_configs.update(configs)
         self.ipc.ws_ipc_relay_queue.put(self.state_dto())
-
 
     def update_camera_group(self,
                             camera_configs: CameraConfigs):
@@ -89,7 +81,7 @@ class SkellycamApplication:
         self._reset()
         logger.success("Camera group closed successfully")
 
-    def start_recording(self, recording_info:RecordingInfo):
+    def start_recording(self, recording_info: RecordingInfo):
         if self.camera_group is None:
             raise ValueError("Cannot start recording without CameraGroup!")
         if self.ipc.record_frames_flag.value:
@@ -146,7 +138,7 @@ def create_skellycam_app(global_kill_flag: multiprocessing.Value,
                          ) -> SkellycamApplication:
     global SKELLYCAM_APP_STATE
     if not SKELLYCAM_APP_STATE:
-        SKELLYCAM_APP_STATE = SkellycamApplication.create(global_kill_flag=global_kill_flag)
+        SKELLYCAM_APP_STATE = SkellycamApplication.initialize_skellycam_app(global_kill_flag=global_kill_flag)
     else:
         raise ValueError("SkellycamAppState already exists!")
     return SKELLYCAM_APP_STATE

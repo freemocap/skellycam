@@ -56,7 +56,7 @@ def camera_group_create_post_endpoint(
                                                      CameraGroupCreateRequest.example()]), ) -> CameraGroupIdString :
     logger.api(f"Received `/camera/group` POST request with config:  {request.camera_configs}...")
     try:
-        camera_group_id = get_skellycam_app().create_or_update_camera_group(camera_configs=request.camera_configs)
+        camera_group_id = get_skellycam_app().create_camera_group(camera_configs=request.camera_configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
         return camera_group_id
     except Exception as e:

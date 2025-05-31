@@ -64,7 +64,6 @@ def get_video_file_type(fourcc_code: int) ->str:
         raise ValueError(f"Unrecognized FOURCC code: {fourcc_code}")
     return file_format
 
-
 class CameraConfig(BaseModel):
     camera_id: CameraIdString = Field(
         default=DEFAULT_CAMERA_ID,

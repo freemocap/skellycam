@@ -3,12 +3,12 @@ import multiprocessing
 from collections import deque
 from pathlib import Path
 
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.shared_memory.multi_frame_escape_ring_buffer import \
+from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import \
     MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
 from skellycam.utilities.wait_functions import wait_1ms
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class FrameSaverProcess:
     def __init__(self,
-                 camera_group_dto: CameraGroupDTO,
+                 camera_group_dto: CameraGroupIPC,
                  multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
                  new_configs_queue: multiprocessing.Queue,
                  ):
@@ -41,7 +41,7 @@ class FrameSaverProcess:
         self._process.join()
 
     @staticmethod
-    def _run_process(camera_group_dto: CameraGroupDTO,
+    def _run_process(camera_group_dto: CameraGroupIPC,
                      multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
                      new_configs_queue: multiprocessing.Queue,
                      ):

@@ -7,7 +7,7 @@ from typing import Literal
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frames.payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
     create_empty_frame_metadata, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MultiFrameEscapeSharedMemoryRingBufferDTO:
-    camera_group_dto: CameraGroupDTO
+    camera_group_dto: CameraGroupIPC
     mf_time_mapping_shm_dto: SharedMemoryRingBufferDTO
     mf_metadata_shm_dto: SharedMemoryRingBufferDTO
     mf_image_shm_dto: SharedMemoryRingBufferDTO
@@ -29,7 +29,7 @@ class MultiFrameEscapeSharedMemoryRingBufferDTO:
 
 @dataclass
 class MultiFrameEscapeSharedMemoryRingBuffer:
-    camera_group_dto: CameraGroupDTO
+    camera_group_dto: CameraGroupIPC
 
     mf_time_mapping_shm: SharedMemoryRingBuffer
     mf_metadata_shm: SharedMemoryRingBuffer
@@ -59,8 +59,8 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                     self.mf_time_mapping_shm.new_data_available])
 
     @classmethod
-    def create(cls,
-               camera_group_dto: CameraGroupDTO,
+    def create_from_ipc(cls,
+               ipc: CameraGroupIPC,
                read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
                           camera_group_dto.camera_configs.values()]
@@ -97,7 +97,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @classmethod
     def recreate(cls,
-                 camera_group_dto: CameraGroupDTO,
+                 camera_group_dto: CameraGroupIPC,
                  shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
                  read_only: bool):
         mf_image_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_image_shm_dto,

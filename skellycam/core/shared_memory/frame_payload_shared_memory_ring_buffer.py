@@ -4,7 +4,7 @@ import time
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.camera.config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
     SharedMemoryRingBufferDTO
 from skellycam.core.frames.payloads.frame_payload import FramePayload
@@ -14,13 +14,13 @@ from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_ME
 logger = logging.getLogger(__name__)
 
 
-class RingBufferCameraSharedMemoryDTO(BaseModel):
+class FramePayloadSharedMemoryRingBufferDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     image_shm_dto: SharedMemoryRingBufferDTO
     metadata_shm_dto: SharedMemoryRingBufferDTO
 
 
-class RingBufferCameraSharedMemory(BaseModel):
+class FramePayloadSharedMemoryRingBuffer(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     image_shm: SharedMemoryRingBuffer
     metadata_shm: SharedMemoryRingBuffer
@@ -30,21 +30,21 @@ class RingBufferCameraSharedMemory(BaseModel):
     def create(
             cls,
             camera_config: CameraConfig,
-            memory_allocation: int,
             read_only: bool,
+            buffer_length: int = 100,
     ):
         example_image = np.zeros(camera_config.image_shape, dtype=np.uint8)
         example_metadata = np.zeros(FRAME_METADATA_SHAPE, dtype=FRAME_METADATA_DTYPE)
         image_shm = SharedMemoryRingBuffer.create(
             example_payload=example_image,
-            memory_allocation=memory_allocation,
+            ring_buffer_length=buffer_length,
             dtype=DEFAULT_IMAGE_DTYPE,
             read_only=read_only,
         )
         metadata_shm = SharedMemoryRingBuffer.create(
             example_payload=example_metadata,
             dtype=FRAME_METADATA_DTYPE,
-            ring_buffer_length=image_shm.ring_buffer_length,
+            ring_buffer_length=buffer_length,
             read_only=read_only,
         )
 
@@ -56,7 +56,7 @@ class RingBufferCameraSharedMemory(BaseModel):
 
     @classmethod
     def recreate(cls,
-                dto: RingBufferCameraSharedMemoryDTO,
+                 dto: FramePayloadSharedMemoryRingBufferDTO,
                  read_only: bool, ):
         image_shm = SharedMemoryRingBuffer.recreate(
             dto=dto.image_shm_dto,
@@ -80,8 +80,8 @@ class RingBufferCameraSharedMemory(BaseModel):
     def new_frame_available(self):
         return self.image_shm.new_data_available and self.metadata_shm.new_data_available
 
-    def to_dto(self) -> RingBufferCameraSharedMemoryDTO:
-        return RingBufferCameraSharedMemoryDTO(
+    def to_dto(self) -> FramePayloadSharedMemoryRingBufferDTO:
+        return FramePayloadSharedMemoryRingBufferDTO(
             image_shm_dto=self.image_shm.to_dto(),
             metadata_shm_dto=self.metadata_shm.to_dto(),
         )
@@ -103,7 +103,7 @@ class RingBufferCameraSharedMemory(BaseModel):
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
-        return FramePayload.create(image=image, metadata=metadata)
+        return FramePayload(image=image, metadata=metadata)
 
     def retrieve_next_frame(self) -> FramePayload:
         image = self.image_shm.get_next_payload()
@@ -112,7 +112,7 @@ class RingBufferCameraSharedMemory(BaseModel):
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
         )
-        return FramePayload.create(image=image, metadata=metadata)
+        return FramePayload(image=image, metadata=metadata)
 
     def close(self):
         self.image_shm.close()
