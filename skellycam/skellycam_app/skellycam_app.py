@@ -1,16 +1,13 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
-from uuid import uuid4
 
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.camera_group.camera_group import CameraGroup
-from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
@@ -21,10 +18,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SkellycamApplication:
     ipc: InterProcessCommunicationManager
-    camera_group_manager: CameraGroupManager = CameraGroupManager()
+    camera_group_manager: CameraGroupManager = field(default_factory=CameraGroupManager)
 
-    # shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
-    # framerate: FramerateTrackers| None = None
 
     @classmethod
     def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):

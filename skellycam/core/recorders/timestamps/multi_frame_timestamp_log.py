@@ -104,13 +104,13 @@ class MultiFrameTimestampLog(BaseModel):
     def from_multi_frame_metadata(
             cls,
             multi_frame_metadata: MultiFrameMetadata,
-            first_multi_frame_payload: MultiFramePayload,
+            initial_multi_frame_payload: MultiFramePayload,
     ):
         camera_timestamp_logs = {
             camera_id: CameraTimestampLog.from_frame_metadata(
                 frame_metadata=frame_metadata,
-                first_frame_metadata=first_multi_frame_payload.frames[camera_id].frame_metadata,
-                timebase_mapping=first_multi_frame_payload.timebase_mapping
+                first_frame_metadata=initial_multi_frame_payload.frames[camera_id].frame_metadata,
+                timebase_mapping=initial_multi_frame_payload.timebase_mapping
             )
             for camera_id, frame_metadata in multi_frame_metadata.frame_metadatas.items()}
 
@@ -131,7 +131,7 @@ class MultiFrameTimestampLog(BaseModel):
             ]
         ))
 
-        timestamp_from_zero_s = (timestamp_perf_counter_ns- first_multi_frame_payload.timestamp_ns) / 1e9
+        timestamp_from_zero_s = (timestamp_perf_counter_ns- initial_multi_frame_payload.timestamp_ns) / 1e9
 
         timestamp_utc_ns = int(np.mean(
             [

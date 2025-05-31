@@ -13,6 +13,7 @@ from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.recorders.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,
 )
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
 logger = logging.getLogger(__name__)
@@ -20,9 +21,9 @@ from pydantic import ConfigDict
 
 
 class MultiframeTimestampLogger(BaseModel):
-    videos_base_path: str
-    multi_frame_metadatas: list[MultiFrameMetadata] = Field(default_factory=list[MultiFrameMetadata])
-    first_multi_frame_payload: MultiFramePayload | None = None
+    recording_info: RecordingInfo
+    initial_multi_frame_payload: MultiFramePayload
+    multi_frame_metadatas: list[MultiFrameMetadata] = []
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
@@ -31,34 +32,25 @@ class MultiframeTimestampLogger(BaseModel):
 
     @property
     def timestamps_base_path(self) -> str:
-        path= Path(self.videos_base_path).parent / "timestamps"
+        path= Path(self.recording_info.timestamps_folder)
         path.mkdir(parents=True, exist_ok=True)
         return str(path)
 
     @property
     def csv_save_path(self) -> str:
-        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_timestamps.csv")
+        return str(Path(self.recording_info.timestamps_folder)/ f"{self.recording_info.recording_name}_timestamps.csv")
 
     @property
     def starting_timestamp_json_path(self) -> str:
-        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_starting_timestamp.json")
-
-    @property
-    def recording_name(self) -> str:
-        return Path(self.videos_base_path).stem
+        return str(Path(self.recording_info.timestamps_folder)/ f"{self.recording_info.recording_name}_starting_timestamp.json")
 
     @property
     def stats_path(self) -> str:
-        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_timestamps_stats.json")
+        return str(Path(self.timestamps_base_path)/ f"{self.recording_info.recording_name}_timestamps_stats.json")
 
     @property
     def documentation_path(self) -> str:
-        return str(Path(self.timestamps_base_path)/ f"{self.recording_name}_timestamps_README.md")
-    @property
-    def camera_ids(self) -> list[str]:
-        if len(self.multi_frame_metadatas) == 0:
-            return []
-        return list(self.multi_frame_metadatas[0].camera_ids)
+        return str(Path(self.timestamps_base_path)/ f"{self.recording_info.recording_name}_timestamps_README.md")
 
     def log_multiframe(self, multi_frame_payload: MultiFramePayload):
         if len(self.multi_frame_metadatas) == 0:
@@ -81,13 +73,13 @@ class MultiframeTimestampLogger(BaseModel):
             f.write(
                 json.dumps(
                     FullTimestamp.from_timebase_mapping(
-                        self.first_multi_frame_payload.timebase_mapping).to_descriptive_dict(), indent=2)
+                        self.initial_multi_frame_payload.timebase_mapping).to_descriptive_dict(), indent=2)
             )
 
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(
             [MultiFrameTimestampLog.from_multi_frame_metadata(multi_frame_metadata=mf_metadata,
-                                                              first_multi_frame_payload=self.first_multi_frame_payload).to_df_row()
+                                                              initial_multi_frame_payload=self.initial_multi_frame_payload).to_df_row()
              for mf_metadata in self.multi_frame_metadatas],
         )
         return df

@@ -26,7 +26,7 @@ class AudioChunk(BaseModel):
 
 class AudioRecordingInfo(BaseModel):
     file_name: str
-    utc_to_perf_counter_ns_mapping: dict
+    timebase_mapping: TimeBaseMapping
     audio_record_start_time: dict
     rate: int
     channels: int
@@ -42,6 +42,7 @@ class AudioRecorder:
     def __init__(self,
                  audio_file_path: str,
                  mic_device_index: int,
+                    timebase_mapping: TimeBaseMapping = TimeBaseMapping(),
                  rate: int = 44100,
                  channels: int = 2,
                  chunk_size: int = 2048):
@@ -49,6 +50,7 @@ class AudioRecorder:
             audio_file_path += '.wav'
         self.audio_filename = audio_file_path
         self.mic_device_index = mic_device_index
+        self.timebase_mapping = timebase_mapping
         self.should_continue = multiprocessing.Value('b', True)
         self.recording_thread = threading.Thread(target=AudioRecorder._record,
                                                  args=(self,
@@ -111,7 +113,7 @@ class AudioRecorder:
     def _initialize_audio_data(self):
         self.audio_recording_info = AudioRecordingInfo(
             file_name=self.audio_filename.replace(str(Path.home()), "~"),
-            utc_to_perf_counter_ns_mapping=TimeBaseMapping().model_dump(),
+            timebase_mapping=self.timebase_mapping.model_dump(),
             audio_record_start_time=FullTimestamp.now().model_dump(),
             rate=self.rate,
             channels=self.channels,
@@ -167,3 +169,5 @@ if __name__ == "__main__":
             print(f"Error: {e}")
     else:
         print("No microphones found.")
+
+    print("Done!")

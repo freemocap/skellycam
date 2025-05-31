@@ -1,7 +1,6 @@
 import logging
 import threading
 import time
-import uuid
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
@@ -9,13 +8,12 @@ from pydantic import BaseModel, ValidationError
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
-from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types import CameraIdString
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
-SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
-TIMESTAMPS_FOLDER_NAME = "synchronized_videos"
+
 
 SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME = f"{SYNCHRONIZED_VIDEOS_FOLDER_NAME}_README.md"
 
@@ -30,22 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 class RecordingManager(BaseModel):
-    recording_uuid: str = str(uuid.uuid4())
-    recording_folder: str
-    videos_folder: str
-    recording_name: str
-    camera_configs: CameraConfigs
-    fresh: bool = True
+    recording_info: RecordingInfo
+    initial_multi_frame_payload: MultiFramePayload
 
-    video_recorders: dict[CameraIdString, VideoRecorder]
+    video_recorders: dict[CameraIdString, VideoRecorder] = {}
     multi_frame_timestamp_logger: MultiframeTimestampLogger
 
     class Config:
         arbitrary_types_allowed = True
-
-    @property
-    def recording_info(self) -> "RecordingInfo":
-        return RecordingInfo.from_recording_manager(self)
 
     @property
     def number_of_frames_to_save(self) -> int:
@@ -55,33 +45,45 @@ class RecordingManager(BaseModel):
     def frames_to_save(self) -> bool:
         return self.number_of_frames_to_save > 0
 
+    @property
+    def camera_configs(self) -> CameraConfigs:
+        return self.initial_multi_frame_payload.camera_configs
+
     @classmethod
     def create(cls,
-               multi_frame_payload: MultiFramePayload,
-               camera_configs: CameraConfigs,
-               recording_folder: str):
+               recording_info: RecordingInfo,
+               initial_multi_frame_payload: MultiFramePayload):
 
-        logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
+        logger.debug(f"Creating FrameSaver for recording folder {recording_info}")
 
-        recording_name = Path(recording_folder).name
-        videos_folder = str(Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
-
-        video_recorders = {}
-        for camera_id, config in camera_configs.items():
-            video_recorders[camera_id] = VideoRecorder.create(camera_id=camera_id,
-                                                              frame=multi_frame_payload.get_frame(camera_id),
-                                                              recording_name=recording_name,
-                                                              videos_folder=videos_folder,
-                                                              config=camera_configs[camera_id],
-                                                              )
-
-        return cls(recording_folder=recording_folder,
-                   videos_folder=videos_folder,
-                   recording_name=recording_name,
-                   camera_configs=camera_configs,
-                   video_recorders=video_recorders,
-                   multi_frame_timestamp_logger=MultiframeTimestampLogger(videos_base_path=videos_folder),
+        return cls(recording_info = recording_info,
+                   initial_multi_frame_payload=initial_multi_frame_payload,
+                   multi_frame_timestamp_logger=MultiframeTimestampLogger(recording_info=recording_info,
+                                                                          initial_multi_frame_payload=initial_multi_frame_payload),
                    )
+
+    def _create_video_recorders(self):
+        if self.video_recorders:
+            logger.error(
+                f"Video recorders should only be created once, but found {len(self.video_recorders)} existing recorders.")
+            self.finish_and_close()
+            raise RuntimeError(
+                f"Video recorders should only be created once, but found {len(self.video_recorders)} existing recorders.")
+        for camera_id, config in self.camera_configs.items():
+            self.video_recorders[camera_id] = VideoRecorder.create(camera_id=camera_id,
+                                                                   frame=self._first_multi_frame_payload.get_frame(
+                                                                       camera_id),
+                                                                   recording_info= self.recording_info,
+                                                                   config=self.camera_configs[camera_id],
+                                                                   )
+
+    def add_multi_frames(self, multi_frame_payloads: list[MultiFramePayload]):
+        """
+        Adds multiple multi-frames to the video recorder.
+        :param multi_frame_payloads: List of MultiFramePayloads to add.
+        """
+        for mf_payload in multi_frame_payloads:
+            self.add_multi_frame(mf_payload=mf_payload)
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
         logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
@@ -96,15 +98,26 @@ class RecordingManager(BaseModel):
             self.video_recorders[camera_id].add_frame(frame=frame)
         self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
 
-    def save_one_frame(self) -> bool | None:
+    def try_save_one_frame(self) -> bool:
         """
-        saves one frame from one video recorder
+        Checks if we are ready to save a frame, and if so, saves one frame.
         """
         if not self.frames_to_save:
-            return None
+            return False
 
         if not Path(self.recording_folder).exists():
             self._create_video_recording_folder()
+            return False  # Create folder and defer to next loop
+
+        if not self.video_recorders:
+            self._create_video_recorders()
+            return False  # Create video recorders and defer to next loop
+        return self.save_one_frame()
+
+    def save_one_frame(self) -> bool:
+        """
+        saves one frame from one video recorder
+        """
 
         frame_counts = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in
                         self.video_recorders.items()}
@@ -133,6 +146,9 @@ class RecordingManager(BaseModel):
     def finish_and_close(self):
         logger.debug(f"Finishing up...")
         finish_threads = []
+        while not self.try_save_one_frame():
+            time.sleep(0.01)
+
         for recorder in self.video_recorders.values():
             finish_threads.append(threading.Thread(target=recorder.finish_and_close))
             finish_threads[-1].start()
@@ -144,27 +160,17 @@ class RecordingManager(BaseModel):
         logger.debug(f"Closing {self.__class__.__name__} for recording: `{self.recording_name}`")
         for video_saver in self.video_recorders.values():
             video_saver.close()
-        self.multi_frame_timestamp_logger.close()
         self.finalize_recording()
 
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_name}`...")
-        self.finalize_timestamps()
-        self.save_recording_summary()
+        self.recording_info.save_to_file()
+        self.multi_frame_timestamp_logger.close()
+        self._save_folder_readme()
         self.validate_recording()
-        # self._save_folder_readme() # TODO - uncomment this when ready, only save if recording is successful
         logger.success(f"Recording `{self.recording_name} Successfully recorded to: {self.recording_folder}")
 
-    def finalize_timestamps(self):
-        # TODO - add clean up and optional tasks... calc stats, save to individual cam timestamp files, etc
-        pass
-
-    def save_recording_summary(self):
-        # TODO - Update the `recording_info` with the final recording info? Or maybe a separeate `RecordingStats` save?
-        # Save the recording info to a `[recording_name]_info.json` in the recording folder
-        # self.multi_frame_timestamp_logger.save_timestamp_stats()
-        self.recording_info.save_to_file()
-
     def validate_recording(self):
-        # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
+        logger.warning(
+            "Recording validation is not implemented yet. This method should do things like check if all video/timestamp files have the same number of frames, etc.")
         pass

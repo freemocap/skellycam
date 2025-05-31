@@ -7,6 +7,7 @@ import cv2
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString
 from skellycam.core.frames.payloads.frame_payload import FramePayload
 
@@ -34,13 +35,12 @@ class VideoRecorder(BaseModel):
     def create(cls,
                frame: FramePayload,
                camera_id: CameraIdString,
-               recording_name: str,
-               videos_folder: str,
+               recording_info: RecordingInfo,
                config: CameraConfig,
                ):
-        Path(videos_folder).mkdir(parents=True, exist_ok=True)
+
         video_file_path = str(
-            Path(videos_folder) / f"{recording_name}_camera_{config.camera_index}{config.video_file_extension}")
+            Path(recording_info.videos_folder) / f"{recording_info.recording_name}.camera{config.camera_index}.{config.camera_id}.{config.video_file_extension}")
         frame_width = frame.width
         frame_height = frame.height
         writer = cls._initialize_video_writer(frame_width=frame_width,

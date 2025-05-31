@@ -1,10 +1,14 @@
 import logging
 import multiprocessing
+from copy import deepcopy
 from dataclasses import dataclass
 
-from skellycam import MultiFrameEscapeSharedMemoryRingBuffer
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import MultiFrameEscapeSharedMemoryRingBufferDTO
+from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
+from skellycam.core.recorders.recording_manager import RecordingManager
+from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
+from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -12,23 +16,26 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FrameWrangler:
     worker: multiprocessing.Process
+    ipc: CameraGroupIPC
 
     @classmethod
-    def from_ipc(cls,
+    def create(cls,
                  ipc: CameraGroupIPC,
-                 multi_frame_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO):
+                 group_shm_dto: CameraGroupSharedMemoryDTO):
         worker = multiprocessing.Process(target=cls._run_process,
                                          name=cls.__class__.__name__,
                                          kwargs=dict(ipc=ipc,
-                                                     multi_frame_escape_shm_dto=multi_frame_shm_dto,
+                                                     group_shm_dto=group_shm_dto,
+                                                     ws_logs_queue=get_websocket_log_queue()
                                                      )
                                          )
-        return cls(worker=worker)
+        return cls(worker=worker,
+                   ipc=ipc,
+                   )
 
     def start(self):
         logger.debug(f"Starting frame listener process...")
-
-        self.frame_saver.start()
+        self.worker.start()
 
     def is_alive(self) -> bool:
         return self.worker.is_alive()
@@ -38,108 +45,65 @@ class FrameWrangler:
 
     def close(self):
         logger.debug(f"Closing frame wrangler...")
-        if not self.camera_group_dto.ipc.kill_camera_group_flag.value == True and not self.camera_group_dto.ipc.global_kill_flag.value == True:
-            raise ValueError("FrameWrangler was closed before the kill flag was set.")
+        self.ipc.should_continue = False
         if self.is_alive():
             self.join()
         logger.debug(f"Frame wrangler closed")
 
     @staticmethod
-    def _run_process(camera_group_dto: CameraGroupIPC,
-                     multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
-                     new_configs_queue: multiprocessing.Queue,
+    def _run_process(ipc: CameraGroupIPC,
+                     camera_group_shm_dto: CameraGroupSharedMemoryDTO,
+                     ws_logs_queue: multiprocessing.Queue
                      ):
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
-        configure_logging(LOG_LEVEL, ws_queue=camera_group_dto.ipc.ws_logs_queue)
+        configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
         logger.debug(f"FrameSaver process started!")
 
-        mf_payloads_to_process: deque[MultiFramePayload] = deque()
-        recording_manager: RecordingManager | None = None
-        frame_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer = MultiFrameEscapeSharedMemoryRingBuffer.recreate(
-            camera_group_dto=camera_group_dto,
-            shm_dto=multi_frame_escape_shm_dto,
+        camera_group_shm: CameraGroupSharedMemory = CameraGroupSharedMemory.recreate_from_dto(
+            shm_dto=camera_group_shm_dto,
             read_only=False)
 
-        camera_configs = camera_group_dto.camera_configs
-
-        previous_mf_payload_pulled_from_shm: MultiFramePayload | None = None
-        previous_mf_payload_pulled_from_deque: MultiFramePayload | None = None
-        recording_info: RecordingInfo | None = None
+        recording_manager: RecordingManager | None = None
         audio_recorder: AudioRecorder | None = None
         try:
-            while camera_group_dto.should_continue:
+            while ipc.should_continue:
                 wait_1ms()
 
-                # Check for new camera configs
-                if not new_configs_queue.empty():
-                    camera_configs = new_configs_queue.get()
-
-                # Fully drain the ring shm buffer every time and put the frames into a deque in this Process' memory
-                while frame_escape_ring_shm.new_multi_frame_available and camera_group_dto.should_continue:
-                    mf_payload: MultiFramePayload = frame_escape_ring_shm.get_multi_frame_payload(
-                        camera_configs=camera_configs,
-                        retrieve_type="next")
-                    # print(f"ROUTER - pulled mf_payload #{mf_payload.multi_frame_number} from ring buffer (mf_payloads_to_process: {len(mf_payloads_to_process)})")
-                    if previous_mf_payload_pulled_from_shm:
-                        if not mf_payload.multi_frame_number == previous_mf_payload_pulled_from_shm.multi_frame_number + 1:
-                            raise ValueError(
-                                f"FrameSaver expected mf_payload #{previous_mf_payload_pulled_from_shm.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
-                    previous_mf_payload_pulled_from_shm = mf_payload
-                    mf_payloads_to_process.append(mf_payload)
+                while camera_group_shm.new_multi_frame_available and ipc.should_continue:
 
                     # If we're recording, create a VideoRecorderManager and load all available frames into it (but don't save them to disk yet)
-                    if not camera_group_dto.ipc.start_recording_queue.empty():
-                        payload = camera_group_dto.ipc.start_recording_queue.get()
-                        if isinstance(payload, RecordingInfo):
-                            recording_info: RecordingInfo = payload
-                            logger.info(f"Starting recording with info: {recording_info.model_dump_json(indent=2)}")
-                            camera_group_dto.ipc.record_frames_flag.value = True
-                        elif payload is None:
-                            logger.info(f"Stopping recording with info: {recording_info.model_dump_json(indent=2)}")
-                            camera_group_dto.ipc.record_frames_flag.value = False
+                    if recording_manager:
+                        if ipc.record_frames_flag:
+                            recording_manager.add_multi_frames(camera_group_shm.get_all_new_frames())
+                        else:
+                            recording_manager.finish_and_close()
+                            recording_manager = None
 
-                    while len(mf_payloads_to_process) > 0:
-                        if not camera_group_dto.ipc.global_should_continue:
-                            logger.critical(
-                                "FrameSaverProcess received kill signal before recording was complete!! Recording may be incomplete or corrupt!")
-                            break
-                        mf_payload = mf_payloads_to_process.popleft()
-                        if previous_mf_payload_pulled_from_deque:
-                            if not mf_payload.multi_frame_number == previous_mf_payload_pulled_from_deque.multi_frame_number + 1:
-                                raise ValueError(
-                                    f"FrameSaver expected mf_payload #{previous_mf_payload_pulled_from_deque.multi_frame_number + 1}, but got #{mf_payload.multi_frame_number}")
-                        previous_mf_payload_pulled_from_deque = mf_payload
-                        if camera_group_dto.ipc.record_frames_flag.value:
-                            if not recording_manager:
-                                recording_manager = RecordingManager.create(multi_frame_payload=mf_payload,
-                                                                            camera_configs=camera_group_dto.camera_configs,
-                                                                            recording_folder=recording_info.full_recording_path,
-                                                                            )
-                                if recording_info.mic_device_index != -1:
-                                    audio_file_path = str(Path(
-                                        recording_manager.videos_folder) / f"{recording_manager.recording_name}_audio.wav")
-                                    audio_recorder = AudioRecorder(audio_file_path=audio_file_path,
-                                                                   mic_device_index=camera_group_dto.ipc.mic_device_index.value)
-                                    audio_recorder.start()
-                            recording_manager.add_multi_frame(mf_payload)
+                    else:
+                        if ipc.record_frames_flag:
+                            recording_manager = RecordingManager.create(
+                                recording_info=ipc.recording_info_queue.get(),
+                                initial_multi_frame_payload=camera_group_shm.get_next_multi_frame_payload(
+                                    camera_configs=dict(deepcopy(ipc.camera_configs))),
 
-                    # If we're not recording and recording_manager exists, finish up the videos and close the recorder
-                    if recording_manager and not camera_group_dto.ipc.record_frames_flag.value:
-                        logger.info('Recording complete, finishing and closing recorder...')
-                        previous_mf_payload_pulled_from_deque = None
-                        while len(mf_payloads_to_process) > 0:
-                            recording_manager.add_multi_frame(mf_payloads_to_process.popleft())
-                        recording_manager.finish_and_close()
-                        recording_manager = None
-                        if audio_recorder:
-                            audio_recorder.stop()
-                            audio_recorder = None
+                            )
 
-                # If we're recording, save one frame from the recording_manager each loop (skips if no frames to save)
-                if recording_manager:
-                    recording_manager.save_one_frame()
+                    if not ipc.recording_info_queue.empty():
+                        if recording_manager:
+                            logger.error(f"Got new recording info while already recording! Finishing current recording before starting new one.")
+                            recording_manager.finish_and_close()
+                            raise RuntimeError(f"Got new recording info while already recording! Finishing current recording before starting new one.")
+                        recording_manager = RecordingManager.create(
+                            recording_info=ipc.recording_info_queue.get(),
+                            initial_multi_frame_payload=camera_group_shm.get_next_multi_frame_payload(
+                                camera_configs=dict(deepcopy(ipc.camera_configs))),
+                        )
+                    # Opportunistically handle recording stuff if no new multi-frame is available, otherwise we keep mf's in the deque until there is time to process them
+                    if not camera_group_shm.new_multi_frame_available:
+                        if recording_manager:
+                            recording_manager.save_one_frame()
 
         except Exception as e:
             logger.error(f"Frame Saver process error: {e}")
@@ -152,10 +116,7 @@ class FrameWrangler:
         except KeyboardInterrupt:
             pass
         finally:
-            if camera_group_dto.should_continue:
-                logger.error("FrameSaver shut down for unknown reason! `camera_group_dto.should_continue` is True")
-                camera_group_dto.ipc.kill_camera_group_flag.value = True
             if recording_manager:
                 recording_manager.finish_and_close()
+            camera_group_shm.close()
             logger.debug(f"FrameSaver process completed")
-            frame_escape_ring_shm.close()

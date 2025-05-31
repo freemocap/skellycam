@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class MultiFrameEscapeSharedMemoryRingBufferDTO:
-    camera_group_dto: CameraGroupIPC
+class MultiFrameSharedMemoryRingBufferDTO:
     mf_time_mapping_shm_dto: SharedMemoryRingBufferDTO
     mf_metadata_shm_dto: SharedMemoryRingBufferDTO
     mf_image_shm_dto: SharedMemoryRingBufferDTO
@@ -28,9 +27,7 @@ class MultiFrameEscapeSharedMemoryRingBufferDTO:
 
 
 @dataclass
-class MultiFrameEscapeSharedMemoryRingBuffer:
-    camera_group_dto: CameraGroupIPC
-
+class MultiFrameSharedMemoryRingBuffer:
     mf_time_mapping_shm: SharedMemoryRingBuffer
     mf_metadata_shm: SharedMemoryRingBuffer
     mf_image_shm: SharedMemoryRingBuffer
@@ -63,21 +60,21 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                ipc: CameraGroupIPC,
                read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
-                          camera_group_dto.camera_configs.values()]
+                          ipc.camera_configs.values()]
         example_images_ravelled = [image.ravel() for image in example_images]
         example_mf_image_buffer = np.concatenate(
             example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated
 
         example_mf_metadatas = [create_empty_frame_metadata(frame_number=0,
                                                             config=config)
-                                for camera_id, config in camera_group_dto.camera_configs.items()]
+                                for camera_id, config in ipc.camera_configs.items()]
         example_mf_metadatas_ravelled = [metadata.ravel() for metadata in example_mf_metadatas]
         example_mf_metadata_buffer = np.concatenate(
             example_mf_metadatas_ravelled)  # Example metadata unravelled into 1D arrays and concatenated
 
         mf_image_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_image_buffer,
                                                      dtype=DEFAULT_IMAGE_DTYPE,
-                                                     memory_allocation=ONE_GIGABYTE*int(len(list(camera_group_dto.camera_configs.keys()))),
+                                                     memory_allocation=ONE_GIGABYTE,
                                                      read_only=read_only)
         mf_metadata_shm = SharedMemoryRingBuffer.create(example_payload=example_mf_metadata_buffer,
                                                         dtype=FRAME_METADATA_DTYPE,
@@ -87,8 +84,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                                                             dtype=np.int64,
                                                             ring_buffer_length=mf_image_shm.ring_buffer_length,
                                                             read_only=read_only)
-        return cls(camera_group_dto=camera_group_dto,
-                   mf_image_shm=mf_image_shm,
+        return cls(mf_image_shm=mf_image_shm,
                    mf_metadata_shm=mf_metadata_shm,
                    mf_time_mapping_shm=mf_time_mapping_shm,
                    shm_valid_flag=multiprocessing.Value('b', True),
@@ -97,8 +93,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
 
     @classmethod
     def recreate(cls,
-                 camera_group_dto: CameraGroupIPC,
-                 shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
+                 shm_dto: MultiFrameSharedMemoryRingBufferDTO,
                  read_only: bool):
         mf_image_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_image_shm_dto,
                                                        read_only=read_only)
@@ -107,21 +102,19 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         mf_time_mapping_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_time_mapping_shm_dto,
                                                               read_only=read_only)
 
-        return cls(camera_group_dto=camera_group_dto,
-                   mf_image_shm=mf_image_shm,
+        return cls(mf_image_shm=mf_image_shm,
                    mf_metadata_shm=mf_metadata_shm,
                    mf_time_mapping_shm=mf_time_mapping_shm,
                    shm_valid_flag=shm_dto.shm_valid_flag,
                    latest_mf_number=shm_dto.latest_mf_number,
                    read_only=read_only)
 
-    def to_dto(self) -> MultiFrameEscapeSharedMemoryRingBufferDTO:
-        return MultiFrameEscapeSharedMemoryRingBufferDTO(camera_group_dto=self.camera_group_dto,
-                                                         mf_time_mapping_shm_dto=self.mf_time_mapping_shm.to_dto(),
-                                                         mf_metadata_shm_dto=self.mf_metadata_shm.to_dto(),
-                                                         mf_image_shm_dto=self.mf_image_shm.to_dto(),
-                                                         shm_valid_flag=self.shm_valid_flag,
-                                                         latest_mf_number=self.latest_mf_number, )
+    def to_dto(self) -> MultiFrameSharedMemoryRingBufferDTO:
+        return MultiFrameSharedMemoryRingBufferDTO(mf_time_mapping_shm_dto=self.mf_time_mapping_shm.to_dto(),
+                                                   mf_metadata_shm_dto=self.mf_metadata_shm.to_dto(),
+                                                   mf_image_shm_dto=self.mf_image_shm.to_dto(),
+                                                   shm_valid_flag=self.shm_valid_flag,
+                                                   latest_mf_number=self.latest_mf_number, )
 
     def put_multi_frame_payload(self,
                                 multi_frame_payload: MultiFramePayload):
@@ -149,7 +142,6 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
                 self.mf_metadata_shm.last_written_index.value,
                 self.mf_time_mapping_shm.last_written_index.value,
                 multi_frame_payload.multi_frame_number} == {multi_frame_payload.multi_frame_number}:
-            self.camera_group_dto.ipc.kill_camera_group_flag.value = True
             raise ValueError("Multi-frame number mismatch! "
                              f"Image: {self.mf_image_shm.last_written_index.value}, "
                              f"Metadata: {self.mf_metadata_shm.last_written_index.value}, "
@@ -210,6 +202,7 @@ class MultiFrameEscapeSharedMemoryRingBuffer:
         self.mf_image_shm.unlink()
         self.mf_metadata_shm.unlink()
         self.mf_time_mapping_shm.unlink()
+        self.shm_valid_flag.value = False
 
     def close_and_unlink(self):
         self.close()

@@ -9,7 +9,7 @@ from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
+    MultiFrameSharedMemoryRingBuffer, MultiFrameSharedMemoryRingBufferDTO
 from skellycam.utilities.wait_functions import wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class FrameSaverProcess:
     def __init__(self,
                  camera_group_dto: CameraGroupIPC,
-                 multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
+                 multi_frame_escape_shm_dto: MultiFrameSharedMemoryRingBufferDTO,
                  new_configs_queue: multiprocessing.Queue,
                  ):
 
@@ -42,7 +42,7 @@ class FrameSaverProcess:
 
     @staticmethod
     def _run_process(camera_group_dto: CameraGroupIPC,
-                     multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO,
+                     multi_frame_escape_shm_dto: MultiFrameSharedMemoryRingBufferDTO,
                      new_configs_queue: multiprocessing.Queue,
                      ):
         # Configure logging in the child process
@@ -54,7 +54,7 @@ class FrameSaverProcess:
 
         mf_payloads_to_process: deque[MultiFramePayload] = deque()
         recording_manager: RecordingManager|None = None
-        frame_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer = MultiFrameEscapeSharedMemoryRingBuffer.recreate(
+        frame_escape_ring_shm: MultiFrameSharedMemoryRingBuffer = MultiFrameSharedMemoryRingBuffer.recreate(
             camera_group_dto=camera_group_dto,
             shm_dto=multi_frame_escape_shm_dto,
             read_only=False)
@@ -111,10 +111,10 @@ class FrameSaverProcess:
                         previous_mf_payload_pulled_from_deque = mf_payload
                         if camera_group_dto.ipc.record_frames_flag.value:
                             if not recording_manager:
-                                recording_manager = RecordingManager.create(multi_frame_payload=mf_payload,
-                                                                            camera_configs=camera_group_dto.camera_configs,
-                                                                            recording_folder = recording_info.full_recording_path,
-                                                                            )
+                                recording_manager = RecordingManager.from_ipc(multi_frame_payload=mf_payload,
+                                                                              camera_configs=camera_group_dto.camera_configs,
+                                                                              recording_folder = recording_info.full_recording_path,
+                                                                              )
                                 if recording_info.mic_device_index != -1:
                                     audio_file_path = str(Path(
                                         recording_manager.videos_folder) / f"{recording_manager.recording_name}_audio.wav")

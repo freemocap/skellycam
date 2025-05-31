@@ -1,16 +1,14 @@
 import logging
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 
-if TYPE_CHECKING:
-    from skellycam.core.recorders.recording_manager import RecordingManager
-
 logger = logging.getLogger(__name__)
+SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
+TIMESTAMPS_FOLDER_NAME = "synchronized_videos"
 
 
 class RecordingInfo(BaseModel):
@@ -23,15 +21,19 @@ class RecordingInfo(BaseModel):
 
     @property
     def full_recording_path(self) -> str:
-        return str(Path(f"{self.recording_directory}/{self.recording_name}"))
+        rec_path = Path(f"{self.recording_directory}/{self.recording_name}")
+        rec_path.mkdir(parents=True, exist_ok=True)
+        return str(rec_path)
 
-    @classmethod
-    def from_recording_manager(cls, recording_manager: 'RecordingManager'):
-        return cls(recording_name=recording_manager.recording_name,
-                   recording_directory=recording_manager.recording_folder
-                     )
+    @property
+    def videos_folder(self) -> str:
+        return str(Path(self.full_recording_path)/SYNCHRONIZED_VIDEOS_FOLDER_NAME)
+
+    @property
+    def timestamps_folder(self) -> str:
+        return str(Path(self.full_recording_path)/TIMESTAMPS_FOLDER_NAME)
 
     def save_to_file(self):
-        logger.debug(f"Saving recording info to [{self.recording_directory}/{self.recording_name}_info.json]")
-        with open(f"{self.recording_directory}/{self.recording_name}_info.json", "w") as f:
+        logger.debug(f"Saving recording info to [{self.full_recording_path}_info.json]")
+        with open(str(Path(self.full_recording_path)/f"{self.recording_name}_info.json"), "w") as f:
             f.write(self.model_dump_json(indent=4))

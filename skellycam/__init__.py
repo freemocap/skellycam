@@ -15,7 +15,7 @@ __package_root__ = __file__.replace("/__init__.py", "")
 from skellycam.api.routers import SKELLYCAM_ROUTES
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer
+    MultiFrameSharedMemoryRingBuffer
 from skellycam.core.types import CameraIndex, CameraName
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
@@ -38,7 +38,7 @@ __all__ = [
     "__pypi_url__",
     'SKELLYCAM_ROUTES',
     'SkellycamApplication',
-    'MultiFrameEscapeSharedMemoryRingBuffer',
+    'MultiFrameSharedMemoryRingBuffer',
     'CameraConfig',
     'InterProcessCommunicationManager',
     'LOG_LEVEL'

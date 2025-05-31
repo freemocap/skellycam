@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer, MultiFrameEscapeSharedMemoryRingBufferDTO
+    MultiFrameSharedMemoryRingBuffer, MultiFrameSharedMemoryRingBufferDTO
 from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory, \
     CameraGroupSharedMemoryDTO
 
@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 class CameraGroupSharedMemoryOrchestratorDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     frame_loop_shm_dto: CameraGroupSharedMemoryDTO
-    multi_frame_escape_shm_dto: MultiFrameEscapeSharedMemoryRingBufferDTO
+    multi_frame_escape_shm_dto: MultiFrameSharedMemoryRingBufferDTO
     camera_group_orchestrator: CameraGroupOrchestrator
 
 
 class CameraGroupSharedMemoryOrchestrator(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     camera_group_shm: CameraGroupSharedMemory
-    multiframe_escape_ring_shm: MultiFrameEscapeSharedMemoryRingBuffer
+    multiframe_escape_ring_shm: MultiFrameSharedMemoryRingBuffer
     orchestrator: CameraGroupOrchestrator
 
     @classmethod
@@ -32,8 +32,8 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
         return cls(
             camera_group_shm=CameraGroupSharedMemory.create(camera_configs=camera_group_dto.camera_configs,
                                                             read_only=read_only),
-            multiframe_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.create(camera_group_dto=camera_group_dto,
-                                                                                     read_only=read_only),
+            multiframe_escape_ring_shm=MultiFrameSharedMemoryRingBuffer.create(camera_group_dto=camera_group_dto,
+                                                                               read_only=read_only),
             orchestrator=CameraGroupOrchestrator.from_dto(camera_group_dto=camera_group_dto,)
             )
 
@@ -45,9 +45,9 @@ class CameraGroupSharedMemoryOrchestrator(BaseModel):
         return cls(
             camera_group_shm=CameraGroupSharedMemory.recreate_from_dto(shm_dto=shmorc_dto.frame_loop_shm_dto,
                                                                        read_only=read_only),
-            multiframe_escape_ring_shm=MultiFrameEscapeSharedMemoryRingBuffer.recreate(camera_group_dto=camera_group_dto,
-                                                                                       shm_dto=shmorc_dto.multi_frame_escape_shm_dto,
-                                                                                       read_only=read_only),
+            multiframe_escape_ring_shm=MultiFrameSharedMemoryRingBuffer.recreate(camera_group_dto=camera_group_dto,
+                                                                                 shm_dto=shmorc_dto.multi_frame_escape_shm_dto,
+                                                                                 read_only=read_only),
             orchestrator=shmorc_dto.camera_group_orchestrator,
         )
 
