@@ -10,6 +10,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.types import CameraIdString
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
@@ -46,8 +47,7 @@ class SkellycamApplication:
     #         self.update_camera_group(camera_configs=camera_configs)
 
     def create_camera_group(self, camera_configs: CameraConfigs):
-        if self.camera_group is not None:
-            self.camera_group.close()
+
         logger.info(f"Creating camera group with cameras: {camera_configs.keys()}")
         camera_group_id = self.camera_group_manager.create_camera_group(camera_configs=camera_configs)
         self.camera_group_manager.get_camera_group(camera_group_id).start()

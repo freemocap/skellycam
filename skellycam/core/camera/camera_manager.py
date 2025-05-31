@@ -1,3 +1,4 @@
+import enum
 import logging
 import threading
 
@@ -7,7 +8,8 @@ from skellycam.core.camera.camera_process import CameraProcess
 from skellycam.core.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
+from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory, CameraGroupSharedMemoryDTO, \
+    CameraSharedMemoryDTOs
 from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
@@ -16,13 +18,13 @@ logger = logging.getLogger(__name__)
 MAX_CAMERA_PORTS_TO_CHECK = 20
 
 
+
 class CameraManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     orchestrator: CameraGroupOrchestrator
     ipc: CameraGroupIPC
     camera_processes: dict[CameraIdString, CameraProcess]
-
     @property
     def camera_ids(self):
         return list(self.camera_processes.keys())
@@ -30,15 +32,16 @@ class CameraManager(BaseModel):
     @classmethod
     def create_cameras(cls,
                        ipc: CameraGroupIPC,
-                       camera_shm: CameraGroupSharedMemory,
+                       camera_shm_dtos: CameraSharedMemoryDTOs,
                        orchestrator: CameraGroupOrchestrator):
 
         camera_processes = {}
         for camera_id, camera_config in ipc.camera_configs.items():
             camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
                                                                ipc=ipc,
-                                                               frame_loop_flags=orchestrator.flags_by_camera_id[camera_id],
-                                                               camera_shared_memory_dto=camera_shm.dto_by_camera_id(camera_id=camera_id))
+                                                               orchestrator=orchestrator,
+                                                               camera_shm_dto=camera_shm_dtos[camera_id],
+                                                               )
 
         return cls(ipc=ipc,
                    orchestrator=orchestrator,
@@ -49,9 +52,9 @@ class CameraManager(BaseModel):
         if len(self.camera_ids) == 0:
             raise ValueError("No cameras to start!")
 
-        logger.info(f"Starting camera manager for cameras: {self.camera_ids}...")
+        logger.info(f"Startingcameras: {self.camera_ids}...")
 
-        self.orchestrator.start_frame_loop()
+        [process.start() for process in self.camera_processes.values()]
         logger.info(f"Cameras {self.camera_ids} frame loop ended.")
 
 

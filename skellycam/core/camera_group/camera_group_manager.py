@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.types import CameraGroupIdString
+from skellycam.core.types import CameraGroupIdString, CameraIdString
 
 logger = logging.getLogger(__name__)
 

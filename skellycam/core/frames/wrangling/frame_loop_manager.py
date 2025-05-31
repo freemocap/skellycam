@@ -112,11 +112,11 @@ def frame_read_trigger_loop(orchestrator: CameraGroupOrchestrator, camera_group_
     orchestrator.await_cameras_ready()
     current_loop = orchestrator.loop_count.value
     logger.debug("Triggering initial multi-frame read...")
-    orchestrator.trigger_multi_frame_read()
+    orchestrator.run_frame_loop()
     logger.debug("Multi-frame read loop started...")
     while camera_group_dto.should_continue:
         if current_loop != orchestrator.loop_count.value:
             current_loop = orchestrator.loop_count.value
-            orchestrator.trigger_multi_frame_read()
+            orchestrator.run_frame_loop()
         else:
             wait_1ms()

@@ -69,10 +69,10 @@ class CameraConfig(BaseModel):
         default=DEFAULT_CAMERA_ID,
         description="The ID of the camera, if known. May be used for display purposes, must be unique.")
 
-    camera_index: CameraIndex = Field(
-        default=DEFAULT_CAMERA_INDEX,
-        description="The index of the camera to use, e.g. cv2.VideoCapture uses `0` for the first camera. Must be unique.",
-    )
+    principal_camera: bool = Field(
+        default=False,
+        description="Whether this camera is the principal camera in the camera group, meaning that it will run the orchestrator and serve as the timestamp base")
+
     camera_name: CameraName = Field(
         default=DEFAULT_CAMERA_NAME,
         description="The name of the camera, if known. May be used for display purposes, does not need to be unique.",

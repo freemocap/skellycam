@@ -29,16 +29,15 @@ class CameraGroup:
     orchestrator: CameraGroupOrchestrator
     frame_wrangler: FrameWrangler
     id: CameraGroupIdString = field(default_factory=lambda: uuid.uuid4()[:6])  # Shortened UUID for readability
-
     @classmethod
     def from_configs(cls, camera_configs: CameraConfigs):
         ipc: CameraGroupIPC = CameraGroupIPC.from_configs(camera_configs=camera_configs)
         shm = CameraGroupSharedMemory.create_from_ipc(camera_group_ipc=ipc,
                                                              read_only=True)
 
-        orchestrator = CameraGroupOrchestrator.from_camera_ids(ipc.camera_ids)
+        orchestrator = CameraGroupOrchestrator.from_ipc(ipc=ipc,)
         cameras = CameraManager.create_cameras(ipc=ipc,
-                                               camera_shm=shm.camera_shms,
+                                               camera_shm_dtos=shm.to_dto().camera_shm_dtos,
                                                orchestrator=orchestrator)
         frame_wrangler = FrameWrangler.create(ipc=ipc,
                                                 group_shm_dto=shm.to_dto(),
@@ -65,7 +64,7 @@ class CameraGroup:
         while not self.frame_wrangler.is_alive():
             wait_10ms()
         logger.info("Frame wrangler started.")
-        self.orchestrator.start()
+        self.cameras.start()
 
     def close(self):
         logger.debug("Closing camera group")

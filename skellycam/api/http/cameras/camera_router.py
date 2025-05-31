@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field, model_validator
 
 import skellycam
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID
@@ -24,6 +24,19 @@ class CameraGroupCreateRequest(BaseModel):
     @classmethod
     def example(cls):
         return cls(camera_configs={DEFAULT_CAMERA_ID: CameraConfig()})
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_principal_camera_id(cls, data: Any) -> Any:
+        """
+        Ensure that at least one camera is marked as the principal camera.
+        """
+        if isinstance(data, dict):
+            if len(set(config.principal_camera for config in data.values())) > 1:
+                raise ValueError("Only one camera can be marked as the principal camera.")
+            if not any([config.principal_camera for config in data.values()]):
+                next(iter(data.values())).principal_camera = True
+        return data
 
 
 class CameraUpdateRequest(BaseModel):

@@ -71,7 +71,7 @@ class RecordingManager(BaseModel):
                 f"Video recorders should only be created once, but found {len(self.video_recorders)} existing recorders.")
         for camera_id, config in self.camera_configs.items():
             self.video_recorders[camera_id] = VideoRecorder.create(camera_id=camera_id,
-                                                                   frame=self._first_multi_frame_payload.get_frame(
+                                                                   frame=self._first_multi_frame_payload.opencv_get_frame(
                                                                        camera_id),
                                                                    recording_info= self.recording_info,
                                                                    config=self.camera_configs[camera_id],
