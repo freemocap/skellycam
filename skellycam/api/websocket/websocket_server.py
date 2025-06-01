@@ -124,7 +124,7 @@ class WebsocketServer:
                 await async_wait_1ms()
 
                 mfs_by_camera_group = self._app.get_all_latest_multiframes(if_newer_than_mf_number=latest_mf_number)
-                if mfs_by_camera_group:
+                if any([isinstance(mf, MultiFramePayload) for mf in mfs_by_camera_group]):
                     await self._send_frontend_payload(mfs_by_camera_group)
                     latest_mf_number = max([mf_payload.multi_frame_number for mf_payload in mfs_by_camera_group.values()])
 
@@ -140,6 +140,8 @@ class WebsocketServer:
                                      mf_payloads: dict[CameraGroupIdString, MultiFramePayload]) -> None:
         fe_payloads = {}
         for group_id, mf_payload in mf_payloads.items():
+            if mf_payload is None:
+                continue
             # mf_payload.backend_framerate = self.latest_backend_framerate
             # mf_payload.frontend_framerate = self.latest_frontend_framerate
             fe_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload, camera_group_id=group_id)
