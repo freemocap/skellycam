@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
@@ -67,16 +68,22 @@ class FrameWrangler:
 
         recording_manager: RecordingManager | None = None
         audio_recorder: AudioRecorder | None = None
+        previous_mf:MultiFramePayload|None = None
         try:
             while ipc.should_continue:
                 wait_1ms()
 
                 while camera_group_shm.new_multi_frame_available and ipc.should_continue:
-
+                    if previous_mf is None:
+                        latest_mfs = camera_group_shm.publish_all_new_multiframes(camera_configs=dict(deepcopy(ipc.camera_configs)))
+                    else:
+                        latest_mfs = camera_group_shm.publish_next_multi_frame_payload(previous_payload=previous_mf)
+                    if len(latest_mfs) > 0 and isinstance(latest_mfs[-1], MultiFramePayload):
+                        previous_mf = latest_mfs[-1]
                     # If we're recording, create a VideoRecorderManager and load all available frames into it (but don't save them to disk yet)
                     if recording_manager:
                         if ipc.record_frames_flag:
-                            recording_manager.add_multi_frames(camera_group_shm.get_all_new_frames())
+                            recording_manager.add_multi_frames(latest_mfs)
                         else:
                             recording_manager.finish_and_close()
                             recording_manager = None
@@ -85,7 +92,7 @@ class FrameWrangler:
                         if ipc.record_frames_flag:
                             recording_manager = RecordingManager.create(
                                 recording_info=ipc.recording_info_queue.get(),
-                                initial_multi_frame_payload=camera_group_shm.get_next_multi_frame_payload(
+                                initial_multi_frame_payload=camera_group_shm.publish_next_multi_frame_payload(
                                     camera_configs=dict(deepcopy(ipc.camera_configs))),
 
                             )
@@ -97,10 +104,10 @@ class FrameWrangler:
                             raise RuntimeError(f"Got new recording info while already recording! Finishing current recording before starting new one.")
                         recording_manager = RecordingManager.create(
                             recording_info=ipc.recording_info_queue.get(),
-                            initial_multi_frame_payload=camera_group_shm.get_next_multi_frame_payload(
+                            initial_multi_frame_payload=camera_group_shm.publish_next_multi_frame_payload(
                                 camera_configs=dict(deepcopy(ipc.camera_configs))),
                         )
-                    # Opportunistically handle recording stuff if no new multi-frame is available, otherwise we keep mf's in the deque until there is time to process them
+                    # Opportunistically save frame to video if no new multi-frame is available, otherwise we keep mf's in the recording manager until there is time to process them (or on recording stop)
                     if not camera_group_shm.new_multi_frame_available:
                         if recording_manager:
                             recording_manager.save_one_frame()

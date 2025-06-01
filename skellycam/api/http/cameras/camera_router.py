@@ -14,7 +14,7 @@ from skellycam.system.default_paths import default_recording_name, get_default_r
 
 logger = logging.getLogger(__name__)
 
-camera_router = APIRouter(prefix=f"/{skellycam.__package_name__}/camera",
+camera_router = APIRouter(prefix=f"/camera",
                           tags=["Cameras"])
 
 
@@ -30,8 +30,8 @@ class CameraUpdateRequest(BaseModel):
     camera_config: CameraConfig
 
     @classmethod
-    def example(cls):
-        return cls(camera_config=CameraConfig())
+    def example(cls) -> "CameraUpdateRequest":
+        return cls(camera_config=CameraConfig(exposure=-8))
 
 
 class StartRecordingRequest(BaseModel):
@@ -54,7 +54,7 @@ def camera_group_create_post_endpoint(
                                                  description="Request body containing desired camera configuration",
                                                  examples=[
                                                      CameraGroupCreateRequest.example()]), ) -> CameraGroupIdString :
-    logger.api(f"Received `/camera/group` POST request with config:  {request.camera_configs}...")
+    logger.api(f"Received `/group/create` POST request with config:  {request.camera_configs}...")
     try:
         configs = request.camera_configs
         if not any([config.principal_camera for config in configs.values()]):
@@ -102,6 +102,7 @@ def camera_group_close_all_delete_endpoint():
     try:
         get_skellycam_app().close_all_camera_groups()
         logger.api("`/camera/group/close/all` request handled successfully.")
+        return True
     except Exception as e:
         logger.error(f"Failed to close all camera groups: {type(e).__name__} - {e}")
         logger.exception(e)
@@ -118,23 +119,26 @@ def camera_update_put_endpoint(
                                             examples=[CameraUpdateRequest.example()]),
 ):
     logger.api(
-        f"Received `/camera/{camera_id}` PUT request for camera {camera_id} with config:  {request.camera_config}...")
+        f"Received `/{camera_id}/update` PUT request for camera {camera_id} with config:  {request.camera_config}...")
     try:
-        get_skellycam_app().create_or_update_camera_group(camera_configs=request.camera_config)
+        get_skellycam_app().camera_group_manager.update_camera_config(camera_config=request.camera_config)
         logger.api("`skellycam/connect` POST request handled successfully.")
+        return True
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)
+        raise HTTPException(status_code=500,
+                             detail=f"Error when processing `/camera/{camera_id}/update` request: {type(e).__name__} - {e}")
 
 
 @camera_router.delete("/{camera_id}/close",
-                      summary="Close camera connections")
+                      summary="Close camera with specified ID")
 def camera_close_delete_endpoint(
         camera_id: CameraIdString, ):
     logger.api(f"Received `/close` request to close camera {camera_id}...")
 
     try:
-        get_skellycam_app().close_camera_group()
+        get_skellycam_app().camera_group_manager.close_camera(camera_id=camera_id)
         logger.api("`/close` request handled successfully.")
     except Exception as e:
         logger.error(f"Failed to close cameras: {type(e).__name__} - {e}")

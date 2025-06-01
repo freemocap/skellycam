@@ -1,20 +1,23 @@
 import logging
 import multiprocessing
+from abc import ABC
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import BaseModel
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera.config.update_instructions import UpdateInstructions
-from skellycam.core.camera_group.camera_group import CameraGroup
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraIdString, CameraGroupIdString
+from skellycam.core.types import CameraGroupIdString
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
+
+
+
 
 
 @dataclass
@@ -22,32 +25,12 @@ class SkellycamApplication:
     ipc: InterProcessCommunicationManager
     camera_group_manager: CameraGroupManager = field(default_factory=CameraGroupManager)
 
-
     @classmethod
     def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):
         return cls(ipc=InterProcessCommunicationManager(global_kill_flag=global_kill_flag))
 
-    # @property
-    # def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer| None:
-    #     if not self.camera_group:
-    #         return None
-    #     return self.camera_group.multi_frame_escape_ring_shm
-    #
-    #
-    # @property
-    # def camera_group_configs(self) -> CameraConfigs | None:
-    #     if self.camera_group is None:
-    #         return  None
-    #     return self.camera_group.camera_configs
-    #
-    # def create_camera_group(self,
-    #                         camera_configs: CameraConfigs):
-    #     if self.camera_group is None:
-    #         self.create_camera_group(camera_configs=camera_configs)
-    #     else:
-    #         self.update_camera_group(camera_configs=camera_configs)
 
-    def create_camera_group(self, camera_configs: CameraConfigs)-> CameraGroupIdString:
+    def create_camera_group(self, camera_configs: CameraConfigs) -> CameraGroupIdString:
 
         logger.info(f"Creating camera group with cameras: {list(camera_configs.keys())}")
         camera_group_id = self.camera_group_manager.create_camera_group(camera_configs=camera_configs)
@@ -55,21 +38,17 @@ class SkellycamApplication:
         logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {list(camera_configs.keys())}")
         return camera_group_id
 
-    def set_device_extracted_camera_configs(self, configs: CameraConfigs):
-        if self.camera_group is None or self.camera_group.camera_configs is None:
-            raise ValueError("Cannot set device extracted camera config without CameraGroup!")
-        self.camera_group.camera_configs.update(configs)
-        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
-
-    def update_camera_group(self,
-                            camera_configs: CameraConfigs):
-        if self.camera_group is None or self.camera_group.camera_configs is None:
-            raise ValueError("Cannot update CameraGroup if it does not exist!")
-        update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
-                                                              old_configs=self.camera_group.camera_configs)
-        logger.trace(f"Camera Config Update instructions: {update_instructions}")
-        self.camera_group.update_camera_configs(camera_configs=camera_configs,
-                                                update_instructions=update_instructions)
+    def get_all_latest_multiframes(self, if_newer_than_mf_number: int|None=None) -> dict[CameraGroupIdString, MultiFramePayload]:        
+        return self.camera_group_manager.get_all_latest_multiframes(if_newer_than_mf_number=if_newer_than_mf_number)
+    
+    def update_camera_configs(self,
+                              camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]):
+        if isinstance(camera_configs, CameraConfig):
+            camera_configs = {camera_configs.camera_id: camera_configs}
+        elif isinstance(camera_configs, list):
+            camera_configs = {config.camera_id: config for config in camera_configs}
+        for camera_id, camera_config in camera_configs.items():
+            self.camera_group_manager.update_camera_config(camera_config=camera_config)
 
     def close_all_camera_groups(self):
         self.camera_group_manager.close_all_camera_groups()
@@ -81,10 +60,8 @@ class SkellycamApplication:
     def stop_recording(self):
         self.camera_group_manager.stop_recording_all_groups()
 
-
     def state_dto(self):
         return SkellycamAppStateDTO.from_state(self)
-
 
     def shutdown_skellycam(self):
         self.ipc.global_kill_flag.value = True

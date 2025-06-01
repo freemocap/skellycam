@@ -9,6 +9,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.camera_group.frame_wrangler import FrameWrangler
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
 from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.utilities.wait_functions import wait_10ms
@@ -56,6 +57,13 @@ class CameraGroup:
     def camera_configs(self) -> DictProxy:
         return self.ipc.camera_configs
 
+    def get_latest_multiframe(self, if_newer_than_mf_number: int|None=None) -> MultiFramePayload|None:
+        """
+        Retrieve the latest multi-frame data if it is newer than the provided multi-frame number.
+        """
+        return self.shm.get_latest_multiframe(camera_configs=dict(self.ipc.camera_configs),
+                                              if_newer_than_mf_number=if_newer_than_mf_number)
+
     def start(self):
         logger.info("Starting camera group...")
         self.frame_wrangler.start()
@@ -63,6 +71,12 @@ class CameraGroup:
             wait_10ms()
         logger.info("Frame wrangler started.")
         self.cameras.start()
+
+    def close_camera(self,camera_id: CameraIdString):
+        """
+        Close a specific camera by its ID.
+        """
+        self.cameras.close_camera(camera_id=camera_id)
 
     def close(self):
         logger.debug("Closing camera group")

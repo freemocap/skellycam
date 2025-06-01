@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 MAX_CAMERA_PORTS_TO_CHECK = 20
 
 
-
 class CameraManager(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     orchestrator: CameraGroupOrchestrator
     ipc: CameraGroupIPC
     camera_processes: dict[CameraIdString, CameraProcess]
+
     @property
     def camera_ids(self):
         return list(self.camera_processes.keys())
@@ -60,6 +60,18 @@ class CameraManager(BaseModel):
 
         for camera_id in update_instructions.update_these_cameras:
             self.camera_processes[camera_id].update_config(update_instructions.new_configs[camera_id])
+
+    def close_camera(self, camera_id: CameraIdString):
+        logger.debug(f"Closing camera: {camera_id}")
+
+        if camera_id not in self.camera_processes:
+            raise ValueError(f"Camera {camera_id} does not exist in this group.")
+
+        camera_process = self.camera_processes[camera_id]
+        camera_process.close()
+        del self.camera_processes[camera_id]
+
+        logger.debug(f"Camera {camera_id} closed successfully.")
 
     def close(self):
         logger.debug(f"Closing cameras: {self.camera_ids}")

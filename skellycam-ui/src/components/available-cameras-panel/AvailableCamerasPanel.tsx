@@ -13,6 +13,7 @@ import {ConnectToCamerasButton} from "@/components/available-cameras-panel/Conne
 import {selectAllCameras, toggleCameraSelection, updateCameraConfig} from "@/store/slices/cameras-slices/camerasSlice";
 import {detectCameraDevices} from "@/store/thunks/detect-cameras-thunks";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
+import {CloseCamerasButton} from "@/components/available-cameras-panel/CloseCamerasButton";
 
 export const AvailableCamerasPanel = () => {
     const theme = useTheme();
@@ -91,6 +92,9 @@ export const AvailableCamerasPanel = () => {
 
                 <Box sx={{ pr: 2 }}>
                     <RefreshDetectedCamerasButton isLoading={isLoading} />
+                </Box>
+                <Box sx={{ pr: 2 }}>
+                    <CloseCamerasButton />
                 </Box>
             </Box>
 

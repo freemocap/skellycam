@@ -46,6 +46,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
         raise RuntimeError(f"Failed to grab frame from camera {camera_index}")
 
     frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
+    #TODO - we might be able to give the `retreive` method a shared memory `cv2.Mat` object to write the frame into, which would avoid a copy operation.
     retrieve_success, image = cap.retrieve()  # decode the frame buffer into an image! The light is now in the camera's memory, and we have a digital representation of the pattern of light that was in the field of view of the camera during the last frame/timeslice.
     frame_metadata[FRAME_METADATA_MODEL.POST_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
 

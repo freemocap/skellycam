@@ -14,7 +14,7 @@ export const connectToCameras = createAsyncThunk(
         }
 
         dispatch(setLoading(true));
-        const connectUrl = 'http://localhost:8006/skellycam/cameras/connect';
+        const connectUrl = 'http://localhost:8006/skellycam/camera/group/create';
 
         const payload = {
             camera_configs: cameraConfigs

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraGroupIdString, CameraIdString
 
@@ -56,6 +57,14 @@ class CameraGroupManager:
             self.close_camera_group(camera_group_id)
         logger.info("Closed all camera groups.")
 
+    def close_camera(self, camera_id: CameraIdString) -> None:
+        """
+        Close a specific camera by its ID across all camera groups.
+        """
+        for camera_group in self.camera_groups.values():
+            if camera_id in camera_group.camera_ids:
+                camera_group.close_camera(camera_id=camera_id)
+
     def start_recording_all_groups(self, recording_info:RecordingInfo) -> None:
         """
         Start recording for all camera groups.
@@ -71,3 +80,12 @@ class CameraGroupManager:
         for camera_group in self.camera_groups.values():
             camera_group.ipc.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
+
+    def get_all_latest_multiframes(self, if_newer_than_mf_number: int|None=None) -> dict[CameraIdString, MultiFramePayload]:
+        """
+        Retrieve the latest multi-frames from all camera groups.
+        """
+        latest_multiframes = {}
+        for camera_group in self.camera_groups.values():
+            latest_multiframes[camera_group.id] = camera_group.get_latest_multiframe(if_newer_than_mf_number=if_newer_than_mf_number)
+        return latest_multiframes

@@ -12,7 +12,7 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
 __package_root__ = __file__.replace("/__init__.py", "")
 
-from skellycam.api.routers import SKELLYCAM_ROUTES
+from skellycam.api.routers import SKELLYCAM_ROUTERS
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import \
     MultiFrameSharedMemoryRingBuffer
@@ -36,7 +36,7 @@ __all__ = [
     "__repo_url__",
     "__repo_issues_url__",
     "__pypi_url__",
-    'SKELLYCAM_ROUTES',
+    'SKELLYCAM_ROUTERS',
     'SkellycamApplication',
     'MultiFrameSharedMemoryRingBuffer',
     'CameraConfig',

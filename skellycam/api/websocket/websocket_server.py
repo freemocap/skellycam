@@ -10,6 +10,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
+from skellycam.core.types import CameraGroupIdString
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app, SkellycamAppStateDTO
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel
 from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
@@ -41,11 +42,11 @@ class WebsocketServer:
         # Only close if still connected
         if self.websocket.client_state == WebSocketState.CONNECTED:
             await self.websocket.close()
-
-        if not self._app.ipc.global_kill_flag.value:
-            logger.error("Websocket connection closed, but global kill flag is not set. "
-                         "This indicates a potential issue with the application state."
-                         )
+        # Cancel all tasks
+        for task in self.ws_tasks:
+            if not task.done():
+                task.cancel()
+        logger.debug("WebsocketRunner context manager exited.")
 
     @property
     def should_continue(self):
@@ -102,10 +103,7 @@ class WebsocketServer:
     async def _handle_ipc_queue_message(self, message: object | None = None):
         if isinstance(message, SkellycamAppStateDTO):
             logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
-        elif isinstance(message, dict) and isinstance(list(message.values())[0], CameraConfig):
-            logger.trace(f"Updating device extracted camera configs")
-            self._app.set_device_extracted_camera_configs(message)
-            return
+
         elif isinstance(message, CurrentFramerate):
             self.latest_backend_framerate = message
             return  # will send framerate update bundled with frontend payload
@@ -120,34 +118,15 @@ class WebsocketServer:
         """
         logger.info(
             f"Starting frontend image payload relay...")
-        frontend_framerate_tracker = FramerateTracker.create(framerate_source="frontend")
-        camera_group_uuid = None
         latest_mf_number = -1
         try:
             while self.should_continue:
                 await async_wait_1ms()
 
-                if not self._app.frame_escape_shm:
-                    latest_mf_number = -1
-                    continue
-
-                if self._app.camera_group and camera_group_uuid != self._app.camera_group.uuid:
-                    latest_mf_number = -1
-                    camera_group_uuid = self._app.camera_group.uuid
-                    continue
-
-                if not self._app.frame_escape_shm.latest_mf_number.value > latest_mf_number:
-                    continue
-
-                mf_payload = self._app.frame_escape_shm.get_multi_frame_payload(
-                    camera_configs=self._app.camera_group.camera_configs,
-                    retrieve_type="latest")
-                frontend_framerate_tracker.update(time.perf_counter_ns())
-                if mf_payload.multi_frame_number % 10 == 0:
-                    # update every 10 multi-frames to match backend framerate behavior
-                    self.latest_frontend_framerate = frontend_framerate_tracker.current_framerate
-                await self._send_frontend_payload(mf_payload)
-                latest_mf_number = mf_payload.multi_frame_number
+                mfs_by_camera_group = self._app.get_all_latest_multiframes(if_newer_than_mf_number=latest_mf_number)
+                if mfs_by_camera_group:
+                    await self._send_frontend_payload(mfs_by_camera_group)
+                    latest_mf_number = max([mf_payload.multi_frame_number for mf_payload in mfs_by_camera_group.values()])
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
@@ -158,19 +137,21 @@ class WebsocketServer:
             raise
 
     async def _send_frontend_payload(self,
-                                     mf_payload: MultiFramePayload):
-        mf_payload.backend_framerate = self.latest_backend_framerate
-        mf_payload.frontend_framerate = self.latest_frontend_framerate
-        frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload)
-        logger.loop(f"Sending frontend payload through websocket...")
-        if not self.websocket.client_state == WebSocketState.CONNECTED:
-            logger.error("Websocket is not connected, cannot send payload!")
-            raise RuntimeError("Websocket is not connected, cannot send payload!")
+                                     mf_payloads: dict[CameraGroupIdString, MultiFramePayload]) -> None:
+        fe_payloads = {}
+        for group_id, mf_payload in mf_payloads.items():
+            mf_payload.backend_framerate = self.latest_backend_framerate
+            mf_payload.frontend_framerate = self.latest_frontend_framerate
+            fe_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload, camera_group_id=group_id)
+            logger.loop(f"Sending frontend payload through websocket...")
+            if not self.websocket.client_state == WebSocketState.CONNECTED:
+                logger.error("Websocket is not connected, cannot send payload!")
+                raise RuntimeError("Websocket is not connected, cannot send payload!")
 
-        if self.websocket.client_state != WebSocketState.CONNECTED:
-            return
+            if self.websocket.client_state != WebSocketState.CONNECTED:
+                return
 
-        await self.websocket.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
+            await self.websocket.send_bytes(fe_payload.model_dump_json().encode('utf-8'))
 
         if not self.websocket.client_state == WebSocketState.CONNECTED:
             logger.error("Websocket shut down while sending payload!")

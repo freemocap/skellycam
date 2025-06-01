@@ -14,12 +14,15 @@ from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_MET
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
-from skellycam.core.types import CameraIdString
+from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.core.types import CameraIndex, Base64JPEGImage
 
 DEFAULT_FRONTEND_IMAGE_RESIZE = 0.5
 DEFAULT_JPEG_QUALITY = 85
+
+
 class FrontendFramePayload(BaseModel):
+    camera_group_id: CameraGroupIdString
     jpeg_images: dict[CameraIdString, Base64JPEGImage]
     camera_configs: CameraConfigs
     multi_frame_metadata: MultiFrameMetadata
@@ -32,11 +35,11 @@ class FrontendFramePayload(BaseModel):
     def camera_ids(self):
         return list(self.jpeg_images.keys())
 
-
     @classmethod
     def from_multi_frame_payload(cls,
+                                 camera_group_id: CameraGroupIdString,
                                  multi_frame_payload: MultiFramePayload,
-                                 image_sizes: dict[CameraIndex, dict[str, int]]|None = None,
+                                 image_sizes: dict[CameraIndex, dict[str, int]] | None = None,
                                  resize_image: float = DEFAULT_FRONTEND_IMAGE_RESIZE,
                                  jpeg_quality: int = DEFAULT_JPEG_QUALITY) -> "FrontendFramePayload":
 
@@ -55,13 +58,15 @@ class FrontendFramePayload(BaseModel):
             jpeg_images[camera_id] = cls._image_to_jpeg_cv2(resized_image, quality=jpeg_quality)
             frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
-        return cls(timebase_mapping=multi_frame_payload.timebase_mapping,
-                   multi_frame_number=multi_frame_payload.multi_frame_number,
-                   jpeg_images=jpeg_images,
-                   multi_frame_metadata=mf_metadata,
-                   camera_configs=multi_frame_payload.camera_configs,
-                   backend_framerate=multi_frame_payload.backend_framerate,
-                   frontend_framerate=multi_frame_payload.frontend_framerate)
+        return cls(
+            camera_group_id=camera_group_id,
+            timebase_mapping=multi_frame_payload.timebase_mapping,
+            multi_frame_number=multi_frame_payload.multi_frame_number,
+            jpeg_images=jpeg_images,
+            multi_frame_metadata=mf_metadata,
+            camera_configs=multi_frame_payload.camera_configs,
+            backend_framerate=multi_frame_payload.backend_framerate,
+            frontend_framerate=multi_frame_payload.frontend_framerate)
 
     @staticmethod
     def _resize_image(frame: FramePayload,

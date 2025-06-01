@@ -9,10 +9,10 @@ from skellycam.api.server.server_constants import PORT
 
 logger = logging.getLogger(__name__)
 
-ui_router = APIRouter(tags=['App'])
+ui_router = APIRouter(tags=['ui'], prefix='/ui')
 
 
-@ui_router.get("/", response_class=HTMLResponse)
+@ui_router.get("/skellycam.__package_name__", response_class=HTMLResponse)
 def serve_ui():
     logger.info("Serving UI HTML to `/ui`")
     file_path = os.path.join(os.path.dirname(__file__), 'ui.html')

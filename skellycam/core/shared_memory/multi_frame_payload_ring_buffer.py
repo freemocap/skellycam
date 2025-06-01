@@ -150,10 +150,10 @@ class MultiFrameSharedMemoryRingBuffer:
 
         self.latest_mf_number.value = multi_frame_payload.multi_frame_number
 
-    def get_multi_frame_payload(self,
-                                camera_configs: CameraConfigs,
-                                retrieve_type: Literal["latest", "next"]
-                                ) -> MultiFramePayload:
+    def get_latest_multiframe(self,
+                              camera_configs: CameraConfigs,
+                              retrieve_type: Literal["latest", "next"]
+                              ) -> MultiFramePayload:
         if retrieve_type == "next" and self.read_only:
             raise ValueError(
                 "Cannot retrieve `next` multi-frame payload from read-only shared memory (bc it increments the counter), use 'latest' instead")
