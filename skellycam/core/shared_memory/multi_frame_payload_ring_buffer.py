@@ -117,7 +117,7 @@ class MultiFrameSharedMemoryRingBuffer:
                                                    latest_mf_number=self.latest_mf_number, )
 
     def put_multi_frame_payload(self,
-                                multi_frame_payload: MultiFramePayload):
+                                multi_frame_payload: MultiFramePayload,overwrite: bool) -> None:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot write to it!")
         if not multi_frame_payload.full:
@@ -131,11 +131,11 @@ class MultiFrameSharedMemoryRingBuffer:
 
         mf_numpy_buffer: MultiFrameNumpyBuffer = multi_frame_payload.to_numpy_buffer()
 
-        self.mf_image_shm.put_data(mf_numpy_buffer.mf_image_buffer)
+        self.mf_image_shm.put_data(mf_numpy_buffer.mf_image_buffer, overwrite=overwrite)
 
-        self.mf_metadata_shm.put_data(mf_numpy_buffer.mf_metadata_buffer)
+        self.mf_metadata_shm.put_data(mf_numpy_buffer.mf_metadata_buffer, overwrite=overwrite)
 
-        self.mf_time_mapping_shm.put_data(mf_numpy_buffer.mf_time_mapping_buffer)
+        self.mf_time_mapping_shm.put_data(mf_numpy_buffer.mf_time_mapping_buffer, overwrite=overwrite)
 
 
         if not {self.mf_image_shm.last_written_index.value,

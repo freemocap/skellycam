@@ -87,7 +87,7 @@ class SharedMemoryRingBuffer:
     def _check_for_overwrite(self, next_index: int) -> bool:
         return next_index % self.ring_buffer_length == self.last_read_index.get() % self.ring_buffer_length
 
-    def put_data(self, data: np.ndarray):
+    def put_data(self, data: np.ndarray, overwrite: bool = False):
         if self.read_only:
             raise ValueError("Cannot write to read-only SharedMemoryRingBuffer.")
         if data.shape != self.ring_buffer_shape[1:]:
@@ -95,7 +95,7 @@ class SharedMemoryRingBuffer:
                 f"Array shape {data.shape} does not match SharedMemoryIndexedArray shape {self.ring_buffer_shape[1:]}")
 
         index_to_write = self.last_written_index.value + 1
-        if self._check_for_overwrite(index_to_write):
+        if self._check_for_overwrite(index_to_write) and not overwrite:
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 
         # self.shm_elements[index_to_write % self.ring_buffer_length].copy_into_buffer(array)

@@ -140,8 +140,8 @@ class WebsocketServer:
                                      mf_payloads: dict[CameraGroupIdString, MultiFramePayload]) -> None:
         fe_payloads = {}
         for group_id, mf_payload in mf_payloads.items():
-            mf_payload.backend_framerate = self.latest_backend_framerate
-            mf_payload.frontend_framerate = self.latest_frontend_framerate
+            # mf_payload.backend_framerate = self.latest_backend_framerate
+            # mf_payload.frontend_framerate = self.latest_frontend_framerate
             fe_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload, camera_group_id=group_id)
             logger.loop(f"Sending frontend payload through websocket...")
             if not self.websocket.client_state == WebSocketState.CONNECTED:

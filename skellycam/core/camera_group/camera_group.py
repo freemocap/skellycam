@@ -61,8 +61,7 @@ class CameraGroup:
         """
         Retrieve the latest multi-frame data if it is newer than the provided multi-frame number.
         """
-        return self.shm.get_latest_multiframe(camera_configs=dict(self.ipc.camera_configs),
-                                              if_newer_than_mf_number=if_newer_than_mf_number)
+        return self.shm.get_latest_multiframe(if_newer_than_mf_number=if_newer_than_mf_number)
 
     def start(self):
         logger.info("Starting camera group...")

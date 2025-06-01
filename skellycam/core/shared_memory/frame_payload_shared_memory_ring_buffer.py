@@ -92,17 +92,13 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
         metadata[FRAME_METADATA_MODEL.COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         self.image_shm.put_data(image)
         self.metadata_shm.put_data(metadata)
-        logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} put frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} into shared memory"
-        )
+
 
     def retrieve_latest_frame(self) -> FramePayload:
         image = self.image_shm.get_latest_payload()
         metadata = self.metadata_shm.get_latest_payload()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
-        logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
-        )
+
         return FramePayload(image=image, metadata=metadata)
 
     def retrieve_next_frame(self) -> FramePayload:

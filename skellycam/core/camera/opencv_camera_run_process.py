@@ -54,20 +54,20 @@ def opencv_camera_run_process(camera_id: CameraIdString,
 
         logger.info(f"Camera {camera_config.camera_id} frame grab trigger loop started!")
         frame_number = -1
+        orchestrator.camera_ready_flags[camera_id].value = True
         # Trigger listening loop
         while should_continue():
-
             frame_metadata = create_empty_frame_metadata(config=camera_config,
                                                          frame_number=frame_number + 1)
             while should_continue() and not orchestrator.all_cameras_ready:
                 wait_1ms() if not ludacris_speed else None
 
             if camera_config.principal_camera:
-                # If this is the principal camera, we trigger the frame grab
+                # If this is the principal camera, trigger the frame grab
                 orchestrator.trigger_frame_grab()
             else:
-                # If this is not the principal camera, we need to wait for the orchestrator to trigger the frame grab
-                while should_continue() and frame_number < orchestrator.grab_frame_counter:
+                # If this is not the principal camera, watch the orchestrator for the frame grab trigger
+                while should_continue() and frame_number < orchestrator.grab_frame_counter.value:
                     wait_1ms() if not ludacris_speed else None
 
             frame_number = opencv_get_frame(cap=cv2_video_capture,
@@ -75,15 +75,15 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                                             camera_shared_memory=camera_shm,
                                             frame_number=frame_number,
                                             )
-
+            # Check if the camera config has changed
             if camera_config != ipc.camera_configs[camera_id]:
-                # Check if the camera config has changed
                 camera_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                                            config=deepcopy(ipc.camera_configs[camera_id]),
                                                            initial=False)
                 ipc.set_config_by_id(camera_id=camera_id,
                                      camera_config=camera_config, )
                 logger.debug(f"Camera {camera_id} config updated to: {camera_config}")
+            logger.loop(f"Camera {camera_id} frame {frame_number} captured and stored in shared memory")
             orchestrator.camera_ready_flags[camera_id].value = True
 
     except Exception as e:

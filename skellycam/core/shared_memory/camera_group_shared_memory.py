@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from copy import deepcopy
 from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
@@ -26,6 +27,7 @@ class CameraGroupSharedMemoryDTO:
 
 @dataclass
 class CameraGroupSharedMemory:
+    ipc: CameraGroupIPC
     camera_shms: dict[CameraIdString, FramePayloadSharedMemoryRingBuffer]
     multi_frame_shm: MultiFrameSharedMemoryRingBuffer
     shm_valid_flag: multiprocessing.Value
@@ -37,7 +39,8 @@ class CameraGroupSharedMemory:
     def create_from_ipc(cls,
                         camera_group_ipc: CameraGroupIPC,
                         read_only: bool = False):
-        return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.create(camera_config=config,
+        return cls(ipc=camera_group_ipc,
+                   camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.create(camera_config=config,
                                                                                      read_only=read_only)
                                 for camera_id, config in camera_group_ipc.camera_configs.items()},
                    multi_frame_shm=MultiFrameSharedMemoryRingBuffer.create_from_ipc(
@@ -50,10 +53,13 @@ class CameraGroupSharedMemory:
 
     @classmethod
     def recreate_from_dto(cls,
+                            ipc: CameraGroupIPC,
                           shm_dto: CameraGroupSharedMemoryDTO,
                           read_only: bool):
 
-        return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
+        return cls(
+                     ipc=ipc,
+            camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
                                                                                        read_only=read_only)
                                 for camera_id, camera_shm_dto in shm_dto.camera_shm_dtos.items()},
                    multi_frame_shm=MultiFrameSharedMemoryRingBuffer.recreate(
@@ -79,7 +85,7 @@ class CameraGroupSharedMemory:
     @property
     def new_multi_frame_available(self) -> bool:
         if not self.valid:
-            return False
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         return all([camera_shared_memory.new_frame_available
                     for camera_shared_memory in self.camera_shms.values()])
 
@@ -90,7 +96,7 @@ class CameraGroupSharedMemory:
                                           latest_mf_number=self.latest_mf_number)
 
     def publish_next_multi_frame_payload(self,
-                                         camera_configs: CameraConfigs | None = None,
+                                         overwrite: bool,
                                          previous_payload: MultiFramePayload | None = None,
                                          ) -> MultiFramePayload:
         """
@@ -99,16 +105,15 @@ class CameraGroupSharedMemory:
         if self.read_only:
             raise ValueError(
                 "Cannot use `get_next_multi_frame_payload` in read-only mode - use `get_latest_multi_frame_payload` instead!")
-        if previous_payload is None:
-            if camera_configs is None:
-                raise ValueError("Camera configs must be provided if no previous payload is given!")
-            mf_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=camera_configs)
-        else:
-            mf_payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
-                                                                            camera_configs=camera_configs)
-
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+        if previous_payload is None:
+            mf_payload: MultiFramePayload = MultiFramePayload.create_initial(camera_configs=dict(deepcopy(self.ipc.camera_configs)))
+        else:
+            mf_payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
+                                                                           camera_configs=dict(deepcopy(self.ipc.camera_configs)))
+
+
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:
@@ -121,23 +126,23 @@ class CameraGroupSharedMemory:
             mf_payload.add_frame(frame)
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")
+        self.multi_frame_shm.put_multi_frame_payload(mf_payload,overwrite=overwrite)
         self.latest_mf_number.value = mf_payload.multi_frame_number
-        self.multi_frame_shm.put_multi_frame_payload(mf_payload)
         return mf_payload
 
 
     def publish_all_new_multiframes(self,
-                                    camera_configs:CameraConfigs|None=None,
+                                    overwrite:bool=True,
                                     previous_payload: MultiFramePayload|None=None) -> list[MultiFramePayload]:
         mfs: list[MultiFramePayload] = []
         while self.new_multi_frame_available:
             mf_payload = self.publish_next_multi_frame_payload(previous_payload=previous_payload,
-                                                               camera_configs=camera_configs)
+                                                               overwrite=overwrite)
             mfs.append(mf_payload)
             previous_payload = mf_payload
         return mfs
 
-    def get_latest_multiframe(self, camera_configs:CameraConfigs, if_newer_than_mf_number: int | None = None) -> MultiFramePayload|None:
+    def get_latest_multiframe(self, if_newer_than_mf_number: int | None = None) -> MultiFramePayload|None:
         """
         Retrieves the latest multi-frame data if it is newer than the provided multi-frame number.
         """
@@ -147,7 +152,7 @@ class CameraGroupSharedMemory:
             return None
         if if_newer_than_mf_number is not None and if_newer_than_mf_number <= self.latest_mf_number.value:
             return None
-        mf =  self.multi_frame_shm.get_latest_multiframe(camera_configs=camera_configs, retrieve_type="latest")
+        mf =  self.multi_frame_shm.get_latest_multiframe(camera_configs=dict(deepcopy(self.ipc.camera_configs)), retrieve_type="latest")
         if mf.multi_frame_number <= if_newer_than_mf_number:
             raise ValueError(f"Latest multi-frame number {mf.multi_frame_number} is not newer than {if_newer_than_mf_number} - something is broken!")
         return mf

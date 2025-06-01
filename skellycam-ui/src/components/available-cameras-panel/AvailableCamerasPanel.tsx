@@ -98,7 +98,7 @@ export const AvailableCamerasPanel = () => {
                 </Box>
             </Box>
 
-            <AccordionDetails sx={{ p: 2, bgcolor: 'background.default' }}>
+            <AccordionDetails sx={{  bgcolor: 'background.default' }}>
                 <Paper
                     elevation={0}
                     sx={{
