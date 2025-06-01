@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraGroupIdString, CameraIdString
 
 logger = logging.getLogger(__name__)
@@ -55,3 +56,18 @@ class CameraGroupManager:
             self.close_camera_group(camera_group_id)
         logger.info("Closed all camera groups.")
 
+    def start_recording_all_groups(self, recording_info:RecordingInfo) -> None:
+        """
+        Start recording for all camera groups.
+        """
+        for camera_group in self.camera_groups.values():
+            camera_group.ipc.start_recording(recording_info=recording_info)
+            logger.info(f"Started recording for camera group ID: {camera_group.id}")
+
+    def stop_recording_all_groups(self) -> None:
+        """
+        Stop recording for all camera groups.
+        """
+        for camera_group in self.camera_groups.values():
+            camera_group.ipc.stop_recording()
+            logger.info(f"Stopped recording for camera group ID: {camera_group.id}")

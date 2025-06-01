@@ -76,34 +76,19 @@ class SkellycamApplication:
         logger.success("Camera groups closed successfully")
 
     def start_recording(self, recording_info: RecordingInfo):
-        if self.camera_group is None:
-            raise ValueError("Cannot start recording without CameraGroup!")
-        if self.ipc.record_frames_flag.value:
-            raise ValueError("Cannot start recording when already recording!")
-        self.ipc.start_recording_queue.put(recording_info)
-
-        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
+        self.camera_group_manager.start_recording_all_groups(recording_info=recording_info)
 
     def stop_recording(self):
-        self.ipc.record_frames_flag.value = False
-        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
+        self.camera_group_manager.stop_recording_all_groups()
+
 
     def state_dto(self):
         return SkellycamAppStateDTO.from_state(self)
 
-    def _reset(self):
-        if self.camera_group:
-            self.close_camera_group()
-        if self.shmorchestrator:
-            self.shmorchestrator.close_and_unlink()
-        self.camera_group = None
-        self.shmorchestrator = None
-        self.ipc = InterProcessCommunicationManager(global_kill_flag=self.ipc.global_kill_flag)
 
     def shutdown_skellycam(self):
         self.ipc.global_kill_flag.value = True
-        if self.camera_group:
-            self.close_camera_group()
+        self.camera_group_manager.close_all_camera_groups()
 
 
 class SkellycamAppStateDTO(BaseModel):
