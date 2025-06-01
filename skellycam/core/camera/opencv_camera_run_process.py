@@ -8,8 +8,8 @@ from skellycam.core.camera.opencv.apply_config import apply_camera_configuration
 from skellycam.core.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.camera.opencv.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
+from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.frame_payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
 from skellycam.core.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBufferDTO, \
     FramePayloadSharedMemoryRingBuffer
 from skellycam.core.types import CameraIdString

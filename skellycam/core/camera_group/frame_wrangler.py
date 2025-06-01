@@ -52,7 +52,7 @@ class FrameWrangler:
 
     @staticmethod
     def _run_process(ipc: CameraGroupIPC,
-                     camera_group_shm_dto: CameraGroupSharedMemoryDTO,
+                     group_shm_dto: CameraGroupSharedMemoryDTO,
                      ws_logs_queue: multiprocessing.Queue
                      ):
         # Configure logging in the child process
@@ -62,7 +62,7 @@ class FrameWrangler:
         logger.debug(f"FrameSaver process started!")
 
         camera_group_shm: CameraGroupSharedMemory = CameraGroupSharedMemory.recreate_from_dto(
-            shm_dto=camera_group_shm_dto,
+            shm_dto=group_shm_dto,
             read_only=False)
 
         recording_manager: RecordingManager | None = None

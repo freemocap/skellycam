@@ -9,9 +9,9 @@ from PIL import Image
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.payloads.frame_payload import FramePayload
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
+from skellycam.core.frame_payloads.frame_payload import FramePayload
+from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
 from skellycam.core.types import CameraIdString

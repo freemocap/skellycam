@@ -8,9 +8,10 @@ from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera.config.update_instructions import UpdateInstructions
+from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraIdString
+from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
@@ -46,12 +47,13 @@ class SkellycamApplication:
     #     else:
     #         self.update_camera_group(camera_configs=camera_configs)
 
-    def create_camera_group(self, camera_configs: CameraConfigs):
+    def create_camera_group(self, camera_configs: CameraConfigs)-> CameraGroupIdString:
 
-        logger.info(f"Creating camera group with cameras: {camera_configs.keys()}")
+        logger.info(f"Creating camera group with cameras: {list(camera_configs.keys())}")
         camera_group_id = self.camera_group_manager.create_camera_group(camera_configs=camera_configs)
         self.camera_group_manager.get_camera_group(camera_group_id).start()
-        logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {camera_configs.keys()}")
+        logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {list(camera_configs.keys())}")
+        return camera_group_id
 
     def set_device_extracted_camera_configs(self, configs: CameraConfigs):
         if self.camera_group is None or self.camera_group.camera_configs is None:

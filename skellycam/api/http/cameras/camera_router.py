@@ -25,19 +25,6 @@ class CameraGroupCreateRequest(BaseModel):
     def example(cls):
         return cls(camera_configs={DEFAULT_CAMERA_ID: CameraConfig()})
 
-    @model_validator(mode='before')
-    @classmethod
-    def validate_principal_camera_id(cls, data: Any) -> Any:
-        """
-        Ensure that at least one camera is marked as the principal camera.
-        """
-        if isinstance(data, dict):
-            if len(set(config.principal_camera for config in data.values())) > 1:
-                raise ValueError("Only one camera can be marked as the principal camera.")
-            if not any([config.principal_camera for config in data.values()]):
-                next(iter(data.values())).principal_camera = True
-        return data
-
 
 class CameraUpdateRequest(BaseModel):
     camera_config: CameraConfig
@@ -69,7 +56,13 @@ def camera_group_create_post_endpoint(
                                                      CameraGroupCreateRequest.example()]), ) -> CameraGroupIdString :
     logger.api(f"Received `/camera/group` POST request with config:  {request.camera_configs}...")
     try:
-        camera_group_id = get_skellycam_app().create_camera_group(camera_configs=request.camera_configs)
+        configs = request.camera_configs
+        if not any([config.principal_camera for config in configs.values()]):
+            # If no principal camera is set, set the first camera as the principal
+            principal_camera_id  = next(iter(configs))
+            configs[principal_camera_id].principal_camera = True
+            logger.debug(f"No principal camera set, setting {configs[principal_camera_id].camera_id} as principal camera.")
+        camera_group_id = get_skellycam_app().create_camera_group(camera_configs=configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
         return camera_group_id
     except Exception as e:

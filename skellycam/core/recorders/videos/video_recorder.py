@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString
-from skellycam.core.frames.payloads.frame_payload import FramePayload
+from skellycam.core.frame_payloads.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 

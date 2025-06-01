@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.recorders.timestamps.multi_frame_timestamp_log import (
     MultiFrameTimestampLog,

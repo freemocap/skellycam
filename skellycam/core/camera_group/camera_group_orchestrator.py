@@ -19,7 +19,7 @@ class CameraGroupOrchestrator:
     @classmethod
     def from_ipc(cls, ipc: CameraGroupIPC, ludacris_speed:bool=False):
         return cls(ipc=ipc,
-                   camera_ready_flags={ camera_id: multiprocessing.Value("b", False) for camera_id in camera_ids },
+                   camera_ready_flags={ camera_id: multiprocessing.Value("b", False) for camera_id in ipc.camera_ids },
                    grab_frame_counter = multiprocessing.Value("q", -1),
                    ludacris_speed=ludacris_speed)
 
@@ -40,7 +40,7 @@ class CameraGroupOrchestrator:
 
     @property
     def all_cameras_ready(self):
-        return all([flags.camera_ready_flag.value for flags in self.camera_ready_flags.values()])
+        return all([flags.value for flags in self.camera_ready_flags.values()])
 
     def await_cameras_ready(self):
         while not self.all_cameras_ready and self.ipc.should_continue:

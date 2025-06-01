@@ -17,9 +17,10 @@ class CameraGroupManager:
         Create a camera group with the provided configuration settings.
         """
         camera_group = CameraGroup.from_configs(camera_configs = camera_configs)
-        self.camera_groups[camera_group.group_id] = camera_group
-        logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_configs.keys()}")
-        return camera_group
+        self.camera_groups[camera_group.id] = camera_group
+
+        logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {list(camera_group.camera_configs.keys())}")
+        return camera_group.id
 
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup:
         """
@@ -32,7 +33,8 @@ class CameraGroupManager:
     def update_camera_config(self, camera_config:CameraConfig):
         for camera_group in self.camera_groups.values():
             if camera_config.camera_id in camera_group.camera_configs:
-                camera_group.update_camera_config(camera_config)
+                camera_group.ipc.set_config_by_id(camera_id=camera_config.camera_id,
+                                                    camera_config=camera_config)
                 logger.info(f"Updated camera config for camera ID: {camera_config.camera_id} in group ID: {camera_group.id}")
 
     def close_camera_group(self, camera_group_id: CameraGroupIdString) -> None:

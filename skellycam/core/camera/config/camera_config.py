@@ -67,7 +67,11 @@ def get_video_file_type(fourcc_code: int) ->str:
 class CameraConfig(BaseModel):
     camera_id: CameraIdString = Field(
         default=DEFAULT_CAMERA_ID,
-        description="The ID of the camera, if known. May be used for display purposes, must be unique.")
+        description="The ID of the camera. May be used for display purposes, must be unique.")
+
+    camera_index: CameraIndex = Field(
+        default=DEFAULT_CAMERA_INDEX,
+        description="The index of the camera in the system. This is used to create the `cv2.VideoCapture` object. ")
 
     principal_camera: bool = Field(
         default=False,
@@ -125,8 +129,7 @@ class CameraConfig(BaseModel):
     @model_validator(mode="after")
     def validate(self) -> Self:
         if self.camera_name is DEFAULT_CAMERA_NAME:
-            self.camera_name = f"Camera-{self.camera_index}-{self.camera_id}"
-        self.camera_index = CameraIndex(self.camera_index)
+            self.camera_name = f"Camera-{self.camera_id}"
         return self
 
     @property

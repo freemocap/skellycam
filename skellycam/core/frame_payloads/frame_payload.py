@@ -4,8 +4,8 @@ from typing import Tuple, Any, List
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
+from skellycam.core.frame_payloads.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE
 
 IMAGE_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB #TODO - optimize this bad boi

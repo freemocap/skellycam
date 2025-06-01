@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer, \
     FramePayloadSharedMemoryRingBufferDTO
 from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBufferDTO, \

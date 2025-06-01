@@ -7,8 +7,8 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
     SharedMemoryRingBufferDTO
-from skellycam.core.frames.payloads.frame_payload import FramePayload
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
+from skellycam.core.frame_payloads.frame_payload import FramePayload
+from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 
 logger = logging.getLogger(__name__)

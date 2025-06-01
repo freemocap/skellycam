@@ -3,14 +3,9 @@ import logging
 import multiprocessing
 from dataclasses import dataclass
 
-import cv2
-
-from skellycam.core.camera.camera_frame_loop_flags import CameraFrameLoopFlags
-from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.apply_config import apply_camera_configuration
 from skellycam.core.camera.opencv_camera_run_process import opencv_camera_run_process
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.orchestrator.camera_group_orchestrator import CameraGroupOrchestrator
+from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.shared_memory.single_slot_camera_shared_memory import \
     CameraSharedMemoryDTO
 from skellycam.core.types import CameraIdString

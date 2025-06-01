@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 def extract_config_from_cv2_capture(camera_index: CameraIndex,
                                     cv2_capture: cv2.VideoCapture,
+                                    principal_camera: bool,
                                     exposure_mode: str = ExposureModes.RECOMMENDED.name,
-                                    rotation: RotationTypes = RotationTypes.NO_ROTATION,
-                                    use_this_camera: bool = True) -> CameraConfig:
+                                    rotation: RotationTypes = RotationTypes.NO_ROTATION,) -> CameraConfig:
 
     width = int(cv2_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cv2_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -30,7 +30,6 @@ def extract_config_from_cv2_capture(camera_index: CameraIndex,
     try:
         return CameraConfig(
             camera_index=camera_index,
-            use_this_camera=use_this_camera,
             resolution=ImageResolution(
                 width=width,
                 height=height
@@ -39,6 +38,7 @@ def extract_config_from_cv2_capture(camera_index: CameraIndex,
             exposure=exposure,
             framerate=framerate,
             rotation=rotation,
+            principal_camera=principal_camera
         )
     except Exception as e:
         logger.error(f"Failed to extract configuration from cv2.VideoCapture object - {type(e).__name__}: {e}")

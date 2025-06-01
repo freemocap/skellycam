@@ -9,9 +9,9 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.types import CameraIdString
 from skellycam.core.camera.config.image_rotation_types import RotationTypes
-from skellycam.core.frames.payloads.frame_payload import FramePayload
-from skellycam.core.frames.payloads.metadata.frame_metadata import FrameMetadata
-from skellycam.core.frames.payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
+from skellycam.core.frame_payloads.frame_payload import FramePayload
+from skellycam.core.frame_payloads.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     create_empty_frame_metadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping

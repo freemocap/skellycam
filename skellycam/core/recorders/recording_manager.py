@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
