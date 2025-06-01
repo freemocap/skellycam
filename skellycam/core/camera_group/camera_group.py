@@ -29,25 +29,23 @@ class CameraGroup:
     orchestrator: CameraGroupOrchestrator
     frame_wrangler: FrameWrangler
     id: CameraGroupIdString = field(default_factory=lambda: str(uuid.uuid4())[:6])  # Shortened UUID for readability
+
     @classmethod
     def from_configs(cls, camera_configs: CameraConfigs):
         ipc: CameraGroupIPC = CameraGroupIPC.from_configs(camera_configs=camera_configs)
+        orchestrator = CameraGroupOrchestrator.from_ipc(ipc=ipc, )
         shm = CameraGroupSharedMemory.create_from_ipc(camera_group_ipc=ipc,
-                                                             read_only=True)
-
-        orchestrator = CameraGroupOrchestrator.from_ipc(ipc=ipc,)
-        cameras = CameraManager.create_cameras(ipc=ipc,
-                                               camera_shm_dtos=shm.to_dto().camera_shm_dtos,
-                                               orchestrator=orchestrator)
-        frame_wrangler = FrameWrangler.create(ipc=ipc,
-                                                group_shm_dto=shm.to_dto(),
-                                                )
+                                                      read_only=True)
         return cls(
             ipc=ipc,
             shm=shm,
-            cameras=cameras,
             orchestrator=orchestrator,
-            frame_wrangler=frame_wrangler,
+            cameras=CameraManager.create_cameras(ipc=ipc,
+                                                 camera_shm_dtos=shm.to_dto().camera_shm_dtos,
+                                                 orchestrator=orchestrator),
+            frame_wrangler=FrameWrangler.create(ipc=ipc,
+                                                group_shm_dto=shm.to_dto(),
+                                                )
         )
 
     @property
@@ -68,8 +66,8 @@ class CameraGroup:
 
     def close(self):
         logger.debug("Closing camera group")
-        self.ipc.shutdown_camera_group_flag.value = True
         self.cameras.close()
         self.frame_wrangler.close()
+        self.ipc.shutdown_camera_group_flag.value = True
         self.shm.close_and_unlink()
         logger.info("Camera group closed.")

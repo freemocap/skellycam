@@ -71,12 +71,9 @@ class SkellycamApplication:
         self.camera_group.update_camera_configs(camera_configs=camera_configs,
                                                 update_instructions=update_instructions)
 
-    def close_camera_group(self):
-        if self.camera_group is None:
-            return
-        logger.debug("Closing existing camera group...")
-        self._reset()
-        logger.success("Camera group closed successfully")
+    def close_all_camera_groups(self):
+        self.camera_group_manager.close_all_camera_groups()
+        logger.success("Camera groups closed successfully")
 
     def start_recording(self, recording_info: RecordingInfo):
         if self.camera_group is None:

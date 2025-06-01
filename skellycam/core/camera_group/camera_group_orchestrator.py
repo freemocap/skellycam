@@ -47,8 +47,8 @@ class CameraGroupOrchestrator:
             wait_1ms() if not self.ludacris_speed else None
 
     def trigger_frame_grab(self):
-        for camera_id, flags in self.camera_ready_flags.items():
-            flags.camera_ready_flag.value = False #pre-emptively set camera ready flag to False
+        for camera_id, flag in self.camera_ready_flags.items():
+            flag.value = False #pre-emptively set camera ready flag to False
         self.grab_frame_counter.value += 1 #trigger the cameras to grab a frame by incrementing the counter
 
 

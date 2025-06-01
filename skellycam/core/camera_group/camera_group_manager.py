@@ -19,7 +19,7 @@ class CameraGroupManager:
         camera_group = CameraGroup.from_configs(camera_configs = camera_configs)
         self.camera_groups[camera_group.id] = camera_group
 
-        logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {list(camera_group.camera_configs.keys())}")
+        logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
         return camera_group.id
 
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup:

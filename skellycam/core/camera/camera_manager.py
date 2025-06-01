@@ -55,22 +55,13 @@ class CameraManager(BaseModel):
         [process.start() for process in self.camera_processes.values()]
         logger.info(f"Cameras {self.camera_ids} frame loop ended.")
 
-
-
-    def close(self):
-        logger.info(f"Stopping cameras: {self.camera_ids}")
-        if not self.camera_group_dto.ipc.kill_camera_group_flag.value and not self.camera_group_dto.ipc.global_kill_flag.value:
-            logger.warning("Camera group was closed without kill flag set!")
-            self.camera_group_dto.ipc.kill_camera_group_flag.value = True
-        self._close_cameras()
-
     def update_camera_configs(self, update_instructions: UpdateInstructions):
         logger.debug(f"Updating cameras with instructions: {update_instructions}")
 
         for camera_id in update_instructions.update_these_cameras:
             self.camera_processes[camera_id].update_config(update_instructions.new_configs[camera_id])
 
-    def _close_cameras(self):
+    def close(self):
         logger.debug(f"Closing cameras: {self.camera_ids}")
 
         camera_close_threads = []

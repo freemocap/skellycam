@@ -81,6 +81,7 @@ def start_recording(request: StartRecordingRequest = Body(..., examples=[StartRe
     Path(request.recording_directory).mkdir(parents=True, exist_ok=True)
     get_skellycam_app().start_recording(RecordingInfo(**request.model_dump()))
     logger.api("`/record/start` request handled successfully.")
+    return True
 
 
 @camera_router.get("/group/all/record/stop",
@@ -99,7 +100,7 @@ def camera_group_close_all_delete_endpoint():
     logger.api("Received `/camera/group/close/all` DELETE request to close all camera groups...")
 
     try:
-        get_skellycam_app().close_camera_group()
+        get_skellycam_app().close_all_camera_groups()
         logger.api("`/camera/group/close/all` request handled successfully.")
     except Exception as e:
         logger.error(f"Failed to close all camera groups: {type(e).__name__} - {e}")
