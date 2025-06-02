@@ -54,7 +54,7 @@ class MultiframeTimestampLogger(BaseModel):
 
     def log_multiframe(self, multi_frame_payload: MultiFramePayload):
         if len(self.multi_frame_metadatas) == 0:
-            self.first_multi_frame_payload = multi_frame_payload
+            self.initial_multi_frame_payload = multi_frame_payload
         self.multi_frame_metadatas.append(multi_frame_payload.to_metadata())
 
     def close(self):

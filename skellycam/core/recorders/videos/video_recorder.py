@@ -41,6 +41,7 @@ class VideoRecorder(BaseModel):
 
         video_file_path = str(
             Path(recording_info.videos_folder) / f"{recording_info.recording_name}.camera{config.camera_index}.{config.camera_id}.{config.video_file_extension}")
+        Path(video_file_path).parent.mkdir(parents=True, exist_ok=True)
         frame_width = frame.width
         frame_height = frame.height
         writer = cls._initialize_video_writer(frame_width=frame_width,
@@ -104,7 +105,7 @@ class VideoRecorder(BaseModel):
         )
         if not writer.isOpened():
             logger.error(f"Failed to open video writer for camera {config.camera_index}")
-            raise ValidationError(f"Failed to open video writer for camera {config.camera_index}")
+            raise RuntimeError(f"Failed to open video writer for camera {config.camera_index}")
         logger.debug(
             f"Initialized VideoWriter for camera {config.camera_index} - Video file will be saved to {video_file_path}")
         return writer

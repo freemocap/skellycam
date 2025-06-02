@@ -87,21 +87,14 @@ class FrameWrangler:
                         if ipc.record_frames_flag.value:
                             recording_manager.add_multi_frames(latest_mfs)
                         else:
+                            # if `recording_manager` exists but we're not recording, we finish and close it
                             recording_manager.finish_and_close()
                             recording_manager = None
 
-                    else:
-                        if ipc.record_frames_flag.value and not recording_manager and previous_mf:
-                            recording_manager = RecordingManager.create(
-                                recording_info=ipc.recording_info_queue.get(),
-                                initial_multi_frame_payload= previous_mf,
-                            )
-
                     if not ipc.recording_info_queue.empty() and previous_mf:
                         if recording_manager:
-                            logger.error(f"Got new recording info while already recording! Finishing current recording before starting new one.")
+                            logger.warning(f"Got new recording info while already recording! Finishing current recording before starting new one.")
                             recording_manager.finish_and_close()
-                            raise RuntimeError(f"Got new recording info while already recording! Finishing current recording before starting new one.")
                         recording_manager = RecordingManager.create(
                             recording_info=ipc.recording_info_queue.get(),
                             initial_multi_frame_payload=previous_mf,
