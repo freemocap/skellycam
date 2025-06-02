@@ -81,7 +81,10 @@ class CameraConfig(BaseModel):
         default=DEFAULT_CAMERA_NAME,
         description="The name of the camera, if known. May be used for display purposes, does not need to be unique.",
     )
-
+    use_this_camera: bool = Field(
+        default=True,
+        description="Whether to use this camera in the camera group. If False, the be removed from the camera group when convient within the frame loop. ",
+    )
     resolution: ImageResolution = Field(
         default=DEFAULT_RESOLUTION,
         description="The current resolution of the camera, in pixels.",

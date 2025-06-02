@@ -7,6 +7,7 @@ import {CameraConfigs, CameraConfigsSchema} from "@/store/slices/cameras-slices/
 
 
 export const FrontendFramePayloadSchema = z.object({
+    camera_group_id: z.string(),
     camera_configs: CameraConfigsSchema,
     multi_frame_metadata: z.record(z.string(), z.unknown()),
     timebase_mapping: z.record(z.string(), z.number()),
