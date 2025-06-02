@@ -17,6 +17,15 @@ def wait_10ms():
 def wait_1ms():
     time.sleep(1e-3)
 
+def wait_100us():
+    time.sleep(1e-4)
+
+def wait_10us():
+    time.sleep(1e-5)
+
+def wait_1us():
+    time.sleep(1e-6)
+
 
 
 async def async_wait_1_sec():

@@ -8,6 +8,7 @@ from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, CameraGroupSharedMemory
+from skellycam.core.types import RecordingManagerIdString
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 from skellycam.utilities.wait_functions import wait_1ms
 
@@ -67,13 +68,26 @@ class FrameWrangler:
             shm_dto=group_shm_dto,
             read_only=False)
 
-        recording_manager: RecordingManager | None = None
+        recording_managers: dict[RecordingManagerIdString, RecordingManager] | None = {}
+        active_recording_manager_id: RecordingManagerIdString | None = None
+        closing_recording_manager_id: RecordingManagerIdString | None = None
         audio_recorder: AudioRecorder | None = None
         previous_mf:MultiFramePayload|None = None
         logger.debug(f"FrameWrangler process started!")
         try:
             while ipc.should_continue:
                 wait_1ms()
+                if closing_recording_manager_id:
+                    if not recording_managers[closing_recording_manager_id].try_save_one_frame():
+                        logger.info(f"Finishing and closing videos for recording {recording_managers[closing_recording_manager_id].recording_info.recording_name}...")
+                        recording_managers[closing_recording_manager_id].finish_and_close()
+                        recording_managers[closing_recording_manager_id].close()
+                        del recording_managers[closing_recording_manager_id]
+                        closing_recording_manager_id = None
+
+                    if previous_mf.multi_frame_number %10 == 0:
+                        logger.info(f"Saving remaining frames to videos for recording {recording_managers[closing_recording_manager_id].recording_info.recording_name} (frames to save: {recording_managers[closing_recording_manager_id].frame_counts_to_save})...")
+
                 if camera_group_shm.new_multi_frame_available:
 
                     latest_mfs = camera_group_shm.publish_all_new_multiframes(previous_payload=previous_mf, overwrite=True)
@@ -83,27 +97,31 @@ class FrameWrangler:
                         previous_mf = latest_mfs[-1]
                     logger.loop(f"Pulled multiframe numbers: {[mf.multi_frame_number for mf in latest_mfs]} from camera buffers")
                     # If we're recording, create a VideoRecorderManager and load all available frames into it (but don't save them to disk yet)
-                    if recording_manager:
+                    if active_recording_manager_id:
                         if ipc.record_frames_flag.value:
-                            recording_manager.add_multi_frames(latest_mfs)
+                            recording_managers[active_recording_manager_id].add_multi_frames(latest_mfs)
                         else:
                             # if `recording_manager` exists but we're not recording, we finish and close it
-                            recording_manager.finish_and_close()
-                            recording_manager = None
+                            closing_recording_manager_id = active_recording_manager_id
+                            active_recording_manager_id = None
 
                     if not ipc.recording_info_queue.empty() and previous_mf:
-                        if recording_manager:
+                        if active_recording_manager_id:
                             logger.warning(f"Got new recording info while already recording! Finishing current recording before starting new one.")
-                            recording_manager.finish_and_close()
-                        recording_manager = RecordingManager.create(
+                            closing_recording_manager_id = active_recording_manager_id
+                            active_recording_manager_id = None
+
+                        rec = RecordingManager.create(
                             recording_info=ipc.recording_info_queue.get(),
                             initial_multi_frame_payload=previous_mf,
                         )
+                        recording_managers[rec.id] = rec
+                        active_recording_manager_id = rec.id
 
                     # if no new multi-frame is available and we're recording, opportunistically save frame to video. Otherwise, we keep mf's in the recording manager until there is time to process them (or on recording stop)
                     else:
-                        if recording_manager:
-                            recording_manager.save_one_frame()
+                        if active_recording_manager_id:
+                            recording_managers[active_recording_manager_id].save_one_frame()
 
         except Exception as e:
             logger.error(f"Frame Saver process error: {e}")
@@ -116,7 +134,11 @@ class FrameWrangler:
         except KeyboardInterrupt:
             pass
         finally:
-            if recording_manager:
-                recording_manager.finish_and_close()
+            if active_recording_manager_id:
+                if recording_managers[active_recording_manager_id]:
+                    recording_managers[active_recording_manager_id].finish_and_close()
+            if closing_recording_manager_id:
+                if recording_managers[closing_recording_manager_id]:
+                    recording_managers[closing_recording_manager_id].finish_and_close()
             camera_group_shm.close()
             logger.debug(f"FrameSaver process completed")

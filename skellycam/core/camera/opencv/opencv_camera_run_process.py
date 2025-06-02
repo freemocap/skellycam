@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import time
 from copy import deepcopy
 
 import cv2
@@ -26,6 +27,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                               ws_queue: multiprocessing.Queue,
                               ludacris_speed: bool,
                               ):
+    ludacris_speed = True
     # Configure logging in the child process
     from skellycam.system.logging_configuration.configure_logging import configure_logging
     from skellycam import LOG_LEVEL
@@ -58,17 +60,11 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         # Trigger listening loop
         while should_continue():
 
-            frame_tab = f"Fr# {orchestrator.camera_frame_count[camera_id].value+1}: "
-            # print(f"{frame_tab }Camera {camera_id} loop START")
             frame_metadata = create_empty_frame_metadata(config=camera_config,
                                                          frame_number=orchestrator.camera_frame_count[camera_id].value+1)
-            # print_in_wait = True
+
             orchestrator.camera_frame_count[camera_id].value += 1 # last camera to do this will break the others out of their wait loops
             while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
-                # if print_in_wait:
-                #     print(f"{frame_tab}Camera {camera_id} waiting cameras ready:"
-                #           f" frame_counts_by_camera_id={[cam_id+':'+str(counter.value) for cam_id, counter in orchestrator.camera_frame_count.items()]}")
-                #     print_in_wait = False
                 wait_1ms() if not ludacris_speed else None
 
             opencv_get_frame(cap=cv2_video_capture,
@@ -83,7 +79,6 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                 ipc.set_config_by_id(camera_id=camera_id,
                                      camera_config=camera_config, )
                 logger.debug(f"Camera {camera_id} config updated to: {camera_config}")
-            # print(f"{frame_tab}Camera {camera_id} frame grab completed")
 
     except Exception as e:
         logger.exception(f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}")

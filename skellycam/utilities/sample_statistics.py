@@ -126,7 +126,32 @@ class DescriptiveStatistics(BaseModel):
     @property
     def median(self) -> float:
         return self.measures_of_central_tendency.median
+    @property
+    def max_index(self) -> int:
+        """Index of the maximum value in the data."""
+        if np.isnan(self.data).all():
+            return -1
+        return int(np.nanargmax(self.data))
+    @property
+    def max(self) -> float:
+        """Maximum value in the data."""
+        if np.isnan(self.data).all():
+            return np.nan
+        return float(np.nanmax(self.data))
 
+    @property
+    def min(self) -> float:
+        """Minimum value in the data."""
+        if np.isnan(self.data).all():
+            return np.nan
+        return float(np.nanmin(self.data))
+
+    @property
+    def min_index(self) -> int:
+        """Index of the minimum value in the data."""
+        if np.isnan(self.data).all():
+            return -1
+        return int(np.nanargmin(self.data))
     @property
     def standard_deviation(self) -> float:
         return self.measures_of_variability.standard_deviation
@@ -160,6 +185,7 @@ class DescriptiveStatistics(BaseModel):
             "number_of_samples": self.number_of_samples,
         }
 
+
     def __str__(self) -> str:
         return (
             f"{self.name} Descriptive Statistics:\n"
@@ -168,6 +194,9 @@ class DescriptiveStatistics(BaseModel):
             f"\tMean: {self.mean:.3f}\n"
             f"\tMedian: {self.median:.3f}\n"
             f"\tStandard Deviation: {self.standard_deviation:.3f}\n"
+            f"\tMaximum (index): {self.max:.3f}({self.max_index})\n"
+            f"\tMinimum(index): {self.min:.3f}({self.min_index})\n"
+            f"\tCoefficient of Variation (%): {self.measures_of_variability.coefficient_of_variation:.3f}\n"
             f"\tMedian Absolute Deviation: {self.median_absolute_deviation:.3f}\n"
             f"\tInterquartile Range: {self.interquartile_range:.3f}\n"
             f"\t95% Confidence Interval: {self.confidence_interval_95:.3f}\n"

@@ -10,3 +10,4 @@ CameraIndex = int
 CameraName = str
 FrameNumber = int
 Base64JPEGImage = str  # Base64 encoded JPEG image
+RecordingManagerIdString = str

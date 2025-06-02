@@ -17,19 +17,20 @@ logger = logging.getLogger(__name__)
 class VideoRecorder(BaseModel):
     camera_id: CameraIdString
     video_path: str
-    video_writer: cv2.VideoWriter
     camera_config: CameraConfig
     frame_width: int
     frame_height: int
+    video_file_path: str
     previous_frame: Optional[FramePayload] = None
-    _frames_to_write: deque[FramePayload] = deque()
+    video_writer: cv2.VideoWriter|None  = None
+    frames_to_write: deque[FramePayload] = deque()
 
     class Config:
         arbitrary_types_allowed = True
 
     @property
     def number_of_frames_to_write(self) -> int:
-        return len(self._frames_to_write)
+        return len(self.frames_to_write)
 
     @classmethod
     def create(cls,
@@ -44,31 +45,38 @@ class VideoRecorder(BaseModel):
         Path(video_file_path).parent.mkdir(parents=True, exist_ok=True)
         frame_width = frame.width
         frame_height = frame.height
-        writer = cls._initialize_video_writer(frame_width=frame_width,
-                                              frame_height=frame_height,
-                                              config=config,
-                                              video_file_path=video_file_path)
+
         logger.debug(f"Created VideoSaver for camera {config.camera_index} with video file path: {video_file_path}")
         return cls(camera_id=camera_id,
                    video_path=video_file_path,
-                   video_writer=writer,
                    camera_config=config,
                    frame_width=frame_width,
                    frame_height=frame_height,
+                   video_file_path=video_file_path
                    )
+
+    def add_frames(self, frames: list[FramePayload]):
+        """
+        Adds multiple frames to the video recorder.
+        :param frames: List of FramePayloads to add.
+        """
+        for frame in frames:
+            self.add_frame(frame=frame)
 
     def add_frame(self, frame: FramePayload):
         self._validate_frame(frame)
-        self._frames_to_write.append(frame)
+        self.frames_to_write.append(frame)
 
     def write_one_frame(self) -> int | None:
-        if len(self._frames_to_write) == 0:
+        if len(self.frames_to_write) == 0:
             return None
+        if self.video_writer is None:
+            self._initialize_video_writer()
 
         if not self.video_writer.isOpened():
             raise ValidationError(f"VideoWriter not open (before adding frame)!")
 
-        frame = self._frames_to_write.popleft()
+        frame = self.frames_to_write.popleft()
         self._validate_frame(frame)
         if self.previous_frame is not None:
             if not frame.frame_number == self.previous_frame.frame_number + 1:
@@ -86,29 +94,24 @@ class VideoRecorder(BaseModel):
 
     def finish_and_close(self):
         logger.debug(f"Finishing and closing VideoSaver for camera {self.camera_id}")
-        while len(self._frames_to_write) > 0:
+        while len(self.frames_to_write) > 0:
             self.write_one_frame()
         self.close()
 
-    @classmethod
-    def _initialize_video_writer(cls,
-                                 frame_width: int,
-                                 frame_height: int,
-                                 config: CameraConfig,
-                                 video_file_path: str):
-        writer = cv2.VideoWriter(
-            video_file_path,  # full path to video file
-            cv2.VideoWriter_fourcc(*config.writer_fourcc),  # fourcc
-            config.framerate,  # fps
-            (frame_width, frame_height),
-            # frame size, note this is OPPOSITE of most of the rest of cv2's functions, which assume 'height, width' following numpy's row-major order
+
+    def _initialize_video_writer(self):
+        self.video_writer = cv2.VideoWriter(
+            self.video_file_path,  # full path to video file
+            cv2.VideoWriter_fourcc(*self.camera_config.writer_fourcc),  # fourcc
+            self.camera_config.framerate,  # fps
+            (self.frame_width, self.frame_height),# frame size, note this is OPPOSITE of most of the rest of cv2's functions, which assume 'height, width' following numpy's row-major order
         )
-        if not writer.isOpened():
-            logger.error(f"Failed to open video writer for camera {config.camera_index}")
-            raise RuntimeError(f"Failed to open video writer for camera {config.camera_index}")
+        if not self.video_writer.isOpened():
+            logger.error(f"Failed to open video writer for camera {self.camera_config.camera_index}")
+            raise RuntimeError(f"Failed to open video writer for camera {self.camera_config.camera_index}")
         logger.debug(
-            f"Initialized VideoWriter for camera {config.camera_index} - Video file will be saved to {video_file_path}")
-        return writer
+            f"Initialized VideoWriter for camera {self.camera_config.camera_index} - Video file will be saved to {self.video_file_path}")
+
 
     def _validate_frame(self, frame: FramePayload):
         if not Path(self.video_path).parent.exists():

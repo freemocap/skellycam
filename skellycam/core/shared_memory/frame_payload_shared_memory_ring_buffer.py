@@ -31,7 +31,7 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
             cls,
             camera_config: CameraConfig,
             read_only: bool,
-            buffer_length: int = 100,
+            buffer_length: int = 300,
     ):
         example_image = np.zeros(camera_config.image_shape, dtype=np.uint8)
         example_metadata = np.zeros(FRAME_METADATA_SHAPE, dtype=FRAME_METADATA_DTYPE)

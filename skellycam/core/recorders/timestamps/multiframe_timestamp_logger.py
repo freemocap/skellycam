@@ -140,7 +140,7 @@ class MultiframeTimestampLogger(BaseModel):
                 sample_data=frame_intervals.to_numpy(na_value=np.nan),
                 name="frame_duration",
                 units="milliseconds").to_dict(),
-            finter_camera_timestamp_range_stats_ms=DescriptiveStatistics.from_samples(
+            inter_camera_timestamp_range_stats_ms=DescriptiveStatistics.from_samples(
                 sample_data=df['inter_camera_timestamp_range_ns'].to_numpy(na_value=np.nan) / 1e6,
                 name="inter_camera_timestamp_range_ns",
                 units="milliseconds").to_dict(),
