@@ -54,7 +54,7 @@ def camera_group_create_post_endpoint(
                                                  description="Request body containing desired camera configuration",
                                                  examples=[
                                                      CameraGroupCreateRequest.example()]), ) -> CameraGroupIdString :
-    logger.api(f"Received `/group/create` POST request with config:  {request.camera_configs}...")
+    logger.api(f"Received `skellycam/cameras/group/create` POST request with config:  {request.camera_configs}...")
     try:
         configs = request.camera_configs
         if not any([config.principal_camera for config in configs.values()]):
@@ -63,13 +63,13 @@ def camera_group_create_post_endpoint(
             configs[principal_camera_id].principal_camera = True
             logger.debug(f"No principal camera set, setting {configs[principal_camera_id].camera_id} as principal camera.")
         camera_group_id = get_skellycam_app().create_camera_group(camera_configs=configs)
-        logger.api("`skellycam/connect` POST request handled successfully.")
+        logger.api("`skellycam/cameras/group/create` POST request handled successfully.")
         return camera_group_id
     except Exception as e:
-        logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
+        logger.error(f"Error when processing `skellycam/cameras/group/create` request: {type(e).__name__} - {e}")
         logger.exception(e)
         raise HTTPException(status_code=500,
-                             detail=f"Error when processing `/camera/group` request: {type(e).__name__} - {e}")
+                             detail=f"Error when processing `skellycam/cameras/group/create` request: {type(e).__name__} - {e}")
 
 
 @camera_router.post("/group/all/record/start",

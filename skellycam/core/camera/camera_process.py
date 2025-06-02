@@ -35,7 +35,6 @@ class CameraProcess:
                ludacris_speed: bool=False):
 
         if camera_strategy == CameraStrategies.OPEN_CV:
-            logger.info(f"Creating OpenCV camera process for camera {camera_id} ")
             camera_run_process = opencv_camera_run_process
         else:
             raise ValueError(f"Unsupported camera strategy: {camera_strategy}")

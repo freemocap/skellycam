@@ -37,8 +37,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
     logger.debug(f"Camera {camera_id} shared memory re-created in CameraProcess for camera {camera_id}")
 
     def should_continue():
-        should_continue_loop = ipc.should_continue and not close_self_flag.value
-        return should_continue_loop
+        return ipc.should_continue and not close_self_flag.value
 
     # Check for configuration updates
 
@@ -53,26 +52,28 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         ipc.set_config_by_id(camera_id=camera_id,
                              camera_config=camera_config, )
 
-        logger.info(f"Camera {camera_config.camera_id} frame grab trigger loop started!")
-        frame_number = -1
-        orchestrator.camera_ready_flags[camera_id].value = True
+        logger.info(f"Camera {camera_config.camera_id} ready!")
+
+
         # Trigger listening loop
         while should_continue():
-            frame_number += 1
+
+            frame_tab = f"Fr# {orchestrator.camera_frame_count[camera_id].value+1}: "
+            # print(f"{frame_tab }Camera {camera_id} loop START")
             frame_metadata = create_empty_frame_metadata(config=camera_config,
-                                                         frame_number=frame_number)
-            orchestrator.camera_ready_flags[camera_id].value = True
-            while should_continue() and not orchestrator.all_cameras_ready:
+                                                         frame_number=orchestrator.camera_frame_count[camera_id].value+1)
+            print_in_wait = True
+            orchestrator.camera_frame_count[camera_id].value += 1 # last camera to do this will break the others out of their wait loops
+            while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
+                if print_in_wait:
+                    print(f"{frame_tab}Camera {camera_id} waiting cameras ready:"
+                          f" frame_counts_by_camera_id={[cam_id+':'+str(counter.value) for cam_id, counter in orchestrator.camera_frame_count.items()]}")
+                    print_in_wait = False
                 wait_1ms() if not ludacris_speed else None
 
-            if camera_config.principal_camera:
-                # If this is the principal camera, trigger the frame grab
-                orchestrator.trigger_frame_grab()
-            else:
-                # If this is not the principal camera, watch the orchestrator for the frame grab trigger
-                while should_continue() and frame_number < orchestrator.grab_frame_counter.value:
-                    wait_1ms() if not ludacris_speed else None
 
+
+            print(f"{frame_tab}Camera {camera_id} grabbing frame ")
             opencv_get_frame(cap=cv2_video_capture,
                              frame_metadata=frame_metadata,
                              camera_shared_memory=camera_shm,
@@ -85,7 +86,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                 ipc.set_config_by_id(camera_id=camera_id,
                                      camera_config=camera_config, )
                 logger.debug(f"Camera {camera_id} config updated to: {camera_config}")
-
+            # print(f"{frame_tab}Camera {camera_id} frame grab completed")
 
     except Exception as e:
         logger.exception(f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}")

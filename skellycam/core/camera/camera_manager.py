@@ -50,10 +50,9 @@ class CameraManager(BaseModel):
         if len(self.camera_ids) == 0:
             raise ValueError("No cameras to start!")
 
-        logger.info(f"Startingcameras: {self.camera_ids}...")
+        logger.info(f"Starting cameras: {self.camera_ids}...")
 
         [process.start() for process in self.camera_processes.values()]
-        logger.info(f"Cameras {self.camera_ids} frame loop ended.")
 
     def update_camera_configs(self, update_instructions: UpdateInstructions):
         logger.debug(f"Updating cameras with instructions: {update_instructions}")

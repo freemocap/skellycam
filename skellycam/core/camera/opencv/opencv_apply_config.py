@@ -20,13 +20,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
     # set camera stream parameters
 
     logger.info(
-        f"Applying configuration to Camera {config.camera_index}:\n"
-        f"\tExposure Mode: {config.exposure_mode},\n"
-        f"\tExposure: {config.exposure if config.exposure_mode == ExposureModes.MANUAL.name else 'N/A'},\n"
-        f"\tResolution height: {config.resolution.height},\n"
-        f"\tResolution width: {config.resolution.width},\n"
-        f"\tFramerate: {config.framerate},\n"
-        f"\tFourcc: {config.capture_fourcc}"
+        f"Applying configuration to Camera {config.camera_index}:\n{config}"
     )
     try:
         if not cv2_vid_capture.isOpened():
@@ -51,6 +45,8 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
             cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc)
         )
         extracted_config = extract_config_from_cv2_capture(camera_index=config.camera_index,
+                                                              camera_id=config.camera_id,
+                                                           camera_name=config.camera_name,
                                                            cv2_capture=cv2_vid_capture,
                                                            exposure_mode=ExposureModes.MANUAL.name,  # set to manual after running recommended routine the first time
                                                            rotation=config.rotation,
