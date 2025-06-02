@@ -81,11 +81,11 @@ class CameraGroupManager:
             camera_group.ipc.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
-    def get_all_latest_multiframes(self, if_newer_than_mf_number: int|None=None) -> dict[CameraIdString, MultiFramePayload]:
+    def get_all_latest_multiframes(self, if_newer_than_mf_number: int|None=None) -> dict[CameraGroupIdString, MultiFramePayload]:
         """
         Retrieve the latest multi-frames from all camera groups.
         """
-        latest_multiframes = {}
+        latest_multiframe_by_camera_group = {}
         for camera_group in self.camera_groups.values():
-            latest_multiframes[camera_group.id] = camera_group.get_latest_multiframe(if_newer_than_mf_number=if_newer_than_mf_number)
-        return latest_multiframes
+            latest_multiframe_by_camera_group[camera_group.id] = camera_group.get_latest_multiframe(if_newer_than_mf_number=if_newer_than_mf_number)
+        return latest_multiframe_by_camera_group

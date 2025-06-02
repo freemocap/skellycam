@@ -62,18 +62,15 @@ def opencv_camera_run_process(camera_id: CameraIdString,
             # print(f"{frame_tab }Camera {camera_id} loop START")
             frame_metadata = create_empty_frame_metadata(config=camera_config,
                                                          frame_number=orchestrator.camera_frame_count[camera_id].value+1)
-            print_in_wait = True
+            # print_in_wait = True
             orchestrator.camera_frame_count[camera_id].value += 1 # last camera to do this will break the others out of their wait loops
             while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
-                if print_in_wait:
-                    print(f"{frame_tab}Camera {camera_id} waiting cameras ready:"
-                          f" frame_counts_by_camera_id={[cam_id+':'+str(counter.value) for cam_id, counter in orchestrator.camera_frame_count.items()]}")
-                    print_in_wait = False
+                # if print_in_wait:
+                #     print(f"{frame_tab}Camera {camera_id} waiting cameras ready:"
+                #           f" frame_counts_by_camera_id={[cam_id+':'+str(counter.value) for cam_id, counter in orchestrator.camera_frame_count.items()]}")
+                #     print_in_wait = False
                 wait_1ms() if not ludacris_speed else None
 
-
-
-            print(f"{frame_tab}Camera {camera_id} grabbing frame ")
             opencv_get_frame(cap=cv2_video_capture,
                              frame_metadata=frame_metadata,
                              camera_shared_memory=camera_shm,

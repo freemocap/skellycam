@@ -132,7 +132,7 @@ class CameraGroupSharedMemory:
 
 
     def publish_all_new_multiframes(self,
-                                    overwrite:bool=True,
+                                    overwrite:bool,
                                     previous_payload: MultiFramePayload|None=None) -> list[MultiFramePayload]:
         mfs: list[MultiFramePayload] = []
         while self.new_multi_frame_available:
@@ -150,7 +150,7 @@ class CameraGroupSharedMemory:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         if not self.multi_frame_shm.ready_to_read:
             return None
-        if if_newer_than_mf_number is not None and if_newer_than_mf_number <= self.latest_mf_number.value:
+        if if_newer_than_mf_number is not None and if_newer_than_mf_number >= self.latest_mf_number.value:
             return None
         mf =  self.multi_frame_shm.get_latest_multiframe(camera_configs=dict(deepcopy(self.ipc.camera_configs)), retrieve_type="latest")
         if mf.multi_frame_number <= if_newer_than_mf_number:
