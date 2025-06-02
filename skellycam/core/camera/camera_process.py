@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 from dataclasses import dataclass
 
-from skellycam.core.camera.opencv_camera_run_process import opencv_camera_run_process
+from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_run_process
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
 from skellycam.core.shared_memory.single_slot_camera_shared_memory import \

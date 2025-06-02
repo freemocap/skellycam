@@ -86,12 +86,12 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
             metadata_shm_dto=self.metadata_shm.to_dto(),
         )
 
-    def put_frame(self, image: np.ndarray, metadata: np.ndarray):
+    def put_frame(self, image: np.ndarray, metadata: np.ndarray, overwrite: bool = False):
         if self.read_only:
             raise ValueError("Cannot put new frame into read-only instance of shared memory!")
         metadata[FRAME_METADATA_MODEL.COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
-        self.image_shm.put_data(image)
-        self.metadata_shm.put_data(metadata)
+        self.image_shm.put_data(image, overwrite=overwrite)
+        self.metadata_shm.put_data(metadata, overwrite=overwrite)
 
 
     def retrieve_latest_frame(self) -> FramePayload:
@@ -105,9 +105,6 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
         image = self.image_shm.get_next_payload()
         metadata = self.metadata_shm.get_next_payload()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
-        logger.loop(
-            f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"
-        )
         return FramePayload(image=image, metadata=metadata)
 
     def close(self):

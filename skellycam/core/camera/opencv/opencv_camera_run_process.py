@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import cv2
 
-from skellycam.core.camera.opencv.apply_config import apply_camera_configuration
 from skellycam.core.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
+from skellycam.core.camera.opencv.opencv_apply_config import apply_camera_configuration
 from skellycam.core.camera.opencv.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
@@ -37,7 +37,8 @@ def opencv_camera_run_process(camera_id: CameraIdString,
     logger.debug(f"Camera {camera_id} shared memory re-created in CameraProcess for camera {camera_id}")
 
     def should_continue():
-        return ipc.should_continue and not close_self_flag.value
+        should_continue_loop = ipc.should_continue and not close_self_flag.value
+        return should_continue_loop
 
     # Check for configuration updates
 
@@ -57,8 +58,10 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         orchestrator.camera_ready_flags[camera_id].value = True
         # Trigger listening loop
         while should_continue():
+            frame_number += 1
             frame_metadata = create_empty_frame_metadata(config=camera_config,
-                                                         frame_number=frame_number + 1)
+                                                         frame_number=frame_number)
+            orchestrator.camera_ready_flags[camera_id].value = True
             while should_continue() and not orchestrator.all_cameras_ready:
                 wait_1ms() if not ludacris_speed else None
 
@@ -70,21 +73,19 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                 while should_continue() and frame_number < orchestrator.grab_frame_counter.value:
                     wait_1ms() if not ludacris_speed else None
 
-            frame_number = opencv_get_frame(cap=cv2_video_capture,
-                                            frame_metadata=frame_metadata,
-                                            camera_shared_memory=camera_shm,
-                                            frame_number=frame_number,
-                                            )
+            opencv_get_frame(cap=cv2_video_capture,
+                             frame_metadata=frame_metadata,
+                             camera_shared_memory=camera_shm,
+                             )
             # Check if the camera config has changed
-            if camera_config != ipc.camera_configs[camera_id]:
+            if camera_config != ipc.get_config_by_id(camera_id=camera_id, with_lock=False):
                 camera_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                                            config=deepcopy(ipc.camera_configs[camera_id]),
                                                            initial=False)
                 ipc.set_config_by_id(camera_id=camera_id,
                                      camera_config=camera_config, )
                 logger.debug(f"Camera {camera_id} config updated to: {camera_config}")
-            logger.loop(f"Camera {camera_id} frame {frame_number} captured and stored in shared memory")
-            orchestrator.camera_ready_flags[camera_id].value = True
+
 
     except Exception as e:
         logger.exception(f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}")

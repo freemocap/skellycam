@@ -35,7 +35,7 @@ class FrameWrangler:
                    )
 
     def start(self):
-        logger.debug(f"Starting frame listener process...")
+        logger.debug(f"Starting frame wrangler process...")
         self.worker.start()
 
     def is_alive(self) -> bool:
@@ -75,11 +75,11 @@ class FrameWrangler:
             while ipc.should_continue:
                 wait_1ms()
                 if camera_group_shm.new_multi_frame_available:
-                    logger.success(f"New multi-frame available in FrameWrangler process, processing frames...")
+
                     latest_mfs = camera_group_shm.publish_all_new_multiframes(previous_payload=previous_mf)
                     if len(latest_mfs) > 0 and isinstance(latest_mfs[-1], MultiFramePayload):
                         previous_mf = latest_mfs[-1]
-
+                    logger.loop(f"Pulled multiframe numbers: {[mf.multi_frame_number for mf in latest_mfs]} from camera buffers")
                     # If we're recording, create a VideoRecorderManager and load all available frames into it (but don't save them to disk yet)
                     if recording_manager:
                         if ipc.record_frames_flag.value:
@@ -89,12 +89,10 @@ class FrameWrangler:
                             recording_manager = None
 
                     else:
-                        if ipc.record_frames_flag.value:
+                        if ipc.record_frames_flag.value and not recording_manager and previous_mf:
                             recording_manager = RecordingManager.create(
                                 recording_info=ipc.recording_info_queue.get(),
-                                initial_multi_frame_payload=camera_group_shm.publish_next_multi_frame_payload(
-                                    camera_configs=dict(deepcopy(ipc.camera_configs))),
-
+                                initial_multi_frame_payload= previous_mf,
                             )
 
                     if not ipc.recording_info_queue.empty() and previous_mf:

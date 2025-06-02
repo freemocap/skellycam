@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 
 def opencv_get_frame(cap: cv2.VideoCapture,
                      frame_metadata: np.ndarray,
-                     camera_shared_memory: FramePayloadSharedMemoryRingBuffer,
-                     frame_number: int,
-                     ) -> int:
+                     camera_shared_memory: FramePayloadSharedMemoryRingBuffer):
     """
     THIS IS WHERE THE MAGIC HAPPENS
 
@@ -56,5 +54,5 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     camera_shared_memory.put_frame(
         image=image,
         metadata=frame_metadata,
+        overwrite=True
     )
-    return frame_number + 1
