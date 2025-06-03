@@ -14,7 +14,7 @@ from skellycam.core.frame_payloads.metadata.frame_metadata_enum import create_em
 from skellycam.core.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBufferDTO, \
     FramePayloadSharedMemoryRingBuffer
 from skellycam.core.types import CameraIdString
-from skellycam.utilities.wait_functions import wait_1ms
+from skellycam.utilities.wait_functions import wait_1ms, wait_100us, wait_10us
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                               ws_queue: multiprocessing.Queue,
                               ludacris_speed: bool,
                               ):
-    ludacris_speed = True
+    # ludacris_speed = True
     # Configure logging in the child process
     from skellycam.system.logging_configuration.configure_logging import configure_logging
     from skellycam import LOG_LEVEL
@@ -65,7 +65,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
 
             orchestrator.camera_frame_count[camera_id].value += 1 # last camera to do this will break the others out of their wait loops
             while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
-                wait_1ms() if not ludacris_speed else None
+                  wait_10us() if not ludacris_speed else None
 
             opencv_get_frame(cap=cv2_video_capture,
                              frame_metadata=frame_metadata,

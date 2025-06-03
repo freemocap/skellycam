@@ -45,8 +45,7 @@ class CameraGroupManager:
         """
         if camera_group_id not in self.camera_groups:
             raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
-        camera_group = self.camera_groups.pop(camera_group_id)
-        camera_group.close()
+        self.camera_groups[camera_group_id].close()
         logger.info(f"Closed camera group with ID: {camera_group_id}")
 
     def close_all_camera_groups(self) -> None:
