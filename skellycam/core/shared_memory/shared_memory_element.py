@@ -1,8 +1,17 @@
+from dataclasses import dataclass
 from multiprocessing import shared_memory
 from typing import Tuple, Union
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
+
+
+@dataclass
+class SharedMemoryElementDTO:
+    shm_name: str
+    shape: Tuple[int, ...]
+    dtype: np.dtype
+    original_shape: Tuple[int, ...]
 
 
 class SharedMemoryElement(BaseModel):
@@ -28,6 +37,20 @@ class SharedMemoryElement(BaseModel):
         shm = shared_memory.SharedMemory(name=shm_name)
         buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
         return cls(buffer=buffer, shm=shm, dtype=dtype, original_shape=shape)
+
+    @classmethod
+    def recreate_from_dto(cls, dto: SharedMemoryElementDTO):
+        return cls.recreate(shm_name=dto.shm_name,
+                            shape=dto.shape,
+                            dtype=dto.dtype)
+
+    def to_dto(self) -> SharedMemoryElementDTO:
+        return SharedMemoryElementDTO(
+            shm_name=self.shm.name,
+            shape=self.buffer.shape,
+            dtype=self.dtype,
+            original_shape=self.original_shape
+        )
 
     @staticmethod
     def _ensure_dtype(dtype: Union[np.dtype, type, str]) -> np.dtype:
@@ -55,9 +78,9 @@ class SharedMemoryElement(BaseModel):
         if array.dtype != self.dtype:
             raise ValueError(f"Array dtype {array.dtype} does not match SharedMemoryElement dtype {self.dtype}")
         if array.shape != self.original_shape:
-            raise ValueError(f"Array shape {array.shape} does not match SharedMemoryElement shape {self.original_shape}")
+            raise ValueError(
+                f"Array shape {array.shape} does not match SharedMemoryElement shape {self.original_shape}")
         return array
-
 
     def close(self):
         self.shm.close()

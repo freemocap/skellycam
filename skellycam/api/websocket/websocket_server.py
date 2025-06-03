@@ -126,7 +126,7 @@ class WebsocketServer:
                 mfs_by_camera_group = self._app.get_all_latest_multiframes(if_newer_than_mf_number=latest_mf_number)
                 if any([isinstance(mf, MultiFramePayload) for mf in mfs_by_camera_group.values()]):
                     await self._send_frontend_payload(mfs_by_camera_group)
-                    latest_mf_number = max([mf_payload.multi_frame_number for mf_payload in mfs_by_camera_group.values()])
+                    latest_mf_number = max([mf_payload.multi_frame_number for mf_payload in mfs_by_camera_group.values() if isinstance(mf_payload, MultiFramePayload)], default=latest_mf_number)
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")

@@ -27,11 +27,26 @@ class CameraManager(BaseModel):
     def camera_ids(self):
         return list(self.camera_processes.keys())
 
+    @property
+    def any_alive(self) -> bool:
+        return any([process.is_alive() for process in self.camera_processes.values()])
+
+    @property
+    def all_alive(self) -> bool:
+        return all([process.is_alive() for process in self.camera_processes.values()])
+
+    @property
+    def cameras_connected(self) -> bool:
+        """
+        Check if all cameras in the group are connected.
+        """
+        return  self.orchestrator.all_cameras_ready
     @classmethod
     def create_cameras(cls,
                        ipc: CameraGroupIPC,
-                       camera_shm_dtos: CameraSharedMemoryDTOs,
-                       orchestrator: CameraGroupOrchestrator):
+                       camera_shm_dtos: CameraSharedMemoryDTOs,):
+
+        orchestrator = CameraGroupOrchestrator.from_ipc(ipc=ipc)
 
         camera_processes = {}
         for camera_id, camera_config in ipc.camera_configs.items():
@@ -54,11 +69,6 @@ class CameraManager(BaseModel):
 
         [process.start() for process in self.camera_processes.values()]
 
-    def update_camera_configs(self, update_instructions: UpdateInstructions):
-        logger.debug(f"Updating cameras with instructions: {update_instructions}")
-
-        for camera_id in update_instructions.update_these_cameras:
-            self.camera_processes[camera_id].update_config(update_instructions.new_configs[camera_id])
 
     def close_camera(self, camera_id: CameraIdString):
         logger.debug(f"Closing camera: {camera_id}")
@@ -81,7 +91,8 @@ class CameraManager(BaseModel):
         [thread.start() for thread in camera_close_threads]
         [thread.join() for thread in camera_close_threads]
 
-        while any([camera_process.is_alive() for camera_process in self.camera_processes.values()]):
+
+        while self.any_alive:
             wait_10ms()
 
         logger.trace(f"Cameras closed: {self.camera_ids}")

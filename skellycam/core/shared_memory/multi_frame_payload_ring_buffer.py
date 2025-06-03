@@ -116,20 +116,20 @@ class MultiFrameSharedMemoryRingBuffer:
                                                    shm_valid_flag=self.shm_valid_flag,
                                                    latest_mf_number=self.latest_mf_number, )
 
-    def put_multi_frame_payload(self,
-                                multi_frame_payload: MultiFramePayload,overwrite: bool) -> None:
+    def put_multiframe(self,
+                       mf_payload: MultiFramePayload, overwrite: bool) -> None:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot write to it!")
-        if not multi_frame_payload.full:
+        if not mf_payload.full:
             raise ValueError("Cannot write incomplete multi-frame payload to shared memory!")
         if self.read_only:
             raise ValueError("Cannot write to read-only shared memory!")
 
-        for frame in multi_frame_payload.frames.values():
+        for frame in mf_payload.frames.values():
             frame.metadata[
                 FRAME_METADATA_MODEL.COPY_TO_MULTI_FRAME_ESCAPE_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
-        mf_numpy_buffer: MultiFrameNumpyBuffer = multi_frame_payload.to_numpy_buffer()
+        mf_numpy_buffer: MultiFrameNumpyBuffer = mf_payload.to_numpy_buffer()
 
         self.mf_image_shm.put_data(mf_numpy_buffer.mf_image_buffer, overwrite=overwrite)
 
@@ -141,49 +141,28 @@ class MultiFrameSharedMemoryRingBuffer:
         if not {self.mf_image_shm.last_written_index.value,
                 self.mf_metadata_shm.last_written_index.value,
                 self.mf_time_mapping_shm.last_written_index.value,
-                multi_frame_payload.multi_frame_number} == {multi_frame_payload.multi_frame_number}:
+                mf_payload.multi_frame_number} == {mf_payload.multi_frame_number}:
             raise ValueError("Multi-frame number mismatch! "
                              f"Image: {self.mf_image_shm.last_written_index.value}, "
                              f"Metadata: {self.mf_metadata_shm.last_written_index.value}, "
                              f"Time Mapping: {self.mf_time_mapping_shm.last_written_index.value}, "
-                             f"Expected: {multi_frame_payload.multi_frame_number}")
+                             f"Expected: {mf_payload.multi_frame_number}")
 
-        self.latest_mf_number.value = multi_frame_payload.multi_frame_number
+        self.latest_mf_number.value = mf_payload.multi_frame_number
 
     def get_latest_multiframe(self,
                               camera_configs: CameraConfigs,
-                              retrieve_type: Literal["latest", "next"]
                               ) -> MultiFramePayload:
-        if retrieve_type == "next" and self.read_only:
-            raise ValueError(
-                "Cannot retrieve `next` multi-frame payload from read-only shared memory (bc it increments the counter), use 'latest' instead")
 
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
-        if retrieve_type == "next":
-            mf_payload = MultiFramePayload.from_numpy_buffer(
-                buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_next_payload(),
-                                                          mf_metadata_buffer=self.mf_metadata_shm.get_next_payload(),
-                                                          mf_time_mapping_buffer=self.mf_time_mapping_shm.get_next_payload(),
-                                                          ),
-                camera_configs=camera_configs)
-
-            if (not self.previous_read_mf_payload and mf_payload.multi_frame_number != 0) or \
-                    (self.previous_read_mf_payload and mf_payload.multi_frame_number != self.previous_read_mf_payload.multi_frame_number + 1):
-                raise ValueError(
-                    f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf_payload.multi_frame_number}")
-            self.previous_read_mf_payload = mf_payload
-
-        elif retrieve_type == "latest":
-            mf_payload = MultiFramePayload.from_numpy_buffer(
-                buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_latest_payload(),
-                                                          mf_metadata_buffer=self.mf_metadata_shm.get_latest_payload(),
-                                                          mf_time_mapping_buffer=self.mf_time_mapping_shm.get_latest_payload(),
-                                                          ),
-                camera_configs=camera_configs)
-        else:
-            raise ValueError(f"Invalid retrieve_type: {retrieve_type}")
+        mf_payload = MultiFramePayload.from_numpy_buffer(
+            buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_latest_payload(),
+                                                      mf_metadata_buffer=self.mf_metadata_shm.get_latest_payload(),
+                                                      mf_time_mapping_buffer=self.mf_time_mapping_shm.get_latest_payload(),
+                                                      ),
+            camera_configs=camera_configs)
 
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")
@@ -192,6 +171,54 @@ class MultiFrameSharedMemoryRingBuffer:
                 FRAME_METADATA_MODEL.COPY_FROM_MULTI_FRAME_ESCAPE_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
 
         return mf_payload
+
+    def get_next_multiframe(self,
+                              camera_configs: CameraConfigs,
+                              ) -> MultiFramePayload:
+        if self.read_only:
+            raise ValueError(
+                "Cannot retrieve `next` multi-frame payload from read-only shared memory (bc it increments the counter), use 'latest' instead")
+
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+
+
+        mf_payload = MultiFramePayload.from_numpy_buffer(
+            buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_next_payload(),
+                                                      mf_metadata_buffer=self.mf_metadata_shm.get_next_payload(),
+                                                      mf_time_mapping_buffer=self.mf_time_mapping_shm.get_next_payload(),
+                                                      ),
+            camera_configs=camera_configs)
+
+        if (not self.previous_read_mf_payload and mf_payload.multi_frame_number != 0) or \
+                (self.previous_read_mf_payload and mf_payload.multi_frame_number != self.previous_read_mf_payload.multi_frame_number + 1):
+            raise ValueError(
+                f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf_payload.multi_frame_number}")
+        self.previous_read_mf_payload = mf_payload
+
+        if not mf_payload or not mf_payload.full:
+            raise ValueError("Did not read full multi-frame mf_payload!")
+        for frame in mf_payload.frames.values():
+            frame.metadata[
+                FRAME_METADATA_MODEL.COPY_FROM_MULTI_FRAME_ESCAPE_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
+
+        return mf_payload
+
+    def get_all_new_multiframes(self,
+                                 camera_configs: CameraConfigs,
+                                 ) -> list[MultiFramePayload]:
+        """
+        Retrieves all new multi-frames from the shared memory.
+        """
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+
+        mfs: list[MultiFramePayload] = []
+        while self.new_multi_frame_available:
+            mf_payload = self.get_next_multiframe(camera_configs=camera_configs)
+            mfs.append(mf_payload)
+
+        return mfs
 
     def close(self):
         self.mf_image_shm.close()

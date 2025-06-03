@@ -42,29 +42,34 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         return ipc.should_continue and not close_self_flag.value
 
     # Check for configuration updates
-
-    cv2_video_capture: cv2.VideoCapture | None = None
     try:
         cv2_video_capture = create_cv2_video_capture(camera_config)
+    except Exception as e:
+        logger.exception(f"Failed to create cv2.VideoCapture for camera {camera_id}: {e}")
+        ipc.should_continue = False
+        close_self_flag.value = True
+        raise RuntimeError(f"Could not create cv2.VideoCapture for camera {camera_id}") from e
 
+    try:
         logger.trace(f"Camera {camera_id} process started")
         camera_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                                    config=camera_config,
                                                    initial=True)
         ipc.set_config_by_id(camera_id=camera_id,
                              camera_config=camera_config, )
-
+        orchestrator.camera_ready_flags[camera_id].value = True
         logger.info(f"Camera {camera_config.camera_id} ready!")
+        while not ipc.camera_group_running_flag.value and should_continue():
+            wait_1ms()
 
 
         # Trigger listening loop
         while should_continue():
-
             frame_metadata = create_empty_frame_metadata(config=camera_config,
-                                                         frame_number=orchestrator.camera_frame_count[camera_id].value+1)
-
-            orchestrator.camera_frame_count[camera_id].value += 1 # last camera to do this will break the others out of their wait loops
-            while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
+                                                         frame_number=orchestrator.camera_frame_counts[camera_id].value + 1)
+            orchestrator.camera_ready_flags[camera_id].value = True
+            orchestrator.camera_frame_counts[camera_id].value += 1 # last camera to do this will break the others out of their wait loops
+            while should_continue() and ipc.camera_group_running_flag.value and not orchestrator.should_grab_by_id(camera_id=camera_id):
                   wait_10us() if not ludacris_speed else None
 
             opencv_get_frame(cap=cv2_video_capture,
@@ -73,11 +78,13 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                              )
             # Check if the camera config has changed
             if camera_config != ipc.get_config_by_id(camera_id=camera_id, with_lock=False):
+                orchestrator.camera_ready_flags[camera_id].value = False
                 camera_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                                            config=deepcopy(ipc.camera_configs[camera_id]),
                                                            initial=False)
                 ipc.set_config_by_id(camera_id=camera_id,
                                      camera_config=camera_config, )
+                orchestrator.camera_ready_flags[camera_id].value = True
                 logger.debug(f"Camera {camera_id} config updated to: {camera_config}")
 
     except Exception as e:

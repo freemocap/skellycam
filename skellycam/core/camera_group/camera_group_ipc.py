@@ -19,6 +19,7 @@ class CameraGroupIPC:
     shutdown_camera_group_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
     record_frames_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
     recording_info_queue: multiprocessing.Queue = field(default_factory=multiprocessing.Queue)
+    camera_group_running_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
 
     @classmethod
     def from_configs(cls, camera_configs: CameraConfigs) -> "CameraGroupIPC":
