@@ -49,8 +49,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture, config: Camera
                                                            camera_name=config.camera_name,
                                                            cv2_capture=cv2_vid_capture,
                                                            exposure_mode=ExposureModes.MANUAL.name,  # set to manual after running recommended routine the first time
-                                                           rotation=config.rotation,
-                                                           principal_camera=config.principal_camera)
+                                                           rotation=config.rotation)
         if not cv2_vid_capture.isOpened() or extracted_config is None:
             raise FailedToApplyCameraConfigurationError(
                 f"Failed to apply configuration to Camera {config.camera_index} - Camera closed when applying configuration"

@@ -126,5 +126,6 @@ class VideoRecorder(BaseModel):
                                   f"{self.frame_height, self.frame_width, self.camera_config.color_channels})")
 
     def close(self):
-        self.video_writer.release()
-        logger.debug(f"Closed VideoSaver for camera {self.camera_id} - Video file saved to {self.video_path}")
+        if self.video_writer:
+            self.video_writer.release()
+            logger.debug(f"Closed VideoSaver for camera {self.camera_id} - Video file saved to {self.video_path}")

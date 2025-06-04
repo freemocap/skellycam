@@ -57,7 +57,7 @@ class RecordingManager(BaseModel):
                recording_info: RecordingInfo,
                initial_multi_frame_payload: MultiFramePayload):
 
-        logger.debug(f"Creating FrameSaver for recording folder {recording_info.recording_name}")
+        logger.debug(f"Creating RecordingManager for recording folder {recording_info.recording_name}")
 
         return cls(recording_info=recording_info,
                    initial_multi_frame_payload=initial_multi_frame_payload,
@@ -119,13 +119,11 @@ class RecordingManager(BaseModel):
                                                                            )
             return True  # create one `video_recorder` at a time so we don't lag the outgoing mfs
 
-        tik = time.perf_counter_ns()
+        # tik = time.perf_counter_ns()
         frame_number = self.video_recorders[camera_id_to_save].write_one_frame()
-        tok = time.perf_counter_ns()
-        if frame_number is None:
-            raise RuntimeError(
-                f"Frame number is None after writing frame to video recorder for camera {camera_id_to_save}")
-        # print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
+        # tok = time.perf_counter_ns()
+        # logger.loop(f"Saved frame {frame_number} for camera {camera_id_to_save} in {(tok - tik)/1e6}ms")
+
         return True
 
     def _save_folder_readme(self):

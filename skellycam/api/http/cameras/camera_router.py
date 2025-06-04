@@ -57,11 +57,6 @@ def camera_group_create_post_endpoint(
     logger.api(f"Received `skellycam/cameras/group/create` POST request with config:  {request.camera_configs}...")
     try:
         configs = request.camera_configs
-        if not any([config.principal_camera for config in configs.values()]):
-            # If no principal camera is set, set the first camera as the principal
-            principal_camera_id  = next(iter(configs))
-            configs[principal_camera_id].principal_camera = True
-            logger.debug(f"No principal camera set, setting {configs[principal_camera_id].camera_id} as principal camera.")
         camera_group_id = get_skellycam_app().create_camera_group(camera_configs=configs)
         logger.api("`skellycam/cameras/group/create` POST request handled successfully.")
         return camera_group_id

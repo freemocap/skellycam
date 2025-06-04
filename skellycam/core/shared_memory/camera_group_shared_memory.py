@@ -171,7 +171,7 @@ class CameraGroupSharedMemoryManager:
     def get_all_new_multiframes(self) -> list[MultiFramePayload]:
         """
         Retrieves all new multi-frame data from the shared memory.
-        This method incremenets the multi-frame number, so it is NOT available for read-only instances.
+        This method increments the multi-frame number, so it is NOT available for read-only instances.
         """
         if self.read_only:
             raise ValueError(

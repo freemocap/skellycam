@@ -15,7 +15,6 @@ def extract_config_from_cv2_capture(camera_index: CameraIndex,
                                     camera_id: str,
                                     camera_name: str,
                                     cv2_capture: cv2.VideoCapture,
-                                    principal_camera: bool,
                                     exposure_mode: str = ExposureModes.RECOMMENDED.name,
                                     rotation: RotationTypes = RotationTypes.NO_ROTATION, ) -> CameraConfig:
     width = int(cv2_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -32,7 +31,6 @@ def extract_config_from_cv2_capture(camera_index: CameraIndex,
             camera_index=camera_index,
             camera_id=camera_id,
             camera_name=camera_name,
-            principal_camera=principal_camera,
             resolution=ImageResolution(
                 width=width,
                 height=height
