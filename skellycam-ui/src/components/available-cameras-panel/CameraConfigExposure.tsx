@@ -2,6 +2,7 @@
 import * as React from 'react';
 import {Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme} from '@mui/material';
 import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras-slices/camera-types";
+import {useAppDispatch} from "@/store/AppStateStore";
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;
@@ -36,7 +37,6 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                                                                           }) => {
     const theme = useTheme();
 
-    const [currentExposure, setCurrentExposure] = React.useState<number>(exposure);
     const handleModeChange = (
         event: React.MouseEvent<HTMLElement>,
         newMode: string,
@@ -46,15 +46,7 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
         }
     };
 
-    const formatExposureValue = (value: number, type: 'label' | 'tooltip') => {
-        setCurrentExposure(value);
-        if (type === 'tooltip') {
-            return `${(1000 / Math.pow(2, -1 * value)).toFixed(3)}ms (1/2`
-                + String.fromCharCode(8203)  // zero-width space to ensure proper rendering
-                + `<sup>${value}</sup> sec)`;
-        }
-        return value;
-    };
+
 
     const baseMarks = [
         {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.min, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.min)},

@@ -2,6 +2,8 @@
 import {createSelector, createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {RootState} from "@/store/AppStateStore";
 import {CameraConfig, CameraDevice, createDefaultCameraConfig} from "@/store/slices/cameras-slices/camera-types";
+import {dispatch} from "d3";
+import {updateCameraConfigThunk} from "@/store/thunks/update-camera-config-thunk";
 
 export interface CamerasState {
     cameras: Record<string, CameraDevice>;
@@ -19,9 +21,8 @@ export const camerasSlice = createSlice({
     name: 'cameras',
     initialState,
     reducers: {
-        setDetectedDevices: (state, action: PayloadAction<CameraDevice[]>) => {
+        setAvailableCameras: (state, action: PayloadAction<CameraDevice[]>) => {
             // Create a new Record of cameras
-            const newCameras: Record<string, CameraDevice> = {};
 
             // Process each device
             action.payload.forEach(device => {
@@ -47,6 +48,7 @@ export const camerasSlice = createSlice({
                 }
             });
         },
+
         setLoading: (state, action: PayloadAction<boolean>) => {
             state.isLoading = action.payload;
         },
@@ -122,7 +124,7 @@ export const selectConfigsForSelectedCameras = createSelector(
 );
 
 export const {
-    setDetectedDevices,
+    setAvailableCameras,
     setLoading,
     setCameraStatus,
     toggleCameraSelection,

@@ -9,11 +9,12 @@ const WebsocketConnectionStatus = () => {
         <Box sx={{
             display: 'flex',
             justifyContent: 'flex-end',
-            padding: '20px',
+            padding: '10px',
             flexDirection: 'column',
+            pl: 4,
             color: '#dadada'
         }}>
-            <Typography variant="h6">
+            <Typography variant="body1">
                 Websocket: {isConnected ? 'connected ✔️' : 'disconnected❌'}
             </Typography>
         </Box>

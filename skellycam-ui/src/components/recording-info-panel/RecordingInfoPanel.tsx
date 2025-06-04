@@ -125,9 +125,12 @@ export const RecordingInfoPanel: React.FC = () => {
     }
   };
 
+  const [expanded, setExpanded] = useState(true);
+
   return (
     <Accordion
-      defaultExpanded
+      expanded={expanded}
+      onChange={(_, isExpanded) => setExpanded(isExpanded)}
       sx={{
         borderRadius: 2,
         '&:before': { display: 'none' },
@@ -139,7 +142,7 @@ export const RecordingInfoPanel: React.FC = () => {
         alignItems: 'center',
         backgroundColor: recordingInfo.isRecording ? theme.palette.error.main : theme.palette.primary.main,
         borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
+        borderBottomLeftRadius: 8,
       }}>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.contrastText }} />}
@@ -154,7 +157,7 @@ export const RecordingInfoPanel: React.FC = () => {
           <Stack direction="row" alignItems="center" spacing={1}>
             <VideocamIcon />
             <Typography variant="subtitle1" fontWeight="medium">
-              {recordingInfo.isRecording ? 'Recording in Progress...' : 'Recording Settings'}
+              {recordingInfo.isRecording ? 'Recording in Progress...' : 'Record Videos'}
             </Typography>
           </Stack>
         </AccordionSummary>
@@ -169,7 +172,10 @@ export const RecordingInfoPanel: React.FC = () => {
 
         <Box sx={{ pr: 2 }}>
           <IconButton
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => {
+                setShowSettings(!showSettings);
+                setExpanded(true);
+            }}
             sx={{
               color: showSettings
                 ? theme.palette.primary.contrastText

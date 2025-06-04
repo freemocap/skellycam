@@ -1,5 +1,6 @@
 import React from 'react';
-import {Button, Typography} from '@mui/material';
+import {Button, keyframes, Typography} from '@mui/material';
+import {styled} from '@mui/system';
 
 interface StartStopButtonProps {
     isRecording: boolean;
@@ -7,11 +8,38 @@ interface StartStopButtonProps {
     onClick: () => void;
 }
 
+const pulseAnimation = keyframes`
+    0% {
+        background-color: #fb1402;
+    }
+    50% {
+        background-color: #d43333;
+    }
+    100% {
+        background-color: #fb1402;
+    }
+`;
+
+const PulsingButton = styled(Button)(({pulsing}: { pulsing: boolean }) => ({
+    backgroundColor: '#9f1810',
+    borderStyle: 'solid',
+    borderWidth: '1px',
+    borderColor: '#000b10',
+    padding: 10,
+    '&:hover': {
+        backgroundColor: '#d32f2f',
+    },
+    ...(pulsing && {
+        animation: `${pulseAnimation} 1.5s infinite ease-in-out`,
+    }),
+
+}));
+
 export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
-    isRecording,
-    countdown,
-    onClick
-}) => {
+                                                                             isRecording,
+                                                                             countdown,
+                                                                             onClick
+                                                                         }) => {
     return (
         <>
             {countdown !== null && (
@@ -19,14 +47,16 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
                     Starting in {countdown}...
                 </Typography>
             )}
-            <Button
+            <PulsingButton
                 onClick={onClick}
                 variant="contained"
-                color={isRecording ? "error" : "secondary"}
+                pulsing={isRecording}
                 fullWidth
             >
+                <Typography variant={'h6'}>
                 {isRecording ? 'Stop Recording' : 'Start Recording'}
-            </Button>
+                </Typography>
+            </PulsingButton>
         </>
     );
 };

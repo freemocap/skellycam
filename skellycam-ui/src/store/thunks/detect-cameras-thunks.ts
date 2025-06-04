@@ -1,6 +1,6 @@
 // skellycam-ui/src/store/thunks/camera-thunks.ts
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import {setDetectedDevices, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
+import {setAvailableCameras, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
 import {
     CAMERA_DEFAULT_CONSTRAINTS,
     CameraDevice,
@@ -101,7 +101,7 @@ export const  detectCameraDevices = createAsyncThunk(
                 config: createDefaultCameraConfig(index, device.label)
             }));
             console.log(`Detected ${serializableCameras.length} camera(s)`, serializableCameras);
-            dispatch(setDetectedDevices(serializableCameras));
+            dispatch(setAvailableCameras(serializableCameras));
             dispatch(setError(null));
             return serializableCameras;
         } catch (error) {
