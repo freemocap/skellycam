@@ -128,8 +128,10 @@ class MultiframeTimestampLogger(BaseModel):
 
     def _calculate_stats(self) -> dict[str, object]:
         df = self.to_dataframe()  # get the dataframe to avoid recalculating
-
         # Basic frame rate statistics
+        if df.empty:
+            logger.error("No timestamp data available to calculate statistics.")
+            return {}
         frame_intervals = df['timestamp_from_zero_s'].diff().dropna()
         return dict(
             framerate_stats=DescriptiveStatistics.from_samples(
@@ -184,4 +186,5 @@ class MultiframeTimestampLogger(BaseModel):
                 sample_data=df['mean_time_spent_in_compress_to_jpeg_ns'].to_numpy(na_value=np.nan) / 1e6,
                 name="time_spent_in_compress_to_jpeg",
                 units="milliseconds").to_dict(),
-        )
+            )
+
