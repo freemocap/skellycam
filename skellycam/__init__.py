@@ -23,7 +23,7 @@ __package_root__ = __file__.replace("/__init__.py", "")
 from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam.system.logging_configuration.log_levels import LogLevels
 
-LOG_LEVEL = LogLevels.TRACE
+LOG_LEVEL = LogLevels.LOOP
 configure_logging(LOG_LEVEL)
 
 

@@ -22,7 +22,7 @@ class CameraGroupManager:
         Check if there are any active camera groups.
         """
         return self.camera_groups and any(
-            [camera_group.status.camera_group_running_flag.value for camera_group in self.camera_groups.values()])
+            [camera_group.ipc.running for camera_group in self.camera_groups.values()])
 
     def create_camera_group(self, camera_configs:CameraConfigs) -> CameraGroupIdString:
         """

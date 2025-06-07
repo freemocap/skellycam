@@ -77,9 +77,10 @@ class VideoManager:
 
         recording_manager: RecordingManager | None = None
         audio_recorder: AudioRecorder | None = None
-        logger.debug(f"FrameWrangler process started!")
+        logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
             while ipc.should_continue:
+
                 recording_manager = cls._drain_and_handle_mf_buffer(
                     ipc=ipc,
                     recording_manager=recording_manager,
@@ -121,6 +122,7 @@ class VideoManager:
             invalid_ok=True)  # prioritize draining shm each loop to avoid overwriting on the ring buffer
 
         if len(new_mfs) > 0 and recording_manager is not None:
+            print(f"VideoManager: {len(new_mfs)} new frames to process")
             # if new frames, add them to the recording manager (doesn't save them yet)
             recording_manager.add_multi_frames(new_mfs)
         else:

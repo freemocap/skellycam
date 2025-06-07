@@ -75,7 +75,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
 
             while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
                 wait_10us()
-
+            print("getting frame for camera", camera_id)
             opencv_get_frame(cap=cv2_video_capture,
                              frame_metadata=frame_metadata,
                              camera_shared_memory=camera_shm,

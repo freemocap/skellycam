@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
@@ -19,14 +19,14 @@ class VideoManagerStatus(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
-    is_recording_frames_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    should_record: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_running_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    finishing: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    updating: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    closed: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    error: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_paused_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_recording_frames_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    should_record: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_running_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    finishing: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
 
     @property
     def recording(self) -> bool:
@@ -37,12 +37,12 @@ class MutliFramePublisherStatus(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
-    is_running_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_paused_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    total_frames_published: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('Q', 0))
-    number_frames_published_this_cycle: multiprocessing.Value = Field(
+    is_running_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    total_frames_published: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('Q', 0))
+    number_frames_published_this_cycle: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value('i', 0))
-    error: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
 
 
 class CameraGroupIPC(BaseModel):
@@ -56,9 +56,9 @@ class CameraGroupIPC(BaseModel):
     video_manager_status: VideoManagerStatus = Field(default_factory=VideoManagerStatus)
     mf_publisher_status: MutliFramePublisherStatus = Field(default_factory=MutliFramePublisherStatus)
 
-    shutdown_camera_group_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    updating_cameras_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    should_pause_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    updating_cameras_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_pause_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
 
     @classmethod
     def create(cls, camera_configs: CameraConfigs):
@@ -116,6 +116,9 @@ class CameraGroupIPC(BaseModel):
                     not self.video_manager_status.is_paused_flag.value,
                     not self.mf_publisher_status.is_paused_flag.value])
 
+    @property
+    def running(self) -> bool:
+        return not self.shutdown_camera_group_flag.value
     def start_recording(self, recording_info: RecordingInfo) -> None:
         if self.any_recording:
             raise ValueError("Cannot start recording while recording is in progress.")

@@ -87,6 +87,7 @@ class MultiframeBuilder:
                 ipc.mf_publisher_status.total_frames_published.value += len(latest_mfs)
                 ipc.mf_publisher_status.number_frames_published_this_cycle.value = len(latest_mfs)
                 if latest_mfs:
+                    logger.loop(f"Published {len(latest_mfs)} new multi-frames")
                     previous_mf = latest_mfs[-1]
 
         except Exception as e:

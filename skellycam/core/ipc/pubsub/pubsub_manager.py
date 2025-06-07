@@ -3,9 +3,9 @@ import multiprocessing
 from enum import Enum, auto
 from multiprocessing.process import parent_process
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
-from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
+from skellycam.core.ipc.pubsub.pubsub_abcs import PubSubTopicABC
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateConfigsTopic, ShmUpdatesTopic, RecordingInfoTopic, \
     ExtractedConfigTopic
 from skellycam.core.types import CameraGroupIdString, TopicSubscriptionQueue
@@ -27,7 +27,7 @@ class PubSubTopicManager(BaseModel):
         TopicTypes.SHM_UPDATES: ShmUpdatesTopic(),
         TopicTypes.RECORDING_INFO: RecordingInfoTopic(),
     })
-    should_continue_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    should_continue_flag: SkipValidation[multiprocessing.Value ]= Field(default_factory=lambda: multiprocessing.Value('b', False))
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
