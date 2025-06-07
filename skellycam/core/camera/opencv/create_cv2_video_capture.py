@@ -1,8 +1,9 @@
-from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.determine_backend import determine_backend
-import cv2
 import logging
 
+import cv2
+
+from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.camera.opencv.determine_backend import determine_backend
 from skellycam.utilities.wait_functions import wait_1s
 
 

@@ -5,8 +5,8 @@ from dataclasses import dataclass
 
 from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_run_process
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.shared_memory.single_slot_camera_shared_memory import \
+from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
+from skellycam.core.ipc.shared_memory.single_slot_camera_shared_memory import \
     CameraSharedMemoryDTO
 from skellycam.core.types import CameraIdString
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
@@ -29,10 +29,8 @@ class CameraProcess:
     def create(cls,
                camera_id: CameraIdString,
                ipc: CameraGroupIPC,
-               orchestrator: CameraGroupOrchestrator,
                camera_shm_dto: CameraSharedMemoryDTO,
-               camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
-               ludacris_speed: bool=False):
+               camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV):
 
         if camera_strategy == CameraStrategies.OPEN_CV:
             camera_run_process = opencv_camera_run_process
@@ -47,14 +45,14 @@ class CameraProcess:
                                                    daemon=True,
                                                    kwargs=dict(camera_id=camera_id,
                                                                ipc=ipc,
-                                                               orchestrator=orchestrator,
                                                                camera_shm_dto=camera_shm_dto,
                                                                close_self_flag=close_self_flag,
+                                                               extracted_config_pub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publication,
+                                                               update_config_sub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
+                                                               update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
                                                                ws_queue=get_websocket_log_queue(),
-                                                               ludacris_speed=ludacris_speed
                                                                )
                                                    ),
-
                    )
 
     def start(self):

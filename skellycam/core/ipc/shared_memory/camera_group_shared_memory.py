@@ -3,13 +3,15 @@ import multiprocessing
 from copy import deepcopy
 from dataclasses import dataclass
 
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer, \
+from skellycam.core.ipc.pubsub.pubsub_manager import TopicPublicationQueue, TopicSubscriptionQueue
+from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer, \
     FramePayloadSharedMemoryRingBufferDTO
-from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBufferDTO, \
+from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBufferDTO, \
     MultiFrameSharedMemoryRingBuffer
-from skellycam.core.shared_memory.multi_frame_payload_single_slot_shared_memory import \
+from skellycam.core.ipc.shared_memory.multi_frame_payload_single_slot_shared_memory import \
     MultiframePayloadSingleSlotSharedMemory, MultiframePayloadSingleSlotSharedMemoryDTO
 from skellycam.core.types import CameraIdString
 
@@ -25,13 +27,14 @@ class CameraGroupSharedMemoryDTO:
     latest_mf_shm_dto: MultiframePayloadSingleSlotSharedMemoryDTO
     shm_valid_flag: multiprocessing.Value
     latest_mf_number: multiprocessing.Value
+    update_shm_publication_queue: TopicPublicationQueue
 
 
 @dataclass
 class CameraGroupSharedMemoryManager:
-    ipc: CameraGroupIPC  # For communication with the main process
     camera_shms: dict[
         CameraIdString, FramePayloadSharedMemoryRingBuffer]  # where the camera processes will publish their frames
+    camera_configs: CameraConfigs
     multi_frame_ring_shm: MultiFrameSharedMemoryRingBuffer  # where we will publish new multi-frame payloads
     latest_multiframe_shm: MultiframePayloadSingleSlotSharedMemory
     shm_valid_flag: multiprocessing.Value  # Has this shm been invalidated by any of its owners?
@@ -39,19 +42,29 @@ class CameraGroupSharedMemoryManager:
     read_only: bool  # is this instance allowed to mutate the shm (publishing or read_next)?
     original: bool = False  # is this the original shared memory instance?
 
+    @property
+    def valid(self) -> bool:
+        """
+        Check if all cameras are ready and the shared memory is valid.
+        """
+        return all([
+            self.shm_valid_flag.value,
+            all([camera_shared_memory.valid for camera_shared_memory in self.camera_shms.values()]),
+            self.multi_frame_ring_shm.valid,
+            self.latest_multiframe_shm
+        ])
     @classmethod
-    def create_from_ipc(cls,
-                        camera_group_ipc: CameraGroupIPC,
-                        read_only: bool = False):
-        return cls(ipc=camera_group_ipc,
-                   camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.create(camera_config=config,
+    def create(cls,
+               camera_configs:CameraConfigs,
+               read_only: bool = False):
+        return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.create(camera_config=config,
                                                                                      read_only=read_only)
-                                for camera_id, config in camera_group_ipc.camera_configs.items()},
-                   multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.create_from_ipc(
-                       ipc=camera_group_ipc,
+                                for camera_id, config in camera_configs.items()},
+                   multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.create_from_configs(
+                       configs=camera_configs,
                        read_only=read_only),
-                   latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.create_from_ipc(
-                       ipc=camera_group_ipc,
+                   latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.create_from_configs(
+                       configs=camera_configs,
                        read_only=read_only),
                    shm_valid_flag=multiprocessing.Value('b', True),
                    latest_mf_number=multiprocessing.Value("l", -1),
@@ -59,13 +72,11 @@ class CameraGroupSharedMemoryManager:
                    read_only=read_only)
 
     @classmethod
-    def recreate_from_dto(cls,
-                          ipc: CameraGroupIPC,
-                          shm_dto: CameraGroupSharedMemoryDTO,
-                          read_only: bool):
+    def recreate(cls,
+                 shm_dto: CameraGroupSharedMemoryDTO,
+                 read_only: bool):
 
         return cls(
-            ipc=ipc,
             camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
                                                                                 read_only=read_only)
                          for camera_id, camera_shm_dto in shm_dto.camera_shm_dtos.items()},
@@ -121,7 +132,7 @@ class CameraGroupSharedMemoryManager:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         if previous_payload is None:
             mf_payload: MultiFramePayload = MultiFramePayload.create_initial(
-                camera_configs=dict(deepcopy(self.ipc.camera_configs)))
+                camera_configs=self.camera_configs)
         else:
             mf_payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
                                                                             camera_configs=dict(
@@ -166,7 +177,7 @@ class CameraGroupSharedMemoryManager:
                 "Cannot use `get_next_multiframe` in read-only mode - use `get_latest_multiframe` instead!")
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        return self.multi_frame_ring_shm.get_next_multiframe(camera_configs=dict(deepcopy(self.ipc.camera_configs)))
+        return self.multi_frame_ring_shm.get_next_multiframe(camera_configs=self.camera_configs)
 
     def get_all_new_multiframes(self) -> list[MultiFramePayload]:
         """
@@ -178,7 +189,7 @@ class CameraGroupSharedMemoryManager:
                 "Cannot use `get_all_new_multiframes` in read-only mode - use `get_latest_multiframe` instead!")
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        return self.multi_frame_ring_shm.get_all_new_multiframes(camera_configs=dict(deepcopy(self.ipc.camera_configs)))
+        return self.multi_frame_ring_shm.get_all_new_multiframes(camera_configs=self.camera_configs)
 
     def get_latest_multiframe(self, if_newer_than_mf_number: int | None = None) -> MultiFramePayload | None:
         """
@@ -186,11 +197,11 @@ class CameraGroupSharedMemoryManager:
         """
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        if not self.latest_multiframe_shm.ready_to_read:
+        if not self.latest_multiframe_shm.first_frame_written:
             return None
         if if_newer_than_mf_number is not None and if_newer_than_mf_number >= self.latest_multiframe_shm.latest_written_mf_number.value:
             return None
-        mf = self.latest_multiframe_shm.retrieve_multiframe(camera_configs=dict(deepcopy(self.ipc.camera_configs)))
+        mf = self.latest_multiframe_shm.retrieve_multiframe(camera_configs=self.camera_configs)
         if if_newer_than_mf_number and mf.multi_frame_number <= if_newer_than_mf_number:
             raise ValueError(
                 f"Latest multi-frame number {mf.multi_frame_number} is not newer than {if_newer_than_mf_number} - something is broken!")

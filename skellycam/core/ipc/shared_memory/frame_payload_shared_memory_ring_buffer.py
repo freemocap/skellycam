@@ -5,11 +5,11 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
-    SharedMemoryRingBufferDTO
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
+from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
+    SharedMemoryRingBufferDTO
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +73,16 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
         )
 
     @property
-    def ready_to_read(self):
-        return self.image_shm.ready_to_read and self.metadata_shm.ready_to_read
+    def original(self):
+        return self.image_shm.original and self.metadata_shm.original
+
+    @property
+    def valid(self):
+        return self.image_shm.valid and self.metadata_shm.valid
+
+    @property
+    def first_frame_written(self):
+        return self.image_shm.first_frame_written and self.metadata_shm.first_frame_written
 
     @property
     def new_frame_available(self):
@@ -92,7 +100,6 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
         metadata[FRAME_METADATA_MODEL.COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         self.image_shm.put_data(image, overwrite=overwrite)
         self.metadata_shm.put_data(metadata, overwrite=overwrite)
-
 
     def retrieve_latest_frame(self) -> FramePayload:
         image = self.image_shm.get_latest_payload()
@@ -114,3 +121,7 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
     def unlink(self):
         self.image_shm.unlink()
         self.metadata_shm.unlink()
+
+    def close_and_unlink(self):
+        self.close()
+        self.unlink()

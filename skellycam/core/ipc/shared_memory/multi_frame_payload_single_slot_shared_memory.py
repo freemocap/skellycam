@@ -5,12 +5,12 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from skellycam.core.camera.config.camera_config import  CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE, create_empty_frame_metadata
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
-from skellycam.core.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
+from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +40,18 @@ class MultiframePayloadSingleSlotSharedMemory:
     previous_read_mf_payload: MultiFramePayload | None = None
 
     @classmethod
-    def create_from_ipc(cls,
-                        ipc: CameraGroupIPC,
-                        read_only: bool = False):
+    def create_from_configs(cls,
+                            configs:CameraConfigs,
+                            read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
-                          ipc.camera_configs.values()]
+                          configs.values()]
         example_images_ravelled = [image.ravel() for image in example_images]
         example_mf_image_buffer = np.concatenate(
             example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated
 
         example_mf_metadatas = [create_empty_frame_metadata(frame_number=0,
                                                             config=config)
-                                for camera_id, config in ipc.camera_configs.items()]
+                                for camera_id, config in configs.items()]
         example_mf_metadatas_ravelled = [metadata.ravel() for metadata in example_mf_metadatas]
         example_mf_metadata_buffer = np.concatenate(
             example_mf_metadatas_ravelled)  # Example metadata unravelled into 1D arrays and concatenated
@@ -87,7 +87,7 @@ class MultiframePayloadSingleSlotSharedMemory:
                    read_only=read_only)
 
     @property
-    def ready_to_read(self) -> bool:
+    def first_frame_written(self) -> bool:
         return self.latest_written_mf_number.value >= 0 and self.shm_valid_flag.value
 
     def to_dto(self) -> MultiframePayloadSingleSlotSharedMemoryDTO:

@@ -3,8 +3,8 @@ from typing import Tuple, Optional
 
 import numpy as np
 
-from skellycam.core.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.shared_memory.shared_memory_number import SharedMemoryNumber
+from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement
+from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
 
 ONE_GIGABYTE = 1024 ** 3
 
@@ -26,6 +26,17 @@ class SharedMemoryRingBuffer:
     last_written_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last written element from the User's perspective, we will internally handle wrapping around the array
     last_read_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last read element from the User's perspective, we will internally handle wrapping around the array
     read_only: bool
+
+    @property
+    def original(self) -> bool:
+        return all([self.ring_buffer_shm.original,
+                    self.last_written_index.original,
+                    self.last_read_index.original])
+    @property
+    def valid(self) -> bool:
+        return all ([self.ring_buffer_shm.valid,
+                     self.last_written_index.valid,
+                     self.last_read_index.valid])
 
     @classmethod
     def create(cls,
@@ -73,12 +84,12 @@ class SharedMemoryRingBuffer:
         )
 
     @property
-    def ready_to_read(self):
+    def first_frame_written(self):
         return self.last_written_index.get() != -1
 
     @property
     def new_data_available(self):
-        return self.ready_to_read and self.last_written_index.get() > self.last_read_index.get()
+        return self.first_frame_written and self.last_written_index.get() > self.last_read_index.get()
 
     @property
     def ring_buffer_length(self):
@@ -105,7 +116,7 @@ class SharedMemoryRingBuffer:
     def get_next_payload(self) -> np.ndarray:
         if self.read_only:
             raise ValueError("Cannot call `get_next_payload` on read-only SharedMemoryRingBuffer. Use `get_latest_payload` instead.")
-        if not self.ready_to_read:
+        if not self.first_frame_written:
             raise ValueError("Ring buffer is not ready to read yet.")
         if not self.new_data_available:
             raise ValueError("No new data available to read.")

@@ -3,15 +3,14 @@ import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
+from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
+    CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
-    CameraGroupSharedMemoryManager
-from skellycam.core.types import RecordingManagerIdString
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
-from skellycam.utilities.wait_functions import wait_1ms
+from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +28,9 @@ class VideoManager:
                                          name=cls.__class__.__name__,
                                          kwargs=dict(ipc=ipc,
                                                      group_shm_dto=group_shm_dto,
+                                                     rec_info_sub_queue=ipc.pubsub.topics[TopicTypes.RECORDING_INFO].get_subscription(),
+                                                     update_configs_sub_queue=ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].get_subscription(),
+                                                     update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
                                                      ws_logs_queue=get_websocket_log_queue()
                                                      )
                                          )
@@ -63,82 +65,86 @@ class VideoManager:
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
 
-        camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate_from_dto(
-            ipc=ipc,
+        ipc.video_manager_status.is_running_flag.value = True
+        recording_info_subscription = ipc.pubsub.recording_topic.get_subscription()
+
+        camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             shm_dto=group_shm_dto,
             read_only=False)
 
         recording_manager: RecordingManager | None = None
         audio_recorder: AudioRecorder | None = None
-        latest_mf: MultiFramePayload | None = None
         logger.debug(f"FrameWrangler process started!")
         try:
             while ipc.should_continue:
-                # Check for new recording info
-                recording_manager = VideoManager.check_recording_info_queue(ipc=ipc,
-                                                                            latest_mf=latest_mf,
-                                                                            recording_manager=recording_manager)
+                if ipc.video_manager_status.should_record.value:
+                    recording_manager = VideoManager.start_recording(
+                        ipc=ipc,
+                        recording_info=recording_info_subscription.get(block=True),
+                        recording_manager=recording_manager)
 
-                latest_mf = VideoManager.get_and_handle_new_mfs(camera_group_shm=camera_group_shm,
-                                                                latest_mf=latest_mf,
-                                                                recording_manager=recording_manager)
+                    new_mfs = camera_group_shm.get_all_new_multiframes()
+                    if len(new_mfs) > 0:
+                        recording_manager.add_multi_frames(new_mfs)
+                    else:
+                        # if no new frames, opportunistically save one frame if we're recording
+                        recording_manager.save_one_frame()
+                else:
+                    if recording_manager and not recording_manager.is_finished:
+                        logger.debug(
+                            f"Stopping RecordingManager `{recording_manager.recording_info.recording_name}`...")
+                        ipc.video_manager_status.finishing.value = True
+                        recording_manager.finish_and_close()
+                        ipc.video_manager_status.finishing.value = False
+                        recording_manager = None
 
 
         except Exception as e:
-            logger.error(f"Frame Saver process error: {e}")
+            ipc.video_manager_status.error.value = True
+            logger.error(f"VideoManager process error: {e}")
             logger.exception(e)
             raise
-        except BrokenPipeError as e:
-            logger.error(f"Frame Saver process error: {e} - Broken pipe error, problem in FrameListenerProcess?")
-            logger.exception(e)
-            raise
+
         except KeyboardInterrupt:
             pass
         finally:
+            ipc.video_manager_status.is_running_flag.value = False
             if recording_manager:
-                    recording_manager.finish_and_close()
+                recording_manager.finish_and_close()
             camera_group_shm.close()
             logger.debug(f"FrameSaver process completed")
 
     @staticmethod
-    def get_and_handle_new_mfs(camera_group_shm:CameraGroupSharedMemoryManager,
-                               latest_mf:MultiFramePayload|None,
-                               recording_manager:RecordingManager|None) -> MultiFramePayload|None:
-        # Get and handle new mfs
-        new_mfs = camera_group_shm.get_all_new_multiframes()
-        if len(new_mfs) > 0 and isinstance(new_mfs[-1], MultiFramePayload):
-            if latest_mf is None:
-                logger.debug(f"Pulled first multiframe(s) from camera group: {new_mfs[-1].camera_ids}")
-            latest_mf = new_mfs[-1]
-            if recording_manager:
-                recording_manager.add_multi_frames(new_mfs)
-        else:
-            # if no new frames, opportunistically save one frame if we're recording
-            if recording_manager:
-                recording_manager.save_one_frame()
-        return latest_mf
+    def start_recording(ipc: CameraGroupIPC,
+                        recording_info: RecordingInfo ,
+                        recording_manager: RecordingManager | None) -> RecordingManager | None:
+        if isinstance(recording_manager, RecordingManager):
+            while not recording_manager.is_finished:
+                logger.debug(f"Finishing RecordingManager `{recording_manager.recording_info.recording_name}`...")
+                ipc.video_manager_status.finishing.value = True
+                recording_manager.finish_and_close()
+                ipc.video_manager_status.finishing.value = False
+
+
+        if not isinstance(recording_info, RecordingInfo):
+            raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
+
+        logger.debug(f"Creating RecodingManager for recording: `{recording_info.recording_name}`")
+        ipc.video_manager_status.updating.value = True
+        recording_manager = RecordingManager.create(
+            recording_info=recording_info,
+            camera_configs=ipc.camera_configs
+        )
+        ipc.video_manager_status.updating.value = False
+        ipc.video_manager_status.is_recording_frames_flag.value = True
+        return recording_manager
 
     @staticmethod
-    def check_recording_info_queue(ipc:CameraGroupIPC,
-                                   latest_mf:MultiFramePayload|None,
-                                   recording_manager:RecordingManager|None) -> RecordingManager|None:
-        if not ipc.recording_info_queue.empty() and latest_mf:
-            recording_info = ipc.recording_info_queue.get()
-            if isinstance(recording_info, RecordingInfo) and recording_info is not None:
-                logger.debug(f"Creating RecodingManager for recording: `{recording_info.recording_name}`")
-                ipc.recording_frames_flag.value = True
-                recording_manager = RecordingManager.create(
-                    recording_info=recording_info,
-                    initial_multi_frame_payload=latest_mf,
-                )
-            elif recording_info is None:
-                if recording_manager is not None:
-                    logger.info(f"Stopping recording for {recording_manager.recording_info.recording_name}...")
-                    recording_manager.finish_and_close()
-                    recording_manager = None
-                ipc.recording_frames_flag.value = False
-            else:
-                raise ValueError(f"Unexpected type in recording_info_queue: {type(recording_info)}")
+    def _should_pause(ipc):
+        if ipc.should_pause_flag.value:
+            logger.debug("Multiframe publication paused")
+            ipc.video_manager_status.is_paused_flag.value = True
+            return True
         else:
-            wait_1ms()
-        return recording_manager
+            ipc.video_manager_status.is_paused_flag.value = False
+            return False

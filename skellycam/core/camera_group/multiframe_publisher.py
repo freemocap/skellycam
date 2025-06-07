@@ -4,19 +4,17 @@ from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
-from skellycam.core.recorders.recording_manager import RecordingManager
-from skellycam.core.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
+from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
+from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
-from skellycam.core.types import RecordingManagerIdString
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
-from skellycam.utilities.wait_functions import wait_1ms, wait_10ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class MultiframePublisher:
+class MultiframeBuilder:
     worker: multiprocessing.Process
     ipc: CameraGroupIPC
 
@@ -28,6 +26,7 @@ class MultiframePublisher:
                                          name=cls.__class__.__name__,
                                          kwargs=dict(ipc=ipc,
                                                      group_shm_dto=group_shm_dto,
+                                                     update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
                                                      ws_logs_queue=get_websocket_log_queue()
                                                      )
                                          )
@@ -61,8 +60,8 @@ class MultiframePublisher:
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
-
-        camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate_from_dto(
+        ipc.mf_publisher_status.is_running_flag.value = True
+        camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             ipc=ipc,
             shm_dto=group_shm_dto,
             read_only=False)
@@ -72,16 +71,31 @@ class MultiframePublisher:
         try:
             while ipc.should_continue:
                 wait_10ms()
+                if not MultiframeBuilder._should_pause(ipc):
+                    wait_100ms()
+                    continue
                 latest_mfs = camera_group_shm.publish_all_new_multiframes(previous_payload=previous_mf,
                                                                           overwrite=True)
-                logger.loop(f"Published multiframe numbers: {[mf.multi_frame_number for mf in latest_mfs]}")
+                ipc.mf_publisher_status.total_frames_published.value += len(latest_mfs)
+                ipc.mf_publisher_status.number_frames_published_this_cycle.value = len(latest_mfs)
 
         except Exception as e:
             logger.error(f"Process error: {e}")
             logger.exception(e)
+            ipc.mf_publisher_status.error.value = True
             raise
         except KeyboardInterrupt:
             pass
         finally:
             camera_group_shm.close()
-            logger.debug(f"FrameSaver process completed")
+            logger.debug(f"Multiframe publication process completed")
+            ipc.mf_publisher_status.is_running_flag.value = False
+    @staticmethod
+    def _should_pause(ipc):
+        if ipc.should_pause_flag.value:
+            logger.debug("Multiframe publication paused")
+            ipc.mf_publisher_status.is_paused_flag.value = True
+            return True
+        else:
+            ipc.mf_publisher_status.is_paused_flag.value = False
+            return False

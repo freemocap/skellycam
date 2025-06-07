@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
-from skellycam.core.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
+from skellycam.core.ipc.shared_memory import FramePayloadSharedMemoryRingBuffer
 from skellycam.core.types import CameraIndex
 
 logger = logging.getLogger(__name__)

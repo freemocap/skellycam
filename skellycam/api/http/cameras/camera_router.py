@@ -1,11 +1,9 @@
 import logging
 from pathlib import Path
-from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
-import skellycam
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString

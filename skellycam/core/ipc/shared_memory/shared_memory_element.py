@@ -1,3 +1,4 @@
+import multiprocessing
 from dataclasses import dataclass
 from multiprocessing import shared_memory
 from typing import Tuple, Union
@@ -20,6 +21,8 @@ class SharedMemoryElement(BaseModel):
     dtype: np.dtype
     shm: shared_memory.SharedMemory
     original_shape: Tuple[int, ...]
+    shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", True)
+    original:bool = False
 
     @classmethod
     def create(cls, shape: Tuple[int, ...], dtype: np.dtype):
@@ -29,7 +32,7 @@ class SharedMemoryElement(BaseModel):
             raise ValueError(f"Payload size is negative: {payload_size_bytes}")
         shm = shared_memory.SharedMemory(size=payload_size_bytes, create=True)
         buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-        return cls(buffer=buffer, shm=shm, dtype=dtype, original_shape=shape)
+        return cls(buffer=buffer, shm=shm, dtype=dtype, original_shape=shape, original=True)
 
     @classmethod
     def recreate(cls, shm_name: str, shape: tuple, dtype: np.dtype):
@@ -43,6 +46,10 @@ class SharedMemoryElement(BaseModel):
         return cls.recreate(shm_name=dto.shm_name,
                             shape=dto.shape,
                             dtype=dto.dtype)
+
+    @property
+    def valid(self) -> bool:
+        return self.shm_valid_flag.value
 
     def to_dto(self) -> SharedMemoryElementDTO:
         return SharedMemoryElementDTO(
@@ -86,4 +93,7 @@ class SharedMemoryElement(BaseModel):
         self.shm.close()
 
     def unlink(self):
+        if not self.original:
+            raise ValueError("Cannot unlink a non-original SharedMemoryElement, close children and unlink the original.")
+        self.valid.value = False
         self.shm.unlink()

@@ -22,7 +22,7 @@ class CameraGroupManager:
         Check if there are any active camera groups.
         """
         return self.camera_groups and any(
-            [camera_group.ipc.camera_group_running_flag.value for camera_group in self.camera_groups.values()])
+            [camera_group.status.camera_group_running_flag.value for camera_group in self.camera_groups.values()])
 
     def create_camera_group(self, camera_configs:CameraConfigs) -> CameraGroupIdString:
         """
@@ -45,9 +45,8 @@ class CameraGroupManager:
 
     def update_camera_config(self, camera_config:CameraConfig):
         for camera_group in self.camera_groups.values():
-            if camera_config.camera_id in camera_group.camera_configs:
-                camera_group.ipc.set_config_by_id(camera_id=camera_config.camera_id,
-                                                    camera_config=camera_config)
+            if camera_config.camera_id in camera_group.camera_ids:
+                camera_group.update_config(camera_config)
                 logger.info(f"Updated camera config for camera ID: {camera_config.camera_id} in group ID: {camera_group.id}")
 
     def close_camera_group(self, camera_group_id: CameraGroupIdString) -> None:
@@ -64,7 +63,7 @@ class CameraGroupManager:
         Close all camera groups.
         """
         for camera_group in self.camera_groups.values():
-            camera_group.ipc.shutdown_camera_group_flag.value = True
+            camera_group.status.shutdown_camera_group_flag.value = True
         wait_100ms()
         with self.lock:
             for camera_group_id in list(self.camera_groups.keys()):
@@ -87,7 +86,7 @@ class CameraGroupManager:
         """
         with self.lock:
             for camera_group in self.camera_groups.values():
-                camera_group.ipc.start_recording(recording_info=recording_info)
+                camera_group.status.start_recording(recording_info=recording_info)
                 logger.info(f"Started recording for camera group ID: {camera_group.id}")
 
     def stop_recording_all_groups(self) -> None:
@@ -96,7 +95,7 @@ class CameraGroupManager:
         """
         with self.lock:
             for camera_group in self.camera_groups.values():
-                camera_group.ipc.stop_recording()
+                camera_group.status.stop_recording()
                 logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 

@@ -1,38 +1,75 @@
+import logging
 import multiprocessing
 from dataclasses import dataclass, field
-from multiprocessing.managers import DictProxy
 
-from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
+from skellycam.core.camera_group.camera_group import create_camera_group_id
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraIdString
-
-import logging
-
-from skellycam.utilities.wait_functions import wait_100ms
-
-
-def validate_camera_configs(camera_configs: CameraConfigs) -> None:
-    if not camera_configs:
-        raise ValueError("Camera configurations cannot be empty.")
+from skellycam.core.types import CameraIdString, CameraGroupIdString
+from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class VideoManagerStatus:
+    is_recording_frames_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    should_record: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_running_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    finishing: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    updating: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    closed: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    error: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+
+    @property
+    def recording(self) -> bool:
+        return self.is_recording_frames_flag.value and self.should_record.value
+
+
+@classmethod
+class MutliFramePublisherStatus:
+    is_running_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    total_frames_published: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('Q', 0))
+    number_frames_published_this_cycle: multiprocessing.Value = field(
+        default_factory=lambda: multiprocessing.Value('i', 0))
+    error: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+
+
 @dataclass
 class CameraGroupIPC:
-    camera_configs: DictProxy = field(default_factory=lambda: multiprocessing.Manager().dict())
-    lock: multiprocessing.Lock = field(default_factory=multiprocessing.Lock)
+    group_id: CameraGroupIdString
+    pubsub: PubSubTopicManager
+    camera_orchestrator: CameraOrchestrator
+    video_manager_status: VideoManagerStatus = field(default_factory=VideoManagerStatus)
+    mf_publisher_status: MutliFramePublisherStatus = field(default_factory=MutliFramePublisherStatus)
+
     shutdown_camera_group_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    recording_frames_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    recording_info_queue: multiprocessing.Queue = field(default_factory=multiprocessing.Queue)
-    camera_group_running_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    updating_cameras_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_pause_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+
+    _lock: multiprocessing.Lock = field(default_factory=multiprocessing.Lock)
 
     @classmethod
-    def from_configs(cls, camera_configs: CameraConfigs) -> "CameraGroupIPC":
-        instance = cls()
-        for camera_id, config in camera_configs.items():
-            instance.set_config_by_id(camera_id=camera_id, camera_config=config)
-        validate_camera_configs(dict(instance.camera_configs))
-        return instance
+    def create(cls, camera_configs: CameraConfigs):
+        validate_camera_configs(camera_configs)
+        group_id = create_camera_group_id()
+        cls(
+            group_id=group_id,
+            pubsub=create_pubsub_manager(group_id=group_id),
+            camera_orchestrator=CameraOrchestrator.from_configs(camera_configs=camera_configs)
+        )
+
+    @property
+    def camera_connections(self):
+        return self.camera_orchestrator.connections
+
+    @property
+    def camera_configs(self) -> CameraConfigs:
+        return {connection.config.camera_id: connection.config for connection in self.camera_connections.values()}
 
     @property
     def camera_ids(self) -> list[CameraIdString]:
@@ -46,39 +83,63 @@ class CameraGroupIPC:
     def should_continue(self, value: bool) -> None:
         self.shutdown_camera_group_flag.value = not value
 
-    def get_config_by_id(self, camera_id: str, with_lock: bool) -> CameraConfig:
-        config: CameraConfig | None = None
-        if not with_lock:
-            config = self.camera_configs.get(camera_id)
-        else:
-            with self.lock:
-                config = self.camera_configs.get(camera_id)
-        if config is None:
-            raise ValueError(f"Camera ID {camera_id} not found in camera configs.")
-        return config
+    @property
+    def any_recording(self) -> bool:
+        return self.video_manager_status.is_recording_frames_flag.value or self.camera_orchestrator.any_recording
 
-    def set_config_by_id(self, camera_id: str, camera_config: CameraConfig | None) -> None:
-        if self.recording_frames_flag.value:
-            raise ValueError("Cannot update camera configuration while recording is in progress.")
-        with self.lock:
-            self.camera_configs[camera_id] = camera_config
-            validate_camera_configs(dict(self.camera_configs))
+    @property
+    def all_recording(self) -> bool:
+        return self.video_manager_status.is_recording_frames_flag.value and self.camera_orchestrator.all_recording
+
+    @property
+    def all_ready(self) -> bool:
+        return self.camera_orchestrator.all_cameras_ready and self.video_manager_status.is_running_flag.value
+
+    @property
+    def all_paused(self) -> bool:
+        return all([not self.camera_orchestrator.all_cameras_paused,
+                    not self.video_manager_status.is_paused_flag.value,
+                    not self.mf_publisher_status.is_paused_flag.value])
+
+    @property
+    def any_paused(self) -> bool:
+        return any([not self.camera_orchestrator.any_cameras_paused,
+                    not self.video_manager_status.is_paused_flag.value,
+                    not self.mf_publisher_status.is_paused_flag.value])
 
     def start_recording(self, recording_info: RecordingInfo) -> None:
-        if self.recording_frames_flag.value:
+        if self.any_recording:
             raise ValueError("Cannot start recording while recording is in progress.")
-        self.recording_info_queue.put(recording_info)
-
+        self.pubsub.recording_topic.publication.put(recording_info)
+        self.video_manager_status.should_record.value = True
 
     def stop_recording(self) -> None:
-        if not self.recording_frames_flag.value:
+        if not self.all_recording:
             raise ValueError("Cannot stop recording - no recording is in progress.")
         logger.info("Sending `stop recording` signal")
-        self.recording_info_queue.put(None)
-        while self.recording_frames_flag.value:
-            wait_100ms()
+        self.video_manager_status.should_record.value = False
+        while self.video_manager_status.is_recording_frames_flag.value:
+            wait_30ms()
 
     def close_camera_group(self) -> None:
-        if self.recording_frames_flag.value:
+        if self.video_manager_status.is_recording_frames_flag.value:
             self.stop_recording()
         self.shutdown_camera_group_flag.value = True
+
+    def pause(self, await_paused: bool = False) -> None:
+        """
+        Pause the camera group IPC.
+        If await_paused is True, it will block until the pause is acknowledged.
+        """
+        self.should_pause_flag.value = True
+        if await_paused:
+            while not self.all_paused and self.should_continue:
+                wait_10ms()
+        logger.info("Camera group IPC paused.")
+
+    def unpause(self, await_unpaused: bool = False) -> None:
+        self.should_pause_flag.value = False
+        if await_unpaused:
+            while self.any_paused and self.should_continue:
+                wait_10ms()
+        logger.info("Camera group IPC unpaused.")

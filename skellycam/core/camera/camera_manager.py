@@ -1,13 +1,11 @@
 import logging
 import threading
-
-from pydantic import BaseModel, ConfigDict
+from dataclasses import dataclass
 
 from skellycam.core.camera.camera_process import CameraProcess
-from skellycam.core.camera.config.update_instructions import UpdateInstructions
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_group_orchestrator import CameraGroupOrchestrator
-from skellycam.core.shared_memory.camera_group_shared_memory import CameraSharedMemoryDTOs
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraSharedMemoryDTOs
 from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_10ms
 
@@ -15,17 +13,40 @@ logger = logging.getLogger(__name__)
 
 MAX_CAMERA_PORTS_TO_CHECK = 20
 
-
-class CameraManager(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    orchestrator: CameraGroupOrchestrator
+@dataclass
+class CameraManager:
     ipc: CameraGroupIPC
     camera_processes: dict[CameraIdString, CameraProcess]
 
+    @classmethod
+    def create_cameras(cls,
+                       ipc: CameraGroupIPC,
+                       camera_shm_dtos: CameraSharedMemoryDTOs, ):
+
+
+        camera_processes = {}
+        for camera_id, camera_config in ipc.camera_configs.items():
+            camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
+                                                               ipc=ipc,
+                                                               camera_shm_dto=camera_shm_dtos[camera_id],
+                                                               )
+
+        return cls(ipc=ipc,
+
+                   camera_processes=camera_processes
+                   )
+
+    @property
+    def orchestrator(self) -> CameraOrchestrator:
+        return self.ipc.camera_orchestrator
     @property
     def camera_ids(self):
         return list(self.camera_processes.keys())
+
+    @property
+    def paused(self):
+        return self.orchestrator.all_cameras_paused
+
 
     @property
     def any_alive(self) -> bool:
@@ -41,25 +62,9 @@ class CameraManager(BaseModel):
         Check if all cameras in the group are connected.
         """
         return  self.orchestrator.all_cameras_ready
-    @classmethod
-    def create_cameras(cls,
-                       ipc: CameraGroupIPC,
-                       camera_shm_dtos: CameraSharedMemoryDTOs,):
 
-        orchestrator = CameraGroupOrchestrator.from_ipc(ipc=ipc)
 
-        camera_processes = {}
-        for camera_id, camera_config in ipc.camera_configs.items():
-            camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
-                                                               ipc=ipc,
-                                                               orchestrator=orchestrator,
-                                                               camera_shm_dto=camera_shm_dtos[camera_id],
-                                                               )
 
-        return cls(ipc=ipc,
-                   orchestrator=orchestrator,
-                   camera_processes=camera_processes
-                   )
 
     def start(self):
         if len(self.camera_ids) == 0:

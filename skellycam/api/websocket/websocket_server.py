@@ -2,14 +2,12 @@ import asyncio
 import json
 import logging
 import multiprocessing
-import time
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
+from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.types import CameraGroupIdString
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app, SkellycamAppStateDTO
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel

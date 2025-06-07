@@ -2,7 +2,6 @@ import logging
 import multiprocessing
 import time
 from dataclasses import dataclass
-from typing import Literal
 
 import numpy as np
 
@@ -11,7 +10,7 @@ from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import DEFAULT_IMAGE_DTYPE, \
     create_empty_frame_metadata, FRAME_METADATA_DTYPE, FRAME_METADATA_MODEL
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
-from skellycam.core.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE, \
+from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE, \
     SharedMemoryRingBuffer, SharedMemoryRingBufferDTO
 
 logger = logging.getLogger(__name__)
@@ -44,10 +43,10 @@ class MultiFrameSharedMemoryRingBuffer:
         return self.shm_valid_flag.value
 
     @property
-    def ready_to_read(self) -> bool:
-        return all([self.mf_metadata_shm.ready_to_read,
-                    self.mf_image_shm.ready_to_read,
-                    self.mf_time_mapping_shm.ready_to_read])
+    def first_frame_written(self) -> bool:
+        return all([self.mf_metadata_shm.first_frame_written,
+                    self.mf_image_shm.first_frame_written,
+                    self.mf_time_mapping_shm.first_frame_written])
 
     @property
     def new_multi_frame_available(self) -> bool:
@@ -56,18 +55,18 @@ class MultiFrameSharedMemoryRingBuffer:
                     self.mf_time_mapping_shm.new_data_available])
 
     @classmethod
-    def create_from_ipc(cls,
-               ipc: CameraGroupIPC,
-               read_only: bool = False):
+    def create_from_configs(cls,
+                            configs:CameraConfigs,
+                            read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
-                          ipc.camera_configs.values()]
+                          configs.values()]
         example_images_ravelled = [image.ravel() for image in example_images]
         example_mf_image_buffer = np.concatenate(
             example_images_ravelled)  # Example images unravelled into 1D arrays and concatenated
 
         example_mf_metadatas = [create_empty_frame_metadata(frame_number=0,
                                                             config=config)
-                                for camera_id, config in ipc.camera_configs.items()]
+                                for camera_id, config in configs.items()]
         example_mf_metadatas_ravelled = [metadata.ravel() for metadata in example_mf_metadatas]
         example_mf_metadata_buffer = np.concatenate(
             example_mf_metadatas_ravelled)  # Example metadata unravelled into 1D arrays and concatenated

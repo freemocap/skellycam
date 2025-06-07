@@ -1,15 +1,14 @@
 import logging
 from collections import deque
 from pathlib import Path
-from typing import Optional
 
 import cv2
 from pydantic import BaseModel, ValidationError
 
 from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString
-from skellycam.core.frame_payloads.frame_payload import FramePayload
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +17,10 @@ class VideoRecorder(BaseModel):
     camera_id: CameraIdString
     video_path: str
     camera_config: CameraConfig
-    frame_width: int
-    frame_height: int
     video_file_path: str
-    previous_frame: Optional[FramePayload] = None
-    video_writer: cv2.VideoWriter|None  = None
+    previous_frame: FramePayload|None = None
     frames_to_write: deque[FramePayload] = deque()
+    video_writer: cv2.VideoWriter|None  = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -34,7 +31,6 @@ class VideoRecorder(BaseModel):
 
     @classmethod
     def create(cls,
-               frame: FramePayload,
                camera_id: CameraIdString,
                recording_info: RecordingInfo,
                config: CameraConfig,
@@ -43,15 +39,11 @@ class VideoRecorder(BaseModel):
         video_file_path = str(
             Path(recording_info.videos_folder) / f"{recording_info.recording_name}.camera{config.camera_index}.{config.camera_id}.{config.video_file_extension}")
         Path(video_file_path).parent.mkdir(parents=True, exist_ok=True)
-        frame_width = frame.width
-        frame_height = frame.height
 
         logger.debug(f"Created VideoSaver for camera {config.camera_index} with video file path: {video_file_path}")
         return cls(camera_id=camera_id,
                    video_path=video_file_path,
                    camera_config=config,
-                   frame_width=frame_width,
-                   frame_height=frame_height,
                    video_file_path=video_file_path
                    )
 
@@ -104,7 +96,7 @@ class VideoRecorder(BaseModel):
             self.video_file_path,  # full path to video file
             cv2.VideoWriter_fourcc(*self.camera_config.writer_fourcc),  # fourcc
             self.camera_config.framerate,  # fps
-            (self.frame_width, self.frame_height),# frame size, note this is OPPOSITE of most of the rest of cv2's functions, which assume 'height, width' following numpy's row-major order
+            (self.camera_config.resolution.width, self.camera_config.resolution.height),# frame size, note this is OPPOSITE of most of the rest of cv2's functions, which assume 'height, width' following numpy's row-major order
         )
         if not self.video_writer.isOpened():
             logger.error(f"Failed to open video writer for camera {self.camera_config.camera_index}")
@@ -119,11 +111,8 @@ class VideoRecorder(BaseModel):
         if frame.camera_id != self.camera_config.camera_index:
             raise ValidationError(
                 f"Frame camera_id {frame.camera_id} does not match self.camera_config camera_id {self.camera_config.camera_index}")
-        if frame.image.shape != (
-                self.frame_height, self.frame_width,
-                self.camera_config.color_channels):
-            raise ValidationError(f"Frame shape ({frame.image.shape}) does not match expected shape ("
-                                  f"{self.frame_height, self.frame_width, self.camera_config.color_channels})")
+        if frame.image.shape != self.camera_config.image_shape:
+            raise ValidationError(f"Frame shape ({frame.image.shape}) does not match expected shape ({self.camera_config.image_shape})")
 
     def close(self):
         if self.video_writer:

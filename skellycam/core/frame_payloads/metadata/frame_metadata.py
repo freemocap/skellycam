@@ -2,9 +2,9 @@ import numpy as np
 from pydantic import BaseModel, computed_field
 from pydantic import Field
 
-from skellycam.core.types import CameraIndex
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
     FRAME_METADATA_SHAPE
+from skellycam.core.types import CameraIndex
 
 
 class FrameLifespanTimestamps(BaseModel):

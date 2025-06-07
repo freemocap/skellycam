@@ -13,6 +13,14 @@ def wait_100ms():
 def wait_10ms():
     time.sleep(1e-2)
 
+def wait_30ms():
+    """
+    Once per frame-ish
+    """
+    wait_10ms()
+    wait_10ms()
+    wait_10ms()
+
 
 def wait_1ms():
     time.sleep(1e-3)

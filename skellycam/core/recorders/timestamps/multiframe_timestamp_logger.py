@@ -6,7 +6,7 @@ from typing import Hashable
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
@@ -22,7 +22,7 @@ from pydantic import ConfigDict
 
 class MultiframeTimestampLogger(BaseModel):
     recording_info: RecordingInfo
-    initial_multi_frame_payload: MultiFramePayload
+    initial_multi_frame_payload: MultiFramePayload|None = None
     multi_frame_metadatas: list[MultiFrameMetadata] = []
 
     model_config = ConfigDict(

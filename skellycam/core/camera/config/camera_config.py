@@ -176,5 +176,26 @@ def default_camera_configs_factory():
 
 CameraConfigs = dict[CameraIdString, CameraConfig]
 
+def validate_camera_configs(camera_configs: CameraConfigs| CameraConfig | list[CameraConfig]) -> None:
+    if isinstance(camera_configs, CameraConfig):
+        camera_configs = {camera_configs.camera_id: camera_configs}
+    elif isinstance(camera_configs, list):
+        camera_configs = {config.camera_id: config for config in camera_configs}
+
+    # Ensure camera_configs is a dictionary of CameraConfig instances
+    if not isinstance(camera_configs, dict):
+        raise TypeError(f"camera_configs must be a dictionary, got {type(camera_configs)} instead.")
+    for camera_id, config in camera_configs.items():
+        if not isinstance(config, CameraConfig):
+            raise TypeError(f"Camera config for {camera_id} must be an instance of CameraConfig, got {type(config)} instead.")
+        if camera_id != config.camera_id:
+            raise ValueError(f"Camera ID mismatch: {camera_id} does not match config's camera_id {config.camera_id}.")
+
+    #Ensure camera indexes are unique
+    camera_indexes = [config.camera_index for config in camera_configs.values()]
+    if len(camera_indexes) != len(set(camera_indexes)):
+        raise ValueError("Camera indexes must be unique across all camera configurations.")
+
+
 if __name__ == "__main__":
     print(CameraConfig(camera_index=0))
