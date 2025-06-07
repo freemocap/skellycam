@@ -1,69 +1,71 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass, field
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
-from skellycam.core.camera_group.camera_group import create_camera_group_id
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager, TopicTypes, \
-    TopicSubscriptionQueue
+from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager, TopicTypes
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraIdString, CameraGroupIdString
+from skellycam.core.types import CameraIdString, CameraGroupIdString, TopicSubscriptionQueue
+from skellycam.utilities.create_camera_group_id import create_camera_group_id
 from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class VideoManagerStatus:
-    is_recording_frames_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    should_record: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_running_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    finishing: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    updating: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    closed: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    error: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_paused_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+
+class VideoManagerStatus(BaseModel):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
+    is_recording_frames_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    should_record: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_running_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    finishing: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    updating: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    closed: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    error: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
 
     @property
     def recording(self) -> bool:
         return self.is_recording_frames_flag.value and self.should_record.value
 
 
-@classmethod
-class MutliFramePublisherStatus:
-    is_running_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_paused_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
-    total_frames_published: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('Q', 0))
-    number_frames_published_this_cycle: multiprocessing.Value = field(
+class MutliFramePublisherStatus(BaseModel):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
+    is_running_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    total_frames_published: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('Q', 0))
+    number_frames_published_this_cycle: multiprocessing.Value = Field(
         default_factory=lambda: multiprocessing.Value('i', 0))
-    error: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value('b', False))
+    error: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value('b', False))
 
 
-@dataclass
-class CameraGroupIPC:
+class CameraGroupIPC(BaseModel):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     group_id: CameraGroupIdString
     pubsub: PubSubTopicManager
     camera_orchestrator: CameraOrchestrator
     extracted_configs_subscription_queue: TopicSubscriptionQueue
-    video_manager_status: VideoManagerStatus = field(default_factory=VideoManagerStatus)
-    mf_publisher_status: MutliFramePublisherStatus = field(default_factory=MutliFramePublisherStatus)
+    video_manager_status: VideoManagerStatus = Field(default_factory=VideoManagerStatus)
+    mf_publisher_status: MutliFramePublisherStatus = Field(default_factory=MutliFramePublisherStatus)
 
-    shutdown_camera_group_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    updating_cameras_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    should_pause_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-
-
-    _lock: multiprocessing.Lock = field(default_factory=multiprocessing.Lock)
-
-
+    shutdown_camera_group_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    updating_cameras_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_pause_flag: multiprocessing.Value = Field(default_factory=lambda: multiprocessing.Value("b", False))
 
     @classmethod
     def create(cls, camera_configs: CameraConfigs):
         validate_camera_configs(camera_configs)
         group_id = create_camera_group_id()
-        pubsub  =create_pubsub_manager(group_id=group_id)
-        cls(
+        pubsub  = create_pubsub_manager(group_id=group_id)
+        return cls(
             group_id=group_id,
             pubsub=pubsub,
             extracted_configs_subscription_queue = pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),

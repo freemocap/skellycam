@@ -1,7 +1,6 @@
 import logging
 import multiprocessing
 from dataclasses import dataclass, field
-from multiprocessing.managers import DictProxy
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.types import CameraIdString

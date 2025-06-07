@@ -1,6 +1,5 @@
 import enum
 import logging
-import uuid
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -12,7 +11,7 @@ from skellycam.core.camera_group.multiframe_publisher import MultiframeBuilder
 from skellycam.core.camera_group.video_manager import VideoManager
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraConfigsMessage, ShmUpdateMessage, ExtractedConfigMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraConfigsMessage, UpdateShmMessage, ExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.utilities.wait_functions import wait_10ms
@@ -25,10 +24,6 @@ class CameraGroupWorkerStrategies(enum.Enum):
     PROCESS = "PROCESS"
 
 
-def create_camera_group_id() -> CameraGroupIdString:
-    return str(uuid.uuid4())[:6]  # Shortened UUID for readability
-
-
 @dataclass
 class CameraGroup:
     ipc: CameraGroupIPC
@@ -37,6 +32,7 @@ class CameraGroup:
     videos: VideoManager
     mf_builder: MultiframeBuilder
 
+    @property
     def id(self) -> CameraGroupIdString:
         return self.ipc.group_id
 
@@ -140,6 +136,7 @@ class CameraGroup:
                             "Camera configs were not updated successfully - re-attempting update with extracted configs.")
                         extracted_configs = {camera_id: None for camera_id in new_configs.keys()}
             wait_10ms()
+        self.shm.camera_configs = new_configs
         logger.debug("Camera configs update complete!")
         return new_configs
 
@@ -191,7 +188,7 @@ class CameraGroup:
         self.ipc.camera_orchestrator = CameraOrchestrator.from_configs(
             camera_configs=configs_update_message.new_configs,
         )
-        shm_update_message = ShmUpdateMessage(
+        shm_update_message = UpdateShmMessage(
             group_shm_dto=self.shm.to_dto(),
             orchestrator=self.ipc.camera_orchestrator,
         )

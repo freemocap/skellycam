@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import ShmUpdateMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_30ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class MultiframeBuilder:
                 wait_10ms()
                 if not update_shm_sub_queue.empty():
                     update_shm_message = update_shm_sub_queue.get()
-                    if not isinstance(update_shm_message, ShmUpdateMessage):
+                    if not isinstance(update_shm_message, UpdateShmMessage):
                         raise TypeError(f"Received unexpected message type: {type(update_shm_message)}")
 
                 if MultiframeBuilder._should_pause(ipc=ipc):
@@ -86,7 +86,8 @@ class MultiframeBuilder:
                                                                           overwrite=True)
                 ipc.mf_publisher_status.total_frames_published.value += len(latest_mfs)
                 ipc.mf_publisher_status.number_frames_published_this_cycle.value = len(latest_mfs)
-                previous_mf = latest_mfs[-1]
+                if latest_mfs:
+                    previous_mf = latest_mfs[-1]
 
         except Exception as e:
             logger.error(f"Process error: {e}")

@@ -1,5 +1,7 @@
-import numpy as np
+import multiprocessing
 
+import numpy as np
+from pydantic import SkipValidation
 
 CameraIdString = str
 CameraGroupIdString = str
@@ -11,3 +13,5 @@ CameraName = str
 FrameNumber = int
 Base64JPEGImage = str  # Base64 encoded JPEG image
 RecordingManagerIdString = str
+TopicSubscriptionQueue = SkipValidation[multiprocessing.Queue]
+TopicPublicationQueue = SkipValidation[multiprocessing.Queue]

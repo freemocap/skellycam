@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import threading
 from enum import Enum, auto
 from multiprocessing.process import parent_process
 
@@ -9,13 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateConfigsTopic, ShmUpdatesTopic, RecordingInfoTopic, \
     ExtractedConfigTopic
-from skellycam.core.types import CameraGroupIdString
-from skellycam.utilities.wait_functions import wait_30ms
+from skellycam.core.types import CameraGroupIdString, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
-
-TopicSubscriptionQueue = multiprocessing.Queue
-TopicPublicationQueue = multiprocessing.Queue
 
 
 class TopicTypes(Enum):
@@ -64,22 +59,9 @@ def create_pubsub_manager(group_id: CameraGroupIdString) -> PubSubTopicManager:
     global PUB_SUB_MANAGERS
     if parent_process() is not None:
         raise RuntimeError("PubSubManager can only be created in the main process.")
-    if PUB_SUB_MANAGERS[group_id] is not None:
+    if PUB_SUB_MANAGERS.get(group_id) is not None:
         raise ValueError(f"PubSubManager for group {group_id} already exists.")
     PUB_SUB_MANAGERS[group_id] = PubSubTopicManager()
     return PUB_SUB_MANAGERS[group_id]
 
 
-if __name__ == "__main__":
-    # Example usage
-    class ExampleMessage(TopicMessageABC):
-        content: str
-
-
-    _topic = PubSubTopicABC(subscriptions=[], message_type=ExampleMessage)
-
-    _queue = _topic.get_subscription()
-    _topic.publish(ExampleMessage(content="Hello, World!"))
-
-    _message = _queue.get()
-    print(_message.content)  # Output: Hello, World!

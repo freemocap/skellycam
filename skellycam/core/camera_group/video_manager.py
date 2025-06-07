@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import ShmUpdateMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
@@ -124,8 +124,9 @@ class VideoManager:
             # if new frames, add them to the recording manager (doesn't save them yet)
             recording_manager.add_multi_frames(new_mfs)
         else:
-            # if no new frames, opportunistically save one frame if we're recording
-            recording_manager.save_one_frame()
+            if recording_manager:
+                # if no new frames and we're recording, opportunistically save one frame if we're recording
+                recording_manager.save_one_frame()
 
         if not ipc.video_manager_status.should_record.value and recording_manager:
             recording_manager = cls.stop_recording(
@@ -162,7 +163,7 @@ class VideoManager:
                 recording_manager = None
             ipc.video_manager_status.updating.value = True
             shm_update = shm_subscription_queue.get(block=True)
-            if not isinstance(shm_update, ShmUpdateMessage):
+            if not isinstance(shm_update, UpdateShmMessage):
                 raise ValueError(f"Expected ShmUpdateMessage, got {type(shm_update)} in shm_subscription_queue")
             camera_group_shm.close()  # close but don't unlink - that's the original shm's job
             camera_group_shm = CameraGroupSharedMemoryManager.recreate(

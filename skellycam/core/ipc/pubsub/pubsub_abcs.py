@@ -1,12 +1,12 @@
+import logging
 from abc import ABC
 from multiprocessing.process import parent_process
 from typing import Type
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from skellycam.core.ipc.pubsub.pubsub_manager import TopicSubscriptionQueue, TopicPublicationQueue
+from skellycam.core.types import TopicSubscriptionQueue, TopicPublicationQueue
 
-import logging
 logger = logging.getLogger(__name__)
 
 class TopicMessageABC(BaseModel, ABC):
@@ -14,7 +14,7 @@ class TopicMessageABC(BaseModel, ABC):
     Base class for messages sent through the PubSub system.
     All messages should inherit from this class.
     """
-    pass
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class PubSubTopicABC(BaseModel, ABC):

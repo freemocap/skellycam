@@ -1,4 +1,3 @@
-from pydantic import Field
 from typing import Type
 
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
@@ -70,9 +69,11 @@ class ExtractedConfigMessage(TopicMessageABC):
     extracted_config: CameraConfig
 
 
-class ShmUpdateMessage(TopicMessageABC):
+class UpdateShmMessage(TopicMessageABC):
     orchestrator: CameraOrchestrator|None = None
     group_shm_dto: CameraGroupSharedMemoryDTO|None = None
+
+
 
 
 class RecordingInfoMessage(TopicMessageABC):
@@ -86,7 +87,7 @@ class ExtractedConfigTopic(PubSubTopicABC):
     message_type: Type[ExtractedConfigMessage] = ExtractedConfigMessage
 
 class ShmUpdatesTopic(PubSubTopicABC):
-    message_type: Type[ShmUpdateMessage] = ShmUpdateMessage
+    message_type: Type[UpdateShmMessage] = UpdateShmMessage
 
 class RecordingInfoTopic(PubSubTopicABC):
     message_type: Type[RecordingInfoMessage] = RecordingInfoMessage
