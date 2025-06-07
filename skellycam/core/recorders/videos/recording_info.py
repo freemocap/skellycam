@@ -4,6 +4,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ class RecordingInfo(BaseModel):
     recording_uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
     recording_name: str
     recording_directory: str
+    camera_configs:CameraConfigs
     mic_device_index: int = -1
 
     recording_start_timestamp: FullTimestamp = Field(default_factory=FullTimestamp.now)

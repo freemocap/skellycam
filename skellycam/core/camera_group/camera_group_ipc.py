@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.camera_group import create_camera_group_id
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager
+from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager, TopicTypes
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
@@ -85,11 +85,11 @@ class CameraGroupIPC:
 
     @property
     def any_recording(self) -> bool:
-        return self.video_manager_status.is_recording_frames_flag.value or self.camera_orchestrator.any_recording
+        return self.video_manager_status.is_recording_frames_flag.value or self.video_manager_status.should_record.value
 
     @property
     def all_recording(self) -> bool:
-        return self.video_manager_status.is_recording_frames_flag.value and self.camera_orchestrator.all_recording
+        return self.video_manager_status.is_recording_frames_flag.value and self.video_manager_status.should_record.value
 
     @property
     def all_ready(self) -> bool:
@@ -110,7 +110,7 @@ class CameraGroupIPC:
     def start_recording(self, recording_info: RecordingInfo) -> None:
         if self.any_recording:
             raise ValueError("Cannot start recording while recording is in progress.")
-        self.pubsub.recording_topic.publication.put(recording_info)
+        self.pubsub.topics[TopicTypes.RECORDING_INFO].publish(recording_info)
         self.video_manager_status.should_record.value = True
 
     def stop_recording(self) -> None:

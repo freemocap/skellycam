@@ -4,13 +4,13 @@ from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
+from skellycam.core.ipc.pubsub.pubsub_topics import ShmUpdateMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
-from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,14 @@ class VideoManager:
     def create(cls,
                ipc: CameraGroupIPC,
                group_shm_dto: CameraGroupSharedMemoryDTO):
-        worker = multiprocessing.Process(target=cls._mf_subscription_video_worker,
+        worker = multiprocessing.Process(target=cls._video_worker,
                                          name=cls.__class__.__name__,
                                          kwargs=dict(ipc=ipc,
                                                      group_shm_dto=group_shm_dto,
-                                                     rec_info_sub_queue=ipc.pubsub.topics[TopicTypes.RECORDING_INFO].get_subscription(),
-                                                     update_configs_sub_queue=ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].get_subscription(),
-                                                     update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
+                                                     recording_info_subscription_queue=ipc.pubsub.topics[
+                                                         TopicTypes.RECORDING_INFO].get_subscription(),
+                                                     shm_subscription_queue=ipc.pubsub.topics[
+                                                         TopicTypes.SHM_UPDATES].get_subscription(),
                                                      ws_logs_queue=get_websocket_log_queue()
                                                      )
                                          )
@@ -55,18 +56,20 @@ class VideoManager:
             self.join()
         logger.debug(f"Video worker closed")
 
-    @staticmethod
-    def _mf_subscription_video_worker(ipc: CameraGroupIPC,
-                                      group_shm_dto: CameraGroupSharedMemoryDTO,
-                                      ws_logs_queue: multiprocessing.Queue
-                                      ):
+    @classmethod
+    def _video_worker(cls,
+                      ipc: CameraGroupIPC,
+                      group_shm_dto: CameraGroupSharedMemoryDTO,
+                      recording_info_subscription_queue: multiprocessing.Queue,
+                      shm_subscription_queue: multiprocessing.Queue,
+                      ws_logs_queue: multiprocessing.Queue
+                      ):
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
 
         ipc.video_manager_status.is_running_flag.value = True
-        recording_info_subscription = ipc.pubsub.recording_topic.get_subscription()
 
         camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             shm_dto=group_shm_dto,
@@ -77,31 +80,24 @@ class VideoManager:
         logger.debug(f"FrameWrangler process started!")
         try:
             while ipc.should_continue:
-                if ipc.video_manager_status.should_record.value:
-                    recording_manager = VideoManager.start_recording(
-                        ipc=ipc,
-                        recording_info=recording_info_subscription.get(block=True),
-                        recording_manager=recording_manager)
+                recording_manager = cls._drain_and_handle_mf_buffer(
+                    ipc=ipc,
+                    recording_manager=recording_manager,
+                    camera_group_shm=camera_group_shm
+                )
+                ipc, recording_manager, camera_group_shm = cls._check_and_handle_updates(
+                    ipc=ipc,
+                    recording_manager=recording_manager,
+                    camera_group_shm=camera_group_shm,
+                    shm_subscription_queue=shm_subscription_queue,
+                    recording_info_subscription_queue=recording_info_subscription_queue
+                )
 
-                    new_mfs = camera_group_shm.get_all_new_multiframes()
-                    if len(new_mfs) > 0:
-                        recording_manager.add_multi_frames(new_mfs)
-                    else:
-                        # if no new frames, opportunistically save one frame if we're recording
-                        recording_manager.save_one_frame()
-                else:
-                    if recording_manager and not recording_manager.is_finished:
-                        logger.debug(
-                            f"Stopping RecordingManager `{recording_manager.recording_info.recording_name}`...")
-                        ipc.video_manager_status.finishing.value = True
-                        recording_manager.finish_and_close()
-                        ipc.video_manager_status.finishing.value = False
-                        recording_manager = None
 
 
         except Exception as e:
             ipc.video_manager_status.error.value = True
-            logger.error(f"VideoManager process error: {e}")
+            logger.error(f"{cls.__class__.__name__} process error: {e}")
             logger.exception(e)
             raise
 
@@ -114,9 +110,71 @@ class VideoManager:
             camera_group_shm.close()
             logger.debug(f"FrameSaver process completed")
 
+
+
+    @classmethod
+    def _drain_and_handle_mf_buffer(cls,
+                                    ipc: CameraGroupIPC,
+                                    recording_manager: RecordingManager | None,
+                                    camera_group_shm: CameraGroupSharedMemoryManager) -> RecordingManager | None:
+        new_mfs = camera_group_shm.get_all_new_multiframes(
+            invalid_ok=True)  # prioritize draining shm each loop to avoid overwriting on the ring buffer
+
+        if len(new_mfs) > 0 and recording_manager is not None:
+            # if new frames, add them to the recording manager (doesn't save them yet)
+            recording_manager.add_multi_frames(new_mfs)
+        else:
+            # if no new frames, opportunistically save one frame if we're recording
+            recording_manager.save_one_frame()
+
+        if not ipc.video_manager_status.should_record.value and recording_manager:
+            recording_manager = cls.stop_recording(
+                ipc=ipc,
+                recording_manager=recording_manager
+            )
+        return recording_manager
+
+    @classmethod
+    def _check_and_handle_updates(cls,
+                                  ipc: CameraGroupIPC,
+                                  recording_manager: RecordingManager | None,
+                                  camera_group_shm: CameraGroupSharedMemoryManager,
+                                  shm_subscription_queue: multiprocessing.Queue,
+                                  recording_info_subscription_queue: multiprocessing.Queue) -> tuple[
+        CameraGroupIPC, RecordingManager | None, CameraGroupSharedMemoryManager]:
+        if not recording_info_subscription_queue.empty():
+            ipc.video_manager_status.updating.value = True
+            recording_info = recording_info_subscription_queue.get(block=True)
+            if isinstance(recording_info, RecordingInfo):
+                if recording_manager is not None:
+                    logger.warning("RecordingManager already exists, finishing it before starting a new one.")
+                    recording_manager.finish_and_close()
+                recording_manager = cls.start_recording(ipc=ipc,
+                                                        recording_info=recording_info,
+                                                        recording_manager=recording_manager)
+            else:
+                raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
+            ipc.video_manager_status.updating.value = False
+
+        if not shm_subscription_queue.empty():
+            if recording_manager is not None or ipc.any_recording:
+                recording_manager.finish_and_close()
+                recording_manager = None
+            ipc.video_manager_status.updating.value = True
+            shm_update = shm_subscription_queue.get(block=True)
+            if not isinstance(shm_update, ShmUpdateMessage):
+                raise ValueError(f"Expected ShmUpdateMessage, got {type(shm_update)} in shm_subscription_queue")
+            camera_group_shm.close()  # close but don't unlink - that's the original shm's job
+            camera_group_shm = CameraGroupSharedMemoryManager.recreate(
+                shm_dto=shm_update.group_shm_dto,
+                read_only=camera_group_shm.read_only)
+            ipc.video_manager_status.updating.value = False
+
+        return ipc, recording_manager, camera_group_shm
+
     @staticmethod
     def start_recording(ipc: CameraGroupIPC,
-                        recording_info: RecordingInfo ,
+                        recording_info: RecordingInfo,
                         recording_manager: RecordingManager | None) -> RecordingManager | None:
         if isinstance(recording_manager, RecordingManager):
             while not recording_manager.is_finished:
@@ -125,7 +183,6 @@ class VideoManager:
                 recording_manager.finish_and_close()
                 ipc.video_manager_status.finishing.value = False
 
-
         if not isinstance(recording_info, RecordingInfo):
             raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
 
@@ -133,18 +190,21 @@ class VideoManager:
         ipc.video_manager_status.updating.value = True
         recording_manager = RecordingManager.create(
             recording_info=recording_info,
-            camera_configs=ipc.camera_configs
         )
         ipc.video_manager_status.updating.value = False
         ipc.video_manager_status.is_recording_frames_flag.value = True
         return recording_manager
 
     @staticmethod
-    def _should_pause(ipc):
-        if ipc.should_pause_flag.value:
-            logger.debug("Multiframe publication paused")
-            ipc.video_manager_status.is_paused_flag.value = True
-            return True
-        else:
-            ipc.video_manager_status.is_paused_flag.value = False
-            return False
+    def stop_recording(ipc: CameraGroupIPC,
+                       recording_manager: RecordingManager):
+        if not isinstance(recording_manager, RecordingManager):
+            raise ValueError(f"Expected RecordingManager, got {type(recording_manager)} in recording_manager")
+        ipc.video_manager_status.is_recording_frames_flag.value = False
+        while not recording_manager.is_finished:
+            logger.debug(f"Finishing RecordingManager `{recording_manager.recording_info.recording_name}`...")
+            ipc.video_manager_status.finishing.value = True
+            recording_manager.finish_and_close()
+            ipc.video_manager_status.finishing.value = False
+
+        return recording_manager

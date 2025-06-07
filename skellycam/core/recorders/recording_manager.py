@@ -39,7 +39,6 @@ class RecordingManager(BaseModel):
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
-               camera_configs: CameraConfigs,
                ):
 
         logger.debug(f"Creating RecordingManager for recording folder {recording_info.recording_name}")
@@ -49,7 +48,7 @@ class RecordingManager(BaseModel):
                    video_recorders={camera_id: VideoRecorder.create(camera_id=camera_id,
                                                                     recording_info=recording_info,
                                                                     config=config,
-                                                                    ) for camera_id, config in camera_configs.items()}
+                                                                    ) for camera_id, config in recording_info.camera_configs.items()}
                    )
 
     @property

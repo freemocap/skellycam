@@ -31,14 +31,6 @@ class CameraOrchestrator:
         return all([conn.status.paused for conn in self.connections.values()])
 
     @property
-    def any_recording(self):
-        return any([conn.status.recording for conn in self.connections.values()])
-
-    @property
-    def all_recording(self):
-        return all([conn.status.recording for conn in self.connections.values()])
-
-    @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:
         return {camera_id: conn.status.frame_count.value for camera_id, conn in self.connections.items()}
 

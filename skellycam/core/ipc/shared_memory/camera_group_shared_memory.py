@@ -179,7 +179,7 @@ class CameraGroupSharedMemoryManager:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         return self.multi_frame_ring_shm.get_next_multiframe(camera_configs=self.camera_configs)
 
-    def get_all_new_multiframes(self) -> list[MultiFramePayload]:
+    def get_all_new_multiframes(self, invalid_ok:bool) -> list[MultiFramePayload]:
         """
         Retrieves all new multi-frame data from the shared memory.
         This method increments the multi-frame number, so it is NOT available for read-only instances.
@@ -188,7 +188,10 @@ class CameraGroupSharedMemoryManager:
             raise ValueError(
                 "Cannot use `get_all_new_multiframes` in read-only mode - use `get_latest_multiframe` instead!")
         if not self.valid:
-            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+            if invalid_ok:
+                return []
+            else:
+                raise ValueError("Shared memory instance has been invalidated, and thats not ok!")
         return self.multi_frame_ring_shm.get_all_new_multiframes(camera_configs=self.camera_configs)
 
     def get_latest_multiframe(self, if_newer_than_mf_number: int | None = None) -> MultiFramePayload | None:

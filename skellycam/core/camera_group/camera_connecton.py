@@ -20,17 +20,11 @@ class CameraStatus:
     closing: multiprocessing.Value("b", False) = field(default_factory=lambda: multiprocessing.Value("b", False))
     closed: multiprocessing.Value("b", False) = field(default_factory=lambda: multiprocessing.Value("b", False))
 
-    should_record: multiprocessing.Value("b", False) = field(default_factory=lambda: multiprocessing.Value("b", False))
-    is_recording: multiprocessing.Value("b", False) = field(default_factory=lambda: multiprocessing.Value("b", False))
-
     paused: multiprocessing.Value("b", False) = field(default_factory=lambda: multiprocessing.Value("b", False))
 
     updating: multiprocessing.Value("b", False) = field(default_factory=lambda: multiprocessing.Value("b", False))
     error: multiprocessing.Value("b", False) = field(default_factory=lambda: multiprocessing.Value("b", False))
 
-    @property
-    def recording(self) -> multiprocessing.Value:
-        return self.is_recording or self.should_record
 
 
     @property
@@ -59,8 +53,6 @@ class CameraStatus:
         self.closing.value = True
         self.running.value = False
         self.grabbing_frame.value = False
-        self.should_record.value = False
-        self.is_recording.value = False
         self.paused.value = False
 
 @dataclass
@@ -73,7 +65,8 @@ class CameraConnection:
     def create(cls, config: CameraConfig):
         if not isinstance(config, CameraConfig):
             raise TypeError(f"config must be an instance of CameraConfig, got {type(config)} instead.")
-        instance = cls(camera_id=config.camera_id)
+        instance = cls(camera_id=config.camera_id,
+                       config=config)
         instance.config = config
         return instance
 
