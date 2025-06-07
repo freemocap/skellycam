@@ -57,6 +57,12 @@ class UpdateCameraConfigsMessage(TopicMessageABC):
         """
         return self.old_configs != self.new_configs or self.close_these_cameras or self.new_cameras
 
+    @property
+    def only_exposure_changed(self) -> bool:
+        new_configs_without_exposure = {camera_id: CameraConfig(**config.model_dump(exclude={'exposure', 'exposure_mode'})) for camera_id, config in self.new_configs}
+        old_configs_without_exposure = {camera_id: CameraConfig(**config.model_dump(exclude={'exposure', 'exposure_mode'})) for camera_id, config in self.old_configs}
+        return new_configs_without_exposure == old_configs_without_exposure
+
 class ExtractedConfigMessage(TopicMessageABC):
     """
     Message containing the camera settings extracted from the camera device

@@ -38,7 +38,7 @@ class PubSubTopicABC(BaseModel, ABC):
         return sub
 
 
-    def publish(self, message:TopicMessageABC)->bool:
+    def publish(self, message:TopicMessageABC):
         """
         Publish a message to all subscribers of this topic.
         """
@@ -46,5 +46,4 @@ class PubSubTopicABC(BaseModel, ABC):
             raise TypeError(f"Expected {self.message_type} but got {type(message)}")
         logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
         self.publication.put(message)
-        return self.propagate_messages()
 

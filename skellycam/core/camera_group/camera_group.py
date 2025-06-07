@@ -12,7 +12,7 @@ from skellycam.core.camera_group.multiframe_publisher import MultiframeBuilder
 from skellycam.core.camera_group.video_manager import VideoManager
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraConfigsMessage, ShmUpdateMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraConfigsMessage, ShmUpdateMessage, ExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.utilities.wait_functions import wait_10ms
@@ -115,62 +115,92 @@ class CameraGroup:
         """
         Update the camera configuration for the group.
         """
-        if self.ipc.any_recording:
-            logger.warning("Cannot update configs while recording.")
         logger.debug("Updating camera configs")
         self.pause(await_paused=True)
         self.ipc.updating_cameras_flag.value = True
-        old_configs = deepcopy(self.ipc.camera_configs)
-        extracted_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in new_configs.keys()}
+
+        self._create_and_send_config_update_message(new_configs=new_configs,
+                                                    old_configs=deepcopy(self.ipc.camera_configs))
+        extracted_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in
+                                                                        new_configs.keys()}
+
+        while self.ipc.updating_cameras_flag.value and not self.ipc.all_ready and self.ipc.should_continue:
+
+            if not self.ipc.extracted_configs_subscription_queue.empty():
+
+                self._receive_extracted_config_message(extracted_configs)
+
+                if all([isinstance(config, CameraConfig) for config in extracted_configs.values()]):
+                    update_message = self._evaluate_extracted_configs(extracted_configs=extracted_configs,
+                                                                     requested_update_configs=new_configs)
+                    if update_message is None:
+                        logger.success("Camera configs updated successfully!")
+                    else:
+                        logger.warning(
+                            "Camera configs were not updated successfully - re-attempting update with extracted configs.")
+                        extracted_configs = {camera_id: None for camera_id in new_configs.keys()}
+            wait_10ms()
+        logger.debug("Camera configs update complete!")
+        return new_configs
+
+    def _evaluate_extracted_configs(self, extracted_configs: CameraConfigs,
+                                   requested_update_configs: CameraConfigs) -> UpdateCameraConfigsMessage | None:
+        logger.debug("All camera configs extracted - checking if the matched our request ")
+
+        eval_update_message = UpdateCameraConfigsMessage.from_configs(
+            old_configs=requested_update_configs,
+            new_configs=extracted_configs
+        )
+        if not eval_update_message.need_update_configs:
+            logger.debug("Camera configs updated successfully.")
+            self.ipc.updating_cameras_flag.value = False
+            return None
+        else:
+            logger.debug("Extracted configs do not match requested updates - cycling update with extracted configs.")
+            self.ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].publish(eval_update_message)
+        return eval_update_message
+
+    def _receive_extracted_config_message(self, extracted_configs: CameraConfigs):
+        extracted_config_msg = self.ipc.extracted_configs_subscription_queue.get(block=True)
+        if not isinstance(extracted_config_msg, ExtractedConfigMessage):
+            raise ValueError(f"Expected ExtractedConfigMessage, recieved {type(extracted_config_msg)}")
+        if extracted_configs[extracted_config_msg.extracted_config.camera_id] is not None:
+            raise ValueError(
+                f"Received two copies of camera {extracted_config_msg.extracted_config.camera_id} somehow?")
+        extracted_configs[extracted_config_msg.extracted_config.camera_id] = extracted_config_msg.extracted_config
+
+    def _create_and_send_config_update_message(self, new_configs: CameraConfigs, old_configs: CameraConfigs):
+
         update_message: UpdateCameraConfigsMessage | None = UpdateCameraConfigsMessage.from_configs(
             old_configs=old_configs,
             new_configs=new_configs,
         )
-        extracted_configs_queue = self.ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription()
-        while self.ipc.updating_cameras_flag.value and not self.ipc.all_ready and self.ipc.should_continue:
-            if update_message is not None and update_message.need_update_configs:
-                if update_message.need_reset_shm:
-                    self._reset_shm(update_message)
+        if update_message.need_update_configs:
+            if self.ipc.any_recording and not update_message.only_exposure_changed:
+                raise RuntimeError("Cannot update configs while recording.")
 
-                if update_message.need_update_configs:
-                    self.ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].publish(update_message)
-                update_message = None
-            if not extracted_configs_queue.empty():
-                extracted_config = extracted_configs_queue.get()
-                if extracted_config is not None:
-                    if extracted_configs[extracted_config.camera_id] is not None:
-                        raise ValueError(
-                            f"Camera {extracted_config.camera_id} has already been configured. "
-                            f"Please check the camera configurations for duplicates."
-                        )
-                    extracted_configs[extracted_config.camera_id] = extracted_config
-                if all(extracted_configs.values()):
-                    logger.debug("All camera configs extracted, updating shared memory...")
-                    old_configs = deepcopy(new_configs)
-                    new_configs = extracted_configs
-                    update_message = UpdateCameraConfigsMessage.from_configs(
-                        old_configs = old_configs,
-                        new_configs = new_configs,
-                    )
-                    if not update_message.need_update_configs:
-                        logger.debug("Camera configs updated successfully.")
-                        self.ipc.updating_cameras_flag.value = False
-                    else:
-                        logger.debug("Extracted configs do not match requested updates - cycling update with extracted configs.")
-                        extracted_configs = {camera_id: None for camera_id in new_configs.keys()}
-            wait_10ms()
-        logger.success("Camera configs updated!")
-        return new_configs
+            if update_message.need_reset_shm:
+                self._handle_shm_update(update_message)
+            self.ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].publish(update_message)
 
-    def _reset_shm(self, update_message: UpdateCameraConfigsMessage):
+    def _handle_shm_update(self, configs_update_message: UpdateCameraConfigsMessage):
         logger.debug("Resetting shared memory...")
         self.shm.close_and_unlink()
-        self.shm = CameraGroupSharedMemoryManager.create(camera_configs=update_message.new_configs,
+        self.shm = CameraGroupSharedMemoryManager.create(camera_configs=configs_update_message.new_configs,
                                                          read_only=self.shm.read_only)
         self.ipc.camera_orchestrator = CameraOrchestrator.from_configs(
-            camera_configs= update_message.new_configs,
+            camera_configs=configs_update_message.new_configs,
         )
-        self.ipc.pubsub.topics[TopicTypes.SHM_UPDATES].publish(ShmUpdateMessage(
+        shm_update_message = ShmUpdateMessage(
             group_shm_dto=self.shm.to_dto(),
             orchestrator=self.ipc.camera_orchestrator,
-        ))
+        )
+        self.ipc.pubsub.topics[TopicTypes.SHM_UPDATES].publish()
+        for camera_to_close in configs_update_message.close_these_cameras:
+            self.cameras.close_camera(camera_to_close)
+        for new_camera in configs_update_message.new_cameras:
+            self.cameras.add_new_camera(
+                camera_id=new_camera.camera_id,
+                ipc=self.ipc,
+                camera_shm_dto=shm_update_message.group_shm_dto.camera_shm_dtos[new_camera.camera_id]
+            )

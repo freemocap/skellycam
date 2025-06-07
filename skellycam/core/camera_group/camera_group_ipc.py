@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.camera_group import create_camera_group_id
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager, TopicTypes
+from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager, TopicTypes, \
+    TopicSubscriptionQueue
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
@@ -44,6 +45,7 @@ class CameraGroupIPC:
     group_id: CameraGroupIdString
     pubsub: PubSubTopicManager
     camera_orchestrator: CameraOrchestrator
+    extracted_configs_subscription_queue: TopicSubscriptionQueue
     video_manager_status: VideoManagerStatus = field(default_factory=VideoManagerStatus)
     mf_publisher_status: MutliFramePublisherStatus = field(default_factory=MutliFramePublisherStatus)
 
@@ -51,15 +53,20 @@ class CameraGroupIPC:
     updating_cameras_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
     should_pause_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
 
+
     _lock: multiprocessing.Lock = field(default_factory=multiprocessing.Lock)
+
+
 
     @classmethod
     def create(cls, camera_configs: CameraConfigs):
         validate_camera_configs(camera_configs)
         group_id = create_camera_group_id()
+        pubsub  =create_pubsub_manager(group_id=group_id)
         cls(
             group_id=group_id,
-            pubsub=create_pubsub_manager(group_id=group_id),
+            pubsub=pubsub,
+            extracted_configs_subscription_queue = pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
             camera_orchestrator=CameraOrchestrator.from_configs(camera_configs=camera_configs)
         )
 

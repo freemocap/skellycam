@@ -6,12 +6,14 @@ from skellycam.core.camera.camera_process import CameraProcess
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraSharedMemoryDTOs
+from skellycam.core.ipc.shared_memory.single_slot_camera_shared_memory import CameraSharedMemoryDTO
 from skellycam.core.types import CameraIdString
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
 MAX_CAMERA_PORTS_TO_CHECK = 20
+
 
 @dataclass
 class CameraManager:
@@ -23,7 +25,6 @@ class CameraManager:
                        ipc: CameraGroupIPC,
                        camera_shm_dtos: CameraSharedMemoryDTOs, ):
 
-
         camera_processes = {}
         for camera_id, camera_config in ipc.camera_configs.items():
             camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
@@ -32,13 +33,13 @@ class CameraManager:
                                                                )
 
         return cls(ipc=ipc,
-
                    camera_processes=camera_processes
                    )
 
     @property
     def orchestrator(self) -> CameraOrchestrator:
         return self.ipc.camera_orchestrator
+
     @property
     def camera_ids(self):
         return list(self.camera_processes.keys())
@@ -46,7 +47,6 @@ class CameraManager:
     @property
     def paused(self):
         return self.orchestrator.all_cameras_paused
-
 
     @property
     def any_alive(self) -> bool:
@@ -61,10 +61,7 @@ class CameraManager:
         """
         Check if all cameras in the group are connected.
         """
-        return  self.orchestrator.all_cameras_ready
-
-
-
+        return self.orchestrator.all_cameras_ready
 
     def start(self):
         if len(self.camera_ids) == 0:
@@ -73,6 +70,18 @@ class CameraManager:
         logger.info(f"Starting cameras: {self.camera_ids}...")
 
         [process.start() for process in self.camera_processes.values()]
+
+
+    def add_new_camera(self,
+                       camera_id: CameraIdString,
+                       ipc: CameraGroupIPC,
+                       camera_shm_dto: CameraSharedMemoryDTO):
+        logger.debug(f"Adding new camera: {camera_id}")
+        self.camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
+                                                                ipc=ipc,
+                                                                camera_shm_dto=camera_shm_dto,
+                                                                )
+        self.camera_processes[camera_id].start()
 
 
     def close_camera(self, camera_id: CameraIdString):
@@ -95,7 +104,6 @@ class CameraManager:
             camera_close_threads.append(threading.Thread(target=camera_process.close))
         [thread.start() for thread in camera_close_threads]
         [thread.join() for thread in camera_close_threads]
-
 
         while self.any_alive:
             wait_10ms()

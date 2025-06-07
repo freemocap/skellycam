@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
+from skellycam.core.ipc.pubsub.pubsub_topics import ShmUpdateMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_30ms
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,8 @@ class MultiframeBuilder:
                                          name=cls.__class__.__name__,
                                          kwargs=dict(ipc=ipc,
                                                      group_shm_dto=group_shm_dto,
-                                                     update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
+                                                     update_shm_sub_queue=ipc.pubsub.topics[
+                                                         TopicTypes.SHM_UPDATES].get_subscription(),
                                                      ws_logs_queue=get_websocket_log_queue()
                                                      )
                                          )
@@ -54,6 +56,7 @@ class MultiframeBuilder:
     @staticmethod
     def _mf_publication_worker(ipc: CameraGroupIPC,
                                group_shm_dto: CameraGroupSharedMemoryDTO,
+                                 update_shm_sub_queue: multiprocessing.Queue,
                                ws_logs_queue: multiprocessing.Queue
                                ):
         # Configure logging in the child process
@@ -62,7 +65,6 @@ class MultiframeBuilder:
         configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
         ipc.mf_publisher_status.is_running_flag.value = True
         camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
-            ipc=ipc,
             shm_dto=group_shm_dto,
             read_only=False)
 
@@ -71,13 +73,20 @@ class MultiframeBuilder:
         try:
             while ipc.should_continue:
                 wait_10ms()
-                if not MultiframeBuilder._should_pause(ipc):
-                    wait_100ms()
+                if not update_shm_sub_queue.empty():
+                    update_shm_message = update_shm_sub_queue.get()
+                    if not isinstance(update_shm_message, ShmUpdateMessage):
+                        raise TypeError(f"Received unexpected message type: {type(update_shm_message)}")
+
+                if MultiframeBuilder._should_pause(ipc=ipc):
+                    wait_30ms()
                     continue
+
                 latest_mfs = camera_group_shm.publish_all_new_multiframes(previous_payload=previous_mf,
                                                                           overwrite=True)
                 ipc.mf_publisher_status.total_frames_published.value += len(latest_mfs)
                 ipc.mf_publisher_status.number_frames_published_this_cycle.value = len(latest_mfs)
+                previous_mf = latest_mfs[-1]
 
         except Exception as e:
             logger.error(f"Process error: {e}")
@@ -90,6 +99,7 @@ class MultiframeBuilder:
             camera_group_shm.close()
             logger.debug(f"Multiframe publication process completed")
             ipc.mf_publisher_status.is_running_flag.value = False
+
     @staticmethod
     def _should_pause(ipc):
         if ipc.should_pause_flag.value:
