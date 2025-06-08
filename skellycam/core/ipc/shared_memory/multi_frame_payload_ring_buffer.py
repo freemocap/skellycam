@@ -192,6 +192,7 @@ class MultiFrameSharedMemoryRingBuffer:
                                                       mf_metadata_buffer=self.mf_metadata_shm.get_next_payload(),
                                                       mf_time_mapping_buffer=self.mf_time_mapping_shm.get_next_payload(),
                                                       ),
+            camera_group_id=self.camera_group_id,
             camera_configs=camera_configs)
 
         if (not self.previous_read_mf_payload and mf_payload.multi_frame_number != 0) or \

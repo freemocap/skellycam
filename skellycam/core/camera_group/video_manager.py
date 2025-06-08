@@ -81,9 +81,6 @@ class VideoManager(BaseModel):
             shm_dto=group_shm_dto,
             read_only=False)
 
-        if not isinstance(camera_group_shm, CameraGroupSharedMemoryManager):
-            raise ValueError(f"Expected CameraConfigs, got {type(camera_group_shm)} in camera_configs")
-
         recording_manager: RecordingManager | None = None
         audio_recorder: AudioRecorder | None = None
         ipc.video_manager_status.is_running_flag.value = True
@@ -95,7 +92,7 @@ class VideoManager(BaseModel):
                     recording_manager=recording_manager,
                     camera_group_shm=camera_group_shm
                 )
-                camera_configs, recording_manager, camera_group_shm = cls._check_and_handle_updates(
+                camera_configs, camera_group_shm, recording_manager = cls._check_and_handle_updates(
                     ipc=ipc,
                     camera_configs=camera_configs,
                     recording_manager=recording_manager,
