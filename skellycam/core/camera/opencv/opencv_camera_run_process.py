@@ -8,6 +8,7 @@ from skellycam.core.camera.opencv.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_connecton import CameraConnection
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
+from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import ExtractedConfigMessage, UpdateCameraConfigsMessage, UpdateShmMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBufferDTO, FramePayloadSharedMemoryRingBuffer
@@ -24,12 +25,11 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                               update_shm_sub_queue: TopicSubscriptionQueue,
                               camera_shm_dto: FramePayloadSharedMemoryRingBufferDTO,
                               close_self_flag: multiprocessing.Value,
-                              ws_queue: multiprocessing.Queue,
                               ):
     # Configure logging in the child process
     from skellycam.system.logging_configuration.configure_logging import configure_logging
     from skellycam import LOG_LEVEL
-    configure_logging(LOG_LEVEL, ws_queue=ws_queue)
+    configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication,)
     orchestrator = ipc.camera_orchestrator
     camera_connection: CameraConnection = orchestrator.connections[camera_id]
     camera_connection.status.running.value = True

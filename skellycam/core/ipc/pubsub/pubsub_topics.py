@@ -1,10 +1,15 @@
 from typing import Type
+from pydantic import Field
 
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.types import TopicPublicationQueue
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
+    get_websocket_log_queue
 
 
 class UpdateCameraConfigsMessage(TopicMessageABC):
@@ -73,7 +78,8 @@ class UpdateShmMessage(TopicMessageABC):
     orchestrator: CameraOrchestrator|None = None
     group_shm_dto: CameraGroupSharedMemoryDTO|None = None
 
-
+class FrontendPayloadMessage(TopicMessageABC):
+    frontend_payload: FrontendFramePayload
 
 
 class RecordingInfoMessage(TopicMessageABC):
@@ -91,3 +97,10 @@ class ShmUpdatesTopic(PubSubTopicABC):
 
 class RecordingInfoTopic(PubSubTopicABC):
     message_type: Type[RecordingInfoMessage] = RecordingInfoMessage
+
+class FrontendPayloadTopic(PubSubTopicABC):
+    message_type: Type[FrontendPayloadMessage] = FrontendPayloadMessage
+
+class LogsTopic(PubSubTopicABC):
+    message_type: Type[LogRecordModel] = LogRecordModel
+    publication: TopicPublicationQueue = Field(default_factory=get_websocket_log_queue)

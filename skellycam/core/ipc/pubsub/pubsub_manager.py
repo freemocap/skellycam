@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
 from skellycam.core.ipc.pubsub.pubsub_abcs import PubSubTopicABC
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateConfigsTopic, ShmUpdatesTopic, RecordingInfoTopic, \
-    ExtractedConfigTopic
+    ExtractedConfigTopic, FrontendPayloadTopic, LogsTopic
 from skellycam.core.types import CameraGroupIdString, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,8 @@ class TopicTypes(Enum):
     EXTRACTED_CONFIG = auto()
     SHM_UPDATES = auto()
     RECORDING_INFO = auto()
+    FRONTEND_PAYLOAD = auto()
+    LOGS = auto()
 
 
 class PubSubTopicManager(BaseModel):
@@ -26,8 +28,9 @@ class PubSubTopicManager(BaseModel):
         TopicTypes.EXTRACTED_CONFIG: ExtractedConfigTopic(),
         TopicTypes.SHM_UPDATES: ShmUpdatesTopic(),
         TopicTypes.RECORDING_INFO: RecordingInfoTopic(),
+        TopicTypes.FRONTEND_PAYLOAD: FrontendPayloadTopic(),
+        TopicTypes.LOGS: LogsTopic(),
     })
-    should_continue_flag: SkipValidation[multiprocessing.Value ]= Field(default_factory=lambda: multiprocessing.Value('b', False))
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
@@ -39,6 +42,7 @@ class PubSubTopicManager(BaseModel):
         """
         if parent_process() is not None:
             raise RuntimeError("Subscriptions must be created in the main process and passed to children")
+
 
         if topic_type not in self.topics:
             raise ValueError(f"Unknown topic type: {topic_type}")

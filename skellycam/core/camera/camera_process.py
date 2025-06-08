@@ -9,7 +9,6 @@ from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.shared_memory.single_slot_camera_shared_memory import \
     CameraSharedMemoryDTO
 from skellycam.core.types import CameraIdString
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +49,6 @@ class CameraProcess:
                                                                extracted_config_pub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publication,
                                                                update_config_sub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
                                                                update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
-                                                               ws_queue=get_websocket_log_queue(),
                                                                )
                                                    ),
                    )

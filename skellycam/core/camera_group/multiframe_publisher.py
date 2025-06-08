@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import time
 from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
@@ -10,6 +9,7 @@ from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
+from skellycam.core.types import TopicPublicationQueue, TopicSubscriptionQueue
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class MultiframeBuilder:
+class MultiframePublisher:
     worker: multiprocessing.Process
     ipc: CameraGroupIPC
 
@@ -31,7 +31,6 @@ class MultiframeBuilder:
                                                      group_shm_dto=group_shm_dto,
                                                      update_shm_sub_queue=ipc.pubsub.topics[
                                                          TopicTypes.SHM_UPDATES].get_subscription(),
-                                                     ws_logs_queue=get_websocket_log_queue()
                                                      )
                                          )
         return cls(worker=worker,
@@ -58,18 +57,18 @@ class MultiframeBuilder:
     @staticmethod
     def _mf_publication_worker(ipc: CameraGroupIPC,
                                group_shm_dto: CameraGroupSharedMemoryDTO,
-                                 update_shm_sub_queue: multiprocessing.Queue,
-                               ws_logs_queue: multiprocessing.Queue
+                               frontend_payload_publication_queue: TopicPublicationQueue,
+                               update_shm_sub_queue: TopicSubscriptionQueue,
                                ):
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
-        configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
+        configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication,)
         camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             shm_dto=group_shm_dto,
             read_only=False)
 
-        previous_mf: MultiFramePayload | None = None
+        latest_mf: MultiFramePayload | None = None
         ipc.mf_publisher_status.is_running_flag.value = True
         logger.success(f"Multiframe Saver process started")
         try:
@@ -80,17 +79,18 @@ class MultiframeBuilder:
                     if not isinstance(update_shm_message, UpdateShmMessage):
                         raise TypeError(f"Received unexpected message type: {type(update_shm_message)}")
 
-                if MultiframeBuilder._should_pause(ipc=ipc):
+                if MultiframePublisher._should_pause(ipc=ipc):
                     wait_30ms()
                     continue
 
-                latest_mfs = camera_group_shm.publish_all_new_multiframes(previous_payload=previous_mf,
+                latest_mfs = camera_group_shm.publish_all_new_multiframes(previous_payload=latest_mf,
                                                                           overwrite=True)
                 ipc.mf_publisher_status.total_frames_published.value += len(latest_mfs)
                 ipc.mf_publisher_status.number_frames_published_this_cycle.value = len(latest_mfs)
                 if latest_mfs:
                     logger.loop(f"Published {len(latest_mfs)} new multi-frames")
-                    previous_mf = latest_mfs[-1]
+                    latest_mf = latest_mfs[-1]
+                    frontend_payload_publication_queue.put(FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=latest_mf))
 
         except Exception as e:
             ipc.should_continue = False

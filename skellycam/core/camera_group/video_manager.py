@@ -36,7 +36,7 @@ class VideoManager:
                                                          TopicTypes.RECORDING_INFO].get_subscription(),
                                                      shm_subscription_queue=ipc.pubsub.topics[
                                                          TopicTypes.SHM_UPDATES].get_subscription(),
-                                                     ws_logs_queue=get_websocket_log_queue()
+
                                                      )
                                          )
         return cls(worker=worker,
@@ -68,12 +68,12 @@ class VideoManager:
                       shm_subscription_queue: multiprocessing.Queue,
                       update_configs_sub_queue: multiprocessing.Queue,
                       camera_configs: CameraConfigs,
-                      ws_logs_queue: multiprocessing.Queue
+
                       ):
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
-        configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
+        configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
 
         camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             shm_dto=group_shm_dto,

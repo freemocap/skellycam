@@ -14,7 +14,7 @@ from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_MET
     create_empty_frame_metadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
-from skellycam.core.types import CameraIdString
+from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.utilities.rotate_image import rotate_image
 
 
@@ -55,7 +55,8 @@ class MultiFrameNumpyBuffer(BaseModel):
             multi_frame_number=mf_number.pop()
         )
 
-    def to_multi_frame_payload(self, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+    def to_multi_frame_payload(self, camera_configs: CameraConfigs,
+                               camera_group_id:CameraGroupIdString) -> 'MultiFramePayload':
         time_mapping = TimeBaseMapping.from_numpy_buffer(self.mf_time_mapping_buffer)
 
         if self.mf_metadata_buffer.shape[0] % FRAME_METADATA_SHAPE[0] != 0:
@@ -99,14 +100,15 @@ class MultiFrameNumpyBuffer(BaseModel):
         return MultiFramePayload(
             frames=frames,
             camera_configs=camera_configs,
-            timebase_mapping=time_mapping
+            timebase_mapping=time_mapping,
+            camera_group_id=camera_group_id,
         )
 
     @classmethod
     def from_buffers(cls: Type['MultiFrameNumpyBuffer'],
                      mf_time_mapping_buffer: np.ndarray,
                      mf_metadata_buffer: np.ndarray,
-                     mf_image_buffer: np.ndarray) -> 'MultiFrameNumpyBuffer':
+                     mf_image_buffer: np.ndarray, ) -> 'MultiFrameNumpyBuffer':
         reshaped_metadata = mf_metadata_buffer.reshape(-1, FRAME_METADATA_SHAPE[0])
         frame_numbers = np.unique(reshaped_metadata[:, FRAME_METADATA_MODEL.FRAME_NUMBER.value])
 
@@ -125,6 +127,7 @@ class MultiFrameNumpyBuffer(BaseModel):
 
 
 class MultiFramePayload(BaseModel):
+    camera_group_id: CameraIdString
     frames: dict[CameraIdString, FramePayload | None]
     timebase_mapping: TimeBaseMapping = Field(default_factory=TimeBaseMapping, description=TimeBaseMapping.__doc__)
     backend_framerate: CurrentFramerate | None = None
@@ -132,9 +135,11 @@ class MultiFramePayload(BaseModel):
     camera_configs: CameraConfigs
 
     @classmethod
-    def create_initial(cls, camera_configs: CameraConfigs) -> 'MultiFramePayload':
+    def create_initial(cls, camera_configs: CameraConfigs, camera_group_id:CameraIdString) -> 'MultiFramePayload':
         return cls(frames={camera_id: None for camera_id in camera_configs.keys()},
-                   camera_configs=camera_configs, )
+                   camera_configs=camera_configs,
+                   camera_group_id=camera_group_id
+                   )
 
     @classmethod
     def from_previous(cls,
@@ -143,6 +148,7 @@ class MultiFramePayload(BaseModel):
         return cls(frames={camera_id: None for camera_id in previous.frames.keys()},
                    timebase_mapping=previous.timebase_mapping,
                    camera_configs=camera_configs,
+                     camera_group_id=previous.camera_group_id,
                    )
 
     @property
@@ -175,8 +181,9 @@ class MultiFramePayload(BaseModel):
         return MultiFrameNumpyBuffer.from_multi_frame_payload(self)
 
     @classmethod
-    def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs) -> 'MultiFramePayload':
-        return buffer.to_multi_frame_payload(camera_configs=camera_configs)
+    def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs, camera_group_id:CameraGroupIdString) -> 'MultiFramePayload':
+        return buffer.to_multi_frame_payload(camera_configs=camera_configs,
+                                                camera_group_id=camera_group_id)
 
     def add_frame(self, frame_dto: FramePayload) -> None:
         camera_index = frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
@@ -279,7 +286,8 @@ def camera_index_to_camera_id(camera_index: int, camera_configs: CameraConfigs) 
 if __name__ == "__main__":
     def create_example_multi_frame_payload() -> MultiFramePayload:
         camera_configs = {CameraIdString(id): CameraConfig(camera_index=id) for id in range(3)}
-        multi_frame_payload = MultiFramePayload.create_initial(camera_configs=camera_configs)
+        multi_frame_payload = MultiFramePayload.create_initial(camera_configs=camera_configs,
+                                                               camera_group_id="example_group")
         for camera_id in camera_configs.keys():
             frame_metadata = create_empty_frame_metadata(config=camera_configs[camera_id], frame_number=0)
             frame_payload = FramePayload(metadata=frame_metadata,
@@ -291,12 +299,12 @@ if __name__ == "__main__":
 
     og_mf = create_example_multi_frame_payload()
     print(og_mf)
-    buffer = og_mf.to_numpy_buffer()
-    print(buffer)
+    _buffer = og_mf.to_numpy_buffer()
+    print(_buffer)
     new_mf = MultiFramePayload.from_numpy_buffer(
-        buffer=MultiFrameNumpyBuffer.from_buffers(mf_time_mapping_buffer=buffer.mf_time_mapping_buffer,
-                                                  mf_metadata_buffer=buffer.mf_metadata_buffer,
-                                                  mf_image_buffer=buffer.mf_image_buffer),
+        buffer=MultiFrameNumpyBuffer.from_buffers(mf_time_mapping_buffer=_buffer.mf_time_mapping_buffer,
+                                                  mf_metadata_buffer=_buffer.mf_metadata_buffer,
+                                                  mf_image_buffer=_buffer.mf_image_buffer),
         camera_configs=og_mf.camera_configs)
     for _camera_id in og_mf.camera_ids:
         og_frame = og_mf.get_frame(_camera_id)

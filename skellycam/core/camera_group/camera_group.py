@@ -7,7 +7,7 @@ from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.camera_group.multiframe_publisher import MultiframeBuilder
+from skellycam.core.camera_group.multiframe_publisher import MultiframePublisher
 from skellycam.core.camera_group.video_manager import VideoManager
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
@@ -30,7 +30,7 @@ class CameraGroup:
     shm: CameraGroupSharedMemoryManager
     cameras: CameraManager
     videos: VideoManager
-    mf_builder: MultiframeBuilder
+    mf_publisher: MultiframePublisher
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -40,19 +40,15 @@ class CameraGroup:
     def from_configs(cls, camera_configs: CameraConfigs):
 
         ipc = CameraGroupIPC.create(camera_configs=camera_configs)
-        shm = CameraGroupSharedMemoryManager.create(camera_configs=camera_configs,
-                                                    read_only=True)
+        shm = CameraGroupSharedMemoryManager.create(camera_configs=camera_configs, read_only=True)
 
         return cls(
-
             ipc=ipc,
             shm=shm,
-            cameras=CameraManager.create_cameras(ipc=ipc,
-                                                 camera_shm_dtos=shm.to_dto().camera_shm_dtos),
-            mf_builder=MultiframeBuilder.create(ipc=ipc,
-                                                group_shm_dto=shm.to_dto()),
-            videos=VideoManager.create(ipc=ipc,
-                                       group_shm_dto=shm.to_dto())
+            cameras=CameraManager.create_cameras(ipc=ipc, camera_shm_dtos=shm.to_dto().camera_shm_dtos),
+            videos=VideoManager.create(ipc=ipc, group_shm_dto=shm.to_dto()),
+            mf_publisher=MultiframePublisher.create(ipc=ipc, group_shm_dto=shm.to_dto()),
+
         )
 
     @property
@@ -61,7 +57,7 @@ class CameraGroup:
 
     @property
     def all_alive(self):
-        return all([self.cameras.all_alive, self.mf_builder.is_alive(), self.videos.is_alive()])
+        return all([self.cameras.all_alive, self.mf_publisher.is_alive(), self.videos.is_alive()])
 
     @property
     def all_ready(self) -> bool:
@@ -78,7 +74,7 @@ class CameraGroup:
     def start(self):
         logger.info("Starting camera group...")
         self.cameras.start()
-        self.mf_builder.start()
+        self.mf_publisher.start()
         self.videos.start()
         while not self.all_alive and self.ipc.should_continue:
             wait_10ms()
@@ -91,7 +87,7 @@ class CameraGroup:
         logger.debug("Closing camera group")
 
         self.ipc.should_continue = False
-        self.mf_builder.close()
+        self.mf_publisher.close()
         self.videos.close()
         self.cameras.close()
         self.shm.close_and_unlink()
@@ -132,7 +128,7 @@ class CameraGroup:
 
                 if all([isinstance(config, CameraConfig) for config in extracted_configs.values()]):
                     update_message = self._evaluate_extracted_configs(extracted_configs=extracted_configs,
-                                                                     requested_update_configs=new_configs)
+                                                                      requested_update_configs=new_configs)
                     if update_message is None:
                         logger.success("Camera configs updated successfully!")
                     else:
@@ -145,7 +141,7 @@ class CameraGroup:
         return new_configs
 
     def _evaluate_extracted_configs(self, extracted_configs: CameraConfigs,
-                                   requested_update_configs: CameraConfigs) -> UpdateCameraConfigsMessage | None:
+                                    requested_update_configs: CameraConfigs) -> UpdateCameraConfigsMessage | None:
         logger.debug("All camera configs extracted - checking if the matched our request ")
 
         eval_update_message = UpdateCameraConfigsMessage.from_configs(
