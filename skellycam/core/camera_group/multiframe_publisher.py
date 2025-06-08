@@ -1,8 +1,10 @@
 import logging
 import multiprocessing
+import time
 from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage
@@ -63,13 +65,13 @@ class MultiframeBuilder:
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
-        ipc.mf_publisher_status.is_running_flag.value = True
         camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             shm_dto=group_shm_dto,
             read_only=False)
 
         previous_mf: MultiFramePayload | None = None
-        logger.debug(f"Multiframe Saver process started")
+        ipc.mf_publisher_status.is_running_flag.value = True
+        logger.success(f"Multiframe Saver process started")
         try:
             while ipc.should_continue:
                 wait_10ms()
@@ -91,6 +93,7 @@ class MultiframeBuilder:
                     previous_mf = latest_mfs[-1]
 
         except Exception as e:
+            ipc.should_continue = False
             logger.error(f"Process error: {e}")
             logger.exception(e)
             ipc.mf_publisher_status.error.value = True

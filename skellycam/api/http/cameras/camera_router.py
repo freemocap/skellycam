@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel, Field
 
-from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID
+from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.skellycam_app.skellycam_app import get_skellycam_app

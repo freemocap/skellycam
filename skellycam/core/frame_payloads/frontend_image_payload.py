@@ -18,7 +18,7 @@ from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.core.types import CameraIndex, Base64JPEGImage
 
 DEFAULT_FRONTEND_IMAGE_RESIZE = 0.5
-DEFAULT_JPEG_QUALITY = 85
+DEFAULT_JPEG_QUALITY = 80
 
 
 class FrontendFramePayload(BaseModel):

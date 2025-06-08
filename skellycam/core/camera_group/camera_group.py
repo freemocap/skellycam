@@ -60,6 +60,10 @@ class CameraGroup:
         return list(self.ipc.camera_configs.keys())
 
     @property
+    def all_alive(self):
+        return all([self.cameras.all_alive, self.mf_builder.is_alive(), self.videos.is_alive()])
+
+    @property
     def all_ready(self) -> bool:
         return all([self.ipc.all_ready, self.shm.valid])
 
@@ -76,7 +80,7 @@ class CameraGroup:
         self.cameras.start()
         self.mf_builder.start()
         self.videos.start()
-        while not self.mf_builder.is_alive() and not self.videos.is_alive() and not self.cameras.all_alive and self.ipc.should_continue:
+        while not self.all_alive and self.ipc.should_continue:
             wait_10ms()
         logger.info(f"Camera group ID: {self.id} sub-processs started -  Awaiting cameras connected...")
         while not self.cameras.cameras_connected and self.ipc.should_continue:
@@ -86,7 +90,7 @@ class CameraGroup:
     def close(self):
         logger.debug("Closing camera group")
 
-        self.ipc.shutdown_camera_group_flag.value = True
+        self.ipc.should_continue = False
         self.mf_builder.close()
         self.videos.close()
         self.cameras.close()

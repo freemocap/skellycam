@@ -46,9 +46,9 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         cv2_video_capture = create_cv2_video_capture(camera_connection.config)
 
     except Exception as e:
+        ipc.should_continue = False
         logger.exception(f"Failed to create cv2.VideoCapture for camera {camera_id}: {e}")
         camera_connection.status.signal_error()
-        ipc.should_continue = False
         close_self_flag.value = True
         raise RuntimeError(f"Could not create cv2.VideoCapture for camera {camera_id}") from e
 
@@ -62,7 +62,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                                                       config=camera_connection.config)
         extracted_config_pub_queue.put(ExtractedConfigMessage(extracted_config=extracted_config))
         camera_connection.status.connected.value = True
-        logger.info(f"Camera {extracted_config.camera_id} ready!")
+        logger.success(f"Camera {extracted_config.camera_id} ready!")
         while not ipc.all_ready and should_continue():
             wait_1ms()
 
@@ -71,16 +71,14 @@ def opencv_camera_run_process(camera_id: CameraIdString,
             frame_metadata = create_empty_frame_metadata(config=extracted_config,
                                                          frame_number=orchestrator.camera_frame_counts[
                                                                           camera_id] + 1)
-            camera_connection.status.grabbing_frame.value = True
 
             while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
                 wait_10us()
-            print("getting frame for camera", camera_id)
+            camera_connection.status.grabbing_frame.value = True
             opencv_get_frame(cap=cv2_video_capture,
                              frame_metadata=frame_metadata,
                              camera_shared_memory=camera_shm,
                              )
-
             camera_connection.status.frame_count.value += 1
             camera_connection.status.grabbing_frame.value = False
 

@@ -2,9 +2,10 @@ import logging
 import multiprocessing
 from dataclasses import dataclass
 
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage, UpdateCameraConfigsMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
@@ -28,6 +29,9 @@ class VideoManager:
                                          name=cls.__class__.__name__,
                                          kwargs=dict(ipc=ipc,
                                                      group_shm_dto=group_shm_dto,
+                                                     camera_configs=ipc.camera_configs,
+                                                     update_configs_sub_queue=ipc.pubsub.topics[
+                                                         TopicTypes.UPDATE_CONFIGS].get_subscription(),
                                                      recording_info_subscription_queue=ipc.pubsub.topics[
                                                          TopicTypes.RECORDING_INFO].get_subscription(),
                                                      shm_subscription_queue=ipc.pubsub.topics[
@@ -62,6 +66,8 @@ class VideoManager:
                       group_shm_dto: CameraGroupSharedMemoryDTO,
                       recording_info_subscription_queue: multiprocessing.Queue,
                       shm_subscription_queue: multiprocessing.Queue,
+                      update_configs_sub_queue: multiprocessing.Queue,
+                      camera_configs: CameraConfigs,
                       ws_logs_queue: multiprocessing.Queue
                       ):
         # Configure logging in the child process
@@ -69,34 +75,35 @@ class VideoManager:
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ws_logs_queue)
 
-        ipc.video_manager_status.is_running_flag.value = True
-
         camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             shm_dto=group_shm_dto,
             read_only=False)
 
         recording_manager: RecordingManager | None = None
         audio_recorder: AudioRecorder | None = None
+        ipc.video_manager_status.is_running_flag.value = True
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
             while ipc.should_continue:
-
                 recording_manager = cls._drain_and_handle_mf_buffer(
                     ipc=ipc,
                     recording_manager=recording_manager,
                     camera_group_shm=camera_group_shm
                 )
-                ipc, recording_manager, camera_group_shm = cls._check_and_handle_updates(
+                camera_configs, recording_manager, camera_group_shm, camera_configs = cls._check_and_handle_updates(
                     ipc=ipc,
+                    camera_configs=camera_configs,
                     recording_manager=recording_manager,
                     camera_group_shm=camera_group_shm,
                     shm_subscription_queue=shm_subscription_queue,
+                    update_configs_sub_queue=update_configs_sub_queue,
                     recording_info_subscription_queue=recording_info_subscription_queue
                 )
 
 
 
         except Exception as e:
+            ipc.should_continue = False
             ipc.video_manager_status.error.value = True
             logger.error(f"{cls.__class__.__name__} process error: {e}")
             logger.exception(e)
@@ -110,8 +117,6 @@ class VideoManager:
                 recording_manager.finish_and_close()
             camera_group_shm.close()
             logger.debug(f"FrameSaver process completed")
-
-
 
     @classmethod
     def _drain_and_handle_mf_buffer(cls,
@@ -140,11 +145,19 @@ class VideoManager:
     @classmethod
     def _check_and_handle_updates(cls,
                                   ipc: CameraGroupIPC,
+                                  camera_configs: CameraConfigs,
                                   recording_manager: RecordingManager | None,
                                   camera_group_shm: CameraGroupSharedMemoryManager,
                                   shm_subscription_queue: multiprocessing.Queue,
+                                  update_configs_sub_queue: multiprocessing.Queue,
                                   recording_info_subscription_queue: multiprocessing.Queue) -> tuple[
-        CameraGroupIPC, RecordingManager | None, CameraGroupSharedMemoryManager]:
+        CameraConfigs, RecordingManager | None, CameraGroupSharedMemoryManager]:
+        if not update_configs_sub_queue.empty():
+            update_configs_message = update_configs_sub_queue.get(block=True)
+            if not isinstance(update_configs_message, UpdateCameraConfigsMessage):
+                raise ValueError(
+                    f"Expected UpdateCameraConfigsMessage, got {type(update_configs_message)} in update_configs_sub_queue")
+            camera_configs = update_configs_message.camera_configs
         if not recording_info_subscription_queue.empty():
             ipc.video_manager_status.updating.value = True
             recording_info = recording_info_subscription_queue.get(block=True)
@@ -173,7 +186,7 @@ class VideoManager:
                 read_only=camera_group_shm.read_only)
             ipc.video_manager_status.updating.value = False
 
-        return ipc, recording_manager, camera_group_shm
+        return camera_configs, recording_manager, camera_group_shm
 
     @staticmethod
     def start_recording(ipc: CameraGroupIPC,

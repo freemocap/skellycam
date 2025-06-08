@@ -102,7 +102,7 @@ class CameraGroupIPC(BaseModel):
 
     @property
     def all_ready(self) -> bool:
-        return self.camera_orchestrator.all_cameras_ready and self.video_manager_status.is_running_flag.value
+        return self.camera_orchestrator.all_cameras_ready and self.video_manager_status.is_running_flag.value and self.mf_publisher_status.is_running_flag.value
 
     @property
     def all_paused(self) -> bool:

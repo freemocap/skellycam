@@ -95,5 +95,5 @@ class SharedMemoryElement(BaseModel):
     def unlink(self):
         if not self.original:
             raise ValueError("Cannot unlink a non-original SharedMemoryElement, close children and unlink the original.")
-        self.valid.value = False
+        self.shm_valid_flag.value = False
         self.shm.unlink()
