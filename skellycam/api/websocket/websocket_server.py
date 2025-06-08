@@ -49,7 +49,7 @@ class WebsocketServer:
     @property
     def should_continue(self):
         return (
-                self._app.ipc.global_should_continue
+                self._app.should_continue
                 and self._websocket_should_continue
                 and self.websocket.client_state == WebSocketState.CONNECTED
         )
@@ -116,15 +116,20 @@ class WebsocketServer:
         """
         logger.info(
             f"Starting frontend image payload relay...")
-        latest_mf_number = -1
         try:
             while self.should_continue:
-                await async_wait_1ms()
+                await async_wait_10ms()
 
-                mfs_by_camera_group = self._app.get_all_latest_multiframes(if_newer_than_mf_number=latest_mf_number)
-                if any([isinstance(mf, MultiFramePayload) for mf in mfs_by_camera_group.values()]):
-                    await self._send_frontend_payload(mfs_by_camera_group)
-                    latest_mf_number = max([mf_payload.multi_frame_number for mf_payload in mfs_by_camera_group.values() if isinstance(mf_payload, MultiFramePayload)], default=latest_mf_number)
+                latest_frontend_payloads  = self._app.get_latest_frontend_payloads()
+                for fe_payload in latest_frontend_payloads:
+                    if not self.websocket.client_state == WebSocketState.CONNECTED:
+                        logger.error("Websocket is not connected, cannot send payload!")
+                        raise RuntimeError("Websocket is not connected, cannot send payload!")
+
+                    if self.websocket.client_state != WebSocketState.CONNECTED:
+                        return
+
+                    await self.websocket.send_bytes(fe_payload.model_dump_json().encode('utf-8'))
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
@@ -134,28 +139,6 @@ class WebsocketServer:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
             raise
 
-    async def _send_frontend_payload(self,
-                                     mf_payloads: dict[CameraGroupIdString, MultiFramePayload]) -> None:
-        fe_payloads = {}
-        for group_id, mf_payload in mf_payloads.items():
-            if mf_payload is None:
-                continue
-            # mf_payload.backend_framerate = self.latest_backend_framerate
-            # mf_payload.frontend_framerate = self.latest_frontend_framerate
-            fe_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload, camera_group_id=group_id)
-            logger.loop(f"Sending frontend payload through websocket...")
-            if not self.websocket.client_state == WebSocketState.CONNECTED:
-                logger.error("Websocket is not connected, cannot send payload!")
-                raise RuntimeError("Websocket is not connected, cannot send payload!")
-
-            if self.websocket.client_state != WebSocketState.CONNECTED:
-                return
-
-            await self.websocket.send_bytes(fe_payload.model_dump_json().encode('utf-8'))
-
-        if not self.websocket.client_state == WebSocketState.CONNECTED:
-            logger.error("Websocket shut down while sending payload!")
-            raise RuntimeError("Websocket shut down while sending payload!")
 
     async def _logs_relay(self):
         logger.info("Starting websocket log relay listener...")

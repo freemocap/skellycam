@@ -5,7 +5,9 @@ from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, create_pubsub_manager, TopicTypes
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
+from skellycam.core.ipc.pubsub.pubsub_manager import create_pubsub_manager, TopicTypes, PubSubTopicManager
+from skellycam.core.ipc.pubsub.pubsub_topics import FrontendPayloadMessage
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString, TopicSubscriptionQueue
 from skellycam.utilities.create_camera_group_id import create_camera_group_id
@@ -14,19 +16,22 @@ from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
 logger = logging.getLogger(__name__)
 
 
-
 class VideoManagerStatus(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
-    is_recording_frames_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    should_record: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_running_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_recording_frames_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('b', False))
+    should_record: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('b', False))
+    is_running_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('b', False))
     finishing: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_paused_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('b', False))
 
     @property
     def recording(self) -> bool:
@@ -37,9 +42,12 @@ class MutliFramePublisherStatus(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
-    is_running_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    is_paused_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    total_frames_published: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('Q', 0))
+    is_running_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('b', False))
+    is_paused_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('b', False))
+    total_frames_published: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('Q', 0))
     number_frames_published_this_cycle: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value('i', 0))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
@@ -56,20 +64,30 @@ class CameraGroupIPC(BaseModel):
     video_manager_status: VideoManagerStatus = Field(default_factory=VideoManagerStatus)
     mf_publisher_status: MutliFramePublisherStatus = Field(default_factory=MutliFramePublisherStatus)
 
-    shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    updating_cameras_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    should_pause_flag: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value("b", False))
+    updating_cameras_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value("b", False))
+    should_pause_flag: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value("b", False))
+    frontend_backpressure: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value("i", 0))
+
+    frontend_payload_subscription_queue: TopicSubscriptionQueue
+    global_kill_flag: SkipValidation[multiprocessing.Value]
 
     @classmethod
-    def create(cls, camera_configs: CameraConfigs):
+    def create(cls, camera_configs: CameraConfigs, global_kill_flag: multiprocessing.Value):
         validate_camera_configs(camera_configs)
         group_id = create_camera_group_id()
-        pubsub  = create_pubsub_manager(group_id=group_id)
+        pubsub = create_pubsub_manager(group_id=group_id)
         return cls(
             group_id=group_id,
             pubsub=pubsub,
-            extracted_configs_subscription_queue = pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
-            camera_orchestrator=CameraOrchestrator.from_configs(camera_configs=camera_configs)
+            camera_orchestrator=CameraOrchestrator.from_configs(camera_configs=camera_configs),
+            extracted_configs_subscription_queue=pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
+            frontend_payload_subscription_queue=pubsub.topics[TopicTypes.FRONTEND_PAYLOAD].get_subscription(),
+            global_kill_flag=global_kill_flag,
         )
 
     @property
@@ -86,7 +104,7 @@ class CameraGroupIPC(BaseModel):
 
     @property
     def should_continue(self) -> bool:
-        return not self.shutdown_camera_group_flag.value
+        return not self.shutdown_camera_group_flag.value and not self.global_kill_flag.value
 
     @should_continue.setter
     def should_continue(self, value: bool) -> None:
@@ -119,6 +137,22 @@ class CameraGroupIPC(BaseModel):
     @property
     def running(self) -> bool:
         return not self.shutdown_camera_group_flag.value
+
+    @property
+    def latest_frontend_payload(self) -> FrontendFramePayload | None:
+        if not self.all_ready:
+            return None
+        fe_messages: list[FrontendPayloadMessage] = []
+        if not self.frontend_payload_subscription_queue.empty():
+            frontend_payload_message = self.frontend_payload_subscription_queue.get()
+            if not isinstance(frontend_payload_message, FrontendPayloadMessage):
+                raise RuntimeError(f"Expected FrontendFramePayload but got {type(frontend_payload_message)}")
+            fe_messages.append(frontend_payload_message)
+        self.frontend_backpressure.value = len(fe_messages) #signal when the queue is backed up so publisher can chill
+        if fe_messages:
+            return fe_messages[-1].frontend_payload
+        return None
+
     def start_recording(self, recording_info: RecordingInfo) -> None:
         if self.any_recording:
             raise ValueError("Cannot start recording while recording is in progress.")

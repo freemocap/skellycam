@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class CameraStrategies(enum.Enum):
-    OPEN_CV = "OPEN_CV"
+    OPEN_CV = enum.auto()
 
 
 @dataclass
@@ -46,9 +46,9 @@ class CameraProcess:
                                                                ipc=ipc,
                                                                camera_shm_dto=camera_shm_dto,
                                                                close_self_flag=close_self_flag,
-                                                               extracted_config_pub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publication,
-                                                               update_config_sub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
-                                                               update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
+                                                               extracted_config_topic=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG],
+                                                               update_configs_sub_queue=ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].get_subscription(),
+                                                               update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
                                                                )
                                                    ),
                    )

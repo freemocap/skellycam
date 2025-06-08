@@ -9,7 +9,8 @@ from skellycam.core.camera_group.camera_connecton import CameraConnection
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import create_empty_frame_metadata
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import ExtractedConfigMessage, UpdateCameraConfigsMessage, UpdateShmMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import ExtractedConfigMessage, UpdateCameraConfigsMessage, \
+    UpdateShmMessage, ExtractedConfigTopic
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBufferDTO, FramePayloadSharedMemoryRingBuffer
 from skellycam.core.types import CameraIdString, TopicSubscriptionQueue, TopicPublicationQueue
@@ -20,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 def opencv_camera_run_process(camera_id: CameraIdString,
                               ipc: CameraGroupIPC,
-                              update_config_sub_queue: TopicSubscriptionQueue,
-                              extracted_config_pub_queue: TopicPublicationQueue,
+                              update_configs_sub_queue: TopicSubscriptionQueue,
+                              extracted_config_topic: ExtractedConfigTopic,
                               update_shm_sub_queue: TopicSubscriptionQueue,
                               camera_shm_dto: FramePayloadSharedMemoryRingBufferDTO,
                               close_self_flag: multiprocessing.Value,
@@ -60,7 +61,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         extracted_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                                       prior_config=extracted_config,
                                                       config=camera_connection.config)
-        extracted_config_pub_queue.put(ExtractedConfigMessage(extracted_config=extracted_config))
+        extracted_config_topic.publish(ExtractedConfigMessage(extracted_config=extracted_config))
         camera_connection.status.connected.value = True
         logger.success(f"Camera {extracted_config.camera_id} ready!")
         while not ipc.all_ready and should_continue():
@@ -84,8 +85,8 @@ def opencv_camera_run_process(camera_id: CameraIdString,
 
             # Check if the camera config has changed
 
-            if not update_config_sub_queue.empty():
-                update_config_message = update_config_sub_queue.get()
+            if not update_configs_sub_queue.empty():
+                update_config_message = update_configs_sub_queue.get()
                 if not isinstance(update_config_message, UpdateCameraConfigsMessage):
                     raise TypeError(f"Received unexpected message type: {type(update_config_message)}")
                 if extracted_config != update_config_message.old_configs[camera_id]:
@@ -95,7 +96,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
                 extracted_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                                               prior_config=extracted_config,
                                                               config=new_config)
-                extracted_config_pub_queue.put(ExtractedConfigMessage(extracted_config=extracted_config))
+                extracted_config_topic.publish(ExtractedConfigMessage(extracted_config=extracted_config))
 
                 logger.debug(f"Received updated config for camera {camera_id}: {extracted_config}")
 

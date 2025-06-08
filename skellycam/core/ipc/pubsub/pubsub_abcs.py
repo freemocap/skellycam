@@ -19,7 +19,6 @@ class TopicMessageABC(BaseModel, ABC):
 
 class PubSubTopicABC(BaseModel, ABC):
     subscriptions: list[TopicSubscriptionQueue] = Field(default_factory=list)
-    publication: TopicPublicationQueue = Field(default_factory=TopicPublicationQueue)
     message_type: Type[TopicMessageABC] = Field(default_factory=TopicMessageABC)
 
     model_config = ConfigDict(
@@ -45,5 +44,6 @@ class PubSubTopicABC(BaseModel, ABC):
         if not isinstance(message, self.message_type):
             raise TypeError(f"Expected {self.message_type} but got {type(message)}")
         logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
-        self.publication.put(message)
+        for sub in self.subscriptions:
+            sub.put(message)
 

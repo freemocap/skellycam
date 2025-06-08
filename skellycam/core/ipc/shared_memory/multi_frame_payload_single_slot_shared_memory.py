@@ -10,12 +10,15 @@ from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_MET
     FRAME_METADATA_DTYPE, DEFAULT_IMAGE_DTYPE, create_empty_frame_metadata
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
 from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
+from skellycam.core.types import CameraGroupIdString
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class MultiframePayloadSingleSlotSharedMemoryDTO:
+    camera_group_id: CameraGroupIdString
+
     mf_time_mapping_shm_dto: SharedMemoryElementDTO
     mf_metadata_shm_dto: SharedMemoryElementDTO
     mf_image_shm_dto: SharedMemoryElementDTO
@@ -26,6 +29,7 @@ class MultiframePayloadSingleSlotSharedMemoryDTO:
 
 @dataclass
 class MultiframePayloadSingleSlotSharedMemory:
+    camera_group_id: CameraGroupIdString
     mf_time_mapping_shm: SharedMemoryElement
     mf_metadata_shm: SharedMemoryElement
     mf_image_shm: SharedMemoryElement
@@ -40,7 +44,8 @@ class MultiframePayloadSingleSlotSharedMemory:
 
     @classmethod
     def create_from_configs(cls,
-                            configs:CameraConfigs,
+                            camera_group_id: CameraGroupIdString,
+                            configs: CameraConfigs,
                             read_only: bool = False):
         example_images = [np.zeros(config.image_shape, dtype=DEFAULT_IMAGE_DTYPE) for config in
                           configs.values()]
@@ -67,6 +72,7 @@ class MultiframePayloadSingleSlotSharedMemory:
                    shm_valid_flag=multiprocessing.Value('b', True),
                    latest_written_mf_number=multiprocessing.Value("l", -1),
                    latest_read_mf_number=multiprocessing.Value("l", -1),
+                     camera_group_id=camera_group_id,
                    read_only=read_only)
 
     @classmethod
@@ -83,6 +89,7 @@ class MultiframePayloadSingleSlotSharedMemory:
                    shm_valid_flag=shm_dto.shm_valid_flag,
                    latest_written_mf_number=shm_dto.latest_written_mf_number,
                    latest_read_mf_number=multiprocessing.Value("l", -1),
+                     camera_group_id=shm_dto.camera_group_id,
                    read_only=read_only)
 
     @property
@@ -95,11 +102,12 @@ class MultiframePayloadSingleSlotSharedMemory:
                                                           mf_image_shm_dto=self.mf_image_shm.to_dto(),
                                                           shm_valid_flag=self.shm_valid_flag,
                                                           latest_written_mf_number=self.latest_written_mf_number,
+                                                            camera_group_id=self.camera_group_id,
                                                           latest_read_mf_number=self.latest_read_mf_number)
 
     def put_multiframe(self,
                        mf_payload: MultiFramePayload,
-                       overwrite:bool) -> None:
+                       overwrite: bool) -> None:
         if not self.shm_valid_flag.value:
             raise ValueError("Shared memory instance has been invalidated, cannot write to it!")
         if not mf_payload.full:
@@ -116,7 +124,8 @@ class MultiframePayloadSingleSlotSharedMemory:
                 raise ValueError(
                     f"Cannot write multi-frame payload with number {mf_payload.multi_frame_number} to shared memory, "
                     f"as it is not newer than the latest read multi-frame number {self.latest_read_mf_number.value}!")
-            logger.warning(f"FYI - Writing multi-frame payload with number {mf_payload.multi_frame_number} to shared memory before previous mf was read. ")
+            logger.warning(
+                f"FYI - Writing multi-frame payload with number {mf_payload.multi_frame_number} to shared memory before previous mf was read. ")
         for frame in mf_payload.frames.values():
             frame.metadata[
                 FRAME_METADATA_MODEL.COPY_TO_MULTI_FRAME_ESCAPE_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
@@ -141,7 +150,9 @@ class MultiframePayloadSingleSlotSharedMemory:
                                                       mf_metadata_buffer=self.mf_metadata_shm.get_data(),
                                                       mf_time_mapping_buffer=self.mf_time_mapping_shm.get_data(),
                                                       ),
-            camera_configs=camera_configs)
+            camera_configs=camera_configs,
+            camera_group_id=self.camera_group_id,
+        )
         self.latest_read_mf_number.value = mf_payload.multi_frame_number
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")
@@ -156,7 +167,6 @@ class MultiframePayloadSingleSlotSharedMemory:
         self.mf_image_shm.close()
         self.mf_metadata_shm.close()
         self.mf_time_mapping_shm.close()
-
 
     def unlink(self):
         self.mf_image_shm.unlink()

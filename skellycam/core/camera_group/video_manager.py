@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass
+
+from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
@@ -11,13 +12,14 @@ from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGr
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class VideoManager:
+class VideoManager(BaseModel):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     worker: multiprocessing.Process
     ipc: CameraGroupIPC
 
@@ -79,6 +81,9 @@ class VideoManager:
             shm_dto=group_shm_dto,
             read_only=False)
 
+        if not isinstance(camera_group_shm, CameraGroupSharedMemoryManager):
+            raise ValueError(f"Expected CameraConfigs, got {type(camera_group_shm)} in camera_configs")
+
         recording_manager: RecordingManager | None = None
         audio_recorder: AudioRecorder | None = None
         ipc.video_manager_status.is_running_flag.value = True
@@ -90,7 +95,7 @@ class VideoManager:
                     recording_manager=recording_manager,
                     camera_group_shm=camera_group_shm
                 )
-                camera_configs, recording_manager, camera_group_shm, camera_configs = cls._check_and_handle_updates(
+                camera_configs, recording_manager, camera_group_shm = cls._check_and_handle_updates(
                     ipc=ipc,
                     camera_configs=camera_configs,
                     recording_manager=recording_manager,
@@ -151,13 +156,13 @@ class VideoManager:
                                   shm_subscription_queue: multiprocessing.Queue,
                                   update_configs_sub_queue: multiprocessing.Queue,
                                   recording_info_subscription_queue: multiprocessing.Queue) -> tuple[
-        CameraConfigs, RecordingManager | None, CameraGroupSharedMemoryManager]:
+        CameraConfigs, CameraGroupSharedMemoryManager, RecordingManager | None, ]:
         if not update_configs_sub_queue.empty():
             update_configs_message = update_configs_sub_queue.get(block=True)
             if not isinstance(update_configs_message, UpdateCameraConfigsMessage):
                 raise ValueError(
                     f"Expected UpdateCameraConfigsMessage, got {type(update_configs_message)} in update_configs_sub_queue")
-            camera_configs = update_configs_message.camera_configs
+            camera_configs = update_configs_message.new_configs
         if not recording_info_subscription_queue.empty():
             ipc.video_manager_status.updating.value = True
             recording_info = recording_info_subscription_queue.get(block=True)
@@ -186,7 +191,7 @@ class VideoManager:
                 read_only=camera_group_shm.read_only)
             ipc.video_manager_status.updating.value = False
 
-        return camera_configs, recording_manager, camera_group_shm
+        return camera_configs, camera_group_shm,recording_manager
 
     @staticmethod
     def start_recording(ipc: CameraGroupIPC,

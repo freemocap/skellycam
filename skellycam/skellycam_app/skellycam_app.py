@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraGroupIdString
@@ -21,13 +22,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SkellycamApplication:
-    ipc: InterProcessCommunicationManager
-    camera_group_manager: CameraGroupManager = field(default_factory=CameraGroupManager)
+    global_kill_flag: multiprocessing.Value
+    camera_group_manager: CameraGroupManager
 
     @classmethod
     def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):
-        return cls(ipc=InterProcessCommunicationManager(global_kill_flag=global_kill_flag))
+        return cls(global_kill_flag=global_kill_flag,
+                     camera_group_manager=CameraGroupManager(global_kill_flag=global_kill_flag))
 
+    @property
+    def should_continue(self) -> bool:
+        """
+        Check if the application should continue running.
+        """
+        return not self.global_kill_flag.value
 
     def create_camera_group(self, camera_configs: CameraConfigs) -> CameraGroupIdString:
 
@@ -37,8 +45,8 @@ class SkellycamApplication:
         logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {list(camera_configs.keys())}")
         return camera_group_id
 
-    def get_all_latest_multiframes(self, if_newer_than_mf_number: int|None=None) -> dict[CameraGroupIdString, MultiFramePayload]:        
-        return self.camera_group_manager.get_all_latest_multiframes(if_newer_than_mf_number=if_newer_than_mf_number)
+    def get_latest_frontend_payloads(self) -> list[FrontendFramePayload]:
+        return self.camera_group_manager.get_latest_frontend_payloads()
     
     def update_camera_configs(self,
                               camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]):

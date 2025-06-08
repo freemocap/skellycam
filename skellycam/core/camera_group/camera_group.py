@@ -1,5 +1,6 @@
 import enum
 import logging
+import multiprocessing
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -9,6 +10,7 @@ from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.multiframe_publisher import MultiframePublisher
 from skellycam.core.camera_group.video_manager import VideoManager
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraConfigsMessage, UpdateShmMessage, ExtractedConfigMessage
@@ -37,10 +39,15 @@ class CameraGroup:
         return self.ipc.group_id
 
     @classmethod
-    def from_configs(cls, camera_configs: CameraConfigs):
+    def from_configs(cls, camera_configs: CameraConfigs,
+                        global_kill_flag: multiprocessing.Value) -> 'CameraGroup':
 
-        ipc = CameraGroupIPC.create(camera_configs=camera_configs)
-        shm = CameraGroupSharedMemoryManager.create(camera_configs=camera_configs, read_only=True)
+
+        ipc = CameraGroupIPC.create(camera_configs=camera_configs,
+                                    global_kill_flag=global_kill_flag)
+        shm = CameraGroupSharedMemoryManager.create(camera_configs=camera_configs,
+                                                    camera_group_id=ipc.group_id,
+                                                    read_only=True)
 
         return cls(
             ipc=ipc,
@@ -63,13 +70,11 @@ class CameraGroup:
     def all_ready(self) -> bool:
         return all([self.ipc.all_ready, self.shm.valid])
 
-    def get_latest_multiframe(self, if_newer_than_mf_number: int | None = None) -> MultiFramePayload | None:
+    def get_latest_frontend_payload(self) -> FrontendFramePayload| None:
         """
         Retrieve the latest multi-frame data if it is newer than the provided multi-frame number.
         """
-        if not self.ipc.all_ready:
-            return None
-        return self.shm.get_latest_multiframe(if_newer_than_mf_number=if_newer_than_mf_number)
+        return self.ipc.latest_frontend_payload
 
     def start(self):
         logger.info("Starting camera group...")

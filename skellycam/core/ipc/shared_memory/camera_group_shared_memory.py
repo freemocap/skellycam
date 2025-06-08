@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-from copy import deepcopy
 from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
@@ -55,15 +54,18 @@ class CameraGroupSharedMemoryManager:
     @classmethod
     def create(cls,
                camera_configs: CameraConfigs,
+               camera_group_id: CameraIdString,
                read_only: bool = False):
         return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.create(camera_config=config,
                                                                                      read_only=read_only)
                                 for camera_id, config in camera_configs.items()},
                    multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.create_from_configs(
                        configs=camera_configs,
+                       camera_group_id=camera_group_id,
                        read_only=read_only),
                    latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.create_from_configs(
                        configs=camera_configs,
+                       camera_group_id=camera_group_id,
                        read_only=read_only),
                    camera_configs=camera_configs,
                    original=True,

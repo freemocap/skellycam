@@ -6,7 +6,7 @@ from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage, FrontendPayloadTopic
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.types import TopicPublicationQueue, TopicSubscriptionQueue
@@ -31,6 +31,7 @@ class MultiframePublisher:
                                                      group_shm_dto=group_shm_dto,
                                                      update_shm_sub_queue=ipc.pubsub.topics[
                                                          TopicTypes.SHM_UPDATES].get_subscription(),
+                                                     frontend_payload_topic=ipc.pubsub.topics[TopicTypes.FRONTEND_PAYLOAD]
                                                      )
                                          )
         return cls(worker=worker,
@@ -57,7 +58,7 @@ class MultiframePublisher:
     @staticmethod
     def _mf_publication_worker(ipc: CameraGroupIPC,
                                group_shm_dto: CameraGroupSharedMemoryDTO,
-                               frontend_payload_publication_queue: TopicPublicationQueue,
+                               frontend_payload_topic: FrontendPayloadTopic,
                                update_shm_sub_queue: TopicSubscriptionQueue,
                                ):
         # Configure logging in the child process
@@ -90,7 +91,8 @@ class MultiframePublisher:
                 if latest_mfs:
                     logger.loop(f"Published {len(latest_mfs)} new multi-frames")
                     latest_mf = latest_mfs[-1]
-                    frontend_payload_publication_queue.put(FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=latest_mf))
+                    if ipc.frontend_backpressure.value <= 1:
+                        frontend_payload_topic.publish(FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=latest_mf))
 
         except Exception as e:
             ipc.should_continue = False
