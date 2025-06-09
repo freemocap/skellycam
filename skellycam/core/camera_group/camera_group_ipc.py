@@ -1,3 +1,4 @@
+import enum
 import logging
 import multiprocessing
 
@@ -5,9 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import create_pubsub_manager, TopicTypes, PubSubTopicManager
-from skellycam.core.ipc.pubsub.pubsub_topics import FrontendPayloadMessage
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString, TopicSubscriptionQueue
 from skellycam.utilities.create_camera_group_id import create_camera_group_id
@@ -52,7 +51,9 @@ class MutliFramePublisherStatus(BaseModel):
         default_factory=lambda: multiprocessing.Value('i', 0))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
 
-
+class IPCWorkerStrategies(enum.Enum):
+    THREAD = "THREAD"
+    PROCESS = "PROCESS"
 class CameraGroupIPC(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
@@ -63,6 +64,7 @@ class CameraGroupIPC(BaseModel):
     extracted_configs_subscription_queue: TopicSubscriptionQueue
     video_manager_status: VideoManagerStatus = Field(default_factory=VideoManagerStatus)
     mf_publisher_status: MutliFramePublisherStatus = Field(default_factory=MutliFramePublisherStatus)
+    mf_exposer_status: MutliFramePublisherStatus = Field(default_factory=MutliFramePublisherStatus)
 
     shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
@@ -70,14 +72,13 @@ class CameraGroupIPC(BaseModel):
         default_factory=lambda: multiprocessing.Value("b", False))
     should_pause_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
-    frontend_backpressure: SkipValidation[multiprocessing.Value] = Field(
+    main_process_backpressure: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("i", 0))
 
-    frontend_payload_subscription_queue: TopicSubscriptionQueue
     global_kill_flag: SkipValidation[multiprocessing.Value]
 
     @classmethod
-    def create(cls, camera_configs: CameraConfigs, global_kill_flag: multiprocessing.Value):
+    def create(cls, camera_configs: CameraConfigs, global_kill_flag: multiprocessing.Value, strategy: IPCWorkerStrategies = IPCWorkerStrategies.THREAD) -> 'CameraGroupIPC':
         validate_camera_configs(camera_configs)
         group_id = create_camera_group_id()
         pubsub = create_pubsub_manager(group_id=group_id)
@@ -86,9 +87,9 @@ class CameraGroupIPC(BaseModel):
             pubsub=pubsub,
             camera_orchestrator=CameraOrchestrator.from_configs(camera_configs=camera_configs),
             extracted_configs_subscription_queue=pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
-            frontend_payload_subscription_queue=pubsub.topics[TopicTypes.FRONTEND_PAYLOAD].get_subscription(),
             global_kill_flag=global_kill_flag,
         )
+
 
     @property
     def camera_connections(self):
@@ -138,20 +139,6 @@ class CameraGroupIPC(BaseModel):
     def running(self) -> bool:
         return not self.shutdown_camera_group_flag.value
 
-    @property
-    def latest_frontend_payload(self) -> FrontendFramePayload | None:
-        if not self.all_ready:
-            return None
-        fe_messages: list[FrontendPayloadMessage] = []
-        if not self.frontend_payload_subscription_queue.empty():
-            frontend_payload_message = self.frontend_payload_subscription_queue.get()
-            if not isinstance(frontend_payload_message, FrontendPayloadMessage):
-                raise RuntimeError(f"Expected FrontendFramePayload but got {type(frontend_payload_message)}")
-            fe_messages.append(frontend_payload_message)
-        self.frontend_backpressure.value = len(fe_messages) #signal when the queue is backed up so publisher can chill
-        if fe_messages:
-            return fe_messages[-1].frontend_payload
-        return None
 
     def start_recording(self, recording_info: RecordingInfo) -> None:
         if self.any_recording:

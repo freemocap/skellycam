@@ -13,6 +13,7 @@ from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraGroupIdString
 from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 class SkellycamApplication:
     global_kill_flag: multiprocessing.Value
     camera_group_manager: CameraGroupManager
+
 
     @classmethod
     def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):
@@ -45,8 +47,8 @@ class SkellycamApplication:
         logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {list(camera_configs.keys())}")
         return camera_group_id
 
-    def get_latest_frontend_payloads(self) -> list[FrontendFramePayload]:
-        return self.camera_group_manager.get_latest_frontend_payloads()
+    def get_new_frontend_payloads(self) -> list[FrontendFramePayload]:
+        return self.camera_group_manager.get_new_frontend_payloads()
     
     def update_camera_configs(self,
                               camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]):
@@ -71,7 +73,7 @@ class SkellycamApplication:
         return SkellycamAppStateDTO.from_state(self)
 
     def shutdown_skellycam(self):
-        self.ipc.global_kill_flag.value = True
+        self.global_kill_flag.value = True
         self.camera_group_manager.close_all_camera_groups()
 
 

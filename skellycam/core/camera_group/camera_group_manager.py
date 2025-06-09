@@ -88,11 +88,11 @@ class CameraGroupManager:
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 
-    def get_latest_frontend_payloads(self) -> list[FrontendFramePayload]:
+    def get_new_frontend_payloads(self) -> list[FrontendFramePayload]:
 
             fe_payloads = []
             for camera_group in self.camera_groups.values():
-                fe_payload =  camera_group.get_latest_frontend_payload()
+                fe_payload =  camera_group.get_new_frontend_payload()
                 if isinstance(fe_payload, FrontendFramePayload):
                     fe_payloads.append(fe_payload)
             return fe_payloads

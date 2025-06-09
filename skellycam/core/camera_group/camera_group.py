@@ -38,6 +38,7 @@ class CameraGroup:
     def id(self) -> CameraGroupIdString:
         return self.ipc.group_id
 
+
     @classmethod
     def from_configs(cls, camera_configs: CameraConfigs,
                         global_kill_flag: multiprocessing.Value) -> 'CameraGroup':
@@ -70,11 +71,10 @@ class CameraGroup:
     def all_ready(self) -> bool:
         return all([self.ipc.all_ready, self.shm.valid])
 
-    def get_latest_frontend_payload(self) -> FrontendFramePayload| None:
-        """
-        Retrieve the latest multi-frame data if it is newer than the provided multi-frame number.
-        """
-        return self.ipc.latest_frontend_payload
+    def get_new_frontend_payload(self) -> FrontendFramePayload| None:
+        if not self.mf_publisher.new_frontend_payload_available:
+            return None
+        return self.mf_publisher.new_fe_payload
 
     def start(self):
         logger.info("Starting camera group...")
@@ -189,6 +189,7 @@ class CameraGroup:
         logger.debug("Resetting shared memory...")
         self.shm.close_and_unlink()
         self.shm = CameraGroupSharedMemoryManager.create(camera_configs=configs_update_message.new_configs,
+                                                        camera_group_id=self.ipc.group_id,
                                                          read_only=self.shm.read_only)
         self.ipc.camera_orchestrator = CameraOrchestrator.from_configs(
             camera_configs=configs_update_message.new_configs,

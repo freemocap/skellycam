@@ -231,6 +231,14 @@ class MultiFrameMetadata(BaseModel):
     multi_frame_number: int
     frame_metadatas: dict[CameraIdString, FrameMetadata]
     timebase_mapping: TimeBaseMapping
+    before_publication_timestamp_ns: int = None
+    after_publication_timestamp_ns: int = None
+
+    @property
+    def time_in_pubsub_queue(self) -> int:
+        if self.before_publication_timestamp_ns is None or self.after_publication_timestamp_ns is None:
+            raise ValueError("Publication timestamps are not set, cannot calculate time in pubsub queue")
+        return self.after_publication_timestamp_ns - self.before_publication_timestamp_ns
 
     @classmethod
     def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload):

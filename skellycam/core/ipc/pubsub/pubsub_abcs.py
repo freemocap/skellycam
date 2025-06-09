@@ -3,6 +3,7 @@ from abc import ABC
 from multiprocessing.process import parent_process
 from typing import Type
 
+import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core.types import TopicSubscriptionQueue, TopicPublicationQueue
@@ -43,7 +44,7 @@ class PubSubTopicABC(BaseModel, ABC):
         """
         if not isinstance(message, self.message_type):
             raise TypeError(f"Expected {self.message_type} but got {type(message)}")
-        logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
+        logger.trace(f"Publishing message of type {self.message_type} and size {len(message.model_dump_json())/1024:.2f} to {len(self.subscriptions)} subscribers with ~{np.mean([sub.qsize() for sub in self.subscriptions]):.2f} messages per subscriber")
         for sub in self.subscriptions:
             sub.put(message)
 
