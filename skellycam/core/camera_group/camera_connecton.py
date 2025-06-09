@@ -19,7 +19,7 @@ class CameraStatus(BaseModel):
     grabbing_frame: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     closing: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
 
@@ -34,16 +34,17 @@ class CameraStatus(BaseModel):
                     not self.closing.value,
                     not self.closed.value,
                     not self.updating.value,
-                    not self.paused.value,
+                    not self.is_paused.value,
                     not self.error.value,
                     ]
                     )
+
     def signal_error(self):
         self.error.value = True
         self.connected.value = False
         self.running.value = False
         self.grabbing_frame.value = False
-        self.paused.value = False
+        self.is_paused.value = False
 
     def signal_closing(self):
         """
@@ -52,7 +53,7 @@ class CameraStatus(BaseModel):
         self.closing.value = True
         self.running.value = False
         self.grabbing_frame.value = False
-        self.paused.value = False
+        self.is_paused.value = False
 
 
 class CameraConnection(BaseModel):

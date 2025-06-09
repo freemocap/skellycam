@@ -24,11 +24,11 @@ class CameraOrchestrator:
 
     @property
     def any_cameras_paused(self):
-        return any([conn.status.paused for conn in self.connections.values()])
+        return any([conn.status.is_paused.value for conn in self.connections.values()])
 
     @property
     def all_cameras_paused(self):
-        return all([conn.status.paused for conn in self.connections.values()])
+        return all([conn.status.is_paused.value for conn in self.connections.values()])
 
     @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:

@@ -16,7 +16,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import ExtractedConfigMessage, Upda
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBufferDTO, FramePayloadSharedMemoryRingBuffer
 from skellycam.core.types import CameraIdString, TopicSubscriptionQueue
-from skellycam.utilities.wait_functions import wait_1ms, wait_10us
+from skellycam.utilities.wait_functions import wait_1ms, wait_10us, wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         logger.exception(f"Failed to create cv2.VideoCapture for camera {camera_id}: {e}")
         camera_connection.status.signal_error()
         close_self_flag.value = True
-        ipc.should_continue = False
+        ipc.kill_everything()
         raise RuntimeError(f"Could not create cv2.VideoCapture for camera {camera_id}") from e
 
     camera_connection.status.connected.value = True
@@ -69,6 +69,11 @@ def opencv_camera_run_process(camera_id: CameraIdString,
         while should_continue():
             frame_metadata = create_empty_frame_metadata(config=extracted_config,
                                                          frame_number=orchestrator.camera_frame_counts[camera_id] + 1)
+            if ipc.should_pause_flag.value:
+                camera_connection.status.is_paused.value = True
+                wait_10ms()
+                continue
+            camera_connection.status.is_paused.value = False
 
             while should_continue() and not orchestrator.should_grab_by_id(camera_id=camera_id):
                 wait_10us()

@@ -111,8 +111,10 @@ class CameraGroupIPC(BaseModel):
     @should_continue.setter
     def should_continue(self, value: bool) -> None:
         self.shutdown_camera_group_flag.value = not value
-        wait_100ms()
-        self.global_kill_flag.value = not value
+
+
+    def kill_everything(self) -> None:
+        self.global_kill_flag.value = True
 
     @property
     def any_recording(self) -> bool:

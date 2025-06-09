@@ -108,20 +108,19 @@ def camera_group_close_all_delete_endpoint():
     "/update",
     summary="Update specified camera and apply provided configuration settings")
 def camera_update_put_endpoint(
-        camera_id: CameraIdString,
         request: CameraUpdateRequest = Body(..., description="Request body containing a dictionary of camera configurations keyed by camera IDs",
                                             examples=[CameraUpdateRequest.example()]),
 ):
     logger.api(
-        f"Received `cameras/update` PUT request for camera {camera_id} with configs:  {json.dumps(request.camera_configs,indent=2)}...")
+        f"Received `cameras/update` PUT request with cameras configs for cameras: {list(request.camera_configs.keys())}...")
     try:
-        get_skellycam_app().camera_group_manager.update_camera_configs(camera_config=request.camera_configs)
+        get_skellycam_app().camera_group_manager.update_camera_configs(camera_configs=request.camera_configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
         return True
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)
         raise HTTPException(status_code=500,
-                             detail=f"Error when processing `/camera/{camera_id}/update` request: {type(e).__name__} - {e}")
+                             detail=f"Error when processing `/camera/update` request: {type(e).__name__} - {e}")
 
 

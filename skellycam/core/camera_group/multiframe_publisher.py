@@ -12,7 +12,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage, FrontendPa
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.types import TopicSubscriptionQueue
-from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_30ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -82,15 +82,19 @@ class MultiframeBuilder:
         logger.success(f"Multiframe Publication process started")
         try:
             while ipc.should_continue:
-                wait_10ms()
+                wait_1ms()
                 if not update_shm_sub_queue.empty():
                     update_shm_message = update_shm_sub_queue.get()
                     if not isinstance(update_shm_message, UpdateShmMessage):
                         raise TypeError(f"Received unexpected message type: {type(update_shm_message)}")
 
-                if MultiframeBuilder._should_pause(ipc=ipc):
-                    wait_30ms()
-                    continue
+                if ipc.should_pause_flag.value:
+                    logger.debug(f"Multiframe publication process paused for camera group {ipc.group_id}")
+                    ipc.mf_publisher_status.is_paused_flag.value = True
+                    while ipc.should_pause_flag.value and ipc.should_continue:
+                        wait_10ms()
+                        continue
+                ipc.mf_publisher_status.is_paused_flag.value = False
 
                 latest_mfs = camera_group_shm.build_all_new_multiframes(previous_payload=latest_mf,
                                                                         overwrite=True)
@@ -106,7 +110,7 @@ class MultiframeBuilder:
                         # frontend_payload_topic.publish(FrontendPayloadMessage(frontend_payload=latest_fe), overwrite=True)
 
         except Exception as e:
-            ipc.should_continue = False
+            ipc.kill_everything()
             logger.error(f"Process error: {e}")
             logger.exception(e)
             ipc.mf_publisher_status.error.value = True
@@ -118,13 +122,3 @@ class MultiframeBuilder:
             logger.debug(f"Multiframe publication process completed")
             ipc.mf_publisher_status.is_running_flag.value = False
 
-
-    @staticmethod
-    def _should_pause(ipc):
-        if ipc.should_pause_flag.value:
-            logger.debug("Multiframe publication loops paused")
-            ipc.mf_exposer_status.is_paused_flag.value = True
-            return True
-        else:
-            ipc.mf_exposer_status.is_paused_flag.value = False
-            return False

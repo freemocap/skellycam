@@ -3,7 +3,7 @@ import {z} from 'zod';
 // Define string literals as const for better type safety
 export const PixelFormats = ['RGB', 'BGR', 'GRAY'];
 export const ExposureModes = ['MANUAL', 'AUTO', 'RECOMMEND'];
-export const CameraStatus = ['CONNECTED', 'AVAILABLE', 'UNAVAILABLE', 'ERROR'];
+export const CameraStatus = ['CONNECTED', 'AVAILABLE', 'UNAVAILABLE', 'IN_USE', 'ERROR'];
 export const RotationOptions = ['0', '90', '180', '270'];
 export const FourccOptions = ['MJPG', 'X264', 'YUYV', 'H264'];
 export const ResolutionPresets = [
@@ -92,3 +92,4 @@ export const CameraConfigsSchema = z.record(z.string(), CameraConfigSchema);
 export type CameraConfig = z.infer<typeof CameraConfigSchema>;
 export type CameraConfigs = z.infer<typeof CameraConfigsSchema>;
 export type ExposureMode = typeof ExposureModes[number];
+

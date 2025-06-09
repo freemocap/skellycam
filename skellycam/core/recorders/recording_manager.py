@@ -13,6 +13,7 @@ from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_manager import VideoManager
 from skellycam.core.types import TopicSubscriptionQueue
+from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,12 @@ class RecordingManager(BaseModel):
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
             while ipc.should_continue:
+                if ipc.should_pause_flag.value:
+                    logger.debug(f"VideoManager process paused for camera group `{ipc.group_id}`")
+                    ipc.video_manager_status.is_paused_flag.value = True
+                    wait_10ms()
+                    continue
+                ipc.video_manager_status.is_paused_flag.value = False
                 video_manager = cls._drain_and_handle_mf_buffer(
                     ipc=ipc,
                     video_manager=video_manager,
@@ -105,7 +112,7 @@ class RecordingManager(BaseModel):
 
 
         except Exception as e:
-            ipc.should_continue = False
+            ipc.kill_everything()
             ipc.video_manager_status.error.value = True
             logger.error(f"{cls.__class__.__name__} process error: {e}")
             logger.exception(e)

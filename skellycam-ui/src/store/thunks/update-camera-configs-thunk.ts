@@ -20,7 +20,7 @@ export const updateCameraConfigsThunk = createAsyncThunk(
 
         const requestBody = JSON.stringify(payload, null, 2);
         try {
-            console.log(`Updating Camera Configs at ${connectUrl} with body:${JSON.stringify(requestBody, null, 2)}`);
+            console.log(`Updating Camera Configs at ${connectUrl} with request body keys:`, Object.keys(payload));
             const response = await fetch(connectUrl, {
                 method: 'PUT',
                 headers: {
