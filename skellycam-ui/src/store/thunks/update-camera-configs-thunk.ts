@@ -3,25 +3,24 @@ import {
     selectCameraById,
     selectConfigsForSelectedCameras,
     setError,
-    setLoading
+    setLoading, updateCameraConfig
 } from "@/store/slices/cameras-slices/camerasSlice";
 import { CameraConfig } from "../slices/cameras-slices/camera-types";
 
-export const updateCameraConfigThunk = createAsyncThunk(
+export const updateCameraConfigsThunk = createAsyncThunk(
     'camera/update',
-    async (cameraConfig: CameraConfig, { dispatch, getState }) => {
+    async (_, { dispatch, getState }) => {
         const state = getState() as any;
-        const cameraId=cameraConfig.camera_id;
         dispatch(setLoading(true));
-        const connectUrl = `http://localhost:8006/skellycam/camera/${cameraId}/update`;
+        const connectUrl = `http://localhost:8006/skellycam/camera/update`;
 
         const payload = {
-            camera_config: cameraConfig
+            camera_configs: selectConfigsForSelectedCameras(state)
         };
 
         const requestBody = JSON.stringify(payload, null, 2);
         try {
-            console.log(`Updating Camera${cameraId} at ${connectUrl} with body:`, requestBody);
+            console.log(`Updating Camera Configs at ${connectUrl} with body:${JSON.stringify(requestBody, null, 2)}`);
             const response = await fetch(connectUrl, {
                 method: 'PUT',
                 headers: {
@@ -40,7 +39,15 @@ export const updateCameraConfigThunk = createAsyncThunk(
                 dispatch(setError(errorMsg));
                 throw new Error(errorMsg);
             }
-
+            // Convert the response data to a Record<string, CameraConfig>
+            data.extracted_configs.forEach((config: CameraConfig) => {
+                dispatch(updateCameraConfig(
+                    {
+                        cameraId: config.camera_id,
+                        config: config
+                    }
+                ))
+            });
             dispatch(setError(null));
             return data;
         } catch (error) {

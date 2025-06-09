@@ -27,7 +27,7 @@ import {
 import { detectCameraDevices } from "@/store/thunks/detect-cameras-thunks";
 import { connectToCameras } from "@/store/thunks/connect-to-cameras-thunk";
 import { CloseCamerasButton } from "@/components/available-cameras-panel/CloseCamerasButton";
-import { updateCameraConfigThunk } from "@/store/thunks/update-camera-config-thunk";
+import { updateCameraConfigsThunk } from "@/store/thunks/update-camera-configs-thunk";
 import { CameraConfig } from "@/store/slices/cameras-slices/camera-types";
 
 export const AvailableCamerasPanel = () => {
@@ -76,9 +76,10 @@ export const AvailableCamerasPanel = () => {
         config: newConfig,
       })
     );
+  };
 
-    // Make the API call
-    dispatch(updateCameraConfigThunk(newConfig));
+  const handleApplyConfigs = () => {
+    dispatch(updateCameraConfigsThunk());
   };
 
   return (

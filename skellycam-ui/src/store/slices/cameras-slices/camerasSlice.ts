@@ -3,7 +3,7 @@ import {createSelector, createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {RootState} from "@/store/AppStateStore";
 import {CameraConfig, CameraDevice, createDefaultCameraConfig} from "@/store/slices/cameras-slices/camera-types";
 import {dispatch} from "d3";
-import {updateCameraConfigThunk} from "@/store/thunks/update-camera-config-thunk";
+import {updateCameraConfigsThunk} from "@/store/thunks/update-camera-config-thunk";
 
 export interface CamerasState {
     cameras: Record<string, CameraDevice>;
