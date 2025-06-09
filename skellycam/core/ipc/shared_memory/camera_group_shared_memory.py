@@ -121,10 +121,10 @@ class CameraGroupSharedMemoryManager:
                                           camera_group_id=self.camera_group_id
                                           )
 
-    def publish_next_multi_frame_payload(self,
-                                         overwrite: bool,
-                                         previous_payload: MultiFramePayload | None = None,
-                                         ) -> MultiFramePayload:
+    def build_next_multi_frame_payload(self,
+                                       overwrite: bool,
+                                       previous_payload: MultiFramePayload | None = None,
+                                       ) -> MultiFramePayload:
         """
         Retrieves the latest frame from each camera shm and copies it to the MultiFrameSharedMemoryRingBuffer.
         """
@@ -156,13 +156,13 @@ class CameraGroupSharedMemoryManager:
         self.latest_mf_number.value = mf_payload.multi_frame_number
         return mf_payload
 
-    def publish_all_new_multiframes(self,
-                                    overwrite: bool,
-                                    previous_payload: MultiFramePayload | None = None) -> list[MultiFramePayload]:
+    def build_all_new_multiframes(self,
+                                  overwrite: bool,
+                                  previous_payload: MultiFramePayload | None = None) -> list[MultiFramePayload]:
         mfs: list[MultiFramePayload] = []
         while self.new_multi_frame_available:
-            mf_payload = self.publish_next_multi_frame_payload(previous_payload=previous_payload,
-                                                               overwrite=overwrite)
+            mf_payload = self.build_next_multi_frame_payload(previous_payload=previous_payload,
+                                                             overwrite=overwrite)
             mfs.append(mf_payload)
             previous_payload = mf_payload
         if len(mfs) > 0 and isinstance(mfs[-1], MultiFramePayload):
@@ -192,6 +192,7 @@ class CameraGroupSharedMemoryManager:
                 "Cannot use `get_all_new_multiframes` in read-only mode - use `get_latest_multiframe` instead!")
         if not self.valid:
             if invalid_ok:
+                logger.warning("Shared memory instance has been invalidated - returning empty list.")
                 return []
             else:
                 raise ValueError("Shared memory instance has been invalidated, and thats not ok!")

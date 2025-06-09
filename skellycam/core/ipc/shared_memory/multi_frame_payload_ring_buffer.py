@@ -38,7 +38,7 @@ class MultiFrameSharedMemoryRingBuffer:
 
     read_only: bool
 
-    previous_read_mf_payload: MultiFramePayload | None = None
+    latest_mf: MultiFramePayload | None = None
 
     @property
     def valid(self) -> bool:
@@ -187,7 +187,7 @@ class MultiFrameSharedMemoryRingBuffer:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
-        mf_payload = MultiFramePayload.from_numpy_buffer(
+        mf = MultiFramePayload.from_numpy_buffer(
             buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_next_payload(),
                                                       mf_metadata_buffer=self.mf_metadata_shm.get_next_payload(),
                                                       mf_time_mapping_buffer=self.mf_time_mapping_shm.get_next_payload(),
@@ -195,20 +195,26 @@ class MultiFrameSharedMemoryRingBuffer:
             camera_group_id=self.camera_group_id,
             camera_configs=camera_configs)
 
-        if (not self.previous_read_mf_payload and mf_payload.multi_frame_number != 0) or \
-                (
-                        self.previous_read_mf_payload and mf_payload.multi_frame_number != self.previous_read_mf_payload.multi_frame_number + 1):
-            raise ValueError(
-                f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf_payload.multi_frame_number}")
-        self.previous_read_mf_payload = mf_payload
-
-        if not mf_payload or not mf_payload.full:
-            raise ValueError("Did not read full multi-frame mf_payload!")
-        for frame in mf_payload.frames.values():
+        self._validate_mf(mf)
+        for frame in mf.frames.values():
             frame.metadata[
                 FRAME_METADATA_MODEL.COPY_FROM_MULTI_FRAME_ESCAPE_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
+        self.latest_mf = mf
+        return mf
 
-        return mf_payload
+    def _validate_mf(self, mf: MultiFramePayload):
+        if not isinstance(mf, MultiFramePayload):
+            raise TypeError(f"Expected MultiFramePayload, got {type(mf)}")
+        if (not self.latest_mf and mf.multi_frame_number != 0):
+            raise ValueError(
+                f"Initial multi-frame number mismatch! Expected multiframe_number = 0, got {mf.multi_frame_number}")
+
+        if(self.latest_mf and mf.multi_frame_number != self.latest_mf.multi_frame_number + 1):
+            raise ValueError(
+                f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf.multi_frame_number}")
+
+        if not mf or not mf.full:
+            raise ValueError("Did not read full multi-frame mf!")
 
     def get_all_new_multiframes(self,
                                 camera_configs: CameraConfigs,

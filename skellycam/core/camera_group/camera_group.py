@@ -8,8 +8,8 @@ from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.camera_group.multiframe_publisher import MultiframePublisher
-from skellycam.core.camera_group.video_manager import VideoManager
+from skellycam.core.camera_group.multiframe_publisher import MultiframeBuilder
+from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraConfigsMessage, UpdateShmMessage, ExtractedConfigMessage
@@ -30,8 +30,8 @@ class CameraGroup:
     ipc: CameraGroupIPC
     shm: CameraGroupSharedMemoryManager
     cameras: CameraManager
-    videos: VideoManager
-    mf_publisher: MultiframePublisher
+    recorder: RecordingManager
+    mf_publisher: MultiframeBuilder
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -51,8 +51,8 @@ class CameraGroup:
             ipc=ipc,
             shm=shm,
             cameras=CameraManager.create_cameras(ipc=ipc, camera_shm_dtos=shm.to_dto().camera_shm_dtos),
-            videos=VideoManager.create(ipc=ipc, group_shm_dto=shm.to_dto()),
-            mf_publisher=MultiframePublisher.create(ipc=ipc, group_shm_dto=shm.to_dto()),
+            recorder=RecordingManager.create(ipc=ipc, group_shm_dto=shm.to_dto()),
+            mf_publisher=MultiframeBuilder.create(ipc=ipc, group_shm_dto=shm.to_dto()),
 
         )
 
@@ -62,7 +62,7 @@ class CameraGroup:
 
     @property
     def all_alive(self):
-        return all([self.cameras.all_alive, self.mf_publisher.is_alive(), self.videos.is_alive()])
+        return all([self.cameras.all_alive, self.mf_publisher.is_alive(), self.recorder.is_alive()])
 
     @property
     def all_ready(self) -> bool:
@@ -78,7 +78,7 @@ class CameraGroup:
         logger.info("Starting camera group...")
         self.cameras.start()
         self.mf_publisher.start()
-        self.videos.start()
+        self.recorder.start()
         while not self.all_alive and self.ipc.should_continue:
             wait_10ms()
         logger.info(f"Camera group ID: {self.id} sub-processs started -  Awaiting cameras connected...")
@@ -91,7 +91,7 @@ class CameraGroup:
 
         self.ipc.should_continue = False
         self.mf_publisher.close()
-        self.videos.close()
+        self.recorder.close()
         self.cameras.close()
         self.shm.close_and_unlink()
         logger.info("Camera group closed.")

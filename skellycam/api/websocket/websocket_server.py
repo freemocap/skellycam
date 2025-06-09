@@ -132,8 +132,9 @@ class WebsocketServer:
                     if self.websocket.client_state != WebSocketState.CONNECTED:
                         return
 
-                    await self.websocket.send_bytes(fe_payload.model_dump_json().encode('utf-8'))
-
+                    payload_json = fe_payload.model_dump_json()
+                    payload_bytes = payload_json.encode('utf-8')
+                    await self.websocket.send_bytes(payload_bytes)
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
         except asyncio.CancelledError:

@@ -11,7 +11,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import RecordingInfoMessage
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString, TopicSubscriptionQueue
 from skellycam.utilities.create_camera_group_id import create_camera_group_id
-from skellycam.utilities.wait_functions import wait_10ms, wait_30ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_30ms, wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,8 @@ class CameraGroupIPC(BaseModel):
     @should_continue.setter
     def should_continue(self, value: bool) -> None:
         self.shutdown_camera_group_flag.value = not value
+        wait_100ms()
+        self.global_kill_flag.value = not value
 
     @property
     def any_recording(self) -> bool:

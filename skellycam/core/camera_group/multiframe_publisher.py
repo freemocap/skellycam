@@ -18,29 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class MultiframePublisher:
-    mf_builder: multiprocessing.Process
+class MultiframeBuilder:
+    worker: multiprocessing.Process
     ipc: CameraGroupIPC
     fe_payload_subscription: TopicSubscriptionQueue
     _latest_fe_payload: FrontendFramePayload | None = None
-    backpressure: multiprocessing.Value = multiprocessing.Value('i', 0)
-
-
-
-
-    @property
-    def latest_fe_payload(self) -> FrontendFramePayload | None:
-        latest_fes: list[FrontendFramePayload]=[]
-        while not self.fe_payload_subscription.empty() and self.ipc.should_continue:
-            fe_message: FrontendPayloadMessage = self.fe_payload_subscription.get()
-            if not isinstance(fe_message, FrontendPayloadMessage):
-                raise TypeError(f"Expected FrontendPayloadMessage, got {type(fe_message)}")
-            latest_fes.append(fe_message.frontend_payload)
-        if latest_fes:
-            self.ipc.main_process_backpressure.value = len(latest_fes)  # Update backpressure with the number of latest FE payloads
-            return latest_fes[-1]
-        return self._latest_fe_payload
-
 
     @classmethod
     def create(cls,
@@ -59,20 +41,20 @@ class MultiframePublisher:
                                                          )
                                              )
 
-        return cls(mf_builder=mf_builder,
+        return cls(worker=mf_builder,
                    fe_payload_subscription=fe_subscription,
                    ipc=ipc,
                    )
 
     def start(self):
         logger.debug(f"Starting multi-frame publication process...")
-        self.mf_builder.start()
+        self.worker.start()
 
     def is_alive(self) -> bool:
-        return self.mf_builder.is_alive()
+        return self.worker.is_alive()
 
     def join(self):
-        self.mf_builder.join()
+        self.worker.join()
 
     def close(self):
         logger.debug(f"Closing multi-frame publication process...")
@@ -106,12 +88,12 @@ class MultiframePublisher:
                     if not isinstance(update_shm_message, UpdateShmMessage):
                         raise TypeError(f"Received unexpected message type: {type(update_shm_message)}")
 
-                if MultiframePublisher._should_pause(ipc=ipc):
+                if MultiframeBuilder._should_pause(ipc=ipc):
                     wait_30ms()
                     continue
 
-                latest_mfs = camera_group_shm.publish_all_new_multiframes(previous_payload=latest_mf,
-                                                                          overwrite=True)
+                latest_mfs = camera_group_shm.build_all_new_multiframes(previous_payload=latest_mf,
+                                                                        overwrite=True)
                 ipc.mf_publisher_status.total_frames_published.value += len(latest_mfs)
                 ipc.mf_publisher_status.number_frames_published_this_cycle.value = len(latest_mfs)
                 if latest_mfs:
