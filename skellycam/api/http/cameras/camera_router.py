@@ -124,15 +124,3 @@ def camera_update_put_endpoint(
                              detail=f"Error when processing `/camera/{camera_id}/update` request: {type(e).__name__} - {e}")
 
 
-@camera_router.delete("/{camera_id}/close",
-                      summary="Close camera with specified ID")
-def camera_close_delete_endpoint(
-        camera_id: CameraIdString, ):
-    logger.api(f"Received `/close` request to close camera {camera_id}...")
-
-    try:
-        get_skellycam_app().camera_group_manager.close_camera(camera_id=camera_id)
-        logger.api("`/close` request handled successfully.")
-    except Exception as e:
-        logger.error(f"Failed to close cameras: {type(e).__name__} - {e}")
-        logger.exception(e)

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ValidationError, Field
 
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
@@ -38,6 +39,7 @@ class RecordingManager(BaseModel):
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
+                camera_configs: CameraConfigs,
                ):
 
         logger.debug(f"Creating RecordingManager for recording folder {recording_info.recording_name}")
@@ -47,7 +49,7 @@ class RecordingManager(BaseModel):
                    video_recorders={camera_id: VideoRecorder.create(camera_id=camera_id,
                                                                     recording_info=recording_info,
                                                                     config=config,
-                                                                    ) for camera_id, config in recording_info.camera_configs.items()}
+                                                                    ) for camera_id, config in camera_configs.items()}
                    )
 
     @property
@@ -91,7 +93,9 @@ class RecordingManager(BaseModel):
         """
         saves one frame from one video recorder
         """
-
+        if self.is_finished:
+            logger.warning(f"RecordingManager for `{self.recording_info.recording_name}` is already finished. Cannot save more frames.")
+            return False
         if max(self.frame_counts_to_save.values()) == 0:
             return False
         # Find the camera ID with the most frames to save

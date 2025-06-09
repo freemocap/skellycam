@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.pubsub.pubsub_manager import create_pubsub_manager, TopicTypes, PubSubTopicManager
+from skellycam.core.ipc.pubsub.pubsub_topics import RecordingInfoMessage
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString, TopicSubscriptionQueue
 from skellycam.utilities.create_camera_group_id import create_camera_group_id
@@ -143,7 +144,7 @@ class CameraGroupIPC(BaseModel):
     def start_recording(self, recording_info: RecordingInfo) -> None:
         if self.any_recording:
             raise ValueError("Cannot start recording while recording is in progress.")
-        self.pubsub.topics[TopicTypes.RECORDING_INFO].publish(recording_info)
+        self.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
         self.video_manager_status.should_record.value = True
 
     def stop_recording(self) -> None:

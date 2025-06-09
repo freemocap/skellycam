@@ -3,7 +3,7 @@ from collections import deque
 from pathlib import Path
 
 import cv2
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
@@ -66,13 +66,13 @@ class VideoRecorder(BaseModel):
             self._initialize_video_writer()
 
         if not self.video_writer.isOpened():
-            raise ValidationError(f"VideoWriter not open (before adding frame)!")
+            raise ValueError(f"VideoWriter not open (before adding frame)!")
 
         frame = self.frames_to_write.popleft()
         self._validate_frame(frame)
         if self.previous_frame is not None:
             if not frame.frame_number == self.previous_frame.frame_number + 1:
-                raise ValidationError(f"Frame numbers for camera {self.camera_id} are not consecutive! \n "
+                raise ValueError(f"Frame numbers for camera {self.camera_id} are not consecutive! \n "
                                       f"Previous frame number: {self.previous_frame.frame_number}, \n"
                                       f"Current frame number: {frame.frame_number}\n")
         self.previous_frame = frame
@@ -81,7 +81,7 @@ class VideoRecorder(BaseModel):
             f"VideoRecorder for Camera {self.camera_id} wrote frame {frame.frame_number} to video file: {self.video_path}")
 
         if not self.video_writer.isOpened():
-            raise ValidationError(f"VideoWriter not open (after adding frame)!")
+            raise ValueError(f"VideoWriter not open (after adding frame)!")
         return frame.frame_number
 
     def finish_and_close(self):
@@ -109,10 +109,10 @@ class VideoRecorder(BaseModel):
         if not Path(self.video_path).parent.exists():
             Path(self.video_path).parent.mkdir(parents=True, exist_ok=True)
         if frame.camera_id != self.camera_config.camera_index:
-            raise ValidationError(
+            raise ValueError(
                 f"Frame camera_id {frame.camera_id} does not match self.camera_config camera_id {self.camera_config.camera_index}")
         if frame.image.shape != self.camera_config.image_shape:
-            raise ValidationError(f"Frame shape ({frame.image.shape}) does not match expected shape ({self.camera_config.image_shape})")
+            raise ValueError(f"Frame shape ({frame.image.shape}) does not match expected shape ({self.camera_config.image_shape})")
 
     def close(self):
         if self.video_writer:

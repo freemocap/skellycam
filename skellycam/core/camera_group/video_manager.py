@@ -3,10 +3,10 @@ import multiprocessing
 
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage, UpdateCameraConfigsMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage, UpdateCameraConfigsMessage, RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
@@ -153,7 +153,7 @@ class VideoManager(BaseModel):
                                   shm_subscription_queue: multiprocessing.Queue,
                                   update_configs_sub_queue: multiprocessing.Queue,
                                   recording_info_subscription_queue: multiprocessing.Queue) -> tuple[
-        CameraConfigs, CameraGroupSharedMemoryManager, RecordingManager | None, ]:
+        CameraConfigs, CameraGroupSharedMemoryManager, RecordingManager | None,]:
         if not update_configs_sub_queue.empty():
             update_configs_message = update_configs_sub_queue.get(block=True)
             if not isinstance(update_configs_message, UpdateCameraConfigsMessage):
@@ -162,16 +162,18 @@ class VideoManager(BaseModel):
             camera_configs = update_configs_message.new_configs
         if not recording_info_subscription_queue.empty():
             ipc.video_manager_status.updating.value = True
-            recording_info = recording_info_subscription_queue.get(block=True)
-            if isinstance(recording_info, RecordingInfo):
+            recording_info_msg = recording_info_subscription_queue.get(block=True)
+            if isinstance(recording_info_msg, RecordingInfoMessage):
                 if recording_manager is not None:
                     logger.warning("RecordingManager already exists, finishing it before starting a new one.")
                     recording_manager.finish_and_close()
                 recording_manager = cls.start_recording(ipc=ipc,
-                                                        recording_info=recording_info,
+                                                        recording_info=recording_info_msg.recording_info,
+                                                        camera_configs=camera_configs,
                                                         recording_manager=recording_manager)
             else:
-                raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
+                raise ValueError(
+                    f"Expected RecordingInfoMessage, got {type(recording_info_msg)} in recording_info_queue")
             ipc.video_manager_status.updating.value = False
 
         if not shm_subscription_queue.empty():
@@ -188,11 +190,12 @@ class VideoManager(BaseModel):
                 read_only=camera_group_shm.read_only)
             ipc.video_manager_status.updating.value = False
 
-        return camera_configs, camera_group_shm,recording_manager
+        return camera_configs, camera_group_shm, recording_manager
 
     @staticmethod
     def start_recording(ipc: CameraGroupIPC,
                         recording_info: RecordingInfo,
+                        camera_configs: CameraConfigs,
                         recording_manager: RecordingManager | None) -> RecordingManager | None:
         if isinstance(recording_manager, RecordingManager):
             while not recording_manager.is_finished:
@@ -203,12 +206,14 @@ class VideoManager(BaseModel):
 
         if not isinstance(recording_info, RecordingInfo):
             raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
+        if not isinstance(camera_configs, dict) or  any([not isinstance(config, CameraConfig) for config in camera_configs.values()]):
+            raise ValueError(f"Expected CameraConfigs, got {type(camera_configs)} in camera_configs")
 
         logger.debug(f"Creating RecodingManager for recording: `{recording_info.recording_name}`")
         ipc.video_manager_status.updating.value = True
-        recording_manager = RecordingManager.create(
-            recording_info=recording_info,
-        )
+        recording_manager = RecordingManager.create(recording_info=recording_info,
+                                                    camera_configs=camera_configs,
+                                                    )
         ipc.video_manager_status.updating.value = False
         ipc.video_manager_status.is_recording_frames_flag.value = True
         return recording_manager
