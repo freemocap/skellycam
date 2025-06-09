@@ -45,10 +45,10 @@ class CameraProcess:
                                                    kwargs=dict(camera_id=camera_id,
                                                                ipc=ipc,
                                                                camera_shm_dto=camera_shm_dto,
-                                                               close_self_flag=close_self_flag,
                                                                extracted_config_topic=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG],
-                                                               update_configs_sub_queue=ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].get_subscription(),
-                                                               update_shm_sub_queue=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
+                                                               update_configs_subscription=ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].get_subscription(),
+                                                               update_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
+                                                               close_self_flag=close_self_flag,
                                                                )
                                                    ),
                    )

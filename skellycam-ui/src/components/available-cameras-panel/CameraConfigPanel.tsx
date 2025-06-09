@@ -1,13 +1,10 @@
 import { Box, Collapse, useTheme } from "@mui/material";
-import Grid from "@mui/material/Grid2"; // Updated import
+import Grid from "@mui/material/Grid2";
 import * as React from "react";
 import { CameraConfigResolution } from "./CameraConfigResolution";
 import { CameraConfigExposure } from "./CameraConfigExposure";
 import { CameraConfigRotation } from "./CameraConfigRotation";
 import { CameraConfig } from "@/store/slices/cameras-slices/camera-types";
-import { useEffect, useState } from "react";
-import { useDebounce } from "@/hooks/useDebounce";
-
 interface CameraConfigPanelProps {
   config: CameraConfig;
   onConfigChange: (newConfig: CameraConfig) => void;
@@ -20,31 +17,15 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
   isExpanded,
 }) => {
   const theme = useTheme();
-  const [localConfig, setLocalConfig] = useState<CameraConfig>(config);
-  // Debounce the local config changes with a 500ms delay
-  const debouncedConfig = useDebounce<CameraConfig>(localConfig, 500);
 
-  // Update local config when props change
-  useEffect(() => {
-    setLocalConfig(config);
-  }, [config]);
-
-  // Send the debounced config to the parent component for API updates
-  useEffect(() => {
-    // Only send updates if the config has actually changed
-    if (JSON.stringify(debouncedConfig) !== JSON.stringify(config)) {
-      onConfigChange(debouncedConfig);
-    }
-  }, [debouncedConfig, onConfigChange, config]);
-
-  const handleChange = (field: keyof CameraConfig, value: any) => {
-    // Update local state immediately for UI feedback
-    const updatedConfig = {
-      ...localConfig,
-      [field]: value
-    };
-    
-    setLocalConfig(updatedConfig);
+  const handleChange = <K extends keyof CameraConfig>(
+    key: K,
+    value: CameraConfig[K]
+  ) => {
+    onConfigChange({
+      ...config,
+      [key]: value,
+    });
   };
 
   return (

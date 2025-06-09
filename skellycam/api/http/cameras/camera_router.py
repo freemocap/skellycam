@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 
@@ -25,11 +26,11 @@ class CameraGroupCreateRequest(BaseModel):
 
 
 class CameraUpdateRequest(BaseModel):
-    camera_config: CameraConfig
+    camera_configs: CameraConfigs
 
     @classmethod
     def example(cls) -> "CameraUpdateRequest":
-        return cls(camera_config=CameraConfig(exposure=-8))
+        return cls(camera_configs={DEFAULT_CAMERA_ID: CameraConfig(exposure=-8)})
 
 
 class StartRecordingRequest(BaseModel):
@@ -104,17 +105,17 @@ def camera_group_close_all_delete_endpoint():
 
 
 @camera_router.put(
-    "/{camera_id}/update",
+    "/update",
     summary="Update specified camera and apply provided configuration settings")
 def camera_update_put_endpoint(
         camera_id: CameraIdString,
-        request: CameraUpdateRequest = Body(..., description="Request body containing desired camera configuration",
+        request: CameraUpdateRequest = Body(..., description="Request body containing a dictionary of camera configurations keyed by camera IDs",
                                             examples=[CameraUpdateRequest.example()]),
 ):
     logger.api(
-        f"Received `/{camera_id}/update` PUT request for camera {camera_id} with config:  {request.camera_config}...")
+        f"Received `cameras/update` PUT request for camera {camera_id} with configs:  {json.dumps(request.camera_configs,indent=2)}...")
     try:
-        get_skellycam_app().camera_group_manager.update_camera_config(camera_config=request.camera_config)
+        get_skellycam_app().camera_group_manager.update_camera_configs(camera_config=request.camera_configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
         return True
     except Exception as e:

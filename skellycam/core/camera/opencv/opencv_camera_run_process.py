@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 def opencv_camera_run_process(camera_id: CameraIdString,
                               ipc: CameraGroupIPC,
-                              update_configs_subscription: TopicSubscriptionQueue,
-                              extracted_config_topic: ExtractedConfigTopic,
-                              update_shm_subscription: TopicSubscriptionQueue,
                               camera_shm_dto: FramePayloadSharedMemoryRingBufferDTO,
+                              extracted_config_topic: ExtractedConfigTopic,
+                              update_configs_subscription: TopicSubscriptionQueue,
+                              update_shm_subscription: TopicSubscriptionQueue,
                               close_self_flag: multiprocessing.Value,
                               ):
     # Configure logging in the child process
