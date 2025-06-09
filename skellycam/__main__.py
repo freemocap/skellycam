@@ -82,6 +82,10 @@ if __name__ == "__main__":
     shutdown_listener_thread.start()
     try:
         asyncio.run(main(global_kill_flag=original_global_kill_flag))
+    except Exception as e:
+        logger.error(f"An error occurred in the main process: {e.__class__.__name__}: {e}")
+        original_global_kill_flag.value = True
+        raise
     finally:
         original_global_kill_flag.value = True  # Ensure cleanup
 

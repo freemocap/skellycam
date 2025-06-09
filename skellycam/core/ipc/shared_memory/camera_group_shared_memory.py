@@ -197,7 +197,7 @@ class CameraGroupSharedMemoryManager:
                 raise ValueError("Shared memory instance has been invalidated, and thats not ok!")
         return self.multi_frame_ring_shm.get_all_new_multiframes(camera_configs=self.camera_configs)
 
-    def get_latest_multiframe(self, if_newer_than_mf_number: int | None = None) -> MultiFramePayload | None:
+    def get_latest_multiframe(self, if_newer_than: int | None = None) -> MultiFramePayload | None:
         """
         Retrieves the latest multi-frame data if it is newer than the provided multi-frame number.
         """
@@ -205,12 +205,12 @@ class CameraGroupSharedMemoryManager:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         if not self.latest_multiframe_shm.first_frame_written:
             return None
-        if if_newer_than_mf_number is not None and if_newer_than_mf_number >= self.latest_multiframe_shm.latest_written_mf_number.value:
+        if if_newer_than is not None and if_newer_than >= self.latest_multiframe_shm.latest_written_mf_number.value:
             return None
         mf = self.latest_multiframe_shm.retrieve_multiframe(camera_configs=self.camera_configs)
-        if if_newer_than_mf_number and mf.multi_frame_number <= if_newer_than_mf_number:
+        if if_newer_than and mf.multi_frame_number <= if_newer_than:
             raise ValueError(
-                f"Latest multi-frame number {mf.multi_frame_number} is not newer than {if_newer_than_mf_number} - something is broken!")
+                f"Latest multi-frame number {mf.multi_frame_number} is not newer than {if_newer_than} - something is broken!")
         return mf
 
     def close(self):

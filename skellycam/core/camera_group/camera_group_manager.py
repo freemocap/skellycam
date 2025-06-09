@@ -63,13 +63,18 @@ class CameraGroupManager:
         """
         Close all camera groups.
         """
+        if not self.camera_groups:
+            logger.warning("No camera groups to close.")
+            return
         for camera_group in self.camera_groups.values():
             camera_group.ipc.shutdown_camera_group_flag.value = True
         wait_100ms()
+        closed_ids:list[CameraIdString] = []
         for camera_group_id in list(self.camera_groups.keys()):
             self.close_camera_group(camera_group_id)
+            closed_ids.append(camera_group_id)
         self.camera_groups.clear()
-        logger.success("Successfully closed all camera groups.")
+        logger.success(f"Successfully closed all camera groups ids - {closed_ids}")
 
     def start_recording_all_groups(self, recording_info:RecordingInfo) -> None:
         """
@@ -88,11 +93,11 @@ class CameraGroupManager:
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 
-    def get_new_frontend_payloads(self) -> list[FrontendFramePayload]:
+    def get_latest_frontend_payloads(self, if_newer_than:int|None) -> list[FrontendFramePayload]:
 
             fe_payloads = []
             for camera_group in self.camera_groups.values():
-                fe_payload =  camera_group.get_new_frontend_payload()
+                fe_payload =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than)
                 if isinstance(fe_payload, FrontendFramePayload):
                     fe_payloads.append(fe_payload)
             return fe_payloads

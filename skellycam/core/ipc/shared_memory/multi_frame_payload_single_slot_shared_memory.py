@@ -144,7 +144,6 @@ class MultiframePayloadSingleSlotSharedMemory:
 
         if not self.shm_valid_flag.value:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-
         mf_payload = MultiFramePayload.from_numpy_buffer(
             buffer=MultiFrameNumpyBuffer.from_buffers(mf_image_buffer=self.mf_image_shm.get_data(),
                                                       mf_metadata_buffer=self.mf_metadata_shm.get_data(),

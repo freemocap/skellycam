@@ -47,8 +47,8 @@ class SkellycamApplication:
         logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {list(camera_configs.keys())}")
         return camera_group_id
 
-    def get_new_frontend_payloads(self) -> list[FrontendFramePayload]:
-        return self.camera_group_manager.get_new_frontend_payloads()
+    def get_new_frontend_payloads(self, if_newer_than:int|None) -> list[FrontendFramePayload]:
+        return self.camera_group_manager.get_latest_frontend_payloads(if_newer_than=if_newer_than)
     
     def update_camera_configs(self,
                               camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]):

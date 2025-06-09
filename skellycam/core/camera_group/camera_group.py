@@ -11,7 +11,6 @@ from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.multiframe_publisher import MultiframePublisher
 from skellycam.core.camera_group.video_manager import VideoManager
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraConfigsMessage, UpdateShmMessage, ExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
@@ -38,11 +37,9 @@ class CameraGroup:
     def id(self) -> CameraGroupIdString:
         return self.ipc.group_id
 
-
     @classmethod
     def from_configs(cls, camera_configs: CameraConfigs,
-                        global_kill_flag: multiprocessing.Value) -> 'CameraGroup':
-
+                     global_kill_flag: multiprocessing.Value) -> 'CameraGroup':
 
         ipc = CameraGroupIPC.create(camera_configs=camera_configs,
                                     global_kill_flag=global_kill_flag)
@@ -71,10 +68,11 @@ class CameraGroup:
     def all_ready(self) -> bool:
         return all([self.ipc.all_ready, self.shm.valid])
 
-    def get_new_frontend_payload(self) -> FrontendFramePayload| None:
-        if not self.mf_publisher.new_frontend_payload_available:
+    def get_latest_frontend_payload(self, if_newer_than: int | None = None) -> FrontendFramePayload | None:
+        mf = self.shm.get_latest_multiframe(if_newer_than=if_newer_than)
+        if mf is None:
             return None
-        return self.mf_publisher.new_fe_payload
+        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf)
 
     def start(self):
         logger.info("Starting camera group...")
@@ -189,7 +187,7 @@ class CameraGroup:
         logger.debug("Resetting shared memory...")
         self.shm.close_and_unlink()
         self.shm = CameraGroupSharedMemoryManager.create(camera_configs=configs_update_message.new_configs,
-                                                        camera_group_id=self.ipc.group_id,
+                                                         camera_group_id=self.ipc.group_id,
                                                          read_only=self.shm.read_only)
         self.ipc.camera_orchestrator = CameraOrchestrator.from_configs(
             camera_configs=configs_update_message.new_configs,

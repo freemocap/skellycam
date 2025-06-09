@@ -38,13 +38,19 @@ class PubSubTopicABC(BaseModel, ABC):
         return sub
 
 
-    def publish(self, message:TopicMessageABC):
+    def publish(self, message:TopicMessageABC, overwrite:bool=False):
         """
         Publish a message to all subscribers of this topic.
         """
         if not isinstance(message, self.message_type):
             raise TypeError(f"Expected {self.message_type} but got {type(message)}")
-        logger.trace(f"Publishing message of type {self.message_type} and size {len(message.model_dump_json())/1024:.2f} to {len(self.subscriptions)} subscribers with ~{np.mean([sub.qsize() for sub in self.subscriptions]):.2f} messages per subscriber")
+        logger.trace(f"Publishing message of type {self.message_type} and size {len(message.model_dump_json())/1024:.2f}KB to {len(self.subscriptions)} subscribers with ~{np.mean([sub.qsize() for sub in self.subscriptions]):.2f} messages per subscriber")
         for sub in self.subscriptions:
+            if overwrite:
+                overwrote = 0
+                while not sub.empty():
+                    sub.get()
+                    overwrote += 1
+                logger.trace(f"Overwrote {overwrote} messages in subscription queue {sub}")
             sub.put(message)
 

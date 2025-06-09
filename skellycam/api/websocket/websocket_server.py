@@ -117,12 +117,14 @@ class WebsocketServer:
         """
         logger.info(
             f"Starting frontend image payload relay...")
+        latest_mf_number: int | None = None
         try:
             while self.should_continue:
-                await async_wait_10ms()
+                await async_wait_1ms()
 
-                new_frontend_payloads  = self._app.get_new_frontend_payloads()
+                new_frontend_payloads  = self._app.get_new_frontend_payloads(if_newer_than=latest_mf_number)
                 for fe_payload in new_frontend_payloads:
+                    latest_mf_number = fe_payload.multi_frame_number
                     if not self.websocket.client_state == WebSocketState.CONNECTED:
                         logger.error("Websocket is not connected, cannot send payload!")
                         raise RuntimeError("Websocket is not connected, cannot send payload!")
