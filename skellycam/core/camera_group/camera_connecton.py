@@ -31,7 +31,6 @@ class CameraStatus(BaseModel):
     def ready(self) -> bool:
         return all([self.connected.value,
                     self.running.value,
-                    not self.grabbing_frame.value,
                     not self.closing.value,
                     not self.closed.value,
                     not self.updating.value,
