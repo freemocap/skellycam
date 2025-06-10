@@ -1,4 +1,4 @@
-from typing import Tuple, Self
+from typing import Tuple, Self, AnyStr, Any
 
 import cv2
 from pydantic import BaseModel, Field, model_validator
@@ -63,6 +63,13 @@ def get_video_file_type(fourcc_code: int) ->str:
     if file_format is None:
         raise ValueError(f"Unrecognized FOURCC code: {fourcc_code}")
     return file_format
+
+
+class ParameterDifferencesModel(BaseModel):
+    parameter_name: str
+    self_value: Any
+    other_value: Any
+
 
 class CameraConfig(BaseModel):
     camera_id: CameraIdString = Field(
@@ -156,6 +163,34 @@ class CameraConfig(BaseModel):
 
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
+
+    def __sub__(self, other: "CameraConfig") -> list[ParameterDifferencesModel]:
+        """
+        Returns a dictionary containing only the fields that differ between two CameraConfig objects.
+
+        Parameters
+        ----------
+        other : CameraConfig
+            The CameraConfig to compare against
+
+        Returns
+        -------
+        list[ParameterDifferencesModel]
+        """
+        self_dict = self.model_dump()
+        other_dict = other.model_dump()
+
+        diffs = []
+        for key, self_value in self_dict.items():
+            other_value = other_dict.get(key)
+            if self_value != other_value:
+                diffs.append(ParameterDifferencesModel(
+                    parameter_name=key,
+                    self_value=self_value,
+                    other_value=other_value
+                ))
+
+        return diffs
 
     def __str__(self):
         out_str = f"\n\tBASE CONFIG:\n"

@@ -130,13 +130,13 @@ class CameraGroup:
                 self._receive_extracted_config_message(extracted_configs)
 
                 if all([isinstance(config, CameraConfig) for config in extracted_configs.values()]):
-                    update_message = self._evaluate_extracted_configs(extracted_configs=extracted_configs,
+                    update_message:UpdateCameraConfigsMessage|None = self._evaluate_extracted_configs(extracted_configs=extracted_configs,
                                                                       requested_update_configs=new_configs)
                     if update_message is None:
                         logger.success("Camera configs updated successfully!")
                     else:
                         logger.warning(
-                            "Camera configs were not updated successfully - re-attempting update with extracted configs.")
+                            f"Camera configs were not updated successfully - differences {update_message.differences}")
                         extracted_configs = {camera_id: None for camera_id in new_configs.keys()}
             wait_10ms()
         self.shm.camera_configs = new_configs

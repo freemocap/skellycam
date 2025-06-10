@@ -1,7 +1,7 @@
 from typing import Type
 from pydantic import Field
 
-from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs, ParameterDifferencesModel
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
@@ -67,6 +67,26 @@ class UpdateCameraConfigsMessage(TopicMessageABC):
         old_configs_without_exposure = {camera_id: CameraConfig(**config.model_dump(exclude={'exposure', 'exposure_mode'})) for camera_id, config in self.old_configs}
         return new_configs_without_exposure == old_configs_without_exposure
 
+    @property
+    def differences(self) -> list[str]:
+        """
+        Get a list of differences between the old and new camera configurations.
+        """
+        differences = []
+        for camera_id, old_config in self.old_configs.items():
+            new_config = self.new_configs.get(camera_id)
+            if new_config:
+                diffs = old_config-new_config
+                if diffs:
+                    differences.append(f"Camera {camera_id} changed (new,old): {[diff.model_dump_json(indent=2) for diff in diffs]}")
+                else:
+                    differences.append(f"Camera {camera_id} unchanged.")
+            else:
+                differences.append(f"Camera {camera_id} removed.")
+        for camera_id, new_config in self.new_configs.items():
+            if camera_id not in self.old_configs:
+                differences.append(f"Camera {camera_id} added")
+        return differences
 class ExtractedConfigMessage(TopicMessageABC):
     """
     Message containing the camera settings extracted from the camera device
