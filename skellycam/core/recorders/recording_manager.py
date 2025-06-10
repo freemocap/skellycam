@@ -1,5 +1,7 @@
+import enum
 import logging
 import multiprocessing
+import threading
 
 from pydantic import BaseModel, ConfigDict
 
@@ -17,21 +19,32 @@ from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
+class CameraWorkerStrategies(enum.Enum):
+    THREAD = enum.auto()
+    PROCESS = enum.auto()
 
 class RecordingManager(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
-    worker: multiprocessing.Process
+    worker: multiprocessing.Process| threading.Thread
     ipc: CameraGroupIPC
 
     @classmethod
     def create(cls,
                ipc: CameraGroupIPC,
-               group_shm_dto: CameraGroupSharedMemoryDTO):
+               group_shm_dto: CameraGroupSharedMemoryDTO,
+               recording_worker_strategy: CameraWorkerStrategies = CameraWorkerStrategies.THREAD,):
+        if recording_worker_strategy == CameraWorkerStrategies.PROCESS:
+            worker_maker = multiprocessing.Process
+        elif recording_worker_strategy == CameraWorkerStrategies.THREAD:
+            worker_maker = threading.Thread
+        else:
+            raise ValueError(f"Unsupported camera worker strategy: {recording_worker_strategy}")
+
         return cls(
             ipc=ipc,
-            worker=multiprocessing.Process(target=cls._video_worker,
+            worker=worker_maker(target=cls._video_worker,
                                            name=cls.__class__.__name__,
                                            kwargs=dict(ipc=ipc,
                                                        group_shm_dto=group_shm_dto,

@@ -1,6 +1,7 @@
 import enum
 import logging
 import multiprocessing
+import threading
 from dataclasses import dataclass
 
 from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_run_process
@@ -15,12 +16,15 @@ logger = logging.getLogger(__name__)
 
 class CameraStrategies(enum.Enum):
     OPEN_CV = enum.auto()
+class CameraWorkerStrategies(enum.Enum):
+    THREAD = enum.auto
+    PROCESS = enum.auto()
 
 
 @dataclass
 class CameraProcess:
     camera_id: CameraIdString
-    process: multiprocessing.Process
+    worker: multiprocessing.Process| threading.Thread
     ipc: CameraGroupIPC
     close_self_flag: multiprocessing.Value
 
@@ -29,41 +33,54 @@ class CameraProcess:
                camera_id: CameraIdString,
                ipc: CameraGroupIPC,
                camera_shm_dto: CameraSharedMemoryDTO,
-               camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV):
+               camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
+               camera_worker_strategy: CameraWorkerStrategies = CameraWorkerStrategies.THREAD,):
 
         if camera_strategy == CameraStrategies.OPEN_CV:
             camera_run_process = opencv_camera_run_process
         else:
             raise ValueError(f"Unsupported camera strategy: {camera_strategy}")
         close_self_flag = multiprocessing.Value("b", False)
+
+        if camera_worker_strategy == CameraWorkerStrategies.PROCESS:
+            worker_maker = multiprocessing.Process
+        elif camera_worker_strategy == CameraWorkerStrategies.THREAD:
+            worker_maker = threading.Thread
+        else:
+            raise ValueError(f"Unsupported camera worker strategy: {camera_worker_strategy}")
+
         return cls(camera_id=camera_id,
                    ipc=ipc,
                    close_self_flag=close_self_flag,
-                   process=multiprocessing.Process(target=camera_run_process,
-                                                   name=f"Camera{ipc.camera_configs[camera_id].camera_index}-{camera_id}-Process",
-                                                   daemon=True,
-                                                   kwargs=dict(camera_id=camera_id,
-                                                               ipc=ipc,
-                                                               camera_shm_dto=camera_shm_dto,
-                                                               extracted_config_topic=ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG],
-                                                               update_configs_subscription=ipc.pubsub.topics[TopicTypes.UPDATE_CONFIGS].get_subscription(),
-                                                               update_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
-                                                               close_self_flag=close_self_flag,
-                                                               )
-                                                   ),
+                   worker=worker_maker(target=camera_run_process,
+                                       name=f"Camera{ipc.camera_configs[camera_id].camera_index}-{camera_id}-Process",
+                                       daemon=True,
+                                       kwargs=dict(camera_id=camera_id,
+                                                   ipc=ipc,
+                                                   camera_shm_dto=camera_shm_dto,
+                                                   extracted_config_topic=ipc.pubsub.topics[
+                                                       TopicTypes.EXTRACTED_CONFIG],
+                                                   update_configs_subscription=ipc.pubsub.topics[
+                                                       TopicTypes.UPDATE_CONFIGS].get_subscription(),
+                                                   update_shm_subscription=ipc.pubsub.topics[
+                                                       TopicTypes.SHM_UPDATES].get_subscription(),
+                                                   close_self_flag=close_self_flag,
+                                                   )
+                                       )
+                   ,
                    )
 
     def start(self):
-        self.process.start()
+        self.worker.start()
 
     def close(self):
         logger.info(f"Closing camera {self.camera_id}")
         self.close_self_flag.value = True
-        self.process.join()
+        self.worker.join()
         logger.info(f"Camera {self.camera_id} closed!")
 
     def is_alive(self) -> bool:
-        return self.process.is_alive()
+        return self.worker.is_alive()
 
 
 

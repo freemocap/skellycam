@@ -1,3 +1,4 @@
+import enum
 import logging
 import multiprocessing
 import threading
@@ -16,7 +17,9 @@ from skellycam.utilities.wait_functions import wait_10ms, wait_30ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
-
+class MultiframeBuilderWorkerStrategies(enum.Enum):
+    THREAD = enum.auto()
+    PROCESS = enum.auto()
 @dataclass
 class MultiframeBuilder:
     worker: multiprocessing.Process
@@ -27,10 +30,18 @@ class MultiframeBuilder:
     @classmethod
     def create(cls,
                ipc: CameraGroupIPC,
-               group_shm_dto: CameraGroupSharedMemoryDTO):
+               group_shm_dto: CameraGroupSharedMemoryDTO,
+               worker_strategy: MultiframeBuilderWorkerStrategies = MultiframeBuilderWorkerStrategies.THREAD
+               ) -> 'MultiframeBuilder':
         fe_subscription = ipc.pubsub.topics[TopicTypes.FRONTEND_PAYLOAD].get_subscription()
+        if worker_strategy == MultiframeBuilderWorkerStrategies.PROCESS:
+            worker_maker = multiprocessing.Process
+        elif worker_strategy == MultiframeBuilderWorkerStrategies.THREAD:
+            worker_maker = threading.Thread
+        else:
+            raise ValueError(f"Unsupported camera worker strategy: {worker_strategy}")
 
-        mf_builder = multiprocessing.Process(target=cls._mf_builder_loop,
+        worker = worker_maker(target=cls._mf_builder_loop,
                                              name=f"{cls.__class__.__name__}-Builder",
                                              kwargs=dict(ipc=ipc,
                                                          group_shm_dto=group_shm_dto,
@@ -41,7 +52,7 @@ class MultiframeBuilder:
                                                          )
                                              )
 
-        return cls(worker=mf_builder,
+        return cls(worker=worker,
                    fe_payload_subscription=fe_subscription,
                    ipc=ipc,
                    )
