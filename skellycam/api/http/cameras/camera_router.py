@@ -109,14 +109,13 @@ def camera_group_close_all_delete_endpoint():
     summary="Update specified camera and apply provided configuration settings")
 def camera_update_put_endpoint(
         request: CameraUpdateRequest = Body(..., description="Request body containing a dictionary of camera configurations keyed by camera IDs",
-                                            examples=[CameraUpdateRequest.example()]),
-):
+                                            examples=[CameraUpdateRequest.example()])) -> CameraConfigs:
     logger.api(
         f"Received `cameras/update` PUT request with cameras configs for cameras: {list(request.camera_configs.keys())}...")
     try:
-        get_skellycam_app().camera_group_manager.update_camera_configs(camera_configs=request.camera_configs)
+        extracted_configs = get_skellycam_app().camera_group_manager.update_camera_settings(camera_configs=request.camera_configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
-        return True
+        return extracted_configs
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)

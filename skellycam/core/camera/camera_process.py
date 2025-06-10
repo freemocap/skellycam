@@ -61,7 +61,7 @@ class CameraProcess:
                                                    extracted_config_topic=ipc.pubsub.topics[
                                                        TopicTypes.EXTRACTED_CONFIG],
                                                    update_configs_subscription=ipc.pubsub.topics[
-                                                       TopicTypes.UPDATE_CONFIGS].get_subscription(),
+                                                       TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription(),
                                                    update_shm_subscription=ipc.pubsub.topics[
                                                        TopicTypes.SHM_UPDATES].get_subscription(),
                                                    close_self_flag=close_self_flag,

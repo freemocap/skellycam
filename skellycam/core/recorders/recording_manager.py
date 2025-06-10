@@ -49,8 +49,8 @@ class RecordingManager(BaseModel):
                                            kwargs=dict(ipc=ipc,
                                                        group_shm_dto=group_shm_dto,
                                                        camera_configs=ipc.camera_configs,
-                                                       update_configs_sub_queue=ipc.pubsub.topics[
-                                                           TopicTypes.UPDATE_CONFIGS].get_subscription(),
+                                                       extracted_configs_subscription=ipc.pubsub.topics[
+                                                           TopicTypes.EXTRACTED_CONFIG].get_subscription(),
                                                        recording_info_subscription_queue=ipc.pubsub.topics[
                                                            TopicTypes.RECORDING_INFO].get_subscription(),
                                                        shm_subscription_queue=ipc.pubsub.topics[
@@ -83,7 +83,7 @@ class RecordingManager(BaseModel):
                       group_shm_dto: CameraGroupSharedMemoryDTO,
                       recording_info_subscription_queue: TopicSubscriptionQueue,
                       shm_subscription_queue: TopicSubscriptionQueue,
-                      update_configs_sub_queue: TopicSubscriptionQueue,
+                      extracted_configs_subscription: TopicSubscriptionQueue,
                       camera_configs: CameraConfigs,
                       ):
         # Configure logging in the child process
@@ -117,7 +117,7 @@ class RecordingManager(BaseModel):
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
                     shm_subscription_queue=shm_subscription_queue,
-                    update_configs_sub_queue=update_configs_sub_queue,
+                    extracted_configs_subscription=extracted_configs_subscription,
                     recording_info_subscription_queue=recording_info_subscription_queue
                 )
 
@@ -168,14 +168,14 @@ class RecordingManager(BaseModel):
                                   video_manager: VideoManager | None,
                                   camera_group_shm: CameraGroupSharedMemoryManager,
                                   shm_subscription_queue: multiprocessing.Queue,
-                                  update_configs_sub_queue: multiprocessing.Queue,
+                                  extracted_configs_subscription: multiprocessing.Queue,
                                   recording_info_subscription_queue: multiprocessing.Queue) -> tuple[
         CameraConfigs, CameraGroupSharedMemoryManager, VideoManager | None,]:
-        if not update_configs_sub_queue.empty():
-            update_configs_message = update_configs_sub_queue.get(block=True)
+        if not extracted_configs_subscription.empty():
+            update_configs_message = extracted_configs_subscription.get(block=True)
             if not isinstance(update_configs_message, UpdateCameraConfigsMessage):
                 raise ValueError(
-                    f"Expected UpdateCameraConfigsMessage, got {type(update_configs_message)} in update_configs_sub_queue")
+                    f"Expected UpdateCameraConfigsMessage, got {type(update_configs_message)} in extracted_configs_subscription")
             camera_configs = update_configs_message.new_configs
         if not recording_info_subscription_queue.empty():
             ipc.video_manager_status.updating.value = True

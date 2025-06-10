@@ -203,7 +203,7 @@ class CameraGroupSharedMemoryManager:
         Retrieves the latest multi-frame data if it is newer than the provided multi-frame number.
         """
         if not self.valid:
-            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+            return None
         if not self.latest_multiframe_shm.first_frame_written:
             return None
         if if_newer_than is not None and if_newer_than >= self.latest_multiframe_shm.latest_written_mf_number.value:

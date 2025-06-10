@@ -57,7 +57,7 @@ class SkellycamApplication:
         elif isinstance(camera_configs, list):
             camera_configs = {config.camera_id: config for config in camera_configs}
         for camera_id, camera_config in camera_configs.items():
-            self.camera_group_manager.update_camera_configs(camera_config=camera_config)
+            self.camera_group_manager.update_camera_settings(camera_config=camera_config)
 
     def close_all_camera_groups(self):
         self.camera_group_manager.close_all_camera_groups()

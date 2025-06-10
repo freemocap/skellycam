@@ -70,6 +70,13 @@ class ParameterDifferencesModel(BaseModel):
     self_value: Any
     other_value: Any
 
+class SettableCameraParameters(BaseModel):
+    exposure_mode: ExposureModes
+    exposure: int | str
+    resolution: ImageResolution
+    framerate: float
+    rotation: RotationTypes
+
 
 class CameraConfig(BaseModel):
     camera_id: CameraIdString = Field(
@@ -160,6 +167,55 @@ class CameraConfig(BaseModel):
     @property
     def video_file_extension(self) -> str:
         return get_video_file_type(cv2.VideoWriter_fourcc(*self.writer_fourcc))
+
+    def to_settable_parameters(self) -> SettableCameraParameters:
+        """
+        Converts the CameraConfig to a SettableCameraParameters object.
+
+        Returns
+        -------
+        SettableCameraParameters
+            An object containing the parameters that can be set on the camera.
+        """
+        return SettableCameraParameters(
+            exposure_mode=ExposureModes(self.exposure_mode),
+            exposure=self.exposure,
+            resolution=self.resolution,
+            framerate=self.framerate,
+            rotation=self.rotation
+        )
+    def accept_settable_parameters(self, settable_parameters: SettableCameraParameters) -> None:
+        """
+        Accepts a SettableCameraParameters object and updates the CameraConfig accordingly.
+
+        Parameters
+        ----------
+        settable_parameters : SettableCameraParameters
+            The parameters to update the CameraConfig with.
+        """
+        self.exposure_mode = settable_parameters.exposure_mode.name
+        self.exposure = settable_parameters.exposure
+        self.resolution = settable_parameters.resolution
+        self.rotation = settable_parameters.rotation
+
+    def get_setting_differences(self, other: "CameraConfig") -> list[ParameterDifferencesModel]:
+        """
+        Returns a list of ParameterDifferencesModel objects containing the differences between this CameraConfig and another, but only for the fields that can be set (as defined in SettableCameraParameters).
+        """
+        self_dict = self.to_settable_parameters().model_dump()
+        other_dict = other.to_settable_parameters().model_dump()
+
+        diffs = []
+        for key, self_value in self_dict.items():
+            other_value = other_dict.get(key)
+            if self_value != other_value:
+                diffs.append(ParameterDifferencesModel(
+                    parameter_name=key,
+                    self_value=self_value,
+                    other_value=other_value
+                ))
+
+        return diffs
 
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()

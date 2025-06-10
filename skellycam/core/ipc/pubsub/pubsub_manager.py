@@ -6,16 +6,17 @@ from multiprocessing.process import parent_process
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
 from skellycam.core.ipc.pubsub.pubsub_abcs import PubSubTopicABC
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateConfigsTopic, ShmUpdatesTopic, RecordingInfoTopic, \
-    ExtractedConfigTopic, FrontendPayloadTopic, LogsTopic
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraSettingsTopic, ShmUpdatesTopic, RecordingInfoTopic, \
+    ExtractedConfigTopic, FrontendPayloadTopic, LogsTopic, NewConfigsTopic
 from skellycam.core.types import CameraGroupIdString, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
 
 
 class TopicTypes(Enum):
-    UPDATE_CONFIGS = auto()
-    EXTRACTED_CONFIG = auto()
+    UPDATE_CAMERA_SETTINGS = auto() #User requested updates to camera configs (i.e. the desired camera settings)
+    EXTRACTED_CONFIG = auto() #Camera Configs extracted from the camera (i.e. the actual camera settings)
+    NEW_CONFIGS = auto() #New camera configs (to inform Nodes when there are new configs available, based on the extracted configs)
     SHM_UPDATES = auto()
     RECORDING_INFO = auto()
     FRONTEND_PAYLOAD = auto()
@@ -24,8 +25,9 @@ class TopicTypes(Enum):
 
 class PubSubTopicManager(BaseModel):
     topics: dict[TopicTypes, PubSubTopicABC] = Field(default_factory=lambda: {
-        TopicTypes.UPDATE_CONFIGS: UpdateConfigsTopic(),
+        TopicTypes.UPDATE_CAMERA_SETTINGS: UpdateCameraSettingsTopic(),
         TopicTypes.EXTRACTED_CONFIG: ExtractedConfigTopic(),
+        TopicTypes.NEW_CONFIGS: NewConfigsTopic(),
         TopicTypes.SHM_UPDATES: ShmUpdatesTopic(),
         TopicTypes.RECORDING_INFO: RecordingInfoTopic(),
         TopicTypes.FRONTEND_PAYLOAD: FrontendPayloadTopic(),

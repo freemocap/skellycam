@@ -1,4 +1,5 @@
 from typing import Type
+
 from pydantic import Field
 
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs, ParameterDifferencesModel
@@ -7,86 +8,104 @@ from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePa
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import TopicPublicationQueue
+from skellycam.core.types import TopicPublicationQueue, CameraIdString
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue
 
 
-class UpdateCameraConfigsMessage(TopicMessageABC):
+class UpdateCameraSettingsMessage(TopicMessageABC):
     """
     Message sent when a camera configuration update is requested.
     """
-    old_configs: CameraConfigs
-    new_configs: CameraConfigs
-    close_these_cameras: list[CameraConfig]
-    new_cameras: list[CameraConfig]
+    requested_parameter_changes: dict[CameraIdString, list[ParameterDifferencesModel]]
+    cameras_to_remove: list[CameraIdString]
+    cameras_to_add: list[CameraConfig]
 
     @classmethod
-    def from_configs(cls, old_configs: CameraConfigs, new_configs: CameraConfigs):
+    def from_configs(cls, current_configs: CameraConfigs, desired_configs: CameraConfigs):
         """
         Create an UpdatedCameraConfigsMessage from old and new camera configurations.
         """
-        need_update_configs = False
-        new_cameras: list[CameraConfig] = []
-        close_these_cameras: list[CameraConfig] = []
 
-        for new_config in new_configs.values():
-            if not new_config.camera_id in old_configs:
-                new_cameras.append(new_config)
-            if not new_config.use_this_camera:
-                close_these_cameras.append(new_config)
+        differences: dict[CameraIdString, list[ParameterDifferencesModel]] = {camera_id: [] for camera_id in
+                                                                              current_configs.keys()}
+        cameras_to_remove: list[CameraIdString] = []
+        cameras_to_add: list[CameraConfig] = []
+        for camera_id, current_config in current_configs.items():
+            desired_config = desired_configs.get(camera_id)
+            if not desired_config or not desired_config.use_this_camera:
+                cameras_to_remove.append(camera_id)
+            else:
+                differences[camera_id] = current_config.get_setting_differences(desired_config)
 
-        for old_config in old_configs.values():
-            if not old_config.camera_id in new_configs:
-                close_these_cameras.append(old_config)
+        for camera_id, desired_config in desired_configs.items():
+            if camera_id not in current_configs:
+                cameras_to_add.append(desired_config)
+
         return cls(
-            old_configs=old_configs,
-            new_configs=new_configs,
-            close_these_cameras=close_these_cameras,
-            new_cameras=new_cameras
+            requested_parameter_changes=differences,
+            cameras_to_remove=cameras_to_remove,
+            cameras_to_add=cameras_to_add,
         )
+
+    @property
+    def resolution_changed(self) -> bool:
+        resolution_changed = False
+        for camera_id, differences in self.requested_parameter_changes.items():
+            for difference in differences:
+                if difference.parameter_name == "resolution":
+                    resolution_changed = True
+                    break
+            if resolution_changed:
+                break
+        return resolution_changed
+
+    @property
+    def rotation_changed(self) -> bool:
+        rotation_changed = False
+        for camera_id, differences in self.requested_parameter_changes.items():
+            for difference in differences:
+                if difference.parameter_name == "rotation":
+                    rotation_changed = True
+                    break
+            if rotation_changed:
+                break
+        return rotation_changed
+
+    @property
+    def exposure_changed(self) -> bool:
+        exposure_changed = False
+        for camera_id, differences in self.requested_parameter_changes.items():
+            for difference in differences:
+                if difference.parameter_name == "exposure" or difference.parameter_name == "exposure_mode":
+                    exposure_changed = True
+                    break
+            if exposure_changed:
+                break
+        return exposure_changed
+
     @property
     def need_reset_shm(self) -> bool:
-        need_reset_shm = self.close_these_cameras or self.new_cameras
-
-        for new_config in self.new_configs.values():
-            if new_config.image_shape != self.old_configs[new_config.camera_id].image_shape:
-                need_reset_shm = True
-        return need_reset_shm
+        """
+        If the image shape changed or if cameras were added or removed, the shared memory needs to be reset.
+        """
+        return self.cameras_to_remove or self.cameras_to_add or self.resolution_changed
 
     @property
-    def need_update_configs(self) -> bool:
+    def need_update_recorder(self) -> bool:
         """
-        Check if the camera configurations need to be updated.
+        If the resolution or rotation changed, the recorder needs to be updated.
         """
-        return self.old_configs != self.new_configs or self.close_these_cameras or self.new_cameras
+        return self.need_reset_shm or self.rotation_changed
 
     @property
     def only_exposure_changed(self) -> bool:
-        new_configs_without_exposure = {camera_id: CameraConfig(**config.model_dump(exclude={'exposure', 'exposure_mode'})) for camera_id, config in self.new_configs}
-        old_configs_without_exposure = {camera_id: CameraConfig(**config.model_dump(exclude={'exposure', 'exposure_mode'})) for camera_id, config in self.old_configs}
-        return new_configs_without_exposure == old_configs_without_exposure
+        """
+        If only the exposure settings changed, we can update the cameras without resetting shared memory.
+        """
+        return not self.need_reset_shm  and self.exposure_changed
 
-    @property
-    def differences(self) -> list[str]:
-        """
-        Get a list of differences between the old and new camera configurations.
-        """
-        differences = []
-        for camera_id, old_config in self.old_configs.items():
-            new_config = self.new_configs.get(camera_id)
-            if new_config:
-                diffs = old_config-new_config
-                if diffs:
-                    differences.append(f"Camera {camera_id} changed (new,old): {[diff.model_dump_json(indent=2) for diff in diffs]}")
-                else:
-                    differences.append(f"Camera {camera_id} unchanged.")
-            else:
-                differences.append(f"Camera {camera_id} removed.")
-        for camera_id, new_config in self.new_configs.items():
-            if camera_id not in self.old_configs:
-                differences.append(f"Camera {camera_id} added")
-        return differences
+
 class ExtractedConfigMessage(TopicMessageABC):
     """
     Message containing the camera settings extracted from the camera device
@@ -94,9 +113,17 @@ class ExtractedConfigMessage(TopicMessageABC):
     extracted_config: CameraConfig
 
 
+class NewConfigsMessage(TopicMessageABC):
+    """
+    Message containing the camera settings extracted from the camera device
+    """
+    new_configs: CameraConfigs
+
+
 class UpdateShmMessage(TopicMessageABC):
-    orchestrator: CameraOrchestrator|None = None
-    group_shm_dto: CameraGroupSharedMemoryDTO|None = None
+    orchestrator: CameraOrchestrator | None = None
+    group_shm_dto: CameraGroupSharedMemoryDTO | None = None
+
 
 class FrontendPayloadMessage(TopicMessageABC):
     frontend_payload: FrontendFramePayload
@@ -106,20 +133,29 @@ class RecordingInfoMessage(TopicMessageABC):
     recording_info: RecordingInfo
 
 
-class UpdateConfigsTopic(PubSubTopicABC):
-    message_type: Type[UpdateCameraConfigsMessage] = UpdateCameraConfigsMessage
+class UpdateCameraSettingsTopic(PubSubTopicABC):
+    message_type: Type[UpdateCameraSettingsMessage] = UpdateCameraSettingsMessage
+
 
 class ExtractedConfigTopic(PubSubTopicABC):
     message_type: Type[ExtractedConfigMessage] = ExtractedConfigMessage
 
+
+class NewConfigsTopic(PubSubTopicABC):
+    message_type: Type[NewConfigsMessage] = NewConfigsMessage
+
+
 class ShmUpdatesTopic(PubSubTopicABC):
     message_type: Type[UpdateShmMessage] = UpdateShmMessage
+
 
 class RecordingInfoTopic(PubSubTopicABC):
     message_type: Type[RecordingInfoMessage] = RecordingInfoMessage
 
+
 class FrontendPayloadTopic(PubSubTopicABC):
     message_type: Type[FrontendPayloadMessage] = FrontendPayloadMessage
+
 
 class LogsTopic(PubSubTopicABC):
     message_type: Type[LogRecordModel] = LogRecordModel
