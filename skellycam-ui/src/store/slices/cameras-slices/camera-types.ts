@@ -60,7 +60,7 @@ export const createDefaultCameraConfig = (index: number, label: string, id: stri
     resolution: CAMERA_DEFAULT_CONSTRAINTS.resolution.default,
     color_channels: 3,
     pixel_format: PixelFormats[0],
-    exposure_mode: ExposureModes[0], // MANUAL
+    exposure_mode: ExposureModes[2], // RECOMMEND
     exposure: CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
     framerate: CAMERA_DEFAULT_CONSTRAINTS.framerate.default,
     rotation: RotationOptions[0], // '0'

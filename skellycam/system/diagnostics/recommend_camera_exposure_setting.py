@@ -15,7 +15,7 @@ TARGET_BRIGHTNESS = 127.5  # Target brightness value for optimal exposure settin
 class ExposureModes(float, Enum):
     AUTO = 0.75  # Default value to activate auto exposure mode
     MANUAL = 0.25  # Default value to activate manual exposure mode
-    RECOMMENDED = -1 # Will find the optimal exposure setting which results in a brightness closest to 127.5 (i.e. half of the maximum brightness of 255)
+    RECOMMEND = -1 # Will find the optimal exposure setting which results in a brightness closest to 127.5 (i.e. half of the maximum brightness of 255)
 
 
 # Set up logging

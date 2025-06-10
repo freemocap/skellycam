@@ -89,7 +89,6 @@ class RecordingManager(BaseModel):
         try:
             while ipc.should_continue:
                 if ipc.should_pause_flag.value:
-                    logger.debug(f"VideoManager process paused for camera group `{ipc.group_id}`")
                     ipc.video_manager_status.is_paused_flag.value = True
                     wait_10ms()
                     continue

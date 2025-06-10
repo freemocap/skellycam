@@ -39,7 +39,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
             )
 
         if apply_exposure_mode:
-            if config.exposure_mode == ExposureModes.RECOMMENDED.name:
+            if config.exposure_mode == ExposureModes.RECOMMEND.name:
                 optimized_exposure = get_recommended_cv2_cap_exposure(cv2_vid_capture)
                 cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
                 cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(optimized_exposure))
@@ -71,7 +71,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
                                                               camera_id=config.camera_id,
                                                            camera_name=config.camera_name,
                                                            cv2_capture=cv2_vid_capture,
-                                                           exposure_mode=ExposureModes.MANUAL.name if config.exposure_mode == ExposureModes.RECOMMENDED.name else config.exposure_mode,  # set to manual after running recommended routine the first time
+                                                           exposure_mode=ExposureModes.MANUAL.name if config.exposure_mode == ExposureModes.RECOMMEND.name else config.exposure_mode,  # set to manual after running recommended routine
                                                            rotation=config.rotation)
         if not cv2_vid_capture.isOpened() or extracted_config is None:
             raise FailedToApplyCameraConfigurationError(

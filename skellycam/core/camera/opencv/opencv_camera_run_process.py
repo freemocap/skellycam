@@ -172,7 +172,7 @@ def check_for_config_updates(camera_id, cv2_video_capture, extracted_config, ext
         if not isinstance(update_configs_message, UpdateCameraConfigsMessage):
             raise TypeError(f"Received unexpected message type: {type(update_configs_message)}")
         if extracted_config != update_configs_message.old_configs[camera_id]:
-            raise ValueError("Camera config changed outside of expected update flow!")
+            raise ValueError(f"Camera config changed outside of expected update flow! \nExpected: {extracted_config}, \nReceived: {update_configs_message.old_configs[camera_id]}")
 
         new_config = update_configs_message.new_configs[camera_id]
         extracted_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
