@@ -18,6 +18,7 @@ class CameraStatus(BaseModel):
     connected: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     grabbing_frame: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     closing: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_close: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
@@ -31,6 +32,7 @@ class CameraStatus(BaseModel):
     def ready(self) -> bool:
         return all([self.connected.value,
                     self.running.value,
+                    not self.should_close.value,
                     not self.closing.value,
                     not self.closed.value,
                     not self.updating.value,
@@ -54,6 +56,7 @@ class CameraStatus(BaseModel):
         self.running.value = False
         self.grabbing_frame.value = False
         self.is_paused.value = False
+        self.should_close.value = True
 
 
 class CameraConnection(BaseModel):

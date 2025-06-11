@@ -47,6 +47,13 @@ class UpdateCameraSettingsMessage(TopicMessageABC):
             cameras_to_remove=cameras_to_remove,
             cameras_to_add=cameras_to_add,
         )
+    @property
+    def any_settings_changes(self) -> bool:
+        return not any([len(changes)>0 for changes in self.requested_parameter_changes.values()])
+
+    @property
+    def need_update_cameras(self) -> bool:
+        return any([self.any_settings_changes or self.cameras_to_remove or self.cameras_to_add])
 
     @property
     def resolution_changed(self) -> bool:
@@ -97,6 +104,12 @@ class UpdateCameraSettingsMessage(TopicMessageABC):
         If the resolution or rotation changed, the recorder needs to be updated.
         """
         return self.need_reset_shm or self.rotation_changed
+    @property
+    def need_update_mf_builder(self) -> bool:
+        """
+        If the shm needs to be reset, the multi-frame builder needs to be updated.
+        """
+        return self.need_reset_shm
 
     @property
     def only_exposure_changed(self) -> bool:
@@ -121,8 +134,7 @@ class NewConfigsMessage(TopicMessageABC):
 
 
 class UpdateShmMessage(TopicMessageABC):
-    orchestrator: CameraOrchestrator | None = None
-    group_shm_dto: CameraGroupSharedMemoryDTO | None = None
+    group_shm_dto: CameraGroupSharedMemoryDTO
 
 
 class FrontendPayloadMessage(TopicMessageABC):

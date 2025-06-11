@@ -4,7 +4,8 @@ import multiprocessing
 
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
-from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
+from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs, CameraConfig
+from skellycam.core.camera_group.camera_connecton import CameraConnection
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.pubsub.pubsub_manager import create_pubsub_manager, TopicTypes, PubSubTopicManager
 from skellycam.core.ipc.pubsub.pubsub_topics import RecordingInfoMessage
@@ -93,7 +94,7 @@ class CameraGroupIPC(BaseModel):
 
 
     @property
-    def camera_connections(self):
+    def camera_connections(self) -> dict[CameraIdString, CameraConnection]:
         return self.camera_orchestrator.connections
 
     @property
@@ -112,9 +113,6 @@ class CameraGroupIPC(BaseModel):
     def should_continue(self, value: bool) -> None:
         self.shutdown_camera_group_flag.value = not value
 
-
-    def kill_everything(self) -> None:
-        self.global_kill_flag.value = True
 
     @property
     def any_recording(self) -> bool:
@@ -144,6 +142,11 @@ class CameraGroupIPC(BaseModel):
     def running(self) -> bool:
         return not self.shutdown_camera_group_flag.value
 
+    def add_camera(self, config: CameraConfig) -> None:
+        self.camera_orchestrator.add_camera(config)
+
+    def remove_camera(self, camera_id: CameraIdString) -> None:
+        self.camera_orchestrator.remove_camera(camera_id)
 
     def start_recording(self, recording_info: RecordingInfo) -> None:
         if self.any_recording:
@@ -181,3 +184,6 @@ class CameraGroupIPC(BaseModel):
             while self.any_paused and self.should_continue:
                 wait_10ms()
         logger.info("Camera group IPC unpaused.")
+
+    def kill_everything(self) -> None:
+        self.global_kill_flag.value = True

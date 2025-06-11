@@ -1,7 +1,8 @@
+import multiprocessing
 from typing import Tuple, Self, AnyStr, Any
 
 import cv2
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, SkipValidation
 
 from skellycam.core.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera.config.image_rotation_types import RotationTypes
@@ -266,6 +267,28 @@ def default_camera_configs_factory():
     }
 
 CameraConfigs = dict[CameraIdString, CameraConfig]
+
+class ThreadSafeCameraConfigs(BaseModel):
+    """
+    A thread-safe container for camera configurations.
+    This is a wrapper around a dictionary of CameraConfig objects.
+    """
+    configs: CameraConfigs = Field(default_factory=default_camera_configs_factory)
+    lock: SkipValidation[multiprocessing.Lock] = Field(default_factory=lambda: multiprocessing.Lock())
+    @model_validator(mode="after")
+    def validate_configs(self) -> Self:
+        validate_camera_configs(self.configs)
+        return self
+
+    def __getitem__(self, camera_id: CameraIdString) -> CameraConfig:
+        with self.lock:
+            return self.configs[camera_id]
+    def __setitem__(self, camera_id: CameraIdString, config: CameraConfig) -> None:
+        with self.lock:
+            if camera_id in self.configs:
+                raise ValueError(f"Camera ID {camera_id} already exists in configs.")
+            validate_camera_configs(config)
+            self.configs[camera_id] = config
 
 def validate_camera_configs(camera_configs: CameraConfigs| CameraConfig | list[CameraConfig]) -> None:
     if isinstance(camera_configs, CameraConfig):

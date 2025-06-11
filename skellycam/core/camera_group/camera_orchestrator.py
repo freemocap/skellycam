@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_connecton import CameraConnection
 from skellycam.core.types import CameraIdString
 
@@ -11,6 +11,18 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraOrchestrator:
     connections: dict[CameraIdString, CameraConnection]
+
+    def add_camera(self,  config: CameraConfig):
+
+        if config.camera_id in self.connections:
+            raise ValueError(f"Camera ID {config.camera_id} already exists in orchestrator.")
+        self.connections[config.camera_id] = CameraConnection.create(config)
+
+    def remove_camera(self, camera_id: CameraIdString):
+        if camera_id not in self.connections:
+            raise ValueError(f"Camera ID {camera_id} not found in orchestrator: {self.connections.keys()}")
+        self.connections[camera_id].status.should_close.value = True
+        del self.connections[camera_id]
 
     @classmethod
     def from_configs(cls, camera_configs:CameraConfigs):
