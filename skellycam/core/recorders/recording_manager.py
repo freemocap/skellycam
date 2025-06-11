@@ -2,13 +2,14 @@ import enum
 import logging
 import multiprocessing
 import threading
+from copy import deepcopy
 
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage, UpdateCameraConfigsMessage, RecordingInfoMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import UpdateShmMessage, RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
@@ -44,20 +45,16 @@ class RecordingManager(BaseModel):
 
         return cls(
             ipc=ipc,
-            worker=worker_maker(target=cls._video_worker,
-                                           name=cls.__class__.__name__,
-                                           kwargs=dict(ipc=ipc,
+            worker=worker_maker(target=cls._worker,
+                                name=cls.__class__.__name__,
+                                kwargs=dict(ipc=ipc,
                                                        group_shm_dto=group_shm_dto,
-                                                       camera_configs=ipc.camera_configs,
-                                                       extracted_configs_subscription=ipc.pubsub.topics[
-                                                           TopicTypes.EXTRACTED_CONFIG].get_subscription(),
                                                        recording_info_subscription_queue=ipc.pubsub.topics[
                                                            TopicTypes.RECORDING_INFO].get_subscription(),
                                                        shm_subscription_queue=ipc.pubsub.topics[
                                                            TopicTypes.SHM_UPDATES].get_subscription(),
-
                                                        )
-                                           ),
+                                ),
         )
 
     def start(self):
@@ -78,14 +75,12 @@ class RecordingManager(BaseModel):
         logger.debug(f"Video worker closed")
 
     @classmethod
-    def _video_worker(cls,
-                      ipc: CameraGroupIPC,
-                      group_shm_dto: CameraGroupSharedMemoryDTO,
-                      recording_info_subscription_queue: TopicSubscriptionQueue,
-                      shm_subscription_queue: TopicSubscriptionQueue,
-                      extracted_configs_subscription: TopicSubscriptionQueue,
-                      camera_configs: CameraConfigs,
-                      ):
+    def _worker(cls,
+                ipc: CameraGroupIPC,
+                group_shm_dto: CameraGroupSharedMemoryDTO,
+                recording_info_subscription_queue: TopicSubscriptionQueue,
+                shm_subscription_queue: TopicSubscriptionQueue,
+                ):
         # Configure logging in the child process
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
@@ -94,7 +89,7 @@ class RecordingManager(BaseModel):
         camera_group_shm: CameraGroupSharedMemoryManager = CameraGroupSharedMemoryManager.recreate(
             shm_dto=group_shm_dto,
             read_only=False)
-
+        current_configs = ipc.camera_configs
         video_manager: VideoManager | None = None
         audio_recorder: AudioRecorder | None = None
         ipc.video_manager_status.is_running_flag.value = True
@@ -111,13 +106,12 @@ class RecordingManager(BaseModel):
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm
                 )
-                camera_configs, camera_group_shm, video_manager = cls._check_and_handle_updates(
+                current_configs, camera_group_shm, video_manager = cls._check_and_handle_updates(
                     ipc=ipc,
-                    camera_configs=camera_configs,
+                    current_configs=current_configs,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
                     shm_subscription_queue=shm_subscription_queue,
-                    extracted_configs_subscription=extracted_configs_subscription,
                     recording_info_subscription_queue=recording_info_subscription_queue
                 )
 
@@ -164,19 +158,18 @@ class RecordingManager(BaseModel):
     @classmethod
     def _check_and_handle_updates(cls,
                                   ipc: CameraGroupIPC,
-                                  camera_configs: CameraConfigs,
+                                  current_configs: CameraConfigs,
                                   video_manager: VideoManager | None,
                                   camera_group_shm: CameraGroupSharedMemoryManager,
                                   shm_subscription_queue: multiprocessing.Queue,
-                                  extracted_configs_subscription: multiprocessing.Queue,
                                   recording_info_subscription_queue: multiprocessing.Queue) -> tuple[
         CameraConfigs, CameraGroupSharedMemoryManager, VideoManager | None,]:
-        if not extracted_configs_subscription.empty():
-            update_configs_message = extracted_configs_subscription.get(block=True)
-            if not isinstance(update_configs_message, UpdateCameraConfigsMessage):
-                raise ValueError(
-                    f"Expected UpdateCameraConfigsMessage, got {type(update_configs_message)} in extracted_configs_subscription")
-            camera_configs = update_configs_message.new_configs
+
+        if not current_configs == ipc.camera_configs:
+            logger.debug(f"Camera configurations have changed, updating current_configs")
+            current_configs = deepcopy(ipc.camera_configs)
+
+
         if not recording_info_subscription_queue.empty():
             ipc.video_manager_status.updating.value = True
             recording_info_msg = recording_info_subscription_queue.get(block=True)
@@ -186,7 +179,7 @@ class RecordingManager(BaseModel):
                     video_manager.finish_and_close()
                 video_manager = cls.start_recording(ipc=ipc,
                                                     recording_info=recording_info_msg.recording_info,
-                                                    camera_configs=camera_configs,
+                                                    camera_configs=current_configs,
                                                     video_manager=video_manager)
             else:
                 raise ValueError(
@@ -207,7 +200,7 @@ class RecordingManager(BaseModel):
                 read_only=camera_group_shm.read_only)
             ipc.video_manager_status.updating.value = False
 
-        return camera_configs, camera_group_shm, video_manager
+        return current_configs, camera_group_shm, video_manager
 
     @staticmethod
     def start_recording(ipc: CameraGroupIPC,

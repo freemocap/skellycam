@@ -73,6 +73,9 @@ class CameraProcess:
     def start(self):
         self.worker.start()
 
+    def join(self):
+        self.worker.join()
+
     def close(self):
         logger.info(f"Closing camera {self.camera_id}")
         self.close_self_flag.value = True

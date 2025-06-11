@@ -84,14 +84,14 @@ class CameraManager:
         self.camera_processes[camera_id].start()
 
 
-    def close_camera(self, camera_id: CameraIdString):
+    def remove_camera(self, camera_id: CameraIdString):
         logger.debug(f"Closing camera: {camera_id}")
 
         if camera_id not in self.camera_processes:
             raise ValueError(f"Camera {camera_id} does not exist in this group.")
 
-        camera_process = self.camera_processes[camera_id]
-        camera_process.close()
+        self.camera_processes[camera_id].close()
+        self.camera_processes[camera_id].join()
         del self.camera_processes[camera_id]
 
         logger.debug(f"Camera {camera_id} closed successfully.")
@@ -99,13 +99,9 @@ class CameraManager:
     def close(self):
         logger.debug(f"Closing cameras: {self.camera_ids}")
 
-        camera_close_threads = []
         for camera_process in self.camera_processes.values():
-            camera_close_threads.append(threading.Thread(target=camera_process.close))
-        [thread.start() for thread in camera_close_threads]
-        [thread.join() for thread in camera_close_threads]
-
-        while self.any_alive:
-            wait_10ms()
+            camera_process.close()
+        for camera_process in self.camera_processes.values():
+            camera_process.join()
 
         logger.trace(f"Cameras closed: {self.camera_ids}")

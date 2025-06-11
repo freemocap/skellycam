@@ -22,6 +22,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
                                config: CameraConfig) -> CameraConfig:
     # set camera stream parameters
     initial_config = prior_config is None
+
     if initial_config:
         logger.info(f"Applying initial configuration to Camera {config.camera_index}:\n{config}")
     else:

@@ -139,7 +139,7 @@ class CameraGroupSharedMemoryManager:
                 camera_configs=self.camera_configs)
         else:
             mf_payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
-                                                                            camera_configs=self.camera_configs)
+                                                                            camera_configs=previous_payload.camera_configs)
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:

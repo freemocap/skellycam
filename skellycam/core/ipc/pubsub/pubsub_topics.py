@@ -135,6 +135,7 @@ class NewConfigsMessage(TopicMessageABC):
 
 class UpdateShmMessage(TopicMessageABC):
     group_shm_dto: CameraGroupSharedMemoryDTO
+    orchestrator: CameraOrchestrator
 
 
 class FrontendPayloadMessage(TopicMessageABC):

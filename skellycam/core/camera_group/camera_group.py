@@ -30,7 +30,7 @@ class CameraGroup:
     shm: CameraGroupSharedMemoryManager
     cameras: CameraManager
     recorder: RecordingManager
-    mf_publisher: MultiframeBuilder
+    mf_builder: MultiframeBuilder
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -51,7 +51,7 @@ class CameraGroup:
             shm=shm,
             cameras=CameraManager.create_cameras(ipc=ipc, camera_shm_dtos=shm.to_dto().camera_shm_dtos),
             recorder=RecordingManager.create(ipc=ipc, group_shm_dto=shm.to_dto()),
-            mf_publisher=MultiframeBuilder.create(ipc=ipc, group_shm_dto=shm.to_dto()),
+            mf_builder=MultiframeBuilder.create(ipc=ipc, group_shm_dto=shm.to_dto()),
 
         )
 
@@ -61,7 +61,7 @@ class CameraGroup:
 
     @property
     def all_alive(self):
-        return all([self.cameras.all_alive, self.mf_publisher.is_alive(), self.recorder.is_alive()])
+        return all([self.cameras.all_alive, self.mf_builder.is_alive(), self.recorder.is_alive()])
 
     @property
     def all_ready(self) -> bool:
@@ -76,7 +76,7 @@ class CameraGroup:
     def start(self):
         logger.info("Starting camera group...")
         self.cameras.start()
-        self.mf_publisher.start()
+        self.mf_builder.start()
         self.recorder.start()
         while not self.all_alive and self.ipc.should_continue:
             wait_10ms()
@@ -89,7 +89,7 @@ class CameraGroup:
         logger.debug("Closing camera group")
 
         self.ipc.should_continue = False
-        self.mf_publisher.close()
+        self.mf_builder.close()
         self.recorder.close()
         self.cameras.close()
         self.shm.close_and_unlink()
@@ -136,7 +136,8 @@ class CameraGroup:
 
 
 
-        self.ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].publish(update_settings_message)
+        self.ipc.camera_configs.update(desired_configs)
+
         extracted_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in
                                                                         desired_configs.keys()}
 
@@ -144,18 +145,20 @@ class CameraGroup:
             if not self.ipc.extracted_configs_subscription_queue.empty():
                 self._receive_extracted_config_message(extracted_configs)
 
-        if update_settings_message.cameras_to_remove or update_settings_message.cameras_to_add:
-            self._remove_cameras(update_settings_message.cameras_to_remove)
-            self._add_cameras(update_settings_message.cameras_to_add)
+
         if update_settings_message.need_reset_shm:
             self.shm.close_and_unlink()
             self.shm = CameraGroupSharedMemoryManager.create(camera_configs=update_settings_message.desired_configs,
                                                              camera_group_id=self.ipc.group_id,
                                                              read_only=self.shm.read_only)
-
-            shm_update_message = UpdateShmMessage(group_shm_dto=self.shm.to_dto())
+            if update_settings_message.cameras_to_remove or update_settings_message.cameras_to_add:
+                self._remove_cameras(update_settings_message.cameras_to_remove)
+                self._add_cameras(update_settings_message.cameras_to_add)
+            shm_update_message = UpdateShmMessage(group_shm_dto=self.shm.to_dto(),
+                                                  orchestrator=self.ipc.camera_orchestrator)
             self.ipc.pubsub.topics[TopicTypes.SHM_UPDATES].publish(shm_update_message)
             wait_10ms()
+
         self.ipc.unpause(await_unpaused=True)
         logger.debug("Camera configs update complete!")
         return desired_configs
@@ -176,22 +179,18 @@ class CameraGroup:
 
     def _remove_cameras(self, cameras_to_remove: list[CameraIdString]):
         for camera_id in cameras_to_remove:
-            if camera_id in self.ipc.camera_configs:
-                raise RuntimeError(f"Camera {camera_id} is still in the IPC (shm) camera configs, update shm before removing cameras.")
             logger.debug(f"Removing camera {camera_id} from camera group {self.id}")
-            self.cameras.close_camera(camera_id)
+            self.cameras.remove_camera(camera_id)
+            self.ipc.remove_camera(camera_id)
+
 
     def _add_cameras(self, cameras_to_add:list[CameraConfig]):
         for camera_config in cameras_to_add:
-            if not isinstance(camera_config, CameraConfig):
-                raise TypeError(f"Expected CameraConfig, got {type(camera_config)}")
-            if not camera_config.camera_id in self.ipc.camera_configs:
-                raise RuntimeError(f"Camera {camera_config.camera_id} is not in the IPC (shm) camera configs, update shm before adding cameras.")
             logger.debug(f"Adding camera {camera_config.camera_id} to camera group {self.id}")
             self.cameras.add_new_camera(camera_id=camera_config.camera_id,
                                         ipc=self.ipc,
                                         camera_shm_dto=self.shm.to_dto().camera_shm_dtos[camera_config.camera_id],
                                         )
-
+            self.ipc.add_camera(camera_config)
 
 

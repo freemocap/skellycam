@@ -1,5 +1,5 @@
 import multiprocessing
-from typing import Tuple, Self, AnyStr, Any
+from typing import Tuple, Self, Any
 
 import cv2
 from pydantic import BaseModel, Field, model_validator, SkipValidation
@@ -25,7 +25,8 @@ DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
 DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
 DEFAULT_WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
 
-def get_video_file_type(fourcc_code: int) ->str:
+
+def get_video_file_type(fourcc_code: int) -> str:
     """
     Get the video file type based on an OpenCV FOURCC code.
 
@@ -70,6 +71,7 @@ class ParameterDifferencesModel(BaseModel):
     parameter_name: str
     self_value: Any
     other_value: Any
+
 
 class SettableCameraParameters(BaseModel):
     exposure_mode: ExposureModes
@@ -185,6 +187,7 @@ class CameraConfig(BaseModel):
             framerate=self.framerate,
             rotation=self.rotation
         )
+
     def accept_settable_parameters(self, settable_parameters: SettableCameraParameters) -> None:
         """
         Accepts a SettableCameraParameters object and updates the CameraConfig accordingly.
@@ -249,6 +252,7 @@ class CameraConfig(BaseModel):
 
         return diffs
 
+
     def __str__(self):
         out_str = f"\n\tBASE CONFIG:\n"
         for key, value in self.model_dump().items():
@@ -266,7 +270,9 @@ def default_camera_configs_factory():
         "dummy": CameraConfig()
     }
 
+
 CameraConfigs = dict[CameraIdString, CameraConfig]
+
 
 class ThreadSafeCameraConfigs(BaseModel):
     """
@@ -275,14 +281,55 @@ class ThreadSafeCameraConfigs(BaseModel):
     """
     configs: CameraConfigs = Field(default_factory=default_camera_configs_factory)
     lock: SkipValidation[multiprocessing.Lock] = Field(default_factory=lambda: multiprocessing.Lock())
+
     @model_validator(mode="after")
     def validate_configs(self) -> Self:
         validate_camera_configs(self.configs)
         return self
 
+    def update(self, new_configs: CameraConfigs) -> None:
+        """
+        Update the camera configurations with a new set of configurations.
+        This will overwrite existing configurations with the same camera ID and add new ones.
+        """
+        with self.lock:
+            validate_camera_configs(new_configs)
+            self.configs.update(new_configs)
+
+    def pop(self, camera_id: CameraIdString) -> CameraConfig:
+        """
+        Remove and return the camera configuration for the given camera ID.
+        """
+        with self.lock:
+            if camera_id not in self.configs:
+                raise KeyError(f"Camera ID {camera_id} not found in configs.")
+            return self.configs.pop(camera_id)
+
+    def keys(self):
+        """
+        Get the keys (camera IDs) of the camera configurations.
+        """
+        with self.lock:
+            return self.configs.keys()
+
+    def values(self):
+        """
+        Get the values (camera configurations) of the camera configurations.
+        """
+        with self.lock:
+            return self.configs.values()
+
+    def items(self):
+        """
+        Get the items (camera ID and configuration pairs) of the camera configurations.
+        """
+        with self.lock:
+            return self.configs.items()
+
     def __getitem__(self, camera_id: CameraIdString) -> CameraConfig:
         with self.lock:
             return self.configs[camera_id]
+
     def __setitem__(self, camera_id: CameraIdString, config: CameraConfig) -> None:
         with self.lock:
             if camera_id in self.configs:
@@ -290,7 +337,36 @@ class ThreadSafeCameraConfigs(BaseModel):
             validate_camera_configs(config)
             self.configs[camera_id] = config
 
-def validate_camera_configs(camera_configs: CameraConfigs| CameraConfig | list[CameraConfig]) -> None:
+    def __contains__(self, camera_id: CameraIdString) -> bool:
+        """
+        Check if a camera configuration exists for the given camera ID.
+        """
+        with self.lock:
+            return camera_id in self.configs
+
+    def __iter__(self):
+        """
+        Iterate over the camera IDs in the configs.
+        """
+        with self.lock:
+            return iter(self.configs)
+
+    def __len__(self) -> int:
+        """
+        Get the number of camera configurations.
+        """
+        with self.lock:
+            return len(self.configs)
+
+    def __str__(self) -> str:
+        """
+        String representation of the ThreadSafeCameraConfigs.
+        """
+        with self.lock:
+            return "\n".join([f"{camera_id}: {config}" for camera_id, config in self.configs.items()])
+
+
+def validate_camera_configs(camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]) -> None:
     if isinstance(camera_configs, CameraConfig):
         camera_configs = {camera_configs.camera_id: camera_configs}
     elif isinstance(camera_configs, list):
@@ -301,11 +377,12 @@ def validate_camera_configs(camera_configs: CameraConfigs| CameraConfig | list[C
         raise TypeError(f"camera_configs must be a dictionary, got {type(camera_configs)} instead.")
     for camera_id, config in camera_configs.items():
         if not isinstance(config, CameraConfig):
-            raise TypeError(f"Camera config for {camera_id} must be an instance of CameraConfig, got {type(config)} instead.")
+            raise TypeError(
+                f"Camera config for {camera_id} must be an instance of CameraConfig, got {type(config)} instead.")
         if camera_id != config.camera_id:
             raise ValueError(f"Camera ID mismatch: {camera_id} does not match config's camera_id {config.camera_id}.")
 
-    #Ensure camera indexes are unique
+    # Ensure camera indexes are unique
     camera_indexes = [config.camera_index for config in camera_configs.values()]
     if len(camera_indexes) != len(set(camera_indexes)):
         raise ValueError("Camera indexes must be unique across all camera configurations.")

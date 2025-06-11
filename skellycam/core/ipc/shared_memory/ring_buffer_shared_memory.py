@@ -99,6 +99,7 @@ class SharedMemoryRingBuffer:
         return next_index % self.ring_buffer_length == self.last_read_index.get() % self.ring_buffer_length
 
     def put_data(self, data: np.ndarray, overwrite: bool = False):
+        overwrite = True
         if self.read_only:
             raise ValueError("Cannot write to read-only SharedMemoryRingBuffer.")
         if data.shape != self.ring_buffer_shape[1:]:
