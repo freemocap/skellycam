@@ -44,7 +44,7 @@ class CameraGroupManager:
             raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
         return self.camera_groups[camera_group_id]
 
-    def update_camera_settings(self, camera_configs:CameraConfigs):
+    def update_camera_settings(self, camera_configs:CameraConfigs) -> CameraConfigs:
         configs_by_group: dict[CameraGroupIdString, CameraConfigs] = {}
         for camera_group in self.camera_groups.values():
             configs_by_group[camera_group.id] = {}
@@ -56,7 +56,7 @@ class CameraGroupManager:
             extracted_configs.update(self.camera_groups[camera_group_id].update_camera_settings(
                 desired_configs=camera_configs))
             logger.info(f"Camera Group ID: {camera_group_id} - Updated Camera Configs for Cameras: {list(camera_configs.keys())}")
-
+        return extracted_configs
 
     def close_camera_group(self, camera_group_id: CameraGroupIdString) -> None:
         """

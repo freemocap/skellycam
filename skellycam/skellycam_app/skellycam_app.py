@@ -51,13 +51,8 @@ class SkellycamApplication:
         return self.camera_group_manager.get_latest_frontend_payloads(if_newer_than=if_newer_than)
     
     def update_camera_configs(self,
-                              camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]):
-        if isinstance(camera_configs, CameraConfig):
-            camera_configs = {camera_configs.camera_id: camera_configs}
-        elif isinstance(camera_configs, list):
-            camera_configs = {config.camera_id: config for config in camera_configs}
-        for camera_id, camera_config in camera_configs.items():
-            self.camera_group_manager.update_camera_settings(camera_config=camera_config)
+                              camera_configs: CameraConfigs) -> CameraConfigs:
+        return self.camera_group_manager.update_camera_settings(camera_configs=camera_configs)
 
     def close_all_camera_groups(self):
         self.camera_group_manager.close_all_camera_groups()

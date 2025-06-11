@@ -74,7 +74,7 @@ class ParameterDifferencesModel(BaseModel):
 
 
 class SettableCameraParameters(BaseModel):
-    exposure_mode: ExposureModes
+    exposure_mode: str
     exposure: int | str
     resolution: ImageResolution
     framerate: float
@@ -181,7 +181,7 @@ class CameraConfig(BaseModel):
             An object containing the parameters that can be set on the camera.
         """
         return SettableCameraParameters(
-            exposure_mode=ExposureModes(self.exposure_mode),
+            exposure_mode=self.exposure_mode,
             exposure=self.exposure,
             resolution=self.resolution,
             framerate=self.framerate,

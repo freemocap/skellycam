@@ -52,7 +52,7 @@ class UpdateCameraSettingsMessage(TopicMessageABC):
         return not any([len(changes)>0 for changes in self.requested_parameter_changes.values()])
 
     @property
-    def need_update_cameras(self) -> bool:
+    def need_update_configs(self) -> bool:
         return any([self.any_settings_changes or self.cameras_to_remove or self.cameras_to_add])
 
     @property

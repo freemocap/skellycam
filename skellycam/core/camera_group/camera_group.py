@@ -161,7 +161,7 @@ class CameraGroup:
 
         self.ipc.unpause(await_unpaused=True)
         logger.debug("Camera configs update complete!")
-        return desired_configs
+        return self.ipc.camera_configs
 
     def _receive_extracted_config_message(self, extracted_configs: CameraConfigs):
         extracted_config_msg = self.ipc.extracted_configs_subscription_queue.get(block=True)
