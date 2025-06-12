@@ -4,8 +4,10 @@ import multiprocessing
 import threading
 from dataclasses import dataclass
 
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_run_process
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.shared_memory.single_slot_camera_shared_memory import \
     CameraSharedMemoryDTO
@@ -16,15 +18,17 @@ logger = logging.getLogger(__name__)
 
 class CameraStrategies(enum.Enum):
     OPEN_CV = enum.auto()
+
+
 class CameraWorkerStrategies(enum.Enum):
     THREAD = enum.auto
     PROCESS = enum.auto()
 
 
 @dataclass
-class CameraProcess:
+class CameraWorker:
     camera_id: CameraIdString
-    worker: multiprocessing.Process| threading.Thread
+    worker: multiprocessing.Process | threading.Thread
     ipc: CameraGroupIPC
     close_self_flag: multiprocessing.Value
 
@@ -32,9 +36,11 @@ class CameraProcess:
     def create(cls,
                camera_id: CameraIdString,
                ipc: CameraGroupIPC,
+               config: CameraConfig,
+               orchestrator: CameraOrchestrator,
                camera_shm_dto: CameraSharedMemoryDTO,
                camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
-               camera_worker_strategy: CameraWorkerStrategies = CameraWorkerStrategies.THREAD,):
+               camera_worker_strategy: CameraWorkerStrategies = CameraWorkerStrategies.THREAD, ):
 
         if camera_strategy == CameraStrategies.OPEN_CV:
             camera_run_process = opencv_camera_run_process
@@ -53,17 +59,13 @@ class CameraProcess:
                    ipc=ipc,
                    close_self_flag=close_self_flag,
                    worker=worker_maker(target=camera_run_process,
-                                       name=f"Camera{ipc.camera_configs[camera_id].camera_index}-{camera_id}-Process",
+                                       name=f"Camera{config.camera_index}-{camera_id}-Process",
                                        daemon=True,
                                        kwargs=dict(camera_id=camera_id,
                                                    ipc=ipc,
+                                                   config=config,
+                                                   orchestrator=orchestrator,
                                                    camera_shm_dto=camera_shm_dto,
-                                                   extracted_config_topic=ipc.pubsub.topics[
-                                                       TopicTypes.EXTRACTED_CONFIG],
-                                                   update_configs_subscription=ipc.pubsub.topics[
-                                                       TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription(),
-                                                   update_shm_subscription=ipc.pubsub.topics[
-                                                       TopicTypes.SHM_UPDATES].get_subscription(),
                                                    close_self_flag=close_self_flag,
                                                    )
                                        )
@@ -84,6 +86,3 @@ class CameraProcess:
 
     def is_alive(self) -> bool:
         return self.worker.is_alive()
-
-
-

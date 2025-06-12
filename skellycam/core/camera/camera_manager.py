@@ -1,14 +1,13 @@
 import logging
-import threading
 from dataclasses import dataclass
 
-from skellycam.core.camera.camera_process import CameraProcess
+from skellycam.core.camera.camera_worker import CameraWorker
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraSharedMemoryDTOs
 from skellycam.core.ipc.shared_memory.single_slot_camera_shared_memory import CameraSharedMemoryDTO
 from skellycam.core.types import CameraIdString
-from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -18,27 +17,29 @@ MAX_CAMERA_PORTS_TO_CHECK = 20
 @dataclass
 class CameraManager:
     ipc: CameraGroupIPC
-    camera_processes: dict[CameraIdString, CameraProcess]
+    orchestrator: CameraOrchestrator
+    camera_processes: dict[CameraIdString, CameraWorker]
 
     @classmethod
     def create_cameras(cls,
                        ipc: CameraGroupIPC,
+                       camera_configs: CameraConfigs,
                        camera_shm_dtos: CameraSharedMemoryDTOs, ):
+        camera_orchestrator = CameraOrchestrator.from_camera_ids(camera_ids=list(camera_configs.keys()))
 
         camera_processes = {}
-        for camera_id, camera_config in ipc.camera_configs.items():
-            camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
+        for camera_id, camera_config in camera_configs.items():
+            camera_processes[camera_id] = CameraWorker.create(camera_id=camera_id,
+                                                               orchestrator=camera_orchestrator,
                                                                ipc=ipc,
                                                                camera_shm_dto=camera_shm_dtos[camera_id],
+                                                               config=camera_config
                                                                )
 
         return cls(ipc=ipc,
-                   camera_processes=camera_processes
+                   camera_processes=camera_processes,
+                   orchestrator=camera_orchestrator
                    )
-
-    @property
-    def orchestrator(self) -> CameraOrchestrator:
-        return self.ipc.camera_orchestrator
 
     @property
     def camera_ids(self):
@@ -71,18 +72,16 @@ class CameraManager:
 
         [process.start() for process in self.camera_processes.values()]
 
-
     def add_new_camera(self,
                        camera_id: CameraIdString,
                        ipc: CameraGroupIPC,
                        camera_shm_dto: CameraSharedMemoryDTO):
         logger.debug(f"Adding new camera: {camera_id}")
-        self.camera_processes[camera_id] = CameraProcess.create(camera_id=camera_id,
+        self.camera_processes[camera_id] = CameraWorker.create(camera_id=camera_id,
                                                                 ipc=ipc,
                                                                 camera_shm_dto=camera_shm_dto,
                                                                 )
         self.camera_processes[camera_id].start()
-
 
     def remove_camera(self, camera_id: CameraIdString):
         logger.debug(f"Closing camera: {camera_id}")

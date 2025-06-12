@@ -50,7 +50,7 @@ class CameraStatus(BaseModel):
         self.should_close.value = True
 
 
-class VideoManagerStatus(BaseModel):
+class RecordingManagerStatus(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     is_recording_frames_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value('b', False))
@@ -64,22 +64,13 @@ class VideoManagerStatus(BaseModel):
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     is_paused_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value('b', False))
+    total_frames_published: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('Q', 0))
+    number_frames_published_this_cycle: SkipValidation[multiprocessing.Value] = Field(
+        default_factory=lambda: multiprocessing.Value('i', 0))
 
     @property
     def recording(self) -> bool:
         return self.is_recording_frames_flag.value and self.should_record.value
 
 
-class MutliFramePublisherStatus(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
-    is_running_flag: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value('b', False))
-    is_paused_flag: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value('b', False))
-    total_frames_published: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value('Q', 0))
-    number_frames_published_this_cycle: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value('i', 0))
-    error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
