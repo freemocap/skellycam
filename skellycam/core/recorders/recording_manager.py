@@ -9,7 +9,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConf
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, SetShmMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, SetShmMessage, RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
@@ -64,8 +64,6 @@ class RecordingManager(BaseModel):
                                 ),
         )
 
-
-
     def start(self):
         logger.debug(f"Starting video worker process...")
         self.worker.start()
@@ -103,7 +101,8 @@ class RecordingManager(BaseModel):
         status: RecordingManagerStatus = ipc.recording_manager_status
         camera_group_shm: CameraGroupSharedMemoryManager | None = None
         camera_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in camera_ids}
-        while ipc.should_continue and (camera_group_shm is None or any([config is None for config in camera_configs.values()])):
+        while ipc.should_continue and (
+                camera_group_shm is None or any([config is None for config in camera_configs.values()])):
             if not config_updates_subscription.empty():
                 config_message = config_updates_subscription.get()
                 if not isinstance(config_message, DeviceExtractedConfigMessage):
@@ -136,13 +135,13 @@ class RecordingManager(BaseModel):
                 # check for new recording info
                 if not recording_info_subscription.empty():
                     recording_info_message = recording_info_subscription.get()
-                    if not isinstance(recording_info_message, RecordingInfo):
+                    if not isinstance(recording_info_message, RecordingInfoMessage):
                         raise RuntimeError(
                             f"Expected RecordingInfo, got {type(recording_info_message)} in recording_info_subscription"
                         )
 
                     video_manager = cls.start_recording(status=status,
-                                                        recording_info=recording_info_message,
+                                                        recording_info=recording_info_message.recording_info,
                                                         camera_configs=camera_configs,
                                                         video_manager=video_manager)
 
@@ -194,7 +193,7 @@ class RecordingManager(BaseModel):
                                 camera_group_shm: CameraGroupSharedMemoryManager) -> tuple[
         VideoManager | None, MultiFramePayload | None]:
         latest_mfs = camera_group_shm.build_all_new_multiframes(previous_payload=latest_mf,
-                                                                overwrite=False)
+                                                                overwrite=True)
         status.total_frames_published.value += len(latest_mfs)
         status.number_frames_published_this_cycle.value = len(latest_mfs)
         if latest_mfs:

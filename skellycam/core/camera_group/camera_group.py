@@ -7,9 +7,11 @@ from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConf
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
+    RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.recording_manager import RecordingManager
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraIdString, CameraGroupIdString
 from skellycam.utilities.wait_functions import wait_10ms
 
@@ -43,7 +45,7 @@ class CameraGroup:
                                            )
         cameras = CameraManager.create_cameras(ipc=ipc,
                                                camera_configs=camera_configs)
-        cameras.start() # Let cameras apply configs and publish their actual extracted settings before creating shared memory
+        cameras.start()  # Let cameras apply configs and publish their actual extracted settings before creating shared memory
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=ipc, requested_configs=camera_configs)
         shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
                                                     camera_group_id=ipc.group_id,
@@ -74,12 +76,12 @@ class CameraGroup:
         if if_newer_than is not None:
             if self.shm.latest_mf_number.value <= if_newer_than:
                 return None
+        if not self.shm.latest_multiframe_shm.first_frame_written:
+            return None
         mf = self.shm.latest_multiframe_shm.retrieve_multiframe(self.configs)
         if mf is None:
             return None
         return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf)
-
-
 
     def close(self):
         logger.debug("Closing camera group")
@@ -114,6 +116,22 @@ class CameraGroup:
         updated_configs = await_extracted_configs(ipc=self.ipc, requested_configs=requested_configs)
         self.configs.update(updated_configs)
         return self.configs
+
+    def start_recording(self, recording_info: RecordingInfo):
+        """
+        Start recording for the camera group.
+        """
+        self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
+        self.recorder.status.should_record.value = True
+        logger.info(
+            f"Started recording for camera group ID: {self.id} wit recording name: {recording_info.recording_name}")
+
+    def stop_recording(self):
+        """
+        Stop recording for the camera group.
+        """
+        self.recorder.status.should_record.value = False
+        logger.info(f"Stopped recording for camera group ID: {self.id}")
 
 
 def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:

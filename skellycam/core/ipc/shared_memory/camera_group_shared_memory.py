@@ -147,7 +147,6 @@ class CameraGroupSharedMemoryManager:
             mf_payload.add_frame(frame)
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")
-
         return mf_payload
 
     def build_all_new_multiframes(self,

@@ -101,6 +101,6 @@ class FramePayload(BaseModel):
 
     def __str__(self):
         print_str = (
-            f"Camera{self.camera_id}: Image shape: {self.image.shape}, "
+            f"Camera {self.camera_id}: Image shape: {self.image.shape}, "
         )
         return print_str

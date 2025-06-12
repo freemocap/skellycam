@@ -220,9 +220,10 @@ class MultiFramePayload(BaseModel):
         return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
 
     def __str__(self) -> str:
-        print_str = f"["
+        print_str = f"[multi_frame_number: {self.multi_frame_number}, camera_group_id: {self.camera_group_id}, "
+
         for camera_id, frame in self.frames.items():
-            print_str += str(frame) + "\n"
+            print_str += str(frame)
         print_str += "]"
         return print_str
 
