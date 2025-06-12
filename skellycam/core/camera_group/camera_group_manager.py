@@ -23,18 +23,18 @@ class CameraGroupManager:
         Check if there are any active camera groups.
         """
         return self.camera_groups and any(
-            [camera_group.ipc.running for camera_group in self.camera_groups.values()])
+            [camera_group.running for camera_group in self.camera_groups.values()])
 
-    def create_camera_group(self, camera_configs:CameraConfigs) -> CameraGroupIdString:
+    def create_and_start_camera_group(self, camera_configs:CameraConfigs) -> CameraGroup:
         """
         Create a camera group with the provided configuration settings.
         """
-        camera_group = CameraGroup.from_configs(camera_configs = camera_configs,
-                                                global_kill_flag=self.global_kill_flag)
+        camera_group = CameraGroup.create_and_start(camera_configs = camera_configs,
+                                                    global_kill_flag=self.global_kill_flag)
         self.camera_groups[camera_group.id] = camera_group
 
         logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
-        return camera_group.id
+        return camera_group
 
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup:
         """
@@ -44,28 +44,25 @@ class CameraGroupManager:
             raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
         return self.camera_groups[camera_group_id]
 
-    def update_camera_settings(self, camera_configs:CameraConfigs) -> CameraConfigs:
+    def _get_configs_by_group(self, camera_configs:CameraConfigs) -> dict[CameraGroupIdString, CameraConfigs]:
         configs_by_group: dict[CameraGroupIdString, CameraConfigs] = {}
         for camera_group in self.camera_groups.values():
             configs_by_group[camera_group.id] = {}
             for camera_id, camera_config in camera_configs.items():
                 if camera_id in camera_group.camera_ids:
                     configs_by_group[camera_group.id][camera_id] = camera_config
+        return configs_by_group
+
+    def update_camera_settings(self, camera_configs:CameraConfigs) -> CameraConfigs:
+
         extracted_configs: CameraConfigs = {}
-        for camera_group_id, camera_configs in configs_by_group.items():
-            extracted_configs.update(self.camera_groups[camera_group_id].update_camera_settings(
+        for camera_group_id, camera_configs in self._get_configs_by_group(camera_configs).items():
+            extracted_configs.update(self.camera_groups[camera_group_id].update_camera_configs(
                 desired_configs=camera_configs))
             logger.info(f"Camera Group ID: {camera_group_id} - Updated Camera Configs for Cameras: {list(camera_configs.keys())}")
         return extracted_configs
 
-    def close_camera_group(self, camera_group_id: CameraGroupIdString) -> None:
-        """
-        Remove a camera group by its ID.
-        """
-        if camera_group_id not in self.camera_groups:
-            raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
-        self.camera_groups[camera_group_id].close()
-        logger.info(f"Closed camera group with ID: {camera_group_id}")
+
 
     def close_all_camera_groups(self) -> None:
         """
@@ -75,21 +72,20 @@ class CameraGroupManager:
             logger.warning("No camera groups to close.")
             return
         for camera_group in self.camera_groups.values():
-            camera_group.ipc.shutdown_camera_group_flag.value = True
+            camera_group.should_continue = False
         wait_100ms()
         closed_ids:list[CameraIdString] = []
         for camera_group_id in list(self.camera_groups.keys()):
-            self.close_camera_group(camera_group_id)
-            closed_ids.append(camera_group_id)
+            self.camera_groups[camera_group_id].close()
+        logger.success(f"Successfully closed all camera groups ids - {list(self.camera_groups.keys())}")
         self.camera_groups.clear()
-        logger.success(f"Successfully closed all camera groups ids - {closed_ids}")
 
     def start_recording_all_groups(self, recording_info:RecordingInfo) -> None:
         """
         Start recording for all camera groups.
         """
         for camera_group in self.camera_groups.values():
-            camera_group.ipc.start_recording(recording_info=recording_info)
+            camera_group.start_recording(recording_info=recording_info)
             logger.info(f"Started recording for camera group ID: {camera_group.id}")
 
     def stop_recording_all_groups(self) -> None:
@@ -97,7 +93,7 @@ class CameraGroupManager:
         Stop recording for all camera groups.
         """
         for camera_group in self.camera_groups.values():
-            camera_group.ipc.stop_recording()
+            camera_group.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 

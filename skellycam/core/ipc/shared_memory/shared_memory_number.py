@@ -1,14 +1,17 @@
-import multiprocessing
-
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement
+from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
 
+
+class SharedMemoryNumberDTO(BaseModel):
+    shm_element_dto: SharedMemoryElementDTO
 
 class SharedMemoryNumber(BaseModel):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
     shm_element: SharedMemoryElement
-    shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", True)
     original: bool = False  # Indicates if this is the original element or a recreated one
 
     @classmethod
@@ -19,9 +22,10 @@ class SharedMemoryNumber(BaseModel):
                    original=True)
 
     @classmethod
-    def recreate(cls, shm_name: str):
-        element = SharedMemoryElement.recreate(shm_name=shm_name, shape=(1,), dtype=np.int64)
-        return cls(shm_element=element)
+    def recreate(cls, dto: SharedMemoryNumberDTO):
+        element = SharedMemoryElement.recreate(dto=dto.shm_element_dto)
+        return cls(shm_element=element,
+                   original=False)
 
     @property
     def name(self) -> str:
@@ -37,8 +41,17 @@ class SharedMemoryNumber(BaseModel):
 
     @property
     def valid(self):
-        return self.shm_valid_flag.value
+        return self.shm_element.valid
 
+    @valid.setter
+    def valid(self, value: bool):
+        self.shm_element.valid = bool(value)
+
+    def to_dto(self) -> SharedMemoryNumberDTO:
+        """Convert the shared memory number to a DTO."""
+        return SharedMemoryNumberDTO(
+            shm_element_dto=self.shm_element.to_dto()
+        )
 
     def set(self, value: int) -> None:
         """Set the value of the counter."""
@@ -56,5 +69,5 @@ class SharedMemoryNumber(BaseModel):
         """Unlink the shared memory."""
         if not self.original:
             raise RuntimeError("Cannot unlink from a recreated SharedMemoryNumber, must unlink the original.")
-        self.shm_valid_flag.value = False
+        self.valid = False
         self.shm_element.unlink()

@@ -5,7 +5,7 @@ import threading
 from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_run_process
+from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_worker_method
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
@@ -37,13 +37,11 @@ class CameraWorker:
                camera_id: CameraIdString,
                ipc: CameraGroupIPC,
                config: CameraConfig,
-               orchestrator: CameraOrchestrator,
-               camera_shm_dto: CameraSharedMemoryDTO,
                camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
                camera_worker_strategy: CameraWorkerStrategies = CameraWorkerStrategies.THREAD, ):
 
         if camera_strategy == CameraStrategies.OPEN_CV:
-            camera_run_process = opencv_camera_run_process
+            camera_run_process = opencv_camera_worker_method
         else:
             raise ValueError(f"Unsupported camera strategy: {camera_strategy}")
         close_self_flag = multiprocessing.Value("b", False)
@@ -64,9 +62,9 @@ class CameraWorker:
                                        kwargs=dict(camera_id=camera_id,
                                                    ipc=ipc,
                                                    config=config,
-                                                   orchestrator=orchestrator,
-                                                   camera_shm_dto=camera_shm_dto,
                                                    close_self_flag=close_self_flag,
+                                                   update_camera_settings_subscription=ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription(),
+                                                   shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription()
                                                    )
                                        )
                    ,

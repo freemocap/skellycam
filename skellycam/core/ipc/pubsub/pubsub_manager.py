@@ -1,13 +1,12 @@
 import logging
-import multiprocessing
 from enum import Enum, auto
 from multiprocessing.process import parent_process
 
-from pydantic import BaseModel, ConfigDict, Field, SkipValidation
+from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core.ipc.pubsub.pubsub_abcs import PubSubTopicABC
-from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCameraSettingsTopic, ShmUpdatesTopic, RecordingInfoTopic, \
-    ExtractedConfigTopic, FrontendPayloadTopic, LogsTopic, NewConfigsTopic
+from skellycam.core.ipc.pubsub.pubsub_topics import LogsTopic, UpdateCamerasSettingsTopic, DeviceExtractedConfigTopic, \
+    SetShmTopic, RecordingInfoTopic
 from skellycam.core.types import CameraGroupIdString, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
@@ -16,21 +15,17 @@ logger = logging.getLogger(__name__)
 class TopicTypes(Enum):
     UPDATE_CAMERA_SETTINGS = auto() #User requested updates to camera configs (i.e. the desired camera settings)
     EXTRACTED_CONFIG = auto() #Camera Configs extracted from the camera (i.e. the actual camera settings)
-    NEW_CONFIGS = auto() #New camera configs (to inform Nodes when there are new configs available, based on the extracted configs)
     SHM_UPDATES = auto()
     RECORDING_INFO = auto()
-    FRONTEND_PAYLOAD = auto()
     LOGS = auto()
 
 
 class PubSubTopicManager(BaseModel):
     topics: dict[TopicTypes, PubSubTopicABC] = Field(default_factory=lambda: {
-        TopicTypes.UPDATE_CAMERA_SETTINGS: UpdateCameraSettingsTopic(),
-        TopicTypes.EXTRACTED_CONFIG: ExtractedConfigTopic(),
-        TopicTypes.NEW_CONFIGS: NewConfigsTopic(),
-        TopicTypes.SHM_UPDATES: ShmUpdatesTopic(),
+        TopicTypes.UPDATE_CAMERA_SETTINGS: UpdateCamerasSettingsTopic(),
+        TopicTypes.EXTRACTED_CONFIG: DeviceExtractedConfigTopic(),
+        TopicTypes.SHM_UPDATES: SetShmTopic(),
         TopicTypes.RECORDING_INFO: RecordingInfoTopic(),
-        TopicTypes.FRONTEND_PAYLOAD: FrontendPayloadTopic(),
         TopicTypes.LOGS: LogsTopic(),
     })
     model_config = ConfigDict(
@@ -52,6 +47,16 @@ class PubSubTopicManager(BaseModel):
         logger.trace(f"Subscribed to topic {topic_type.name} with {len(self.topics[topic_type].subscriptions)} subscriptions")
         return sub
 
+    def close(self) -> None:
+        """
+        Close all topics in the manager.
+        """
+        logger.debug("Closing PubSubTopicManager...")
+        for topic in self.topics.values():
+            topic.close()
+        self.topics.clear()
+        logger.debug("PubSubTopicManager closed.")
+
 
 
 
@@ -66,7 +71,8 @@ def create_pubsub_manager(group_id: CameraGroupIdString) -> PubSubTopicManager:
     if parent_process() is not None:
         raise RuntimeError("PubSubManager can only be created in the main process.")
     if PUB_SUB_MANAGERS.get(group_id) is not None:
-        raise ValueError(f"PubSubManager for group {group_id} already exists.")
+        logger.debug(f"Creating PubSubManager for group {group_id}")
+        PUB_SUB_MANAGERS.get(group_id).close()
     PUB_SUB_MANAGERS[group_id] = PubSubTopicManager()
     return PUB_SUB_MANAGERS[group_id]
 

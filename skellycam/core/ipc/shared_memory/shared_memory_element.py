@@ -1,15 +1,15 @@
-import multiprocessing
 from dataclasses import dataclass
 from multiprocessing import shared_memory
-from typing import Tuple, Union
+from typing import Tuple, Union, Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 
-@dataclass
-class SharedMemoryElementDTO:
+class SharedMemoryElementDTO(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     shm_name: str
+    shm_valid_name: str
     shape: Tuple[int, ...]
     dtype: np.dtype
     original_shape: Tuple[int, ...]
@@ -21,8 +21,9 @@ class SharedMemoryElement(BaseModel):
     dtype: np.dtype
     shm: shared_memory.SharedMemory
     original_shape: Tuple[int, ...]
-    shm_valid_flag: multiprocessing.Value = multiprocessing.Value("b", True)
-    original:bool = False
+    valid_flag_shm: shared_memory.SharedMemory
+    valid_flag_buffer: np.ndarray
+    original: bool = False
 
     @classmethod
     def create(cls, shape: Tuple[int, ...], dtype: np.dtype):
@@ -32,31 +33,47 @@ class SharedMemoryElement(BaseModel):
             raise ValueError(f"Payload size is negative: {payload_size_bytes}")
         shm = shared_memory.SharedMemory(size=payload_size_bytes, create=True)
         buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-        return cls(buffer=buffer, shm=shm, dtype=dtype, original_shape=shape, original=True)
+        valid_flag_shm = shared_memory.SharedMemory(size=np.dtype(np.int64).itemsize, create=True)
+        valid_flag_buffer = np.ndarray((1,), dtype=np.int64, buffer=valid_flag_shm.buf)
+        valid_flag_buffer[0] = 1  # Set valid flag to True (1)
+        return cls(buffer=buffer,
+                   shm=shm,
+                   dtype=dtype,
+                   original_shape=shape,
+                   valid_flag_shm=valid_flag_shm,
+                   valid_flag_buffer=valid_flag_buffer,
+                   original=True)
 
     @classmethod
-    def recreate(cls, shm_name: str, shape: tuple, dtype: np.dtype):
-        dtype = cls._ensure_dtype(dtype)
-        shm = shared_memory.SharedMemory(name=shm_name)
-        buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-        return cls(buffer=buffer, shm=shm, dtype=dtype, original_shape=shape)
-
-    @classmethod
-    def recreate_from_dto(cls, dto: SharedMemoryElementDTO):
-        return cls.recreate(shm_name=dto.shm_name,
-                            shape=dto.shape,
-                            dtype=dto.dtype)
+    def recreate(cls, dto: SharedMemoryElementDTO):
+        dtype = cls._ensure_dtype(dto.dtype)
+        shm = shared_memory.SharedMemory(name=dto.shm_name)
+        buffer = np.ndarray(dto.shape, dtype=dtype, buffer=shm.buf)
+        valid_flag_shm = shared_memory.SharedMemory(name=dto.shm_valid_name)
+        valid_flag_buffer = np.ndarray((1,), dtype=dtype, buffer=valid_flag_shm.buf)
+        return cls(buffer=buffer,
+                   shm=shm,
+                   dtype=dto.dtype,
+                   original_shape=dto.shape,
+                   valid_flag_shm=valid_flag_shm,
+                   valid_flag_buffer=valid_flag_buffer,
+                   original=False)
 
     @property
     def valid(self) -> bool:
-        return self.shm_valid_flag.value
+        return bool(np.copy(self.valid_flag_buffer))
+
+    @valid.setter
+    def valid(self, value:Any):
+         self.valid_flag_buffer[0] = 1 if value else 0
 
     def to_dto(self) -> SharedMemoryElementDTO:
         return SharedMemoryElementDTO(
             shm_name=self.shm.name,
             shape=self.buffer.shape,
             dtype=self.dtype,
-            original_shape=self.original_shape
+            original_shape=self.original_shape,
+            shm_valid_name=self.valid_flag_shm.name
         )
 
     @staticmethod
@@ -94,6 +111,7 @@ class SharedMemoryElement(BaseModel):
 
     def unlink(self):
         if not self.original:
-            raise ValueError("Cannot unlink a non-original SharedMemoryElement, close children and unlink the original.")
-        self.shm_valid_flag.value = False
+            raise ValueError(
+                "Cannot unlink a non-original SharedMemoryElement, close children and unlink the original.")
+        self.valid = False
         self.shm.unlink()

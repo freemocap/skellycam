@@ -80,6 +80,11 @@ class FramePayloadSharedMemoryRingBuffer(BaseModel):
     def valid(self):
         return self.image_shm.valid and self.metadata_shm.valid
 
+    @valid.setter
+    def valid(self, value: bool):
+        self.image_shm.valid = value
+        self.metadata_shm.valid = value
+
     @property
     def first_frame_written(self):
         return self.image_shm.first_frame_written and self.metadata_shm.first_frame_written

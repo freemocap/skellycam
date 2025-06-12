@@ -45,6 +45,11 @@ class StartRecordingRequest(BaseModel):
         return str(Path(self.recording_directory) / self.recording_name)
 
 
+class CreateCameraGroupResponse(BaseModel):
+    group_id: CameraGroupIdString
+    camera_configs: CameraConfigs
+
+
 @camera_router.post("/group/create",
                     summary="Create camera group with provided configuration settings",
                     )
@@ -52,13 +57,14 @@ def camera_group_create_post_endpoint(
         request: CameraGroupCreateRequest = Body(...,
                                                  description="Request body containing desired camera configuration",
                                                  examples=[
-                                                     CameraGroupCreateRequest.example()]), ) -> CameraGroupIdString :
+                                                     CameraGroupCreateRequest.example()]), ) -> CreateCameraGroupResponse :
     logger.api(f"Received `skellycam/cameras/group/create` POST request with config:  {request.camera_configs}...")
     try:
         configs = request.camera_configs
-        camera_group_id = get_skellycam_app().create_camera_group(camera_configs=configs)
+        camera_group = get_skellycam_app().create_camera_group(camera_configs=configs)
         logger.api("`skellycam/cameras/group/create` POST request handled successfully.")
-        return camera_group_id
+        return CreateCameraGroupResponse(group_id=camera_group.id,
+                                         camera_configs=camera_group.configs)
     except Exception as e:
         logger.error(f"Error when processing `skellycam/cameras/group/create` request: {type(e).__name__} - {e}")
         logger.exception(e)

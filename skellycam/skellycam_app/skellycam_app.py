@@ -7,6 +7,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
@@ -39,13 +40,13 @@ class SkellycamApplication:
         """
         return not self.global_kill_flag.value
 
-    def create_camera_group(self, camera_configs: CameraConfigs) -> CameraGroupIdString:
+    def create_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
 
         logger.info(f"Creating camera group with cameras: {list(camera_configs.keys())}")
-        camera_group_id = self.camera_group_manager.create_camera_group(camera_configs=camera_configs)
-        self.camera_group_manager.get_camera_group(camera_group_id).start()
-        logger.info(f"Camera group created with ID: {camera_group_id} and cameras: {list(camera_configs.keys())}")
-        return camera_group_id
+        camera_group = self.camera_group_manager.create_and_start_camera_group(camera_configs=camera_configs)
+
+        logger.info(f"Camera group created with ID: {camera_group.id} and cameras: {list(camera_configs.keys())}")
+        return camera_group
 
     def get_new_frontend_payloads(self, if_newer_than:int|None) -> list[FrontendFramePayload]:
         return self.camera_group_manager.get_latest_frontend_payloads(if_newer_than=if_newer_than)

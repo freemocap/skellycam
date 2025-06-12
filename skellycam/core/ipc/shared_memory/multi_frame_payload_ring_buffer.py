@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import time
 from dataclasses import dataclass
 
@@ -11,6 +10,7 @@ from skellycam.core.frame_payloads.metadata.frame_metadata_enum import DEFAULT_I
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameNumpyBuffer
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_GIGABYTE, \
     SharedMemoryRingBuffer, SharedMemoryRingBufferDTO
+from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber, SharedMemoryNumberDTO
 from skellycam.core.types import CameraGroupIdString
 
 logger = logging.getLogger(__name__)
@@ -22,8 +22,7 @@ class MultiFrameSharedMemoryRingBufferDTO:
     mf_time_mapping_shm_dto: SharedMemoryRingBufferDTO
     mf_metadata_shm_dto: SharedMemoryRingBufferDTO
     mf_image_shm_dto: SharedMemoryRingBufferDTO
-    shm_valid_flag: multiprocessing.Value
-    latest_mf_number: multiprocessing.Value
+    latest_mf_number_shm_dto: SharedMemoryNumberDTO
 
 
 @dataclass
@@ -32,17 +31,25 @@ class MultiFrameSharedMemoryRingBuffer:
     mf_time_mapping_shm: SharedMemoryRingBuffer
     mf_metadata_shm: SharedMemoryRingBuffer
     mf_image_shm: SharedMemoryRingBuffer
-
-    shm_valid_flag: multiprocessing.Value
-    latest_mf_number: multiprocessing.Value
+    latest_mf_number: SharedMemoryNumber
 
     read_only: bool
-
+    original: bool = False
     latest_mf: MultiFramePayload | None = None
 
     @property
     def valid(self) -> bool:
-        return self.shm_valid_flag.value
+        return all([self.mf_time_mapping_shm.valid,
+                    self.mf_metadata_shm.valid,
+                    self.mf_image_shm.valid,
+                    self.latest_mf_number.valid])
+
+    @valid.setter
+    def valid(self, value: bool):
+        self.mf_time_mapping_shm.valid = value
+        self.mf_metadata_shm.valid = value
+        self.mf_image_shm.valid = value
+        self.latest_mf_number.valid = value
 
     @property
     def first_frame_written(self) -> bool:
@@ -86,13 +93,14 @@ class MultiFrameSharedMemoryRingBuffer:
                                                             dtype=np.int64,
                                                             ring_buffer_length=mf_image_shm.ring_buffer_length,
                                                             read_only=read_only)
+        latest_mf_number = SharedMemoryNumber.create(initial_value=-1)
         return cls(mf_image_shm=mf_image_shm,
                    mf_metadata_shm=mf_metadata_shm,
                    mf_time_mapping_shm=mf_time_mapping_shm,
-                   shm_valid_flag=multiprocessing.Value('b', True),
-                   latest_mf_number=multiprocessing.Value("l", -1),
                    camera_group_id=camera_group_id,
-                   read_only=read_only)
+                   latest_mf_number=SharedMemoryNumber.create(initial_value=-1),
+                   read_only=read_only,
+                   original=True)
 
     @classmethod
     def recreate(cls,
@@ -104,22 +112,21 @@ class MultiFrameSharedMemoryRingBuffer:
                                                           read_only=read_only)
         mf_time_mapping_shm = SharedMemoryRingBuffer.recreate(dto=shm_dto.mf_time_mapping_shm_dto,
                                                               read_only=read_only)
-
+        latest_mf_number = SharedMemoryNumber.recreate(dto=shm_dto.latest_mf_number_shm_dto)
         return cls(mf_image_shm=mf_image_shm,
                    mf_metadata_shm=mf_metadata_shm,
                    mf_time_mapping_shm=mf_time_mapping_shm,
-                   shm_valid_flag=shm_dto.shm_valid_flag,
-                   latest_mf_number=shm_dto.latest_mf_number,
                    camera_group_id=shm_dto.camera_group_id,
-                   read_only=read_only)
+                   latest_mf_number=latest_mf_number,
+                   read_only=read_only,
+                   original=False)
 
     def to_dto(self) -> MultiFrameSharedMemoryRingBufferDTO:
         return MultiFrameSharedMemoryRingBufferDTO(mf_time_mapping_shm_dto=self.mf_time_mapping_shm.to_dto(),
                                                    mf_metadata_shm_dto=self.mf_metadata_shm.to_dto(),
                                                    mf_image_shm_dto=self.mf_image_shm.to_dto(),
-                                                   shm_valid_flag=self.shm_valid_flag,
-                                                   latest_mf_number=self.latest_mf_number,
-                                                   camera_group_id=self.camera_group_id,)
+                                                   latest_mf_number_shm_dto=self.latest_mf_number.to_dto(),
+                                                   camera_group_id=self.camera_group_id, )
 
     def put_multiframe(self,
                        mf_payload: MultiFramePayload, overwrite: bool) -> None:
@@ -151,7 +158,6 @@ class MultiFrameSharedMemoryRingBuffer:
                              f"Metadata: {self.mf_metadata_shm.last_written_index.value}, "
                              f"Time Mapping: {self.mf_time_mapping_shm.last_written_index.value}, "
                              f"Expected: {mf_payload.multi_frame_number}")
-
         self.latest_mf_number.value = mf_payload.multi_frame_number
 
     def get_latest_multiframe(self,
@@ -209,7 +215,7 @@ class MultiFrameSharedMemoryRingBuffer:
             raise ValueError(
                 f"Initial multi-frame number mismatch! Expected multiframe_number = 0, got {mf.multi_frame_number}")
 
-        if(self.latest_mf and mf.multi_frame_number != self.latest_mf.multi_frame_number + 1):
+        if (self.latest_mf and mf.multi_frame_number != self.latest_mf.multi_frame_number + 1):
             raise ValueError(
                 f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf.multi_frame_number}")
 
@@ -238,10 +244,14 @@ class MultiFrameSharedMemoryRingBuffer:
         self.mf_time_mapping_shm.close()
 
     def unlink(self):
+        if self.read_only:
+            raise ValueError("Cannot unlink read-only shared memory!")
+        if not self.original:
+            raise ValueError("Cannot unlink shared memory that is not original!")
+        self.valid = False
         self.mf_image_shm.unlink()
         self.mf_metadata_shm.unlink()
         self.mf_time_mapping_shm.unlink()
-        self.shm_valid_flag.value = False
 
     def close_and_unlink(self):
         self.close()

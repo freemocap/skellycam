@@ -6,8 +6,8 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraSharedMemoryDTOs
-from skellycam.core.ipc.shared_memory.single_slot_camera_shared_memory import CameraSharedMemoryDTO
 from skellycam.core.types import CameraIdString
+from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -17,41 +17,37 @@ MAX_CAMERA_PORTS_TO_CHECK = 20
 @dataclass
 class CameraManager:
     ipc: CameraGroupIPC
-    orchestrator: CameraOrchestrator
     camera_processes: dict[CameraIdString, CameraWorker]
 
     @classmethod
     def create_cameras(cls,
                        ipc: CameraGroupIPC,
-                       camera_configs: CameraConfigs,
-                       camera_shm_dtos: CameraSharedMemoryDTOs, ):
-        camera_orchestrator = CameraOrchestrator.from_camera_ids(camera_ids=list(camera_configs.keys()))
+                       camera_configs: CameraConfigs ):
 
         camera_processes = {}
         for camera_id, camera_config in camera_configs.items():
             camera_processes[camera_id] = CameraWorker.create(camera_id=camera_id,
-                                                               orchestrator=camera_orchestrator,
-                                                               ipc=ipc,
-                                                               camera_shm_dto=camera_shm_dtos[camera_id],
-                                                               config=camera_config
-                                                               )
+                                                              ipc=ipc,
+                                                              config=camera_config
+                                                              )
 
         return cls(ipc=ipc,
                    camera_processes=camera_processes,
-                   orchestrator=camera_orchestrator
                    )
 
     @property
     def camera_ids(self):
         return list(self.camera_processes.keys())
 
-    @property
-    def paused(self):
-        return self.orchestrator.all_cameras_paused
+
 
     @property
     def any_alive(self) -> bool:
         return any([process.is_alive() for process in self.camera_processes.values()])
+
+    @property
+    def all_ready(self) -> bool:
+        return self.ipc.camera_orchestrator.all_cameras_ready
 
     @property
     def all_alive(self) -> bool:
@@ -62,7 +58,7 @@ class CameraManager:
         """
         Check if all cameras in the group are connected.
         """
-        return self.orchestrator.all_cameras_ready
+        return self.ipc.camera_orchestrator.all_cameras_ready
 
     def start(self):
         if len(self.camera_ids) == 0:
@@ -72,28 +68,23 @@ class CameraManager:
 
         [process.start() for process in self.camera_processes.values()]
 
-    def add_new_camera(self,
-                       camera_id: CameraIdString,
-                       ipc: CameraGroupIPC,
-                       camera_shm_dto: CameraSharedMemoryDTO):
-        logger.debug(f"Adding new camera: {camera_id}")
-        self.camera_processes[camera_id] = CameraWorker.create(camera_id=camera_id,
-                                                                ipc=ipc,
-                                                                camera_shm_dto=camera_shm_dto,
-                                                                )
-        self.camera_processes[camera_id].start()
+    def pause(self, await_paused: bool):
+        logger.debug(f"Pausing cameras: {self.camera_ids}")
+        for status in self.ipc.camera_orchestrator.camera_statuses.values():
+            status.should_pause.value = True
+        if await_paused:
+            while not self.ipc.camera_orchestrator.all_cameras_paused:
+                wait_10ms()
+        logger.debug(f"Cameras paused: {self.camera_ids}")
 
-    def remove_camera(self, camera_id: CameraIdString):
-        logger.debug(f"Closing camera: {camera_id}")
-
-        if camera_id not in self.camera_processes:
-            raise ValueError(f"Camera {camera_id} does not exist in this group.")
-
-        self.camera_processes[camera_id].close()
-        self.camera_processes[camera_id].join()
-        del self.camera_processes[camera_id]
-
-        logger.debug(f"Camera {camera_id} closed successfully.")
+    def unpause(self, await_unpaused: bool = True):
+        logger.debug(f"Unpausing cameras: {self.camera_ids}")
+        for status in self.ipc.camera_orchestrator.camera_statuses.values():
+            status.should_pause.value = False
+        if await_unpaused:
+            while self.ipc.camera_orchestrator.any_cameras_paused:
+                wait_10ms()
+        logger.debug(f"Cameras unpaused: {self.camera_ids}")
 
     def close(self):
         logger.debug(f"Closing cameras: {self.camera_ids}")

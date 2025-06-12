@@ -1,4 +1,5 @@
 import logging
+import sys
 from abc import ABC
 from multiprocessing.process import parent_process
 from typing import Type
@@ -7,6 +8,7 @@ import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core.types import TopicSubscriptionQueue, TopicPublicationQueue
+from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,10 @@ class PubSubTopicABC(BaseModel, ABC):
         """
         if not isinstance(message, self.message_type):
             raise TypeError(f"Expected {self.message_type} but got {type(message)}")
-        logger.trace(f"Publishing message of type {self.message_type} and size {len(message.model_dump_json())/1024:.2f}KB to {len(self.subscriptions)} subscribers with ~{np.mean([sub.qsize() for sub in self.subscriptions]):.2f} messages per subscriber")
+        if len(self.subscriptions) == 0:
+            logger.warning(f"Publishing message of type {self.message_type} with no subscribers, message will be lost")
+            return
+        logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers with ~{np.mean([sub.qsize() for sub in self.subscriptions]):.2f} messages per subscriber")
         for sub in self.subscriptions:
             if overwrite:
                 overwrote = 0
@@ -53,4 +58,13 @@ class PubSubTopicABC(BaseModel, ABC):
                     overwrote += 1
                 logger.trace(f"Overwrote {overwrote} messages in subscription queue {sub}")
             sub.put(message)
-
+    def close(self):
+        """
+        Close all subscriptions for this topic.
+        """
+        logger.debug(f"Closing PubSubTopicABC {self.__class__.__name__} with {len(self.subscriptions)} subscriptions")
+        for sub in self.subscriptions:
+            sub.close()
+        wait_100ms()
+        self.subscriptions.clear()
+        logger.debug(f"Closed PubSubTopicABC {self.__class__.__name__}")

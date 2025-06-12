@@ -1,28 +1,25 @@
-from dataclasses import dataclass
-from typing import Tuple, Optional
+from typing import Optional
 
 import numpy as np
+from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
+from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
+from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber, SharedMemoryNumberDTO
 
 ONE_GIGABYTE = 1024 ** 3
 
 
-@dataclass
-class SharedMemoryRingBufferDTO:
-    dtype: np.dtype
-    shm_element_name: str
-    ring_buffer_shape: Tuple[int, ...]
-    last_written_index_shm_name: str
-    last_read_index_shm_name: str
+class SharedMemoryRingBufferDTO(BaseModel):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
+    ring_buffer_shm_dto: SharedMemoryElementDTO
+    last_written_index_shm_dto: SharedMemoryNumberDTO
+    last_read_index_shm_dto: SharedMemoryNumberDTO
 
 
-@dataclass
-class SharedMemoryRingBuffer:
-    dtype: np.dtype
+class SharedMemoryRingBuffer(BaseModel):
     ring_buffer_shm: SharedMemoryElement
-    ring_buffer_shape: Tuple[int, ...]
     last_written_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last written element from the User's perspective, we will internally handle wrapping around the array
     last_read_index: SharedMemoryNumber  # NOTE - represents APPARENT index of last read element from the User's perspective, we will internally handle wrapping around the array
     read_only: bool
@@ -32,11 +29,18 @@ class SharedMemoryRingBuffer:
         return all([self.ring_buffer_shm.original,
                     self.last_written_index.original,
                     self.last_read_index.original])
+
     @property
     def valid(self) -> bool:
-        return all ([self.ring_buffer_shm.valid,
-                     self.last_written_index.valid,
-                     self.last_read_index.valid])
+        return all([self.ring_buffer_shm.valid,
+                    self.last_written_index.valid,
+                    self.last_read_index.valid])
+
+    @valid.setter
+    def valid(self, value: bool):
+        self.ring_buffer_shm.valid = value
+        self.last_written_index.valid = value
+        self.last_read_index.valid = value
 
     @classmethod
     def create(cls,
@@ -53,8 +57,6 @@ class SharedMemoryRingBuffer:
         last_written_index = SharedMemoryNumber.create(initial_value=-1)
         last_read_index = SharedMemoryNumber.create(initial_value=-1)
         return cls(ring_buffer_shm=ring_buffer_shm,
-                   ring_buffer_shape=full_buffer.shape,
-                   dtype=dtype,
                    last_written_index=last_written_index,
                    last_read_index=last_read_index,
                    read_only=read_only)
@@ -64,23 +66,17 @@ class SharedMemoryRingBuffer:
                  dto: SharedMemoryRingBufferDTO,
                  read_only: bool):
 
-        return cls(ring_buffer_shm=SharedMemoryElement.recreate(shm_name=dto.shm_element_name,
-                                                                    shape=dto.ring_buffer_shape,
-                                                                    dtype=dto.dtype),
-                       ring_buffer_shape=dto.ring_buffer_shape,
-                       dtype=dto.dtype,
-                       last_written_index=SharedMemoryNumber.recreate(shm_name=dto.last_written_index_shm_name),
-                       last_read_index=SharedMemoryNumber.recreate(shm_name=dto.last_read_index_shm_name),
-                       read_only=read_only)
-
+        return cls(ring_buffer_shm=SharedMemoryElement.recreate(dto.ring_buffer_shm_dto),
+                   last_written_index=SharedMemoryNumber.recreate(dto.last_written_index_shm_dto),
+                   last_read_index=SharedMemoryNumber.recreate(dto.last_read_index_shm_dto),
+                   read_only=read_only,
+                   )
 
     def to_dto(self) -> SharedMemoryRingBufferDTO:
         return SharedMemoryRingBufferDTO(
-            ring_buffer_shape=self.ring_buffer_shape,
-            dtype=self.dtype,
-            shm_element_name=self.ring_buffer_shm.name,
-            last_written_index_shm_name=self.last_written_index.name,
-            last_read_index_shm_name=self.last_read_index.name
+            ring_buffer_shm_dto=self.ring_buffer_shm.to_dto(),
+            last_written_index_shm_dto=self.last_written_index.to_dto(),
+            last_read_index_shm_dto=self.last_read_index.to_dto(),
         )
 
     @property
@@ -93,7 +89,7 @@ class SharedMemoryRingBuffer:
 
     @property
     def ring_buffer_length(self):
-        return self.ring_buffer_shape[0]
+        return self.ring_buffer_shm.original_shape[0]
 
     def _check_for_overwrite(self, next_index: int) -> bool:
         return next_index % self.ring_buffer_length == self.last_read_index.get() % self.ring_buffer_length
@@ -102,9 +98,9 @@ class SharedMemoryRingBuffer:
         overwrite = True
         if self.read_only:
             raise ValueError("Cannot write to read-only SharedMemoryRingBuffer.")
-        if data.shape != self.ring_buffer_shape[1:]:
+        if data.shape != self.ring_buffer_shm.original_shape[1:]:
             raise ValueError(
-                f"Array shape {data.shape} does not match SharedMemoryIndexedArray shape {self.ring_buffer_shape[1:]}")
+                f"Array shape {data.shape} does not match SharedMemoryIndexedArray shape {self.ring_buffer_shm.original_shape[1:]}")
 
         index_to_write = self.last_written_index.value + 1
         if self._check_for_overwrite(index_to_write) and not overwrite:
@@ -116,7 +112,8 @@ class SharedMemoryRingBuffer:
 
     def get_next_payload(self) -> np.ndarray:
         if self.read_only:
-            raise ValueError("Cannot call `get_next_payload` on read-only SharedMemoryRingBuffer. Use `get_latest_payload` instead.")
+            raise ValueError(
+                "Cannot call `get_next_payload` on read-only SharedMemoryRingBuffer. Use `get_latest_payload` instead.")
         if not self.first_frame_written:
             raise ValueError("Ring buffer is not ready to read yet.")
         if not self.new_data_available:
@@ -159,5 +156,3 @@ class SharedMemoryRingBuffer:
     def close_and_unlink(self):
         self.close()
         self.unlink()
-
-
