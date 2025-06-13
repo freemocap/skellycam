@@ -57,8 +57,8 @@ class CameraGroupManager:
 
         extracted_configs: CameraConfigs = {}
         for camera_group_id, camera_configs in self._get_configs_by_group(camera_configs).items():
-            extracted_configs.update(self.camera_groups[camera_group_id].update_camera_configs(
-                desired_configs=camera_configs))
+            extracted_configs.update(self.camera_groups[camera_group_id].update_camera_settings(
+                requested_configs=camera_configs))
             logger.info(f"Camera Group ID: {camera_group_id} - Updated Camera Configs for Cameras: {list(camera_configs.keys())}")
         return extracted_configs
 

@@ -147,6 +147,9 @@ class CameraGroupSharedMemoryManager:
             mf_payload.add_frame(frame)
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")
+        self.latest_multiframe_shm.put_multiframe(mf_payload=mf_payload,
+                                                  overwrite=True)
+        self.latest_mf_number.value = mf_payload.multi_frame_number
         return mf_payload
 
     def build_all_new_multiframes(self,
@@ -157,9 +160,6 @@ class CameraGroupSharedMemoryManager:
             mf_payload = self.build_next_multi_frame_payload(previous_payload=previous_payload)
             mfs.append(mf_payload)
             previous_payload = mf_payload
-        if len(mfs) > 0 and isinstance(mfs[-1], MultiFramePayload):
-            self.latest_multiframe_shm.put_multiframe(mfs[-1], overwrite=overwrite)
-            self.latest_mf_number.value = mfs[-1].multi_frame_number
         return mfs
 
 

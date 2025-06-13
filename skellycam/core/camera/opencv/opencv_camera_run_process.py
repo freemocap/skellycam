@@ -94,7 +94,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                         f"Expected UpdateCamerasSettingsMessage for camera {camera_id}, "
                         f"but received {type(update_message)}"
                     )
-                if not camera_id in update_message.requested_configs[camera_id]:
+                if not camera_id in update_message.requested_configs:
                     raise RuntimeError(
                         f"Camera {camera_id} not found in UpdateCamerasSettingsMessage: {update_message.requested_configs.keys()} "
                     )
@@ -118,6 +118,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
             self_status.grabbing_frame.value = False
             # Last camera to increment their frame count triggers the next frame_grab signal
             self_status.frame_count.value += 1
+
 
     except Exception as e:
         self_status.signal_error()
