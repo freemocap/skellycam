@@ -13,7 +13,7 @@ class MultiFrameTimestampLog(BaseModel):
         description="The number of multi-frame payloads that have been received by the camera group, "
                     "will be the same for all cameras and corresponds to the frame number in saved videos"
     )
-    timestamp_from_zero_s: float = Field(
+    timestamp_from_zero_ms: float = Field(
         description="The mean timestamp of the individual frames in this multi-frame, in seconds since the first frame was received by this camera group"
     )
     timestamp_utc_s: float = Field(
@@ -131,7 +131,7 @@ class MultiFrameTimestampLog(BaseModel):
             ]
         ))
 
-        timestamp_from_zero_s = (timestamp_perf_counter_ns- initial_multi_frame_payload.timestamp_ns) / 1e9
+        timestamp_from_zero_ms = (timestamp_perf_counter_ns- initial_multi_frame_payload.timestamp_ns) / 1e9
 
         timestamp_utc_ns = int(np.mean(
             [
@@ -273,7 +273,7 @@ class MultiFrameTimestampLog(BaseModel):
 
         return cls(
             multi_frame_number=multi_frame_metadata.multi_frame_number,
-            timestamp_from_zero_s=timestamp_from_zero_s,
+            timestamp_from_zero_ms=timestamp_from_zero_ms,
             timestamp_utc_s=timestamp_utc_ns / 1e9,
             timestamp_utc_iso8601=timestamp_utc_iso8601,
             inter_camera_timestamp_range_ns=inter_camera_timestamp_range_ns,

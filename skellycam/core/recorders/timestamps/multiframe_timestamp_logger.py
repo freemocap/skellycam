@@ -132,14 +132,14 @@ class MultiframeTimestampLogger(BaseModel):
         if df.empty:
             logger.error("No timestamp data available to calculate statistics.")
             return {}
-        frame_intervals = df['timestamp_from_zero_s'].diff().dropna()
+        frame_intervals = df['timestamp_from_zero_ms'].diff().dropna()
         return dict(
             framerate_stats=DescriptiveStatistics.from_samples(
                 sample_data=frame_intervals.to_numpy(na_value=np.nan)**-1,
                 name="frame_duration",
-                units="milliseconds").to_dict(),
+                units="frames_per_second").to_dict(),
             frame_duration_stats=DescriptiveStatistics.from_samples(
-                sample_data=frame_intervals.to_numpy(na_value=np.nan),
+                sample_data=frame_intervals.to_numpy(na_value=np.nan)*1000,
                 name="frame_duration",
                 units="milliseconds").to_dict(),
             inter_camera_timestamp_range_stats_ms=DescriptiveStatistics.from_samples(

@@ -15,7 +15,7 @@ class CameraTimestampLog(BaseModel):
     frame_number: int = Field(
         description="- The number of frame payloads that have been received by the camera group, will be the same for all cameras and corresponds to the frame number in saved videos"
     )
-    timestamp_from_zero_s: float = Field(
+    timestamp_from_zero_ms: float = Field(
         description="- The timestamp of the frame, in nanoseconds since the first frame was received by the camera group"
     )
     timestamp_perf_counter_ns: int = Field(
@@ -48,7 +48,7 @@ class CameraTimestampLog(BaseModel):
             camera_id=frame_metadata.camera_id,
             frame_number=frame_metadata.frame_number,
             timestamp_perf_counter_ns=frame_metadata.timestamp_ns,
-            timestamp_from_zero_s=frame_metadata.timestamp_ns- first_frame_metadata.timestamp_ns / 1e9,
+            timestamp_from_zero_ms=frame_metadata.timestamp_ns- first_frame_metadata.timestamp_ns / 1e6,
             timestamp_utc_ns=timebase_mapping.convert_perf_counter_ns_to_unix_ns(frame_metadata.timestamp_ns,local_time=False),
             timestamp_utc_iso8601=datetime.fromtimestamp(
                 timebase_mapping.convert_perf_counter_ns_to_unix_ns(frame_metadata.timestamp_ns,local_time=False) / 1e9
