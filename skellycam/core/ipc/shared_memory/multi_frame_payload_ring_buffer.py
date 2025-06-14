@@ -208,7 +208,7 @@ class MultiFrameSharedMemoryRingBuffer:
         self.latest_mf = mf
         return mf
 
-    def _validate_mf(self, mf: MultiFramePayload):
+    def _validate_mf(self, mf: MultiFramePayload, strict_mode: bool = False):
         if not isinstance(mf, MultiFramePayload):
             raise TypeError(f"Expected MultiFramePayload, got {type(mf)}")
         if (not self.latest_mf and mf.multi_frame_number != 0):
@@ -216,8 +216,11 @@ class MultiFrameSharedMemoryRingBuffer:
                 f"Initial multi-frame number mismatch! Expected multiframe_number = 0, got {mf.multi_frame_number}")
 
         if (self.latest_mf and mf.multi_frame_number != self.latest_mf.multi_frame_number + 1):
-            raise ValueError(
-                f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf.multi_frame_number}")
+            msg = f"Multi-frame number mismatch! Expected {self.latest_mf_number.value}, got {mf.multi_frame_number}"
+            if strict_mode:
+                raise ValueError(msg)
+            else:
+                logger.warning(msg)
 
         if not mf or not mf.full:
             raise ValueError("Did not read full multi-frame mf!")

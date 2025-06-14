@@ -38,6 +38,7 @@ class CameraGroup:
                global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None,
                camera_strategy: WorkerStrategy = WorkerStrategy.THREAD,
+               camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD,
                recorder_strategy: WorkerStrategy = WorkerStrategy.THREAD,
                mf_builder_strategy: WorkerStrategy = WorkerStrategy.THREAD) -> 'CameraGroup':
 
@@ -52,9 +53,11 @@ class CameraGroup:
                                               worker_strategy=mf_builder_strategy)
 
         # note - create cameras last so others can subscribe to camera updates
-        cameras = CameraManager.create_cameras(ipc=ipc,
-                                               camera_configs=camera_configs,
-                                               worker_strategy=camera_strategy, )
+        cameras = CameraManager.create(ipc=ipc,
+                                       camera_configs=camera_configs,
+                                       camera_manager_strategy=camera_manager_strategy,
+                                       camera_strategy=camera_strategy,
+                                       )
 
         return cls(
             ipc=ipc,

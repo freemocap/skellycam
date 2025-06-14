@@ -54,6 +54,10 @@ class RecordingManager(BaseModel):
                                                      )),
         )
 
+    @property
+    def ready(self):
+        return self.worker.is_alive()
+
     def start(self):
         logger.debug(f"Starting video worker process...")
         self.worker.start()
@@ -63,10 +67,6 @@ class RecordingManager(BaseModel):
 
     def join(self):
         self.worker.join()
-
-    @property
-    def ready(self):
-        return self.worker.is_alive()
 
     def close(self):
         logger.debug(f"Closing video worker process...")
@@ -89,13 +89,17 @@ class RecordingManager(BaseModel):
             from skellycam.system.logging_configuration.configure_logging import configure_logging
             from skellycam import LOG_LEVEL
             configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
+
         def should_continue():
             return ipc.should_continue and not should_close_self.value
+
         status: RecordingManagerStatus = ipc.recording_manager_status
         camera_group_shm: CameraGroupSharedMemoryManager | None = None
         camera_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in camera_ids}
+
         while should_continue() and (
-                camera_group_shm is None or any([config is None for config in camera_configs.values()])):
+                camera_group_shm is None or
+                any([config is None for config in camera_configs.values()])):
             if not config_updates_subscription.empty():
                 config_message = config_updates_subscription.get()
                 if not isinstance(config_message, DeviceExtractedConfigMessage):
@@ -118,7 +122,7 @@ class RecordingManager(BaseModel):
         if camera_group_shm is None or not camera_group_shm.valid:
             raise RuntimeError("Failed to initialize camera_group_shm")
 
-        #Ensure all camera configs are properly initialized before proceeding
+        # Ensure all camera configs are properly initialized before proceeding
         if any([config is None for config in camera_configs.values()]):
             raise RuntimeError(f"Failed to initialize camera_configs: {camera_configs}")
 
@@ -130,8 +134,8 @@ class RecordingManager(BaseModel):
         try:
             while should_continue():
                 # check for new recording info
-                if not recording_info_subscription.empty():
-                    recording_info_message = recording_info_subscription.get()
+                if status.should_record.value and video_manager is None:
+                    recording_info_message = recording_info_subscription.get(block=True)
                     if not isinstance(recording_info_message, RecordingInfoMessage):
                         raise RuntimeError(
                             f"Expected RecordingInfo, got {type(recording_info_message)} in recording_info_subscription"
