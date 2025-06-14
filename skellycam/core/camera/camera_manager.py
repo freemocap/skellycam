@@ -4,14 +4,10 @@ from dataclasses import dataclass
 from skellycam.core.camera.camera_worker import CameraWorker
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraSharedMemoryDTOs
-from skellycam.core.types import CameraIdString
+from skellycam.core.types import CameraIdString, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
-
-MAX_CAMERA_PORTS_TO_CHECK = 20
 
 
 @dataclass
@@ -22,24 +18,24 @@ class CameraManager:
     @classmethod
     def create_cameras(cls,
                        ipc: CameraGroupIPC,
-                       camera_configs: CameraConfigs ):
+                       camera_configs: CameraConfigs,
+                       worker_strategy: WorkerStrategy):
+
 
         camera_processes = {}
         for camera_id, camera_config in camera_configs.items():
             camera_processes[camera_id] = CameraWorker.create(camera_id=camera_id,
                                                               ipc=ipc,
-                                                              config=camera_config
+                                                              config=camera_config,
+                                                              worker_strategy=worker_strategy
                                                               )
 
-        return cls(ipc=ipc,
-                   camera_processes=camera_processes,
-                   )
+        return cls(ipc=ipc, camera_processes=camera_processes)
+
 
     @property
     def camera_ids(self):
         return list(self.camera_processes.keys())
-
-
 
     @property
     def any_alive(self) -> bool:

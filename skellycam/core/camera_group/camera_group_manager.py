@@ -29,9 +29,10 @@ class CameraGroupManager:
         """
         Create a camera group with the provided configuration settings.
         """
-        camera_group = CameraGroup.create_and_start(camera_configs = camera_configs,
+        camera_group = CameraGroup.create(camera_configs = camera_configs,
                                                     global_kill_flag=self.global_kill_flag)
         self.camera_groups[camera_group.id] = camera_group
+        self.camera_groups[camera_group.id].start()
 
         logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
         return camera_group

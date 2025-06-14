@@ -11,7 +11,8 @@ from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.shared_memory.single_slot_camera_shared_memory import \
     CameraSharedMemoryDTO
-from skellycam.core.types import CameraIdString
+from skellycam.core.recorders.recording_manager import WorkerType
+from skellycam.core.types import CameraIdString, WorkerStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +21,12 @@ class CameraStrategies(enum.Enum):
     OPEN_CV = enum.auto()
 
 
-class CameraWorkerStrategies(enum.Enum):
-    THREAD = enum.auto
-    PROCESS = enum.auto()
 
 
 @dataclass
 class CameraWorker:
     camera_id: CameraIdString
-    worker: multiprocessing.Process | threading.Thread
+    worker: WorkerType
     ipc: CameraGroupIPC
     close_self_flag: multiprocessing.Value
 
@@ -37,8 +35,9 @@ class CameraWorker:
                camera_id: CameraIdString,
                ipc: CameraGroupIPC,
                config: CameraConfig,
+               worker_strategy: WorkerStrategy,
                camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
-               camera_worker_strategy: CameraWorkerStrategies = CameraWorkerStrategies.THREAD, ):
+               ):
 
         if camera_strategy == CameraStrategies.OPEN_CV:
             camera_run_process = opencv_camera_worker_method
@@ -46,17 +45,11 @@ class CameraWorker:
             raise ValueError(f"Unsupported camera strategy: {camera_strategy}")
         close_self_flag = multiprocessing.Value("b", False)
 
-        if camera_worker_strategy == CameraWorkerStrategies.PROCESS:
-            worker_maker = multiprocessing.Process
-        elif camera_worker_strategy == CameraWorkerStrategies.THREAD:
-            worker_maker = threading.Thread
-        else:
-            raise ValueError(f"Unsupported camera worker strategy: {camera_worker_strategy}")
 
         return cls(camera_id=camera_id,
                    ipc=ipc,
                    close_self_flag=close_self_flag,
-                   worker=worker_maker(target=camera_run_process,
+                   worker=worker_strategy.value(target=camera_run_process,
                                        name=f"Camera{config.camera_index}-{camera_id}-Process",
                                        daemon=True,
                                        kwargs=dict(camera_id=camera_id,

@@ -1,9 +1,7 @@
-import enum
 import logging
 import multiprocessing
-import threading
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SkipValidation
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
@@ -15,22 +13,18 @@ from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_manager import VideoManager
-from skellycam.core.types import TopicSubscriptionQueue, CameraIdString
+from skellycam.core.types import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
 
 logger = logging.getLogger(__name__)
-
-
-class WorkerStrategies(enum.Enum):
-    THREAD = enum.auto()
-    PROCESS = enum.auto()
 
 
 class RecordingManager(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
-    worker: multiprocessing.Process | threading.Thread
+    worker: WorkerType
     ipc: CameraGroupIPC
+    should_close_self: SkipValidation[multiprocessing.Value]
 
     @property
     def status(self):
@@ -40,28 +34,24 @@ class RecordingManager(BaseModel):
     def create(cls,
                ipc: CameraGroupIPC,
                camera_ids: list[CameraIdString],
-               recording_worker_strategy: WorkerStrategies = WorkerStrategies.THREAD, ):
-        if recording_worker_strategy == WorkerStrategies.PROCESS:
-            worker_maker = multiprocessing.Process
-        elif recording_worker_strategy == WorkerStrategies.THREAD:
-            worker_maker = threading.Thread
-        else:
-            raise ValueError(f"Unsupported camera worker strategy: {recording_worker_strategy}")
-
+               worker_strategy: WorkerStrategy):
+        should_close_self = multiprocessing.Value("b", False)
         return cls(
             ipc=ipc,
-            worker=worker_maker(target=cls._worker,
-                                name=cls.__class__.__name__,
-                                kwargs=dict(ipc=ipc,
-                                            camera_ids=camera_ids,
-                                            recording_info_subscription=ipc.pubsub.topics[
-                                                TopicTypes.RECORDING_INFO].get_subscription(),
-                                            config_updates_subscription=ipc.pubsub.topics[
-                                                TopicTypes.EXTRACTED_CONFIG].get_subscription(),
-                                            shm_updates_subscription=ipc.pubsub.topics[
-                                                TopicTypes.SHM_UPDATES].get_subscription(),
-                                            )
-                                ),
+            should_close_self=should_close_self,
+            worker=worker_strategy.value(target=cls._worker,
+                                         name=cls.__class__.__name__,
+                                         kwargs=dict(ipc=ipc,
+                                                     camera_ids=camera_ids,
+                                                     should_close_self=should_close_self,
+                                                     recording_info_subscription=ipc.pubsub.topics[
+                                                         TopicTypes.RECORDING_INFO].get_subscription(),
+                                                     config_updates_subscription=ipc.pubsub.topics[
+                                                         TopicTypes.EXTRACTED_CONFIG].get_subscription(),
+                                                     shm_updates_subscription=ipc.pubsub.topics[
+                                                         TopicTypes.SHM_UPDATES].get_subscription(),
+
+                                                     )),
         )
 
     def start(self):
@@ -80,7 +70,7 @@ class RecordingManager(BaseModel):
 
     def close(self):
         logger.debug(f"Closing video worker process...")
-        self.ipc.should_continue = False
+        self.should_close_self.value = False
         if self.is_alive():
             self.join()
         logger.debug(f"Video worker closed")
@@ -92,16 +82,19 @@ class RecordingManager(BaseModel):
                 recording_info_subscription: TopicSubscriptionQueue,
                 config_updates_subscription: TopicSubscriptionQueue,
                 shm_updates_subscription: TopicSubscriptionQueue,
+                should_close_self: multiprocessing.Value
                 ):
         if multiprocessing.parent_process():
             # Configure logging if multiprocessing (i.e. if there is a parent process)
             from skellycam.system.logging_configuration.configure_logging import configure_logging
             from skellycam import LOG_LEVEL
             configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
+        def should_continue():
+            return ipc.should_continue and not should_close_self.value
         status: RecordingManagerStatus = ipc.recording_manager_status
         camera_group_shm: CameraGroupSharedMemoryManager | None = None
         camera_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in camera_ids}
-        while ipc.should_continue and (
+        while should_continue() and (
                 camera_group_shm is None or any([config is None for config in camera_configs.values()])):
             if not config_updates_subscription.empty():
                 config_message = config_updates_subscription.get()
@@ -125,13 +118,17 @@ class RecordingManager(BaseModel):
         if camera_group_shm is None or not camera_group_shm.valid:
             raise RuntimeError("Failed to initialize camera_group_shm")
 
+        #Ensure all camera configs are properly initialized before proceeding
+        if any([config is None for config in camera_configs.values()]):
+            raise RuntimeError(f"Failed to initialize camera_configs: {camera_configs}")
+
         video_manager: VideoManager | None = None
         audio_recorder: AudioRecorder | None = None
         latest_mf: MultiFramePayload | None = None
         status.is_running_flag.value = True
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
-            while ipc.should_continue:
+            while should_continue():
                 # check for new recording info
                 if not recording_info_subscription.empty():
                     recording_info_message = recording_info_subscription.get()
@@ -163,6 +160,7 @@ class RecordingManager(BaseModel):
                 # check/handle new multi-frames
                 video_manager, latest_mf = cls._get_and_handle_new_mfs(
                     status=status,
+                    camera_configs=camera_configs,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
                     latest_mf=latest_mf
@@ -179,7 +177,7 @@ class RecordingManager(BaseModel):
             pass
         finally:
             status.is_running_flag.value = False
-            ipc.should_continue = False
+            should_close_self.value = True
             if video_manager:
                 video_manager.finish_and_close()
             camera_group_shm.close()
@@ -188,18 +186,18 @@ class RecordingManager(BaseModel):
     @classmethod
     def _get_and_handle_new_mfs(cls,
                                 status: RecordingManagerStatus,
+                                camera_configs: CameraConfigs,
                                 video_manager: VideoManager | None,
                                 latest_mf: MultiFramePayload | None,
                                 camera_group_shm: CameraGroupSharedMemoryManager) -> tuple[
         VideoManager | None, MultiFramePayload | None]:
-        latest_mfs = camera_group_shm.build_all_new_multiframes(previous_payload=latest_mf,
-                                                                overwrite=True)
+        latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes(camera_configs=camera_configs)
         status.total_frames_published.value += len(latest_mfs)
         status.number_frames_published_this_cycle.value = len(latest_mfs)
-        if latest_mfs:
-            latest_mf = latest_mfs[-1]
+
         if len(latest_mfs) > 0 and video_manager is not None:
             print(f"VideoManager: {len(latest_mfs)} new frames to process")
+            latest_mf = latest_mfs[-1]
             # if new frames, add them to the recording manager (doesn't save them yet)
             video_manager.add_multi_frames(latest_mfs)
         else:

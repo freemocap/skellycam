@@ -1,4 +1,6 @@
+import enum
 import multiprocessing
+import threading
 
 import numpy as np
 from pydantic import SkipValidation
@@ -15,3 +17,9 @@ Base64JPEGImage = str  # Base64 encoded JPEG image
 RecordingManagerIdString = str
 TopicSubscriptionQueue = SkipValidation[multiprocessing.Queue]
 TopicPublicationQueue = SkipValidation[multiprocessing.Queue]
+
+WorkerType = SkipValidation[threading.Thread | multiprocessing.Process]
+
+class WorkerStrategy(enum.Enum):
+    THREAD = threading.Thread
+    PROCESS = multiprocessing.Process

@@ -27,9 +27,11 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                                 close_self_flag: multiprocessing.Value,
                                 ):
     # Configure logging in the child process
-    from skellycam.system.logging_configuration.configure_logging import configure_logging
-    from skellycam import LOG_LEVEL
-    configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication, )
+    if multiprocessing.parent_process():
+        # Configure logging if multiprocessing (i.e. if there is a parent process)
+        from skellycam.system.logging_configuration.configure_logging import configure_logging
+        from skellycam import LOG_LEVEL
+        configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
     logger.trace(f"Camera {camera_id} worker started")
     orchestrator: CameraOrchestrator = ipc.camera_orchestrator
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
@@ -71,7 +73,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         raise RuntimeError("Failed to initialize camera_group_shm")
     logger.success(f"Camera {camera_id} ready!")
 
-    while (not ipc.all_ready) and should_continue():
+    while not ipc.all_ready and should_continue():
         wait_10ms()
 
     try:

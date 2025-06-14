@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.mf_publisher import MultiframeBuilder
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
@@ -12,7 +13,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraIdString, CameraGroupIdString
+from skellycam.core.types import CameraIdString, CameraGroupIdString, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -21,44 +22,60 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroup:
     ipc: CameraGroupIPC
-    shm: CameraGroupSharedMemoryManager
     configs: CameraConfigs
     cameras: CameraManager
+    mf_builder: MultiframeBuilder
     recorder: RecordingManager
+    shm: CameraGroupSharedMemoryManager | None = None
 
     @property
     def id(self) -> CameraGroupIdString:
         return self.ipc.group_id
 
     @classmethod
-    def create_and_start(cls,
-                         camera_configs: CameraConfigs,
-                         global_kill_flag: multiprocessing.Value,
-                         group_id: CameraGroupIdString | None = None) -> 'CameraGroup':
+    def create(cls,
+               camera_configs: CameraConfigs,
+               global_kill_flag: multiprocessing.Value,
+               group_id: CameraGroupIdString | None = None,
+               camera_strategy: WorkerStrategy = WorkerStrategy.THREAD,
+               recorder_strategy: WorkerStrategy = WorkerStrategy.THREAD,
+               mf_builder_strategy: WorkerStrategy = WorkerStrategy.THREAD) -> 'CameraGroup':
 
         ipc = CameraGroupIPC.create(group_id=group_id,
                                     camera_configs=camera_configs,
                                     global_kill_flag=global_kill_flag)
-        # note - create rec manager first so it can subscribe to camera updates
         recorder = RecordingManager.create(ipc=ipc,
-                                           camera_ids=list(camera_configs.keys())
+                                           camera_ids=list(camera_configs.keys()),
+                                           worker_strategy=recorder_strategy
                                            )
+        mf_builder = MultiframeBuilder.create(ipc=ipc,
+                                              worker_strategy=mf_builder_strategy)
+
+        # note - create cameras last so others can subscribe to camera updates
         cameras = CameraManager.create_cameras(ipc=ipc,
-                                               camera_configs=camera_configs)
-        cameras.start()  # Let cameras apply configs and publish their actual extracted settings before creating shared memory
-        extracted_configs: CameraConfigs = await_extracted_configs(ipc=ipc, requested_configs=camera_configs)
-        shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
-                                                    camera_group_id=ipc.group_id,
-                                                    read_only=True)
-        ipc.publish_shm_message(shm_dto=shm.to_dto())
-        recorder.start()
+                                               camera_configs=camera_configs,
+                                               worker_strategy=camera_strategy, )
+
         return cls(
             ipc=ipc,
-            shm=shm,
             cameras=cameras,
             recorder=recorder,
-            configs=camera_configs
+            configs=camera_configs,
+            mf_builder=mf_builder,
         )
+
+    def start(self) -> CameraConfigs:
+        logger.info(f"Starting camera group ID: {self.id} with cameras: {list(self.configs.keys())}")
+        self.cameras.start()
+        self.recorder.start()
+        self.mf_builder.start()
+        logger.debug(f"Awaiting extracted configs so we can create shared memory...")
+        extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
+        self.shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
+                                                    camera_group_id=self.ipc.group_id,
+                                                    read_only=True)
+        self.ipc.publish_shm_message(shm_dto=self.shm.to_dto())
+        return extracted_configs
 
     @property
     def camera_ids(self) -> list[CameraIdString]:
@@ -70,9 +87,13 @@ class CameraGroup:
 
     @property
     def all_ready(self) -> bool:
-        return all([self.cameras.all_ready, self.recorder.ready, self.shm.valid])
+        if self.shm is None:
+            return False
+        return all([self.cameras.all_ready, self.recorder.ready, self.mf_builder.ready,  self.shm.valid])
 
     def get_latest_frontend_payload(self, if_newer_than: int | None = None) -> FrontendFramePayload | None:
+        if self.shm is None:
+            return None
         if if_newer_than is not None:
             if self.shm.latest_mf_number.value <= if_newer_than:
                 return None
