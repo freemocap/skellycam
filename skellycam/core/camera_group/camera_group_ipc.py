@@ -8,6 +8,7 @@ from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.pubsub.pubsub_manager import create_pubsub_manager, TopicTypes, PubSubTopicManager
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
 from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraGroupIdString, TopicSubscriptionQueue
 from skellycam.utilities.create_camera_group_id import create_camera_group_id
 
@@ -20,6 +21,7 @@ class CameraGroupIPC(BaseModel):
     )
     group_id: CameraGroupIdString
     pubsub: PubSubTopicManager
+    timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping)
     camera_orchestrator: CameraOrchestrator
     extracted_config_subscription: TopicSubscriptionQueue
 

@@ -3,20 +3,25 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
-from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 
 
 def initialize_frame_metadata_rec_array(
         camera_config: CameraConfig,
-        frame_number: int,   ) -> np.recarray:
+        frame_number: int,
+        timebase_mapping: TimebaseMapping
+) -> np.recarray:
+    # Create a record array with the correct shape (1,)
+    result = np.recarray(1, dtype=FRAME_METADATA_DTYPE)
 
-    return np.rec.array(
-        (camera_config.to_numpy_record_array(),
-         frame_number,
-         FrameLifespanTimestamps().to_numpy_record_array()),
-        dtype=FRAME_METADATA_DTYPE
-    )
+    # Assign values to the record array
+    result.camera_config[0] = camera_config.to_numpy_record_array()[0]
+    result.frame_number[0] = frame_number
+    result.timestamps[0] = FrameLifespanTimestamps().to_numpy_record_array()[0]
+    result.timebase_mapping[0] = timebase_mapping.to_numpy_record_array()[0]
+
+    return result
 
 class FrameMetadata(BaseModel):
     """
@@ -25,7 +30,7 @@ class FrameMetadata(BaseModel):
     frame_number: int
     camera_config: CameraConfig
     timestamps: FrameLifespanTimestamps
-    timebase_mapping: TimeBaseMapping = Field(default_factory=TimeBaseMapping, description=TimeBaseMapping.__doc__)
+    timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping, description=TimebaseMapping.__doc__)
 
     @property
     def camera_id(self) -> str:
@@ -46,7 +51,7 @@ class FrameMetadata(BaseModel):
             frame_number=array.frame_number,
             camera_config=CameraConfig.from_numpy_record_array(array.camera_config),
             timestamps=FrameLifespanTimestamps.from_numpy_record_array(array.timestamps),
-            timebase_mapping=TimeBaseMapping.from_numpy_record_array(array.timebase_mapping)
+            timebase_mapping=TimebaseMapping.from_numpy_record_array(array.timebase_mapping)
         )
 
     def to_numpy_record_array(self) -> np.recarray:

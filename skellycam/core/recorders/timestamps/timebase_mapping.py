@@ -11,7 +11,7 @@ from skellycam.core.types.numpy_record_dtypes import TIMEBASE_MAPPING_DTYPE
 def get_utc_offset() -> int:
     return int(datetime.now(get_localzone()).utcoffset().total_seconds())
 
-class TimeBaseMapping(BaseModel):
+class TimebaseMapping(BaseModel):
     """
     A mapping of `time.time_ns()` to `time.perf_counter_ns()`
     to allow conversion of `time.perf_counter_ns()`'s arbitrary time base to unix time

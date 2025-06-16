@@ -1,7 +1,8 @@
 import logging
 import time
 
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, initialize_multi_frame_rec_array
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
 
 logger = logging.getLogger(__name__)
@@ -9,6 +10,16 @@ logger = logging.getLogger(__name__)
 
 
 class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
+
+    @classmethod
+    def from_configs(cls,
+                    camera_configs: CameraConfigs,
+                    read_only: bool = False) -> "MultiFrameSharedMemoryRingBuffer":
+        return cls.create(
+            example_data=initialize_multi_frame_rec_array(camera_configs=camera_configs,
+                                                          frame_number=0), #NOTE - Dummy used for shape and dtype
+            read_only=read_only,
+        )
 
     def put_multiframe(self,
                        mf_payload: MultiFramePayload,
@@ -22,7 +33,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
             raise ValueError("Cannot write to read-only shared memory!")
 
         for frame in mf_payload.frames.values():
-            frame.frame_metadata.copy_to_multiframe_shm = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.copy_to_multi_frame_escape_shm_buffer_timestamp_ns = time.perf_counter_ns()
 
         self.put_data(data=mf_payload.to_numpy_record_array(), overwrite=overwrite)
 
@@ -30,7 +41,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
 
         mf_payload = MultiFramePayload.from_numpy_record_array(self.get_latest_data())
         for frame in mf_payload.frames.values():
-            frame.frame_metadata.copy_from_multiframe_shm = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.copy_from_multi_frame_escape_shm_buffer_timestamp_ns = time.perf_counter_ns()
 
         return mf_payload
 
@@ -38,7 +49,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
 
         mf_payload = MultiFramePayload.from_numpy_record_array(self.get_next_data())
         for frame in mf_payload.frames.values():
-            frame.frame_metadata.copy_from_multiframe_shm = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.copy_from_multi_frame_escape_shm_buffer_timestamp_ns = time.perf_counter_ns()
         return mf_payload
 
     def get_all_new_multiframes(self) -> list[MultiFramePayload]:

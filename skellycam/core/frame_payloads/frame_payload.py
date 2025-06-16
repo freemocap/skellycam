@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, FRAME_METADATA_DTYPE, \
     initialize_frame_metadata_rec_array
+from skellycam.core.recorders.timestamps import timebase_mapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
 from skellycam.utilities.rotate_image import rotate_image
 
@@ -19,16 +21,37 @@ def create_frame_dtype(config: CameraConfig) -> FRAME_DTYPE:
     ], align=True)
 
 
-def initialize_frame_rec_array(camera_config: CameraConfig, frame_number: int=0) -> np.recarray:
-    return np.rec.array(
-        (np.zeros((camera_config.resolution.height,
-                   camera_config.resolution.width,
-                   camera_config.color_channels), dtype=np.uint8),
-         initialize_frame_metadata_rec_array(camera_config=camera_config,
-                                             frame_number=frame_number)),
-        dtype=create_frame_dtype(camera_config)
-    )
+# skellycam/core/frame_payloads/frame_payload.py
+def initialize_frame_rec_array(camera_config: CameraConfig, timebase_mapping: TimebaseMapping,
+                               frame_number: int = 0) -> np.recarray:
+    """
+    Create a frame record array with the correct shape and dtype.
 
+    The issue was that np.rec.array was being called with arrays of different shapes:
+    - The image array had shape (height, width, channels)
+    - The metadata array had shape (1,)
+
+    This fix creates a record array with the correct dtype and then assigns values to it.
+    """
+    # Create the record array with the correct dtype
+    dtype = create_frame_dtype(camera_config)
+    result = np.recarray(1, dtype=dtype)
+
+    # Create the image array
+    image_array = np.zeros((camera_config.resolution.height,
+                            camera_config.resolution.width,
+                            camera_config.color_channels), dtype=np.uint8)
+
+    # Get the metadata array
+    metadata_array = initialize_frame_metadata_rec_array(camera_config=camera_config,
+                                                         frame_number=frame_number,
+                                                         timebase_mapping=timebase_mapping)
+
+    # Assign values to the record array
+    result.image[0] = image_array
+    result.frame_metadata[0] = metadata_array[0]
+
+    return result
 
 class FramePayload(BaseModel):
     image: NDArray[Shape["* image_height, * image_width, * color_channels"], np.uint8]

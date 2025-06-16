@@ -7,7 +7,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.frame_payload import FramePayload, create_frame_dtype, initialize_frame_rec_array
-from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
 
 MULTI_FRAME_DTYPE = np.dtype
@@ -32,7 +32,7 @@ def create_multiframe_dtype(camera_configs: dict[str, CameraConfig]) -> MULTI_FR
     return np.dtype(fields, align=True)
 
 
-def initialize_multi_frame_rec_array(camera_configs: dict[str, CameraConfig], frame_number: int) -> np.recarray:
+def initialize_multi_frame_rec_array(camera_configs: dict[str, CameraConfig],frame_number: int) -> np.recarray:
     """
     Initialize a record array for multiple frames based on camera configurations.
 
@@ -45,10 +45,11 @@ def initialize_multi_frame_rec_array(camera_configs: dict[str, CameraConfig], fr
     """
     # Create a dictionary to hold the data for each camera
     data = {}
-
+    dummy_timebase_mapping = TimebaseMapping()  # NOTE - dummy value - used for shape, size, dtype etc
     for camera_id, config in camera_configs.items():
         # Store the image and metadata for this camera
         data[camera_id] = initialize_frame_rec_array(camera_config=config,
+                                                     timebase_mapping=dummy_timebase_mapping,
                                                      frame_number=frame_number)
 
     # Create the record array with the multiframe dtype
@@ -59,7 +60,7 @@ def initialize_multi_frame_rec_array(camera_configs: dict[str, CameraConfig], fr
 
 class MultiFramePayload(BaseModel):
     frames: dict[CameraIdString, FramePayload | None]
-    timebase_mapping: TimeBaseMapping = Field(default_factory=TimeBaseMapping, description=TimeBaseMapping.__doc__)
+    timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping, description=TimebaseMapping.__doc__)
 
     @property
     def camera_configs(self) -> CameraConfigs:
@@ -115,10 +116,10 @@ class MultiFramePayload(BaseModel):
         return result
 
     @classmethod
-    def from_numpy_record_array(cls, rec_array: np.recarray):
+    def from_numpy_record_array(cls, mf_rec_array: np.recarray):
         frames = {}
-        for camera_id in rec_array.dtype.names:
-            frames[camera_id] = FramePayload.from_numpy_record_array(rec_array[camera_id][0])
+        for camera_id in mf_rec_array.dtype.names:
+            frames[camera_id] = FramePayload.from_numpy_record_array(mf_rec_array[camera_id])
 
         return cls(frames=frames)
 
@@ -164,7 +165,7 @@ class MultiFramePayload(BaseModel):
 class MultiFrameMetadata(BaseModel):
     multi_frame_number: int
     frame_metadatas: dict[CameraIdString, FrameMetadata]
-    timebase_mapping: TimeBaseMapping
+    timebase_mapping: TimebaseMapping
 
 
     @classmethod
@@ -214,7 +215,7 @@ if __name__ == "__main__":
     from skellycam.core.frame_payloads.frame_payload import FramePayload
     from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
     from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
-    from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
+    from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
     # Create example camera configurations
     camera_configs = {
@@ -235,7 +236,7 @@ if __name__ == "__main__":
     }
 
     # Create a shared timebase mapping for all frames
-    timebase_mapping = TimeBaseMapping()
+    timebase_mapping = TimebaseMapping()
 
     # Create frame timestamps for each camera
     timestamps1 = FrameLifespanTimestamps(

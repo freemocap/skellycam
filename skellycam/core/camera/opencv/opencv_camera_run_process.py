@@ -15,6 +15,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtract
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
+from skellycam.core.recorders.timestamps import timebase_mapping
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
 
@@ -79,6 +80,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         wait_10ms()
     frame_rec_array = initialize_frame_rec_array(
         camera_config=config,
+        timebase_mapping=ipc.timebase_mapping,
         frame_number=orchestrator.camera_frame_counts[camera_id] + 1
     )
     try:
@@ -108,9 +110,9 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                              camera_shared_memory=camera_shm,
                              )
             self_status.grabbing_frame.value = False
-            frame_rec_array.frame_metadata.frame_number +=1
+            frame_rec_array.frame_metadata.frame_number[0] +=1
             # Last camera to increment their frame count triggers the next frame_grab
-            self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number
+            self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
 
     except Exception as e:
         self_status.signal_error()
@@ -155,7 +157,8 @@ def check_for_new_config(camera_id: CameraIdString,
                                             config=new_config, )
         frame_rec_array = initialize_frame_rec_array(
             camera_config=config,
-            frame_number=frame_rec_array.metadata.frame_number
+            timebase_mapping=ipc.timebase_mapping,
+            frame_number=frame_rec_array.frame_metadata.frame_number
         )
         ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
             DeviceExtractedConfigMessage(extracted_config=config))

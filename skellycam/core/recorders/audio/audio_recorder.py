@@ -12,7 +12,7 @@ import pyaudio
 from pydantic import BaseModel
 
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class AudioChunk(BaseModel):
 
 class AudioRecordingInfo(BaseModel):
     file_name: str
-    timebase_mapping: TimeBaseMapping
+    timebase_mapping: TimebaseMapping
     audio_record_start_time: dict
     rate: int
     channels: int
@@ -42,7 +42,7 @@ class AudioRecorder:
     def __init__(self,
                  audio_file_path: str,
                  mic_device_index: int,
-                    timebase_mapping: TimeBaseMapping = TimeBaseMapping(),
+                 timebase_mapping: TimebaseMapping = TimebaseMapping(),
                  rate: int = 44100,
                  channels: int = 2,
                  chunk_size: int = 2048):

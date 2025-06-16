@@ -50,4 +50,5 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.config.camera_id}")
 
-    camera_shared_memory.put_frame(frame_rec_array=frame_rec_array,overwrite = False)
+    # camera_shared_memory.put_frame(frame_rec_array=frame_rec_array,overwrite = False)
+    camera_shared_memory.put_frame(frame_rec_array=frame_rec_array,overwrite = True)

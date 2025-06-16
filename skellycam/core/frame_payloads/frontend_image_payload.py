@@ -10,10 +10,9 @@ from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
-from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString
 from skellycam.core.types.type_overloads import CameraIndex, Base64JPEGImage
 
@@ -26,7 +25,7 @@ class FrontendFramePayload(BaseModel):
     jpeg_images: dict[CameraIdString, Base64JPEGImage]
     camera_configs: CameraConfigs
     multi_frame_metadata: MultiFrameMetadata
-    timebase_mapping: TimeBaseMapping
+    timebase_mapping: TimebaseMapping
     multi_frame_number: int = 0
     backend_framerate: CurrentFramerate | None = None
     frontend_framerate: CurrentFramerate | None = None
@@ -48,18 +47,22 @@ class FrontendFramePayload(BaseModel):
         jpeg_images = {}
         for camera_id in multi_frame_payload.frames.keys():
             frame = multi_frame_payload.get_frame(camera_id)
-            frame.metadata[FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.start_resize_image_timestamp_ns = time.perf_counter_ns()
             resized_image = cls._resize_image(frame=frame,
                                               image_sizes=image_sizes,
                                               fallback_resize_ratio=resize_image)
 
-            frame.metadata[FRAME_METADATA_MODEL.START_IMAGE_ANNOTATION_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.end_resize_image_timestamp_ns = time.perf_counter_ns()
+
+            frame.frame_metadata.timestamps.start_annotation_timestamp_ns = time.perf_counter_ns()
             annotated_image = annotate_image(frame=frame,
                                              image=resized_image)
-            frame.metadata[FRAME_METADATA_MODEL.END_IMAGE_ANNOTATION_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.end_annotation_timestamp_ns = time.perf_counter_ns()
 
+            frame.frame_metadata.timestamps.start_jpeg_encoding_timestamp_ns = time.perf_counter_ns()
             jpeg_images[camera_id] = cls._image_to_jpeg_cv2(annotated_image, quality=jpeg_quality)
-            frame.metadata[FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value] = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.end_jpeg_encoding_timestamp_ns = time.perf_counter_ns()
+
 
         return cls(
             jpeg_images=jpeg_images,

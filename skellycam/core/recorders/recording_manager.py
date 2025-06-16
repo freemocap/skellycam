@@ -164,7 +164,6 @@ class RecordingManager(BaseModel):
                 # check/handle new multi-frames
                 video_manager, latest_mf = cls._get_and_handle_new_mfs(
                     status=status,
-                    camera_configs=camera_configs,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
                     latest_mf=latest_mf
@@ -190,12 +189,11 @@ class RecordingManager(BaseModel):
     @classmethod
     def _get_and_handle_new_mfs(cls,
                                 status: RecordingManagerStatus,
-                                camera_configs: CameraConfigs,
                                 video_manager: VideoManager | None,
                                 latest_mf: MultiFramePayload | None,
                                 camera_group_shm: CameraGroupSharedMemoryManager) -> tuple[
         VideoManager | None, MultiFramePayload | None]:
-        latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes(camera_configs=camera_configs)
+        latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
         status.total_frames_published.value += len(latest_mfs)
         status.number_frames_published_this_cycle.value = len(latest_mfs)
 

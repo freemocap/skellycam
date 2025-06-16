@@ -7,8 +7,8 @@ from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer im
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.multi_frame_payload_single_slot_shared_memory import \
     MultiframePayloadSingleSlotSharedMemory
-from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO, SharedMemoryRingBuffer
-from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
+from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
+from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElementDTO
 from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -23,6 +23,7 @@ class CameraGroupSharedMemoryDTO:
     multi_frame_ring_shm_dto: SharedMemoryRingBufferDTO
     latest_mf_shm_dto: SharedMemoryElementDTO
     latest_mf_number_shm_dto: SharedMemoryElementDTO
+    camera_configs: CameraConfigs
 
 
 @dataclass
@@ -31,6 +32,7 @@ class CameraGroupSharedMemoryManager:
     multi_frame_ring_shm: MultiFrameSharedMemoryRingBuffer
     latest_multiframe_shm: MultiframePayloadSingleSlotSharedMemory
     latest_mf_number: SharedMemoryNumber
+    camera_configs: CameraConfigs
     read_only: bool
     original: bool = False
 
@@ -45,6 +47,7 @@ class CameraGroupSharedMemoryManager:
             self.latest_multiframe_shm.valid,
             self.latest_mf_number.valid,
         ])
+
     @valid.setter
     def valid(self, value: bool):
         """
@@ -59,19 +62,19 @@ class CameraGroupSharedMemoryManager:
     @classmethod
     def create(cls,
                camera_configs: CameraConfigs,
-               camera_group_id: CameraIdString,
                read_only: bool = False):
-        return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.create_from_configs(camera_config=config,
-                                                                                     read_only=read_only)
+        return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.from_config(camera_config=config,
+                                                                                          read_only=read_only)
                                 for camera_id, config in camera_configs.items()},
 
-                   latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.create_from_configs(
-                       configs=camera_configs,
+                   latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.from_configs(
+                       camera_configs=camera_configs,
                        read_only=read_only),
-                     multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.create_from_configs(
-                            configs=camera_configs,
-                            read_only=read_only),
-                   latest_mf_number=SharedMemoryNumber.create(initial_value=-1,read_only=read_only),
+                   multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.from_configs(
+                       camera_configs=camera_configs,
+                       read_only=read_only),
+                   latest_mf_number=SharedMemoryNumber.create(initial_value=-1, read_only=read_only),
+                     camera_configs=camera_configs,
                    original=True,
                    read_only=read_only)
 
@@ -84,15 +87,14 @@ class CameraGroupSharedMemoryManager:
             camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
                                                                                 read_only=read_only)
                          for camera_id, camera_shm_dto in shm_dto.camera_shm_dtos.items()},
-            latest_mf_number=SharedMemoryNumber.recreate(shm_dto.latest_mf_number_shm_dto),
-            latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.recreate(
-                shm_dto=shm_dto.latest_mf_shm_dto,
+            latest_mf_number=SharedMemoryNumber.recreate(shm_dto.latest_mf_number_shm_dto,
+                                                         read_only=read_only),
+            latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.recreate(dto=shm_dto.latest_mf_shm_dto,
+                                                                                   read_only=read_only),
+            multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.recreate(
+                dto=shm_dto.multi_frame_ring_shm_dto,
                 read_only=read_only),
             camera_configs=shm_dto.camera_configs,
-            camera_group_id=shm_dto.camera_group_id,
-            multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.recreate(
-                shm_dto=shm_dto.multi_frame_ring_shm_dto,
-                read_only=read_only),
             read_only=read_only)
 
     @property
@@ -104,7 +106,6 @@ class CameraGroupSharedMemoryManager:
     def camera_ids(self) -> list[CameraIdString]:
         return list(self.camera_shms.keys())
 
-
     @property
     def new_multi_frame_available(self) -> bool:
         if not self.valid:
@@ -115,15 +116,12 @@ class CameraGroupSharedMemoryManager:
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_shm_dtos=self.camera_shm_dtos,
                                           latest_mf_shm_dto=self.latest_multiframe_shm.to_dto(),
-                                            latest_mf_number_shm_dto=self.latest_mf_number.to_dto(),
-                                          camera_configs=self.camera_configs,
-                                          camera_group_id=self.camera_group_id,
-                                            multi_frame_ring_shm_dto=self.multi_frame_ring_shm.to_dto(),
+                                          latest_mf_number_shm_dto=self.latest_mf_number.to_dto(),
+                                          multi_frame_ring_shm_dto=self.multi_frame_ring_shm.to_dto(),
+                                            camera_configs=self.camera_configs
                                           )
 
-    def build_next_multi_frame_payload(self,
-                                       previous_payload: MultiFramePayload | None = None,
-                                       ) -> MultiFramePayload:
+    def build_next_multi_frame_payload(self) -> MultiFramePayload:
         """
         Retrieves the latest frame from each camera shm and copies it to the MultiFrameSharedMemoryRingBuffer.
         """
@@ -132,13 +130,7 @@ class CameraGroupSharedMemoryManager:
                 "Cannot use `get_next_multi_frame_payload` in read-only mode - use `get_latest_multi_frame_payload` instead!")
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        if previous_payload is None:
-            mf_payload: MultiFramePayload = MultiFramePayload.create_initial(
-                camera_group_id=self.camera_group_id,
-                camera_configs=self.camera_configs)
-        else:
-            mf_payload: MultiFramePayload = MultiFramePayload.from_previous(previous=previous_payload,
-                                                                            camera_configs=previous_payload.camera_configs)
+        mf_payload: MultiFramePayload = MultiFramePayload.create_empty(camera_configs=self.camera_configs)
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:
@@ -151,21 +143,18 @@ class CameraGroupSharedMemoryManager:
             mf_payload.add_frame(frame)
         if not mf_payload or not mf_payload.full:
             raise ValueError("Did not read full multi-frame mf_payload!")
-        self.multi_frame_ring_shm.put_multiframe(mf_payload=mf_payload,overwrite=False) # Don't overwrite to ensure all frames are saved
-        self.latest_multiframe_shm.put_multiframe(mf_payload=mf_payload,overwrite=True) # Overwrite to always have the latest available
-        self.latest_mf_number.value = mf_payload.multi_frame_number #Externalize so we can check the frame number without retrieving the full multi-frame
+        self.multi_frame_ring_shm.put_multiframe(mf_payload=mf_payload,
+                                                 overwrite=False)  # Don't overwrite to ensure all frames are saved
+        self.latest_multiframe_shm.put_multiframe(mf_payload=mf_payload)
+        self.latest_mf_number.value = mf_payload.multi_frame_number  # Externalize so we can check the frame number without retrieving the full multi-frame
         return mf_payload
 
-    def build_all_new_multiframes(self,
-                                  previous_payload: MultiFramePayload | None = None) -> list[MultiFramePayload]:
+    def build_all_new_multiframes(self) -> list[MultiFramePayload]:
         mfs: list[MultiFramePayload] = []
         while self.new_multi_frame_available:
-            mf_payload = self.build_next_multi_frame_payload(previous_payload=previous_payload)
+            mf_payload = self.build_next_multi_frame_payload()
             mfs.append(mf_payload)
-            previous_payload = mf_payload
         return mfs
-
-
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it
@@ -174,7 +163,6 @@ class CameraGroupSharedMemoryManager:
         self.multi_frame_ring_shm.close()
         self.latest_multiframe_shm.close()
         self.latest_mf_number.close()
-
 
     def unlink(self):
         # Unlink the shared memory so that it is removed from the system, memory becomes invalid for all processes
@@ -187,7 +175,6 @@ class CameraGroupSharedMemoryManager:
         self.multi_frame_ring_shm.unlink()
         self.latest_multiframe_shm.unlink()
         self.latest_mf_number.unlink()
-
 
     def unlink_and_close(self):
         self.unlink()

@@ -75,7 +75,6 @@ class CameraGroup:
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
         self.shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
-                                                    camera_group_id=self.ipc.group_id,
                                                     read_only=True)
         self.ipc.publish_shm_message(shm_dto=self.shm.to_dto())
         return extracted_configs
@@ -100,9 +99,8 @@ class CameraGroup:
         if if_newer_than is not None:
             if self.shm.latest_mf_number.value <= if_newer_than:
                 return None
-        if not self.shm.latest_multiframe_shm.first_frame_written:
-            return None
-        mf = self.shm.latest_multiframe_shm.retrieve_multiframe(self.configs)
+
+        mf = self.shm.latest_multiframe_shm.retrieve_multiframe()
         if mf is None:
             return None
         return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf)

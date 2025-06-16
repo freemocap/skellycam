@@ -34,21 +34,20 @@ class SharedMemoryRingBuffer(BaseModel):
     @classmethod
     def create(cls,
                example_data: np.recarray,
-               dtype: np.dtype,
                read_only: bool,
                memory_allocation: int = ONE_GIGABYTE,
-               ring_buffer_length: Optional[int] = None,
+               ring_buffer_length: int = None,
                ):
         if ring_buffer_length is None:
-            ring_buffer_length = memory_allocation // np.prod(example_data.dtype.shape)
+            ring_buffer_length = memory_allocation // example_data.itemsize
         shm_list = [SharedMemoryElement.create(dtype=example_data.dtype,
-                                               read_only=read_only) for _ in range(ring_buffer_length)]
+                                               read_only=read_only) for _ in range(int(ring_buffer_length))]
         return cls(shm_list=shm_list,
                    last_written_index=SharedMemoryNumber.create(initial_value=-1,
                                                                 read_only=read_only),
                    last_read_index=SharedMemoryNumber.create(initial_value=-1,
                                                              read_only=read_only),
-                   dtype=dtype,
+                   dtype=example_data.dtype,
                    read_only=read_only)
 
     @property
