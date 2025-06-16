@@ -53,10 +53,13 @@ class FrameMetadata(BaseModel):
         """
         Convert the FrameMetadata to a numpy record array.
         """
-        return np.rec.array(
-            (self.camera_config.to_numpy_record_array(),
-             self.frame_number,
-             self.timestamps.to_numpy_record_array(),
-             self.timebase_mapping.to_numpy_record_array()),
-            dtype=FRAME_METADATA_DTYPE
-        )
+        # Create a record array with the correct shape (1,) to match the expected structure
+        result = np.recarray(1, dtype=FRAME_METADATA_DTYPE)
+
+        # Assign values to the record array
+        result.camera_config[0] = self.camera_config.to_numpy_record_array()[0]
+        result.frame_number[0] = self.frame_number
+        result.timestamps[0] = self.timestamps.to_numpy_record_array()[0]
+        result.timebase_mapping[0] = self.timebase_mapping.to_numpy_record_array()[0]
+
+        return result

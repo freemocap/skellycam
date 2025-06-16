@@ -28,11 +28,19 @@ class TimeBaseMapping(BaseModel):
             return int(self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns) + (self.local_time_utc_offset * 1e9))
         return self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns)
 
-    def to_numpy_record_array(self) -> TIMEBASE_MAPPING_DTYPE:
-        return np.rec.array(
-            (self.utc_time_ns, self.perf_counter_ns, self.local_time_utc_offset),
-            dtype=TIMEBASE_MAPPING_DTYPE
-        )
+    def to_numpy_record_array(self) -> np.recarray:
+        """
+        Convert the TimeBaseMapping to a numpy record array.
+        """
+        # Create a record array with the correct shape (1,)
+        result = np.recarray(1, dtype=TIMEBASE_MAPPING_DTYPE)
+
+        # Assign values to the record array
+        result.utc_time_ns[0] = self.utc_time_ns
+        result.perf_counter_ns[0] = self.perf_counter_ns
+        result.local_time_utc_offset[0] = self.local_time_utc_offset
+
+        return result
 
     @classmethod
     def from_numpy_record_array(cls, rec_array: np.recarray):

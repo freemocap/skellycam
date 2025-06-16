@@ -63,23 +63,30 @@ class FramePayload(BaseModel):
 
     @classmethod
     def from_numpy_record_array(cls, array: np.recarray):
-        if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.metadata.camera_config)):
+        if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config)):
             raise ValueError(f"FramePayload array shape mismatch - "
-                             f"Expected: {create_frame_dtype(CameraConfig.from_numpy_record_array(array.metadata.camera_config))}, "
+                             f"Expected: {create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config))}, "
                              f"Actual: {array.dtype}")
 
         frame =  cls(
             image=array.image,
-            frame_metadata=FrameMetadata.from_numpy_record_array(array.metadata)
+            frame_metadata=FrameMetadata.from_numpy_record_array(array.frame_metadata)
         )
         frame.image = rotate_image(frame.image, frame.camera_config.rotation)
         return frame
 
     def to_numpy_record_array(self) -> np.recarray:
-        return np.rec.array(
-            (self.image, self.frame_metadata.to_numpy_record_array()),
-            dtype=create_frame_dtype(self.frame_metadata.camera_config)
-        )
+        """
+        Convert the FramePayload to a numpy record array.
+        """
+        # Create a record array with the correct shape (1,)
+        result = np.recarray(1, dtype=create_frame_dtype(self.frame_metadata.camera_config))
+
+        # Assign values to the record array
+        result.image[0] = self.image
+        result.frame_metadata[0] = self.frame_metadata.to_numpy_record_array()[0]
+
+        return result
 
 
     def __str__(self):

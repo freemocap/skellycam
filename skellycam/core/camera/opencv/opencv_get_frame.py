@@ -2,9 +2,8 @@ import logging
 import time
 
 import cv2
-from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+import numpy as np
 
-from skellycam.core.frame_payloads.frame_payload import FRAME_DTYPE
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
 
@@ -12,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def opencv_get_frame(cap: cv2.VideoCapture,
-                     frame_rec_array: FRAME_DTYPE,
+                     frame_rec_array: np.recarray,
                      camera_shared_memory: FramePayloadSharedMemoryRingBuffer):
     """
     THIS IS WHERE THE MAGIC HAPPENS
