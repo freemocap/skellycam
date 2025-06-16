@@ -19,7 +19,7 @@ def create_frame_dtype(config: CameraConfig) -> FRAME_DTYPE:
     ], align=True)
 
 
-def initialize_frame_rec_array(camera_config: CameraConfig, frame_number: int) -> np.recarray:
+def initialize_frame_rec_array(camera_config: CameraConfig, frame_number: int=0) -> np.recarray:
     return np.rec.array(
         (np.zeros((camera_config.resolution.height,
                    camera_config.resolution.width,

@@ -67,11 +67,9 @@ class CameraGroupSharedMemoryManager:
 
                    latest_multiframe_shm=MultiframePayloadSingleSlotSharedMemory.create_from_configs(
                        configs=camera_configs,
-                       camera_group_id=camera_group_id,
                        read_only=read_only),
                      multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.create_from_configs(
                             configs=camera_configs,
-                            camera_group_id=camera_group_id,
                             read_only=read_only),
                    latest_mf_number=SharedMemoryNumber.create(initial_value=-1,read_only=read_only),
                    original=True,

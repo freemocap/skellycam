@@ -3,7 +3,8 @@ import time
 
 import numpy as np
 
-from skellycam.core.frame_payloads.frame_payload import FramePayload
+from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.frame_payloads.frame_payload import FramePayload, initialize_frame_rec_array
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
     SharedMemoryRingBufferDTO
 
@@ -12,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
 
+    @classmethod
+    def from_config(cls, camera_config:CameraConfig, read_only: bool = False):
+        return cls.create(
+            dtype=initialize_frame_rec_array(camera_config),
+            read_only=read_only,
+        )
     @property
     def new_frame_available(self):
         return self.new_data_available
