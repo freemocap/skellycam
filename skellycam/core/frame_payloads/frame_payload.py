@@ -1,31 +1,50 @@
 import numpy as np
-from pydantic import BaseModel, ConfigDict
+from numpydantic import NDArray, Shape
+from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.metadata.frame_metadata import FrameMetadata
-from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, FRAME_METADATA_DTYPE
+from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
+
+
+def create_frame_dtype(config: CameraConfig) -> FRAME_DTYPE:
+    """
+    Create a numpy dtype for the frame metadata based on the camera configuration.
+    """
+    return np.dtype([
+        ('image', np.uint8, (config.resolution.height, config.resolution.width, config.color_channels)),
+        ('frame_metadata', FRAME_METADATA_DTYPE)
+    ], align=True)
+
+def initialize_frame_rec_array(camera_config: CameraConfig, frame_number: int) -> np.recarray:
+    return np.recarray(
+        (np.zeros((camera_config.resolution.height,
+                                camera_config.resolution.width,
+                                camera_config.color_channels), dtype=np.uint8),
+         initialize_frame_rec_array(camera_config, frame_number)),
+        dtype=create_frame_dtype(camera_config)
+    )
 
 
 class FramePayload(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    image: np.ndarray
-    metadata: np.ndarray
+    image: NDArray[Shape["* image_height, * image_width, * color_channels"], np.uint8]
+    frame_metadata: FrameMetadata
 
     @property
     def camera_id(self):
-        return self.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
+        return self.frame_metadata.camera_id
 
     @property
     def frame_number(self):
-        return self.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]
+        return self.frame_metadata.frame_number
 
     @property
     def timestamp_ns(self) -> int:
         """
         De facto timestamp for this frame is defined as the average of the pre-grab and post-grab timestamps (i.e. the hypothetical moment the image was grabbed).
         """
-        return int((self.metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] + self.metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value]) // 2)
+        return self.frame_metadata.timestamp_ns
+
     @property
     def height(self):
         return self.image.shape[0]
@@ -34,10 +53,22 @@ class FramePayload(BaseModel):
     def width(self):
         return self.image.shape[1]
 
-    @property
-    def frame_metadata(self) -> FrameMetadata:
-        return FrameMetadata.from_frame_metadata_array(self.metadata)
+    @classmethod
+    def from_numpy_record_array(cls, array: np.recarray):
+        if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.metadata.camera_config)):
+            raise ValueError(f"FramePayload array shape mismatch - "
+                             f"Expected: {create_frame_dtype(CameraConfig.from_numpy_record_array(array.metadata.camera_config))}, "
+                             f"Actual: {array.dtype}")
+        return cls(
+            image=array.image,
+            metadata=FrameMetadata.from_numpy_record_array(array.metadata)
+        )
 
+    def to_numpy_record_array(self) -> np.recarray:
+        return np.rec.array(
+            (self.image, self.frame_metadata.to_numpy_record_array()),
+            dtype=create_frame_dtype(self.frame_metadata.camera_config)
+        )
 
     def __eq__(self, other: "FramePayload"):
         return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)

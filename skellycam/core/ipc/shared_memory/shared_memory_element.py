@@ -1,112 +1,120 @@
 from multiprocessing import shared_memory
-from typing import Tuple, Union, Any
+from typing import Any
 
 import numpy as np
+from numpydantic import NDArray, Shape
 from pydantic import BaseModel, ConfigDict
+
+from skellycam.core.types.type_overloads import SharedMemoryName
 
 
 class SharedMemoryElementDTO(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
     shm_name: str
     shm_valid_name: str
-    shape: Tuple[int, ...]
     dtype: np.dtype
-    original_shape: Tuple[int, ...]
+
 
 
 class SharedMemoryElement(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    buffer: np.ndarray
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+    )
+    buffer: np.recarray
+    valid_flag_buffer: NDArray[Shape["1"], np.bool_]
     dtype: np.dtype
     shm: shared_memory.SharedMemory
-    original_shape: Tuple[int, ...]
     valid_flag_shm: shared_memory.SharedMemory
-    valid_flag_buffer: np.ndarray
     original: bool = False
 
     @classmethod
-    def create(cls, shape: Tuple[int, ...], dtype: np.dtype):
-        dtype = cls._ensure_dtype(dtype)
-        payload_size_bytes = int(np.prod(shape, dtype=np.int64) * dtype.itemsize)
-        if payload_size_bytes < 0:
-            raise ValueError(f"Payload size is negative: {payload_size_bytes}")
-        shm = shared_memory.SharedMemory(size=payload_size_bytes, create=True)
-        buffer = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-        valid_flag_shm = shared_memory.SharedMemory(size=np.dtype(np.int64).itemsize, create=True)
-        valid_flag_buffer = np.ndarray((1,), dtype=np.int64, buffer=valid_flag_shm.buf)
-        valid_flag_buffer[0] = 1  # Set valid flag to True (1)
-        return cls(buffer=buffer,
-                   shm=shm,
+    def create(cls, dtype: np.dtype):
+
+        shm = shared_memory.SharedMemory(size=dtype.itemsize, create=True)
+        buffer = np.recarray(shape=(1,), dtype=dtype, buf=shm.buf)
+        valid_flag_shm = shared_memory.SharedMemory(size=np.dtype(np.bool_).itemsize, create=True)
+        valid_flag_buffer = np.ndarray((1,), dtype=np.bool_, buffer=valid_flag_shm.buf)
+        valid_flag_buffer[0] = True
+        return cls(
+            buffer=buffer,
+            shm=shm,
                    dtype=dtype,
-                   original_shape=shape,
                    valid_flag_shm=valid_flag_shm,
                    valid_flag_buffer=valid_flag_buffer,
-                   original=True)
+            original=True
+        )
 
     @classmethod
     def recreate(cls, dto: SharedMemoryElementDTO):
-        dtype = cls._ensure_dtype(dto.dtype)
         shm = shared_memory.SharedMemory(name=dto.shm_name)
-        buffer = np.ndarray(dto.shape, dtype=dtype, buffer=shm.buf)
+        buffer = np.recarray(shape=(1,), dtype=dto.dtype, buf=shm.buf)
         valid_flag_shm = shared_memory.SharedMemory(name=dto.shm_valid_name)
-        valid_flag_buffer = np.ndarray((1,), dtype=dtype, buffer=valid_flag_shm.buf)
-        return cls(buffer=buffer,
-                   shm=shm,
-                   dtype=dto.dtype,
-                   original_shape=dto.shape,
-                   valid_flag_shm=valid_flag_shm,
-                   valid_flag_buffer=valid_flag_buffer,
-                   original=False)
+        valid_flag_buffer = np.ndarray((1,), dtype=np.bool_, buffer=valid_flag_shm.buf)
+        return cls(
+            buffer=buffer,
+            shm=shm,
+            dtype=dto.dtype,
+            valid_flag_shm=valid_flag_shm,
+            valid_flag_buffer=valid_flag_buffer,
+            original=False
+        )
 
     @property
     def valid(self) -> bool:
-        return bool(np.copy(self.valid_flag_buffer))
+        return bool(np.copy(self.valid_flag_buffer)[0])
 
     @valid.setter
-    def valid(self, value:Any):
-         self.valid_flag_buffer[0] = 1 if value else 0
-
+    def valid(self, value: Any):
+        self.valid_flag_buffer[0] = bool(value)
     def to_dto(self) -> SharedMemoryElementDTO:
         return SharedMemoryElementDTO(
             shm_name=self.shm.name,
-            shape=self.buffer.shape,
             dtype=self.dtype,
-            original_shape=self.original_shape,
             shm_valid_name=self.valid_flag_shm.name
         )
 
-    @staticmethod
-    def _ensure_dtype(dtype: Union[np.dtype, type, str]) -> np.dtype:
-        if not isinstance(dtype, np.dtype):
-            dtype = np.dtype(dtype)
-        return dtype
-
     @property
-    def name(self) -> str:
+    def name(self) -> SharedMemoryName:
         return self.shm.name
 
     @property
     def size(self) -> int:
         return self.shm.size
 
-    def put_data(self, data: np.ndarray):
+    def put_data(self, data: np.recarray):
         if data.dtype != self.dtype:
             raise ValueError(f"Array dtype {data.dtype} does not match SharedMemoryElement dtype {self.dtype}")
-        if data.shape != self.original_shape:
-            raise ValueError(f"Array shape {data.shape} does not match SharedMemoryElement shape {self.original_shape}")
+
+        # Handle scalar records
+        if data.shape == () and self.buffer.shape == (1,):
+            np.copyto(dst=self.buffer, src=np.array([data], dtype=self.dtype))
+            return
+
+        # Handle array records
+        if data.shape != self.buffer.shape:
+            raise ValueError(
+                f"Array shape {data.shape} does not match SharedMemoryElement shape {self.buffer.shape}")
+
         np.copyto(dst=self.buffer, src=data)
 
-    def get_data(self) -> np.ndarray:
-        array = np.copy(self.buffer)
-        if array.dtype != self.dtype:
-            raise ValueError(f"Array dtype {array.dtype} does not match SharedMemoryElement dtype {self.dtype}")
-        if array.shape != self.original_shape:
-            raise ValueError(
-                f"Array shape {array.shape} does not match SharedMemoryElement shape {self.original_shape}")
-        return array
+    def get_data(self) -> np.recarray:
+        data = np.copy(self.buffer)
+        if data.dtype != self.dtype:
+            raise ValueError(f"Array dtype {data.dtype} does not match SharedMemoryElement dtype {self.dtype}")
 
+        # For consistency, if we have a single record array, return it as a scalar
+        if data.shape == (1,):
+            return data[0]
+        return data
+
+    def close_and_unlink(self):
+        self.unlink()
+        self.close()
     def close(self):
         self.shm.close()
+        self.valid_flag_shm.close()
 
     def unlink(self):
         if not self.original:
@@ -114,3 +122,53 @@ class SharedMemoryElement(BaseModel):
                 "Cannot unlink a non-original SharedMemoryElement, close children and unlink the original.")
         self.valid = False
         self.shm.unlink()
+        self.valid_flag_shm.unlink()
+
+if __name__ == "__main__":
+    # Simple test for SharedMemoryElement
+    import time
+
+    # Define a custom dtype for testing
+    test_dtype = np.dtype([('x', np.float64), ('y', np.float64), ('z', np.float64)])
+
+    print("Creating original SharedMemoryElement...")
+    original = SharedMemoryElement.create(dtype=test_dtype)
+
+    # Create test data
+    test_data = np.rec.array((2,3,4), dtype=test_dtype)
+
+    print(f"Original data:\n{test_data}")
+
+    # Put data into shared memory
+    original.put_data(test_data)
+
+    # Create DTO for sharing with another process
+    dto = original.to_dto()
+    print(f"DTO: {dto}")
+
+    # Simulate another process by recreating from DTO
+    print("Recreating from DTO (simulating another process)...")
+    copy = SharedMemoryElement.recreate(dto)
+
+    # Get data from the copy
+    retrieved_data = copy.get_data()
+    print(f"Retrieved data:\n{retrieved_data}")
+
+    # Verify data is the same
+    is_equal = np.array_equal(test_data, retrieved_data)
+    print(f"Data verification: {'Success' if is_equal else 'Failed'}")
+
+    # Test valid flag
+    print(f"Valid flag: {copy.valid}")
+    original.valid = False
+    print(f"Valid flag after setting to False: {copy.valid}")
+
+    # Clean up
+    print("Cleaning up...")
+    copy.close()
+    print("Closed copy.")
+    # Use the new method for safe cleanup
+    original.close_and_unlink()
+    print("Closed and unlinked original.")
+
+    print("Test completed.")

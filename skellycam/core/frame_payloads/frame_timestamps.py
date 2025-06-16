@@ -1,11 +1,7 @@
 import numpy as np
-from pydantic import BaseModel, computed_field
-from pydantic import Field
+from pydantic import BaseModel, Field, computed_field
 
-from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
-    FRAME_METADATA_SHAPE
-from skellycam.core.types import CameraIndex
+from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
 
 
 class FrameLifespanTimestamps(BaseModel):
@@ -18,30 +14,46 @@ class FrameLifespanTimestamps(BaseModel):
     copy_from_camera_shm_buffer_timestamp_ns: int = Field(description="Timestamp when the frame is copied from the per-camera shared memory buffer")
     copy_to_multi_frame_escape_shm_buffer_timestamp_ns: int = Field(description="Timestamp when the frame is copied to the multi-frame escape shared memory buffer")
     copy_from_multi_frame_escape_shm_buffer_timestamp_ns: int = Field(description="Timestamp when the frame is copied from the multi-frame escape shared memory buffer")
-
     start_compress_to_jpeg_timestamp_ns: int = Field(description="Timestamp when the frame starts compressing to JPEG in preparation for sending to the frontend")
     end_compress_to_jpeg_timestamp_ns: int = Field(description="Timestamp when the frame finishes compressing to JPEG in preparation for sending to the frontend")
 
     @classmethod
-    def from_frame_metadata(cls, frame_metadata: np.ndarray):
+    def from_numpy_record_array(cls, array: np.recarray):
+        if array.dtype != FRAME_LIFECYCLE_TIMESTAMPS_DTYPE:
+            raise ValueError(f"Metadata array shape mismatch - "
+                             f"Expected: {FRAME_LIFECYCLE_TIMESTAMPS_DTYPE}, "
+                             f"Actual: {array.dtype}")
         return cls(
-            initialized_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.FRAME_METADATA_INITIALIZED.value],
-            pre_grab_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value],
-            post_grab_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value],
-            pre_retrieve_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value],
-            post_retrieve_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.POST_RETRIEVE_TIMESTAMP_NS.value],
-            copy_to_camera_shm_buffer_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value],
-            copy_from_camera_shm_buffer_timestamp_ns=frame_metadata[FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value],
-            copy_to_multi_frame_escape_shm_buffer_timestamp_ns=frame_metadata[
-                FRAME_METADATA_MODEL.COPY_TO_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value],
-            copy_from_multi_frame_escape_shm_buffer_timestamp_ns=frame_metadata[
-                FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value],
-            start_compress_to_jpeg_timestamp_ns=frame_metadata[
-                FRAME_METADATA_MODEL.START_COMPRESS_TO_JPEG_TIMESTAMP_NS.value],
-            end_compress_to_jpeg_timestamp_ns=frame_metadata[
-                FRAME_METADATA_MODEL.END_COMPRESS_TO_JPEG_TIMESTAMP_NS.value],
+            initialized_timestamp_ns= array.frame_metadata_initialized,
+            pre_grab_timestamp_ns= array.pre_grab_timestamp_ns,
+            post_grab_timestamp_ns= array.post_grab_timestamp_ns,
+            pre_retrieve_timestamp_ns=  array.pre_retrieve_timestamp_ns,
+            post_retrieve_timestamp_ns= array.post_retrieve_timestamp_ns,
+            copy_to_camera_shm_buffer_timestamp_ns= array.copy_to_camera_shm_buffer_timestamp_ns,
+            copy_from_camera_shm_buffer_timestamp_ns= array.copy_from_camera_shm_buffer_timestamp_ns,
+            copy_to_multi_frame_escape_shm_buffer_timestamp_ns= array.copy_to_multi_frame_escape_shm_buffer_timestamp_ns,
+            copy_from_multi_frame_escape_shm_buffer_timestamp_ns= array.copy_from_multi_frame_escape_shm_buffer_timestamp_ns,
+            start_compress_to_jpeg_timestamp_ns= array.start_compress_to_jpeg_timestamp_ns,
+            end_compress_to_jpeg_timestamp_ns= array.end_compress_to_jpeg_timestamp_ns,
         )
 
+    def to_numpy_record_array(self) -> np.recarray:
+        return np.rec.array(
+            (
+                self.initialized_timestamp_ns,
+                self.pre_grab_timestamp_ns,
+                self.post_grab_timestamp_ns,
+                self.pre_retrieve_timestamp_ns,
+                self.post_retrieve_timestamp_ns,
+                self.copy_to_camera_shm_buffer_timestamp_ns,
+                self.copy_from_camera_shm_buffer_timestamp_ns,
+                self.copy_to_multi_frame_escape_shm_buffer_timestamp_ns,
+                self.copy_from_multi_frame_escape_shm_buffer_timestamp_ns,
+                self.start_compress_to_jpeg_timestamp_ns,
+                self.end_compress_to_jpeg_timestamp_ns,
+            ),
+            dtype=FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
+        )
 
     @computed_field
     def time_before_grab_signal_ns(self) -> int:
@@ -102,29 +114,3 @@ class FrameLifespanTimestamps(BaseModel):
         if self.end_compress_to_jpeg_timestamp_ns and self.start_compress_to_jpeg_timestamp_ns:
             return self.end_compress_to_jpeg_timestamp_ns - self.start_compress_to_jpeg_timestamp_ns
         return -1
-
-
-class FrameMetadata(BaseModel):
-    """
-    A Pydantic model to represent the metadata associated with a frame of image data, we will build this from the numpy array once we've cleared the camera/shm whackiness.
-    """
-    camera_config: CameraConfig
-    frame_number: int
-    frame_lifespan_timestamps: FrameLifespanTimestamps
-
-    @property
-    def timestamp_ns(self) -> int:
-        return self.frame_lifespan_timestamps.post_grab_timestamp_ns
-
-    @classmethod
-    def from_frame_metadata_array(cls, metadata_array: np.ndarray):
-        if metadata_array.shape != FRAME_METADATA_SHAPE:
-            raise ValueError(f"Metadata array shape mismatch - "
-                             f"Expected: {FRAME_METADATA_SHAPE}, "
-                             f"Actual: {metadata_array.shape}")
-        return cls(
-            camera_id=metadata_array[FRAME_METADATA_MODEL.CAMERA_INDEX.value],
-            frame_number=metadata_array[FRAME_METADATA_MODEL.FRAME_NUMBER.value],
-            frame_lifespan_timestamps=FrameLifespanTimestamps.from_frame_metadata(metadata_array)
-        )
-

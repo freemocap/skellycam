@@ -7,9 +7,9 @@ from pydantic import ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera.config.image_rotation_types import RotationTypes
+from skellycam.core.types.image_rotation_types import RotationTypes
 from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.frame_payloads.metadata.frame_metadata import FrameMetadata
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
     create_empty_frame_metadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
@@ -260,7 +260,7 @@ class MultiFrameMetadata(BaseModel):
     @property
     def timestamp_unix_seconds_local(self) -> float:
         mean_frame_grab_ns = np.mean([
-            frame_metadata.frame_lifespan_timestamps.post_grab_timestamp_ns
+            frame_metadata.timestamps.post_grab_timestamp_ns
             for frame_metadata in self.frame_metadatas.values()
         ])
         unix_ns = self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(int(mean_frame_grab_ns), local_time=True)
@@ -268,7 +268,7 @@ class MultiFrameMetadata(BaseModel):
     @property
     def timestamp_unix_seconds_utc(self) -> float:
         mean_frame_grab_ns = np.mean([
-            frame_metadata.frame_lifespan_timestamps.post_grab_timestamp_ns
+            frame_metadata.timestamps.post_grab_timestamp_ns
             for frame_metadata in self.frame_metadatas.values()
         ])
         unix_ns = self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(int(mean_frame_grab_ns), local_time=False)
@@ -280,7 +280,7 @@ class MultiFrameMetadata(BaseModel):
 
     @property
     def intercamera_grab_range_ns(self) -> int:
-        grab_times = [frame_metadata.frame_lifespan_timestamps.post_grab_timestamp_ns
+        grab_times = [frame_metadata.timestamps.post_grab_timestamp_ns
                       for frame_metadata in self.frame_metadatas.values()]
         return int(np.max(grab_times) - np.min(grab_times))
 

@@ -10,9 +10,6 @@ ONE_GIGABYTE = 1024 ** 3
 
 
 class SharedMemoryRingBufferDTO(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
     ring_buffer_shm_dto: SharedMemoryElementDTO
     last_written_index_shm_dto: SharedMemoryNumberDTO
     last_read_index_shm_dto: SharedMemoryNumberDTO

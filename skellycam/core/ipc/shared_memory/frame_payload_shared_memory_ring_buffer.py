@@ -6,8 +6,6 @@ from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
-    FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer, \
     SharedMemoryRingBufferDTO
 
@@ -15,14 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class FramePayloadSharedMemoryRingBufferDTO(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     image_shm_dto: SharedMemoryRingBufferDTO
     metadata_shm_dto: SharedMemoryRingBufferDTO
     config_shm_dto: SharedMemoryRingBufferDTO 
 
 
 class FramePayloadSharedMemoryRingBuffer(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     image_shm: SharedMemoryRingBuffer
     metadata_shm: SharedMemoryRingBuffer
     config_shm: SharedMemoryRingBuffer 

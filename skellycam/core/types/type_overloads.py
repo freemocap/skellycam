@@ -1,13 +1,15 @@
 import enum
 import multiprocessing
 import threading
+from typing import Annotated, Any
 
 import numpy as np
-from pydantic import SkipValidation
+from pydantic import SkipValidation, PlainValidator
 
 CameraIdString = str
 CameraGroupIdString = str
 CameraNameString = str
+SharedMemoryName = str
 IMAGE_DATA_DTYPE = np.uint8
 BYTES_PER_MONO_PIXEL = np.dtype(IMAGE_DATA_DTYPE).itemsize
 CameraIndex = int
@@ -23,3 +25,4 @@ WorkerType = SkipValidation[threading.Thread | multiprocessing.Process]
 class WorkerStrategy(enum.Enum):
     THREAD = threading.Thread
     PROCESS = multiprocessing.Process
+

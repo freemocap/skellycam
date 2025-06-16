@@ -2,7 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.frame_payloads.metadata.frame_metadata import FrameMetadata, FrameLifespanTimestamps
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
+from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
 from skellycam.core.types import CameraIndex
 
@@ -57,7 +58,7 @@ class CameraTimestampLog(BaseModel):
             timestamp_local_iso8601=datetime.fromtimestamp(
                 timebase_mapping.convert_perf_counter_ns_to_unix_ns(frame_metadata.timestamp_ns,local_time=True) / 1e9
             ).isoformat(),
-            frame_lifespan=frame_metadata.frame_lifespan_timestamps
+            frame_lifespan=frame_metadata.timestamps
         )
 
 

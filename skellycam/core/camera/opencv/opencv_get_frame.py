@@ -2,10 +2,9 @@ import logging
 import time
 
 import cv2
-import numpy as np
-
-from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
+
+from skellycam.core.frame_payloads.frame_payload import FRAME_DTYPE
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
 
@@ -13,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def opencv_get_frame(cap: cv2.VideoCapture,
-                     frame_metadata: np.ndarray,
-                     config: CameraConfig,
+                     frame_rec_array: FRAME_DTYPE,
                      camera_shared_memory: FramePayloadSharedMemoryRingBuffer):
     """
     THIS IS WHERE THE MAGIC HAPPENS
@@ -34,25 +32,23 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     get as tight of a synchronization as possible between the cameras
     # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
     """
-
-    frame_metadata[FRAME_METADATA_MODEL.PRE_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
+    frame_rec_array.frame_metadata.timestamps.pre_grab_timestamp_ns = time.perf_counter_ns()
     grab_success = cap.grab()  # This is as close as we get to the moment of transduction, where the light is captured by the sensor. This is where the light gets in ✨
-    frame_metadata[FRAME_METADATA_MODEL.POST_GRAB_TIMESTAMP_NS.value] = time.perf_counter_ns()
+    frame_rec_array.frame_metadata.timestamps.post_grab_timestamp_ns = time.perf_counter_ns()
 
     if not grab_success:
-        raise RuntimeError(f"Failed to grab frame from camera {frame_metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]}")
+        raise RuntimeError(f"Failed to grab frame from camera {frame_rec_array.frame_metadata.config.camera_id}")
 
-    frame_metadata[FRAME_METADATA_MODEL.PRE_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
-    # TODO - we might be able to give the `retreive` method a shared memory `cv2.Mat` object to write the frame into, which would avoid a copy operation.
-    retrieve_success, image = cap.retrieve()  # decode the frame buffer into an image! The light is now in the camera's memory, and we have a digital representation of the pattern of light that was in the field of view of the camera during the last frame/timeslice.
-    frame_metadata[FRAME_METADATA_MODEL.POST_RETRIEVE_TIMESTAMP_NS.value] = time.perf_counter_ns()
+    frame_rec_array.frame_metadata.timestamps.pre_retrieve_timestamp_ns = time.perf_counter_ns()
+    # decode the frame buffer into an image!
+    # The light is now in the camera's memory,
+    # and we have a digital representation of the pattern of light
+    # that was in the field of view of the camera during the last frame/timeslice.
+    # This is the emprical measurement upon which most/all our future calcualtions and inferences will be based.
+    retrieve_success, image = cap.retrieve(image=frame_rec_array.image)  # provide pre-allocated image buffer for speed
+    frame_rec_array.frame_metadata.timestamps.post_retrieve_timestamp_ns = time.perf_counter_ns()
 
     if not retrieve_success:
-        raise ValueError(f"Failed to retrieve frame from camera {frame_metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]}")
+        raise ValueError(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.config.camera_id}")
 
-    camera_shared_memory.put_frame(
-        image=image,
-        metadata=frame_metadata,
-        config=config,
-        overwrite=False
-    )
+    camera_shared_memory.put_frame(frame_rec_array=frame_rec_array,overwrite = False)

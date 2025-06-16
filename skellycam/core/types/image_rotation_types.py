@@ -2,7 +2,7 @@ from enum import Enum
 
 import cv2
 
-OPENCV_NO_ROTATION_PLACEHOLDER_VALUE= 99 # using 99instead of -1 because this will need to be a `uint` later
+OPENCV_NO_ROTATION_PLACEHOLDER_VALUE= 99 # using 99 instead of -1 because this will need to be a `uint` later
 
 class RotationTypes(str, Enum):
     NO_ROTATION = "0"

@@ -1,12 +1,11 @@
-import multiprocessing
 from typing import Tuple, Self, Any
 
 import cv2
 import numpy as np
-from pydantic import BaseModel, Field, model_validator, SkipValidation
+from pydantic import BaseModel, Field, model_validator
 
 from skellycam.core.camera.config.image_resolution import ImageResolution
-from skellycam.core.camera.config.image_rotation_types import RotationTypes
+from skellycam.core.types.image_rotation_types import RotationTypes
 from skellycam.core.types import CameraIdString, BYTES_PER_MONO_PIXEL, CameraNameString
 from skellycam.core.types import CameraIndex, CameraName
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
@@ -26,22 +25,7 @@ DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
 DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
 DEFAULT_WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
 
-CAMERA_CONFIG_DTYPE = np.dtype([
-            ('camera_id', 'U1000'),
-            ('camera_index', np.int32),
-            ('camera_name', 'U1000'),
-            ('use_this_camera', np.bool_),
-            ('resolution_height', np.int32),
-            ('resolution_width', np.int32),
-            ('color_channels', np.int32),
-            ('pixel_format', 'U8'),
-            ('exposure_mode', 'U32'),
-            ('exposure', np.int32),
-            ('framerate', np.float32),
-            ('rotation', 'U8'),
-            ('capture_fourcc', 'U4'),
-            ('writer_fourcc', 'U4'),
-        ])
+
 def get_video_file_type(fourcc_code: int) -> str:
     """
     Get the video file type based on an OpenCV FOURCC code.
@@ -133,7 +117,7 @@ class CameraConfig(BaseModel):
                                            "MANUAL to set the exposure manually, "
                                            "or RECOMMENDED to use the find the setting "
                                            "that puts mean pixel intensity at 128 (255/2).")
-    exposure: int  = Field(
+    exposure: int = Field(
         default=DEFAULT_EXPOSURE,
         description="The exposure of the camera using the opencv convention (the number is the exposure time in ms, raised to the power of -2). "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/ "
@@ -258,25 +242,30 @@ class CameraConfig(BaseModel):
         return rec_arr
 
     @classmethod
-    def from_numpy_record_array(cls, rec_arr: np.recarray):
+    def from_numpy_record_array(cls, array: np.recarray):
+        if array.dtype != CAMERA_CONFIG_DTYPE:
+            raise ValueError(f"Metadata array shape mismatch - "
+                             f"Expected: {CAMERA_CONFIG_DTYPE}, "
+                             f"Actual: {array.dtype}")
         return cls(
-            camera_id=rec_arr.camera_id,
-            camera_index=rec_arr.camera_index,
-            camera_name=rec_arr.camera_name,
-            use_this_camera=rec_arr.use_this_camera,
+            camera_id=array.camera_id,
+            camera_index=array.camera_index,
+            camera_name=array.camera_name,
+            use_this_camera=array.use_this_camera,
             resolution=ImageResolution(
-                height=rec_arr.resolution_height,
-                width=rec_arr.resolution_width
+                height=array.resolution_height,
+                width=array.resolution_width
             ),
-            color_channels=rec_arr.color_channels,
-            pixel_format=rec_arr.pixel_format,
-            exposure_mode=rec_arr.exposure_mode,
-            exposure=rec_arr.exposure,
-            framerate=rec_arr.framerate,
-            rotation=RotationTypes(rec_arr.rotation),
-            capture_fourcc=rec_arr.capture_fourcc,
-            writer_fourcc=rec_arr.writer_fourcc
+            color_channels=array.color_channels,
+            pixel_format=array.pixel_format,
+            exposure_mode=array.exposure_mode,
+            exposure=array.exposure,
+            framerate=array.framerate,
+            rotation=RotationTypes(array.rotation),
+            capture_fourcc=array.capture_fourcc,
+            writer_fourcc=array.writer_fourcc
         )
+
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
 
@@ -308,7 +297,6 @@ class CameraConfig(BaseModel):
 
         return diffs
 
-
     def __str__(self):
         out_str = f"\n\tBASE CONFIG:\n"
         for key, value in self.model_dump().items():
@@ -328,7 +316,6 @@ def default_camera_configs_factory():
 
 
 CameraConfigs = dict[CameraIdString, CameraConfig]
-
 
 
 def validate_camera_configs(camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]) -> None:
