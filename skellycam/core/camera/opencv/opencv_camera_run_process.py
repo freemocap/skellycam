@@ -15,7 +15,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtract
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
-from skellycam.core.types import CameraIdString, TopicSubscriptionQueue
+from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
 
 logger = logging.getLogger(__name__)

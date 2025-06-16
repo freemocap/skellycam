@@ -36,6 +36,7 @@ class SingleSlotCameraSharedMemory:
             camera_config: CameraConfig,
             read_only: bool,
     ):
+        raise NotImplementedError("Needs updating after switch to recarray based shm")
         image_shm = SharedMemoryElement.create(
             shape=camera_config.image_shape,
             dtype=DEFAULT_IMAGE_DTYPE,
@@ -100,8 +101,8 @@ class SingleSlotCameraSharedMemory:
 
     def retrieve_frame(self) -> FramePayload:
 
-        image = self.image_shm.get_data()
-        metadata = self.metadata_shm.get_data()
+        image = self.image_shm.retrieve_data()
+        metadata = self.metadata_shm.retrieve_data()
         metadata[FRAME_METADATA_MODEL.COPY_FROM_CAMERA_SHM_BUFFER_TIMESTAMP_NS.value] = time.perf_counter_ns()
         logger.loop(
             f"Camera {metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]} retrieved frame#{metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} from shared memory"

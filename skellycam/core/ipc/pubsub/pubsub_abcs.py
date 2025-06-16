@@ -6,7 +6,7 @@ from typing import Type
 import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
-from skellycam.core.types import TopicSubscriptionQueue
+from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)

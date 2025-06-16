@@ -3,8 +3,10 @@ from numpydantic import NDArray, Shape
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, FRAME_METADATA_DTYPE
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, FRAME_METADATA_DTYPE, \
+    initialize_frame_metadata_rec_array
 from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
+from skellycam.utilities.rotate_image import rotate_image
 
 
 def create_frame_dtype(config: CameraConfig) -> FRAME_DTYPE:
@@ -16,12 +18,14 @@ def create_frame_dtype(config: CameraConfig) -> FRAME_DTYPE:
         ('frame_metadata', FRAME_METADATA_DTYPE)
     ], align=True)
 
+
 def initialize_frame_rec_array(camera_config: CameraConfig, frame_number: int) -> np.recarray:
-    return np.recarray(
+    return np.rec.array(
         (np.zeros((camera_config.resolution.height,
-                                camera_config.resolution.width,
-                                camera_config.color_channels), dtype=np.uint8),
-         initialize_frame_rec_array(camera_config, frame_number)),
+                   camera_config.resolution.width,
+                   camera_config.color_channels), dtype=np.uint8),
+         initialize_frame_metadata_rec_array(camera_config=camera_config,
+                                             frame_number=frame_number)),
         dtype=create_frame_dtype(camera_config)
     )
 
@@ -53,16 +57,23 @@ class FramePayload(BaseModel):
     def width(self):
         return self.image.shape[1]
 
+    @property
+    def camera_config(self) -> CameraConfig:
+        return self.frame_metadata.camera_config
+
     @classmethod
     def from_numpy_record_array(cls, array: np.recarray):
         if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.metadata.camera_config)):
             raise ValueError(f"FramePayload array shape mismatch - "
                              f"Expected: {create_frame_dtype(CameraConfig.from_numpy_record_array(array.metadata.camera_config))}, "
                              f"Actual: {array.dtype}")
-        return cls(
+
+        frame =  cls(
             image=array.image,
-            metadata=FrameMetadata.from_numpy_record_array(array.metadata)
+            frame_metadata=FrameMetadata.from_numpy_record_array(array.metadata)
         )
+        frame.image = rotate_image(frame.image, frame.camera_config.rotation)
+        return frame
 
     def to_numpy_record_array(self) -> np.recarray:
         return np.rec.array(
@@ -70,8 +81,6 @@ class FramePayload(BaseModel):
             dtype=create_frame_dtype(self.frame_metadata.camera_config)
         )
 
-    def __eq__(self, other: "FramePayload"):
-        return np.array_equal(self.image, other.image) and np.array_equal(self.metadata, other.metadata)
 
     def __str__(self):
         print_str = (

@@ -14,8 +14,8 @@ from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_MET
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, MultiFrameMetadata
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
-from skellycam.core.types import CameraIdString, CameraGroupIdString
-from skellycam.core.types import CameraIndex, Base64JPEGImage
+from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString
+from skellycam.core.types.type_overloads import CameraIndex, Base64JPEGImage
 
 DEFAULT_FRONTEND_IMAGE_RESIZE = 0.5
 DEFAULT_JPEG_QUALITY = 80

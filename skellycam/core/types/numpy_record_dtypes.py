@@ -39,6 +39,13 @@ FRAME_METADATA_DTYPE = np.dtype([
     ('timestamps', FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)],
     align=True)
 
-FRAME_DTYPE = np.dtype
+TIMEBASE_MAPPING_DTYPE = np.dtype([
+    ('utc_time_ns', np.uint64),
+    ('perf_counter_ns', np.uint64),
+    ('local_time_utc_offset', np.int32),
+    ], align=True)
+
+FRAME_DTYPE = np.dtype #actual dtype created dynamically based on camera config
+MULTIFRAME_DTYPE = np.dtype #actual dtype created dynamically based on camera configs
 
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from skellycam.core.ipc.pubsub.pubsub_abcs import PubSubTopicABC
 from skellycam.core.ipc.pubsub.pubsub_topics import LogsTopic, UpdateCamerasSettingsTopic, DeviceExtractedConfigTopic, \
     SetShmTopic, RecordingInfoTopic
-from skellycam.core.types import CameraGroupIdString, TopicSubscriptionQueue
+from skellycam.core.types.type_overloads import CameraGroupIdString, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_manager import VideoManager
-from skellycam.core.types import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
+from skellycam.core.types.type_overloads import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
 
 logger = logging.getLogger(__name__)
 

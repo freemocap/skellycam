@@ -5,6 +5,8 @@ import numpy as np
 from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
+from skellycam.core.types.numpy_record_dtypes import TIMEBASE_MAPPING_DTYPE
+
 
 def get_utc_offset() -> int:
     return int(datetime.now(get_localzone()).utcoffset().total_seconds())
@@ -26,9 +28,19 @@ class TimeBaseMapping(BaseModel):
             return int(self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns) + (self.local_time_utc_offset * 1e9))
         return self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns)
 
-    def to_numpy_buffer(self):
-        return np.concatenate([np.array([self.utc_time_ns]), np.array([self.perf_counter_ns])], dtype=np.int64)
+    def to_numpy_record_array(self) -> TIMEBASE_MAPPING_DTYPE:
+        return np.rec.array(
+            (self.utc_time_ns, self.perf_counter_ns, self.local_time_utc_offset),
+            dtype=TIMEBASE_MAPPING_DTYPE
+        )
 
     @classmethod
-    def from_numpy_buffer(cls, buffer: np.ndarray):
-        return cls(utc_time_ns=buffer[0], perf_counter_ns=buffer[1])
+    def from_numpy_record_array(cls, rec_array: np.recarray):
+        if rec_array.dtype != TIMEBASE_MAPPING_DTYPE:
+            raise ValueError(f"Expected rec_array to have dtype {TIMEBASE_MAPPING_DTYPE}, but got {rec_array.dtype}")
+        return cls(
+            utc_time_ns=int(rec_array.utc_time_ns.copy()),
+            perf_counter_ns=int(rec_array.perf_counter_ns.copy()),
+            local_time_utc_offset=int(rec_array.local_time_utc_offset.copy())
+        )
+

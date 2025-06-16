@@ -16,7 +16,7 @@ __package_root__ = __file__.replace("/__init__.py", "")
 # from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 # from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import \
 #     MultiFrameSharedMemoryRingBuffer
-# from skellycam.core.types import CameraIndex, CameraName
+# from skellycam.core.types.type_overloads import CameraIndex, CameraName
 # from skellycam.skellycam_app.skellycam_app import SkellycamApplication
 # from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 # from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import create_websocket_log_queue

@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from skellycam.core.camera.config.image_resolution import ImageResolution
 from skellycam.core.types.image_rotation_types import RotationTypes
-from skellycam.core.types import CameraIdString, BYTES_PER_MONO_PIXEL, CameraNameString
-from skellycam.core.types import CameraIndex, CameraName
+from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL, CameraNameString
+from skellycam.core.types.type_overloads import CameraIndex, CameraName
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
 DEFAULT_IMAGE_HEIGHT: int = 720

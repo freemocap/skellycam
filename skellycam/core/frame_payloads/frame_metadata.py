@@ -1,8 +1,9 @@
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps, FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
+from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
+from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 
 
@@ -24,6 +25,7 @@ class FrameMetadata(BaseModel):
     frame_number: int
     camera_config: CameraConfig
     timestamps: FrameLifespanTimestamps
+    timebase_mapping: TimeBaseMapping = Field(default_factory=TimeBaseMapping, description=TimeBaseMapping.__doc__)
 
     @property
     def camera_id(self) -> str:
@@ -43,7 +45,8 @@ class FrameMetadata(BaseModel):
         return cls(
             frame_number=array.frame_number,
             camera_config=CameraConfig.from_numpy_record_array(array.camera_config),
-            timestamps=FrameLifespanTimestamps.from_numpy_record_array(array.timestamps)
+            timestamps=FrameLifespanTimestamps.from_numpy_record_array(array.timestamps),
+            timebase_mapping=TimeBaseMapping.from_numpy_record_array(array.timebase_mapping)
         )
 
     def to_numpy_record_array(self) -> np.recarray:
@@ -53,6 +56,7 @@ class FrameMetadata(BaseModel):
         return np.rec.array(
             (self.camera_config.to_numpy_record_array(),
              self.frame_number,
-             self.timestamps.to_numpy_record_array()),
+             self.timestamps.to_numpy_record_array(),
+             self.timebase_mapping.to_numpy_record_array()),
             dtype=FRAME_METADATA_DTYPE
         )

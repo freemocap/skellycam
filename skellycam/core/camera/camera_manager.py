@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from skellycam.core.camera.camera_worker import CameraWorker
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.types import WorkerStrategy, WorkerType
+from skellycam.core.types.type_overloads import WorkerStrategy, WorkerType
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)

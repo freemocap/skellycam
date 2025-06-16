@@ -13,7 +13,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraIdString, CameraGroupIdString, WorkerStrategy
+from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ class CameraGroup:
         self.ipc.should_continue = False
         self.recorder.close()
         self.cameras.close()
-        self.shm.close_and_unlink()
+        self.shm.unlink_and_close()
         logger.info("Camera group closed.")
 
     def pause(self, await_paused: bool = True):

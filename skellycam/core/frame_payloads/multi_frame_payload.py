@@ -1,3 +1,4 @@
+import time
 from pprint import pprint
 from typing import Type
 
@@ -8,149 +9,70 @@ from pydantic import ConfigDict
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.types.image_rotation_types import RotationTypes
-from skellycam.core.frame_payloads.frame_payload import FramePayload
+from skellycam.core.frame_payloads.frame_payload import FramePayload, create_frame_dtype, initialize_frame_rec_array
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, FRAME_METADATA_SHAPE, \
-    create_empty_frame_metadata
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
-from skellycam.core.types import CameraIdString, CameraGroupIdString
+from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.rotate_image import rotate_image
 
+MULTI_FRAME_DTYPE = np.dtype
 
-class MultiFrameNumpyBuffer(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        json_encoders={
-            np.ndarray: lambda v: v.tolist(),
-        },
+
+def create_multiframe_dtype(camera_configs: dict[str, CameraConfig]) -> MULTI_FRAME_DTYPE:
+    """
+    Create a numpy dtype for multiple frames based on a dictionary of camera configurations.
+    Each camera gets its own field in the dtype.
+
+    Args:
+        camera_configs: Dictionary mapping camera IDs to their configurations
+
+    Returns:
+        A numpy dtype that can store frames from multiple cameras
+    """
+    fields = []
+    for camera_id, config in camera_configs.items():
+        # Create a field for each camera using its ID as the field name
+        # Each field contains a frame with the camera-specific dtype
+        fields.append((camera_id, create_frame_dtype(config)))
+    return np.dtype(fields, align=True)
+
+
+def initialize_multi_frame_rec_array(camera_configs: dict[str, CameraConfig], frame_number: int) -> np.recarray:
+    """
+    Initialize a record array for multiple frames based on camera configurations.
+
+    Args:
+        camera_configs: Dictionary mapping camera IDs to their configurations
+        frame_number: The frame number to initialize the metadata with
+
+    Returns:
+        A numpy record array that can store frames from multiple cameras
+    """
+    # Create a dictionary to hold the data for each camera
+    data = {}
+
+    for camera_id, config in camera_configs.items():
+        # Store the image and metadata for this camera
+        data[camera_id] = initialize_frame_rec_array(camera_config=config,
+                                                     frame_number=frame_number)
+
+    # Create the record array with the multiframe dtype
+    return np.rec.array(
+        tuple(data.values()),
+        dtype=create_multiframe_dtype(camera_configs)
     )
-    mf_time_mapping_buffer: np.ndarray
-    mf_metadata_buffer: np.ndarray
-    mf_image_buffer: np.ndarray
-    multi_frame_number: int
-
-    @classmethod
-    def from_multi_frame_payload(cls, multi_frame_payload: 'MultiFramePayload') -> 'MultiFrameNumpyBuffer':
-        frames = list(multi_frame_payload.frames.values())
-
-        time_mapping_buffer = multi_frame_payload.timebase_mapping.to_numpy_buffer()
-
-        mf_metadatas = np.concatenate([frame.metadata for frame in frames], axis=0)
-        expected_metadata_shape = FRAME_METADATA_SHAPE[0] * len(frames)
-        if mf_metadatas.shape[0] != expected_metadata_shape:
-            raise ValueError(
-                f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be {expected_metadata_shape} but is {mf_metadatas.shape[0]}")
-
-        mf_images = np.concatenate([frame.image.ravel() for frame in frames], axis=0)
-
-        mf_number = {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] for frame in frames}
-        if len(mf_number) > 1:
-            raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
-
-        return cls(
-            mf_time_mapping_buffer=time_mapping_buffer,
-            mf_metadata_buffer=mf_metadatas,
-            mf_image_buffer=mf_images,
-            multi_frame_number=mf_number.pop()
-        )
-
-    def to_multi_frame_payload(self, camera_configs: CameraConfigs,
-                               camera_group_id:CameraGroupIdString) -> 'MultiFramePayload':
-        time_mapping = TimeBaseMapping.from_numpy_buffer(self.mf_time_mapping_buffer)
-
-        if self.mf_metadata_buffer.shape[0] % FRAME_METADATA_SHAPE[0] != 0:
-            raise ValueError(
-                f"MultiFrameNumpyBuffer metadata buffer has the wrong shape. Should be a multiple of {FRAME_METADATA_SHAPE[0]} but is {self.mf_metadata_buffer.shape[0]}"
-            )
-
-        number_of_cameras = self.mf_metadata_buffer.shape[0] // FRAME_METADATA_SHAPE[0]
-        mf_metadatas = np.split(self.mf_metadata_buffer, number_of_cameras)
-        frames = {}
-        buffer_index = 0
-
-        for metadata in mf_metadatas:
-            if not metadata.shape == FRAME_METADATA_SHAPE:
-                raise ValueError(
-                    f"Metadata shape {metadata.shape} does not match expected shape {FRAME_METADATA_SHAPE}"
-                )
-            if metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] != self.multi_frame_number:
-                raise ValueError(
-                    f"Metadata frame number {metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]} does not match expected frame number {self.multi_frame_number}"
-                )
-            camera_index = metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
-            camera_id = camera_index_to_camera_id(camera_index=camera_index,
-                                                  camera_configs=camera_configs)
-
-            image_shape = (metadata[FRAME_METADATA_MODEL.IMAGE_HEIGHT.value],
-                           metadata[FRAME_METADATA_MODEL.IMAGE_WIDTH.value],
-                           metadata[FRAME_METADATA_MODEL.IMAGE_COLOR_CHANNELS.value])
-
-            if camera_configs[camera_id].image_shape != image_shape:
-                raise ValueError(
-                    f"Camera config image shape {camera_configs[camera_id].image_shape} does not match image shape {image_shape}"
-                )
-
-            image_length = np.prod(image_shape)
-            image_buffer = self.mf_image_buffer[int(buffer_index):int(buffer_index + image_length)]
-            buffer_index += image_length
-            image = image_buffer.reshape(image_shape)
-            frames[camera_id] = FramePayload(metadata=metadata, image=image)
-
-        return MultiFramePayload(
-            frames=frames,
-            camera_configs=camera_configs,
-            timebase_mapping=time_mapping,
-            camera_group_id=camera_group_id,
-        )
-
-    @classmethod
-    def from_buffers(cls: Type['MultiFrameNumpyBuffer'],
-                     mf_time_mapping_buffer: np.ndarray,
-                     mf_metadata_buffer: np.ndarray,
-                     mf_image_buffer: np.ndarray, ) -> 'MultiFrameNumpyBuffer':
-        reshaped_metadata = mf_metadata_buffer.reshape(-1, FRAME_METADATA_SHAPE[0])
-        frame_numbers = np.unique(reshaped_metadata[:, FRAME_METADATA_MODEL.FRAME_NUMBER.value])
-
-        if len(frame_numbers) > 1:
-            raise ValueError(f"MultiFramePayload has multiple frame numbers {frame_numbers}")
-
-        return cls(
-            mf_time_mapping_buffer=mf_time_mapping_buffer,
-            mf_metadata_buffer=mf_metadata_buffer,
-            mf_image_buffer=mf_image_buffer,
-            multi_frame_number=int(frame_numbers[0])
-        )
-
-    def __str__(self):
-        return f"MultiFrameNumpyBuffer: metadata shape {self.mf_metadata_buffer.shape}, image shape {self.mf_image_buffer.shape}, time mapping shape {self.mf_time_mapping_buffer.shape}"
-
 
 class MultiFramePayload(BaseModel):
-    camera_group_id: CameraIdString
     frames: dict[CameraIdString, FramePayload | None]
     timebase_mapping: TimeBaseMapping = Field(default_factory=TimeBaseMapping, description=TimeBaseMapping.__doc__)
-    backend_framerate: CurrentFramerate | None = None
-    frontend_framerate: CurrentFramerate | None = None
 
     @property
     def camera_configs(self) -> CameraConfigs:
         return {camera_id: frame.camera_config for camera_id, frame in self.frames.items() if frame is not None}
 
     @classmethod
-    def create_initial(cls, camera_configs: CameraConfigs, camera_group_id:CameraIdString) -> 'MultiFramePayload':
-        return cls(frames={camera_id: None for camera_id in camera_configs.keys()},
-                   camera_group_id=camera_group_id
-                   )
-
-    @classmethod
-    def from_previous(cls,
-                      previous: 'MultiFramePayload',
-                      camera_configs: CameraConfigs) -> 'MultiFramePayload':
-        return cls(frames={camera_id: None for camera_id in previous.frames.keys()},
-                   timebase_mapping=previous.timebase_mapping,
-                     camera_group_id=previous.camera_group_id,
-                   )
+    def create_empty(cls, camera_configs: CameraConfigs):
+        return cls(frames={camera_id: None for camera_id in camera_configs.keys()})
 
     @property
     def full(self) -> bool:
@@ -172,37 +94,44 @@ class MultiFramePayload(BaseModel):
 
     @property
     def multi_frame_number(self) -> int:
-        frame_numbers = [frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] for frame in self.frames.values()]
+        frame_numbers = [frame.metadata.frame_number for frame in self.frames.values()]
         mf_number = set(frame_numbers)
         if len(mf_number) > 1:
             raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
         return mf_number.pop()
 
-    def to_numpy_buffer(self) -> MultiFrameNumpyBuffer:
-        return MultiFrameNumpyBuffer.from_multi_frame_payload(self)
+    def to_numpy_record_array(self) -> np.recarray:
+        if not self.full:
+            raise ValueError("MultiFramePayload is not full, cannot convert to numpy structured array")
+        return np.rec.array(
+            tuple(frame.to_numpy_record_array() for frame in self.frames.values()),
+            dtype=create_multiframe_dtype(self.camera_configs)
+        )
 
     @classmethod
-    def from_numpy_buffer(cls, buffer: MultiFrameNumpyBuffer, camera_configs: CameraConfigs, camera_group_id:CameraGroupIdString) -> 'MultiFramePayload':
-        return buffer.to_multi_frame_payload(camera_configs=camera_configs,
-                                                camera_group_id=camera_group_id)
+    def from_numpy_record_array(cls, rec_array: np.recarray):
+        return cls(
+            frames={camera_id: FramePayload.from_numpy_record_array(rec_array[camera_id])
+                    for camera_id in rec_array.dtype.names},
+        )
 
-    def add_frame(self, frame_dto: FramePayload) -> None:
-        camera_index = frame_dto.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value]
-        camera_id = camera_index_to_camera_id(camera_index=camera_index,
-                                              camera_configs=self.camera_configs)
+    def add_frame(self, new_frame: FramePayload) -> None:
+
         for frame in self.frames.values():
             if frame:
-                if frame.metadata[FRAME_METADATA_MODEL.CAMERA_INDEX.value] == camera_index:
+                if frame.camera_id == new_frame.camera_id:
                     raise ValueError(
-                        f"Cannot add frame for camera_id {camera_id} to MultiFramePayloadDTO, frame already exists!")
-                if not frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value] == frame_dto.metadata[
-                    FRAME_METADATA_MODEL.FRAME_NUMBER.value]:
+                        f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayloadDTO, frame already exists!")
+                if not frame.frame_number == new_frame.frame_number:
                     raise ValueError(
-                        f"Cannot add frame for camera_id {camera_id} to MultiFramePayloadDTO, frame number mismatch!")
-        self.frames[camera_id] = frame_dto
+                        f"Cannot add frame for camera_id {new_frame.frame_number} to MultiFramePayloadDTO, frame number mismatch!")
+                if not frame.frame_metadata.timebase_mapping != new_frame.frame_metadata.timebase_mapping:
+                    raise ValueError(
+                        f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayloadDTO, timebase mapping mismatch!")
+        new_frame.frame_metadata.timestamps.put_into_multi_frame_payload = time.perf_counter_ns()
+        self.frames[new_frame.camera_id] = new_frame
 
-    def get_frame(self, camera_id: CameraIdString, rotate: bool = True,
-                  return_copy: bool = True) -> FramePayload | None:
+    def get_frame(self, camera_id: CameraIdString,return_copy: bool = True) -> FramePayload | None:
 
         if return_copy:
             frame = self.frames[camera_id].model_copy()
@@ -212,118 +141,14 @@ class MultiFramePayload(BaseModel):
         if frame is None:
             raise ValueError(f"Cannot get frame for camera_id {camera_id} from MultiFramePayloadDTO, frame is None")
 
-        if rotate and not self.camera_configs[camera_id].rotation == RotationTypes.NO_ROTATION:
-            frame.image = rotate_image(frame.image, self.camera_configs[camera_id].rotation)
-
         return frame
 
-    def to_metadata(self) -> 'MultiFrameMetadata':
-        return MultiFrameMetadata.from_multi_frame_payload(multi_frame_payload=self)
 
     def __str__(self) -> str:
-        print_str = f"[multi_frame_number: {self.multi_frame_number}, camera_group_id: {self.camera_group_id}, "
+        print_str = f"[multi_frame_number: {self.multi_frame_number}"
 
         for camera_id, frame in self.frames.items():
             print_str += str(frame)
         print_str += "]"
         return print_str
 
-
-class MultiFrameMetadata(BaseModel):
-    multi_frame_number: int
-    frame_metadatas: dict[CameraIdString, FrameMetadata]
-    timebase_mapping: TimeBaseMapping
-    before_publication_timestamp_ns: int = None
-    after_publication_timestamp_ns: int = None
-
-    @property
-    def time_in_pubsub_queue(self) -> int:
-        if self.before_publication_timestamp_ns is None or self.after_publication_timestamp_ns is None:
-            raise ValueError("Publication timestamps are not set, cannot calculate time in pubsub queue")
-        return self.after_publication_timestamp_ns - self.before_publication_timestamp_ns
-
-    @classmethod
-    def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload):
-        return cls(
-            multi_frame_number=multi_frame_payload.multi_frame_number,
-            frame_metadatas={
-                camera_id: FrameMetadata.from_frame_metadata_array(frame.metadata)
-                for camera_id, frame in multi_frame_payload.frames.items()
-            },
-            timebase_mapping=multi_frame_payload.timebase_mapping
-        )
-
-    @property
-    def camera_ids(self) -> list[CameraIdString]:
-        return list(self.frame_metadatas.keys())
-
-    @property
-    def timestamp_unix_seconds_local(self) -> float:
-        mean_frame_grab_ns = np.mean([
-            frame_metadata.timestamps.post_grab_timestamp_ns
-            for frame_metadata in self.frame_metadatas.values()
-        ])
-        unix_ns = self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(int(mean_frame_grab_ns), local_time=True)
-        return unix_ns / 1e9
-    @property
-    def timestamp_unix_seconds_utc(self) -> float:
-        mean_frame_grab_ns = np.mean([
-            frame_metadata.timestamps.post_grab_timestamp_ns
-            for frame_metadata in self.frame_metadatas.values()
-        ])
-        unix_ns = self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(int(mean_frame_grab_ns), local_time=False)
-        return unix_ns / 1e9
-
-    @property
-    def seconds_since_cameras_connected(self) -> float:
-        return self.timestamp_unix_seconds_utc - self.timebase_mapping.utc_time_ns / 1e9
-
-    @property
-    def intercamera_grab_range_ns(self) -> int:
-        grab_times = [frame_metadata.timestamps.post_grab_timestamp_ns
-                      for frame_metadata in self.frame_metadatas.values()]
-        return int(np.max(grab_times) - np.min(grab_times))
-
-
-
-def camera_index_to_camera_id(camera_index: int, camera_configs: CameraConfigs) -> CameraIdString:
-    for camera_id, camera_config in camera_configs.items():
-        if camera_config.camera_index == camera_index:
-            return camera_id
-    raise ValueError(f"Camera index {camera_index} not found in camera configs")
-
-
-if __name__ == "__main__":
-    def create_example_multi_frame_payload() -> MultiFramePayload:
-        camera_configs = {CameraIdString(id): CameraConfig(camera_index=id) for id in range(3)}
-        multi_frame_payload = MultiFramePayload.create_initial(camera_configs=camera_configs,
-                                                               camera_group_id="example_group")
-        for camera_id in camera_configs.keys():
-            frame_metadata = create_empty_frame_metadata(config=camera_configs[camera_id], frame_number=0)
-            frame_payload = FramePayload(metadata=frame_metadata,
-                                         image=np.random.randint(0, 255, camera_configs[camera_id].image_shape,
-                                                                 dtype=np.uint8))
-            multi_frame_payload.add_frame(frame_payload)
-        return multi_frame_payload
-
-
-    og_mf = create_example_multi_frame_payload()
-    print(og_mf)
-    _buffer = og_mf.to_numpy_buffer()
-    print(_buffer)
-    new_mf = MultiFramePayload.from_numpy_buffer(
-        buffer=MultiFrameNumpyBuffer.from_buffers(mf_time_mapping_buffer=_buffer.mf_time_mapping_buffer,
-                                                  mf_metadata_buffer=_buffer.mf_metadata_buffer,
-                                                  mf_image_buffer=_buffer.mf_image_buffer),
-        camera_configs=og_mf.camera_configs)
-    for _camera_id in og_mf.camera_ids:
-        og_frame = og_mf.get_frame(_camera_id)
-        new_frame = new_mf.get_frame(_camera_id)
-        if not np.array_equal(og_frame.image, new_frame.image):
-            raise ValueError(f"Images for camera_id {_camera_id} do not match")
-        if not np.array_equal(og_frame.metadata, new_frame.metadata):
-            raise ValueError(f"Metadata for camera_id {_camera_id} do not match")
-    print(new_mf)
-
-    print("Metadata:")
-    pprint(og_mf.to_metadata())

@@ -6,7 +6,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraGroupIdString, CameraIdString
+from skellycam.core.types.type_overloads import CameraGroupIdString, CameraIdString
 from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)

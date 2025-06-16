@@ -5,7 +5,7 @@ from typing import List
 import cv2
 import numpy as np
 
-from skellycam.core.types import CameraIndex
+from skellycam.core.types.type_overloads import CameraIndex
 from skellycam.system.device_detection.camera_device_info import AvailableCameras, CameraDeviceInfo
 
 logger = logging.getLogger(__name__)

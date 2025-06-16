@@ -6,7 +6,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfi
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import TopicPublicationQueue
+from skellycam.core.types.type_overloads import TopicPublicationQueue
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue
 

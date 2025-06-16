@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from skellycam.core.camera.config.camera_config import DEFAULT_CAPTURE_FOURCC, \
     DEFAULT_FRAMERATE
 from skellycam.core.camera.config.image_resolution import ImageResolution
-from skellycam.core.types import CameraName
+from skellycam.core.types.type_overloads import CameraName
 
 logger = logging.getLogger(__name__)
 

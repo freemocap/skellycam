@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraIdString
+from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
 

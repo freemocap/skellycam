@@ -11,7 +11,7 @@ from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
-from skellycam.core.types import CameraIdString, RecordingManagerIdString
+from skellycam.core.types.type_overloads import CameraIdString, RecordingManagerIdString
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
 

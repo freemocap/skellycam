@@ -27,10 +27,11 @@ class SharedMemoryElement(BaseModel):
     dtype: np.dtype
     shm: shared_memory.SharedMemory
     valid_flag_shm: shared_memory.SharedMemory
+    read_only: bool
     original: bool = False
 
     @classmethod
-    def create(cls, dtype: np.dtype):
+    def create(cls, dtype: np.dtype, read_only: bool):
 
         shm = shared_memory.SharedMemory(size=dtype.itemsize, create=True)
         buffer = np.recarray(shape=(1,), dtype=dtype, buf=shm.buf)
@@ -43,11 +44,12 @@ class SharedMemoryElement(BaseModel):
                    dtype=dtype,
                    valid_flag_shm=valid_flag_shm,
                    valid_flag_buffer=valid_flag_buffer,
-            original=True
+            original=True,
+            read_only=read_only
         )
 
     @classmethod
-    def recreate(cls, dto: SharedMemoryElementDTO):
+    def recreate(cls, dto: SharedMemoryElementDTO, read_only: bool):
         shm = shared_memory.SharedMemory(name=dto.shm_name)
         buffer = np.recarray(shape=(1,), dtype=dto.dtype, buf=shm.buf)
         valid_flag_shm = shared_memory.SharedMemory(name=dto.shm_valid_name)
@@ -58,7 +60,8 @@ class SharedMemoryElement(BaseModel):
             dtype=dto.dtype,
             valid_flag_shm=valid_flag_shm,
             valid_flag_buffer=valid_flag_buffer,
-            original=False
+            original=False,
+            read_only=read_only
         )
 
     @property
@@ -99,19 +102,17 @@ class SharedMemoryElement(BaseModel):
 
         np.copyto(dst=self.buffer, src=data)
 
-    def get_data(self) -> np.recarray:
-        data = np.copy(self.buffer)
+    def retrieve_data(self) -> np.recarray:
+        data = np.rec.array(self.buffer, dtype=self.dtype)
         if data.dtype != self.dtype:
             raise ValueError(f"Array dtype {data.dtype} does not match SharedMemoryElement dtype {self.dtype}")
 
-        # For consistency, if we have a single record array, return it as a scalar
         if data.shape == (1,):
             return data[0]
         return data
 
-    def close_and_unlink(self):
-        self.unlink()
-        self.close()
+
+
     def close(self):
         self.shm.close()
         self.valid_flag_shm.close()
@@ -123,7 +124,9 @@ class SharedMemoryElement(BaseModel):
         self.valid = False
         self.shm.unlink()
         self.valid_flag_shm.unlink()
-
+    def unlink_and_close(self):
+        self.unlink()
+        self.close()
 if __name__ == "__main__":
 
     # Define a custom dtype for testing
@@ -149,7 +152,7 @@ if __name__ == "__main__":
     copy = SharedMemoryElement.recreate(dto)
 
     # Get data from the copy
-    retrieved_data = copy.get_data()
+    retrieved_data = copy.retrieve_data()
     print(f"Retrieved data:\n{retrieved_data}")
 
     # Verify data is the same
@@ -166,7 +169,7 @@ if __name__ == "__main__":
     copy.close()
     print("Closed copy.")
     # Use the new method for safe cleanup
-    original.close_and_unlink()
+    original.unlink_and_close()
     print("Closed and unlinked original.")
 
     print("Test completed.")

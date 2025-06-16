@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimeBaseMapping
-from skellycam.core.types import CameraIndex
+from skellycam.core.types.type_overloads import CameraIndex
 
 
 class CameraTimestampLog(BaseModel):

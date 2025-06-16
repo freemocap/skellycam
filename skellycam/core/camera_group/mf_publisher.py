@@ -9,7 +9,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
 from skellycam.core.recorders.recording_manager import WorkerType
-from skellycam.core.types import TopicSubscriptionQueue, WorkerStrategy
+from skellycam.core.types.type_overloads import TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
