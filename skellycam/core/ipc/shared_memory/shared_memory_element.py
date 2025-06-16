@@ -125,8 +125,6 @@ class SharedMemoryElement(BaseModel):
         self.valid_flag_shm.unlink()
 
 if __name__ == "__main__":
-    # Simple test for SharedMemoryElement
-    import time
 
     # Define a custom dtype for testing
     test_dtype = np.dtype([('x', np.float64), ('y', np.float64), ('z', np.float64)])
