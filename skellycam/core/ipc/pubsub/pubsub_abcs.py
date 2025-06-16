@@ -1,5 +1,4 @@
 import logging
-import sys
 from abc import ABC
 from multiprocessing.process import parent_process
 from typing import Type
@@ -7,7 +6,7 @@ from typing import Type
 import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
-from skellycam.core.types import TopicSubscriptionQueue, TopicPublicationQueue
+from skellycam.core.types import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)

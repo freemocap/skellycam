@@ -4,16 +4,17 @@ import time
 import cv2
 import numpy as np
 
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
-from skellycam.core.types import CameraIndex
 
 logger = logging.getLogger(__name__)
 
 
 def opencv_get_frame(cap: cv2.VideoCapture,
                      frame_metadata: np.ndarray,
+                     config: CameraConfig,
                      camera_shared_memory: FramePayloadSharedMemoryRingBuffer):
     """
     THIS IS WHERE THE MAGIC HAPPENS
@@ -52,5 +53,6 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     camera_shared_memory.put_frame(
         image=image,
         metadata=frame_metadata,
+        config=config,
         overwrite=False
     )

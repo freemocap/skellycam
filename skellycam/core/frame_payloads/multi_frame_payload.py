@@ -132,12 +132,14 @@ class MultiFramePayload(BaseModel):
     timebase_mapping: TimeBaseMapping = Field(default_factory=TimeBaseMapping, description=TimeBaseMapping.__doc__)
     backend_framerate: CurrentFramerate | None = None
     frontend_framerate: CurrentFramerate | None = None
-    camera_configs: CameraConfigs
+
+    @property
+    def camera_configs(self) -> CameraConfigs:
+        return {camera_id: frame.camera_config for camera_id, frame in self.frames.items() if frame is not None}
 
     @classmethod
     def create_initial(cls, camera_configs: CameraConfigs, camera_group_id:CameraIdString) -> 'MultiFramePayload':
         return cls(frames={camera_id: None for camera_id in camera_configs.keys()},
-                   camera_configs=camera_configs,
                    camera_group_id=camera_group_id
                    )
 
@@ -147,7 +149,6 @@ class MultiFramePayload(BaseModel):
                       camera_configs: CameraConfigs) -> 'MultiFramePayload':
         return cls(frames={camera_id: None for camera_id in previous.frames.keys()},
                    timebase_mapping=previous.timebase_mapping,
-                   camera_configs=camera_configs,
                      camera_group_id=previous.camera_group_id,
                    )
 

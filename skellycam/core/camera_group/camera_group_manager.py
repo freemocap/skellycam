@@ -2,10 +2,9 @@ import logging
 import multiprocessing
 from dataclasses import dataclass, field
 
-from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types import CameraGroupIdString, CameraIdString
 from skellycam.utilities.wait_functions import wait_100ms

@@ -1,20 +1,16 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
 
-from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types import CameraGroupIdString
-from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
 logger = logging.getLogger(__name__)
 

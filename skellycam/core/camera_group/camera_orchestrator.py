@@ -1,11 +1,11 @@
 import logging
+import multiprocessing
 from dataclasses import dataclass
+
 from pydantic import BaseModel, Field, SkipValidation, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.types import CameraIdString
-import multiprocessing
-
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)

@@ -115,6 +115,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
             self_status.grabbing_frame.value = True
             opencv_get_frame(cap=cv2_video_capture,
                              frame_metadata=frame_metadata,
+                             config=config,
                              camera_shared_memory=camera_shm,
                              )
             self_status.grabbing_frame.value = False

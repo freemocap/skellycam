@@ -2,6 +2,7 @@ import multiprocessing
 from typing import Tuple, Self, Any
 
 import cv2
+import numpy as np
 from pydantic import BaseModel, Field, model_validator, SkipValidation
 
 from skellycam.core.camera.config.image_resolution import ImageResolution
@@ -25,7 +26,22 @@ DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
 DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
 DEFAULT_WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
 
-
+CAMERA_CONFIG_DTYPE = np.dtype([
+            ('camera_id', 'U1000'),
+            ('camera_index', np.int32),
+            ('camera_name', 'U1000'),
+            ('use_this_camera', np.bool_),
+            ('resolution_height', np.int32),
+            ('resolution_width', np.int32),
+            ('color_channels', np.int32),
+            ('pixel_format', 'U8'),
+            ('exposure_mode', 'U32'),
+            ('exposure', np.int32),
+            ('framerate', np.float32),
+            ('rotation', 'U8'),
+            ('capture_fourcc', 'U4'),
+            ('writer_fourcc', 'U4'),
+        ])
 def get_video_file_type(fourcc_code: int) -> str:
     """
     Get the video file type based on an OpenCV FOURCC code.
@@ -117,7 +133,7 @@ class CameraConfig(BaseModel):
                                            "MANUAL to set the exposure manually, "
                                            "or RECOMMENDED to use the find the setting "
                                            "that puts mean pixel intensity at 128 (255/2).")
-    exposure: int | str = Field(
+    exposure: int  = Field(
         default=DEFAULT_EXPOSURE,
         description="The exposure of the camera using the opencv convention (the number is the exposure time in ms, raised to the power of -2). "
                     "https://www.kurokesu.com/main/2020/05/22/uvc-camera-exposure-timing-in-opencv/ "
@@ -197,7 +213,7 @@ class CameraConfig(BaseModel):
         settable_parameters : SettableCameraParameters
             The parameters to update the CameraConfig with.
         """
-        self.exposure_mode = settable_parameters.exposure_mode.name
+        self.exposure_mode = settable_parameters.exposure_mode
         self.exposure = settable_parameters.exposure
         self.resolution = settable_parameters.resolution
         self.rotation = settable_parameters.rotation
@@ -221,6 +237,46 @@ class CameraConfig(BaseModel):
 
         return diffs
 
+    def to_numpy_record_array(self) -> np.recarray:
+        rec_arr = np.recarray((1,), dtype=CAMERA_CONFIG_DTYPE)
+
+        rec_arr.camera_id = self.camera_id
+        rec_arr.camera_index = self.camera_index
+        rec_arr.camera_name = self.camera_name
+        rec_arr.use_this_camera = self.use_this_camera
+        rec_arr.resolution_height = self.resolution.height
+        rec_arr.resolution_width = self.resolution.width
+        rec_arr.color_channels = self.color_channels
+        rec_arr.pixel_format = self.pixel_format
+        rec_arr.exposure_mode = self.exposure_mode
+        rec_arr.exposure = self.exposure
+        rec_arr.framerate = self.framerate
+        rec_arr.rotation = self.rotation.value
+        rec_arr.capture_fourcc = self.capture_fourcc
+        rec_arr.writer_fourcc = self.writer_fourcc
+
+        return rec_arr
+
+    @classmethod
+    def from_numpy_record_array(cls, rec_arr: np.recarray):
+        return cls(
+            camera_id=rec_arr.camera_id,
+            camera_index=rec_arr.camera_index,
+            camera_name=rec_arr.camera_name,
+            use_this_camera=rec_arr.use_this_camera,
+            resolution=ImageResolution(
+                height=rec_arr.resolution_height,
+                width=rec_arr.resolution_width
+            ),
+            color_channels=rec_arr.color_channels,
+            pixel_format=rec_arr.pixel_format,
+            exposure_mode=rec_arr.exposure_mode,
+            exposure=rec_arr.exposure,
+            framerate=rec_arr.framerate,
+            rotation=RotationTypes(rec_arr.rotation),
+            capture_fourcc=rec_arr.capture_fourcc,
+            writer_fourcc=rec_arr.writer_fourcc
+        )
     def __eq__(self, other: "CameraConfig") -> bool:
         return self.model_dump() == other.model_dump()
 
@@ -273,97 +329,6 @@ def default_camera_configs_factory():
 
 CameraConfigs = dict[CameraIdString, CameraConfig]
 
-
-class ThreadSafeCameraConfigs(BaseModel):
-    """
-    A thread-safe container for camera configurations.
-    This is a wrapper around a dictionary of CameraConfig objects.
-    """
-    configs: CameraConfigs = Field(default_factory=default_camera_configs_factory)
-    lock: SkipValidation[multiprocessing.Lock] = Field(default_factory=lambda: multiprocessing.Lock())
-
-    @model_validator(mode="after")
-    def validate_configs(self) -> Self:
-        validate_camera_configs(self.configs)
-        return self
-
-    def update(self, new_configs: CameraConfigs) -> None:
-        """
-        Update the camera configurations with a new set of configurations.
-        This will overwrite existing configurations with the same camera ID and add new ones.
-        """
-        with self.lock:
-            validate_camera_configs(new_configs)
-            self.configs.update(new_configs)
-
-    def pop(self, camera_id: CameraIdString) -> CameraConfig:
-        """
-        Remove and return the camera configuration for the given camera ID.
-        """
-        with self.lock:
-            if camera_id not in self.configs:
-                raise KeyError(f"Camera ID {camera_id} not found in configs.")
-            return self.configs.pop(camera_id)
-
-    def keys(self):
-        """
-        Get the keys (camera IDs) of the camera configurations.
-        """
-        with self.lock:
-            return self.configs.keys()
-
-    def values(self):
-        """
-        Get the values (camera configurations) of the camera configurations.
-        """
-        with self.lock:
-            return self.configs.values()
-
-    def items(self):
-        """
-        Get the items (camera ID and configuration pairs) of the camera configurations.
-        """
-        with self.lock:
-            return self.configs.items()
-
-    def __getitem__(self, camera_id: CameraIdString) -> CameraConfig:
-        with self.lock:
-            return self.configs[camera_id]
-
-    def __setitem__(self, camera_id: CameraIdString, config: CameraConfig) -> None:
-        with self.lock:
-            if camera_id in self.configs:
-                raise ValueError(f"Camera ID {camera_id} already exists in configs.")
-            validate_camera_configs(config)
-            self.configs[camera_id] = config
-
-    def __contains__(self, camera_id: CameraIdString) -> bool:
-        """
-        Check if a camera configuration exists for the given camera ID.
-        """
-        with self.lock:
-            return camera_id in self.configs
-
-    def __iter__(self):
-        """
-        Iterate over the camera IDs in the configs.
-        """
-        with self.lock:
-            return iter(self.configs)
-
-    def __len__(self) -> int:
-        """
-        Get the number of camera configurations.
-        """
-        with self.lock:
-            return len(self.configs)
-
-    def __str__(self) -> str:
-        """
-        String representation of the ThreadSafeCameraConfigs.
-        """
-        with self.lock:
-            return "\n".join([f"{camera_id}: {config}" for camera_id, config in self.configs.items()])
 
 
 def validate_camera_configs(camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]) -> None:

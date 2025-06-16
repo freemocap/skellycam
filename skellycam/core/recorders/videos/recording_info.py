@@ -4,7 +4,6 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 
 logger = logging.getLogger(__name__)

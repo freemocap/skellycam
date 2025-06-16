@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from multiprocessing import shared_memory
 from typing import Tuple, Union, Any
 

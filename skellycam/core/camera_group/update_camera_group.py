@@ -1,7 +1,7 @@
-from skellycam.core.camera.config.camera_config import CameraConfigs, ParameterDifferencesModel, CameraConfig
-from skellycam.core.camera_group.camera_group import CameraGroup
 from pydantic import BaseModel
 
+from skellycam.core.camera.config.camera_config import CameraConfigs, ParameterDifferencesModel, CameraConfig
+from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.types import CameraIdString
 
 
