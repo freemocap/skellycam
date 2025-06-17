@@ -109,7 +109,7 @@ class MultiFrameTimestampLog(BaseModel):
         camera_timestamp_logs = {
             camera_id: CameraTimestampLog.from_frame_metadata(
                 frame_metadata=frame_metadata,
-                first_frame_metadata=initial_multi_frame_payload.frames[camera_id].metadata,
+                first_frame_metadata=initial_multi_frame_payload.frames[camera_id].frame_metadata,
                 timebase_mapping=initial_multi_frame_payload.timebase_mapping
             )
             for camera_id, frame_metadata in multi_frame_metadata.frame_metadatas.items()}

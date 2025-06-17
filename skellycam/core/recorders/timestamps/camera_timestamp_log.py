@@ -5,12 +5,12 @@ from pydantic import BaseModel, Field
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.types.type_overloads import CameraIndex
+from skellycam.core.types.type_overloads import CameraIndex, CameraIdString
 
 
 class CameraTimestampLog(BaseModel):
 
-    camera_id: CameraIndex = Field(
+    camera_id: CameraIdString = Field(
         description="- Camera ID of the camera that recorded the frame"
     )
     frame_number: int = Field(
@@ -71,7 +71,7 @@ class CameraTimestampLog(BaseModel):
         """
         document = "# Individual Camera Timestamp Log Field Descriptions:\n"
         document += f"The following fields are included in the camera timestamp log, as defined in the {cls.__class__.__name__} data model/class:\n"
-        for field_name, field in cls.__fields__.items():
+        for field_name, field in cls.model_fields.items():
             document += f"- **{field_name}**:{field.description}\n\n"
             if field_name.startswith("_"):
                 document += f"    - note, this is a private field and is not included in the CSV output. You can find it in the `recording_start_timestamp.json` file in the recording folder\n"

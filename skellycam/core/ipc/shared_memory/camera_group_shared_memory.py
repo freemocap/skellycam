@@ -131,7 +131,7 @@ class CameraGroupSharedMemoryManager:
         self.multi_frame_ring_shm.put_multiframe(mf_payload=mf_payload,
                                                  overwrite=False)  # Don't overwrite to ensure all frames are saved
         self._latest_mf_built = mf_payload.multi_frame_number
-        logger.debug(f"Built multiframe #{mf_payload.multi_frame_number} from cameras: {list(mf_payload.camera_ids)}")
+        logger.loop(f"Built multiframe #{mf_payload.multi_frame_number} from cameras: {list(mf_payload.camera_ids)}")
 
         return mf_payload
 

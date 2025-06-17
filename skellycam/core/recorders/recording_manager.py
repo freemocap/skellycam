@@ -192,7 +192,7 @@ class RecordingManager(BaseModel):
         latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
 
         if len(latest_mfs) > 0:
-            logger.info(f"RecordingManager: retrieved mfs: {[mf.multi_frame_number for mf in latest_mfs]}")
+            logger.loop(f"RecordingManager: retrieved mfs: {[mf.multi_frame_number for mf in latest_mfs]}")
             status.total_frames_published.value += len(latest_mfs)
             status.number_frames_published_this_cycle.value = len(latest_mfs)
             # if new frames, add them to the recording manager (doesn't save them yet)

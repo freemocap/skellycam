@@ -108,9 +108,9 @@ class VideoRecorder(BaseModel):
     def _validate_frame(self, frame: FramePayload):
         if not Path(self.video_path).parent.exists():
             Path(self.video_path).parent.mkdir(parents=True, exist_ok=True)
-        if frame.camera_id != self.camera_config.camera_index:
+        if frame.camera_config != self.camera_config:
             raise ValueError(
-                f"Frame camera_id {frame.camera_id} does not match self.camera_config camera_id {self.camera_config.camera_index}")
+                f"Frame camera_config does not match self.camera_config (self.camera_config-frame.camera_config): \n{self.camera_config-frame.camera_config}")
         if frame.image.shape != self.camera_config.image_shape:
             raise ValueError(f"Frame shape ({frame.image.shape}) does not match expected shape ({self.camera_config.image_shape})")
 

@@ -42,6 +42,12 @@ class MultiFramePayload(BaseModel):
     frames: dict[CameraIdString, FramePayload | None]
     timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping, description=TimebaseMapping.__doc__)
 
+    def to_metadata(self) -> "MultiFrameMetadata":
+        """
+        Convert the MultiFramePayload to a MultiFrameMetadata object.
+        """
+        return MultiFrameMetadata.from_multi_frame_payload(self)
+
     @property
     def camera_configs(self) -> CameraConfigs:
         return {camera_id: frame.camera_config for camera_id, frame in self.frames.items() if frame is not None}

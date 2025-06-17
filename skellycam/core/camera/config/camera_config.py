@@ -268,11 +268,50 @@ class CameraConfig(BaseModel):
         )
 
     def __eq__(self, other: "CameraConfig") -> bool:
-        return self.model_dump() == other.model_dump()
+        """
+        Compare two CameraConfig objects with tolerance for floating point values.
+
+        Parameters
+        ----------
+        other : CameraConfig
+            The CameraConfig to compare against
+
+        Returns
+        -------
+        bool
+            True if the configs are equal (with tolerance for floating point values)
+        """
+        self_dict = self.model_dump()
+        other_dict = other.model_dump()
+
+        # Define tolerance for floating point comparisons
+        float_tolerance = 1e-3
+
+        for key, self_value in self_dict.items():
+            other_value = other_dict.get(key)
+
+            # Special handling for floating point values
+            if isinstance(self_value, float) and isinstance(other_value, float):
+                if abs(self_value - other_value) > float_tolerance:
+                    return False
+            # For nested objects like resolution
+            elif isinstance(self_value, dict) and isinstance(other_value, dict):
+                for nested_key, nested_self_value in self_value.items():
+                    nested_other_value = other_value.get(nested_key)
+                    if isinstance(nested_self_value, float) and isinstance(nested_other_value, float):
+                        if abs(nested_self_value - nested_other_value) > float_tolerance:
+                            return False
+                    elif nested_self_value != nested_other_value:
+                        return False
+            # For all other types, use standard equality
+            elif self_value != other_value:
+                return False
+
+        return True
 
     def __sub__(self, other: "CameraConfig") -> list[ParameterDifferencesModel]:
         """
-        Returns a dictionary containing only the fields that differ between two CameraConfig objects.
+        Returns a list of differences between two CameraConfig objects, with tolerance for floating point values.
 
         Parameters
         ----------
@@ -282,14 +321,46 @@ class CameraConfig(BaseModel):
         Returns
         -------
         list[ParameterDifferencesModel]
+            List of differences between the two configs
         """
         self_dict = self.model_dump()
         other_dict = other.model_dump()
 
+        # Define tolerance for floating point comparisons
+        float_tolerance = 1e-5
+
         diffs = []
         for key, self_value in self_dict.items():
             other_value = other_dict.get(key)
-            if self_value != other_value:
+
+            # Special handling for floating point values
+            if isinstance(self_value, float) and isinstance(other_value, float):
+                if abs(self_value - other_value) > float_tolerance:
+                    diffs.append(ParameterDifferencesModel(
+                        parameter_name=key,
+                        self_value=self_value,
+                        other_value=other_value
+                    ))
+            # For nested objects like resolution
+            elif isinstance(self_value, dict) and isinstance(other_value, dict):
+                nested_diffs = []
+                for nested_key, nested_self_value in self_value.items():
+                    nested_other_value = other_value.get(nested_key)
+                    if isinstance(nested_self_value, float) and isinstance(nested_other_value, float):
+                        if abs(nested_self_value - nested_other_value) > float_tolerance:
+                            nested_diffs.append((nested_key, nested_self_value, nested_other_value))
+                    elif nested_self_value != nested_other_value:
+                        nested_diffs.append((nested_key, nested_self_value, nested_other_value))
+
+                if nested_diffs:
+                    for nested_key, nested_self_value, nested_other_value in nested_diffs:
+                        diffs.append(ParameterDifferencesModel(
+                            parameter_name=f"{key}.{nested_key}",
+                            self_value=nested_self_value,
+                            other_value=nested_other_value
+                        ))
+            # For all other types, use standard equality
+            elif self_value != other_value:
                 diffs.append(ParameterDifferencesModel(
                     parameter_name=key,
                     self_value=self_value,
