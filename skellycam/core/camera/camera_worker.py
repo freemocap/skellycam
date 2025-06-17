@@ -8,13 +8,13 @@ from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.recorders.recording_manager import WorkerType
-from skellycam.core.types.type_overloads import CameraIdString, WorkerStrategy
+from skellycam.core.types.type_overloads import CameraIdString, WorkerStrategy, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
 
 
 class CameraStrategies(enum.Enum):
-    OPEN_CV = enum.auto()
+    OPEN_CV = opencv_camera_worker_method
 
 
 
@@ -31,29 +31,28 @@ class CameraWorker:
                camera_id: CameraIdString,
                ipc: CameraGroupIPC,
                config: CameraConfig,
+               update_camera_settings_subscription: TopicSubscriptionQueue,
+                shm_subscription: TopicSubscriptionQueue,
                worker_strategy: WorkerStrategy,
                camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
                ):
 
-        if camera_strategy == CameraStrategies.OPEN_CV:
-            camera_run_process = opencv_camera_worker_method
-        else:
-            raise ValueError(f"Unsupported camera strategy: {camera_strategy}")
+
         close_self_flag = multiprocessing.Value("b", False)
 
 
         return cls(camera_id=camera_id,
                    ipc=ipc,
                    close_self_flag=close_self_flag,
-                   worker=worker_strategy.value(target=camera_run_process,
+                   worker=worker_strategy.value(target=camera_strategy,
                                        name=f"Camera{config.camera_index}-{camera_id}-Process",
                                        daemon=True,
                                        kwargs=dict(camera_id=camera_id,
                                                    ipc=ipc,
                                                    config=config,
                                                    close_self_flag=close_self_flag,
-                                                   update_camera_settings_subscription=ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription(),
-                                                   shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription()
+                                                   update_camera_settings_subscription=update_camera_settings_subscription,
+                                                   shm_subscription=shm_subscription,
                                                    )
                                        )
                    ,

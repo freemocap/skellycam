@@ -132,6 +132,7 @@ class CameraGroupSharedMemoryManager:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         mf_payload: MultiFramePayload = MultiFramePayload.create_empty(camera_configs=self.camera_configs)
 
+
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
@@ -147,6 +148,8 @@ class CameraGroupSharedMemoryManager:
                                                  overwrite=False)  # Don't overwrite to ensure all frames are saved
         self.latest_multiframe_shm.put_multiframe(mf_payload=mf_payload)
         self.latest_mf_number.value = mf_payload.multi_frame_number  # Externalize so we can check the frame number without retrieving the full multi-frame
+        logger.debug(f"Built multiframe #{mf_payload.multi_frame_number} from cameras: {list(mf_payload.camera_ids)}")
+
         return mf_payload
 
     def build_all_new_multiframes(self) -> list[MultiFramePayload]:
@@ -154,8 +157,6 @@ class CameraGroupSharedMemoryManager:
         while self.new_multi_frame_available:
             mf_payload = self.build_next_multi_frame_payload()
             mfs.append(mf_payload)
-        if len(mfs) > 0:
-            logger.loop(f"Built multiframe #'s: {[mf.multi_frame_number for mf in mfs]} from cameras: {self.camera_ids}")
         return mfs
 
     def close(self):

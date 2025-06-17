@@ -128,7 +128,6 @@ class RecordingManager(BaseModel):
 
         video_manager: VideoManager | None = None
         audio_recorder: AudioRecorder | None = None
-        latest_mf: MultiFramePayload | None = None
         status.is_running_flag.value = True
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
@@ -162,11 +161,10 @@ class RecordingManager(BaseModel):
                     raise NotImplementedError("Runtime updates of shared memory are not yet implemented.")
 
                 # check/handle new multi-frames
-                video_manager, latest_mf = cls._get_and_handle_new_mfs(
+                video_manager = cls._get_and_handle_new_mfs(
                     status=status,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
-                    latest_mf=latest_mf
                 )
 
         except Exception as e:
@@ -190,18 +188,16 @@ class RecordingManager(BaseModel):
     def _get_and_handle_new_mfs(cls,
                                 status: RecordingManagerStatus,
                                 video_manager: VideoManager | None,
-                                latest_mf: MultiFramePayload | None,
-                                camera_group_shm: CameraGroupSharedMemoryManager) -> tuple[
-        VideoManager | None, MultiFramePayload | None]:
+                                camera_group_shm: CameraGroupSharedMemoryManager) ->VideoManager | None:
         latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
-        status.total_frames_published.value += len(latest_mfs)
-        status.number_frames_published_this_cycle.value = len(latest_mfs)
 
-        if len(latest_mfs) > 0 and video_manager is not None:
-            print(f"VideoManager: {len(latest_mfs)} new frames to process")
-            latest_mf = latest_mfs[-1]
+        if len(latest_mfs) > 0:
+            logger.info(f"RecordingManager: retrieved mfs: {[mf.multi_frame_number for mf in latest_mfs]}")
+            status.total_frames_published.value += len(latest_mfs)
+            status.number_frames_published_this_cycle.value = len(latest_mfs)
             # if new frames, add them to the recording manager (doesn't save them yet)
-            video_manager.add_multi_frames(latest_mfs)
+            if video_manager is not None:
+                video_manager.add_multi_frames(latest_mfs)
         else:
             if video_manager:
                 if status.should_record.value:
@@ -210,7 +206,7 @@ class RecordingManager(BaseModel):
                 else:
                     # if we have a video manager but not recording, then finish and close it
                     video_manager = cls.stop_recording(status=status, video_manager=video_manager)
-        return video_manager, latest_mf
+        return video_manager
 
     @classmethod
     def start_recording(cls,
