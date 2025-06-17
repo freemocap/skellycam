@@ -93,19 +93,25 @@ class CameraGroup:
             return False
         return all([self.cameras.all_ready, self.recorder.ready, self.mf_builder.ready,  self.shm.valid])
 
+    @property
+    def latest_multiframe_number(self) -> int|None:
+        if not self.shm.multi_frame_ring_shm.last_written_index.valid:
+            return None
+        return self.shm.multi_frame_ring_shm.last_written_index.value if self.shm is not None else -1
+
     def get_latest_frontend_payload(self, if_newer_than: int | None = None) -> FrontendFramePayload | None:
         if self.shm is None:
             return None
         if if_newer_than is not None:
-            if self.shm.latest_mf_number.value <= if_newer_than:
+            if self.latest_multiframe_number is None:
+                return None
+            if self.latest_multiframe_number <= if_newer_than:
                 return None
 
-        mf = self.shm.latest_multiframe_shm.retrieve_multiframe()
+        mf = self.shm.multi_frame_ring_shm.get_latest_multiframe()
         if mf is None:
             return None
-        # Create a deep copy to prevent concurrent modification issues
-        mf_copy = mf.model_copy(deep=True)
-        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_copy)
+        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf)
 
     def close(self):
         logger.debug("Closing camera group")

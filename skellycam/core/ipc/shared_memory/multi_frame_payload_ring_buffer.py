@@ -37,8 +37,9 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
 
         self.put_data(data=mf_payload.to_numpy_record_array(), overwrite=overwrite)
 
-    def get_latest_multiframe(self) -> MultiFramePayload:
-
+    def get_latest_multiframe(self) -> MultiFramePayload| None:
+        if not self.first_data_written:
+            return None
         mf_payload = MultiFramePayload.from_numpy_record_array(self.get_latest_data())
         for frame in mf_payload.frames.values():
             frame.frame_metadata.timestamps.copy_from_multi_frame_escape_shm_buffer_timestamp_ns = time.perf_counter_ns()
