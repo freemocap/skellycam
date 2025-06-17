@@ -8,7 +8,7 @@ from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 
 logger = logging.getLogger(__name__)
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
-TIMESTAMPS_FOLDER_NAME = "synchronized_videos"
+TIMESTAMPS_FOLDER_NAME = "synchronized_videos/timestamps"
 
 
 class RecordingInfo(BaseModel):

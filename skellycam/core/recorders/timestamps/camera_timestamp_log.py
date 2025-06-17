@@ -49,7 +49,7 @@ class CameraTimestampLog(BaseModel):
             camera_id=frame_metadata.camera_id,
             frame_number=frame_metadata.frame_number,
             timestamp_perf_counter_ns=frame_metadata.timestamp_ns,
-            timestamp_from_zero_ms=frame_metadata.timestamp_ns- first_frame_metadata.timestamp_ns / 1e6,
+            timestamp_from_zero_ms=(frame_metadata.timestamp_ns- first_frame_metadata.timestamp_ns) / 1e6,
             timestamp_utc_ns=timebase_mapping.convert_perf_counter_ns_to_unix_ns(frame_metadata.timestamp_ns,local_time=False),
             timestamp_utc_iso8601=datetime.fromtimestamp(
                 timebase_mapping.convert_perf_counter_ns_to_unix_ns(frame_metadata.timestamp_ns,local_time=False) / 1e9

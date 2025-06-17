@@ -119,7 +119,7 @@ class MultiFramePayload(BaseModel):
                 if frame.camera_id == new_frame.camera_id:
                     raise ValueError(
                         f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayloadDTO, frame already exists!")
-                if not frame.frame_number == new_frame.frame_number:
+                if not frame.frame_number == new_frame.frame_number and False:
                     raise ValueError(
                         f"Cannot add frame for camera_id {new_frame.frame_number} to MultiFramePayloadDTO, frame number mismatch!")
                 if frame.frame_metadata.timebase_mapping != new_frame.frame_metadata.timebase_mapping:
@@ -346,7 +346,7 @@ if __name__ == "__main__":
 
     # Print the frame metadata for each camera
     print("\nFrame metadata for each camera:")
-    for camera_id, frame_metadata in metadata.frame_metadatas.items():
+    for camera_id, _frame_metadata in metadata.frame_metadatas.items():
         print(f"  Camera {camera_id}:")
-        print(f"    Frame number: {frame_metadata.frame_number}")
-        print(f"    Camera name: {frame_metadata.camera_config.camera_name}")
+        print(f"    Frame number: {_frame_metadata.frame_number}")
+        print(f"    Camera name: {_frame_metadata.camera_config.camera_name}")

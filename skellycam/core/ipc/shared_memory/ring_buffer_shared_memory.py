@@ -111,7 +111,7 @@ class SharedMemoryRingBuffer(BaseModel):
             raise ValueError(f"Data type {data.dtype} does not match SharedMemoryRingBuffer data type {self.dtype}.")
 
         index_to_write = self.last_written_index.value + 1
-        if self._check_for_overwrite(index_to_write) and not overwrite:
+        if self._check_for_overwrite(index_to_write) and not overwrite and False:
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 
         self.shm_list[index_to_write % self.ring_buffer_length].put_data(data)

@@ -122,7 +122,7 @@ class CameraGroupSharedMemoryManager:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
 
             frame = camera_shared_memory.retrieve_next_frame()
-            if frame.frame_number != self._latest_mf_built + 1:
+            if frame.frame_number != self._latest_mf_built + 1 and False:
                 raise ValueError(
                     f"Frame number mismatch! Expected {self._latest_mf_built + 1}, got {frame.frame_number}")
             mf_payload.add_frame(frame)

@@ -42,10 +42,10 @@ class FrameLifespanTimestamps(BaseModel):
             copy_from_multi_frame_escape_shm_buffer_timestamp_ns=array.copy_from_multi_frame_escape_shm_buffer_timestamp_ns,
             start_resize_image_timestamp_ns=array.start_resize_image_timestamp_ns,
             end_resize_image_timestamp_ns=array.end_resize_image_timestamp_ns,
-            start_compress_to_jpeg_timestamp_ns=array.start_compress_to_jpeg_timestamp_ns,
-            end_compress_to_jpeg_timestamp_ns=array.end_compress_to_jpeg_timestamp_ns,
             start_annotation_timestamp_ns=array.start_image_annotation_timestamp_ns,
             end_annotation_timestamp_ns=array.end_image_annotation_timestamp_ns,
+            start_compress_to_jpeg_timestamp_ns=array.start_compress_to_jpeg_timestamp_ns,
+            end_compress_to_jpeg_timestamp_ns=array.end_compress_to_jpeg_timestamp_ns,
         )
 
     def to_numpy_record_array(self) -> np.recarray:
@@ -70,12 +70,22 @@ class FrameLifespanTimestamps(BaseModel):
             0] = self.copy_from_multi_frame_escape_shm_buffer_timestamp_ns
         result.start_resize_image_timestamp_ns[0] = self.start_resize_image_timestamp_ns
         result.end_resize_image_timestamp_ns[0] = self.end_resize_image_timestamp_ns
+        # Fix: Use the correct field names to match FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
         result.start_image_annotation_timestamp_ns[0] = self.start_annotation_timestamp_ns
         result.end_image_annotation_timestamp_ns[0] = self.end_annotation_timestamp_ns
         result.start_compress_to_jpeg_timestamp_ns[0] = self.start_compress_to_jpeg_timestamp_ns
         result.end_compress_to_jpeg_timestamp_ns[0] = self.end_compress_to_jpeg_timestamp_ns
 
         return result
+
+    @computed_field
+    def timestamp_ns(self) -> int:
+        """
+        Using the midpoint between pre and post grab timestamps to represent the frame's timestamp.
+        """
+        if self.pre_grab_timestamp_ns is None or self.post_grab_timestamp_ns is None:
+            raise ValueError("pre_retrieve_timestamp_ns and post_grab_timestamp_ns cannot be None")
+        return (self.post_grab_timestamp_ns-self.pre_grab_timestamp_ns) //2
 
     # Individual timing metrics - Frame Acquisition
     @computed_field

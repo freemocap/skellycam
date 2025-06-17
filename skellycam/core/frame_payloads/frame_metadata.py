@@ -39,7 +39,7 @@ class FrameMetadata(BaseModel):
 
     @property
     def timestamp_ns(self) -> int:
-        return (self.timestamps.post_grab_timestamp_ns-self.timestamps.post_grab_timestamp_ns)//2
+        return self.timestamps.timestamp_ns
 
     @classmethod
     def from_numpy_record_array(cls, array: np.recarray):

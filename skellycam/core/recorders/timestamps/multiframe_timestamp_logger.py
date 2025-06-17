@@ -53,7 +53,7 @@ class MultiframeTimestampLogger(BaseModel):
         return str(Path(self.timestamps_base_path)/ f"{self.recording_info.recording_name}_timestamps_README.md")
 
     def log_multiframe(self, multi_frame_payload: MultiFramePayload):
-        if len(self.multi_frame_metadatas) == 0:
+        if self.initial_multi_frame_payload is None:
             self.initial_multi_frame_payload = multi_frame_payload
         self.multi_frame_metadatas.append(multi_frame_payload.to_metadata())
 
@@ -61,6 +61,7 @@ class MultiframeTimestampLogger(BaseModel):
         logger.debug(
             f"Closing timestamp logger manager... Saving timestamp logs to {self.csv_save_path}"
         )
+        Path(self.recording_info.timestamps_folder).mkdir(parents=True, exist_ok=True)
         self._save_starting_timestamp()
         self._convert_to_dataframe_and_save()
         self.save_stats()
