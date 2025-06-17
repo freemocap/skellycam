@@ -8,6 +8,7 @@ from pydantic import BaseModel, ValidationError, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.recording_timestamps import RecordingTimestamps
 from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
@@ -32,7 +33,7 @@ class VideoManager(BaseModel):
     id: RecordingManagerIdString = Field(default_factory=lambda: str(uuid.uuid4))
     recording_info: RecordingInfo
     video_recorders: dict[CameraIdString, VideoRecorder]
-    multi_frame_timestamp_logger: MultiframeTimestampLogger
+    recording_timestamps: RecordingTimestamps
     is_finished: bool = False
     class Config:
         arbitrary_types_allowed = True
@@ -45,7 +46,7 @@ class VideoManager(BaseModel):
         logger.debug(f"Creating RecordingManager for recording folder {recording_info.recording_name}")
 
         return cls(recording_info=recording_info,
-                   multi_frame_timestamp_logger=MultiframeTimestampLogger(recording_info=recording_info),
+                   recording_timestamps=RecordingTimestamps(),
                    video_recorders={camera_id: VideoRecorder.create(camera_id=camera_id,
                                                                     recording_info=recording_info,
                                                                     config=config,
@@ -69,6 +70,7 @@ class VideoManager(BaseModel):
         for mf_payload in multi_frame_payloads:
             self.add_multi_frame(mf_payload=mf_payload)
 
+
     def add_multi_frame(self, mf_payload: MultiFramePayload):
         logger.loop(
             f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_info.recording_name}")
@@ -77,7 +79,7 @@ class VideoManager(BaseModel):
         for camera_id in mf_payload.camera_ids:
             frame = mf_payload.get_frame(camera_id)
             self.video_recorders[camera_id].add_frame(frame=frame)
-        self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
+        self.recording_timestamps.add_multiframe(mf_payload)
 
     def try_save_one_frame(self) -> bool:
         """

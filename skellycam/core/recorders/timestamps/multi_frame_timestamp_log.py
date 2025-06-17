@@ -3,7 +3,8 @@ from datetime import datetime
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFrameMetadata, MultiFramePayload
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.multi_frame_metadata import MultiFrameMetadata
 from skellycam.core.recorders.timestamps.camera_timestamp_log import CameraTimestampLog
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -176,25 +177,25 @@ class MultiFrameTimestampLog(BaseModel):
         )
         mean_time_waiting_to_retrieve_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_waiting_to_retrieve_ns
+                timestamp_log.frame_lifespan.idle_before_retrieve_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
         stddev_time_waiting_to_retrieve_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_waiting_to_retrieve_ns
+                timestamp_log.frame_lifespan.idle_before_retrieve_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
         mean_time_spent_retrieving_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.time_spent_retrieving_ns
+                timestamp_log.frame_lifespan.frame_retrieve_duation_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
         stddev_time_spent_retrieving_ns = np.std(
             [
-                timestamp_log.frame_lifespan.time_spent_retrieving_ns
+                timestamp_log.frame_lifespan.frame_retrieve_duation_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )

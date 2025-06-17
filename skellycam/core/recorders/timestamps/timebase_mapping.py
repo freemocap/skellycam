@@ -52,3 +52,9 @@ class TimebaseMapping(BaseModel):
             local_time_utc_offset=int(rec_array.local_time_utc_offset.copy())
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, TimebaseMapping):
+            return NotImplemented
+        return (self.utc_time_ns == other.utc_time_ns and
+                self.perf_counter_ns == other.perf_counter_ns and
+                self.local_time_utc_offset == other.local_time_utc_offset)

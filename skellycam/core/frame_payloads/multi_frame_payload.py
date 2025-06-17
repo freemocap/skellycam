@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.frame_payload import FramePayload, initialize_frame_rec_array
+from skellycam.core.frame_payloads.multi_frame_metadata import MultiFrameMetadata
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import CameraIdString
@@ -39,8 +39,18 @@ def initialize_multi_frame_rec_array(camera_configs: dict[str, CameraConfig],fra
     )
 
 class MultiFramePayload(BaseModel):
+    principal_camera_id: CameraIdString = Field(
+        description="- The camera ID of the principal camera for this multi-frame payload, used to define timebase within a multiframe."
+    )
     frames: dict[CameraIdString, FramePayload | None]
-    timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping, description=TimebaseMapping.__doc__)
+
+    @classmethod
+    def create_empty(cls, camera_configs: CameraConfigs, principal_camera_id: CameraIdString = None) -> "MultiFramePayload":
+        if principal_camera_id is None:
+            # use lowest camera index as principal camera
+            principal_camera_id = sorted(camera_configs.keys(), key=lambda x: camera_configs[x].camera_index)[0]
+        return cls(frames={camera_id: None for camera_id in camera_configs.keys()},
+                     principal_camera_id=principal_camera_id)
 
     def to_metadata(self) -> "MultiFrameMetadata":
         """
@@ -49,12 +59,16 @@ class MultiFramePayload(BaseModel):
         return MultiFrameMetadata.from_multi_frame_payload(self)
 
     @property
+    def timebase_mapping(self) -> TimebaseMapping:
+        self._validate_multi_frame()
+        timebase_mappings = set([frame.timebase_mapping for frame in self.frames.values()])
+        if len(timebase_mappings) != 1:
+            raise ValueError(f"MultiFramePayload has multiple timebase mappings: {timebase_mappings}")
+        return timebase_mappings.pop()
+
+    @property
     def camera_configs(self) -> CameraConfigs:
         return {camera_id: frame.camera_config for camera_id, frame in self.frames.items() if frame is not None}
-
-    @classmethod
-    def create_empty(cls, camera_configs: CameraConfigs):
-        return cls(frames={camera_id: None for camera_id in camera_configs.keys()})
 
     @property
     def full(self) -> bool:
@@ -149,64 +163,18 @@ class MultiFramePayload(BaseModel):
         return print_str
 
 
-
-class MultiFrameMetadata(BaseModel):
-    multi_frame_number: int
-    frame_metadatas: dict[CameraIdString, FrameMetadata]
-    timebase_mapping: TimebaseMapping
-
-
-    @classmethod
-    def from_multi_frame_payload(cls, multi_frame_payload: MultiFramePayload):
-        return cls(
-            multi_frame_number=multi_frame_payload.multi_frame_number,
-            frame_metadatas={
-                camera_id: frame.frame_metadata
-                for camera_id, frame in multi_frame_payload.frames.items()
-            },
-            timebase_mapping=multi_frame_payload.timebase_mapping
-        )
-
-
-    @property
-    def timestamp_unix_seconds_local(self) -> float:
-        mean_frame_grab_ns = np.mean([
-            frame_metadata.timestamps.post_grab_timestamp_ns
-            for frame_metadata in self.frame_metadatas.values()
-        ])
-        unix_ns = self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(int(mean_frame_grab_ns), local_time=True)
-        return unix_ns / 1e9
-    @property
-    def timestamp_unix_seconds_utc(self) -> float:
-        mean_frame_grab_ns = np.mean([
-            frame_metadata.timestamps.post_grab_timestamp_ns
-            for frame_metadata in self.frame_metadatas.values()
-        ])
-        unix_ns = self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(int(mean_frame_grab_ns), local_time=False)
-        return unix_ns / 1e9
-
-    @property
-    def seconds_since_cameras_connected(self) -> float:
-        return self.timestamp_unix_seconds_utc - self.timebase_mapping.utc_time_ns / 1e9
-
-    @property
-    def inter_camera_grab_range_ns(self) -> int:
-        grab_times = [frame_metadata.timestamps.post_grab_timestamp_ns
-                      for frame_metadata in self.frame_metadatas.values()]
-        return int(np.max(grab_times) - np.min(grab_times))
-
-
 if __name__ == "__main__":
     import numpy as np
     from skellycam.core.camera.config.camera_config import CameraConfig
     from skellycam.core.camera.config.image_resolution import ImageResolution
     from skellycam.core.frame_payloads.frame_payload import FramePayload
     from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-    from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
+    from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps, MultiframeLifespanTimestamps, \
+    MultiframeTimestamps
     from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
     # Create example camera configurations
-    camera_configs = {
+    _camera_configs = {
         "cam1": CameraConfig(
             camera_id="cam1",
             camera_index=0,
@@ -265,17 +233,17 @@ if __name__ == "__main__":
     )
 
     # Create frame metadata for each camera
-    frame_number = 1
+    _frame_number = 1
     metadata1 = FrameMetadata(
-        frame_number=frame_number,
-        camera_config=camera_configs["cam1"],
+        frame_number=_frame_number,
+        camera_config=_camera_configs["cam1"],
         timestamps=timestamps1,
         timebase_mapping=timebase_mapping
     )
 
     metadata2 = FrameMetadata(
-        frame_number=frame_number,
-        camera_config=camera_configs["cam2"],
+        frame_number=_frame_number,
+        camera_config=_camera_configs["cam2"],
         timestamps=timestamps2,
         timebase_mapping=timebase_mapping
     )
@@ -303,7 +271,7 @@ if __name__ == "__main__":
     print("\n=== Testing MultiFramePayload ===")
 
     # Create an empty multi-frame payload
-    multi_frame = MultiFramePayload.create_empty(camera_configs)
+    multi_frame = MultiFramePayload.create_empty(_camera_configs)
     print(f"Created empty multi-frame payload: {multi_frame}")
     print(f"Is full: {multi_frame.full}")
     print(f"Camera IDs: {multi_frame.camera_ids}")
@@ -346,7 +314,7 @@ if __name__ == "__main__":
 
     # Print the frame metadata for each camera
     print("\nFrame metadata for each camera:")
-    for camera_id, _frame_metadata in metadata.frame_metadatas.items():
-        print(f"  Camera {camera_id}:")
+    for _camera_id, _frame_metadata in metadata.frame_metadatas.items():
+        print(f"  Camera {_camera_id}:")
         print(f"    Frame number: {_frame_metadata.frame_number}")
         print(f"    Camera name: {_frame_metadata.camera_config.camera_name}")

@@ -106,3 +106,8 @@ dev-dependencies = [
 #    "nuitka>=2.4.9",
 #    "pyinstaller>=6.11.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+]
