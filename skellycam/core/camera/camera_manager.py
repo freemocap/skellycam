@@ -55,6 +55,11 @@ class CameraManager:
                                  shm_subscription_by_camera: dict[str, TopicSubscriptionQueue]
 
                                ):
+        if multiprocessing.parent_process():
+            # Configure logging if multiprocessing (i.e. if there is a parent process)
+            from skellycam.system.logging_configuration.configure_logging import configure_logging
+            from skellycam import LOG_LEVEL
+            configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
         logger.info(f"Starting camera manager process with {len(camera_configs)} cameras")
 
 
@@ -65,7 +70,7 @@ class CameraManager:
                 camera_id=camera_id,
                 ipc=ipc,
                 config=camera_config,
-                worker_strategy=camera_strategy,
+                camera_worker_strategy=camera_strategy,
                 update_camera_settings_subscription=config_subscription_by_camera[camera_id],
                 shm_subscription=shm_subscription_by_camera[camera_id],
             )

@@ -17,7 +17,7 @@ from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer im
     FramePayloadSharedMemoryRingBuffer
 from skellycam.core.recorders.timestamps import timebase_mapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
-from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
+from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -29,9 +29,10 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                                 update_camera_settings_subscription: TopicSubscriptionQueue,
                                 shm_subscription: TopicSubscriptionQueue,
                                 close_self_flag: multiprocessing.Value,
+                                camera_worker_strategy: WorkerStrategy,
                                 ):
     # Configure logging in the child process
-    if multiprocessing.parent_process():
+    if camera_worker_strategy == WorkerStrategy.PROCESS:
         # Configure logging if multiprocessing (i.e. if there is a parent process)
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
@@ -118,6 +119,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
     except Exception as e:
         self_status.signal_error()
         logger.exception(f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}")
+        ipc.kill_everything()
         raise
     finally:
         logger.debug(f"Releasing camera {camera_id} `cv2.VideoCapture` and shutting down CameraProcess")

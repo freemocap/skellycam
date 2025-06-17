@@ -33,7 +33,7 @@ class CameraWorker:
                config: CameraConfig,
                update_camera_settings_subscription: TopicSubscriptionQueue,
                 shm_subscription: TopicSubscriptionQueue,
-               worker_strategy: WorkerStrategy,
+               camera_worker_strategy: WorkerStrategy,
                camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
                ):
 
@@ -44,7 +44,7 @@ class CameraWorker:
         return cls(camera_id=camera_id,
                    ipc=ipc,
                    close_self_flag=close_self_flag,
-                   worker=worker_strategy.value(target=camera_strategy,
+                   worker=camera_worker_strategy.value(target=camera_strategy,
                                        name=f"Camera{config.camera_index}-{camera_id}-Process",
                                        daemon=True,
                                        kwargs=dict(camera_id=camera_id,
@@ -53,6 +53,7 @@ class CameraWorker:
                                                    close_self_flag=close_self_flag,
                                                    update_camera_settings_subscription=update_camera_settings_subscription,
                                                    shm_subscription=shm_subscription,
+                                                   camera_worker_strategy=camera_worker_strategy,
                                                    )
                                        )
                    ,

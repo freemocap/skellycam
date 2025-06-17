@@ -68,6 +68,10 @@ class SkellycamApplication:
         self.global_kill_flag.value = True
         self.camera_group_manager.close_all_camera_groups()
 
+    def kill_everything(self):
+        logger.exception("Something went wrong, killing everything!")
+        self.shutdown_skellycam()
+
 
 class SkellycamAppStateDTO(BaseModel):
     """

@@ -38,9 +38,9 @@ class CameraGroup:
                global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None,
                camera_strategy: WorkerStrategy = WorkerStrategy.THREAD,
-               camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD,
-               recorder_strategy: WorkerStrategy = WorkerStrategy.THREAD,
-               mf_builder_strategy: WorkerStrategy = WorkerStrategy.THREAD) -> 'CameraGroup':
+               camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
+               recorder_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
+               mf_builder_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
 
         ipc = CameraGroupIPC.create(group_id=group_id,
                                     camera_configs=camera_configs,
@@ -103,7 +103,9 @@ class CameraGroup:
         mf = self.shm.latest_multiframe_shm.retrieve_multiframe()
         if mf is None:
             return None
-        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf)
+        # Create a deep copy to prevent concurrent modification issues
+        mf_copy = mf.model_copy(deep=True)
+        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_copy)
 
     def close(self):
         logger.debug("Closing camera group")

@@ -70,6 +70,9 @@ class MultiFramePayload(BaseModel):
 
     @property
     def multi_frame_number(self) -> int:
+        return self._validate_multi_frame()
+
+    def _validate_multi_frame(self) -> int:
         if not self.full:
             raise ValueError("MultiFramePayload is not full, cannot get multi_frame_number")
         frame_numbers = [frame.frame_metadata.frame_number for frame in self.frames.values()]
@@ -82,9 +85,7 @@ class MultiFramePayload(BaseModel):
         """
         Convert the MultiFramePayload to a numpy record array.
         """
-        if not self.full:
-            raise ValueError("MultiFramePayload is not full, cannot convert to numpy structured array")
-
+        self._validate_multi_frame()
         # Create a record array with the correct shape (1,)
         dtype = create_multiframe_dtype(self.camera_configs)
         result = np.recarray(1, dtype=dtype)
@@ -101,7 +102,9 @@ class MultiFramePayload(BaseModel):
         for camera_id in mf_rec_array.dtype.names:
             frames[camera_id] = FramePayload.from_numpy_record_array(mf_rec_array[camera_id])
 
-        return cls(frames=frames)
+        instance =  cls(frames=frames)
+        instance._validate_multi_frame()
+        return instance
 
     def add_frame(self, new_frame: FramePayload) -> None:
 
@@ -120,8 +123,7 @@ class MultiFramePayload(BaseModel):
         self.frames[new_frame.camera_id] = new_frame
 
     def get_frame(self, camera_id: CameraIdString, return_copy: bool = True) -> FramePayload:
-        if not self.full:
-            raise ValueError("MultiFramePayload is not full, cannot get frame")
+        self._validate_multi_frame()
         frame = self.frames[camera_id]
 
         if return_copy:

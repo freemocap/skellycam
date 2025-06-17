@@ -5,6 +5,7 @@ import multiprocessing
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
+from skellycam.api.http import app
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
@@ -139,6 +140,7 @@ class WebsocketServer:
             pass
         except Exception as e:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
+            get_skellycam_app().kill_everything()
             raise
 
 
@@ -150,7 +152,7 @@ class WebsocketServer:
                 if not logs_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
                     try:
                         log_record: LogRecordModel = logs_queue.get_nowait()
-                        await self.websocket.send_json(log_record)
+                        # await self.websocket.send_json(log_record)
                     except (multiprocessing.queues.Empty, logs_queue.Empty):
                         await async_wait_1ms()
                 else:

@@ -75,6 +75,7 @@ class MultiframeBuilder:
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")
+            ipc.kill_everything()
             raise
         finally:
             logger.debug(f"Multi-frame publication thread for camera group {ipc.group_id} exiting...")
