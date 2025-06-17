@@ -21,14 +21,12 @@ DEFAULT_JPEG_QUALITY = 80
 
 
 class FrontendFramePayload(BaseModel):
-    camera_group_id: CameraGroupIdString
+    # camera_group_id: CameraGroupIdString
     jpeg_images: dict[CameraIdString, Base64JPEGImage]
     camera_configs: CameraConfigs
-    multi_frame_metadata: MultiFrameMetadata
+    # multi_frame_metadata: MultiFrameMetadata
     timebase_mapping: TimebaseMapping
     multi_frame_number: int = 0
-    backend_framerate: CurrentFramerate | None = None
-    frontend_framerate: CurrentFramerate | None = None
 
     @property
     def camera_ids(self):
@@ -59,20 +57,19 @@ class FrontendFramePayload(BaseModel):
                                              image=resized_image)
             frame.frame_metadata.timestamps.end_annotation_timestamp_ns = time.perf_counter_ns()
 
-            frame.frame_metadata.timestamps.start_jpeg_encoding_timestamp_ns = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.start_compress_to_jpeg_timestamp_ns = time.perf_counter_ns()
             jpeg_images[camera_id] = cls._image_to_jpeg_cv2(annotated_image, quality=jpeg_quality)
-            frame.frame_metadata.timestamps.end_jpeg_encoding_timestamp_ns = time.perf_counter_ns()
+            frame.frame_metadata.timestamps.end_compress_to_jpeg_timestamp_ns = time.perf_counter_ns()
 
 
         return cls(
             jpeg_images=jpeg_images,
-            camera_group_id=multi_frame_payload.camera_group_id,
+            # camera_group_id=multi_frame_payload.camera_group_id,
             timebase_mapping=multi_frame_payload.timebase_mapping,
             multi_frame_number=multi_frame_payload.multi_frame_number,
-            multi_frame_metadata=multi_frame_payload.to_metadata(),
+            # multi_frame_metadata=multi_frame_payload.to_metadata(),
             camera_configs=multi_frame_payload.camera_configs,
-            backend_framerate=multi_frame_payload.backend_framerate,
-            frontend_framerate=multi_frame_payload.frontend_framerate)
+)
 
     @staticmethod
     def _resize_image(frame: FramePayload,
@@ -150,7 +147,7 @@ def annotate_image(frame: FramePayload,
                    image: np.ndarray) -> np.ndarray:
     annotation_text = [
         f"Camera ID: {frame.camera_id}",
-        f"Frames Read: {frame.metadata[FRAME_METADATA_MODEL.FRAME_NUMBER.value]}",
+        f"Frames Read: {frame.frame_metadata.frame_number}",
     ]
     font_scale = 1
     font_thickness = 2

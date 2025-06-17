@@ -14,8 +14,8 @@ class SharedMemoryElementDTO(BaseModel):
     )
     shm_name: str
     shm_valid_name: str
+    first_written_shm_name: str
     dtype: np.dtype
-
 
 
 class SharedMemoryElement(BaseModel):
@@ -23,10 +23,15 @@ class SharedMemoryElement(BaseModel):
         arbitrary_types_allowed=True
     )
     buffer: np.recarray
-    valid_flag_buffer: NDArray[Shape["1"], np.bool_]
+
     dtype: np.dtype
     shm: shared_memory.SharedMemory
+
     valid_flag_shm: shared_memory.SharedMemory
+    valid_flag_buffer: NDArray[Shape["1"], np.bool_]
+
+    first_data_written_shm: shared_memory.SharedMemory
+    first_data_written_buffer: NDArray[Shape["1"], np.bool_]
     read_only: bool
     original: bool = False
 
@@ -38,12 +43,18 @@ class SharedMemoryElement(BaseModel):
         valid_flag_shm = shared_memory.SharedMemory(size=np.dtype(np.bool_).itemsize, create=True)
         valid_flag_buffer = np.ndarray((1,), dtype=np.bool_, buffer=valid_flag_shm.buf)
         valid_flag_buffer[0] = True
+
+        first_data_written_shm = shared_memory.SharedMemory(size=np.dtype(np.bool_).itemsize, create=True)
+        first_data_written_buffer = np.ndarray((1,), dtype=np.bool_, buffer=first_data_written_shm.buf)
+        first_data_written_buffer[0] = False
         return cls(
             buffer=buffer,
             shm=shm,
-                   dtype=dtype,
-                   valid_flag_shm=valid_flag_shm,
-                   valid_flag_buffer=valid_flag_buffer,
+            dtype=dtype,
+            valid_flag_shm=valid_flag_shm,
+            valid_flag_buffer=valid_flag_buffer,
+            first_data_written_shm=first_data_written_shm,
+            first_data_written_buffer=first_data_written_buffer,
             original=True,
             read_only=read_only
         )
@@ -52,14 +63,21 @@ class SharedMemoryElement(BaseModel):
     def recreate(cls, dto: SharedMemoryElementDTO, read_only: bool):
         shm = shared_memory.SharedMemory(name=dto.shm_name)
         buffer = np.recarray(shape=(1,), dtype=dto.dtype, buf=shm.buf)
+
         valid_flag_shm = shared_memory.SharedMemory(name=dto.shm_valid_name)
         valid_flag_buffer = np.ndarray((1,), dtype=np.bool_, buffer=valid_flag_shm.buf)
+
+        first_data_written_shm = shared_memory.SharedMemory(name=dto.first_written_shm_name)
+        first_data_written_buffer = np.ndarray((1,), dtype=np.bool_, buffer=first_data_written_shm.buf)
+
         return cls(
             buffer=buffer,
             shm=shm,
             dtype=dto.dtype,
             valid_flag_shm=valid_flag_shm,
             valid_flag_buffer=valid_flag_buffer,
+            first_data_written_shm=first_data_written_shm,
+            first_data_written_buffer=first_data_written_buffer,
             original=False,
             read_only=read_only
         )
@@ -71,11 +89,20 @@ class SharedMemoryElement(BaseModel):
     @valid.setter
     def valid(self, value: Any):
         self.valid_flag_buffer[0] = bool(value)
+
+    @property
+    def first_data_written(self) -> bool:
+        return bool(np.copy(self.first_data_written_buffer)[0])
+    @first_data_written.setter
+    def first_data_written(self, value: Any):
+        self.first_data_written_buffer[0] = bool(value)
+
     def to_dto(self) -> SharedMemoryElementDTO:
         return SharedMemoryElementDTO(
             shm_name=self.shm.name,
             dtype=self.dtype,
-            shm_valid_name=self.valid_flag_shm.name
+            shm_valid_name=self.valid_flag_shm.name,
+            first_written_shm_name=self.first_data_written_shm.name
         )
 
     @property
@@ -101,8 +128,13 @@ class SharedMemoryElement(BaseModel):
                 f"Array shape {data.shape} does not match SharedMemoryElement shape {self.buffer.shape}")
 
         np.copyto(dst=self.buffer, src=data)
+        self.first_data_written = True
 
-    def retrieve_data(self) -> np.recarray:
+    def retrieve_data(self) -> np.recarray|None:
+        if not self.valid:
+            raise ValueError("Cannot retrieve data from an invalid SharedMemoryElement.")
+        if not self.first_data_written:
+            return None
         data = np.rec.array(self.buffer, dtype=self.dtype)
         if data.dtype != self.dtype:
             raise ValueError(f"Array dtype {data.dtype} does not match SharedMemoryElement dtype {self.dtype}")
@@ -111,11 +143,10 @@ class SharedMemoryElement(BaseModel):
             return data[0]
         return data
 
-
-
     def close(self):
         self.shm.close()
         self.valid_flag_shm.close()
+        self.first_data_written_shm.close()
 
     def unlink(self):
         if not self.original:
@@ -124,19 +155,22 @@ class SharedMemoryElement(BaseModel):
         self.valid = False
         self.shm.unlink()
         self.valid_flag_shm.unlink()
+        self.first_data_written_shm.unlink()
+
     def unlink_and_close(self):
         self.unlink()
         self.close()
-if __name__ == "__main__":
 
+
+if __name__ == "__main__":
     # Define a custom dtype for testing
     test_dtype = np.dtype([('x', np.float64), ('y', np.float64), ('z', np.float64)])
 
     print("Creating original SharedMemoryElement...")
-    original = SharedMemoryElement.create(dtype=test_dtype)
+    original = SharedMemoryElement.create(dtype=test_dtype, read_only=False)
 
     # Create test data
-    test_data = np.rec.array((2,3,4), dtype=test_dtype)
+    test_data = np.rec.array((2, 3, 4), dtype=test_dtype)
 
     print(f"Original data:\n{test_data}")
 
@@ -149,7 +183,7 @@ if __name__ == "__main__":
 
     # Simulate another process by recreating from DTO
     print("Recreating from DTO (simulating another process)...")
-    copy = SharedMemoryElement.recreate(dto)
+    copy = SharedMemoryElement.recreate(dto, read_only=False)
 
     # Get data from the copy
     retrieved_data = copy.retrieve_data()

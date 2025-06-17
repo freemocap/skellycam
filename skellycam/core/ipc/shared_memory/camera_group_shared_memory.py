@@ -138,7 +138,7 @@ class CameraGroupSharedMemoryManager:
 
             frame = camera_shared_memory.retrieve_next_frame()
             if frame.frame_number != self.latest_mf_number.value + 1:
-                raise ValueError(
+                logger.warning(
                     f"Frame number mismatch! Expected {self.latest_mf_number.value + 1}, got {frame.frame_number}")
             mf_payload.add_frame(frame)
         if not mf_payload or not mf_payload.full:
@@ -154,6 +154,8 @@ class CameraGroupSharedMemoryManager:
         while self.new_multi_frame_available:
             mf_payload = self.build_next_multi_frame_payload()
             mfs.append(mf_payload)
+        if len(mfs) > 0:
+            logger.loop(f"Built multiframe #'s: {[mf.multi_frame_number for mf in mfs]} from cameras: {self.camera_ids}")
         return mfs
 
     def close(self):

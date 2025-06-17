@@ -225,20 +225,20 @@ class CameraConfig(BaseModel):
     def to_numpy_record_array(self) -> np.recarray:
         rec_arr = np.recarray((1,), dtype=CAMERA_CONFIG_DTYPE)
 
-        rec_arr.camera_id = self.camera_id
-        rec_arr.camera_index = self.camera_index
-        rec_arr.camera_name = self.camera_name
-        rec_arr.use_this_camera = self.use_this_camera
-        rec_arr.resolution_height = self.resolution.height
-        rec_arr.resolution_width = self.resolution.width
-        rec_arr.color_channels = self.color_channels
-        rec_arr.pixel_format = self.pixel_format
-        rec_arr.exposure_mode = self.exposure_mode
-        rec_arr.exposure = self.exposure
-        rec_arr.framerate = self.framerate
-        rec_arr.rotation = self.rotation.value
-        rec_arr.capture_fourcc = self.capture_fourcc
-        rec_arr.writer_fourcc = self.writer_fourcc
+        rec_arr.camera_id[0] = self.camera_id
+        rec_arr.camera_index[0] = self.camera_index
+        rec_arr.camera_name[0] = self.camera_name
+        rec_arr.use_this_camera[0] = self.use_this_camera
+        rec_arr.resolution_height[0] = self.resolution.height
+        rec_arr.resolution_width[0] = self.resolution.width
+        rec_arr.color_channels[0] = self.color_channels
+        rec_arr.pixel_format[0] = self.pixel_format
+        rec_arr.exposure_mode[0] = self.exposure_mode
+        rec_arr.exposure[0] = self.exposure
+        rec_arr.framerate[0] = round(self.framerate,4)
+        rec_arr.rotation[0] = self.rotation.value
+        rec_arr.capture_fourcc[0] = self.capture_fourcc
+        rec_arr.writer_fourcc[0] = self.writer_fourcc
 
         return rec_arr
 

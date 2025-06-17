@@ -1,4 +1,9 @@
+from typing import TYPE_CHECKING
+
 import numpy as np
+
+if TYPE_CHECKING:
+    from skellycam.core.camera.config.camera_config import CameraConfig
 
 CAMERA_CONFIG_DTYPE = np.dtype([
     ('camera_id', 'U1000'),
@@ -51,3 +56,31 @@ FRAME_METADATA_DTYPE = np.dtype([
 
 FRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera config
 MULTIFRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera configs
+
+
+def create_frame_dtype(config: 'CameraConfig') -> FRAME_DTYPE:
+    """
+    Create a numpy dtype for the frame metadata based on the camera configuration.
+    """
+    return np.dtype([
+        ('frame_metadata', FRAME_METADATA_DTYPE),
+        ('image', np.uint8, (config.resolution.height, config.resolution.width, config.color_channels)),
+    ], align=True)
+
+def create_multiframe_dtype(camera_configs: dict[str, 'CameraConfig']) -> MULTIFRAME_DTYPE:
+    """
+    Create a numpy dtype for multiple frames based on a dictionary of camera configurations.
+    Each camera gets its own field in the dtype.
+
+    Args:
+        camera_configs: Dictionary mapping camera IDs to their configurations
+
+    Returns:
+        A numpy dtype that can store frames from multiple cameras
+    """
+    fields = []
+    for camera_id, config in camera_configs.items():
+        # Create a field for each camera using its ID as the field name
+        # Each field contains a frame with the camera-specific dtype
+        fields.append((camera_id, create_frame_dtype(config)))
+    return np.dtype(fields, align=True)

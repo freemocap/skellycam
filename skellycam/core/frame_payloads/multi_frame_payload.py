@@ -6,30 +6,10 @@ from pydantic import BaseModel, Field
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-from skellycam.core.frame_payloads.frame_payload import FramePayload, create_frame_dtype, initialize_frame_rec_array
+from skellycam.core.frame_payloads.frame_payload import FramePayload, initialize_frame_rec_array
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import CameraIdString
-
-MULTI_FRAME_DTYPE = np.dtype
-
-
-def create_multiframe_dtype(camera_configs: dict[str, CameraConfig]) -> MULTI_FRAME_DTYPE:
-    """
-    Create a numpy dtype for multiple frames based on a dictionary of camera configurations.
-    Each camera gets its own field in the dtype.
-
-    Args:
-        camera_configs: Dictionary mapping camera IDs to their configurations
-
-    Returns:
-        A numpy dtype that can store frames from multiple cameras
-    """
-    fields = []
-    for camera_id, config in camera_configs.items():
-        # Create a field for each camera using its ID as the field name
-        # Each field contains a frame with the camera-specific dtype
-        fields.append((camera_id, create_frame_dtype(config)))
-    return np.dtype(fields, align=True)
 
 
 def initialize_multi_frame_rec_array(camera_configs: dict[str, CameraConfig],frame_number: int) -> np.recarray:

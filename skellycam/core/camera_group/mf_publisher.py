@@ -63,7 +63,7 @@ class MultiframeBuilder:
             raise ValueError(f"Expected SetShmMessage, got {type(shm_message)}")
         shm_dto: CameraGroupSharedMemoryDTO = shm_message.camera_group_shm_dto
         camera_group_shm = CameraGroupSharedMemoryManager.recreate(shm_dto=shm_dto, read_only=False)
-        logger.debug(f"Starting multi-frame publication thread for camera group {ipc.group_id}...")
+        logger.success(f"Starting multi-frame publication thread for camera group {ipc.group_id}...")
         try:
             while should_continue():
                 if not ipc.camera_orchestrator.all_cameras_ready:

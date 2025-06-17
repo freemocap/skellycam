@@ -3,26 +3,15 @@ from numpydantic import NDArray, Shape
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, FRAME_METADATA_DTYPE, \
-    initialize_frame_metadata_rec_array
-from skellycam.core.recorders.timestamps import timebase_mapping
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, initialize_frame_metadata_rec_array
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
+from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.utilities.rotate_image import rotate_image
 
 
-def create_frame_dtype(config: CameraConfig) -> FRAME_DTYPE:
-    """
-    Create a numpy dtype for the frame metadata based on the camera configuration.
-    """
-    return np.dtype([
-        ('image', np.uint8, (config.resolution.height, config.resolution.width, config.color_channels)),
-        ('frame_metadata', FRAME_METADATA_DTYPE)
-    ], align=True)
-
-
 # skellycam/core/frame_payloads/frame_payload.py
-def initialize_frame_rec_array(camera_config: CameraConfig, timebase_mapping: TimebaseMapping,
+def initialize_frame_rec_array(camera_config: CameraConfig,
+                               timebase_mapping: TimebaseMapping,
                                frame_number: int = 0) -> np.recarray:
     """
     Create a frame record array with the correct shape and dtype.
@@ -38,9 +27,9 @@ def initialize_frame_rec_array(camera_config: CameraConfig, timebase_mapping: Ti
     result = np.recarray(1, dtype=dtype)
 
     # Create the image array
-    image_array = np.zeros((camera_config.resolution.height,
+    image_array = np.ones((camera_config.resolution.height,
                             camera_config.resolution.width,
-                            camera_config.color_channels), dtype=np.uint8)
+                            camera_config.color_channels), dtype=np.uint8) + camera_config.camera_index
 
     # Get the metadata array
     metadata_array = initialize_frame_metadata_rec_array(camera_config=camera_config,

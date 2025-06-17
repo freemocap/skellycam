@@ -5,6 +5,7 @@ import multiprocessing
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
@@ -119,7 +120,7 @@ class WebsocketServer:
             while self.should_continue:
                 await async_wait_1ms()
 
-                new_frontend_payloads  = self._app.get_new_frontend_payloads(if_newer_than=latest_mf_number)
+                new_frontend_payloads: list[FrontendFramePayload]  = self._app.get_new_frontend_payloads(if_newer_than=latest_mf_number)
                 for fe_payload in new_frontend_payloads:
                     latest_mf_number = fe_payload.multi_frame_number
                     if not self.websocket.client_state == WebSocketState.CONNECTED:

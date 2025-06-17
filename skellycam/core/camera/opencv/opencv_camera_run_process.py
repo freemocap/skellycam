@@ -9,13 +9,14 @@ from skellycam.core.camera.opencv.opencv_apply_config import apply_camera_config
 from skellycam.core.camera.opencv.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
-from skellycam.core.frame_payloads.frame_payload import initialize_frame_rec_array, FRAME_DTYPE
+from skellycam.core.frame_payloads.frame_payload import initialize_frame_rec_array
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtractedConfigMessage, \
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
 from skellycam.core.recorders.timestamps import timebase_mapping
+from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
 
