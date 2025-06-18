@@ -177,13 +177,13 @@ class MultiFrameTimestampLog(BaseModel):
         )
         mean_time_waiting_to_retrieve_ns = np.mean(
             [
-                timestamp_log.frame_lifespan.idle_before_retrieve_ns
+                timestamp_log.frame_lifespan.idle_before_retrieve_duration_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )
         stddev_time_waiting_to_retrieve_ns = np.std(
             [
-                timestamp_log.frame_lifespan.idle_before_retrieve_ns
+                timestamp_log.frame_lifespan.idle_before_retrieve_duration_ns
                 for timestamp_log in camera_timestamp_logs.values()
             ]
         )

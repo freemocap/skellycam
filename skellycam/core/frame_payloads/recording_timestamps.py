@@ -11,6 +11,10 @@ class RecordingTimestamps(BaseModel):
         default_factory=list,
         description="List of timestamps for each multi-frame payload in the recording session")
 
+    @property
+    def number_of_recorded_frames(self) -> int:
+        return len(self.multiframe_timestamps)
+
     def add_multiframe(self, multiframe:MultiFramePayload):
         """
         Adds a multiframe payload to the recording timestamps.
@@ -28,225 +32,181 @@ class RecordingTimestamps(BaseModel):
         return self.multiframe_timestamps[0]
 
     @property
-    def recording_start_ns(self) -> int:
+    def recording_start_local_unix_ms(self) -> float:
         """Returns the timestamp of the first frame in the recording"""
-        return self.first_timestamp.principal_camera_timestamps.timestamp_ns
+        return self.first_timestamp.principal_camera_timestamps.frame_initialized_local_unix_ms
 
     @property
-    def timestamps_ns(self) -> list[int]:
+    def timestamps_local_unix_ms(self) -> list[float]:
         """
         Returns a list of timestamps in nanoseconds for each multiframe payload,
         relative to the first frame.
         """
-        return [mf.principal_camera_timestamps.timestamp_ns - self.recording_start_ns
-                for mf in self.multiframe_timestamps]
+        return [mf.timestamp_local_unix_ms.mean - self.recording_start_local_unix_ms for mf in self.multiframe_timestamps]
 
     @property
-    def frame_durations_ns(self) -> list[float]:
+    def frame_durations_ms(self) -> list[float]:
         """
-        Returns the duration between consecutive frames in nanoseconds.
-        The first value is 0 since there's no previous frame.
+        Returns the duration between consecutive frames in milliseconds.
+        The first value is NaN since there's no previous frame.
+        If there are no timestamps, returns an empty list.
         """
-        return [0] + list(np.diff(self.timestamps_ns))
+        if not self.timestamps_local_unix_ms:
+            return []
+        return [np.nan] + list(np.diff(self.timestamps_local_unix_ms))
 
     @property
     def frames_per_second(self) -> list[float]:
-        """
-        Returns the instantaneous frames per second for each frame.
-        """
-        durations = self.frame_durations_ns
-        # Avoid division by zero by replacing zeros with NaN
-        durations_no_zero = np.array(durations, dtype=float)
-        durations_no_zero[durations_no_zero == 0] = np.nan
-        # Convert nanoseconds to seconds and calculate fps
-        return list(1e9 / durations_no_zero)
+        return [duration** -1 * 1e6 for duration in self.frame_durations_ms if duration > 0 ]
 
-    @property
     @computed_field
-    def frame_initialized_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.frame_initialized_ns.mean for mf in self.multiframe_timestamps],
-            name="frame_initialized_ns",
-            units="milliseconds"
-        )
     @property
-    @computed_field
-    def pre_grab_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.pre_grab_ns.mean for mf in self.multiframe_timestamps],
-            name="pre_grab_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def post_grab_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.post_grab_ns.mean for mf in self.multiframe_timestamps],
-            name="post_grab_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def pre_retrieve_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.pre_retrieve_ns.mean for mf in self.multiframe_timestamps],
-            name="pre_retrieve_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def post_retrieve_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.post_retrieve_ns.mean for mf in self.multiframe_timestamps],
-            name="post_retrieve_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def copy_to_camera_shm_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.copy_to_camera_shm_ns.mean for mf in self.multiframe_timestamps],
-            name="copy_to_camera_shm_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def retrieve_from_camera_shm_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.retrieve_from_camera_shm_ns.mean for mf in self.multiframe_timestamps],
-            name="retrieve_from_camera_shm_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def copy_to_multiframe_shm_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.copy_to_multiframe_shm_ns.mean for mf in self.multiframe_timestamps],
-            name="copy_to_multiframe_shm_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def retrieve_from_multiframe_shm_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.retrieve_from_multiframe_shm_ns.mean for mf in self.multiframe_timestamps],
-            name="retrieve_from_multiframe_shm_ns",
-            units="milliseconds"
-        )
-
-    @property
-    @computed_field
-    def timestamp_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.timestamp_ns.mean for mf in self.multiframe_timestamps],
-            name="timestamp_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def idle_before_grab_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.idle_before_grab_ns.mean for mf in self.multiframe_timestamps],
-            name="idle_before_grab_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def frame_grab_duration_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.frame_grab_duration_ns.mean for mf in self.multiframe_timestamps],
-            name="frame_grab_duration_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def idle_before_retrieve_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.idle_before_retrieve_ns.mean for mf in self.multiframe_timestamps],
-            name="idle_before_retrieve_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def frame_retrieve_duration_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.frame_retrieve_duration_ns.mean for mf in self.multiframe_timestamps],
-            name="frame_retrieve_duration_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def idle_before_copy_to_camera_shm_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.idle_before_copy_to_camera_shm_ns.mean for mf in self.multiframe_timestamps],
-            name="idle_before_copy_to_camera_shm_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def time_in_camera_shm_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.time_in_camera_shm_ns.mean for mf in self.multiframe_timestamps],
-            name="time_in_camera_shm_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def idle_before_copy_to_multiframe_shm_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.idle_before_copy_to_multiframe_shm_ns.mean for mf in self.multiframe_timestamps],
-            name="idle_before_copy_to_multiframe_shm_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def time_in_multiframe_shm(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.time_in_multiframe_shm.mean for mf in self.multiframe_timestamps],
-            name="time_in_multiframe_shm",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def total_frame_acquisition_time_ns(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.total_frame_acquisition_time_ns.mean for mf in self.multiframe_timestamps],
-            name="total_frame_acquisition_time_ns",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def total_ipc_travel_time(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.total_ipc_travel_time.mean for mf in self.multiframe_timestamps],
-            name="total_ipc_travel_time",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def inter_camera_timestamp_stats(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[mf.inter_camera_timestamp_stats_ms.mean for mf in self.multiframe_timestamps],
-            name="inter_camera_timestamp_stats",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
-    def frame_duration_stats(self) -> DescriptiveStatistics:
-        """Statistics about frame durations across the recording"""
-        return DescriptiveStatistics.from_samples(
-            samples=[duration / 1_000_000 for duration in self.frame_durations_ns[1:]],  # Skip the first 0
-            name="frame_duration",
-            units="milliseconds"
-        )
-    @property
-    @computed_field
     def fps_stats(self) -> DescriptiveStatistics:
-        """Statistics about frames per second across the recording"""
-        # Filter out any NaN or infinite values
-        valid_fps = [fps for fps in self.frames_per_second if np.isfinite(fps)]
+        """
+        Returns the statistics of the frames per second.
+        """
         return DescriptiveStatistics.from_samples(
-            samples=valid_fps,
+            samples=self.frames_per_second,
             name="frames_per_second",
-            units="fps"
+            units="Hz"
+        )
+    @computed_field
+    @property
+    def frame_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the frame durations in milliseconds.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=self.frame_durations_ms,
+            name="frame_durations_ms",
+            units="milliseconds"
+        )
+    @computed_field
+    @property
+    def inter_camera_grab_range_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the inter-camera grab range in nanoseconds.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.inter_camera_grab_range_ms for ts in self.multiframe_timestamps],
+            name="inter_camera_grab_range_ms",
+            units="milliseconds"
+        )
+
+
+    @computed_field
+    @property
+    def idle_before_grab_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the idle time before grabbing a frame.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.idle_before_grab_duration_ms for ts in self.multiframe_timestamps],
+            name="idle_before_grab_duration_ms",
+            units="milliseconds"
+        )
+
+    @computed_field
+    @property
+    def frame_grab_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the frame grab duration.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.frame_grab_duration_ms for ts in self.multiframe_timestamps],
+            name="frame_grab_duration_ms",
+            units="milliseconds"
+        )
+    @computed_field
+    @property
+    def idle_before_retrieve_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the idle time before retrieving a frame.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.idle_before_retrieve_duration_ms for ts in self.multiframe_timestamps],
+            name="idle_before_retrieve_duration_ms",
+            units="milliseconds"
+        )
+
+    @computed_field
+    @property
+    def frame_retrieve_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the frame retrieve duration.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.frame_retrieve_duration_ms for ts in self.multiframe_timestamps],
+            name="frame_retrieve_duration_ms",
+            units="milliseconds"
+        )
+
+    @computed_field
+    @property
+    def idle_before_copy_to_camera_shm_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the idle time before copying to camera shared memory.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.idle_before_copy_to_camera_shm_duration_ms for ts in self.multiframe_timestamps],
+            name="idle_before_copy_to_camera_shm_duration_ms",
+            units="milliseconds"
+        )
+
+    @computed_field
+    @property
+    def idle_in_camera_shm_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the idle time in camera shared memory.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.idle_in_camera_shm_duration_ms for ts in self.multiframe_timestamps],
+            name="idle_in_camera_shm_duration_ms",
+            units="milliseconds"
+        )
+    @computed_field
+    @property
+    def idle_before_copy_to_multiframe_shm_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the idle time before copying to multiframe shared memory.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.idle_before_copy_to_multiframe_shm_duration_ms for ts in self.multiframe_timestamps],
+            name="idle_before_copy_to_multiframe_shm_duration_ms",
+            units="milliseconds"
+        )
+    @computed_field
+    @property
+    def idle_in_multiframe_shm_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the idle time in multiframe shared memory.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.idle_in_multiframe_shm_duration_ms for ts in self.multiframe_timestamps],
+            name="idle_in_multiframe_shm_duration_ms",
+            units="milliseconds"
+        )
+
+
+    @computed_field
+    @property
+    def total_frame_acquisition_duration_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the total frame acquisition duration.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.total_frame_acquisition_duration_ms for ts in self.multiframe_timestamps],
+            name="total_frame_acquisition_duration_ms",
+            units="milliseconds"
+        )
+    @computed_field
+    @property
+    def total_ipc_travel_duration_stats (self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the total IPC travel duration.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.total_ipc_travel_duration_ms for ts in self.multiframe_timestamps],
+            name="total_ipc_travel_duration_ms",
+            units="milliseconds"
         )

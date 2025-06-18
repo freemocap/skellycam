@@ -186,6 +186,13 @@ class DescriptiveStatistics(BaseModel):
         return int(np.nanargmin(self.data))
 
     @property
+    def range(self) -> float:
+        """Range of the data (max - min)."""
+        if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
+            return np.nan
+        return self.max - self.min
+
+    @property
     def standard_deviation(self) -> float:
         return self.measures_of_variability.standard_deviation
 
@@ -225,7 +232,8 @@ class DescriptiveStatistics(BaseModel):
             f"\tMedian: {format_value(self.median)}\n"
             f"\tStandard Deviation: {format_value(self.standard_deviation)}\n"
             f"\tMaximum (index): {format_value(self.max)}({self.max_index})\n"
-            f"\tMinimum(index): {format_value(self.min)}({self.min_index})\n"
+            f"\tMinimum (index): {format_value(self.min)}({self.min_index})\n"
+            f"\tRange (max-min): {format_value(self.range)}\n"
             f"\tCoefficient of Variation (%): {format_value(self.coefficient_of_variation)}\n"
             f"\tMedian Absolute Deviation: {format_value(self.median_absolute_deviation)}\n"
             f"\tInterquartile Range: {format_value(self.interquartile_range)}\n"

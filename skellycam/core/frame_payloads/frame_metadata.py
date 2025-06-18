@@ -18,8 +18,7 @@ def initialize_frame_metadata_rec_array(
     # Assign values to the record array
     result.camera_config[0] = camera_config.to_numpy_record_array()[0]
     result.frame_number[0] = frame_number
-    result.timestamps[0] = FrameLifespanTimestamps().to_numpy_record_array()[0]
-    result.timebase_mapping[0] = timebase_mapping.to_numpy_record_array()[0]
+    result.timestamps[0] = FrameLifespanTimestamps(timebase_mapping=timebase_mapping).to_numpy_record_array()[0]
 
     return result
 
@@ -30,7 +29,6 @@ class FrameMetadata(BaseModel):
     frame_number: int
     camera_config: CameraConfig
     timestamps: FrameLifespanTimestamps
-    timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping, description=TimebaseMapping.__doc__)
 
     @property
     def camera_id(self) -> str:
@@ -39,7 +37,7 @@ class FrameMetadata(BaseModel):
 
     @property
     def timestamp_ns(self) -> int:
-        return self.timestamps.timestamp_ns
+        return self.timestamps.timestamp_local_unix_ms
 
     @classmethod
     def from_numpy_record_array(cls, array: np.recarray):
@@ -51,7 +49,6 @@ class FrameMetadata(BaseModel):
             frame_number=array.frame_number,
             camera_config=CameraConfig.from_numpy_record_array(array.camera_config),
             timestamps=FrameLifespanTimestamps.from_numpy_record_array(array.timestamps),
-            timebase_mapping=TimebaseMapping.from_numpy_record_array(array.timebase_mapping)
         )
 
     def to_numpy_record_array(self) -> np.recarray:
@@ -65,6 +62,5 @@ class FrameMetadata(BaseModel):
         result.camera_config[0] = self.camera_config.to_numpy_record_array()[0]
         result.frame_number[0] = self.frame_number
         result.timestamps[0] = self.timestamps.to_numpy_record_array()[0]
-        result.timebase_mapping[0] = self.timebase_mapping.to_numpy_record_array()[0]
 
         return result

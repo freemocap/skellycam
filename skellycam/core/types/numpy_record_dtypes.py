@@ -21,30 +21,30 @@ CAMERA_CONFIG_DTYPE = np.dtype([
     ('capture_fourcc', 'U4'),
     ('writer_fourcc', 'U4'),
 ], align=True)
-
-FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
-    ('frame_initialized_ns', np.uint64),
-    ('pre_grab_ns', np.uint64),
-    ('post_grab_ns', np.uint64),
-    ('pre_retrieve_ns', np.uint64),
-    ('post_retrieve_ns', np.uint64),
-    ('copy_to_camera_shm_buffer_ns', np.uint64),
-    ('retrieve_from_camera_shm_buffer_ns', np.uint64),
-    ('copy_to_multi_frame_escape_shm_buffer_ns', np.uint64),
-    ('retrieve_from_multi_frame_escape_shm_buffer_ns', np.uint64),
-], align=True)
-
 TIMEBASE_MAPPING_DTYPE = np.dtype([
     ('utc_time_ns', np.uint64),
     ('perf_counter_ns', np.uint64),
     ('local_time_utc_offset', np.int32),
 ], align=True)
+FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
+    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE),
+    ('frame_initialized_ns', np.uint64),
+    ('pre_grab_ns', np.uint64),
+    ('post_grab_ns', np.uint64),
+    ('pre_retrieve_ns', np.uint64),
+    ('post_retrieve_ns', np.uint64),
+    ('copy_to_camera_shm_ns', np.uint64),
+    ('retrieve_from_camera_shm_ns', np.uint64),
+    ('copy_to_multiframe_shm_ns', np.uint64),
+    ('retrieve_from_multiframe_shm_ns', np.uint64),
+], align=True)
+
+
 
 FRAME_METADATA_DTYPE = np.dtype([
     ('camera_config', CAMERA_CONFIG_DTYPE),
     ('frame_number', np.uint64),
-    ('timestamps', FRAME_LIFECYCLE_TIMESTAMPS_DTYPE),
-    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE)],
+    ('timestamps', FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)],
     align=True)
 
 FRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera config
