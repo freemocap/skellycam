@@ -17,9 +17,8 @@ class MultiframeTimestamps(BaseModel):
 
     frame_timestamps: dict[CameraIdString, FrameLifespanTimestamps] = Field(
         description="Timestamps for each camera's frame lifecycle on a given multi-frame payload")
-    principal_camera_id: CameraIdString = Field(description="The id of the principal camera, which will be used "
-                                                            "as the zero-reference for this multi-frame payload")
 
+    multiframe_number: int
     @classmethod
     def from_multiframe(cls, multiframe_payload: 'MultiFramePayload') -> 'MultiframeTimestamps':
         """
@@ -27,13 +26,8 @@ class MultiframeTimestamps(BaseModel):
         """
         return cls(frame_timestamps={camera_id: frame.timestamps
                                      for camera_id, frame in multiframe_payload.frames.items()},
-                   principal_camera_id=multiframe_payload.principal_camera_id)
-    @property
-    def principal_camera_timestamps(self) -> FrameLifespanTimestamps:
-        """
-        Returns the timestamps for the principal camera.
-        """
-        return self.frame_timestamps[self.principal_camera_id]
+                   multiframe_number=multiframe_payload.multi_frame_number)
+
 
     @computed_field
     @property

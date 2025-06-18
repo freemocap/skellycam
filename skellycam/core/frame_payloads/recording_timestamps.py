@@ -1,8 +1,11 @@
 import numpy as np
+import pandas as pd
 from pydantic import BaseModel, Field, computed_field
 
+from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.frame_payloads.multiframe_timestamps import MultiframeTimestamps
+from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
 
@@ -34,7 +37,8 @@ class RecordingTimestamps(BaseModel):
     @property
     def recording_start_local_unix_ms(self) -> float:
         """Returns the timestamp of the first frame in the recording"""
-        return self.first_timestamp.principal_camera_timestamps.frame_initialized_local_unix_ms
+        return min([mf_ts.frame_initialized_local_unix_ms.mean for mf_ts in self.multiframe_timestamps])
+
 
     @property
     def timestamps_local_unix_ms(self) -> list[float]:
@@ -59,7 +63,7 @@ class RecordingTimestamps(BaseModel):
     def frames_per_second(self) -> list[float]:
         return [duration** -1 * 1e6 for duration in self.frame_durations_ms if duration > 0 ]
 
-    @computed_field
+
     @property
     def fps_stats(self) -> DescriptiveStatistics:
         """
@@ -70,7 +74,7 @@ class RecordingTimestamps(BaseModel):
             name="frames_per_second",
             units="Hz"
         )
-    @computed_field
+
     @property
     def frame_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -81,7 +85,6 @@ class RecordingTimestamps(BaseModel):
             name="frame_durations_ms",
             units="milliseconds"
         )
-    @computed_field
     @property
     def inter_camera_grab_range_stats(self) -> DescriptiveStatistics:
         """
@@ -94,7 +97,6 @@ class RecordingTimestamps(BaseModel):
         )
 
 
-    @computed_field
     @property
     def idle_before_grab_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -106,7 +108,6 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def frame_grab_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -117,7 +118,6 @@ class RecordingTimestamps(BaseModel):
             name="frame_grab_duration_ms",
             units="milliseconds"
         )
-    @computed_field
     @property
     def idle_before_retrieve_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -129,7 +129,6 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def frame_retrieve_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -141,7 +140,6 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def idle_before_copy_to_camera_shm_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -153,7 +151,6 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def idle_in_camera_shm_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -164,7 +161,6 @@ class RecordingTimestamps(BaseModel):
             name="idle_in_camera_shm_duration_ms",
             units="milliseconds"
         )
-    @computed_field
     @property
     def idle_before_copy_to_multiframe_shm_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -175,7 +171,6 @@ class RecordingTimestamps(BaseModel):
             name="idle_before_copy_to_multiframe_shm_duration_ms",
             units="milliseconds"
         )
-    @computed_field
     @property
     def idle_in_multiframe_shm_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -188,7 +183,6 @@ class RecordingTimestamps(BaseModel):
         )
 
 
-    @computed_field
     @property
     def total_frame_acquisition_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -199,7 +193,6 @@ class RecordingTimestamps(BaseModel):
             name="total_frame_acquisition_duration_ms",
             units="milliseconds"
         )
-    @computed_field
     @property
     def total_ipc_travel_duration_stats (self) -> DescriptiveStatistics:
         """
@@ -210,3 +203,40 @@ class RecordingTimestamps(BaseModel):
             name="total_ipc_travel_duration_ms",
             units="milliseconds"
         )
+
+    def to_mf_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame([mf_ts.model_dump(exclude={'frame_timestamps', 'principal_camera_id'}) for mf_ts in self.multiframe_timestamps],
+                          index=[mf_ts.multiframe_number for mf_ts in self.multiframe_timestamps])
+
+    @property
+    def timestamps_by_camera_id(self) -> dict[CameraIdString, list[FrameLifespanTimestamps]]:
+        """
+        Returns a dictionary mapping camera IDs to lists of FrameLifespanTimestamps.
+        Each list contains the timestamps for that camera across all multiframe payloads.
+        """
+        camera_timestamps = {}
+        for mf_ts in self.multiframe_timestamps:
+            for camera_id, frame_ts in mf_ts.frame_timestamps.items():
+                if camera_id not in camera_timestamps:
+                    camera_timestamps[camera_id] = []
+                camera_timestamps[camera_id].append(frame_ts)
+        return camera_timestamps
+    @property
+    def frame_numbers(self) -> list[int]:
+        """
+        Returns a list of frame numbers for all frames in the recording.
+        This is derived from the multiframe timestamps.
+        """
+        return [mf_ts.multiframe_number for mf_ts in self.multiframe_timestamps]
+
+    def to_camera_dataframe(self) -> dict[CameraIdString, pd.DataFrame]:
+        """
+        Returns a dictionary of dataframes for each camera in the recording.
+        Each dataframe contains the timestamps for that camera.
+        """
+        camera_dfs = {}
+        for camera_id, frame_timestamps in self.timestamps_by_camera_id.items():
+            camera_dfs[camera_id] = pd.DataFrame([ts.model_dump() for ts in frame_timestamps],
+                                                 index=self.frame_numbers)
+
+        return camera_dfs

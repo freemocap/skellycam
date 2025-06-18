@@ -46,29 +46,19 @@ class FrontendFramePayload(BaseModel):
         jpeg_images = {}
         for camera_id in multi_frame_payload.frames.keys():
             frame = multi_frame_payload.get_frame(camera_id)
-            frame.frame_metadata.timestamps.start_resize_image_timestamp_ns = time.perf_counter_ns()
             resized_image = cls._resize_image(frame=frame,
                                               image_sizes=image_sizes,
                                               fallback_resize_ratio=resize_image)
 
-            frame.frame_metadata.timestamps.end_resize_image_timestamp_ns = time.perf_counter_ns()
-
-            frame.frame_metadata.timestamps.start_annotation_timestamp_ns = time.perf_counter_ns()
             annotated_image = annotate_image(frame=frame,
                                              image=resized_image)
-            frame.frame_metadata.timestamps.end_annotation_timestamp_ns = time.perf_counter_ns()
-
-            frame.frame_metadata.timestamps.start_compress_to_jpeg_timestamp_ns = time.perf_counter_ns()
             jpeg_images[camera_id] = cls._image_to_jpeg_cv2(annotated_image, quality=jpeg_quality)
-            frame.frame_metadata.timestamps.end_compress_to_jpeg_timestamp_ns = time.perf_counter_ns()
 
 
         return cls(
             jpeg_images=jpeg_images,
-            # camera_group_id=multi_frame_payload.camera_group_id,
             timebase_mapping=multi_frame_payload.timebase_mapping,
             multi_frame_number=multi_frame_payload.multi_frame_number,
-            # multi_frame_metadata=multi_frame_payload.to_metadata(),
             camera_configs=multi_frame_payload.camera_configs,
 )
 
