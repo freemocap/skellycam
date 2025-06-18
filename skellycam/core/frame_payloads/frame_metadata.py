@@ -1,5 +1,5 @@
 import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps

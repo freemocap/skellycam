@@ -5,11 +5,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
-from skellycam.core.ipc.shared_memory.multi_frame_payload_single_slot_shared_memory import \
-    MultiframePayloadSingleSlotSharedMemory
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
-from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElementDTO
-from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
@@ -122,7 +118,7 @@ class CameraGroupSharedMemoryManager:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
 
             frame = camera_shared_memory.retrieve_next_frame()
-            if frame.frame_number != self._latest_mf_built + 1 and False:
+            if frame.frame_number != self._latest_mf_built + 1:
                 raise ValueError(
                     f"Frame number mismatch! Expected {self._latest_mf_built + 1}, got {frame.frame_number}")
             mf_payload.add_frame(frame)

@@ -1,6 +1,5 @@
 import numpy as np
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel
 
 Z_SCORE_95_CI = 1.96  # Z-score for 95% confidence interval
 

@@ -4,7 +4,6 @@ import time
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload, initialize_multi_frame_rec_array
 from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
 logger = logging.getLogger(__name__)
 

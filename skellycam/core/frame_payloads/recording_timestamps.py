@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload

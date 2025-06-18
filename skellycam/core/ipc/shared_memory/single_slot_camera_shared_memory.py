@@ -4,11 +4,11 @@ import time
 from dataclasses import dataclass
 
 import numpy as np
+from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
+    FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.frame_payloads.metadata.frame_metadata_enum import FRAME_METADATA_MODEL, \
-    FRAME_METADATA_DTYPE, FRAME_METADATA_SHAPE, DEFAULT_IMAGE_DTYPE
 from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement
 
 logger = logging.getLogger(__name__)

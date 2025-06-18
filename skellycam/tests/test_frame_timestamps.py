@@ -1,7 +1,8 @@
-import time
+import numpy as np
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
-from unittest.mock import patch, MagicMock
 
 from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping

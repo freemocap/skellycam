@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,7 +9,7 @@ ONE_GIGABYTE = 1024 ** 3
 
 class SharedMemoryRingBufferDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    shm_dto_list: list[SharedMemoryElementDTO]
+    shm_dtos: dict[int, SharedMemoryElementDTO]
     last_written_index_shm_dto: SharedMemoryElementDTO
     last_read_index_shm_dto: SharedMemoryElementDTO
     dtype: np.dtype
@@ -19,7 +17,7 @@ class SharedMemoryRingBufferDTO(BaseModel):
 
 class SharedMemoryRingBuffer(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    shm_list: list[SharedMemoryElement]
+    shms: dict[int, SharedMemoryElement]
     dtype: np.dtype
     last_written_index: SharedMemoryNumber = Field(
         ...,
@@ -40,9 +38,9 @@ class SharedMemoryRingBuffer(BaseModel):
                ):
         if ring_buffer_length is None:
             ring_buffer_length = memory_allocation // example_data.itemsize
-        shm_list = [SharedMemoryElement.create(dtype=example_data.dtype,
-                                               read_only=read_only) for _ in range(int(ring_buffer_length))]
-        return cls(shm_list=shm_list,
+        shms = {index: SharedMemoryElement.create(dtype=example_data.dtype,
+                                            read_only=read_only) for index in range(int(ring_buffer_length))}
+        return cls(shms=shms,
                    last_written_index=SharedMemoryNumber.create(initial_value=-1,
                                                                 read_only=read_only),
                    last_read_index=SharedMemoryNumber.create(initial_value=-1,
@@ -52,19 +50,19 @@ class SharedMemoryRingBuffer(BaseModel):
 
     @property
     def original(self) -> bool:
-        return all([all([shm.original for shm in self.shm_list]),
+        return all([all([shm.original for shm in self.shms.values()]),
                     self.last_written_index.original,
                     self.last_read_index.original])
 
     @property
     def valid(self) -> bool:
-        return all([all([shm.valid for shm in self.shm_list]),
+        return all([all([shm.valid for shm in self.shms.values()]),
                     self.last_written_index.valid,
                     self.last_read_index.valid])
 
     @valid.setter
     def valid(self, value: bool):
-        for shm in self.shm_list:
+        for shm in self.shms.values():
             shm.valid = value
         self.last_written_index.valid = value
         self.last_read_index.valid = value
@@ -74,7 +72,7 @@ class SharedMemoryRingBuffer(BaseModel):
                  dto: SharedMemoryRingBufferDTO,
                  read_only: bool):
 
-        return cls(shm_list=[SharedMemoryElement.recreate(dto=shm_dto, read_only=read_only) for shm_dto in dto.shm_dto_list],
+        return cls(shms={index: SharedMemoryElement.recreate(dto=dto, read_only=read_only) for index, dto in dto.shm_dtos.items()},
                    last_written_index=SharedMemoryNumber.recreate(dto=dto.last_written_index_shm_dto, read_only=read_only),
                    last_read_index=SharedMemoryNumber.recreate(dto=dto.last_read_index_shm_dto, read_only=read_only),
                    dtype=dto.dtype,
@@ -83,7 +81,7 @@ class SharedMemoryRingBuffer(BaseModel):
 
     def to_dto(self) -> SharedMemoryRingBufferDTO:
         return SharedMemoryRingBufferDTO(
-            shm_dto_list=[shm.to_dto() for shm in self.shm_list],
+            shm_dtos={index: shm.to_dto() for index, shm in self.shms.items()},
             last_written_index_shm_dto=self.last_written_index.to_dto(),
             last_read_index_shm_dto=self.last_read_index.to_dto(),
             dtype=self.dtype,
@@ -95,7 +93,7 @@ class SharedMemoryRingBuffer(BaseModel):
 
     @property
     def ring_buffer_length(self) -> int:
-        return len(self.shm_list)
+        return len(self.shms)
 
     @property
     def new_data_available(self) -> bool:
@@ -114,7 +112,7 @@ class SharedMemoryRingBuffer(BaseModel):
         if self._check_for_overwrite(index_to_write) and not overwrite and False:
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 
-        self.shm_list[index_to_write % self.ring_buffer_length].put_data(data)
+        self.shms[index_to_write % self.ring_buffer_length].put_data(data)
         self.last_written_index.value = index_to_write
 
     def get_next_data(self) -> np.recarray:
@@ -133,7 +131,7 @@ class SharedMemoryRingBuffer(BaseModel):
         index_to_read = self.last_read_index.value + 1
         if index_to_read > self.last_written_index.value:
             raise ValueError("Cannot read past the last written index!")
-        shm_data = self.shm_list[index_to_read % self.ring_buffer_length].retrieve_data()
+        shm_data = self.shms[index_to_read % self.ring_buffer_length].retrieve_data()
         self.last_read_index.value = index_to_read
         return shm_data
 
@@ -148,12 +146,12 @@ class SharedMemoryRingBuffer(BaseModel):
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
 
-        return self.shm_list[self.last_written_index.value % self.ring_buffer_length].retrieve_data()
+        return self.shms[self.last_written_index.value % self.ring_buffer_length].retrieve_data()
 
     def close(self):
         self.last_written_index.close()
         self.last_read_index.close()
-        for shm in self.shm_list:
+        for shm in self.shms.values():
             shm.close()
 
     def unlink(self):
@@ -162,7 +160,7 @@ class SharedMemoryRingBuffer(BaseModel):
         self.valid = False
         self.last_written_index.unlink()
         self.last_read_index.unlink()
-        for shm in self.shm_list:
+        for shm in self.shms.values():
             shm.unlink()
 
     def close_and_unlink(self):
@@ -177,13 +175,12 @@ if __name__ == "__main__":
     test_dtype = np.dtype([('x', np.float64), ('y', np.float64), ('z', np.float64)])
 
     # Create example payload
-    example_data = np.recarray((1,), dtype=test_dtype)
+    _example_data = np.recarray((1,), dtype=test_dtype)
 
     print("Creating original SharedMemoryRingBuffer...")
     # Create a small ring buffer for testing with just 5 slots
     original = SharedMemoryRingBuffer.create(
-        example_data=example_data,
-        dtype=test_dtype,
+        example_data=_example_data,
         read_only=False,
         ring_buffer_length=5
     )
@@ -206,12 +203,12 @@ if __name__ == "__main__":
     print(f"Last written index after third write: {original.last_written_index.value}")
 
     # Create DTO for sharing with another process
-    dto = original.to_dto()
-    print(f"Created DTO with {len(dto.shm_dto_list)} shared memory elements")
+    _dto = original.to_dto()
+    print(f"Created DTO with {len(_dto.shm_dtos)} shared memory elements")
 
     # Simulate another process by recreating from DTO
     print("Recreating from DTO (simulating another process)...")
-    copy = SharedMemoryRingBuffer.recreate(dto=dto, read_only=True)
+    copy = SharedMemoryRingBuffer.recreate(dto=_dto, read_only=True)
 
     # Get latest data from the copy
     print("Reading latest data...")
@@ -219,7 +216,7 @@ if __name__ == "__main__":
     print(f"Latest data: {latest_data}")
 
     # Create a reader that consumes data sequentially
-    reader = SharedMemoryRingBuffer.recreate(dto=dto, read_only=False)
+    reader = SharedMemoryRingBuffer.recreate(dto=_dto, read_only=False)
 
     print("Reading data sequentially...")
     # Read all available data

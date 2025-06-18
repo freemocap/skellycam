@@ -1,12 +1,12 @@
-import pytest
-import numpy as np
 from unittest.mock import MagicMock, patch, PropertyMock
 
-from skellycam.core.frame_payloads.recording_timestamps import RecordingTimestamps
-from skellycam.core.frame_payloads.multiframe_timestamps import MultiframeTimestamps
+import numpy as np
+import pytest
+
 from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
+from skellycam.core.frame_payloads.multiframe_timestamps import MultiframeTimestamps
+from skellycam.core.frame_payloads.recording_timestamps import RecordingTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
 
 class TestRecordingTimestamps:

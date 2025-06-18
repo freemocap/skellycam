@@ -3,7 +3,6 @@ import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \

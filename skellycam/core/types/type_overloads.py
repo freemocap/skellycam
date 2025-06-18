@@ -1,10 +1,9 @@
 import enum
 import multiprocessing
 import threading
-from typing import Annotated, Any
 
 import numpy as np
-from pydantic import SkipValidation, PlainValidator
+from pydantic import SkipValidation
 
 CameraIdString = str
 CameraGroupIdString = str

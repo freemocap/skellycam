@@ -5,7 +5,6 @@ import multiprocessing
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.api.http import app
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app

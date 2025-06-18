@@ -1,5 +1,4 @@
 import base64
-import time
 from io import BytesIO
 from typing import Dict
 
@@ -11,10 +10,8 @@ from pydantic import BaseModel
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frame_payloads.multi_frame_metadata import MultiFrameMetadata
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString
+from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.core.types.type_overloads import CameraIndex, Base64JPEGImage
 
 DEFAULT_FRONTEND_IMAGE_RESIZE = 0.5

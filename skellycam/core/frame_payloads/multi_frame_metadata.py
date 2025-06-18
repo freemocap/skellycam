@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import numpy as np
 from pydantic import BaseModel
 
@@ -5,7 +7,7 @@ from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.multiframe_timestamps import MultiframeTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
-from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 

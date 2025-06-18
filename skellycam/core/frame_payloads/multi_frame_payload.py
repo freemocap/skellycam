@@ -1,5 +1,5 @@
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.camera_config import CameraConfigs

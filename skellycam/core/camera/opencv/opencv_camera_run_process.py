@@ -15,7 +15,6 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtract
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
-from skellycam.core.recorders.timestamps import timebase_mapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms

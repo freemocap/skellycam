@@ -49,7 +49,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     frame_rec_array.frame_metadata.timestamps.post_retrieve_ns = time.perf_counter_ns()
 
     if not retrieve_success:
-        raise ValueError(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.config.camera_id}")
+        raise ValueError(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id}")
 
     # camera_shared_memory.put_frame(frame_rec_array=frame_rec_array,overwrite = False)
     logger.loop(f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id} grabbed frame {frame_rec_array.frame_metadata.frame_number[0]}")
