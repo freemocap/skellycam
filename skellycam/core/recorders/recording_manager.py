@@ -133,8 +133,6 @@ class RecordingManager(BaseModel):
             while should_continue():
                 wait_1ms()
 
-
-
                 # check for new recording info
                 if status.should_record.value and video_manager is None:
                     recording_info_message = recording_info_subscription.get(block=True)
@@ -192,7 +190,8 @@ class RecordingManager(BaseModel):
                                 video_manager: VideoManager | None,
                                 camera_group_shm: CameraGroupSharedMemoryManager) ->VideoManager | None:
 
-        latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
+        latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes(mf=None, #create new mfs for us
+                                                                                   apply_config_rotation=True)
 
         if len(latest_mfs) > 0:
             logger.loop(f"RecordingManager: retrieved mfs: {[mf.multi_frame_number for mf in latest_mfs]}")
@@ -226,7 +225,7 @@ class RecordingManager(BaseModel):
                 [not isinstance(config, CameraConfig) for config in camera_configs.values()]):
             raise ValueError(f"Expected CameraConfigs, got {type(camera_configs)} in camera_configs")
 
-        logger.debug(f"Creating RecodingManager for recording: `{recording_info.recording_name}`")
+        logger.info(f"Creating RecodingManager for recording: `{recording_info.recording_name}`")
         status.updating.value = True
         video_manager = VideoManager.create(recording_info=recording_info,
                                             camera_configs=camera_configs,
@@ -237,7 +236,7 @@ class RecordingManager(BaseModel):
 
     @staticmethod
     def stop_recording(status: RecordingManagerStatus, video_manager: VideoManager) -> None:
-        logger.debug(f"Stopping recording: `{video_manager.recording_info.recording_name}`...")
+        logger.info(f"Stopping recording: `{video_manager.recording_info.recording_name}`...")
         if not isinstance(video_manager, VideoManager):
             raise ValueError(f"Expected VideoManager, got {type(video_manager)} in video_manager")
         status.is_recording_frames_flag.value = False

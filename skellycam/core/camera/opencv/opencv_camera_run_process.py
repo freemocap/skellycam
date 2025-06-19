@@ -15,7 +15,6 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtract
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
-from skellycam.core.types.numpy_record_dtypes import FRAME_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
 
@@ -79,39 +78,36 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
 
     while not ipc.all_ready and should_continue():
         wait_10ms()
-    frame_rec_array = FramePayload.create_initial(camera_config=config,
-                                                  timebase_mapping=ipc.timebase_mapping).to_numpy_record_array()
+    frame = FramePayload.create_initial(camera_config=config,
+                                        timebase_mapping=ipc.timebase_mapping)
 
     try:
         logger.debug(f"Camera {config.camera_id} frame grab loop starting...")
         while should_continue():
-
+            frame.initialize()
             if self_status.should_pause.value or not config.use_this_camera:
                 self_status.is_paused.value = True
                 wait_10ms()
                 continue
             self_status.is_paused.value = False
-            config, frame_rec_array = check_for_new_config(camera_id=camera_id,
-                                                           frame_rec_array=frame_rec_array,
-                                                           config=config,
-                                                           cv2_video_capture=cv2_video_capture,
-                                                           ipc=ipc,
-                                                           self_status=self_status,
-                                                           update_camera_settings_subscription=update_camera_settings_subscription)
+            frame = check_for_new_config(frame=frame,
+                                         cv2_video_capture=cv2_video_capture,
+                                         ipc=ipc,
+                                         self_status=self_status,
+                                         update_camera_settings_subscription=update_camera_settings_subscription)
 
             if not orchestrator.should_grab_by_id(camera_id=camera_id):
                 wait_10us()
                 continue
 
             self_status.grabbing_frame.value = True
-            opencv_get_frame(cap=cv2_video_capture,
-                             frame_rec_array=frame_rec_array,
-                             camera_shared_memory=camera_shm,
-                             )
+            frame = opencv_get_frame(cap=cv2_video_capture,frame=frame)
+
+            camera_shm.put_frame(frame_rec_array=frame.to_numpy_record_array(), overwrite=True)
             self_status.grabbing_frame.value = False
-            frame_rec_array.frame_metadata.frame_number[0] += 1
-            # Last camera to increment their frame count triggers the next frame_grab
-            self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+            frame.increment_frame_number()
+            # Last camera to increment their frame count status triggers the next frame_grab
+            self_status.frame_count.value = frame.frame_number
 
     except Exception as e:
         self_status.signal_error()
@@ -131,33 +127,29 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         logger.debug(f"Camera {config.camera_index} process completed")
 
 
-def check_for_new_config(camera_id: CameraIdString,
-                         config: CameraConfig,
-                         frame_rec_array: FRAME_DTYPE,
+def check_for_new_config(frame: FramePayload,
                          cv2_video_capture: cv2.VideoCapture,
                          ipc: CameraGroupIPC,
                          self_status: CameraStatus,
-                         update_camera_settings_subscription) -> tuple[CameraConfig, FRAME_DTYPE]:
+                         update_camera_settings_subscription) -> FramePayload:
     if not update_camera_settings_subscription.empty():
-        logger.debug(f"Camera {camera_id} received update_camera_settings_subscription message")
+        logger.debug(f"Camera {frame.camera_config.camera_id} received update_camera_settings_subscription message")
         self_status.updating.value = True
         update_message = update_camera_settings_subscription.get()
         if not isinstance(update_message, UpdateCamerasSettingsMessage):
             raise RuntimeError(
-                f"Expected UpdateCamerasSettingsMessage for camera {camera_id}, "
+                f"Expected UpdateCamerasSettingsMessage for camera {frame.camera_config.camera_id}, "
                 f"but received {type(update_message)}"
             )
-        if not camera_id in update_message.requested_configs:
+        if not frame.camera_config.camera_id in update_message.requested_configs:
             raise RuntimeError(
-                f"Camera {camera_id} not found in UpdateCamerasSettingsMessage: {update_message.requested_configs.keys()} "
+                f"Camera {frame.camera_config.camera_id} not found in UpdateCamerasSettingsMessage: {update_message.requested_configs.keys()} "
             )
-        new_config = update_message.requested_configs[camera_id]
-        config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
-                                            prior_config=config,
-                                            config=new_config, )
-        frame_rec_array = FramePayload.create_initial(camera_config=config,
-                                                      timebase_mapping=ipc.timebase_mapping).to_numpy_record_array()
+        new_config = update_message.requested_configs[frame.camera_config.camera_id]
+        frame.camera_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
+                                                         prior_config=frame.camera_config,
+                                                         config=new_config, )
         ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
-            DeviceExtractedConfigMessage(extracted_config=config))
+            DeviceExtractedConfigMessage(extracted_config=frame.camera_config))
         self_status.updating.value = False
-    return config, frame_rec_array
+    return frame

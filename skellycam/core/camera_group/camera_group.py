@@ -3,7 +3,7 @@ import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera.camera_manager import CameraManager
-from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.mf_publisher import MultiframeBuilder
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
@@ -176,5 +176,6 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
                 updated_configs[
                     extracted_config_message.extracted_config.camera_id] = extracted_config_message.extracted_config
         wait_10ms()
+    validate_camera_configs(updated_configs)
     logger.info(f"Updated camera configs - {list(requested_configs.keys())}")
     return updated_configs

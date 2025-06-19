@@ -6,10 +6,12 @@ from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
 from skellycam.core.types.numpy_record_dtypes import TIMEBASE_MAPPING_DTYPE
+from skellycam.utilities.time_unit_conversion import LOCAL_TIMEZONE
 
 
 def get_utc_offset() -> int:
     return int(datetime.now(get_localzone()).utcoffset().total_seconds())
+
 
 class TimebaseMapping(BaseModel):
     """
@@ -20,6 +22,7 @@ class TimebaseMapping(BaseModel):
     perf_counter_ns: int = Field(default_factory=time.perf_counter_ns,
                                  description="Time in nanoseconds from `time.perf_counter_ns()` (arbirtary time base)")
     local_time_utc_offset: int = Field(default_factory=get_utc_offset, description="Local time GMT offset in seconds")
+
     def convert_perf_counter_ns_to_unix_ns(self, perf_counter_ns: int, local_time: bool) -> int:
         """
         Convert a `time.perf_counter_ns()` timestamp to a unix timestamp
@@ -27,6 +30,21 @@ class TimebaseMapping(BaseModel):
         if local_time:
             return int(self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns) + (self.local_time_utc_offset * 1e9))
         return self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns)
+
+    def convert_perf_counter_ns_to_local_iso8601(self, perf_counter_ns: int) -> str:
+        """
+        Convert a `time.perf_counter_ns()` timestamp to a local ISO 8601 formatted string
+        with nanosecond precision.
+        """
+        unix_ns = self.convert_perf_counter_ns_to_unix_ns(perf_counter_ns, local_time=True)
+
+        # Convert to datetime with microsecond precision (max that datetime supports by default)
+        dt = datetime.fromtimestamp(unix_ns / 1e9, tz=LOCAL_TIMEZONE)
+
+        # Format with microsecond precision (6 decimal places)
+        iso_format = dt.isoformat()
+
+        return iso_format
 
     def to_numpy_record_array(self) -> np.recarray:
         """

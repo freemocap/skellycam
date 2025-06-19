@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frame_payloads.recording_timestamps import RecordingTimestamps
+from skellycam.core.frame_payloads.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import CameraIdString, RecordingManagerIdString
@@ -45,7 +45,7 @@ class VideoManager(BaseModel):
         logger.debug(f"Creating RecordingManager for recording folder {recording_info.recording_name}")
 
         return cls(recording_info=recording_info,
-                   recording_timestamps=RecordingTimestamps(),
+                   recording_timestamps=RecordingTimestamps(recording_info=recording_info),
                    video_recorders={camera_id: VideoRecorder.create(camera_id=camera_id,
                                                                     recording_info=recording_info,
                                                                     config=config,
@@ -130,9 +130,16 @@ class VideoManager(BaseModel):
             recorder.close()
         self.finalize_recording()
 
+    def save_timestamps(self):
+        """
+        Saves the recording timestamps to a file.
+        """
+        logger.debug(f"Saving timestamps for recording: `{self.recording_info.recording_name}`...")
+        self.recording_timestamps.save_to_file(recording_info=self.recording_info)
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file()
+        self.recording_timestamps.save_timestamps()
         self._save_folder_readme()
         self.validate_recording()
         self.is_finished = True

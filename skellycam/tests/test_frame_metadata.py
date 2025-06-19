@@ -5,7 +5,7 @@ import pytest
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, initialize_frame_metadata_rec_array
-from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
+from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE, CAMERA_CONFIG_DTYPE
 
@@ -58,9 +58,9 @@ class TestFrameMetadata:
 
     @pytest.fixture
     def frame_timestamps(self, timebase_mapping):
-        timestamps = FrameLifespanTimestamps(timebase_mapping=timebase_mapping)
-        timestamps.pre_grab_ns = 1000
-        timestamps.post_grab_ns = 2000
+        timestamps = FrameTimestamps(timebase_mapping=timebase_mapping)
+        timestamps.pre_frame_grab_ns = 1000
+        timestamps.post_frame_grab_ns = 2000
         return timestamps
 
     def test_frame_metadata_initialization(self, camera_config, frame_timestamps):
@@ -119,15 +119,15 @@ class TestFrameMetadata:
 
         # Mock the from_numpy_record_array methods that would be called
         with patch.object(CameraConfig, 'from_numpy_record_array', return_value=camera_config):
-            with patch.object(FrameLifespanTimestamps, 'from_numpy_record_array',
-                              return_value=FrameLifespanTimestamps(timebase_mapping=timebase_mapping)):
+            with patch.object(FrameTimestamps, 'from_numpy_record_array',
+                              return_value=FrameTimestamps(timebase_mapping=timebase_mapping)):
                 # Convert back to FrameMetadata
                 metadata = FrameMetadata.from_numpy_record_array(rec_array)
 
                 assert metadata.frame_number == frame_number
                 assert metadata.camera_config == camera_config
                 CameraConfig.from_numpy_record_array.assert_called_once()
-                FrameLifespanTimestamps.from_numpy_record_array.assert_called_once()
+                FrameTimestamps.from_numpy_record_array.assert_called_once()
 
     def test_validation_error_on_wrong_dtype(self):
         """Test that an error is raised when trying to create from an array with wrong dtype."""

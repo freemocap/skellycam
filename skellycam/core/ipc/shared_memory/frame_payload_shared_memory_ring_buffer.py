@@ -25,21 +25,23 @@ class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
     def put_frame(self, frame_rec_array: np.recarray, overwrite: bool):
         if self.read_only:
             raise ValueError("Cannot put new frame into read-only instance of shared memory!")
-        frame_rec_array.frame_metadata.timestamps.copy_to_camera_shm_ns = time.perf_counter_ns()
+        frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns = time.perf_counter_ns()
         self.put_data(frame_rec_array, overwrite=overwrite)
 
-    def retrieve_latest_frame(self, frame:FramePayload|None=None) -> FramePayload:
+    def retrieve_latest_frame(self, frame:FramePayload) -> FramePayload:
+        pre_retrieve_tik = time.perf_counter_ns()
         frame_rec_array = self.get_latest_data()
-        frame_rec_array.frame_metadata.timestamps.retrieve_from_camera_shm_ns = time.perf_counter_ns()
-        if frame is None:
-            frame = FramePayload.create_from_numpy_record_array(frame_rec_array)
-        else:
-            frame.update_from_numpy_record_array(frame_rec_array)
+        frame_rec_array.frame_metadata.timestamps.post_retrieve_from_camera_shm_ns = time.perf_counter_ns()
+        frame_rec_array.frame_metadata.timestamps.pre_retrieve_from_camera_shm_ns = pre_retrieve_tik
+        frame.update_from_numpy_record_array(frame_rec_array)
         return frame
 
     def retrieve_next_frame(self, frame:FramePayload|None=None) -> FramePayload:
+        pre_retrieve_tik = time.perf_counter_ns()
         frame_rec_array = self.get_next_data()
-        frame_rec_array.frame_metadata.timestamps.retrieve_from_camera_shm_ns = time.perf_counter_ns()
+        frame_rec_array.frame_metadata.timestamps.post_retrieve_from_camera_shm_ns = time.perf_counter_ns()
+        frame_rec_array.frame_metadata.timestamps.pred_retrieve_from_camera_shm_ns = pre_retrieve_tik
+
         if frame is None:
             frame =  FramePayload.create_from_numpy_record_array(frame_rec_array)
         else:

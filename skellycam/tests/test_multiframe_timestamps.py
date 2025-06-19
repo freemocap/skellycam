@@ -2,8 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
-from skellycam.core.frame_payloads.multiframe_timestamps import MultiframeTimestamps
+from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiframeTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
@@ -15,30 +15,30 @@ class TestMultiframeTimestamps:
         self.timebase = TimebaseMapping()
         
         # Create sample frame timestamps for multiple cameras
-        self.camera1_timestamps = FrameLifespanTimestamps(
+        self.camera1_timestamps = FrameTimestamps(
             timebase_mapping=self.timebase,
             frame_initialized_ns=1000,
-            pre_grab_ns=2000,
-            post_grab_ns=3000,
-            pre_retrieve_ns=4000,
-            post_retrieve_ns=5000,
-            copy_to_camera_shm_ns=6000,
-            retrieve_from_camera_shm_ns=7000,
-            copy_to_multiframe_shm_ns=8000,
-            retrieve_from_multiframe_shm_ns=9000
+            pre_frame_grab_ns=2000,
+            post_frame_grab_ns=3000,
+            pre_frame_retrieve_ns=4000,
+            post_frame_retrieve_ns=5000,
+            pre_copy_to_camera_shm_ns=6000,
+            post_retrieve_from_camera_shm_ns=7000,
+            pre_copy_to_multiframe_shm_ns=8000,
+            post_retrieve_from_multiframe_shm_ns=9000
         )
         
-        self.camera2_timestamps = FrameLifespanTimestamps(
+        self.camera2_timestamps = FrameTimestamps(
             timebase_mapping=self.timebase,
             frame_initialized_ns=1500,
-            pre_grab_ns=2500,
-            post_grab_ns=3500,
-            pre_retrieve_ns=4500,
-            post_retrieve_ns=5500,
-            copy_to_camera_shm_ns=6500,
-            retrieve_from_camera_shm_ns=7500,
-            copy_to_multiframe_shm_ns=8500,
-            retrieve_from_multiframe_shm_ns=9500
+            pre_frame_grab_ns=2500,
+            post_frame_grab_ns=3500,
+            pre_frame_retrieve_ns=4500,
+            post_frame_retrieve_ns=5500,
+            pre_copy_to_camera_shm_ns=6500,
+            post_retrieve_from_camera_shm_ns=7500,
+            pre_copy_to_multiframe_shm_ns=8500,
+            post_retrieve_from_multiframe_shm_ns=9500
         )
         
         # Create a dictionary of frame timestamps
@@ -63,7 +63,7 @@ class TestMultiframeTimestamps:
         
         # Check that the frame_timestamps dictionary contains FrameLifespanTimestamps objects
         for ts in self.multiframe_timestamps.frame_timestamps.values():
-            assert isinstance(ts, FrameLifespanTimestamps)
+            assert isinstance(ts, FrameTimestamps)
 
     def test_from_multiframe(self):
         """Test creating MultiframeTimestamps from a MultiFramePayload."""
@@ -85,7 +85,7 @@ class TestMultiframeTimestamps:
     def test_timestamps_local_unix_ms_property(self):
         """Test the timestamps_local_unix_ms computed property."""
         # Mock the timestamp_local_unix_ms property of FrameLifespanTimestamps
-        with patch.object(FrameLifespanTimestamps, 'timestamp_local_unix_ms', 
+        with patch.object(FrameTimestamps, 'timestamp_local_unix_ms',
                           new_callable=lambda: 1000, create=True):
             timestamps_dict = self.multiframe_timestamps.timestamps_local_unix_ms
             

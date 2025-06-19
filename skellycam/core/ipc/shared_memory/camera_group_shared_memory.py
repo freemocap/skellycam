@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
@@ -31,9 +31,6 @@ class CameraGroupSharedMemoryManager:
     latest_multiframe_number: SharedMemoryNumber
     camera_configs: CameraConfigs
     read_only: bool
-    _local_frames: dict[CameraIdString, FramePayload| None] = None
-    _local_multiframe: MultiFramePayload | None = None
-
     original: bool = False
 
     @property
@@ -59,6 +56,7 @@ class CameraGroupSharedMemoryManager:
     def create(cls,
                camera_configs: CameraConfigs,
                read_only: bool = False):
+        validate_camera_configs(camera_configs)
         return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.from_config(camera_config=config,
                                                                                           read_only=read_only)
                                 for camera_id, config in camera_configs.items()},
@@ -119,35 +117,25 @@ class CameraGroupSharedMemoryManager:
                 "Cannot use `get_next_multi_frame_payload` in read-only mode - use `get_latest_multi_frame_payload` instead!")
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        if self._local_multiframe is None:
-            self._local_multiframe = MultiFramePayload.create_empty(camera_configs=self.camera_configs)
-        if self._local_frames is None:
-            self._local_frames = {camera_id: None for camera_id in self.camera_ids}
 
+        mf_payload = MultiFramePayload.create_empty(camera_configs=self.camera_configs)
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
 
-            self._local_frames[camera_id] = camera_shared_memory.retrieve_next_frame(self._local_frames[camera_id])
-
-        if any([frame is None for frame in self._local_frames.values()]):
-            raise ValueError(f"Not all cameras have new frames! Missing frames for cameras: {list(self._local_frames.keys())}")
-        if not self._local_multiframe.full:
-            if not all([frame.frame_number == -1 for frame in self._local_frames.values()]):
-                raise ValueError(f"initialization mis-match! Some frames already have frame numbers: {[frame.frame_number for frame in self._local_frames.values()]}")
-            [self._local_multiframe.add_frame(frame) for frame in self._local_frames.values()]
-        else:
-            if not all([frame.frame_number != self.latest_multiframe_number.value  for frame in self._local_frames.values()]):
-                logger.warning(f"Frame number mismatch! Expected {self.latest_multiframe_number.value+ 1}, got {[self._local_frames[camera_id].frame_number for camera_id in self.camera_ids]}")
-            self._local_multiframe.update_frames(self._local_frames)
-        if not self._local_multiframe or not self._local_multiframe.full:
-            raise ValueError("Did not read full multi-frame self._local_multiframe!")
-        self.multi_frame_ring_shm.put_multiframe(mf_payload=self._local_multiframe,
+            frame = camera_shared_memory.retrieve_next_frame()
+            if frame.frame_number != self.latest_multiframe_number.value + 1 and False:
+                logger.error(
+                    f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {frame.frame_number}")
+            mf_payload.add_frame(frame)
+        if not mf_payload or not mf_payload.full:
+            raise ValueError("Did not read full multi-frame mf_payload!")
+        self.multi_frame_ring_shm.put_multiframe(mf_payload=mf_payload,
                                                  overwrite=False)  # Don't overwrite to ensure all frames are saved
-        self.latest_multiframe_number.value = self._local_multiframe.multi_frame_number
-        logger.loop(f"Built multiframe #{self._local_multiframe.multi_frame_number} from cameras: {list(self._local_multiframe.camera_ids)}")
+        self.latest_multiframe_number.value = mf_payload.multi_frame_number
+        logger.loop(f"Built multiframe #{mf_payload.multi_frame_number} from cameras: {list(mf_payload.camera_ids)}")
 
-        return self._local_multiframe
+        return mf_payload
 
     def build_all_new_multiframes(self) -> list[MultiFramePayload]:
         mfs: list[MultiFramePayload] = []

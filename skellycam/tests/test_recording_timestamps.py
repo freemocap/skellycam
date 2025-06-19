@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch, PropertyMock
 import numpy as np
 import pytest
 
-from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
-from skellycam.core.frame_payloads.multiframe_timestamps import MultiframeTimestamps
-from skellycam.core.frame_payloads.recording_timestamps import RecordingTimestamps
+from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiframeTimestamps
+from skellycam.core.frame_payloads.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
 
@@ -16,30 +16,30 @@ class TestRecordingTimestamps:
         self.timebase = TimebaseMapping()
 
         # Create sample frame timestamps for multiple cameras
-        self.camera1_timestamps = FrameLifespanTimestamps(
+        self.camera1_timestamps = FrameTimestamps(
             timebase_mapping=self.timebase,
             frame_initialized_ns=1000,
-            pre_grab_ns=2000,
-            post_grab_ns=3000,
-            pre_retrieve_ns=4000,
-            post_retrieve_ns=5000,
-            copy_to_camera_shm_ns=6000,
-            retrieve_from_camera_shm_ns=7000,
-            copy_to_multiframe_shm_ns=8000,
-            retrieve_from_multiframe_shm_ns=9000
+            pre_frame_grab_ns=2000,
+            post_frame_grab_ns=3000,
+            pre_frame_retrieve_ns=4000,
+            post_frame_retrieve_ns=5000,
+            pre_copy_to_camera_shm_ns=6000,
+            post_retrieve_from_camera_shm_ns=7000,
+            pre_copy_to_multiframe_shm_ns=8000,
+            post_retrieve_from_multiframe_shm_ns=9000
         )
 
-        self.camera2_timestamps = FrameLifespanTimestamps(
+        self.camera2_timestamps = FrameTimestamps(
             timebase_mapping=self.timebase,
             frame_initialized_ns=1500,
-            pre_grab_ns=2500,
-            post_grab_ns=3500,
-            pre_retrieve_ns=4500,
-            post_retrieve_ns=5500,
-            copy_to_camera_shm_ns=6500,
-            retrieve_from_camera_shm_ns=7500,
-            copy_to_multiframe_shm_ns=8500,
-            retrieve_from_multiframe_shm_ns=9500
+            pre_frame_grab_ns=2500,
+            post_frame_grab_ns=3500,
+            pre_frame_retrieve_ns=4500,
+            post_frame_retrieve_ns=5500,
+            pre_copy_to_camera_shm_ns=6500,
+            post_retrieve_from_camera_shm_ns=7500,
+            pre_copy_to_multiframe_shm_ns=8500,
+            post_retrieve_from_multiframe_shm_ns=9500
         )
 
         # Create a dictionary of frame timestamps
@@ -55,30 +55,30 @@ class TestRecordingTimestamps:
         )
 
         # Create a second MultiframeTimestamps with slightly different values
-        self.camera1_timestamps2 = FrameLifespanTimestamps(
+        self.camera1_timestamps2 = FrameTimestamps(
             timebase_mapping=self.timebase,
             frame_initialized_ns=11000,
-            pre_grab_ns=12000,
-            post_grab_ns=13000,
-            pre_retrieve_ns=14000,
-            post_retrieve_ns=15000,
-            copy_to_camera_shm_ns=16000,
-            retrieve_from_camera_shm_ns=17000,
-            copy_to_multiframe_shm_ns=18000,
-            retrieve_from_multiframe_shm_ns=19000
+            pre_frame_grab_ns=12000,
+            post_frame_grab_ns=13000,
+            pre_frame_retrieve_ns=14000,
+            post_frame_retrieve_ns=15000,
+            pre_copy_to_camera_shm_ns=16000,
+            post_retrieve_from_camera_shm_ns=17000,
+            pre_copy_to_multiframe_shm_ns=18000,
+            post_retrieve_from_multiframe_shm_ns=19000
         )
 
-        self.camera2_timestamps2 = FrameLifespanTimestamps(
+        self.camera2_timestamps2 = FrameTimestamps(
             timebase_mapping=self.timebase,
             frame_initialized_ns=11500,
-            pre_grab_ns=12500,
-            post_grab_ns=13500,
-            pre_retrieve_ns=14500,
-            post_retrieve_ns=15500,
-            copy_to_camera_shm_ns=16500,
-            retrieve_from_camera_shm_ns=17500,
-            copy_to_multiframe_shm_ns=18500,
-            retrieve_from_multiframe_shm_ns=19500
+            pre_frame_grab_ns=12500,
+            post_frame_grab_ns=13500,
+            pre_frame_retrieve_ns=14500,
+            post_frame_retrieve_ns=15500,
+            pre_copy_to_camera_shm_ns=16500,
+            post_retrieve_from_camera_shm_ns=17500,
+            pre_copy_to_multiframe_shm_ns=18500,
+            post_retrieve_from_multiframe_shm_ns=19500
         )
 
         self.frame_timestamps2 = {
@@ -144,17 +144,17 @@ class TestRecordingTimestamps:
     def test_recording_start_local_unix_ms(self):
         """Test getting the recording start timestamp."""
         # Create a custom MultiframeTimestamps with a known frame_initialized_local_unix_ms value
-        custom_frame_timestamps = FrameLifespanTimestamps(
+        custom_frame_timestamps = FrameTimestamps(
             timebase_mapping=self.timebase,
             frame_initialized_ns=1000,
-            pre_grab_ns=2000,
-            post_grab_ns=3000,
-            pre_retrieve_ns=4000,
-            post_retrieve_ns=5000,
-            copy_to_camera_shm_ns=6000,
-            retrieve_from_camera_shm_ns=7000,
-            copy_to_multiframe_shm_ns=8000,
-            retrieve_from_multiframe_shm_ns=9000
+            pre_frame_grab_ns=2000,
+            post_frame_grab_ns=3000,
+            pre_frame_retrieve_ns=4000,
+            post_frame_retrieve_ns=5000,
+            pre_copy_to_camera_shm_ns=6000,
+            post_retrieve_from_camera_shm_ns=7000,
+            pre_copy_to_multiframe_shm_ns=8000,
+            post_retrieve_from_multiframe_shm_ns=9000
         )
 
         # Mock the frame_initialized_local_unix_ms property
@@ -251,17 +251,17 @@ class TestRecordingTimestamps:
         """Test calculating inter-camera grab range statistics."""
         # Create minimal valid MultiframeTimestamps instances
         frame_timestamps = {
-            "camera1": FrameLifespanTimestamps(
+            "camera1": FrameTimestamps(
                 timebase_mapping=self.timebase,
                 frame_initialized_ns=1000,
-                pre_grab_ns=2000,
-                post_grab_ns=3000,
-                pre_retrieve_ns=4000,
-                post_retrieve_ns=5000,
-                copy_to_camera_shm_ns=6000,
-                retrieve_from_camera_shm_ns=7000,
-                copy_to_multiframe_shm_ns=8000,
-                retrieve_from_multiframe_shm_ns=9000
+                pre_frame_grab_ns=2000,
+                post_frame_grab_ns=3000,
+                pre_frame_retrieve_ns=4000,
+                post_frame_retrieve_ns=5000,
+                pre_copy_to_camera_shm_ns=6000,
+                post_retrieve_from_camera_shm_ns=7000,
+                pre_copy_to_multiframe_shm_ns=8000,
+                post_retrieve_from_multiframe_shm_ns=9000
             )
         }
 

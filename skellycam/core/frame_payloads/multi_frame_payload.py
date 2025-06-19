@@ -1,16 +1,16 @@
-import numpy as np
-from pydantic import BaseModel, ConfigDict
+import logging
 
-from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.config.camera_config import CameraConfigs
+import numpy as np
+from pydantic import BaseModel
+
+from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.multi_frame_metadata import MultiFrameMetadata
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import CameraIdString
 
-
-
+logger = logging.getLogger(__name__)
 
 class MultiFramePayload(BaseModel):
     frames: dict[CameraIdString, FramePayload | None]
@@ -37,22 +37,10 @@ class MultiFramePayload(BaseModel):
         return MultiFrameMetadata.from_multi_frame_payload(self)
 
     @property
-    def timebase_mapping(self) -> TimebaseMapping:
-        self._validate_multi_frame()  # This ensures the payload is full
-        # Get the first timebase mapping as reference
-        reference_mapping = list(self.frames.values())[0].frame_metadata.timestamps.timebase_mapping
-
-        # Check if all other mappings are equal to the reference
-        for frame in self.frames.values():
-            if frame.frame_metadata.timestamps.timebase_mapping != reference_mapping:
-                raise ValueError(f"MultiFramePayload has multiple timebase mappings")
-
-        return reference_mapping
-
-    @property
     def camera_configs(self) -> CameraConfigs:
-        return {camera_id: frame.frame_metadata.camera_config for camera_id, frame in self.frames.items() if
-                frame is not None}
+        configs =  {camera_id: frame.frame_metadata.camera_config for camera_id, frame in self.frames.items()}
+        validate_camera_configs(configs)
+        return configs
 
     @property
     def full(self) -> bool:
@@ -74,16 +62,26 @@ class MultiFramePayload(BaseModel):
 
     @property
     def multi_frame_number(self) -> int:
-        return self._validate_multi_frame()
-
-    def _validate_multi_frame(self) -> int:
-        if not self.full:
-            raise ValueError("MultiFramePayload is not full, cannot get multi_frame_number")
         frame_numbers = [frame.frame_metadata.frame_number for frame in self.frames.values()]
         mf_number = set(frame_numbers)
         if len(mf_number) > 1:
             raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
         return mf_number.pop()
+
+    @property
+    def timebase_mapping(self) -> TimebaseMapping:
+        mappings = [frame.frame_metadata.timestamps.timebase_mapping for frame in self.frames.values()]
+        mapping = set(mappings)
+        if len(mapping) > 1:
+            raise ValueError(f"MultiFramePayload has multiple frame numbers {mapping}")
+        return mapping.pop()
+
+    def _validate_multi_frame(self):
+        if not self.full:
+            raise ValueError("MultiFramePayload is not full, cannot get multi_frame_number")
+        _ = self.multi_frame_number
+        _ = self.timebase_mapping
+        _ = self.camera_configs
 
     def to_numpy_record_array(self) -> np.recarray:
         """
@@ -110,22 +108,15 @@ class MultiFramePayload(BaseModel):
         instance._validate_multi_frame()
         return instance
 
-    def update_frames(self, new_frames: dict[CameraIdString, FramePayload]) -> None:
+    def update_from_numpy_record_array(self, mf_rec_array: np.recarray, apply_config_rotation:bool):
+        self._validate_multi_frame()
+        for camera_id, frame in self.frames:
+            if not isinstance(frame, FramePayload):
+                raise ValueError(f"Expected FramePayload, got {type[frame]}")
+            frame.update_from_numpy_record_array(frame_rec_array=mf_rec_array[camera_id],
+                                                 apply_config_rotation=apply_config_rotation)
+        self._validate_multi_frame()
 
-        if len(set([frame.frame_number for frame in self.frames.values()])) != 1:
-            raise ValueError("Cannot update frames, existing frames have inconsistent frame numbers!")
-
-        for camera_id, new_frame in new_frames.items():
-            if camera_id not in self.frames:
-                raise ValueError(f"Camera ID {camera_id} does not exist in MultiFramePayload!")
-            if not new_frame.frame_metadata.timestamps.timebase_mapping == self.timebase_mapping:
-                raise ValueError(
-                    f"Cannot update frame for camera_id {camera_id} in MultiFramePayload, timebase mapping mismatch!")
-            if not all([new_frame.frame_number == other_frame.frame_number for other_frame in new_frames.values()]):
-                raise ValueError(
-                    f"Cannot update frame for camera_id {camera_id} in MultiFramePayload, frame number mismatch!")
-            # Update the frame
-            self.frames[camera_id] = new_frame
 
     def add_frame(self, new_frame: FramePayload) -> None:
         # Check if this camera_id already exists in the frames
@@ -138,15 +129,15 @@ class MultiFramePayload(BaseModel):
         if existing_frames:
             # Check frame number consistency
             if any(frame.frame_number != new_frame.frame_number for frame in existing_frames):
-                raise ValueError(
+                logger.warning(
                     f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayload, frame number mismatch!")
 
-            # Check timebase mapping consistency
-            # if any(
-            #         frame.frame_metadata.timestamps.timebase_mapping != new_frame.frame_metadata.timestamps.timebase_mapping
-            #         for frame in existing_frames):
-            #     raise ValueError(
-            #         f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayload, timebase mapping mismatch!")
+            #Check timebase mapping consistency
+            if any(
+                    frame.frame_metadata.timestamps.timebase_mapping != new_frame.frame_metadata.timestamps.timebase_mapping
+                    for frame in existing_frames):
+                raise ValueError(
+                    f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayload, timebase mapping mismatch!")
 
         # Add the frame
         self.frames[new_frame.camera_id] = new_frame

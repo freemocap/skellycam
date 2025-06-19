@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
-from skellycam.core.frame_payloads.frame_timestamps import FrameLifespanTimestamps
+from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
@@ -15,10 +15,11 @@ class MultiframeTimestamps(BaseModel):
     Provides the mean, median, standard deviation, and range of the attributes of the frame lifecycle timestamps
     """
 
-    frame_timestamps: dict[CameraIdString, FrameLifespanTimestamps] = Field(
+    frame_timestamps: dict[CameraIdString, FrameTimestamps] = Field(
         description="Timestamps for each camera's frame lifecycle on a given multi-frame payload")
 
     multiframe_number: int
+
     @classmethod
     def from_multiframe(cls, multiframe_payload: 'MultiFramePayload') -> 'MultiframeTimestamps':
         """
@@ -28,14 +29,10 @@ class MultiframeTimestamps(BaseModel):
                                      for camera_id, frame in multiframe_payload.frames.items()},
                    multiframe_number=multiframe_payload.multi_frame_number)
 
-
-    @computed_field
     @property
     def timestamps_local_unix_ms(self) -> dict[CameraIdString, float]:
         return {camera_id: ts.timestamp_local_unix_ms for camera_id, ts in self.frame_timestamps.items()}
 
-
-    @computed_field
     @property
     def timestamp_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -43,7 +40,6 @@ class MultiframeTimestamps(BaseModel):
             name="timestamp_local_unix_ms",
             units="milliseconds")
 
-    @computed_field
     @property
     def inter_camera_grab_range_ms(self) -> float:
         """
@@ -53,7 +49,6 @@ class MultiframeTimestamps(BaseModel):
         """
         return self.timestamp_local_unix_ms.range
 
-    @computed_field
     @property
     def frame_initialized_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -62,7 +57,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def pre_grab_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -71,7 +65,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def post_grab_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -80,7 +73,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def pre_retrieve_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -89,7 +81,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def post_retrieve_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -98,7 +89,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def copy_to_camera_shm_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -107,7 +97,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def retrieve_from_camera_shm_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -116,7 +105,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def copy_to_multiframe_shm_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -125,7 +113,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def retrieve_from_multiframe_shm_local_unix_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -134,8 +121,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-
-    @computed_field
     @property
     def idle_before_grab_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -144,7 +129,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def frame_grab_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -153,7 +137,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def idle_before_retrieve_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -162,7 +145,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def frame_retrieve_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -171,7 +153,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def idle_before_copy_to_camera_shm_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -180,7 +161,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def idle_in_camera_shm_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -189,7 +169,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def idle_before_copy_to_multiframe_shm_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -198,7 +177,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def idle_in_multiframe_shm_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -207,7 +185,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def total_frame_acquisition_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -216,7 +193,6 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @computed_field
     @property
     def total_ipc_travel_duration_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
@@ -224,3 +200,5 @@ class MultiframeTimestamps(BaseModel):
             name="total_ipc_travel_duration_ms",
             units="milliseconds"
         )
+
+

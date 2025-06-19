@@ -313,7 +313,7 @@ class TestFramePayloadSharedMemoryRingBuffer:
         after_put = time.perf_counter_ns()
         
         # Verify timestamp was set
-        copy_to_shm_ns = example_frame_rec_array.frame_metadata.timestamps.copy_to_camera_shm_ns
+        copy_to_shm_ns = example_frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns
         assert before_put <= copy_to_shm_ns <= after_put
         
         # Retrieve the frame
@@ -322,5 +322,5 @@ class TestFramePayloadSharedMemoryRingBuffer:
         after_retrieve = time.perf_counter_ns()
         
         # Verify timestamp was set
-        retrieve_from_shm_ns = frame.frame_metadata.timestamps.retrieve_from_camera_shm_ns
+        retrieve_from_shm_ns = frame.frame_metadata.timestamps.post_retrieve_from_camera_shm_ns
         assert before_retrieve <= retrieve_from_shm_ns <= after_retrieve

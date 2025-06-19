@@ -9,6 +9,7 @@ from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
 logger = logging.getLogger(__name__)
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
 TIMESTAMPS_FOLDER_NAME = "synchronized_videos/timestamps"
+CAMERA_TIMESTAMPS_FOLDER_NAME = "synchronized_videos/timestamps/camera_timestamps"
 
 
 class RecordingInfo(BaseModel):
@@ -27,11 +28,21 @@ class RecordingInfo(BaseModel):
 
     @property
     def videos_folder(self) -> str:
-        return str(Path(self.full_recording_path)/SYNCHRONIZED_VIDEOS_FOLDER_NAME)
+        path = Path(self.full_recording_path)/SYNCHRONIZED_VIDEOS_FOLDER_NAME
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
 
     @property
     def timestamps_folder(self) -> str:
-        return str(Path(self.full_recording_path)/TIMESTAMPS_FOLDER_NAME)
+        path = Path(self.full_recording_path) / TIMESTAMPS_FOLDER_NAME
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
+
+    @property
+    def camera_timestamps_folder(self) -> str:
+        path = Path(self.full_recording_path)/CAMERA_TIMESTAMPS_FOLDER_NAME
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
 
     def save_to_file(self):
         logger.debug(f"Saving recording info to [{self.full_recording_path}_info.json]")

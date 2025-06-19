@@ -390,12 +390,7 @@ def default_camera_configs_factory():
 CameraConfigs = dict[CameraIdString, CameraConfig]
 
 
-def validate_camera_configs(camera_configs: CameraConfigs | CameraConfig | list[CameraConfig]) -> None:
-    if isinstance(camera_configs, CameraConfig):
-        camera_configs = {camera_configs.camera_id: camera_configs}
-    elif isinstance(camera_configs, list):
-        camera_configs = {config.camera_id: config for config in camera_configs}
-
+def validate_camera_configs(camera_configs: CameraConfigs) -> None:
     # Ensure camera_configs is a dictionary of CameraConfig instances
     if not isinstance(camera_configs, dict):
         raise TypeError(f"camera_configs must be a dictionary, got {type(camera_configs)} instead.")
