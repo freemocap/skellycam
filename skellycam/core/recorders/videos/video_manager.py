@@ -4,7 +4,7 @@ import time
 import uuid
 from pathlib import Path
 
-from pydantic import BaseModel, ValidationError, Field
+from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
@@ -73,7 +73,7 @@ class VideoManager(BaseModel):
     def add_multi_frame(self, mf_payload: MultiFramePayload):
         logger.loop(
             f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_info.recording_name}")
-        self._validate_multi_frame(mf_payload=mf_payload)
+
 
         for camera_id in mf_payload.camera_ids:
             frame = mf_payload.get_frame(camera_id)
@@ -110,12 +110,6 @@ class VideoManager(BaseModel):
         with open(str(Path(self.recording_info.videos_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
 
-    def _validate_multi_frame(self, mf_payload: MultiFramePayload):
-        # Note - individual VideoRecorders will validate the frames' resolutions and whatnot
-        if self.multi_frame_timestamp_logger.initial_multi_frame_payload is not None:
-            if not self.multi_frame_timestamp_logger.initial_multi_frame_payload.frames.keys() == mf_payload.frames.keys():
-                raise ValidationError(f"CameraConfigs and MultiFramePayload frames do not match")
-
     def finish_and_close(self):
         logger.debug(f"Finishing up...")
         finish_threads = []
@@ -139,7 +133,6 @@ class VideoManager(BaseModel):
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file()
-        self.multi_frame_timestamp_logger.close()
         self._save_folder_readme()
         self.validate_recording()
         self.is_finished = True

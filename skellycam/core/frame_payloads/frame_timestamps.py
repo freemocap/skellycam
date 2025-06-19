@@ -22,8 +22,8 @@ class FrameLifespanTimestamps(BaseModel):
                                            description="Copied to the multi-frame escape shared memory buffer")
     retrieve_from_multiframe_shm_ns: int = Field(default=0,
                                                  description="Retrieved from the multi-frame escape shared memory buffer")
-    @computed_field
-    @property
+    # @computed_field
+    # @property
     def timestamp_local_unix_ms(self) -> float:
         """
         Using the midpoint between pre and post grab timestamps to represent the frame's timestamp.
@@ -32,68 +32,68 @@ class FrameLifespanTimestamps(BaseModel):
             raise ValueError("pre_retrieve_ns and post_grab_ns cannot be None")
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns((self.post_grab_ns - self.pre_grab_ns) // 2, local_time=True) / 1_000_000
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def frame_initialized_local_unix_ms(self) -> float:
         """
         Convert the frame initialized timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.frame_initialized_ns, local_time=True) / 1_000_000
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def pre_grab_local_unix_ms(self) -> float:
         """
         Convert the pre-grab timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.pre_grab_ns, local_time=True) / 1_000_000
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def post_grab_local_unix_ms(self) -> float:
         """
         Convert the post-grab timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.post_grab_ns, local_time=True) / 1_000_000
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def pre_retrieve_local_unix_ms(self) -> float:
         """
         Convert the pre-retrieve timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.pre_retrieve_ns, local_time=True) / 1_000_000
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def post_retrieve_local_unix_ms(self) -> float:
         """
         Convert the post-retrieve timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.post_retrieve_ns, local_time=True) / 1_000_000
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def copy_to_camera_shm_local_unix_ms(self) -> float:
         """
         Convert the copy to camera shared memory timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.copy_to_camera_shm_ns, local_time=True) / 1_000_000
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def retrieve_from_camera_shm_local_unix_ms(self) -> float:
         """
         Convert the retrieve from camera shared memory timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.retrieve_from_camera_shm_ns, local_time=True) / 1_000_000
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def copy_to_multiframe_shm_local_unix_ms(self) -> float:
         """
         Convert the copy to multi-frame shared memory timestamp to local Unix time in milliseconds.
         """
         return self.timebase_mapping.convert_perf_counter_ns_to_unix_ns(self.copy_to_multiframe_shm_ns, local_time=True) / 1_000_000
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def retrieve_from_multiframe_shm_local_unix_ms(self) -> float:
         """
         Convert the retrieve from multi-frame shared memory timestamp to local Unix time in milliseconds.
@@ -102,75 +102,75 @@ class FrameLifespanTimestamps(BaseModel):
 
 
     # Durations
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def idle_before_grab_duration_ms(self) -> float:
         if self.frame_initialized_ns and self.pre_grab_ns:
             return (self.pre_grab_ns - self.frame_initialized_ns)/1_000_000
         return -1
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def frame_grab_duration_ms(self) -> float:
         if self.post_grab_ns and self.pre_grab_ns:
             return (self.post_grab_ns - self.pre_grab_ns)/1_000_000
         return -1
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def idle_before_retrieve_duration_ms(self) -> float:
         if self.pre_retrieve_ns and self.post_grab_ns:
             return (self.pre_retrieve_ns - self.post_grab_ns)/1_000_000
         return -1
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def frame_retrieve_duration_ms(self) -> float:
         if self.post_retrieve_ns and self.pre_retrieve_ns:
             return (self.post_retrieve_ns - self.pre_retrieve_ns)/1_000_000
         return -1
 
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def idle_before_copy_to_camera_shm_duration_ms(self) -> float:
         if self.copy_to_camera_shm_ns and self.post_retrieve_ns:
             return (self.copy_to_camera_shm_ns - self.post_retrieve_ns)/1_000_000
         return -1
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def idle_in_camera_shm_duration_ms(self) -> float:
         if self.retrieve_from_camera_shm_ns and self.copy_to_camera_shm_ns:
             return (self.retrieve_from_camera_shm_ns - self.copy_to_camera_shm_ns)/1_000_000
         return -1
 
 
-    @computed_field    # Individual timing metrics - Multi-Frame Operations
-    @property
+    # @computed_field    # Individual timing metrics - Multi-Frame Operations
+    # @property
     def idle_before_copy_to_multiframe_shm_duration_ms(self) -> float:
         if self.copy_to_multiframe_shm_ns and self.retrieve_from_camera_shm_ns:
             return (self.copy_to_multiframe_shm_ns - self.retrieve_from_camera_shm_ns)/1_000_000
         return -1
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def idle_in_multiframe_shm_duration_ms(self) -> float:
         if self.retrieve_from_multiframe_shm_ns and self.copy_to_multiframe_shm_ns:
             return (self.retrieve_from_multiframe_shm_ns - self.copy_to_multiframe_shm_ns)/1_000_000
         return -1
 
 
-    @computed_field    # Higher-level category timing metrics
-    @property
+    # @computed_field
+    # @property
     def total_frame_acquisition_duration_ms(self) -> float:
         """Total time spent in frame acquisition (grab + retrieve)"""
         if self.post_retrieve_ns and self.pre_grab_ns:
             return (self.post_retrieve_ns - self.pre_grab_ns)/1_000_000
         return -1
 
-    @computed_field
-    @property
+#     @computed_field
+#     @property
     def total_ipc_travel_duration_ms(self) -> float:
         """Total time spent in IPC operations (after frame grab/retrieve, before exiting mf shm"""
         if self.retrieve_from_multiframe_shm_ns and self.post_retrieve_ns:

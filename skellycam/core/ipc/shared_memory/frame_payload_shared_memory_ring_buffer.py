@@ -4,9 +4,8 @@ import time
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.frame_payload import FramePayload, initialize_frame_rec_array
+from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +15,7 @@ class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
     @classmethod
     def from_config(cls, camera_config:CameraConfig, read_only: bool = False):
         return cls.create(
-            example_data=initialize_frame_rec_array(camera_config= camera_config,
-                                                    timebase_mapping=TimebaseMapping()), #NOTE - Dummy used for shape and dtype
+            example_data=FramePayload.create_dummy(camera_config=camera_config).to_numpy_record_array(), #NOTE - Dummy used for shape and dtype
             read_only=read_only,
         )
     @property
@@ -30,12 +28,20 @@ class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         frame_rec_array.frame_metadata.timestamps.copy_to_camera_shm_ns = time.perf_counter_ns()
         self.put_data(frame_rec_array, overwrite=overwrite)
 
-    def retrieve_latest_frame(self) -> FramePayload:
+    def retrieve_latest_frame(self, frame:FramePayload|None=None) -> FramePayload:
         frame_rec_array = self.get_latest_data()
         frame_rec_array.frame_metadata.timestamps.retrieve_from_camera_shm_ns = time.perf_counter_ns()
-        return FramePayload.from_numpy_record_array(frame_rec_array)
+        if frame is None:
+            frame = FramePayload.create_from_numpy_record_array(frame_rec_array)
+        else:
+            frame.update_from_numpy_record_array(frame_rec_array)
+        return frame
 
-    def retrieve_next_frame(self) -> FramePayload:
+    def retrieve_next_frame(self, frame:FramePayload|None=None) -> FramePayload:
         frame_rec_array = self.get_next_data()
         frame_rec_array.frame_metadata.timestamps.retrieve_from_camera_shm_ns = time.perf_counter_ns()
-        return FramePayload.from_numpy_record_array(frame_rec_array)
+        if frame is None:
+            frame =  FramePayload.create_from_numpy_record_array(frame_rec_array)
+        else:
+            frame.update_from_numpy_record_array(frame_rec_array)
+        return frame

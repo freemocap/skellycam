@@ -9,7 +9,7 @@ from skellycam.core.camera.opencv.opencv_apply_config import apply_camera_config
 from skellycam.core.camera.opencv.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
-from skellycam.core.frame_payloads.frame_payload import initialize_frame_rec_array
+from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtractedConfigMessage, \
     UpdateCamerasSettingsMessage
@@ -79,11 +79,9 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
 
     while not ipc.all_ready and should_continue():
         wait_10ms()
-    frame_rec_array = initialize_frame_rec_array(
-        camera_config=config,
-        timebase_mapping=ipc.timebase_mapping,
-        frame_number=orchestrator.camera_frame_counts[camera_id] + 1
-    )
+    frame_rec_array = FramePayload.create_initial(camera_config=config,
+                                                  timebase_mapping=ipc.timebase_mapping).to_numpy_record_array()
+
     try:
         logger.debug(f"Camera {config.camera_id} frame grab loop starting...")
         while should_continue():
@@ -111,7 +109,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                              camera_shared_memory=camera_shm,
                              )
             self_status.grabbing_frame.value = False
-            frame_rec_array.frame_metadata.frame_number[0] +=1
+            frame_rec_array.frame_metadata.frame_number[0] += 1
             # Last camera to increment their frame count triggers the next frame_grab
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
 
@@ -157,11 +155,8 @@ def check_for_new_config(camera_id: CameraIdString,
         config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                             prior_config=config,
                                             config=new_config, )
-        frame_rec_array = initialize_frame_rec_array(
-            camera_config=config,
-            timebase_mapping=ipc.timebase_mapping,
-            frame_number=frame_rec_array.frame_metadata.frame_number
-        )
+        frame_rec_array = FramePayload.create_initial(camera_config=config,
+                                                      timebase_mapping=ipc.timebase_mapping).to_numpy_record_array()
         ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
             DeviceExtractedConfigMessage(extracted_config=config))
         self_status.updating.value = False

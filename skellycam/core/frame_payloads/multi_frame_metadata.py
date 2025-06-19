@@ -26,7 +26,7 @@ class MultiFrameMetadata(BaseModel):
                 camera_id: frame.frame_metadata
                 for camera_id, frame in multi_frame_payload.frames.items()
             },
-            timebase_mapping=multi_frame_payload.timebase_mapping,
+            # timebase_mapping=multi_frame_payload.timebase_mapping,
             mf_timestamps=MultiframeTimestamps.from_multiframe(multi_frame_payload)
         )
 

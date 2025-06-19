@@ -23,7 +23,7 @@ class FrontendFramePayload(BaseModel):
     jpeg_images: dict[CameraIdString, Base64JPEGImage]
     camera_configs: CameraConfigs
     # multi_frame_metadata: MultiFrameMetadata
-    timebase_mapping: TimebaseMapping
+    # timebase_mapping: TimebaseMapping
     multi_frame_number: int = 0
 
     @property
@@ -54,7 +54,7 @@ class FrontendFramePayload(BaseModel):
 
         return cls(
             jpeg_images=jpeg_images,
-            timebase_mapping=multi_frame_payload.timebase_mapping,
+            # timebase_mapping=multi_frame_payload.timebase_mapping,
             multi_frame_number=multi_frame_payload.multi_frame_number,
             camera_configs=multi_frame_payload.camera_configs,
 )

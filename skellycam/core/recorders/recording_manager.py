@@ -39,7 +39,7 @@ class RecordingManager(BaseModel):
             ipc=ipc,
             should_close_self=should_close_self,
             worker=worker_strategy.value(target=cls._worker,
-                                         name=cls.__class__.__name__,
+                                         name='RecordingManagerWorker',
                                          kwargs=dict(ipc=ipc,
                                                      camera_ids=camera_ids,
                                                      should_close_self=should_close_self,
@@ -74,9 +74,8 @@ class RecordingManager(BaseModel):
             self.join()
         logger.debug(f"Video worker closed")
 
-    @classmethod
-    def _worker(cls,
-                ipc: CameraGroupIPC,
+    @staticmethod
+    def _worker(ipc: CameraGroupIPC,
                 camera_ids: list[CameraIdString],
                 recording_info_subscription: TopicSubscriptionQueue,
                 config_updates_subscription: TopicSubscriptionQueue,
@@ -139,7 +138,7 @@ class RecordingManager(BaseModel):
                             f"Expected RecordingInfo, got {type(recording_info_message)} in recording_info_subscription"
                         )
 
-                    video_manager = cls.start_recording(status=status,
+                    video_manager = RecordingManager.start_recording(status=status,
                                                         recording_info=recording_info_message.recording_info,
                                                         camera_configs=camera_configs,
                                                         video_manager=video_manager)
@@ -160,7 +159,7 @@ class RecordingManager(BaseModel):
                     raise NotImplementedError("Runtime updates of shared memory are not yet implemented.")
 
                 # check/handle new multi-frames
-                video_manager = cls._get_and_handle_new_mfs(
+                video_manager = RecordingManager._get_and_handle_new_mfs(
                     status=status,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
@@ -169,7 +168,7 @@ class RecordingManager(BaseModel):
         except Exception as e:
             status.error.value = True
             ipc.kill_everything()
-            logger.error(f"{cls.__class__.__name__} process error: {e}")
+            logger.error(f"{RecordingManager.__class__.__name__} process error: {e}")
             logger.exception(e)
             raise
 
@@ -183,9 +182,8 @@ class RecordingManager(BaseModel):
             camera_group_shm.close()
             logger.debug(f"RecordingManager worker completed")
 
-    @classmethod
-    def _get_and_handle_new_mfs(cls,
-                                status: RecordingManagerStatus,
+    @staticmethod
+    def _get_and_handle_new_mfs(status: RecordingManagerStatus,
                                 video_manager: VideoManager | None,
                                 camera_group_shm: CameraGroupSharedMemoryManager) ->VideoManager | None:
         latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
@@ -204,17 +202,16 @@ class RecordingManager(BaseModel):
                     video_manager.save_one_frame()
                 else:
                     # if we have a video manager but not recording, then finish and close it
-                    video_manager = cls.stop_recording(status=status, video_manager=video_manager)
+                    video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
         return video_manager
 
-    @classmethod
-    def start_recording(cls,
-                        status: RecordingManagerStatus,
+    @staticmethod
+    def start_recording(status: RecordingManagerStatus,
                         recording_info: RecordingInfo,
                         camera_configs: CameraConfigs,
                         video_manager: VideoManager | None) -> VideoManager | None:
         if isinstance(video_manager, VideoManager):
-            cls.stop_recording(status=status, video_manager=video_manager)
+            RecordingManager.stop_recording(status=status, video_manager=video_manager)
 
         if not isinstance(recording_info, RecordingInfo):
             raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
@@ -231,8 +228,8 @@ class RecordingManager(BaseModel):
         status.is_recording_frames_flag.value = True
         return video_manager
 
-    @classmethod
-    def stop_recording(cls, status: RecordingManagerStatus, video_manager: VideoManager) -> None:
+    @staticmethod
+    def stop_recording(status: RecordingManagerStatus, video_manager: VideoManager) -> None:
         logger.debug(f"Stopping recording: `{video_manager.recording_info.recording_name}`...")
         if not isinstance(video_manager, VideoManager):
             raise ValueError(f"Expected VideoManager, got {type(video_manager)} in video_manager")

@@ -120,6 +120,8 @@ class SharedMemoryElement(BaseModel):
         # Handle scalar records
         if data.shape == () and self.buffer.shape == (1,):
             np.copyto(dst=self.buffer, src=np.array([data], dtype=self.dtype))
+            self.first_data_written = True
+
             return
 
         # Handle array records

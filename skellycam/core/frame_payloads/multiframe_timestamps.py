@@ -24,7 +24,7 @@ class MultiframeTimestamps(BaseModel):
         """
         Create a MultiframeLifespanTimestamps from a MultiFramePayload.
         """
-        return cls(frame_timestamps={camera_id: frame.timestamps
+        return cls(frame_timestamps={camera_id: frame.frame_metadata.timestamps
                                      for camera_id, frame in multiframe_payload.frames.items()},
                    multiframe_number=multiframe_payload.multi_frame_number)
 

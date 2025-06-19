@@ -36,9 +36,16 @@ class FrameMetadata(BaseModel):
 
 
     @property
-    def timestamp_ns(self) -> int:
+    def timestamp_ns(self) -> float:
         return self.timestamps.timestamp_local_unix_ms
 
+    @classmethod
+    def create_initial(cls, camera_config: CameraConfig, timebase_mapping:TimebaseMapping) -> "FrameMetadata":
+        return cls(
+            frame_number=-1,
+            camera_config=camera_config,
+            timestamps=FrameLifespanTimestamps(timebase_mapping=timebase_mapping),
+        )
     @classmethod
     def from_numpy_record_array(cls, array: np.recarray):
         if array.dtype != FRAME_METADATA_DTYPE:

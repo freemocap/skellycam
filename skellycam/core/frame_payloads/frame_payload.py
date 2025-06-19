@@ -3,44 +3,13 @@ from numpydantic import NDArray, Shape
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata, initialize_frame_metadata_rec_array
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.utilities.rotate_image import rotate_image
 
 
-# skellycam/core/frame_payloads/frame_payload.py
-def initialize_frame_rec_array(camera_config: CameraConfig,
-                               timebase_mapping: TimebaseMapping,
-                               frame_number: int = 0) -> np.recarray:
-    """
-    Create a frame record array with the correct shape and dtype.
 
-    The issue was that np.rec.array was being called with arrays of different shapes:
-    - The image array had shape (height, width, channels)
-    - The metadata array had shape (1,)
-
-    This fix creates a record array with the correct dtype and then assigns values to it.
-    """
-    # Create the record array with the correct dtype
-    dtype = create_frame_dtype(camera_config)
-    result = np.recarray(1, dtype=dtype)
-
-    # Create the image array
-    image_array = np.ones((camera_config.resolution.height,
-                            camera_config.resolution.width,
-                            camera_config.color_channels), dtype=np.uint8) + camera_config.camera_index
-
-    # Get the metadata array
-    metadata_array = initialize_frame_metadata_rec_array(camera_config=camera_config,
-                                                         frame_number=frame_number,
-                                                         timebase_mapping=timebase_mapping)
-
-    # Assign values to the record array
-    result.image[0] = image_array
-    result.frame_metadata[0] = metadata_array[0]
-
-    return result
 
 class FramePayload(BaseModel):
     image: NDArray[Shape["* image_height, * image_width, * color_channels"], np.uint8]
@@ -59,7 +28,7 @@ class FramePayload(BaseModel):
         """
         De facto timestamp for this frame is defined as the average of the pre-grab and post-grab timestamps (i.e. the hypothetical moment the image was grabbed).
         """
-        return self.frame_metadata.timestamp_ns
+        return self.frame_metadata.timestamps.post_grab_ns
 
     @property
     def height(self):
@@ -74,7 +43,30 @@ class FramePayload(BaseModel):
         return self.frame_metadata.camera_config
 
     @classmethod
-    def from_numpy_record_array(cls, array: np.recarray, apply_config_rotation: bool=False):
+    def create_initial(cls, camera_config: CameraConfig, timebase_mapping:TimebaseMapping) -> "FramePayload":
+        """
+        Create a dummy FramePayload with a dummy image and metadata.
+        """
+        image_shape = (camera_config.resolution.height, camera_config.resolution.width, camera_config.color_channels)
+        dummy_image = np.ones(image_shape, dtype=np.uint8) + camera_config.camera_index
+
+        frame_metadata = FrameMetadata.create_initial(camera_config=camera_config, timebase_mapping=timebase_mapping)
+
+        return cls(image=dummy_image, frame_metadata=frame_metadata)
+    @classmethod
+    def create_dummy(cls, camera_config: CameraConfig) -> "FramePayload":
+        """
+        Create a dummy FramePayload with a dummy image and metadata, for shape and size inference.
+        """
+        image_shape = (camera_config.resolution.height, camera_config.resolution.width, camera_config.color_channels)
+        dummy_image = np.ones(image_shape, dtype=np.uint8) + camera_config.camera_index
+
+        frame_metadata = FrameMetadata.create_initial(camera_config=camera_config, timebase_mapping=TimebaseMapping())
+
+        return cls(image=dummy_image, frame_metadata=frame_metadata)
+
+    @classmethod
+    def create_from_numpy_record_array(cls, array: np.recarray, apply_config_rotation: bool=False):
         if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config)):
             raise ValueError(f"FramePayload array shape mismatch - "
                              f"Expected: {create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config))}, "
@@ -87,7 +79,24 @@ class FramePayload(BaseModel):
         if apply_config_rotation:
             frame.image = rotate_image(frame.image, frame.camera_config.rotation)
         return frame
+    def update_from_numpy_record_array(self, array: np.recarray, apply_config_rotation: bool=False):
+        """
+        Update the FramePayload from a numpy record array.
+        """
+        if array.dtype != create_frame_dtype(self.frame_metadata.camera_config):
+            raise ValueError(f"FramePayload array shape mismatch - "
+                             f"Expected: {create_frame_dtype(self.frame_metadata.camera_config)}, "
+                             f"Actual: {array.dtype}")
+        if self.frame_metadata.timestamps.timebase_mapping.to_numpy_record_array() != array.frame_metadata.timestamps.timebase_mapping:
+            raise ValueError(f"FramePayload timebase mapping mismatch - "
+                             f"Expected: {self.frame_metadata.timestamps.timebase_mapping}, "
+                             f"Actual: {array.frame_metadata.timestamps.timebase_mapping}")
 
+        self.image = array.image
+        self.frame_metadata = FrameMetadata.from_numpy_record_array(array.frame_metadata)
+
+        if apply_config_rotation:
+            self.image = rotate_image(self.image, self.camera_config.rotation)
     def to_numpy_record_array(self) -> np.recarray:
         """
         Convert the FramePayload to a numpy record array.

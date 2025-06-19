@@ -37,9 +37,8 @@ class MultiframeBuilder:
                    close_self_flag=close_self_flag
                    )
 
-    @classmethod
-    def _run_mf_publication_thread(cls,
-                                   ipc: CameraGroupIPC,
+    @staticmethod
+    def _run_mf_publication_thread(ipc: CameraGroupIPC,
                                    new_shm_subscription: TopicSubscriptionQueue,
                                    close_self_flag: multiprocessing.Value
                                    ):

@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 
+
 from skellycam.api.server.server_manager import UvicornServerManager
 from skellycam.api.server.server_singleton import create_server_manager
 
@@ -17,7 +18,6 @@ def run_server(global_kill_flag: multiprocessing.Value):
     logger.info("Starting server main process")
     server_manager: UvicornServerManager = create_server_manager(global_kill_flag=global_kill_flag)
     try:
-
         server_manager.run_server()
     except Exception as e:
         logger.error(f"Server main process ended with error: {e}")
@@ -32,20 +32,11 @@ def run_server(global_kill_flag: multiprocessing.Value):
 async def main(global_kill_flag: multiprocessing.Value):
 
 
-    # active_elements_check_loop_task = asyncio.create_task(
-    #     active_elements_check_loop(global_kill_flag=global_kill_flag,
-    #
-    #                                context="Skellycam Server"
-    #                                ),
-    #     name="AppLifecycleCheckLoop")
-    # active_elements_check_loop_task.add_done_callback(lambda _: logger.info("Shutdown listener loop task ended"))
-
     main_server_thread = threading.Thread(target=run_server,
                                           kwargs=dict(global_kill_flag=global_kill_flag),
                                           name="MainServerThread")
     main_server_thread.start()
 
-    # await asyncio.gather(active_elements_check_loop_task, return_exceptions=True)
     logger.debug("joining main server thread...")
     main_server_thread.join()
     logger.debug("Main server thread complete - exiting main function")
@@ -62,6 +53,7 @@ def listen_for_shutdown_signals(global_kill_flag: multiprocessing.Value):
     if os.getenv("SKELLYCAM_SHOULD_SHUTDOWN", "").lower() == "true":
         logger.info("Received valid shutdown signal from environment variable")
         global_kill_flag.value = True
+
 
 def handle_shutdown_signal(signum, frame):
     """Signal handler for termination signals."""
