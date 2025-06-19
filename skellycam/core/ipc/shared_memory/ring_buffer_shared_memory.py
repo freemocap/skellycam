@@ -6,7 +6,8 @@ from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNu
 
 ONE_GIGABYTE = 1024 ** 3
 
-
+import logging
+logger = logging.getLogger(__name__)
 class SharedMemoryRingBufferDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     shm_dtos: dict[int, SharedMemoryElementDTO]
@@ -39,7 +40,7 @@ class SharedMemoryRingBuffer(BaseModel):
         if ring_buffer_length is None:
             ring_buffer_length = memory_allocation // example_data.itemsize
         shms = {index: SharedMemoryElement.create(dtype=example_data.dtype,
-                                            read_only=read_only) for index in range(int(ring_buffer_length))}
+                                                  read_only=read_only) for index in range(int(ring_buffer_length))}
         return cls(shms=shms,
                    last_written_index=SharedMemoryNumber.create(initial_value=-1,
                                                                 read_only=read_only),
@@ -72,8 +73,10 @@ class SharedMemoryRingBuffer(BaseModel):
                  dto: SharedMemoryRingBufferDTO,
                  read_only: bool):
 
-        return cls(shms={index: SharedMemoryElement.recreate(dto=dto, read_only=read_only) for index, dto in dto.shm_dtos.items()},
-                   last_written_index=SharedMemoryNumber.recreate(dto=dto.last_written_index_shm_dto, read_only=read_only),
+        return cls(shms={index: SharedMemoryElement.recreate(dto=dto, read_only=read_only) for index, dto in
+                         dto.shm_dtos.items()},
+                   last_written_index=SharedMemoryNumber.recreate(dto=dto.last_written_index_shm_dto,
+                                                                  read_only=read_only),
                    last_read_index=SharedMemoryNumber.recreate(dto=dto.last_read_index_shm_dto, read_only=read_only),
                    dtype=dto.dtype,
                    read_only=read_only,
@@ -98,6 +101,14 @@ class SharedMemoryRingBuffer(BaseModel):
     @property
     def new_data_available(self) -> bool:
         return self.first_data_written and self.last_written_index.value > self.last_read_index.value
+
+    @property
+    def new_data_indicies(self) -> list[int]:
+        if not self.first_data_written:
+            return []
+        if not self.new_data_available:
+            return []
+        return list(range(self.last_read_index.value, self.last_written_index.value))
 
     def _check_for_overwrite(self, next_index: int) -> bool:
         return next_index % self.ring_buffer_length == self.last_read_index.value % self.ring_buffer_length
@@ -133,6 +144,7 @@ class SharedMemoryRingBuffer(BaseModel):
             raise ValueError("Cannot read past the last written index!")
         shm_data = self.shms[index_to_read % self.ring_buffer_length].retrieve_data()
         self.last_read_index.value = index_to_read
+
         return shm_data
 
     def get_latest_data(self) -> np.recarray:
@@ -145,7 +157,6 @@ class SharedMemoryRingBuffer(BaseModel):
         """
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
-
         return self.shms[self.last_written_index.value % self.ring_buffer_length].retrieve_data()
 
     def close(self):
@@ -208,11 +219,11 @@ if __name__ == "__main__":
 
     # Simulate another process by recreating from DTO
     print("Recreating from DTO (simulating another process)...")
-    copy = SharedMemoryRingBuffer.recreate(dto=_dto, read_only=True)
+    _copy = SharedMemoryRingBuffer.recreate(dto=_dto, read_only=True)
 
-    # Get latest data from the copy
+    # Get latest data from the _copy
     print("Reading latest data...")
-    latest_data = copy.get_latest_data()
+    latest_data = _copy.get_latest_data()
     print(f"Latest data: {latest_data}")
 
     # Create a reader that consumes data sequentially
@@ -232,17 +243,17 @@ if __name__ == "__main__":
         print(f"Wrote data {i}: {test_data}")
 
     print("\nReading latest data after wrapping...")
-    latest_data = copy.get_latest_data()
+    latest_data = _copy.get_latest_data()
     print(f"Latest data: {latest_data}")
 
     # Test valid flag
-    print(f"\nValid flag: {copy.valid}")
+    print(f"\nValid flag: {_copy.valid}")
     original.valid = False
-    print(f"Valid flag after setting to False: {copy.valid}")
+    print(f"Valid flag after setting to False: {_copy.valid}")
 
     # Clean up
     print("\nCleaning up...")
-    copy.close()
+    _copy.close()
     reader.close()
     print("Closed copies.")
 

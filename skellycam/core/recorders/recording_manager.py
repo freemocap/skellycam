@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-
+import tracemalloc
 from pydantic import BaseModel, ConfigDict, SkipValidation
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
@@ -13,6 +13,7 @@ from skellycam.core.recorders.recording_manager_status import RecordingManagerSt
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_manager import VideoManager
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
+from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,10 @@ class RecordingManager(BaseModel):
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
             while should_continue():
+                wait_1ms()
+
+
+
                 # check for new recording info
                 if status.should_record.value and video_manager is None:
                     recording_info_message = recording_info_subscription.get(block=True)
@@ -186,6 +191,7 @@ class RecordingManager(BaseModel):
     def _get_and_handle_new_mfs(status: RecordingManagerStatus,
                                 video_manager: VideoManager | None,
                                 camera_group_shm: CameraGroupSharedMemoryManager) ->VideoManager | None:
+
         latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
 
         if len(latest_mfs) > 0:
@@ -203,6 +209,7 @@ class RecordingManager(BaseModel):
                 else:
                     # if we have a video manager but not recording, then finish and close it
                     video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
+
         return video_manager
 
     @staticmethod

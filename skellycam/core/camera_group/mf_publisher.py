@@ -68,8 +68,10 @@ class MultiframeBuilder:
                     wait_10ms()
                     continue
                 mfs = camera_group_shm.build_all_new_multiframes()
+
                 if len(mfs) > 0:
                     logger.loop(f"Publishing {len(mfs)} multi-frames for camera group {ipc.group_id}...")
+                wait_10ms()
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")
