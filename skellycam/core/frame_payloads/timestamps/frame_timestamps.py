@@ -28,13 +28,13 @@ class FrameTimestamps(BaseModel):
         """
         Using the midpoint between pre and post grab timestamps to represent the frame's timestamp.
         """
-        if self.pre_frame_grab_ns is None or self.post_frame_grab_ns is None:
+        if not self.pre_frame_grab_ns or not self.post_frame_grab_ns:
             raise ValueError("pre_frame_retrieve_ns and post_frame_grab_ns cannot be None")
         return (self.post_frame_grab_ns - self.pre_frame_grab_ns) // 2
 
 
     @property
-    def durations(self) -> dict[str,object]:
+    def durations(self) -> 'FrameDurations':
         """
         Get a helper object that calculates various duration metrics.
         """
@@ -96,16 +96,19 @@ class FrameDurations(BaseModel):
     """
     timestamps: FrameTimestamps
     @classmethod
-    def calculate_durations(cls, timestamps:FrameTimestamps) -> dict[str, int]:
+    def calculate_durations(cls, timestamps:FrameTimestamps):
 
-        instance = cls(timestamps=timestamps)
-        as_dict = instance.model_dump(exclude={'timestamps'})
+        return cls(timestamps=timestamps)
+
+    def to_dict(self) -> dict[str, int]:
+        as_dict = self.model_dump(exclude={'timestamps'})
         uncalculable_fields = [value==-1 for value in as_dict.values()]
         if len(uncalculable_fields) > 0:
-            logger.warning(f"Could not calculate frame duration fields: {uncalculable_fields} due to missing timestamps: {instance.timestamps.unset_fields}")
+            logger.warning(f"Could not calculate frame duration fields: {uncalculable_fields} due to missing timestamps: {self.timestamps.unset_fields}")
         return as_dict
 
     @computed_field
+    @property
     def idle_before_grab_ns(self) -> int:
         """Time between frame initialization and the start of the grab operation."""
         if self.timestamps.frame_initialized_ns and self.timestamps.pre_frame_grab_ns:
@@ -113,6 +116,7 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
     def during_frame_grab_ns(self) -> int:
         """Time spent in the grab operation."""
         if self.timestamps.post_frame_grab_ns and self.timestamps.pre_frame_grab_ns:
@@ -120,12 +124,14 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
     def idle_before_retrieve_ns(self)-> int:
         if self.timestamps.pre_frame_retrieve_ns and self.timestamps.post_frame_grab_ns:
             return self.timestamps.pre_frame_retrieve_ns - self.timestamps.post_frame_grab_ns
         return -1
 
     @computed_field
+    @property
     def during_frame_retrieve_ns(self) -> int:
         """Time spent in the retrieve operation."""
         if self.timestamps.post_frame_retrieve_ns and self.timestamps.pre_frame_retrieve_ns:
@@ -133,6 +139,7 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
     def idle_before_copy_to_camera_shm_ns(self) -> int:
         """Time between frame retrieval and copying to camera shared memory."""
         if self.timestamps.pre_copy_to_camera_shm_ns and self.timestamps.post_frame_retrieve_ns:
@@ -140,6 +147,7 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
     def stored_in_camera_shm_ns(self) -> int:
         """Time spent in the camera shared memory buffer."""
         if self.timestamps.post_retrieve_from_camera_shm_ns and self.timestamps.pre_copy_to_camera_shm_ns:
@@ -147,14 +155,15 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
     def during_copy_from_camera_shm_ns(self) -> int:
-        """Time spent in the camera shared memory buffer."""
+        """Time spent copying from the camera shared memory buffer."""
         if self.timestamps.post_retrieve_from_camera_shm_ns and self.timestamps.pre_retrieve_from_camera_shm_ns:
-            return self.timestamps.post_retrieve_from_camera_shm_ns - self.timestamps.pre_copy_to_camera_shm_ns
+            return self.timestamps.post_retrieve_from_camera_shm_ns - self.timestamps.pre_retrieve_from_camera_shm_ns
         return -1
-    
 
     @computed_field
+    @property
     def idle_before_copy_to_multiframe_shm_ns(self) -> int:
         """Time between retrieving from camera shared memory and copying to multi-frame shared memory."""
         if self.timestamps.pre_copy_to_multiframe_shm_ns and self.timestamps.post_retrieve_from_camera_shm_ns:
@@ -162,6 +171,14 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
+    def during_copy_from_multiframe_shm_ns(self) -> int:
+        """Time spent copying from multiframe shared memory."""
+        if self.timestamps.post_retrieve_from_multiframe_shm_ns and self.timestamps.pre_retrieve_from_multiframe_shm_ns:
+            return self.timestamps.post_retrieve_from_multiframe_shm_ns - self.timestamps.pre_retrieve_from_multiframe_shm_ns
+        return -1
+    @computed_field
+    @property
     def stored_in_multiframe_shm_ns(self) -> int:
         """Time spent in the multi-frame shared memory buffer."""
         if self.timestamps.post_retrieve_from_multiframe_shm_ns and self.timestamps.pre_copy_to_multiframe_shm_ns:
@@ -169,6 +186,7 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
     def total_frame_acquisition_time_ns(self) -> int:
         """Total time spent in frame acquisition (grab + retrieve)"""
         if self.timestamps.post_frame_retrieve_ns and self.timestamps.pre_frame_grab_ns:
@@ -176,6 +194,7 @@ class FrameDurations(BaseModel):
         return -1
 
     @computed_field
+    @property
     def total_ipc_travel_time_ns(self) -> int:
         """Total time spent in IPC operations (after frame grab/retrieve, before exiting mf shm)"""
         if self.timestamps.post_retrieve_from_multiframe_shm_ns and self.timestamps.post_frame_retrieve_ns:

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiframeTimestamps
+from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.frame_payloads.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
@@ -49,7 +49,7 @@ class TestRecordingTimestamps:
         }
 
         # Create MultiframeTimestamps instances
-        self.multiframe_timestamps1 = MultiframeTimestamps(
+        self.multiframe_timestamps1 = MultiFrameTimestamps(
             frame_timestamps=self.frame_timestamps,
             principal_camera_id="camera1"
         )
@@ -86,7 +86,7 @@ class TestRecordingTimestamps:
             "camera2": self.camera2_timestamps2
         }
 
-        self.multiframe_timestamps2 = MultiframeTimestamps(
+        self.multiframe_timestamps2 = MultiFrameTimestamps(
             frame_timestamps=self.frame_timestamps2,
             principal_camera_id="camera1"
         )
@@ -160,7 +160,7 @@ class TestRecordingTimestamps:
         # Mock the frame_initialized_local_unix_ms property
         with patch.object(custom_frame_timestamps.__class__, 'frame_initialized_local_unix_ms',
                           property(lambda self: 1000)):
-            custom_multiframe = MultiframeTimestamps(
+            custom_multiframe = MultiFrameTimestamps(
                 frame_timestamps={"camera1": custom_frame_timestamps},
                 principal_camera_id="camera1"
             )
@@ -189,7 +189,7 @@ class TestRecordingTimestamps:
             mf2 = self.multiframe_timestamps2
 
             # Create test multiframes with mocked timestamp_local_unix_ms
-            with patch.object(MultiframeTimestamps, 'timestamp_local_unix_ms',
+            with patch.object(MultiFrameTimestamps, 'timestamp_local_unix_ms',
                               property(
                                   lambda self: mock_stats1 if self is mf1 else mock_stats2)):
                 # Test the property
@@ -265,12 +265,12 @@ class TestRecordingTimestamps:
             )
         }
 
-        mf1 = MultiframeTimestamps(
+        mf1 = MultiFrameTimestamps(
             frame_timestamps=frame_timestamps,
             principal_camera_id="camera1"
         )
 
-        mf2 = MultiframeTimestamps(
+        mf2 = MultiFrameTimestamps(
             frame_timestamps=frame_timestamps,
             principal_camera_id="camera1"
         )
@@ -280,7 +280,7 @@ class TestRecordingTimestamps:
         )
 
         # Patch the inter_camera_grab_range_ms property
-        with patch.object(MultiframeTimestamps, 'inter_camera_grab_range_ms',
+        with patch.object(MultiFrameTimestamps, 'inter_camera_grab_range_ms',
                           new_callable=PropertyMock,
                           side_effect=[5, 10]):
             with patch('skellycam.utilities.sample_statistics.DescriptiveStatistics.from_samples') as mock_from_samples:

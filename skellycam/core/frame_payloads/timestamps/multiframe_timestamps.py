@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 
 
-class MultiframeTimestamps(BaseModel):
+class MultiFrameTimestamps(BaseModel):
     """
     Provides the statstistics for the timestamps of a multi-frame payload.
     """
@@ -24,7 +24,7 @@ class MultiframeTimestamps(BaseModel):
     recording_start_time_ns: int
 
     @classmethod
-    def from_multiframe(cls, multiframe: 'MultiFramePayload', recording_start_time_ns:int) -> 'MultiframeTimestamps':
+    def from_multiframe(cls, multiframe: 'MultiFramePayload', recording_start_time_ns:int) -> 'MultiFrameTimestamps':
         """
         Create a MultiframeLifespanTimestamps from a MultiFramePayload.
         """
@@ -48,8 +48,8 @@ class MultiframeTimestamps(BaseModel):
     def inter_camera_grab_range_ms(self) -> float:
         """
         Returns the range of the timestamps across all cameras in milliseconds.
-        This is the difference between the maximum and minimum `timestamp_ms` values from each camera, which
-        are base on the midpoint between the pre-grab and post-grab timestamps.
+        This is the difference between the maximum and minimum `timestamp_ns` values from each camera, which
+        are base on the midpoint between the pre-grab and post-grab timestamps and converted to milliseconds.
         """
         return ns_to_ms(self.timestamp_ns.range)
 
@@ -116,13 +116,7 @@ class MultiframeTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
-    def copy_to_multiframe_shm_ms(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.pre_copy_to_multiframe_shm_ns) for ts in self.frame_timestamps.values()],
-            name="copy_to_multiframe_shm_ms",
-            units="milliseconds"
-        )
+
 
     @property
     def pre_retrieve_from_multiframe_shm_ms(self) -> DescriptiveStatistics:
@@ -135,7 +129,7 @@ class MultiframeTimestamps(BaseModel):
     @property
     def post_retrieve_from_multiframe_shm_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.pre_retrieve_from_multiframe_shm_ns) for ts in self.frame_timestamps.values()],
+            samples=[ns_to_ms(ts.post_retrieve_from_multiframe_shm_ns) for ts in self.frame_timestamps.values()],
             name="post_retrieve_from_multiframe_shm_ms",
             units="milliseconds"
         )
@@ -203,14 +197,25 @@ class MultiframeTimestamps(BaseModel):
             name="idle_before_copy_to_multiframe_shm_ms",
             units="milliseconds"
         )
-
     @property
     def stored_in_multiframe_shm_ms(self) -> DescriptiveStatistics:
+        """
+        Time spent in the multi-frame shared memory buffer.
+        """
         return DescriptiveStatistics.from_samples(
             samples=[ns_to_ms(ts.durations.stored_in_multiframe_shm_ns) for ts in self.frame_timestamps.values()],
             name="stored_in_multiframe_shm_ms",
             units="milliseconds"
         )
+
+    @property
+    def during_copy_from_multiframe_shm_ms(self) -> DescriptiveStatistics:
+        return DescriptiveStatistics.from_samples(
+            samples=[ns_to_ms(ts.durations.during_copy_from_multiframe_shm_ns) for ts in self.frame_timestamps.values()],
+            name="during_copy_from_multiframe_shm_ms",
+            units="milliseconds"
+        )
+
 
     @property
     def total_frame_acquisition_time_ms(self) -> DescriptiveStatistics:

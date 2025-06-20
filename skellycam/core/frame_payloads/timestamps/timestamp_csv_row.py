@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 
 
-class FrameTimestampCSVRow(BaseModel):
+class FrameTimestampsCSVRow(BaseModel):
     frame_number: int
 
     # Timestamp fields
@@ -54,7 +54,7 @@ class FrameTimestampCSVRow(BaseModel):
                             frame_metadata: 'FrameMetadata',
                             recording_start_time_ns: int,
                             previous_frame_timestamps: FrameTimestamps| None = None,
-                            ) -> "FrameTimestampCSVRow":
+                            ) -> "FrameTimestampsCSVRow":
         timestamps = frame_metadata.timestamps
         timebase: TimebaseMapping = timestamps.timebase_mapping
 

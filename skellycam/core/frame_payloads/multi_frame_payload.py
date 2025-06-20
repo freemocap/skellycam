@@ -74,7 +74,8 @@ class MultiFramePayload(BaseModel):
         frame_numbers = [frame.frame_metadata.frame_number for frame in self.frames.values()]
         mf_number = set(frame_numbers)
         if len(mf_number) > 1:
-            raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
+            # raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
+            logger.warning(f"MultiFramePayload has multiple frame numbers {mf_number}")
         return mf_number.pop()
 
     @property

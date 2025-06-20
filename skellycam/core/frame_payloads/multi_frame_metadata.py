@@ -4,7 +4,7 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiframeTimestamps
+from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class MultiFrameMetadata(BaseModel):
     multi_frame_number: int
     frame_metadatas: dict[CameraIdString, FrameMetadata]
-    mf_timestamps: MultiframeTimestamps
+    mf_timestamps: MultiFrameTimestamps
     timebase_mapping: TimebaseMapping
 
 
@@ -27,7 +27,7 @@ class MultiFrameMetadata(BaseModel):
                 for camera_id, frame in multi_frame_payload.frames.items()
             },
             # timebase_mapping=multi_frame_payload.timebase_mapping,
-            mf_timestamps=MultiframeTimestamps.from_multiframe(multi_frame_payload)
+            mf_timestamps=MultiFrameTimestamps.from_multiframe(multi_frame_payload)
         )
 
 

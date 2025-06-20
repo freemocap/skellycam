@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiframeTimestamps
+from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
 
@@ -48,7 +48,7 @@ class TestMultiframeTimestamps:
         }
         
         # Create a MultiframeTimestamps instance
-        self.multiframe_timestamps = MultiframeTimestamps(
+        self.multiframe_timestamps = MultiFrameTimestamps(
             frame_timestamps=self.frame_timestamps,
             principal_camera_id="camera1"
         )
@@ -76,7 +76,7 @@ class TestMultiframeTimestamps:
         mock_multiframe.principal_camera_id = "camera1"
         
         # Create MultiframeTimestamps from the mock MultiFramePayload
-        multiframe_timestamps = MultiframeTimestamps.from_multiframe(mock_multiframe)
+        multiframe_timestamps = MultiFrameTimestamps.from_multiframe(mock_multiframe)
         
         # Check that the MultiframeTimestamps was created correctly
         assert multiframe_timestamps.frame_timestamps == self.frame_timestamps
@@ -166,7 +166,7 @@ class TestMultiframeTimestamps:
 
     def test_with_empty_frame_timestamps(self):
         """Test behavior with an empty frame_timestamps dictionary."""
-        empty_multiframe = MultiframeTimestamps(
+        empty_multiframe = MultiFrameTimestamps(
             frame_timestamps={},
             principal_camera_id="camera1"
         )
