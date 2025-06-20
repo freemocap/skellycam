@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms
@@ -116,7 +116,13 @@ class MultiFrameTimestamps(BaseModel):
             units="milliseconds"
         )
 
-
+    @property
+    def pre_copy_to_multiframe_shm_ms(self) -> DescriptiveStatistics:
+        return DescriptiveStatistics.from_samples(
+            samples=[ns_to_ms(ts.pre_copy_to_multiframe_shm_ns) for ts in self.frame_timestamps.values()],
+            name="pre_copy_to_multiframe_shm_ms",
+            units="milliseconds"
+        )
 
     @property
     def pre_retrieve_from_multiframe_shm_ms(self) -> DescriptiveStatistics:

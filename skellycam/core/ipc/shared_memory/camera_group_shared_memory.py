@@ -10,7 +10,7 @@ from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer im
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
 from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,6 @@ import multiprocessing
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue
@@ -21,8 +20,6 @@ class WebsocketServer:
         self.websocket = websocket
         self._app: SkellycamApplication = get_skellycam_app()
 
-        self.latest_backend_framerate: CurrentFramerate | None = None
-        self.latest_frontend_framerate: CurrentFramerate | None = None
 
         self._websocket_should_continue = True
         self.ws_tasks: list[asyncio.Task] = []

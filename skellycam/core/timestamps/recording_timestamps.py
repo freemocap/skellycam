@@ -5,9 +5,9 @@ import pandas as pd
 from pydantic import BaseModel, Field
 from tabulate import tabulate
 
-from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiFrameTimestamps
+from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.sample_statistics import DescriptiveStatistics
@@ -26,6 +26,8 @@ class RecordingTimestampsStats(BaseModel):
     """
     recording_name: str
     number_of_frames: int
+    framerate_stats: DescriptiveStatistics
+    frame_duration_stats: DescriptiveStatistics
     inter_camera_grab_range_ms: DescriptiveStatistics
     idle_before_grab_ms: DescriptiveStatistics
     during_frame_grab_ms: DescriptiveStatistics
@@ -43,6 +45,8 @@ class RecordingTimestampsStats(BaseModel):
         return cls(
             recording_name=recording_timestamps.recording_info.recording_name,
             number_of_frames=recording_timestamps.number_of_recorded_frames,
+            framerate_stats=recording_timestamps.framerate_stats,
+            frame_duration_stats=recording_timestamps.frame_duration_stats,
             inter_camera_grab_range_ms=recording_timestamps.inter_camera_grab_range_stats,
             idle_before_grab_ms=recording_timestamps.idle_before_grab_duration_stats,
             during_frame_grab_ms=recording_timestamps.during_frame_grab_stats,
@@ -68,10 +72,38 @@ class RecordingTimestampsStats(BaseModel):
         header += f"Total Frames: {self.number_of_frames}\n"
         header += "=" * 80 + "\n\n"
 
-        # Frame timing section
+        # Frame timing section with table for framerate, frame duration, and inter-camera timestamp range
         timing_section = "FRAME TIMING STATISTICS\n"
         timing_section += "-" * 80 + "\n"
-        timing_section += f"Inter-camera grab range: {self.inter_camera_grab_range_ms}\n\n"
+
+        # Create table for timing metrics
+        timing_data = [
+            ["Framerate",
+             f"{self.framerate_stats.mean:.2f} Hz",
+             f"{self.framerate_stats.standard_deviation:.2f}",
+             f"{self.framerate_stats.min:.2f}",
+             f"{self.framerate_stats.max:.2f}",
+             f"{self.framerate_stats.median:.2f}"],
+            ["Frame Duration",
+             f"{self.frame_duration_stats.mean:.2f} ms",
+             f"{self.frame_duration_stats.standard_deviation:.2f}",
+             f"{self.frame_duration_stats.min:.2f}",
+             f"{self.frame_duration_stats.max:.2f}",
+             f"{self.frame_duration_stats.median:.2f}"],
+            ["Inter-Camera Grab Range",
+             f"{self.inter_camera_grab_range_ms.mean:.2f} ms",
+             f"{self.inter_camera_grab_range_ms.standard_deviation:.2f}",
+             f"{self.inter_camera_grab_range_ms.min:.2f}",
+             f"{self.inter_camera_grab_range_ms.max:.2f}",
+             f"{self.inter_camera_grab_range_ms.median:.2f}"]
+        ]
+
+        timing_table = tabulate(
+            timing_data,
+            headers=["Metric", "Mean", "Std", "Min", "Max", "Median"],
+            tablefmt="grid"
+        )
+        timing_section += timing_table + "\n\n"
 
         # Frame acquisition pipeline section
         pipeline_section = "FRAME ACQUISITION PIPELINE\n"
@@ -98,11 +130,11 @@ class RecordingTimestampsStats(BaseModel):
             percentage = (stats.mean / total_time) * 100 if total_time > 0 else 0
             table_data.append([
                 stage_name,
-                f"{stats.mean:.3f}",
-                f"{stats.standard_deviation:.3f}",
-                f"{stats.min:.3f}",
-                f"{stats.max:.3f}",
-                f"{percentage:.3f}%"
+                f"{stats.mean:.2f}",
+                f"{stats.standard_deviation:.2f}",
+                f"{stats.min:.2f}",
+                f"{stats.max:.2f}",
+                f"{percentage:.1f}%"
             ])
 
         # Create the pipeline table
@@ -119,15 +151,15 @@ class RecordingTimestampsStats(BaseModel):
 
         summary_data = [
             ["Total frame acquisition time",
-             f"{self.total_frame_acquisition_time_ms.mean:.3f}",
-             f"{self.total_frame_acquisition_time_ms.standard_deviation:.3f}",
-             f"{self.total_frame_acquisition_time_ms.min:.3f}",
-             f"{self.total_frame_acquisition_time_ms.max:.3f}"],
+             f"{self.total_frame_acquisition_time_ms.mean:.2f}",
+             f"{self.total_frame_acquisition_time_ms.standard_deviation:.2f}",
+             f"{self.total_frame_acquisition_time_ms.min:.2f}",
+             f"{self.total_frame_acquisition_time_ms.max:.2f}"],
             ["Total IPC travel time",
-             f"{self.total_ipc_travel_time_ms.mean:.3f}",
-             f"{self.total_ipc_travel_time_ms.standard_deviation:.3f}",
-             f"{self.total_ipc_travel_time_ms.min:.3f}",
-             f"{self.total_ipc_travel_time_ms.max:.3f}"]
+             f"{self.total_ipc_travel_time_ms.mean:.2f}",
+             f"{self.total_ipc_travel_time_ms.standard_deviation:.2f}",
+             f"{self.total_ipc_travel_time_ms.min:.2f}",
+             f"{self.total_ipc_travel_time_ms.max:.2f}"]
         ]
 
         summary_table = tabulate(
@@ -139,7 +171,6 @@ class RecordingTimestampsStats(BaseModel):
 
         # Combine all sections
         return header + timing_section + pipeline_section + summary_section
-
 class RecordingTimestamps(BaseModel):
     multiframe_timestamps: list[MultiFrameTimestamps] = Field(
         default_factory=list,
@@ -232,10 +263,10 @@ class RecordingTimestamps(BaseModel):
 
     @property
     def frames_per_second(self) -> list[float]:
-        return [duration ** -1 * 1e6 for duration in self.frame_durations_ms if duration > 0]
+        return [duration ** -1 for duration in self.frame_durations_ms if duration > 0]
 
     @property
-    def fps_stats(self) -> DescriptiveStatistics:
+    def framerate_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the frames per second.
         """

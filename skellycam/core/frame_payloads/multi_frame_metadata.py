@@ -4,8 +4,8 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
 
 if TYPE_CHECKING:

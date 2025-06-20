@@ -7,7 +7,7 @@ import pytest
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 
 
 # Define process functions at module level so they can be pickled

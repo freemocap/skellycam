@@ -1,94 +1,60 @@
+import time
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
-from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.frame_timestamps import FrameTimestamps, FrameDurations
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
 
 
-class TestFrameLifespanTimestamps:
+class TestFrameTimestamps:
     def test_initialization(self):
-        """Test that FrameLifespanTimestamps initializes with default values."""
+        """Test that FrameTimestamps initializes with default values."""
         timebase = TimebaseMapping()
         timestamps = FrameTimestamps(timebase_mapping=timebase)
-        
+
         # Check that frame_initialized_ns is set by default
         assert timestamps.frame_initialized_ns > 0
-        
+
         # Check that other timestamps are initialized to 0
         assert timestamps.pre_frame_grab_ns == 0
         assert timestamps.post_frame_grab_ns == 0
         assert timestamps.pre_frame_retrieve_ns == 0
         assert timestamps.post_frame_retrieve_ns == 0
         assert timestamps.pre_copy_to_camera_shm_ns == 0
+        assert timestamps.pre_retrieve_from_camera_shm_ns == 0
         assert timestamps.post_retrieve_from_camera_shm_ns == 0
         assert timestamps.pre_copy_to_multiframe_shm_ns == 0
+        assert timestamps.pre_retrieve_from_multiframe_shm_ns == 0
         assert timestamps.post_retrieve_from_multiframe_shm_ns == 0
-        
+
         # Check that timebase_mapping is set correctly
         assert timestamps.timebase_mapping == timebase
 
-    def test_timestamp_local_unix_ns_property(self):
-        """Test the timestamp_local_unix_ns computed property."""
-        # Create a mock TimebaseMapping to control the conversion
-        mock_timebase = MagicMock(spec=TimebaseMapping)
-        mock_timebase.convert_perf_counter_ns_to_unix_ns.return_value = 1000
-        
+    def test_timestamp_property(self):
+        """Test the timestamp_ns property."""
+        timebase = TimebaseMapping()
+
         timestamps = FrameTimestamps(
-            timebase_mapping=mock_timebase,
+            timebase_mapping=timebase,
             pre_frame_grab_ns=1000,
             post_frame_grab_ns=3000
         )
-        
+
         # Should use the midpoint between pre and post grab
-        expected_midpoint = (3000 - 1000) // 2
-        _ = timestamps.timestamp_local_unix_ms
-        
-        # Verify the conversion was called with the correct midpoint
-        mock_timebase.convert_perf_counter_ns_to_unix_ns.assert_called_once_with(expected_midpoint, local_time=True)
-        
+        assert timestamps.timestamp_ns == 2000  # (3000 + 1000) // 2
+
         # Test error case
-        timestamps.pre_frame_grab_ns = None
+        timestamps = FrameTimestamps(timebase_mapping=timebase)
         with pytest.raises(ValueError):
-            _ = timestamps.timestamp_local_unix_ms
+            _ = timestamps.timestamp_ns
 
-    def test_local_unix_ms_conversions(self):
-        """Test the local_unix_ms computed properties."""
-        # Create a mock TimebaseMapping to control the conversion
-        mock_timebase = MagicMock(spec=TimebaseMapping)
-        mock_timebase.convert_perf_counter_ns_to_unix_ns.return_value = 1_000_000_000  # 1 second in ns
-        
-        timestamps = FrameTimestamps(
-            timebase_mapping=mock_timebase,
-            frame_initialized_ns=1000,
-            pre_frame_grab_ns=2000,
-            post_frame_grab_ns=3000,
-            pre_frame_retrieve_ns=4000,
-            post_frame_retrieve_ns=5000,
-            pre_copy_to_camera_shm_ns=6000,
-            post_retrieve_from_camera_shm_ns=7000,
-            pre_copy_to_multiframe_shm_ns=8000,
-            post_retrieve_from_multiframe_shm_ns=9000
-        )
-        
-        # Test that all the ms conversions work correctly
-        assert timestamps.frame_initialized_local_unix_ms == 1000  # 1_000_000_000 // 1_000_000
-        assert timestamps.pre_grab_local_unix_ms == 1000
-        assert timestamps.post_grab_local_unix_ms == 1000
-        assert timestamps.pre_retrieve_local_unix_ms == 1000
-        assert timestamps.post_retrieve_local_unix_ms == 1000
-        assert timestamps.copy_to_camera_shm_local_unix_ms == 1000
-        assert timestamps.retrieve_from_camera_shm_local_unix_ms == 1000
-        assert timestamps.copy_to_multiframe_shm_local_unix_ms == 1000
-        assert timestamps.retrieve_from_multiframe_shm_local_unix_ms == 1000
-
-    def test_timing_metrics(self):
-        """Test the computed timing metrics."""
+    def test_durations_property(self):
+        """Test the durations property."""
         timebase = TimebaseMapping()
-        
-        # Create timestamps with sequential values for easy testing
+
         timestamps = FrameTimestamps(
             timebase_mapping=timebase,
             frame_initialized_ns=1000,
@@ -97,24 +63,31 @@ class TestFrameLifespanTimestamps:
             pre_frame_retrieve_ns=4000,
             post_frame_retrieve_ns=5000,
             pre_copy_to_camera_shm_ns=6000,
-            post_retrieve_from_camera_shm_ns=7000,
-            pre_copy_to_multiframe_shm_ns=8000,
-            post_retrieve_from_multiframe_shm_ns=9000
+            pre_retrieve_from_camera_shm_ns=7000,
+            post_retrieve_from_camera_shm_ns=8000,
+            pre_copy_to_multiframe_shm_ns=9000,
+            pre_retrieve_from_multiframe_shm_ns=10000,
+            post_retrieve_from_multiframe_shm_ns=11000
         )
-        
-        # Test individual timing metrics
-        assert timestamps.idle_before_grab_duration_ms == .001  # 2000 - 1000
-        assert timestamps.frame_grab_duration_ms == .001  # 3000 - 2000
-        assert timestamps.idle_before_retrieve_duration_ms == .001  # 4000 - 3000
-        assert timestamps.frame_retrieve_duration_ms == .001  # 5000 - 4000
-        assert timestamps.idle_before_copy_to_camera_shm_duration_ms == .001  # 6000 - 5000
-        assert timestamps.idle_in_camera_shm_duration_ms == .001  # 7000 - 6000
-        assert timestamps.idle_before_copy_to_multiframe_shm_duration_ms == .001  # 8000 - 7000
-        assert timestamps.idle_in_multiframe_shm_duration_ms == .001  # 9000 - 8000
-        
+
+        durations = timestamps.durations
+        assert isinstance(durations, FrameDurations)
+
+        # Test that durations are calculated correctly
+        assert durations.idle_before_grab_ns == 1000  # 2000 - 1000
+        assert durations.during_frame_grab_ns == 1000  # 3000 - 2000
+        assert durations.idle_before_retrieve_ns == 1000  # 4000 - 3000
+        assert durations.during_frame_retrieve_ns == 1000  # 5000 - 4000
+        assert durations.idle_before_copy_to_camera_shm_ns == 1000  # 6000 - 5000
+        assert durations.stored_in_camera_shm_ns == 2000  # 8000 - 6000
+        assert durations.during_copy_from_camera_shm_ns == 1000  # 8000 - 7000
+        assert durations.idle_before_copy_to_multiframe_shm_ns == 1000  # 9000 - 8000
+        assert durations.stored_in_multiframe_shm_ns == 2000  # 11000 - 9000
+        assert durations.during_copy_from_multiframe_shm_ns == 1000  # 11000 - 10000
+
         # Test higher-level category timing metrics
-        assert timestamps.total_frame_acquisition_duration_ms == .003  # 5000 - 2000
-        assert timestamps.total_ipc_travel_duration_ms == .004  # 9000 - 5000
+        assert durations.total_frame_acquisition_time_ns == 3000  # 5000 - 2000
+        assert durations.total_ipc_travel_time_ns == 6000  # 11000 - 5000
 
     def test_numpy_conversion(self):
         """Test conversion to and from numpy record arrays."""
@@ -127,33 +100,37 @@ class TestFrameLifespanTimestamps:
             pre_frame_retrieve_ns=4000,
             post_frame_retrieve_ns=5000,
             pre_copy_to_camera_shm_ns=6000,
-            post_retrieve_from_camera_shm_ns=7000,
-            pre_copy_to_multiframe_shm_ns=8000,
-            post_retrieve_from_multiframe_shm_ns=9000
+            pre_retrieve_from_camera_shm_ns=7000,
+            post_retrieve_from_camera_shm_ns=8000,
+            pre_copy_to_multiframe_shm_ns=9000,
+            pre_retrieve_from_multiframe_shm_ns=10000,
+            post_retrieve_from_multiframe_shm_ns=11000
         )
-        
+
         # Convert to numpy record array
         record_array = original.to_numpy_record_array()
-        
+
         # Check the record array properties
         assert isinstance(record_array, np.recarray)
         assert record_array.shape == (1,)
         assert record_array.dtype == FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
-        
+
         # Check values in the record array
         assert record_array.frame_initialized_ns[0] == 1000
         assert record_array.pre_frame_grab_ns[0] == 2000
         assert record_array.post_frame_grab_ns[0] == 3000
         assert record_array.pre_frame_retrieve_ns[0] == 4000
         assert record_array.post_frame_retrieve_ns[0] == 5000
-        assert record_array.copy_to_camera_shm_ns[0] == 6000
-        assert record_array.retrieve_from_camera_shm_ns[0] == 7000
-        assert record_array.copy_to_multiframe_shm_ns[0] == 8000
-        assert record_array.retrieve_from_multiframe_shm_ns[0] == 9000
-        
-        # Convert back to FrameLifespanTimestamps
+        assert record_array.pre_copy_to_camera_shm_ns[0] == 6000
+        assert record_array.pre_retrieve_from_camera_shm_ns[0] == 7000
+        assert record_array.post_retrieve_from_camera_shm_ns[0] == 8000
+        assert record_array.pre_copy_to_multiframe_shm_ns[0] == 9000
+        assert record_array.pre_retrieve_from_multiframe_shm_ns[0] == 10000
+        assert record_array.post_retrieve_from_multiframe_shm_ns[0] == 11000
+
+        # Convert back to FrameTimestamps
         reconstructed = FrameTimestamps.from_numpy_record_array(record_array)
-        
+
         # Check that the reconstructed object has the same values
         assert reconstructed.frame_initialized_ns == original.frame_initialized_ns
         assert reconstructed.pre_frame_grab_ns == original.pre_frame_grab_ns
@@ -161,10 +138,12 @@ class TestFrameLifespanTimestamps:
         assert reconstructed.pre_frame_retrieve_ns == original.pre_frame_retrieve_ns
         assert reconstructed.post_frame_retrieve_ns == original.post_frame_retrieve_ns
         assert reconstructed.pre_copy_to_camera_shm_ns == original.pre_copy_to_camera_shm_ns
+        assert reconstructed.pre_retrieve_from_camera_shm_ns == original.pre_retrieve_from_camera_shm_ns
         assert reconstructed.post_retrieve_from_camera_shm_ns == original.post_retrieve_from_camera_shm_ns
         assert reconstructed.pre_copy_to_multiframe_shm_ns == original.pre_copy_to_multiframe_shm_ns
+        assert reconstructed.pre_retrieve_from_multiframe_shm_ns == original.pre_retrieve_from_multiframe_shm_ns
         assert reconstructed.post_retrieve_from_multiframe_shm_ns == original.post_retrieve_from_multiframe_shm_ns
-        
+
         # Check that timebase mapping was also reconstructed correctly
         assert reconstructed.timebase_mapping.utc_time_ns == original.timebase_mapping.utc_time_ns
         assert reconstructed.timebase_mapping.perf_counter_ns == original.timebase_mapping.perf_counter_ns
@@ -175,24 +154,72 @@ class TestFrameLifespanTimestamps:
         # Create a record array with incorrect dtype
         wrong_dtype = np.dtype([('wrong_field', np.int32)])
         wrong_array = np.recarray(1, dtype=wrong_dtype)
-        
+
         # Should raise ValueError
         with pytest.raises(ValueError):
             FrameTimestamps.from_numpy_record_array(wrong_array)
 
-    def test_negative_timing_metrics_for_unset_values(self):
-        """Test that timing metrics return -1 when timestamps are not set."""
+    def test_negative_durations_for_unset_values(self):
+        """Test that duration metrics return -1 when timestamps are not set."""
         timebase = TimebaseMapping()
         timestamps = FrameTimestamps(timebase_mapping=timebase)
-        
+        durations = timestamps.durations
+
         # All metrics should return -1 since no timestamps are set (except frame_initialized_ns)
-        assert timestamps.idle_before_grab_duration_ms == -1
-        assert timestamps.frame_grab_duration_ms == -1
-        assert timestamps.idle_before_retrieve_duration_ms == -1
-        assert timestamps.frame_retrieve_duration_ms == -1
-        assert timestamps.idle_before_copy_to_camera_shm_duration_ms == -1
-        assert timestamps.idle_in_camera_shm_duration_ms == -1
-        assert timestamps.idle_before_copy_to_multiframe_shm_duration_ms == -1
-        assert timestamps.idle_in_multiframe_shm_duration_ms == -1
-        assert timestamps.total_frame_acquisition_duration_ms == -1
-        assert timestamps.total_ipc_travel_duration_ms == -1
+        assert durations.idle_before_grab_ns == -1
+        assert durations.during_frame_grab_ns == -1
+        assert durations.idle_before_retrieve_ns == -1
+        assert durations.during_frame_retrieve_ns == -1
+        assert durations.idle_before_copy_to_camera_shm_ns == -1
+        assert durations.stored_in_camera_shm_ns == -1
+        assert durations.during_copy_from_camera_shm_ns == -1
+        assert durations.idle_before_copy_to_multiframe_shm_ns == -1
+        assert durations.stored_in_multiframe_shm_ns == -1
+        assert durations.during_copy_from_multiframe_shm_ns == -1
+        assert durations.total_frame_acquisition_time_ns == -1
+        assert durations.total_ipc_travel_time_ns == -1
+
+        # Test to_dict method
+        durations_dict = durations.to_dict()
+        assert all(value == -1 for value in durations_dict.values())
+
+    def test_controlled_timing_simulation(self):
+        """Test creating a dummy timestamp with controlled timing and verify durations."""
+        # Create a controlled test that doesn't rely on actual timing
+        timebase = TimebaseMapping()
+        timestamps = FrameTimestamps(timebase_mapping=timebase)
+
+        # Set timestamps with fixed increments instead of using sleep
+        base_time = 1_000_000_000  # 1 second in ns
+        timestamps.frame_initialized_ns = base_time
+        timestamps.pre_frame_grab_ns = base_time + 100_000_000  # +100ms
+        timestamps.post_frame_grab_ns = base_time + 300_000_000  # +300ms (+200ms from previous)
+        timestamps.pre_frame_retrieve_ns = base_time + 600_000_000  # +600ms (+300ms from previous)
+        timestamps.post_frame_retrieve_ns = base_time + 1_000_000_000  # +1000ms (+400ms from previous)
+        timestamps.pre_copy_to_camera_shm_ns = base_time + 1_500_000_000  # +1500ms (+500ms from previous)
+        timestamps.pre_retrieve_from_camera_shm_ns = base_time + 2_100_000_000  # +2100ms (+600ms from previous)
+        timestamps.post_retrieve_from_camera_shm_ns = base_time + 2_800_000_000  # +2800ms (+700ms from previous)
+        timestamps.pre_copy_to_multiframe_shm_ns = base_time + 3_600_000_000  # +3600ms (+800ms from previous)
+        timestamps.pre_retrieve_from_multiframe_shm_ns = base_time + 4_500_000_000  # +4500ms (+900ms from previous)
+        timestamps.post_retrieve_from_multiframe_shm_ns = base_time + 5_500_000_000  # +5500ms (+1000ms from previous)
+
+        # Calculate durations
+        durations = timestamps.durations
+
+        # Verify durations are exactly as expected (since we're using fixed values)
+        assert durations.idle_before_grab_ns == 100_000_000  # 100ms
+        assert durations.during_frame_grab_ns == 200_000_000  # 200ms
+        assert durations.idle_before_retrieve_ns == 300_000_000  # 300ms
+        assert durations.during_frame_retrieve_ns == 400_000_000  # 400ms
+        assert durations.idle_before_copy_to_camera_shm_ns == 500_000_000  # 500ms
+        assert durations.during_copy_from_camera_shm_ns == 700_000_000  # 700ms
+        assert durations.stored_in_camera_shm_ns == 1_300_000_000  # 1300ms (from pre_copy_to_camera_shm to post_retrieve_from_camera_shm)
+        assert durations.idle_before_copy_to_multiframe_shm_ns == 800_000_000  # 800ms
+        assert durations.during_copy_from_multiframe_shm_ns == 1_000_000_000  # 1000ms
+        assert durations.stored_in_multiframe_shm_ns == 1_900_000_000  # 1900ms (from pre_copy_to_multiframe_shm to post_retrieve_from_multiframe_shm)
+
+        # Check total_frame_acquisition_time_ns (should be 900ms = 1000ms - 100ms)
+        assert durations.total_frame_acquisition_time_ns == 900_000_000  # post_frame_retrieve_ns - pre_frame_grab_ns
+
+        # Check total_ipc_travel_time_ns (should be 4500ms = 5500ms - 1000ms)
+        assert durations.total_ipc_travel_time_ns == 4_500_000_000  # post_retrieve_from_multiframe_shm_ns - post_frame_retrieve_ns

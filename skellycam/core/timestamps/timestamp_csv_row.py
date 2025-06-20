@@ -2,8 +2,8 @@ from pydantic import BaseModel, Field
 
 from typing import TYPE_CHECKING
 
-from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.utilities.time_unit_conversion import ns_to_ms, ns_to_sec
 
 if TYPE_CHECKING:

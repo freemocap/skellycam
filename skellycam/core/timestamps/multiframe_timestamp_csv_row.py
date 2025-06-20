@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.frame_payloads.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.utilities.time_unit_conversion import ns_to_ms
 
 if TYPE_CHECKING:
@@ -75,10 +75,10 @@ class MultiframeTimestampsCSVRow(BaseModel):
     post_retrieve_from_camera_shm_ms_range: float = Field(serialization_alias="frame.post_retrieve_from_camera_shm.ms.range")
     
     # copy_to_multiframe_shm_ns
-    copy_to_multiframe_shm_ms_mean: float = Field(serialization_alias="frame.copy_to_multiframe_shm.ms.mean")
-    copy_to_multiframe_shm_ms_median: float = Field(serialization_alias="frame.copy_to_multiframe_shm.ms.median")
-    copy_to_multiframe_shm_ms_stddev: float = Field(serialization_alias="frame.copy_to_multiframe_shm.ms.stddev")
-    copy_to_multiframe_shm_ms_range: float = Field(serialization_alias="frame.copy_to_multiframe_shm.ms.range")
+    pre_copy_to_multiframe_shm_ms_mean: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.mean")
+    pre_copy_to_multiframe_shm_ms_median: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.median")
+    pre_copy_to_multiframe_shm_ms_stddev: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.stddev")
+    pre_copy_to_multiframe_shm_ms_range: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.range")
     
     # pre_retrieve_from_multiframe_shm_ns
     pre_retrieve_from_multiframe_shm_ms_mean: float = Field(serialization_alias="frame.pre_retrieve_from_multiframe_shm.ms.mean")
@@ -221,10 +221,10 @@ class MultiframeTimestampsCSVRow(BaseModel):
             post_retrieve_from_camera_shm_ms_stddev=mf_timestamps.post_retrieve_from_camera_shm_ms.standard_deviation,
             post_retrieve_from_camera_shm_ms_range=mf_timestamps.post_retrieve_from_camera_shm_ms.range,
 
-            copy_to_multiframe_shm_ms_mean=mf_timestamps.copy_to_multiframe_shm_ms.mean,
-            copy_to_multiframe_shm_ms_median=mf_timestamps.copy_to_multiframe_shm_ms.median,
-            copy_to_multiframe_shm_ms_stddev=mf_timestamps.copy_to_multiframe_shm_ms.standard_deviation,
-            copy_to_multiframe_shm_ms_range=mf_timestamps.copy_to_multiframe_shm_ms.range,
+            pre_copy_to_multiframe_shm_ms_mean=mf_timestamps.pre_copy_to_multiframe_shm_ms.mean,
+            pre_copy_to_multiframe_shm_ms_median=mf_timestamps.pre_copy_to_multiframe_shm_ms.median,
+            pre_copy_to_multiframe_shm_ms_stddev=mf_timestamps.pre_copy_to_multiframe_shm_ms.standard_deviation,
+            pre_copy_to_multiframe_shm_ms_range=mf_timestamps.pre_copy_to_multiframe_shm_ms.range,
 
             pre_retrieve_from_multiframe_shm_ms_mean=mf_timestamps.pre_retrieve_from_multiframe_shm_ms.mean,
             pre_retrieve_from_multiframe_shm_ms_median=mf_timestamps.pre_retrieve_from_multiframe_shm_ms.median,

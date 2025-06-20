@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.multi_frame_metadata import MultiFrameMetadata
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import CameraIdString
 

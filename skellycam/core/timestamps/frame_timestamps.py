@@ -4,7 +4,7 @@ import time
 import numpy as np
 from pydantic import BaseModel, Field, computed_field
 
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class FrameTimestamps(BaseModel):
         """
         if not self.pre_frame_grab_ns or not self.post_frame_grab_ns:
             raise ValueError("pre_frame_retrieve_ns and post_frame_grab_ns cannot be None")
-        return (self.post_frame_grab_ns - self.pre_frame_grab_ns) // 2
+        return (self.post_frame_grab_ns + self.pre_frame_grab_ns) // 2
 
 
     @property

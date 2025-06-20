@@ -2,8 +2,8 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 
 
