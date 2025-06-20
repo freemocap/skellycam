@@ -52,7 +52,7 @@ class FrameTimestamps(BaseModel):
             post_frame_grab_ns=array.post_frame_grab_ns,
             pre_frame_retrieve_ns=array.pre_frame_retrieve_ns,
             post_frame_retrieve_ns=array.post_frame_retrieve_ns,
-            pre_copy_to_camera_shm_ns=array.copy_to_camera_shm_ns,
+            pre_copy_to_camera_shm_ns=array.pre_copy_to_camera_shm_ns,
             pre_retrieve_from_camera_shm_ns=array.pre_retrieve_from_camera_shm_ns,
             post_retrieve_from_camera_shm_ns=array.post_retrieve_from_camera_shm_ns,
             pre_copy_to_multiframe_shm_ns=array.pre_copy_to_multiframe_shm_ns,
@@ -76,9 +76,11 @@ class FrameTimestamps(BaseModel):
         result.pre_frame_retrieve_ns[0] = self.pre_frame_retrieve_ns
         result.post_frame_retrieve_ns[0] = self.post_frame_retrieve_ns
         result.pre_copy_to_camera_shm_ns[0] = self.pre_copy_to_camera_shm_ns
-        result.retrieve_from_camera_shm_ns[0] = self.post_retrieve_from_camera_shm_ns
+        result.pre_retrieve_from_camera_shm_ns[0] = self.pre_retrieve_from_camera_shm_ns
+        result.post_retrieve_from_camera_shm_ns[0] = self.post_retrieve_from_camera_shm_ns
         result.pre_copy_to_multiframe_shm_ns[0] = self.pre_copy_to_multiframe_shm_ns
-        result.retrieve_from_multiframe_shm_ns[0] = self.post_retrieve_from_multiframe_shm_ns
+        result.pre_retrieve_from_multiframe_shm_ns[0] = self.pre_retrieve_from_multiframe_shm_ns
+        result.post_retrieve_from_multiframe_shm_ns[0] = self.post_retrieve_from_multiframe_shm_ns
 
         return result
 

@@ -12,20 +12,22 @@ from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
 
+
 class MultiFramePayload(BaseModel):
     frames: dict[CameraIdString, FramePayload | None]
 
     @classmethod
-    def create_dummy(cls, camera_configs: CameraConfigs) -> "MultiFramePayload":
+    def create_dummy(cls,
+                     timebase_mapping: TimebaseMapping,
+                     camera_configs: CameraConfigs) -> "MultiFramePayload":
         """
         Create a MultiFramePayload with dummy data for each camera.
         """
-        frames = {
-            camera_id: FramePayload.create_initial(camera_config=config,
-                                                   timebase_mapping=TimebaseMapping())
-            for camera_id, config in camera_configs.items()
-        }
+        frames = {camera_id: FramePayload.create_initial(camera_config=config,
+                                                         timebase_mapping=timebase_mapping)
+                  for camera_id, config in camera_configs.items()}
         return cls(frames=frames)
+
     @classmethod
     def create_empty(cls, camera_configs: CameraConfigs) -> "MultiFramePayload":
         return cls(frames={camera_id: None for camera_id in camera_configs.keys()})
@@ -38,7 +40,7 @@ class MultiFramePayload(BaseModel):
 
     @property
     def camera_configs(self) -> CameraConfigs:
-        configs =  {camera_id: frame.frame_metadata.camera_config for camera_id, frame in self.frames.items()}
+        configs = {camera_id: frame.frame_metadata.camera_config for camera_id, frame in self.frames.items()}
         validate_camera_configs(configs)
         return configs
 
@@ -59,7 +61,14 @@ class MultiFramePayload(BaseModel):
         if not self.full:
             raise ValueError("MultiFramePayload is not full, cannot get timestamp")
         return int(np.mean([frame.timestamp_ns for frame in self.frames.values() if frame is not None]))
-
+    @property
+    def earliest_timestamp_ns(self) -> int:
+        """
+        Return the earliest pre_grab timestamp of all frames in the multi-frame payload.
+        """
+        if not self.full:
+            raise ValueError("MultiFramePayload is not full, cannot get timestamp")
+        return int(np.min([frame.frame_metadata.timestamps.pre_frame_grab_ns for frame in self.frames.values() if frame is not None]))
     @property
     def multi_frame_number(self) -> int:
         frame_numbers = [frame.frame_metadata.frame_number for frame in self.frames.values()]
@@ -108,15 +117,14 @@ class MultiFramePayload(BaseModel):
         instance._validate_multi_frame()
         return instance
 
-    def update_from_numpy_record_array(self, mf_rec_array: np.recarray, apply_config_rotation:bool):
+    def update_from_numpy_record_array(self, mf_rec_array: np.recarray, apply_config_rotation: bool):
         self._validate_multi_frame()
-        for camera_id, frame in self.frames:
+        for camera_id, frame in self.frames.items():
             if not isinstance(frame, FramePayload):
                 raise ValueError(f"Expected FramePayload, got {type[frame]}")
             frame.update_from_numpy_record_array(frame_rec_array=mf_rec_array[camera_id],
                                                  apply_config_rotation=apply_config_rotation)
         self._validate_multi_frame()
-
 
     def add_frame(self, new_frame: FramePayload) -> None:
         # Check if this camera_id already exists in the frames
@@ -132,7 +140,7 @@ class MultiFramePayload(BaseModel):
                 logger.warning(
                     f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayload, frame number mismatch!")
 
-            #Check timebase mapping consistency
+            # Check timebase mapping consistency
             if any(
                     frame.frame_metadata.timestamps.timebase_mapping != new_frame.frame_metadata.timestamps.timebase_mapping
                     for frame in existing_frames):

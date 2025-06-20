@@ -6,6 +6,7 @@ import numpy as np
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +14,13 @@ logger = logging.getLogger(__name__)
 class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
 
     @classmethod
-    def from_config(cls, camera_config:CameraConfig, read_only: bool = False):
+    def from_config(cls,
+                    camera_config:CameraConfig,
+                    timebase_mapping:TimebaseMapping,
+                    read_only: bool = False):
         return cls.create(
-            example_data=FramePayload.create_dummy(camera_config=camera_config).to_numpy_record_array(), #NOTE - Dummy used for shape and dtype
+            example_data=FramePayload.create_dummy(camera_config=camera_config,
+                                                   timebase_mapping=timebase_mapping).to_numpy_record_array(), #NOTE - Dummy used for shape and dtype
             read_only=read_only,
         )
     @property
@@ -40,7 +45,7 @@ class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         pre_retrieve_tik = time.perf_counter_ns()
         frame_rec_array = self.get_next_data()
         frame_rec_array.frame_metadata.timestamps.post_retrieve_from_camera_shm_ns = time.perf_counter_ns()
-        frame_rec_array.frame_metadata.timestamps.pred_retrieve_from_camera_shm_ns = pre_retrieve_tik
+        frame_rec_array.frame_metadata.timestamps.pre_retrieve_from_camera_shm_ns= pre_retrieve_tik
 
         if frame is None:
             frame =  FramePayload.create_from_numpy_record_array(frame_rec_array)

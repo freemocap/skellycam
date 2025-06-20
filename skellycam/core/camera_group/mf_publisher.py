@@ -67,10 +67,7 @@ class MultiframeBuilder:
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_10ms()
                     continue
-                mfs = camera_group_shm.build_all_new_multiframes()
-
-                if len(mfs) > 0:
-                    logger.loop(f"Publishing {len(mfs)} multi-frames for camera group {ipc.group_id}...")
+                camera_group_shm.build_all_new_multiframes()
                 wait_10ms()
 
         except Exception as e:

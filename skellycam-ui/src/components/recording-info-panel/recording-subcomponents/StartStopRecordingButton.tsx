@@ -20,6 +20,7 @@ const pulseAnimation = keyframes`
     }
 `;
 
+
 const PulsingButton = styled(Button)(({pulsing}: { pulsing: boolean }) => ({
     backgroundColor: '#9f1810',
     borderStyle: 'solid',
@@ -32,7 +33,6 @@ const PulsingButton = styled(Button)(({pulsing}: { pulsing: boolean }) => ({
     ...(pulsing && {
         animation: `${pulseAnimation} 1.5s infinite ease-in-out`,
     }),
-
 }));
 
 export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
@@ -50,7 +50,7 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
             <PulsingButton
                 onClick={onClick}
                 variant="contained"
-                pulsing={isRecording}
+                pulsing={isRecording ? true : undefined}
                 fullWidth
             >
                 <Typography variant={'h6'}>

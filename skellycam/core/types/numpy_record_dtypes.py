@@ -26,6 +26,7 @@ TIMEBASE_MAPPING_DTYPE = np.dtype([
     ('perf_counter_ns', np.uint64),
     ('local_time_utc_offset', np.int32),
 ], align=True)
+
 FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
     ('timebase_mapping', TIMEBASE_MAPPING_DTYPE),
     ('frame_initialized_ns', np.uint64),
@@ -33,10 +34,12 @@ FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
     ('post_frame_grab_ns', np.uint64),
     ('pre_frame_retrieve_ns', np.uint64),
     ('post_frame_retrieve_ns', np.uint64),
-    ('copy_to_camera_shm_ns', np.uint64),
-    ('retrieve_from_camera_shm_ns', np.uint64),
-    ('copy_to_multiframe_shm_ns', np.uint64),
-    ('retrieve_from_multiframe_shm_ns', np.uint64),
+    ('pre_copy_to_camera_shm_ns', np.uint64),
+    ('pre_retrieve_from_camera_shm_ns', np.uint64),
+    ('post_retrieve_from_camera_shm_ns', np.uint64),
+    ('pre_copy_to_multiframe_shm_ns', np.uint64),
+    ('pre_retrieve_from_multiframe_shm_ns', np.uint64),
+    ('post_retrieve_from_multiframe_shm_ns', np.uint64),
 ], align=True)
 
 

@@ -3,6 +3,7 @@ import time
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +13,11 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
     @classmethod
     def from_configs(cls,
                     camera_configs: CameraConfigs,
+                     timebase_mapping: TimebaseMapping,
                     read_only: bool = False) -> "MultiFrameSharedMemoryRingBuffer":
         return cls.create(
-            example_data=MultiFramePayload.create_dummy(camera_configs=camera_configs).to_numpy_record_array(),
+            example_data=MultiFramePayload.create_dummy(camera_configs=camera_configs,
+                                                        timebase_mapping=timebase_mapping).to_numpy_record_array(),
             read_only=read_only,
         )
 

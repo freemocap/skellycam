@@ -70,14 +70,15 @@ class FramePayload(BaseModel):
         return cls(image=dummy_image, frame_metadata=frame_metadata)
 
     @classmethod
-    def create_dummy(cls, camera_config: CameraConfig) -> "FramePayload":
+    def create_dummy(cls, camera_config: CameraConfig, timebase_mapping:TimebaseMapping) -> "FramePayload":
         """
         Create a dummy FramePayload with a dummy image and metadata, for shape and size inference.
         """
         image_shape = (camera_config.resolution.height, camera_config.resolution.width, camera_config.color_channels)
         dummy_image = np.ones(image_shape, dtype=np.uint8) + camera_config.camera_index
 
-        frame_metadata = FrameMetadata.create_initial(camera_config=camera_config, timebase_mapping=TimebaseMapping())
+        frame_metadata = FrameMetadata.create_initial(camera_config=camera_config,
+                                                      timebase_mapping=timebase_mapping)
 
         return cls(image=dummy_image, frame_metadata=frame_metadata)
 

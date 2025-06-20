@@ -105,7 +105,12 @@ class RecordingTimestamps(BaseModel):
     multiframe_timestamps: list[MultiframeTimestamps] = Field(
         default_factory=list,
         description="List of timestamps for each multi-frame payload in the recording session")
+    recording_start_ns: int | None = Field(
+        default=None,
+        description="The timestamp of the earliest 'grab' timestamp from the frames in the first multiframe of this recording, in nanoseconds. "
+                    "This is as the Zero timebase to calculate relative timestamps for each multiframe payload.")
     recording_info: RecordingInfo
+
 
     def save_timestamps(self):
         """
@@ -147,7 +152,10 @@ class RecordingTimestamps(BaseModel):
         Adds a multiframe payload to the recording timestamps.
         If the multiframe payload is empty, it will not be added.
         """
-        self.multiframe_timestamps.append(MultiframeTimestamps.from_multiframe(multiframe))
+        if self.recording_start_ns is None:
+            self.recording_start_ns = multiframe.earliest_timestamp_ns
+        self.multiframe_timestamps.append(MultiframeTimestamps.from_multiframe(multiframe=multiframe,
+                                                                               recording_start_time_ns=self.recording_start_ns))
 
     @property
     def first_timestamp(self) -> MultiframeTimestamps:
@@ -161,7 +169,7 @@ class RecordingTimestamps(BaseModel):
     @property
     def recording_start_local_unix_ms(self) -> float:
         """Returns the timestamp of the first frame in the recording"""
-        return min([mf_ts.frame_initialized_local_unix_ms.mean for mf_ts in self.multiframe_timestamps])
+        return min([mf_ts.frame_initialized_ms.mean for mf_ts in self.multiframe_timestamps])
 
     @property
     def timestamps_local_unix_ms(self) -> list[float]:
@@ -226,8 +234,8 @@ class RecordingTimestamps(BaseModel):
         Returns the statistics of the idle time before grabbing a frame.
         """
         return DescriptiveStatistics.from_samples(
-            samples=[ts.idle_before_grab_duration_ms for ts in self.multiframe_timestamps],
-            name="idle_before_grab_duration_ms",
+            samples=[ts.idle_before_grab_ms for ts in self.multiframe_timestamps],
+            name="idle_before_grab_ms",
             units="milliseconds"
         )
 

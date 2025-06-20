@@ -43,13 +43,14 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     # decode the frame buffer into an image!
     # The light is now in the camera's memory,
     # and we have a digital representation of the pattern of light
-    # that was in the field of view of the camera during the last frame/timeslice.
-    # This is the emprical measurement upon which most/all our future calcualtions and inferences will be based.
-    retrieve_success, image = cap.retrieve(image=frame.image[0])  # provide pre-allocated image buffer for speed
+    # that was in the field of view of the camera during the frame/timeslice
+    # when the image was 'grabbed' in the previous step.
+    # This is the empirical measurement upon which most/all our future calculations and inferences will be based.
+    retrieve_success, _ = cap.retrieve(image=frame.image)  # provide pre-allocated image  for speed
     frame.frame_metadata.timestamps.post_frame_retrieve_ns = time.perf_counter_ns()
 
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {frame.frame_metadata.camera_config.camera_id}")
 
-    logger.loop(f"Camera {frame.frame_metadata.camera_config.camera_id} grabbed frame {frame.frame_metadata.frame_number[0]}")
+    logger.loop(f"Camera {frame.frame_metadata.camera_config.camera_id} grabbed frame {frame.frame_metadata.frame_number}")
     return frame

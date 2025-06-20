@@ -7,6 +7,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConf
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.mf_publisher import MultiframeBuilder
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
     RecordingInfoMessage
@@ -27,6 +28,7 @@ class CameraGroup:
     mf_builder: MultiframeBuilder
     recorder: RecordingManager
     shm: CameraGroupSharedMemoryManager | None = None
+    mf: MultiFramePayload| None = None # Local copy of the latest multi-frame payload
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -75,7 +77,8 @@ class CameraGroup:
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
         self.shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
-                                                    read_only=True)
+                                                         timebase_mapping=self.ipc.timebase_mapping,
+                                                         read_only=True)
         self.ipc.publish_shm_message(shm_dto=self.shm.to_dto())
         return extracted_configs
 
@@ -91,10 +94,10 @@ class CameraGroup:
     def all_ready(self) -> bool:
         if self.shm is None:
             return False
-        return all([self.cameras.all_ready, self.recorder.ready, self.mf_builder.ready,  self.shm.valid])
+        return all([self.cameras.all_ready, self.recorder.ready, self.mf_builder.ready, self.shm.valid])
 
     @property
-    def latest_multiframe_number(self) -> int|None:
+    def latest_multiframe_number(self) -> int | None:
         if not self.shm.multi_frame_ring_shm.last_written_index.valid:
             return None
         return self.shm.multi_frame_ring_shm.last_written_index.value if self.shm is not None else -1
@@ -108,10 +111,11 @@ class CameraGroup:
             if self.latest_multiframe_number <= if_newer_than:
                 return None
 
-        mf = self.shm.multi_frame_ring_shm.get_latest_multiframe()
-        if mf is None:
+        self.mf = self.shm.multi_frame_ring_shm.get_latest_multiframe(mf=self.mf,
+                                                                 apply_config_rotation=True)
+        if self.mf is None:
             return None
-        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf)
+        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=self.mf)
 
     def close(self):
         logger.debug("Closing camera group")

@@ -23,7 +23,7 @@ class TimebaseMapping(BaseModel):
                                  description="Time in nanoseconds from `time.perf_counter_ns()` (arbirtary time base)")
     local_time_utc_offset: int = Field(default_factory=get_utc_offset, description="Local time GMT offset in seconds")
 
-    def convert_perf_counter_ns_to_unix_ns(self, perf_counter_ns: int, local_time: bool) -> int:
+    def convert_perf_counter_ns_to_unix_ns(self, perf_counter_ns: int|float, local_time: bool) -> int:
         """
         Convert a `time.perf_counter_ns()` timestamp to a unix timestamp
         """
@@ -31,7 +31,7 @@ class TimebaseMapping(BaseModel):
             return int(self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns) + (self.local_time_utc_offset * 1e9))
         return self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns)
 
-    def convert_perf_counter_ns_to_local_iso8601(self, perf_counter_ns: int) -> str:
+    def convert_perf_counter_ns_to_local_iso8601(self, perf_counter_ns: int|float) -> str:
         """
         Convert a `time.perf_counter_ns()` timestamp to a local ISO 8601 formatted string
         with nanosecond precision.
@@ -76,3 +76,6 @@ class TimebaseMapping(BaseModel):
         return (self.utc_time_ns == other.utc_time_ns and
                 self.perf_counter_ns == other.perf_counter_ns and
                 self.local_time_utc_offset == other.local_time_utc_offset)
+
+    def __hash__(self):
+        return hash((self.utc_time_ns, self.perf_counter_ns, self.local_time_utc_offset))

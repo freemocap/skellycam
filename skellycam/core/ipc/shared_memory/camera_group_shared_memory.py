@@ -10,6 +10,7 @@ from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer im
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
 from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
+from skellycam.core.recorders.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
@@ -55,13 +56,16 @@ class CameraGroupSharedMemoryManager:
     @classmethod
     def create(cls,
                camera_configs: CameraConfigs,
+               timebase_mapping: TimebaseMapping,
                read_only: bool = False):
         validate_camera_configs(camera_configs)
         return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.from_config(camera_config=config,
+                                                                                        timebase_mapping=timebase_mapping,
                                                                                           read_only=read_only)
                                 for camera_id, config in camera_configs.items()},
 
                    multi_frame_ring_shm=MultiFrameSharedMemoryRingBuffer.from_configs(
+                       timebase_mapping=timebase_mapping,
                        camera_configs=camera_configs,
                        read_only=read_only),
                    camera_configs=camera_configs,
@@ -137,12 +141,9 @@ class CameraGroupSharedMemoryManager:
 
         return mf_payload
 
-    def build_all_new_multiframes(self) -> list[MultiFramePayload]:
-        mfs: list[MultiFramePayload] = []
+    def build_all_new_multiframes(self):
         while self.new_multi_frame_available:
-            mf_payload = self.build_next_multi_frame_payload()
-            mfs.append(mf_payload)
-        return mfs
+            self.build_next_multi_frame_payload()
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it
