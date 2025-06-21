@@ -1,9 +1,10 @@
 import numpy as np
-from pydantic import BaseModel
+from numpydantic import NDArray
+from pydantic import BaseModel, ConfigDict, computed_field
 
 Z_SCORE_95_CI = 1.96  # Z-score for 95% confidence interval
 
-SamplesType = list[float|int]|np.ndarray
+SamplesType = list[float | int] | np.ndarray
 
 
 def validate_samples(data: np.ndarray) -> None:
@@ -25,9 +26,7 @@ def validate_samples(data: np.ndarray) -> None:
 
 
 class SampleData(BaseModel):
-    data: np.ndarray
-
-    model_config = {"arbitrary_types_allowed": True}
+    data: NDArray
 
     @classmethod
     def from_samples(cls, samples: SamplesType):
@@ -56,16 +55,16 @@ class SampleData(BaseModel):
 
 class CentralTendencyMeasures(BaseModel):
     mean: float
-    median: float|None = None
+    median: float | None = None
 
     @classmethod
     def from_samples(cls, samples: SampleData) -> 'CentralTendencyMeasures':
         # Mean requires at least 1 sample
         mean = np.nanmean(samples.data) if samples.has_min_samples(1) else np.nan
-        
+
         # Median requires at least 1 sample
         median = np.nanmedian(samples.data) if samples.has_min_samples(1) else np.nan
-        
+
         return cls(
             mean=mean,
             median=median,
@@ -73,36 +72,36 @@ class CentralTendencyMeasures(BaseModel):
 
 
 class VariabilityMeasures(BaseModel):
-    standard_deviation: float|None = None
-    median_absolute_deviation: float|None = None
-    interquartile_range: float|None = None
-    confidence_interval_95: float|None = None
-    coefficient_of_variation: float|None = None
+    standard_deviation: float | None = None
+    median_absolute_deviation: float | None = None
+    interquartile_range: float | None = None
+    confidence_interval_95: float | None = None
+    coefficient_of_variation: float | None = None
 
     @classmethod
     def from_samples(cls, samples: SampleData) -> 'VariabilityMeasures':
         # Standard deviation requires at least 2 samples
         std_dev = np.nanstd(samples.data) if samples.has_min_samples(2) else np.nan
-        
+
         # Mean for coefficient of variation
         mean = np.nanmean(samples.data) if samples.has_min_samples(1) else np.nan
-        
+
         # Median absolute deviation requires at least 2 samples
         mad = np.nan
         if samples.has_min_samples(2):
             mad = np.nanmedian(np.abs(samples.data - np.nanmedian(samples.data)))
-        
+
         # Interquartile range requires at least 4 samples for meaningful quartiles
         iqr = np.nan
         if samples.has_min_samples(4):
             iqr = np.nanpercentile(samples.data, 75) - np.nanpercentile(samples.data, 25)
-        
+
         # Confidence interval requires at least 3 samples for meaningful estimation
         ci_95 = np.nan
         if samples.has_min_samples(3):
             size = np.sqrt(samples.number_of_samples)
             ci_95 = Z_SCORE_95_CI * std_dev / size
-        
+
         # Coefficient of variation requires at least 2 samples and non-zero mean
         cv = np.nan
         if samples.has_min_samples(2) and mean != 0 and not np.isnan(mean):
@@ -122,7 +121,7 @@ class DescriptiveStatistics(BaseModel):
     units: str = ""
     sample_data: SampleData
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(model_title_generator=lambda x: f"DescriptiveStatistics[{x.name}] (units:{x.units})", )
 
     @classmethod
     def from_samples(cls, samples: SamplesType, name: str = "", units: str = "") -> 'DescriptiveStatistics':
@@ -132,17 +131,42 @@ class DescriptiveStatistics(BaseModel):
             sample_data=SampleData.from_samples(samples)
         )
 
-    @property
-    def samples(self) -> SamplesType:
-        return self.sample_data.samples
+    @computed_field
+    def max(self) -> float:
+        """Maximum value in the data."""
+        if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
+            return np.nan
+        return float(np.nanmax(self.data))
 
-    @property
+    @computed_field
+    def min(self) -> float:
+        """Minimum value in the data."""
+        if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
+            return np.nan
+        return float(np.nanmin(self.data))
+
+    @computed_field
+    def range(self) -> float:
+        """Range of the data (max - min)."""
+        if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
+            return np.nan
+        return self.max - self.min
+
+    @computed_field
+    def number_of_samples(self) -> int:
+        return self.sample_data.number_of_samples
+
+    @computed_field
     def measures_of_central_tendency(self) -> CentralTendencyMeasures:
         return CentralTendencyMeasures.from_samples(self.sample_data)
 
-    @property
+    @computed_field
     def measures_of_variability(self) -> VariabilityMeasures:
         return VariabilityMeasures.from_samples(self.sample_data)
+
+    @property
+    def samples(self) -> SamplesType:
+        return self.sample_data.samples
 
     @property
     def data(self) -> np.ndarray:
@@ -162,20 +186,6 @@ class DescriptiveStatistics(BaseModel):
         if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
             return -1
         return int(np.nanargmax(self.data))
-    
-    @property
-    def max(self) -> float:
-        """Maximum value in the data."""
-        if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
-            return np.nan
-        return float(np.nanmax(self.data))
-
-    @property
-    def min(self) -> float:
-        """Minimum value in the data."""
-        if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
-            return np.nan
-        return float(np.nanmin(self.data))
 
     @property
     def min_index(self) -> int:
@@ -183,13 +193,6 @@ class DescriptiveStatistics(BaseModel):
         if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
             return -1
         return int(np.nanargmin(self.data))
-
-    @property
-    def range(self) -> float:
-        """Range of the data (max - min)."""
-        if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
-            return np.nan
-        return self.max - self.min
 
     @property
     def standard_deviation(self) -> float:
@@ -208,13 +211,8 @@ class DescriptiveStatistics(BaseModel):
         return self.measures_of_variability.confidence_interval_95
 
     @property
-    def number_of_samples(self) -> int:
-        return self.sample_data.number_of_samples
-
-    @property
     def coefficient_of_variation(self) -> float:
         return self.measures_of_variability.coefficient_of_variation
-
 
     def __str__(self) -> str:
         # Helper function to format values properly
@@ -239,11 +237,15 @@ class DescriptiveStatistics(BaseModel):
             f"\t95% Confidence Interval: {format_value(self.confidence_interval_95)}\n"
         )
 
+
 if __name__ == "__main__":
     dummy_data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
     stats = DescriptiveStatistics.from_samples(samples=dummy_data, name="Test Data", units="units")
     print(stats)
 
     dummy_too_few_data = [1.0, 2.0]
-    too_few_stats = DescriptiveStatistics.from_samples(samples=dummy_too_few_data, name="Test Data (too few samples)", units="units")
+    too_few_stats = DescriptiveStatistics.from_samples(samples=dummy_too_few_data, name="Test Data (too few samples)",
+                                                       units="units")
     print(too_few_stats)
+
+    print(stats.model_dump_json(exclude={'sample_data'}, indent=4))

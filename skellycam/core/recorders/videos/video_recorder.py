@@ -85,9 +85,10 @@ class VideoRecorder(BaseModel):
         return frame.frame_number
 
     def finish_and_close(self):
-        logger.debug(f"Finishing and closing VideoSaver for camera {self.camera_id}")
+        logger.debug(f"Finishing and closing VideoSaver for camera {self.camera_id} with {self.number_of_frames_to_write} frames to left write.")
         while len(self.frames_to_write) > 0:
             self.write_one_frame()
+
         self.close()
 
 
@@ -117,4 +118,4 @@ class VideoRecorder(BaseModel):
     def close(self):
         if self.video_writer:
             self.video_writer.release()
-            logger.debug(f"Closed VideoSaver for camera {self.camera_id} - Video file saved to {self.video_path}")
+            logger.info(f"Camera {self.camera_id} - Video file saved to {self.video_path}")

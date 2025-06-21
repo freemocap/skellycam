@@ -38,7 +38,7 @@ class FrameTimestamps(BaseModel):
         """
         Get a helper object that calculates various duration metrics.
         """
-        return FrameDurations.calculate_durations(self)
+        return FrameDurations(timestamps=self)
 
     @classmethod
     def from_numpy_record_array(cls, array: np.recarray):
@@ -84,9 +84,6 @@ class FrameTimestamps(BaseModel):
 
         return result
 
-    @property
-    def unset_fields(self) ->list[str]:
-        return [key for key, value in self.model_fields.items() if value ==0]
 
 
 class FrameDurations(BaseModel):
@@ -95,17 +92,6 @@ class FrameDurations(BaseModel):
     between different timestamp points in the frame lifecycle.
     """
     timestamps: FrameTimestamps
-    @classmethod
-    def calculate_durations(cls, timestamps:FrameTimestamps):
-
-        return cls(timestamps=timestamps)
-
-    def to_dict(self) -> dict[str, int]:
-        as_dict = self.model_dump(exclude={'timestamps'})
-        uncalculable_fields = [value==-1 for value in as_dict.values()]
-        if len(uncalculable_fields) > 0:
-            logger.warning(f"Could not calculate frame duration fields: {uncalculable_fields} due to missing timestamps: {self.timestamps.unset_fields}")
-        return as_dict
 
     @computed_field
     @property
@@ -199,4 +185,12 @@ class FrameDurations(BaseModel):
         """Total time spent in IPC operations (after frame grab/retrieve, before exiting mf shm)"""
         if self.timestamps.post_retrieve_from_multiframe_shm_ns and self.timestamps.post_frame_retrieve_ns:
             return self.timestamps.post_retrieve_from_multiframe_shm_ns - self.timestamps.post_frame_retrieve_ns
+        return -1
+
+    @computed_field
+    @property
+    def total_camera_to_recorder_time_ns(self) -> int:
+        """Total time spent in IPC operations (after frame grab/retrieve, before exiting mf shm)"""
+        if self.timestamps.post_retrieve_from_multiframe_shm_ns and self.timestamps.timestamp_ns:
+            return self.timestamps.post_retrieve_from_multiframe_shm_ns - self.timestamps.timestamp_ns
         return -1

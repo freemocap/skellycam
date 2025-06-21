@@ -88,6 +88,7 @@ class TestFrameTimestamps:
         # Test higher-level category timing metrics
         assert durations.total_frame_acquisition_time_ns == 3000  # 5000 - 2000
         assert durations.total_ipc_travel_time_ns == 6000  # 11000 - 5000
+        assert durations.total_camera_to_recorder_time_ns == 8500  # 11000 - 2500
 
     def test_numpy_conversion(self):
         """Test conversion to and from numpy record arrays."""
@@ -178,10 +179,13 @@ class TestFrameTimestamps:
         assert durations.during_copy_from_multiframe_shm_ns == -1
         assert durations.total_frame_acquisition_time_ns == -1
         assert durations.total_ipc_travel_time_ns == -1
+        assert durations.total_camera_to_recorder_time_ns == -1
 
         # Test to_dict method
         durations_dict = durations.to_dict()
         assert all(value == -1 for value in durations_dict.values())
+
+
 
     def test_controlled_timing_simulation(self):
         """Test creating a dummy timestamp with controlled timing and verify durations."""
@@ -223,3 +227,7 @@ class TestFrameTimestamps:
 
         # Check total_ipc_travel_time_ns (should be 4500ms = 5500ms - 1000ms)
         assert durations.total_ipc_travel_time_ns == 4_500_000_000  # post_retrieve_from_multiframe_shm_ns - post_frame_retrieve_ns
+
+        # Check total_camera_to_recorder_time_ns (should be 5300ms = 5500ms - 200ms)
+        # Note: timestamp_ns is (pre_frame_grab_ns + post_frame_grab_ns) // 2 = (100ms + 300ms) // 2 = 200ms
+        assert durations.total_camera_to_recorder_time_ns == 5_300_000_000  # post_retrieve_from_multiframe_shm_ns - timestamp_ns

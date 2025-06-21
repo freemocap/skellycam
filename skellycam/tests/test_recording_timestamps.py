@@ -5,7 +5,8 @@ import numpy as np
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.timestamps.recording_timestamps import RecordingTimestampsStats, RecordingTimestamps
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+from skellycam.core.timestamps.recording_timestamps import  RecordingTimestamps
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 
 
@@ -163,6 +164,7 @@ class TestRecordingTimestampsStats:
     def test_str_representation(self):
         """Test the string representation of RecordingTimestampsStats."""
         # Call the __str__ method on the actual stats object
+        print(f"Testing string representation of RecordingTimestampsStats\n\n{self.stats}\n")
         result = str(self.stats)
 
         # Check that the result is a non-empty string

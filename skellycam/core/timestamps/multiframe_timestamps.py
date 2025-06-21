@@ -238,3 +238,16 @@ class MultiFrameTimestamps(BaseModel):
             name="total_ipc_travel_time_ms",
             units="milliseconds"
         )
+
+    @property
+    def total_camera_to_recorder_time_ms(self) -> DescriptiveStatistics:
+        """
+        Returns the combined statistics for total camera-to-recorder time (acquisition + IPC).
+        This is an approximation based on the sum of means, min, max and a combined standard deviation.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ns_to_ms(ts.durations.total_camera_to_recorder_time_ns) for ts in self.frame_timestamps.values()],
+            name="total_camera_to_recorder_time_ns",
+            units="milliseconds"
+        )
+

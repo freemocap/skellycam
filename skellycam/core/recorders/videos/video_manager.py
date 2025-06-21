@@ -111,7 +111,8 @@ class VideoManager(BaseModel):
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
 
     def finish_and_close(self):
-        logger.debug(f"Finishing up...")
+
+        logger.info(f"Finishing up {len(self.video_recorders)} video recorders for recording: `{self.recording_info.recording_name}`")
         finish_threads = []
         while self.try_save_one_frame():
             time.sleep(0.01)
@@ -130,16 +131,13 @@ class VideoManager(BaseModel):
             recorder.close()
         self.finalize_recording()
 
-    def save_timestamps(self):
-        """
-        Saves the recording timestamps to a file.
-        """
-        logger.debug(f"Saving timestamps for recording: `{self.recording_info.recording_name}`...")
-        self.recording_timestamps.save_to_file(recording_info=self.recording_info)
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file()
+        print("Starting to save timestamps...")
+        tik = time.perf_counter()
         self.recording_timestamps.save_timestamps()
+        print(f"Finished saving timestamps in {time.perf_counter() - tik:.2f} seconds")
         self._save_folder_readme()
         self.validate_recording()
         self.is_finished = True
