@@ -50,7 +50,15 @@ export const useWebSocket = (wsUrl: string) => {
 
                     // Update state with validated data
                     dispatch(setLatestFrontendPayload(latestPayload));
+                    console.log(`received frame number: ${latestPayload.multi_frame_number}`);
 
+                    // Send acknowledgment of received frame back to server
+                    if (websocket && latestPayload.multi_frame_number) {
+                        console.log(`Sending acknowledgment for frame number: ${latestPayload.multi_frame_number}`);
+                        websocket.send(JSON.stringify({
+                            received_frame: latestPayload.multi_frame_number
+                        }));
+                    }
                     // Process images if they exist - convert directly to ImageBitmap
                     if (jpeg_images && typeof jpeg_images === 'object') {
                         const imagePromises: Promise<[string, ImageBitmap]>[] = [];
