@@ -1,6 +1,7 @@
 import numpy as np
 from numpydantic import NDArray
 from pydantic import BaseModel, ConfigDict, computed_field
+from functools import cached_property
 
 Z_SCORE_95_CI = 1.96  # Z-score for 95% confidence interval
 
@@ -121,7 +122,7 @@ class DescriptiveStatistics(BaseModel):
     units: str = ""
     sample_data: SampleData
 
-    model_config = ConfigDict(model_title_generator=lambda x: f"DescriptiveStatistics[{x.name}] (units:{x.units})", )
+    model_config = ConfigDict(model_title_generator=lambda x: f"DescriptiveStatistics[{x.name}] (units:{x.units})")
 
     @classmethod
     def from_samples(cls, samples: SamplesType, name: str = "", units: str = "") -> 'DescriptiveStatistics':
@@ -131,36 +132,36 @@ class DescriptiveStatistics(BaseModel):
             sample_data=SampleData.from_samples(samples)
         )
 
-    @computed_field
+    @cached_property
     def max(self) -> float:
         """Maximum value in the data."""
         if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
             return np.nan
         return float(np.nanmax(self.data))
 
-    @computed_field
+    @cached_property
     def min(self) -> float:
         """Minimum value in the data."""
         if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
             return np.nan
         return float(np.nanmin(self.data))
 
-    @computed_field
+    @cached_property
     def range(self) -> float:
         """Range of the data (max - min)."""
         if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
             return np.nan
         return self.max - self.min
 
-    @computed_field
+    @cached_property
     def number_of_samples(self) -> int:
         return self.sample_data.number_of_samples
 
-    @computed_field
+    @cached_property
     def measures_of_central_tendency(self) -> CentralTendencyMeasures:
         return CentralTendencyMeasures.from_samples(self.sample_data)
 
-    @computed_field
+    @cached_property
     def measures_of_variability(self) -> VariabilityMeasures:
         return VariabilityMeasures.from_samples(self.sample_data)
 
@@ -172,48 +173,47 @@ class DescriptiveStatistics(BaseModel):
     def data(self) -> np.ndarray:
         return self.sample_data.data
 
-    @property
+    @cached_property
     def mean(self) -> float:
         return self.measures_of_central_tendency.mean
 
-    @property
+    @cached_property
     def median(self) -> float:
         return self.measures_of_central_tendency.median if self.sample_data.has_min_samples(1) else np.nan
 
-    @property
+    @cached_property
     def max_index(self) -> int:
         """Index of the maximum value in the data."""
         if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
             return -1
         return int(np.nanargmax(self.data))
 
-    @property
+    @cached_property
     def min_index(self) -> int:
         """Index of the minimum value in the data."""
         if not self.sample_data.has_min_samples(1) or np.isnan(self.data).all():
             return -1
         return int(np.nanargmin(self.data))
 
-    @property
+    @cached_property
     def standard_deviation(self) -> float:
         return self.measures_of_variability.standard_deviation
 
-    @property
+    @cached_property
     def median_absolute_deviation(self) -> float:
         return self.measures_of_variability.median_absolute_deviation
 
-    @property
+    @cached_property
     def interquartile_range(self) -> float:
         return self.measures_of_variability.interquartile_range
 
-    @property
+    @cached_property
     def confidence_interval_95(self) -> float:
         return self.measures_of_variability.confidence_interval_95
 
-    @property
+    @cached_property
     def coefficient_of_variation(self) -> float:
         return self.measures_of_variability.coefficient_of_variation
-
     def __str__(self) -> str:
         # Helper function to format values properly
         def format_value(value):

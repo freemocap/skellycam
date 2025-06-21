@@ -68,7 +68,7 @@ class RecordingTimestampsStats(BaseModel):
 
         # Header with basic recording info
         header = "_" * 80 + "\n\n"
-        header += f"Recording Statistics: {self.recording_name}\n\n"
+        header += f"Timestamp Statistics for recording: {self.recording_name}\n\n"
         header += f"Number of Cameras: {self.number_of_cameras}\n"
         header += f"Total Frames: {self.number_of_frames}\n"
         header += f"Total Duration: {self.total_duration_sec:.3f} seconds\n\n"
@@ -125,7 +125,7 @@ class RecordingTimestampsStats(BaseModel):
             f"{self.idle_before_grab_ms.standard_deviation:.{precision}f}",
             f"{self.idle_before_grab_ms.min:.{precision}f}",
             f"{self.idle_before_grab_ms.max:.{precision}f}",
-            f"{idle_percentage:.1f}%"
+            f"--"
         ]
         table_data = [idle_data,
                       ["", "", "", "", "", "", ""]]
@@ -166,7 +166,6 @@ class RecordingTimestampsStats(BaseModel):
             f"{acquisition_percentage:.1f}%"
         ])
 
-        table_data.append(["", "", "", "", "", "", ""])
         # Add IPC Transfer Pipeline category header
         table_data.append(["", "", "", "", "", "", ""],)
 
@@ -234,8 +233,7 @@ class RecordingTimestampsStats(BaseModel):
         pipeline_section += pipeline_table + "\n\n"
 
         # Summary section with table
-        summary_section = "-" * 80 + "\n"
-        summary_section += "SUMMARY METRICS\n"
+        summary_section = "SUMMARY METRICS\n"
 
         summary_data = [
             ["frame acquisition time",

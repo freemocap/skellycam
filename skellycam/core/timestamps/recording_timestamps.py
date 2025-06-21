@@ -1,4 +1,5 @@
 import logging
+from functools import cached_property
 from pathlib import Path
 
 import numpy as np
@@ -51,14 +52,14 @@ class RecordingTimestamps(BaseModel):
         logger.info(f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
 
 
-    @property
+    @cached_property
     def number_of_recorded_frames(self) -> int:
         return len(self.multiframe_timestamps)
-    @property
+    @cached_property
     def number_of_cameras(self) -> int:
         return len(self.multiframe_timestamps[0].frame_timestamps.values())
 
-    @property
+    @cached_property
     def total_duration_sec(self) -> float:
         """
         Returns the total duration of the recording in seconds.
@@ -87,7 +88,7 @@ class RecordingTimestamps(BaseModel):
         self.multiframe_timestamps.append(MultiFrameTimestamps.from_multiframe(multiframe=multiframe,
                                                                                recording_start_time_ns=self.recording_start_ns))
 
-    @property
+    @cached_property
     def first_timestamp(self) -> MultiFrameTimestamps:
         """
         Returns the timestamp of the first multiframe payload in the recording session.
@@ -96,12 +97,12 @@ class RecordingTimestamps(BaseModel):
             raise ValueError("No multiframe timestamps available")
         return self.multiframe_timestamps[0]
 
-    @property
+    @cached_property
     def recording_start_local_unix_ms(self) -> float:
         """Returns the timestamp of the first frame in the recording"""
         return min([mf_ts.frame_initialized_ms.mean for mf_ts in self.multiframe_timestamps])
 
-    @property
+    @cached_property
     def timestamps_ms(self) -> list[float]:
         """
         Returns a list of timestamps in milliseconds for each multiframe payload,
@@ -110,7 +111,7 @@ class RecordingTimestamps(BaseModel):
         return [ns_to_ms(mf.timestamp_ns.mean) - self.recording_start_local_unix_ms for mf in
                 self.multiframe_timestamps]
 
-    @property
+    @cached_property
     def frame_durations_ms(self) -> list[float]:
         """
         Returns the duration between consecutive frames in milliseconds.
@@ -121,11 +122,11 @@ class RecordingTimestamps(BaseModel):
             return []
         return [np.nan] + list(np.diff(self.timestamps_ms))
 
-    @property
+    @cached_property
     def frames_per_second(self) -> list[float]:
         return [ms_to_sec(duration) ** -1 for duration in self.frame_durations_ms if duration > 0]
 
-    @property
+    @cached_property
     def framerate_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the frames per second.
@@ -136,7 +137,7 @@ class RecordingTimestamps(BaseModel):
             units="Hz"
         )
 
-    @property
+    @cached_property
     def frame_duration_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the frame durations in milliseconds.
@@ -147,7 +148,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def inter_camera_grab_range_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the inter-camera grab range in nanoseconds.
@@ -158,7 +159,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def idle_before_grab_duration_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before grabbing a frame.
@@ -169,7 +170,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def during_frame_grab_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the frame grab duration.
@@ -180,7 +181,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def idle_before_retrieve_duration_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before retrieving a frame.
@@ -191,7 +192,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def during_frame_retrieve_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the frame retrieve duration.
@@ -202,7 +203,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def idle_before_copy_to_camera_shm_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before copying to camera shared memory.
@@ -213,7 +214,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def stored_in_camera_shm_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time in camera shared memory.
@@ -224,7 +225,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def during_copy_from_camera_shm_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before copying to multiframe shared memory.
@@ -235,7 +236,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def idle_before_copy_to_multiframe_shm_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before copying to multiframe shared memory.
@@ -245,7 +246,7 @@ class RecordingTimestamps(BaseModel):
             name="idle_before_copy_to_multiframe_shm_ms",
             units="milliseconds"
         )
-    @property
+    @cached_property
     def stored_in_multiframe_shm_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time in multiframe shared memory.
@@ -256,7 +257,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def during_copy_from_multiframe_shm_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before copying to multiframe shared memory.
@@ -267,7 +268,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def total_frame_acquisition_time_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the total frame acquisition duration.
@@ -278,7 +279,7 @@ class RecordingTimestamps(BaseModel):
             units="milliseconds"
         )
 
-    @property
+    @cached_property
     def total_ipc_travel_time_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the total IPC travel duration.
@@ -288,7 +289,7 @@ class RecordingTimestamps(BaseModel):
             name="total_ipc_travel_duration_ms",
             units="milliseconds"
         )
-    @property
+    @cached_property
     def total_camera_to_recorder_time_stats(self) -> DescriptiveStatistics:
 
         return DescriptiveStatistics.from_samples(
@@ -303,7 +304,7 @@ class RecordingTimestamps(BaseModel):
         return pd.DataFrame(records,
                             index=[mf_ts.multiframe_number for mf_ts in self.multiframe_timestamps])
 
-    @property
+    @cached_property
     def timestamps_by_camera_id(self) -> dict[CameraIdString, list[FrameTimestamps]]:
         """
         Returns a dictionary mapping camera IDs to lists of FrameLifespanTimestamps.
@@ -317,7 +318,7 @@ class RecordingTimestamps(BaseModel):
                 camera_timestamps[camera_id].append(frame_ts)
         return camera_timestamps
 
-    @property
+    @cached_property
     def frame_numbers(self) -> list[int]:
         """
         Returns a list of frame numbers for all frames in the recording.
