@@ -101,10 +101,9 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
 
             self_status.grabbing_frame.value = True
             frame = opencv_get_frame(cap=cv2_video_capture, frame=frame)
-
             camera_shm.put_frame(frame_rec_array=frame.to_numpy_record_array(), overwrite=True)
             self_status.grabbing_frame.value = False
-            frame.increment_frame_number()
+
             # Last camera to increment their frame count status triggers the next frame_grab
             self_status.frame_count.value = frame.frame_number
             frame.initialize()

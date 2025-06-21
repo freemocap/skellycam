@@ -28,7 +28,7 @@ class CameraGroup:
     mf_builder: MultiframeBuilder
     recorder: RecordingManager
     shm: CameraGroupSharedMemoryManager | None = None
-    mf: MultiFramePayload| None = None # Local copy of the latest multi-frame payload
+    mf: MultiFramePayload | None = None  # Local copy of the latest multi-frame payload
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -96,23 +96,16 @@ class CameraGroup:
             return False
         return all([self.cameras.all_ready, self.recorder.ready, self.mf_builder.ready, self.shm.valid])
 
-    @property
-    def latest_multiframe_number(self) -> int | None:
-        if not self.shm.multi_frame_ring_shm.last_written_index.valid:
-            return None
-        return self.shm.multi_frame_ring_shm.last_written_index.value if self.shm is not None else -1
 
-    def get_latest_frontend_payload(self, if_newer_than: int | None = None) -> FrontendFramePayload | None:
-        if self.shm is None:
+
+    def get_latest_frontend_payload(self, if_newer_than: int ) -> FrontendFramePayload | None:
+        if self.shm is None or not self.shm.valid:
             return None
-        if if_newer_than is not None:
-            if self.latest_multiframe_number is None:
-                return None
-            if self.latest_multiframe_number <= if_newer_than:
-                return None
+        if self.shm.latest_multiframe_number.value <= if_newer_than:
+            return None
 
         self.mf = self.shm.multi_frame_ring_shm.get_latest_multiframe(mf=self.mf,
-                                                                 apply_config_rotation=True)
+                                                                      apply_config_rotation=True)
         if self.mf is None:
             return None
         return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=self.mf)

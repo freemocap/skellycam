@@ -402,10 +402,11 @@ def validate_camera_configs(camera_configs: CameraConfigs) -> None:
             raise ValueError(f"Camera ID mismatch: {camera_id} does not match config's camera_id {config.camera_id}.")
 
     # Ensure camera indexes are unique
-    camera_indexes = [config.camera_index for config in camera_configs.values()]
+    camera_indexes_by_camera = {config.camera_id: config.camera_index for config in camera_configs.values()}
+    camera_indexes = list(camera_indexes_by_camera.values())
     if len(camera_indexes) != len(set(camera_indexes)):
-        raise ValueError("Camera indexes must be unique across all camera configurations.")
+        raise ValueError(f"Camera indexes must be unique across all camera configurations, received: {camera_indexes_by_camera}")
 
-
+0
 if __name__ == "__main__":
     print(CameraConfig(camera_index=0))

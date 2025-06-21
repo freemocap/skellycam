@@ -51,6 +51,6 @@ def opencv_get_frame(cap: cv2.VideoCapture,
 
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {frame.frame_metadata.camera_config.camera_id}")
-
+    frame.increment_frame_number()
     logger.loop(f"Camera {frame.frame_metadata.camera_config.camera_id} grabbed frame {frame.frame_metadata.frame_number}")
     return frame

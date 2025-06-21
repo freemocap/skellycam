@@ -22,20 +22,20 @@ export const useWebSocket = (wsUrl: string) => {
     const bitmapCleanupRef = useRef<Record<string, ImageBitmap>>({});
     const dispatch = useAppDispatch();
 
-    const handleIncomingMessage = useCallback((event: MessageEvent) => {
+    const handleIncomingMessage = useCallback((event: MessageEvent, ws:WebSocket) => {
         const data = event.data;
         if (data instanceof Blob) {
             data.text().then(text => {
-                parseAndValidateMessage(text);
+                parseAndValidateMessage(text, ws);
             }).catch(error => {
                 console.error('Error reading Blob data:', error);
             });
         } else if (typeof data === 'string') {
-            parseAndValidateMessage(data);
+            parseAndValidateMessage(data, ws);
         }
     }, []);
 
-    const parseAndValidateMessage = useCallback(async (data: string) => {
+    const parseAndValidateMessage = useCallback(async (data: string, ws:WebSocket) => {
         try {
             const parsedData = JSON.parse(data);
 
@@ -50,15 +50,9 @@ export const useWebSocket = (wsUrl: string) => {
 
                     // Update state with validated data
                     dispatch(setLatestFrontendPayload(latestPayload));
-                    console.log(`received frame number: ${latestPayload.multi_frame_number}`);
 
-                    // Send acknowledgment of received frame back to server
-                    if (websocket && latestPayload.multi_frame_number) {
-                        console.log(`Sending acknowledgment for frame number: ${latestPayload.multi_frame_number}`);
-                        websocket.send(JSON.stringify({
-                            received_frame: latestPayload.multi_frame_number
-                        }));
-                    }
+
+
                     // Process images if they exist - convert directly to ImageBitmap
                     if (jpeg_images && typeof jpeg_images === 'object') {
                         const imagePromises: Promise<[string, ImageBitmap]>[] = [];
@@ -101,15 +95,20 @@ export const useWebSocket = (wsUrl: string) => {
                                 bitmap.close();
                             });
                         }, 0);
+                        // Send acknowledgment for the received frame, triggeing the next one to be sent
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            const ackMessage = JSON.stringify({
+                                type: 'received_frame',
+                                multi_frame_number: latestPayload.multi_frame_number,
+                                received_at: Date.now()
+                            });
+                            ws.send(ackMessage);
+                        } else {
+                            console.warn(`Cannot send acknowledgment for frame ${latestPayload.multi_frame_number}: WebSocket not open`);
+                        }
                     }
 
-                    // Update framerates if available
-                    if (latestPayload.frontend_framerate) {
-                        dispatch(setFrontendFramerate(latestPayload.frontend_framerate as CurrentFramerate));
-                    }
-                    if (latestPayload.backend_framerate) {
-                        dispatch(setBackendFramerate(latestPayload.backend_framerate as CurrentFramerate));
-                    }
+
                     return;
                 } catch (e) {
                     if (e instanceof z.ZodError) {
@@ -194,10 +193,10 @@ export const useWebSocket = (wsUrl: string) => {
             return;
         }
         const ws = new WebSocket(wsUrl);
-
         ws.onopen = () => {
             setIsConnected(true);
             setConnectAttempt(0);
+            ws.send("Hello from the Skellycam Frontend💀📸👋");
             console.log(`Websocket is connected to url: ${wsUrl}`)
         };
 
@@ -207,7 +206,7 @@ export const useWebSocket = (wsUrl: string) => {
         };
 
         ws.onmessage = (event) => {
-            handleIncomingMessage(event);
+            handleIncomingMessage(event, ws);
         };
 
         ws.onerror = (error) => {

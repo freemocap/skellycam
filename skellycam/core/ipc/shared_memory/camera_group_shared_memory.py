@@ -1,14 +1,12 @@
 import logging
 from dataclasses import dataclass
 
-import numpy as np
-
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
-from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
+from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElementDTO
 from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
@@ -22,6 +20,7 @@ CameraSharedMemoryDTOs = dict[CameraIdString, SharedMemoryRingBufferDTO]
 class CameraGroupSharedMemoryDTO:
     camera_shm_dtos: CameraSharedMemoryDTOs
     multi_frame_ring_shm_dto: SharedMemoryRingBufferDTO
+    latest_multiframe_number_shm_dto: SharedMemoryElementDTO
     camera_configs: CameraConfigs
 
 
@@ -41,6 +40,7 @@ class CameraGroupSharedMemoryManager:
         """
         return all([
             all([camera_shared_memory.valid for camera_shared_memory in self.camera_shms.values()]),
+            self.latest_multiframe_number.valid,
             self.multi_frame_ring_shm.valid,
         ])
 
@@ -52,6 +52,8 @@ class CameraGroupSharedMemoryManager:
         """
         for camera_shared_memory in self.camera_shms.values():
             camera_shared_memory.valid = value
+        self.latest_multiframe_number.valid = value
+        self.multi_frame_ring_shm.valid = value
 
     @classmethod
     def create(cls,
@@ -60,7 +62,7 @@ class CameraGroupSharedMemoryManager:
                read_only: bool = False):
         validate_camera_configs(camera_configs)
         return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.from_config(camera_config=config,
-                                                                                        timebase_mapping=timebase_mapping,
+                                                                                          timebase_mapping=timebase_mapping,
                                                                                           read_only=read_only)
                                 for camera_id, config in camera_configs.items()},
 
@@ -87,7 +89,8 @@ class CameraGroupSharedMemoryManager:
                 dto=shm_dto.multi_frame_ring_shm_dto,
                 read_only=read_only),
             camera_configs=shm_dto.camera_configs,
-            latest_multiframe_number=SharedMemoryNumber.create(initial_value=-1, read_only=read_only),
+            latest_multiframe_number=SharedMemoryNumber.recreate(dto=shm_dto.latest_multiframe_number_shm_dto,
+                                                                 read_only=read_only),
             read_only=read_only)
 
     @property
@@ -109,6 +112,7 @@ class CameraGroupSharedMemoryManager:
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_shm_dtos=self.camera_shm_dtos,
                                           multi_frame_ring_shm_dto=self.multi_frame_ring_shm.to_dto(),
+                                          latest_multiframe_number_shm_dto=self.latest_multiframe_number.to_dto(),
                                           camera_configs=self.camera_configs
                                           )
 
@@ -128,7 +132,7 @@ class CameraGroupSharedMemoryManager:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
 
             frame = camera_shared_memory.retrieve_next_frame()
-            if frame.frame_number != self.latest_multiframe_number.value + 1 and False:
+            if frame.frame_number != self.latest_multiframe_number.value + 1:
                 logger.error(
                     f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {frame.frame_number}")
             mf_payload.add_frame(frame)
@@ -137,7 +141,8 @@ class CameraGroupSharedMemoryManager:
         self.multi_frame_ring_shm.put_multiframe(mf_payload=mf_payload,
                                                  overwrite=False)  # Don't overwrite to ensure all frames are saved
         self.latest_multiframe_number.value = mf_payload.multi_frame_number
-        logger.loop(f"Built multiframe #{mf_payload.multi_frame_number} from cameras: {list(mf_payload.camera_ids)}")
+        logger.loop(
+            f"Built multiframe #{mf_payload.multi_frame_number} ({self.latest_multiframe_number.value})from cameras: {list(mf_payload.camera_ids)}")
 
         return mf_payload
 

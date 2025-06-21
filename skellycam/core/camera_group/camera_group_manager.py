@@ -97,7 +97,7 @@ class CameraGroupManager:
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 
-    def get_latest_frontend_payloads(self, if_newer_than:int|None) -> list[FrontendFramePayload]:
+    def get_latest_frontend_payloads(self, if_newer_than:int) -> list[FrontendFramePayload]:
 
             fe_payloads = []
             for camera_group in self.camera_groups.values():
