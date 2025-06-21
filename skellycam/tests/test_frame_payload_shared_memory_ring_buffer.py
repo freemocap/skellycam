@@ -8,24 +8,30 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 
 
 # Define process functions at module level so they can be pickled
-def reader_process_func(dto, iterations):
+def reader_process_func(dto_dict, iterations):
     """Reader process function for multiprocessing tests."""
     # Convert dict back to DTO
-
+    from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
+    dto = SharedMemoryRingBufferDTO(**dto_dict)
 
     # Recreate ring buffer
     ring_buffer = FramePayloadSharedMemoryRingBuffer.recreate(dto, read_only=True)
+
+    # Create a pre-allocated recarray for reading
+    frame_dtype = dto.dtype
+    output_frame = np.recarray((1,), dtype=frame_dtype)
 
     # Read in a loop
     for _ in range(iterations):
         try:
             if ring_buffer.new_frame_available:
                 # Get the latest frame
-                frame = ring_buffer.retrieve_latest_frame()
-                assert isinstance(frame, FramePayload)
+                frame = ring_buffer.retrieve_latest_frame(output_frame)
+                assert isinstance(frame, np.recarray)
         except ValueError:
             # No data available yet
             pass
@@ -35,20 +41,26 @@ def reader_process_func(dto, iterations):
     ring_buffer.close()
 
 
-def sequential_reader_process_func(dto, iterations):
+def sequential_reader_process_func(dto_dict, iterations):
     """Sequential reader process function for multiprocessing tests."""
     # Convert dict back to DTO
+    from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
+    dto = SharedMemoryRingBufferDTO(**dto_dict)
 
     # Recreate ring buffer
     ring_buffer = FramePayloadSharedMemoryRingBuffer.recreate(dto, read_only=False)
+
+    # Create a pre-allocated recarray for reading
+    frame_dtype = dto.dtype
+    output_frame = np.recarray((1,), dtype=frame_dtype)
 
     # Read in a loop
     read_count = 0
     for _ in range(iterations * 2):  # More iterations to ensure we catch all writes
         try:
             if ring_buffer.new_frame_available:
-                frame = ring_buffer.retrieve_next_frame()
-                assert isinstance(frame, FramePayload)
+                frame = ring_buffer.retrieve_next_frame(output_frame)
+                assert isinstance(frame, np.recarray)
                 read_count += 1
         except ValueError:
             # No data available yet
@@ -60,17 +72,19 @@ def sequential_reader_process_func(dto, iterations):
     return read_count
 
 
-def writer_process_func(dto, iterations, camera_config_dict):
+def writer_process_func(dto_dict, iterations, camera_config_dict):
     """Writer process function for multiprocessing tests."""
     # Convert dict back to DTO
+    from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
+    dto = SharedMemoryRingBufferDTO(**dto_dict)
     camera_config = CameraConfig(**camera_config_dict)
 
     # Recreate ring buffer
     ring_buffer = FramePayloadSharedMemoryRingBuffer.recreate(dto, read_only=False)
-
+    timebase_mapping = TimebaseMapping()
     # Write in a loop
     for i in range(iterations):
-        frame_rec_array = FramePayload.create_dummy(camera_config).to_numpy_record_array()
+        frame_rec_array = FramePayload.create_dummy(camera_config, timebase_mapping).to_numpy_record_array()
         ring_buffer.put_frame(frame_rec_array, overwrite=True)
         time.sleep(0.02)
 
@@ -94,13 +108,14 @@ class TestFramePayloadSharedMemoryRingBuffer:
     @pytest.fixture
     def example_frame_rec_array(self, camera_config, timebase_mapping):
         """Create example frame record array for testing."""
-        return FramePayload.create_dummy(camera_config).to_numpy_record_array()
+        return FramePayload.create_dummy(camera_config, timebase_mapping).to_numpy_record_array()
 
     @pytest.fixture
-    def frame_buffer(self, camera_config):
+    def frame_buffer(self, camera_config, timebase_mapping):
         """Create and return a FramePayloadSharedMemoryRingBuffer."""
         buffer = FramePayloadSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
+            timebase_mapping=timebase_mapping,
             read_only=False
         )
         yield buffer
@@ -111,26 +126,33 @@ class TestFramePayloadSharedMemoryRingBuffer:
             except Exception:
                 pass
 
-    def test_from_config(self, camera_config):
+    @pytest.fixture
+    def output_frame(self, camera_config):
+        """Create a pre-allocated recarray for reading frames."""
+        frame_dtype = create_frame_dtype(camera_config)
+        return np.recarray((1,), dtype=frame_dtype)
+
+    def test_from_config(self, camera_config, timebase_mapping):
         """Test creating a FramePayloadSharedMemoryRingBuffer from a camera config."""
         buffer = FramePayloadSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
+            timebase_mapping=timebase_mapping,
             read_only=False
         )
-        
+
         assert buffer.valid
         assert buffer.first_data_written is False
         assert buffer.last_written_index.value == -1
         assert buffer.last_read_index.value == -1
-        
+
         buffer.close_and_unlink()
 
-    def test_put_and_retrieve_latest_frame(self, frame_buffer, example_frame_rec_array):
+    def test_put_and_retrieve_latest_frame(self, frame_buffer, example_frame_rec_array, output_frame):
         """Test putting and retrieving the latest frame."""
         # Initially, no frame is available
         assert frame_buffer.new_frame_available is False
         with pytest.raises(ValueError, match="No data available to read"):
-            frame_buffer.retrieve_latest_frame()
+            frame_buffer.retrieve_latest_frame(output_frame)
 
         # Put a frame into shared memory
         frame_buffer.put_frame(example_frame_rec_array, overwrite=False)
@@ -141,32 +163,32 @@ class TestFramePayloadSharedMemoryRingBuffer:
         assert frame_buffer.last_written_index.value == 0
 
         # Retrieve the latest frame
-        frame = frame_buffer.retrieve_latest_frame()
+        frame = frame_buffer.retrieve_latest_frame(output_frame)
 
         # Verify frame data
-        assert isinstance(frame, FramePayload)
-        assert frame.frame_number == example_frame_rec_array.frame_metadata.frame_number
+        assert isinstance(frame, np.recarray)
+        assert frame.frame_metadata.frame_number == example_frame_rec_array.frame_metadata.frame_number
         assert frame.frame_metadata.camera_config.camera_id == example_frame_rec_array.frame_metadata.camera_config.camera_id
-        
+
         # Put another frame
         example_frame_rec_array.frame_metadata.frame_number = 1
         frame_buffer.put_frame(example_frame_rec_array, overwrite=False)
-        
+
         # Verify updated index
         assert frame_buffer.last_written_index.value == 1
-        
-        # Retrieve latest frame again
-        frame = frame_buffer.retrieve_latest_frame()
-        
-        # Verify we get the newest frame
-        assert frame.frame_number == 1
 
-    def test_retrieve_next_frame(self, frame_buffer, example_frame_rec_array):
+        # Retrieve latest frame again
+        frame = frame_buffer.retrieve_latest_frame(output_frame)
+
+        # Verify we get the newest frame
+        assert frame.frame_metadata.frame_number == 1
+
+    def test_retrieve_next_frame(self, frame_buffer, example_frame_rec_array, output_frame):
         """Test retrieving frames sequentially."""
         # Initially, no frame is available
         assert frame_buffer.new_frame_available is False
         with pytest.raises(ValueError, match="Ring buffer is not ready to read yet"):
-            frame_buffer.retrieve_next_frame()
+            frame_buffer.retrieve_next_frame(output_frame)
 
         # Put multiple frames
         for i in range(3):
@@ -181,20 +203,21 @@ class TestFramePayloadSharedMemoryRingBuffer:
 
         # Retrieve frames sequentially
         for i in range(3):
-            frame = frame_buffer.retrieve_next_frame()
-            assert frame.frame_number == i
+            frame = frame_buffer.retrieve_next_frame(output_frame)
+            assert frame.frame_metadata.frame_number == i
             assert frame_buffer.last_read_index.value == i
 
         # No more frames available
         assert frame_buffer.new_frame_available is False
         with pytest.raises(ValueError, match="No new data available to read"):
-            frame_buffer.retrieve_next_frame()
+            frame_buffer.retrieve_next_frame(output_frame)
 
-    def test_read_only_restrictions(self, camera_config, example_frame_rec_array):
+    def test_read_only_restrictions(self, camera_config, timebase_mapping, example_frame_rec_array, output_frame):
         """Test read-only restrictions."""
         # Create read-only buffer
         read_only_buffer = FramePayloadSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
+            timebase_mapping=timebase_mapping,
             read_only=True
         )
 
@@ -205,11 +228,12 @@ class TestFramePayloadSharedMemoryRingBuffer:
         # Clean up
         read_only_buffer.close()
 
-    def test_concurrent_access(self, camera_config):
+    def test_concurrent_access(self, camera_config, timebase_mapping):
         """Test concurrent access to shared memory from multiple processes."""
         # Create original buffer
         original = FramePayloadSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
+            timebase_mapping=timebase_mapping,
             read_only=False
         )
 
@@ -239,25 +263,26 @@ class TestFramePayloadSharedMemoryRingBuffer:
         # Clean up
         original.close_and_unlink()
 
-    def test_sequential_reader(self, camera_config):
+    def test_sequential_reader(self, camera_config, timebase_mapping):
         """Test sequential reading with concurrent writing."""
         # Create original buffer
         original = FramePayloadSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
+            timebase_mapping=timebase_mapping,
             read_only=False
         )
 
         # Create DTO and convert to dict for passing to child processes
         dto = original.to_dto()
-
+        dto_dict = dto.model_dump()
         camera_config_dict = camera_config.model_dump()
 
         # Number of iterations
         iterations = 10
 
         # Start sequential reader and writer processes
-        reader = Process(target=sequential_reader_process_func, args=(dto, iterations))
-        writer = Process(target=writer_process_func, args=(dto, iterations, camera_config_dict))
+        reader = Process(target=sequential_reader_process_func, args=(dto_dict, iterations))
+        writer = Process(target=writer_process_func, args=(dto_dict, iterations, camera_config_dict))
 
         reader.start()
         writer.start()
@@ -273,7 +298,7 @@ class TestFramePayloadSharedMemoryRingBuffer:
         # Clean up
         original.close_and_unlink()
 
-    def test_buffer_wrapping(self, frame_buffer, example_frame_rec_array):
+    def test_buffer_wrapping(self, frame_buffer, example_frame_rec_array, output_frame):
         """Test buffer wrapping behavior."""
         # Fill the buffer and then some to test wrapping
         buffer_size = frame_buffer.ring_buffer_length
@@ -287,9 +312,9 @@ class TestFramePayloadSharedMemoryRingBuffer:
         assert frame_buffer.last_written_index.value == total_frames - 1
 
         # Get latest frame
-        latest_frame = frame_buffer.retrieve_latest_frame()
+        latest_frame = frame_buffer.retrieve_latest_frame(output_frame)
         assert latest_frame is not None
-        assert latest_frame.frame_number == total_frames - 1
+        assert latest_frame.frame_metadata.frame_number == total_frames - 1
 
         # Reset the last_read_index to start reading from the oldest available frame
         # This is needed because the buffer has wrapped around
@@ -297,30 +322,43 @@ class TestFramePayloadSharedMemoryRingBuffer:
 
         # Read sequentially - we should get the most recent buffer_size frames
         for i in range(buffer_size):
-            frame = frame_buffer.retrieve_next_frame()
+            frame = frame_buffer.retrieve_next_frame(output_frame)
             expected_frame_number = total_frames - buffer_size + i
-            assert frame.frame_number == expected_frame_number
+            assert frame.frame_metadata.frame_number == expected_frame_number
 
         # Now no more frames available
         with pytest.raises(ValueError, match="No new data available to read"):
-            frame_buffer.retrieve_next_frame()
+            frame_buffer.retrieve_next_frame(output_frame)
 
-    def test_timestamps_are_updated(self, frame_buffer, example_frame_rec_array):
+    def test_timestamps_are_updated(self, frame_buffer, example_frame_rec_array, output_frame):
         """Test that timestamps are updated when putting and retrieving frames."""
         # Put a frame
         before_put = time.perf_counter_ns()
         frame_buffer.put_frame(example_frame_rec_array, overwrite=False)
         after_put = time.perf_counter_ns()
-        
+
         # Verify timestamp was set
         copy_to_shm_ns = example_frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns
         assert before_put <= copy_to_shm_ns <= after_put
-        
+
         # Retrieve the frame
         before_retrieve = time.perf_counter_ns()
-        frame = frame_buffer.retrieve_latest_frame()
+        frame = frame_buffer.retrieve_latest_frame(output_frame)
         after_retrieve = time.perf_counter_ns()
-        
+
         # Verify timestamp was set
         retrieve_from_shm_ns = frame.frame_metadata.timestamps.post_retrieve_from_camera_shm_ns
+        assert before_retrieve <= retrieve_from_shm_ns <= after_retrieve
+
+        # Test timestamps with retrieve_next_frame
+        frame_buffer.put_frame(example_frame_rec_array, overwrite=False)
+
+        before_retrieve = time.perf_counter_ns()
+        frame = frame_buffer.retrieve_next_frame(output_frame)
+        after_retrieve = time.perf_counter_ns()
+
+        # Verify timestamp was set
+        retrieve_from_shm_ns = frame.frame_metadata.timestamps.post_retrieve_from_camera_shm_ns
+        pre_retrieve_from_shm_ns = frame.frame_metadata.timestamps.pre_retrieve_from_camera_shm_ns
+        assert before_retrieve <= pre_retrieve_from_shm_ns <= after_retrieve
         assert before_retrieve <= retrieve_from_shm_ns <= after_retrieve

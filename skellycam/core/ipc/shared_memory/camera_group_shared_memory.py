@@ -1,5 +1,8 @@
 import logging
+import time
 from dataclasses import dataclass
+
+import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
@@ -10,6 +13,7 @@ from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryE
 from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
+from skellycam.utilities.time_unit_conversion import ns_to_ms
 
 logger = logging.getLogger(__name__)
 
@@ -116,39 +120,49 @@ class CameraGroupSharedMemoryManager:
                                           camera_configs=self.camera_configs
                                           )
 
-    def build_next_multi_frame_payload(self) -> MultiFramePayload:
+    def build_next_multi_frame_payload(self, mf_rec_array: np.recarray) -> np.recarray:
         """
         Retrieves the latest frame from each camera shm and copies it to the MultiFrameSharedMemoryRingBuffer.
         """
+        mf_build_start_ns = time.perf_counter_ns()
         if self.read_only:
             raise ValueError(
                 "Cannot use `get_next_multi_frame_payload` in read-only mode - use `get_latest_multi_frame_payload` instead!")
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
-        mf_payload = MultiFramePayload.create_empty(camera_configs=self.camera_configs)
+        print(f"mf_init_dur: {ns_to_ms(time.perf_counter_ns() - mf_build_start_ns):.3f}")
+
         for camera_id, camera_shared_memory in self.camera_shms.items():
+            tik = time.perf_counter_ns()
             if not camera_shared_memory.new_frame_available:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
 
-            frame = camera_shared_memory.retrieve_next_frame()
-            if frame.frame_number != self.latest_multiframe_number.value + 1:
-                logger.error(
-                    f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {frame.frame_number}")
-            mf_payload.add_frame(frame)
-        if not mf_payload or not mf_payload.full:
-            raise ValueError("Did not read full multi-frame mf_payload!")
-        self.multi_frame_ring_shm.put_multiframe(mf_payload=mf_payload,
+            mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[camera_id])
+            if mf_rec_array[camera_id].frame_metadata.frame_number[0] != self.latest_multiframe_number.value + 1:
+                raise ValueError(f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
+            print(f"{camera_id} frame_retrieve_dur: {ns_to_ms(time.perf_counter_ns() - tik):.3f}ms")
+
+        tik = time.perf_counter_ns()
+        self.multi_frame_ring_shm.put_multiframe(mf_rec_array =mf_rec_array,
                                                  overwrite=False)  # Don't overwrite to ensure all frames are saved
-        self.latest_multiframe_number.value = mf_payload.multi_frame_number
+        print(f"mf_put_dur: {ns_to_ms(time.perf_counter_ns() - tik):.3f}ms")
+        print(f"TOTAL mf build time: {ns_to_ms(time.perf_counter_ns() - mf_build_start_ns):.3f}ms")
+
+        mf_numbers = set(mf_rec_array[camera_id].frame_metadata.frame_number for camera_id in self.camera_ids)
+        if len(mf_numbers) > 1:
+            raise ValueError(f"Multi-frame payload has multiple frame numbers: {mf_numbers}. "
+                             f"Expected all cameras to have the same frame number.")
+        self.latest_multiframe_number.value = mf_numbers.pop()
         logger.loop(
-            f"Built multiframe #{mf_payload.multi_frame_number} ({self.latest_multiframe_number.value})from cameras: {list(mf_payload.camera_ids)}")
+            f"Built multiframe #{self.latest_multiframe_number.value} from cameras: {list(self.camera_ids)}")
 
-        return mf_payload
+        return mf_rec_array
 
-    def build_all_new_multiframes(self):
+    def build_all_new_multiframes(self, mf_rec_array:np.recarray) -> np.recarray:
         while self.new_multi_frame_available:
-            self.build_next_multi_frame_payload()
+            mf_rec_array = self.build_next_multi_frame_payload(mf_rec_array)
+        return  mf_rec_array #recycle the mf object to save memory
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it

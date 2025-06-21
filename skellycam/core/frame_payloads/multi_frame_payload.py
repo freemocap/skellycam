@@ -86,7 +86,7 @@ class MultiFramePayload(BaseModel):
             raise ValueError(f"MultiFramePayload has multiple frame numbers {mapping}")
         return mapping.pop()
 
-    def _validate_multi_frame(self):
+    def validate_multi_frame(self):
         if not self.full:
             raise ValueError("MultiFramePayload is not full, cannot get multi_frame_number")
         _ = self.multi_frame_number
@@ -97,7 +97,7 @@ class MultiFramePayload(BaseModel):
         """
         Convert the MultiFramePayload to a numpy record array.
         """
-        self._validate_multi_frame()
+        self.validate_multi_frame()
         # Create a record array with the correct shape (1,)
         dtype = create_multiframe_dtype(self.camera_configs)
         result = np.recarray(1, dtype=dtype)
@@ -115,17 +115,9 @@ class MultiFramePayload(BaseModel):
             frames[camera_id] = FramePayload.create_from_numpy_record_array(mf_rec_array[camera_id])
 
         instance = cls(frames=frames)
-        instance._validate_multi_frame()
+        instance.validate_multi_frame()
         return instance
 
-    def update_from_numpy_record_array(self, mf_rec_array: np.recarray, apply_config_rotation: bool):
-        self._validate_multi_frame()
-        for camera_id, frame in self.frames.items():
-            if not isinstance(frame, FramePayload):
-                raise ValueError(f"Expected FramePayload, got {type[frame]}")
-            frame.update_from_numpy_record_array(frame_rec_array=mf_rec_array[camera_id],
-                                                 apply_config_rotation=apply_config_rotation)
-        self._validate_multi_frame()
 
     def add_frame(self, new_frame: FramePayload) -> None:
         # Check if this camera_id already exists in the frames
@@ -152,7 +144,7 @@ class MultiFramePayload(BaseModel):
         self.frames[new_frame.camera_id] = new_frame
 
     def get_frame(self, camera_id: CameraIdString, return_copy: bool = True) -> FramePayload:
-        self._validate_multi_frame()
+        self.validate_multi_frame()
         frame = self.frames[camera_id]
 
         if return_copy:

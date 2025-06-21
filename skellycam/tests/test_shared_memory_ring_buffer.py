@@ -44,12 +44,15 @@ def sequential_reader_process_func(dto_dict, iterations):
     # Recreate ring buffer
     ring_buffer = SharedMemoryRingBuffer.recreate(dto, read_only=False)
 
+    # Create a pre-allocated recarray for reading
+    example_data = np.recarray((1,), dtype=dto.dtype)
+
     # Read in a loop
     read_count = 0
     for _ in range(iterations * 2):  # More iterations to ensure we catch all writes
         try:
             if ring_buffer.new_data_available:
-                data = ring_buffer.get_next_data()
+                data = ring_buffer.get_next_data(example_data)
                 read_count += 1
         except ValueError:
             # No data available yet
@@ -211,10 +214,13 @@ class TestSharedMemoryRingBuffer:
         test_data2 = np.rec.array([(4.0, 5.0, 6.0)], dtype=simple_dtype)
         test_data3 = np.rec.array([(7.0, 8.0, 9.0)], dtype=simple_dtype)
 
+        # Create pre-allocated recarray for reading
+        output_data = np.recarray((1,), dtype=simple_dtype)
+
         # Initially, no data is available
         assert simple_ring_buffer.first_data_written is False
         with pytest.raises(ValueError, match="Ring buffer is not ready to read yet"):
-            simple_ring_buffer.get_next_data()
+            simple_ring_buffer.get_next_data(output_data)
 
         # Put data into shared memory
         simple_ring_buffer.put_data(test_data1)
@@ -227,27 +233,30 @@ class TestSharedMemoryRingBuffer:
         assert simple_ring_buffer.last_read_index.value == -1
 
         # Get data sequentially
-        data1 = simple_ring_buffer.get_next_data()
+        data1 = simple_ring_buffer.get_next_data(output_data)
         assert data1 is not None
         assert data1.x == test_data1.x[0]
         assert simple_ring_buffer.last_read_index.value == 0
 
-        data2 = simple_ring_buffer.get_next_data()
+        data2 = simple_ring_buffer.get_next_data(output_data)
         assert data2 is not None
         assert data2.x == test_data2.x[0]
         assert simple_ring_buffer.last_read_index.value == 1
 
-        data3 = simple_ring_buffer.get_next_data()
+        data3 = simple_ring_buffer.get_next_data(output_data)
         assert data3 is not None
         assert data3.x == test_data3.x[0]
         assert simple_ring_buffer.last_read_index.value == 2
 
         # No more data available
         with pytest.raises(ValueError, match="No new data available to read"):
-            simple_ring_buffer.get_next_data()
+            simple_ring_buffer.get_next_data(output_data)
 
     def test_buffer_wrapping(self, simple_ring_buffer, simple_dtype):
         """Test buffer wrapping behavior."""
+        # Create pre-allocated recarray for reading
+        output_data = np.recarray((1,), dtype=simple_dtype)
+
         # Fill the buffer and then some to test wrapping
         for i in range(10):  # More than buffer size (5)
             test_data = np.rec.array([(float(i), float(i * 2), float(i * 3))], dtype=simple_dtype)
@@ -264,7 +273,7 @@ class TestSharedMemoryRingBuffer:
         # Read sequentially
         # We should be able to read all 10 indices (0-9)
         for i in range(10):
-            data = simple_ring_buffer.get_next_data()
+            data = simple_ring_buffer.get_next_data(output_data)
             expected_index = i
             # The data at indices 0-4 has been overwritten with data from indices 5-9
             if i < 5:
@@ -276,7 +285,8 @@ class TestSharedMemoryRingBuffer:
 
         # Now no more data available
         with pytest.raises(ValueError, match="No new data available to read"):
-            simple_ring_buffer.get_next_data()
+            simple_ring_buffer.get_next_data(output_data)
+
     def test_read_only_restrictions(self, example_data, simple_dtype):
         """Test read-only restrictions."""
         # Create read-only ring buffer
@@ -286,6 +296,9 @@ class TestSharedMemoryRingBuffer:
             ring_buffer_length=5
         )
 
+        # Create pre-allocated recarray for reading
+        output_data = np.recarray((1,), dtype=simple_dtype)
+
         # Attempt to write data
         test_data = np.rec.array([(1.0, 2.0, 3.0)], dtype=simple_dtype)
         with pytest.raises(ValueError, match="Cannot write to read-only SharedMemoryRingBuffer"):
@@ -293,7 +306,7 @@ class TestSharedMemoryRingBuffer:
 
         # Attempt to get next data
         with pytest.raises(ValueError, match="Cannot call `get_next_data` on read-only SharedMemoryRingBuffer"):
-            read_only_buffer.get_next_data()
+            read_only_buffer.get_next_data(output_data)
 
         # Clean up
         read_only_buffer.close()
@@ -436,6 +449,9 @@ class TestSharedMemoryRingBuffer:
 
     def test_new_data_available(self, simple_ring_buffer, simple_dtype):
         """Test new_data_available property."""
+        # Create pre-allocated recarray for reading
+        output_data = np.recarray((1,), dtype=simple_dtype)
+
         # Initially, no data is available
         assert simple_ring_buffer.new_data_available is False
 
@@ -447,7 +463,7 @@ class TestSharedMemoryRingBuffer:
         assert simple_ring_buffer.new_data_available is True
 
         # Read the data
-        simple_ring_buffer.get_next_data()
+        simple_ring_buffer.get_next_data(output_data)
 
         # No new data available
         assert simple_ring_buffer.new_data_available is False

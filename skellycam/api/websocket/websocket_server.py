@@ -91,6 +91,8 @@ class WebsocketServer:
 
                         payload_json = fe_payload.model_dump_json()
                         payload_bytes = payload_json.encode('utf-8')
+                        if fe_payload.multi_frame_number %2 == 0:
+                            continue
                         await self.websocket.send_bytes(payload_bytes)
                         self.last_sent_frame_number = fe_payload.multi_frame_number
         except WebSocketDisconnect:

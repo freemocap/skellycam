@@ -1,7 +1,9 @@
 import logging
 import multiprocessing
+import time
 
 import cv2
+import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.create_cv2_video_capture import create_cv2_video_capture
@@ -15,6 +17,8 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtract
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
 
@@ -78,9 +82,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
 
     while not ipc.all_ready and should_continue():
         wait_10ms()
-    frame = FramePayload.create_initial(camera_config=config,
-                                        timebase_mapping=ipc.timebase_mapping)
-
+    frame_rec_array = create_initial_frame_rec_array(config, ipc)
     try:
         logger.debug(f"Camera {config.camera_id} frame grab loop starting...")
         while should_continue():
@@ -89,24 +91,24 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                 wait_10ms()
                 continue
             self_status.is_paused.value = False
-            frame = check_for_new_config(frame=frame,
-                                         cv2_video_capture=cv2_video_capture,
-                                         ipc=ipc,
-                                         self_status=self_status,
-                                         update_camera_settings_subscription=update_camera_settings_subscription)
+            frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
+                                                   cv2_video_capture=cv2_video_capture,
+                                                   ipc=ipc,
+                                                   self_status=self_status,
+                                                   update_camera_settings_subscription=update_camera_settings_subscription)
 
             if not orchestrator.should_grab_by_id(camera_id=camera_id):
                 wait_10us()
                 continue
 
             self_status.grabbing_frame.value = True
-            frame = opencv_get_frame(cap=cv2_video_capture, frame=frame)
-            camera_shm.put_frame(frame_rec_array=frame.to_numpy_record_array(), overwrite=True)
+            frame_rec_array = opencv_get_frame(cap=cv2_video_capture, frame_rec_array=frame_rec_array, )
+            camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
             self_status.grabbing_frame.value = False
 
             # Last camera to increment their frame count status triggers the next frame_grab
-            self_status.frame_count.value = frame.frame_number
-            frame.initialize()
+            self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+            frame_rec_array = initialize_frame_timestamps(frame_rec_array=frame_rec_array)
 
 
     except Exception as e:
@@ -127,29 +129,64 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         logger.debug(f"Camera {config.camera_index} process completed")
 
 
-def check_for_new_config(frame: FramePayload,
+def create_initial_frame_rec_array(config: CameraConfig, ipc: CameraGroupIPC) -> np.recarray:
+    # Create initial frame record array
+    frame_dtype = create_frame_dtype(config)
+    frame_rec_array = np.recarray(1, dtype=frame_dtype)
+    # Initialize the frame metadata
+    frame_rec_array.frame_metadata.camera_config[0] = config.to_numpy_record_array()
+    frame_rec_array.frame_metadata.frame_number[0] = -1
+    frame_rec_array.frame_metadata.timestamps.timebase_mapping[0] = ipc.timebase_mapping.to_numpy_record_array()
+    # Initialize the image with zeros
+    image_shape = (config.resolution.height, config.resolution.width, config.color_channels)
+    frame_rec_array.image[0] = np.zeros(image_shape, dtype=np.uint8)+ config.camera_index
+    return frame_rec_array
+
+
+def check_for_new_config(frame_rec_array: np.recarray,
                          cv2_video_capture: cv2.VideoCapture,
                          ipc: CameraGroupIPC,
                          self_status: CameraStatus,
-                         update_camera_settings_subscription) -> FramePayload:
+                         update_camera_settings_subscription) -> np.recarray:
     if not update_camera_settings_subscription.empty():
-        logger.debug(f"Camera {frame.camera_config.camera_id} received update_camera_settings_subscription message")
-        self_status.updating.value = True
+        logger.debug(
+            f"Camera {frame_rec_array.camera_config.camera_id} received update_camera_settings_subscription message")
         update_message = update_camera_settings_subscription.get()
         if not isinstance(update_message, UpdateCamerasSettingsMessage):
             raise RuntimeError(
-                f"Expected UpdateCamerasSettingsMessage for camera {frame.camera_config.camera_id}, "
+                f"Expected UpdateCamerasSettingsMessage for camera {frame_rec_array.camera_config.camera_id[0]}, "
                 f"but received {type(update_message)}"
             )
-        if not frame.camera_config.camera_id in update_message.requested_configs:
-            raise RuntimeError(
-                f"Camera {frame.camera_config.camera_id} not found in UpdateCamerasSettingsMessage: {update_message.requested_configs.keys()} "
-            )
-        new_config = update_message.requested_configs[frame.camera_config.camera_id]
-        frame.camera_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
-                                                         prior_config=frame.camera_config,
-                                                         config=new_config, )
-        ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
-            DeviceExtractedConfigMessage(extracted_config=frame.camera_config))
-        self_status.updating.value = False
-    return frame
+        if frame_rec_array.camera_config.camera_id in update_message.requested_configs:
+            self_status.updating.value = True
+            new_config = update_message.requested_configs[frame_rec_array.camera_config.camera_id[0]]
+            extracted_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
+                                                          prior_config=CameraConfig.from_numpy_record_array(
+                                                              frame_rec_array.camera_config[0]),
+                                                          config=new_config, )
+            frame_rec_array.camera_config[0] = extracted_config.to_numpy_record_array()
+            ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
+                DeviceExtractedConfigMessage(
+                    extracted_config=CameraConfig.from_numpy_record_array(frame_rec_array.camera_config)))
+            self_status.updating.value = False
+
+
+    return frame_rec_array
+
+
+def initialize_frame_timestamps(frame_rec_array: np.recarray) -> np.recarray:
+    """Initialize timestamps for a new frame"""
+
+    # Reset all timestamps to 0
+    frame_rec_array.frame_metadata.timestamps.pre_frame_grab_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.post_frame_grab_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.pre_frame_retrieve_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.pre_retrieve_from_camera_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.post_retrieve_from_camera_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.pre_copy_to_multiframe_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.frame_initialized_ns[0] = time.perf_counter_ns()
+    return frame_rec_array

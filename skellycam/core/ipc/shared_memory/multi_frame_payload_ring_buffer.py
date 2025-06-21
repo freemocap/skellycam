@@ -1,9 +1,13 @@
 import logging
 import time
+
+import numpy as np
+
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.utilities.time_unit_conversion import ns_to_ms
 
 logger = logging.getLogger(__name__)
 
@@ -22,61 +26,58 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         )
 
     def put_multiframe(self,
-                       mf_payload: MultiFramePayload,
+                       mf_rec_array: np.recarray,
                        overwrite: bool) -> None:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot write to it!")
-        if not mf_payload.full:
-            raise ValueError("Cannot write incomplete multi-frame payload to shared memory!")
         if self.read_only:
             raise ValueError("Cannot write to read-only shared memory!")
+        mf_numbers: list[int] = []
+        for camera_id in mf_rec_array.dtype.names:
+            mf_rec_array[camera_id].frame_metadata.timestamps.pre_copy_to_multiframe_shm_ns[0] = time.perf_counter_ns()
+            mf_numbers.append(mf_rec_array[camera_id].frame_metadata.frame_number[0])
+        tik = time.perf_counter_ns()
+        self.put_data(data=mf_rec_array, overwrite=overwrite)
 
-        for frame in mf_payload.frames.values():
-            frame.frame_metadata.timestamps.pre_copy_to_multiframe_shm_ns = time.perf_counter_ns()
+        if len(set(mf_numbers)) != 1:
+            raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_numbers}, expected only one.")
 
-        self.put_data(data=mf_payload.to_numpy_record_array(), overwrite=overwrite)
+        print(f"Put multi-frame {mf_numbers.pop()} to shared memory, took {ns_to_ms(time.perf_counter_ns() - tik):.3f} ms")
 
 
-    def get_latest_multiframe(self, mf:MultiFramePayload|None, apply_config_rotation:bool) -> MultiFramePayload| None:
+    def get_latest_multiframe(self, mf_rec_array:np.recarray) -> np.recarray:
         if not self.first_data_written:
-            return None
+            return mf_rec_array
         pre_tik = time.perf_counter_ns()
-        mf_rec_array = self.get_latest_data()
-        if mf is None:
-            mf = MultiFramePayload.from_numpy_record_array(mf_rec_array)
-        else:
-            mf.update_from_numpy_record_array(mf_rec_array, apply_config_rotation=apply_config_rotation)
-        for frame in mf.frames.values():
-            frame.frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns = time.perf_counter_ns()
-            frame.frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns = pre_tik
+        mf_rec_array = self.get_latest_data(mf_rec_array)
 
-        return mf
+        for camera_id in mf_rec_array.dtype.names:
 
-    def get_next_multiframe(self, mf:MultiFramePayload|None, apply_config_rotation:bool) -> MultiFramePayload|None:
+            mf_rec_array[camera_id].frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns[0] = time.perf_counter_ns()
+            mf_rec_array[camera_id].frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns[0] = pre_tik
+        return mf_rec_array
+    def get_next_multiframe(self, mf_rec_array:np.recarray) -> np.recarray:
         pre_tik = time.perf_counter_ns()
 
-        mf_rec_array = self.get_next_data()
-        if mf is None:
-            mf = MultiFramePayload.from_numpy_record_array(mf_rec_array=mf_rec_array)
-        else:
-            mf.update_from_numpy_record_array(mf_rec_array=mf_rec_array,
-                                              apply_config_rotation=apply_config_rotation)
-        for frame in mf.frames.values():
-            frame.frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns = time.perf_counter_ns()
-            frame.frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns = pre_tik
-        return mf
+        mf_rec_array = self.get_next_data(mf_rec_array)
 
-    def get_all_new_multiframes(self,mf:MultiFramePayload|None, apply_config_rotation:bool) -> list[MultiFramePayload]:
+        for camera_id in mf_rec_array.dtype.names:
+            mf_rec_array[camera_id].frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns[0] = time.perf_counter_ns()
+            mf_rec_array[camera_id].frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns[0] = pre_tik
+        return mf_rec_array
+
+    def get_all_new_multiframes(self,mf_rec_array:np.recarray) -> list[np.recarray]:
         """
         Retrieves all new multi-frames from the shared memory.
         """
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        mfs: list[MultiFramePayload] = []
+        mfs: list[np.recarray] = []
         new_data_indicies = self.new_data_indicies
         for _ in new_data_indicies:
-            mf_payload = self.get_next_multiframe(mf=mf, apply_config_rotation=apply_config_rotation)
-            if mf_payload is not None:
-                mfs.append(mf_payload)
+            og_rec_array = mf_rec_array.copy()
+            mf_rec_array = self.get_next_multiframe(mf_rec_array=mf_rec_array)
+            if not np.array_equal(og_rec_array, mf_rec_array):
+                mfs.append(mf_rec_array.copy())
         return mfs
 

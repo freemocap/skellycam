@@ -126,7 +126,7 @@ class SharedMemoryRingBuffer(BaseModel):
         self.shms[index_to_write % self.ring_buffer_length].put_data(data)
         self.last_written_index.value = index_to_write
 
-    def get_next_data(self) -> np.recarray:
+    def get_next_data(self, rec_array:np.recarray) -> np.recarray:
         if self.read_only:
             raise ValueError(
                 "Cannot call `get_next_data` on read-only SharedMemoryRingBuffer. Use `get_latest_data` instead.")
@@ -134,20 +134,20 @@ class SharedMemoryRingBuffer(BaseModel):
             raise ValueError("Ring buffer is not ready to read yet.")
         if not self.new_data_available:
             raise ValueError("No new data available to read.")
-        return self._read_next_data()
+        return self._read_next_data(rec_array)
 
-    def _read_next_data(self) -> np.recarray | None:
+    def _read_next_data(self, rec_array:np.recarray) -> np.recarray | None:
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
         index_to_read = self.last_read_index.value + 1
         if index_to_read > self.last_written_index.value:
             raise ValueError("Cannot read past the last written index!")
-        shm_data = self.shms[index_to_read % self.ring_buffer_length].retrieve_data()
+        rec_array = self.shms[index_to_read % self.ring_buffer_length].retrieve_data(rec_array)
         self.last_read_index.value = index_to_read
 
-        return shm_data
+        return rec_array
 
-    def get_latest_data(self) -> np.recarray:
+    def get_latest_data(self,rec_array:np.recarray) -> np.recarray:
         """
         NOTE - this method does NOT update the 'last_read_index' value.
 
@@ -157,7 +157,7 @@ class SharedMemoryRingBuffer(BaseModel):
         """
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
-        return self.shms[self.last_written_index.value % self.ring_buffer_length].retrieve_data()
+        return self.shms[self.last_written_index.value % self.ring_buffer_length].retrieve_data(rec_array)
 
     def close(self):
         self.last_written_index.close()

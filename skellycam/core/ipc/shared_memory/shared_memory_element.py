@@ -132,7 +132,7 @@ class SharedMemoryElement(BaseModel):
         np.copyto(dst=self.buffer, src=data)
         self.first_data_written = True
 
-    def retrieve_data(self) -> np.recarray|None:
+    def retrieve_data(self,rec_array:np.recarray|None=None) -> np.recarray|None:
         if not self.valid:
             raise ValueError("Cannot retrieve data from an invalid SharedMemoryElement.")
         if not self.first_data_written:
@@ -141,9 +141,15 @@ class SharedMemoryElement(BaseModel):
         if data.dtype != self.dtype:
             raise ValueError(f"Array dtype {data.dtype} does not match SharedMemoryElement dtype {self.dtype}")
 
+        if rec_array is not None:
+            if data.shape == (1,):
+                np.copyto(rec_array, data[0])
+            np.copyto(rec_array, data)
+            return rec_array
         if data.shape == (1,):
             return data[0]
         return data
+
 
     def close(self):
         self.shm.close()
