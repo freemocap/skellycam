@@ -74,6 +74,42 @@ export const camerasSlice = createSlice({
             }
         },
 
+        copyConfigToAllCameras: (state, action: PayloadAction<string>) => {
+            const sourceCameraId = action.payload;
+            const sourceCamera = state.cameras[sourceCameraId];
+
+            if (sourceCamera) {
+                const sourceConfig = sourceCamera.config;
+
+                // Copy specific config properties we want to share
+                // (excluding camera-specific properties like camera_id, camera_name, etc.)
+                const configToCopy = {
+                    resolution: sourceConfig.resolution,
+                    color_channels: sourceConfig.color_channels,
+                    pixel_format: sourceConfig.pixel_format,
+                    exposure_mode: sourceConfig.exposure_mode,
+                    exposure: sourceConfig.exposure,
+                    framerate: sourceConfig.framerate,
+                    rotation: sourceConfig.rotation,
+                    capture_fourcc: sourceConfig.capture_fourcc,
+                    writer_fourcc: sourceConfig.writer_fourcc,
+                };
+
+                // Apply to all other cameras
+                Object.keys(state.cameras).forEach(cameraId => {
+                    if (cameraId !== sourceCameraId) {
+                        state.cameras[cameraId] = {
+                            ...state.cameras[cameraId],
+                            config: {
+                                ...state.cameras[cameraId].config,
+                                ...configToCopy
+                            }
+                        };
+                    }
+                });
+            }
+        },
+
     },
 });
 
@@ -108,6 +144,7 @@ export const {
     setCameraStatus,
     toggleCameraSelection,
     updateCameraConfig,
+    copyConfigToAllCameras,
     setError
 } = camerasSlice.actions;
 

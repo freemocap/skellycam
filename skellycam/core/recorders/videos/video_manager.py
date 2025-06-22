@@ -2,8 +2,10 @@ import logging
 import threading
 import time
 import uuid
+from collections import deque
 from pathlib import Path
 
+import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
@@ -33,6 +35,7 @@ class VideoManager(BaseModel):
     recording_info: RecordingInfo
     video_recorders: dict[CameraIdString, VideoRecorder]
     recording_timestamps: RecordingTimestamps
+    mf_recarrays: deque[np.recarray] = Field(default_factory=deque)
     is_finished: bool = False
     class Config:
         arbitrary_types_allowed = True
@@ -61,13 +64,8 @@ class VideoManager(BaseModel):
                 self.video_recorders.items()}
 
 
-    def add_multi_frames(self, multi_frame_payloads: list[MultiFramePayload]):
-        """
-        Adds multiple multi-frames to the video recorder.
-        :param multi_frame_payloads: List of MultiFramePayloads to add.
-        """
-        for mf_payload in multi_frame_payloads:
-            self.add_multi_frame(mf_payload=mf_payload)
+    def add_multi_frame_recarrays(self, mf_recarrays: list[np.recarray]):
+        self.mf_recarrays.extend(mf_recarrays)
 
 
     def add_multi_frame(self, mf_payload: MultiFramePayload):
@@ -79,6 +77,13 @@ class VideoManager(BaseModel):
             frame = mf_payload.get_frame(camera_id)
             self.video_recorders[camera_id].add_frame(frame=frame)
         self.recording_timestamps.add_multiframe(mf_payload)
+
+    def do_opportunistic_tasks(self) -> bool:
+        if len(self.mf_recarrays) > 0:
+            mf = MultiFramePayload.from_numpy_record_array(self.mf_recarrays.popleft(), apply_config_rotation=True)
+            self.add_multi_frame(mf_payload=mf)
+            return True
+        return self.try_save_one_frame()
 
     def try_save_one_frame(self) -> bool:
         """
@@ -114,7 +119,7 @@ class VideoManager(BaseModel):
 
         logger.info(f"Finishing up {len(self.video_recorders)} video recorders for recording: `{self.recording_info.recording_name}`")
         finish_threads = []
-        while self.try_save_one_frame():
+        while self.do_opportunistic_tasks():
             time.sleep(0.01)
 
         for recorder in self.video_recorders.values():

@@ -15,10 +15,6 @@ class RecordingManagerStatus(BaseModel):
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
-    total_frames_published: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value('Q', 0))
-    number_frames_published_this_cycle: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value('i', 0))
 
     @property
     def recording(self) -> bool:

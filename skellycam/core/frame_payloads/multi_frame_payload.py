@@ -109,10 +109,13 @@ class MultiFramePayload(BaseModel):
         return result
 
     @classmethod
-    def from_numpy_record_array(cls, mf_rec_array: np.recarray) -> "MultiFramePayload":
+    def from_numpy_record_array(cls,
+                                mf_rec_array: np.recarray,
+                                apply_config_rotation:bool=False) -> "MultiFramePayload":
         frames = {}
         for camera_id in mf_rec_array.dtype.names:
-            frames[camera_id] = FramePayload.create_from_numpy_record_array(mf_rec_array[camera_id])
+            frames[camera_id] = FramePayload.create_from_numpy_record_array(mf_rec_array[camera_id],
+                                                                            apply_config_rotation=apply_config_rotation)
 
         instance = cls(frames=frames)
         instance.validate_multi_frame()

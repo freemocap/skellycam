@@ -194,13 +194,9 @@ class RecordingManager(BaseModel):
         latest_mf_recarrays = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
 
         if len(latest_mf_recarrays) > 0:
-            latest_mfs = [MultiFramePayload.from_numpy_record_array(mf_rec_array) for mf_rec_array in latest_mf_recarrays]
-            logger.loop(f"RecordingManager: retrieved mfs: {[mf.multi_frame_number for mf in latest_mfs]}")
-            status.total_frames_published.value += len(latest_mfs)
-            status.number_frames_published_this_cycle.value = len(latest_mfs)
             # if new frames, add them to the recording manager (doesn't save them yet)
             if video_manager is not None:
-                video_manager.add_multi_frames(latest_mfs)
+                video_manager.add_multi_frame_recarrays(latest_mf_recarrays)
         else:
             if video_manager:
                 if status.should_record.value:

@@ -45,10 +45,8 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
 
         if apply_exposure_mode:
             if config.exposure_mode == ExposureModes.RECOMMEND.name:
-                optimized_exposure = get_recommended_cv2_cap_exposure(cv2_vid_capture)
-                cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
-                cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(optimized_exposure))
-                logger.info(f"Setting camera {config.camera_index} to recommended exposure: {optimized_exposure}")
+                config.exposure = find_recommended_exposure(cv2_vid_capture)
+                config.exposure_mode = ExposureModes.MANUAL.name
             elif config.exposure_mode == ExposureModes.AUTO.name:
                 cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING)
             elif config.exposure_mode == ExposureModes.MANUAL.name:
@@ -87,3 +85,10 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
         raise FailedToApplyCameraConfigurationError(
             f"Failed to apply configuration to Camera {config.camera_index} - {type(e).__name__} - {e}"
         )
+
+
+def find_recommended_exposure(cv2_vid_capture:cv2.VideoCapture) -> int:
+    optimized_exposure = get_recommended_cv2_cap_exposure(cv2_vid_capture)
+    cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
+    cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(optimized_exposure))
+    return optimized_exposure
