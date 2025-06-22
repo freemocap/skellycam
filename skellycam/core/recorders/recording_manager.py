@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, SkipValidation
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, SetShmMessage, RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
@@ -190,10 +191,10 @@ class RecordingManager(BaseModel):
                                 video_manager: VideoManager | None,
                                 camera_group_shm: CameraGroupSharedMemoryManager) ->VideoManager | None:
 
-        latest_mfs = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes(mf=None, #create new mfs for us
-                                                                                   apply_config_rotation=True)
+        latest_mf_recarrays = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
 
-        if len(latest_mfs) > 0:
+        if len(latest_mf_recarrays) > 0:
+            latest_mfs = [MultiFramePayload.from_numpy_record_array(mf_rec_array) for mf_rec_array in latest_mf_recarrays]
             logger.loop(f"RecordingManager: retrieved mfs: {[mf.multi_frame_number for mf in latest_mfs]}")
             status.total_frames_published.value += len(latest_mfs)
             status.number_frames_published_this_cycle.value = len(latest_mfs)

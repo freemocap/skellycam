@@ -126,7 +126,7 @@ class SharedMemoryRingBuffer(BaseModel):
         self.shms[index_to_write % self.ring_buffer_length].put_data(data)
         self.last_written_index.value = index_to_write
 
-    def get_next_data(self, rec_array:np.recarray) -> np.recarray:
+    def get_next_data(self, rec_array:np.recarray|None) -> np.recarray:
         if self.read_only:
             raise ValueError(
                 "Cannot call `get_next_data` on read-only SharedMemoryRingBuffer. Use `get_latest_data` instead.")
@@ -136,7 +136,7 @@ class SharedMemoryRingBuffer(BaseModel):
             raise ValueError("No new data available to read.")
         return self._read_next_data(rec_array)
 
-    def _read_next_data(self, rec_array:np.recarray) -> np.recarray | None:
+    def _read_next_data(self, rec_array:np.recarray|None) -> np.recarray | None:
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
         index_to_read = self.last_read_index.value + 1
@@ -147,7 +147,7 @@ class SharedMemoryRingBuffer(BaseModel):
 
         return rec_array
 
-    def get_latest_data(self,rec_array:np.recarray) -> np.recarray:
+    def get_latest_data(self,rec_array:np.recarray|None=None) -> np.recarray:
         """
         NOTE - this method does NOT update the 'last_read_index' value.
 

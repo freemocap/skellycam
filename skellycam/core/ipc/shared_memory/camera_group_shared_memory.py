@@ -131,7 +131,7 @@ class CameraGroupSharedMemoryManager:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
-        print(f"mf_init_dur: {ns_to_ms(time.perf_counter_ns() - mf_build_start_ns):.3f}")
+        # print(f"mf_init_dur: {ns_to_ms(time.perf_counter_ns() - mf_build_start_ns):.3f}")
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
             tik = time.perf_counter_ns()
@@ -141,15 +141,15 @@ class CameraGroupSharedMemoryManager:
             mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[camera_id])
             if mf_rec_array[camera_id].frame_metadata.frame_number[0] != self.latest_multiframe_number.value + 1:
                 raise ValueError(f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
-            print(f"{camera_id} frame_retrieve_dur: {ns_to_ms(time.perf_counter_ns() - tik):.3f}ms")
+#             print(f"{camera_id} frame_retrieve_dur: {ns_to_ms(time.perf_counter_ns() - tik):.3f}ms")
 
         tik = time.perf_counter_ns()
         self.multi_frame_ring_shm.put_multiframe(mf_rec_array =mf_rec_array,
                                                  overwrite=False)  # Don't overwrite to ensure all frames are saved
-        print(f"mf_put_dur: {ns_to_ms(time.perf_counter_ns() - tik):.3f}ms")
-        print(f"TOTAL mf build time: {ns_to_ms(time.perf_counter_ns() - mf_build_start_ns):.3f}ms")
+#         print(f"mf_put_dur: {ns_to_ms(time.perf_counter_ns() - tik):.3f}ms")
+#         print(f"TOTAL mf build time: {ns_to_ms(time.perf_counter_ns() - mf_build_start_ns):.3f}ms")
 
-        mf_numbers = set(mf_rec_array[camera_id].frame_metadata.frame_number for camera_id in self.camera_ids)
+        mf_numbers = set(mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in self.camera_ids)
         if len(mf_numbers) > 1:
             raise ValueError(f"Multi-frame payload has multiple frame numbers: {mf_numbers}. "
                              f"Expected all cameras to have the same frame number.")

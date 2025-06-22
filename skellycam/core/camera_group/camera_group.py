@@ -104,10 +104,10 @@ class CameraGroup:
         if self.shm.latest_multiframe_number.value <= if_newer_than:
             return None
 
-        self.mf = self.shm.multi_frame_ring_shm.get_latest_multiframe(mf=self.mf,
-                                                                      apply_config_rotation=True)
-        if self.mf is None:
+        mf_rec_array = self.shm.multi_frame_ring_shm.get_latest_multiframe()
+        if mf_rec_array is None:
             return None
+        self.mf = MultiFramePayload.from_numpy_record_array(mf_rec_array=mf_rec_array)
         return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=self.mf)
 
     def close(self):
