@@ -84,14 +84,14 @@ class FramePayload(BaseModel):
 
     @classmethod
     def create_from_numpy_record_array(cls, array: np.recarray, apply_config_rotation: bool = False):
-        if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config)):
+        if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config[0])):
             raise ValueError(f"FramePayload array shape mismatch - "
                              f"Expected: {create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config[0]))}, "
                              f"Actual: {array.dtype}")
 
         instance = cls(
-            image=array.image.copy(),
-            frame_metadata=FrameMetadata.from_numpy_record_array(array.frame_metadata.copy())
+            image=array.image[0],
+            frame_metadata=FrameMetadata.from_numpy_record_array(array.frame_metadata[0])
         )
         if apply_config_rotation:
             instance.image = rotate_image(instance.image, instance.camera_config.rotation)

@@ -172,7 +172,7 @@ class RecordingManager(BaseModel):
         except Exception as e:
             status.error.value = True
             ipc.kill_everything()
-            logger.error(f"{RecordingManager.__class__.__name__} process error: {e}")
+            logger.error(f"RecordingManager process error: {e}")
             logger.exception(e)
             raise
 

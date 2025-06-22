@@ -7,10 +7,13 @@ from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNu
 ONE_GIGABYTE = 1024 ** 3
 
 import logging
+
 logger = logging.getLogger(__name__)
+
+
 class SharedMemoryRingBufferDTO(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    shm_dtos: list[SharedMemoryElementDTO]
+    ring_shm_dto: SharedMemoryElementDTO
     last_written_index_shm_dto: SharedMemoryElementDTO
     last_read_index_shm_dto: SharedMemoryElementDTO
     dtype: np.dtype
@@ -18,7 +21,7 @@ class SharedMemoryRingBufferDTO(BaseModel):
 
 class SharedMemoryRingBuffer(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    shms: list[SharedMemoryElement]
+    ring_shm: SharedMemoryElement
     dtype: np.dtype
     last_written_index: SharedMemoryNumber = Field(
         ...,
@@ -39,9 +42,10 @@ class SharedMemoryRingBuffer(BaseModel):
                ):
         if ring_buffer_length is None:
             ring_buffer_length = memory_allocation // example_data.itemsize
-        shms = [SharedMemoryElement.create(dtype=example_data.dtype,
-                                                  read_only=read_only) for index in range(int(ring_buffer_length))]
-        return cls(shms=shms,
+        ring_shm = SharedMemoryElement.create(dtype=example_data.dtype,
+                                              read_only=read_only,
+                                              buffer_shape=(ring_buffer_length,))
+        return cls(ring_shm=ring_shm,
                    last_written_index=SharedMemoryNumber.create(initial_value=-1,
                                                                 read_only=read_only),
                    last_read_index=SharedMemoryNumber.create(initial_value=-1,
@@ -51,20 +55,19 @@ class SharedMemoryRingBuffer(BaseModel):
 
     @property
     def original(self) -> bool:
-        return all([all([shm.original for shm in self.shms]),
+        return all([self.ring_shm.original,
                     self.last_written_index.original,
                     self.last_read_index.original])
 
     @property
     def valid(self) -> bool:
-        return all([all([shm.valid for shm in self.shms]),
+        return all([self.ring_shm.valid,
                     self.last_written_index.valid,
                     self.last_read_index.valid])
 
     @valid.setter
     def valid(self, value: bool):
-        for shm in self.shms:
-            shm.valid = value
+        self.ring_shm.valid = value
         self.last_written_index.valid = value
         self.last_read_index.valid = value
 
@@ -73,8 +76,7 @@ class SharedMemoryRingBuffer(BaseModel):
                  dto: SharedMemoryRingBufferDTO,
                  read_only: bool):
 
-        return cls(shms=[SharedMemoryElement.recreate(dto=dto, read_only=read_only) for dto in
-                         dto.shm_dtos],
+        return cls(ring_shm=SharedMemoryElement.recreate(dto=dto.ring_shm_dto, read_only=read_only),
                    last_written_index=SharedMemoryNumber.recreate(dto=dto.last_written_index_shm_dto,
                                                                   read_only=read_only),
                    last_read_index=SharedMemoryNumber.recreate(dto=dto.last_read_index_shm_dto, read_only=read_only),
@@ -84,7 +86,7 @@ class SharedMemoryRingBuffer(BaseModel):
 
     def to_dto(self) -> SharedMemoryRingBufferDTO:
         return SharedMemoryRingBufferDTO(
-            shm_dtos=[shm.to_dto() for shm in self.shms],
+            ring_shm_dto=self.ring_shm.to_dto(),
             last_written_index_shm_dto=self.last_written_index.to_dto(),
             last_read_index_shm_dto=self.last_read_index.to_dto(),
             dtype=self.dtype,
@@ -96,7 +98,7 @@ class SharedMemoryRingBuffer(BaseModel):
 
     @property
     def ring_buffer_length(self) -> int:
-        return len(self.shms)
+        return self.ring_shm.buffer.shape[0]
 
     @property
     def new_data_available(self) -> bool:
@@ -123,10 +125,10 @@ class SharedMemoryRingBuffer(BaseModel):
         if self._check_for_overwrite(index_to_write) and not overwrite and False:
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 
-        self.shms[index_to_write % self.ring_buffer_length].put_data(data)
+        self.ring_shm.buffer[index_to_write % self.ring_buffer_length] = data
         self.last_written_index.value = index_to_write
 
-    def get_next_data(self, rec_array:np.recarray|None) -> np.recarray:
+    def get_next_data(self, rec_array: np.recarray | None) -> np.recarray:
         if self.read_only:
             raise ValueError(
                 "Cannot call `get_next_data` on read-only SharedMemoryRingBuffer. Use `get_latest_data` instead.")
@@ -136,18 +138,20 @@ class SharedMemoryRingBuffer(BaseModel):
             raise ValueError("No new data available to read.")
         return self._read_next_data(rec_array)
 
-    def _read_next_data(self, rec_array:np.recarray|None) -> np.recarray | None:
+    def _read_next_data(self, rec_array: np.recarray | None) -> np.recarray | None:
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
         index_to_read = self.last_read_index.value + 1
         if index_to_read > self.last_written_index.value:
             raise ValueError("Cannot read past the last written index!")
-        rec_array = self.shms[index_to_read % self.ring_buffer_length].retrieve_data(rec_array)
+        if rec_array is None:
+            rec_array = np.recarray(1, dtype=self.dtype)
+        np.copyto(rec_array,self.ring_shm.buffer[index_to_read % self.ring_buffer_length])
         self.last_read_index.value = index_to_read
 
         return rec_array
 
-    def get_latest_data(self,rec_array:np.recarray|None=None) -> np.recarray:
+    def get_latest_data(self, rec_array: np.recarray | None = None) -> np.recarray:
         """
         NOTE - this method does NOT update the 'last_read_index' value.
 
@@ -157,13 +161,15 @@ class SharedMemoryRingBuffer(BaseModel):
         """
         if self.last_written_index.value == -1:
             raise ValueError("No data available to read.")
-        return self.shms[self.last_written_index.value % self.ring_buffer_length].retrieve_data(rec_array)
+        if rec_array is None:
+            rec_array = np.recarray(1, dtype=self.dtype)
+        np.copyto(rec_array,self.ring_shm.buffer[self.last_written_index.value % self.ring_buffer_length])
+        return rec_array
 
     def close(self):
         self.last_written_index.close()
         self.last_read_index.close()
-        for shm in self.shms:
-            shm.close()
+        self.ring_shm.close()
 
     def unlink(self):
         if not self.original:
@@ -171,10 +177,107 @@ class SharedMemoryRingBuffer(BaseModel):
         self.valid = False
         self.last_written_index.unlink()
         self.last_read_index.unlink()
-        for shm in self.shms:
-            shm.unlink()
+        self.ring_shm.unlink()
 
     def close_and_unlink(self):
         self.unlink()
         self.close()
 
+
+if __name__ == "__main__":
+    print("Testing SharedMemoryRingBuffer...")
+
+    # Define a custom dtype for testing
+    test_dtype = np.dtype([('x', np.float64), ('y', np.float64), ('z', np.float64)])
+
+    # Create example payload
+    _example_data = np.recarray((1,), dtype=test_dtype)
+
+    print("Creating original SharedMemoryRingBuffer...")
+    # Create a small ring buffer for testing with just 5 slots
+    original = SharedMemoryRingBuffer.create(
+        example_data=_example_data,
+        read_only=False,
+        ring_buffer_length=5
+    )
+
+    print(f"Ring buffer length: {original.ring_buffer_length}")
+    print(f"First frame written: {original.first_data_written}")
+
+    # Create test data
+    test_data1 = np.rec.array([(1.0, 2.0, 3.0)], dtype=test_dtype)
+    test_data2 = np.rec.array([(4.0, 5.0, 6.0)], dtype=test_dtype)
+    test_data3 = np.rec.array([(7.0, 8.0, 9.0)], dtype=test_dtype)
+
+    # Put data into the ring buffer
+    print("Writing data to ring buffer...")
+    original.put_data(test_data1)
+    print(f"Last written index after first write: {original.last_written_index.value}")
+    original.put_data(test_data2)
+    print(f"Last written index after second write: {original.last_written_index.value}")
+    original.put_data(test_data3)
+    print(f"Last written index after third write: {original.last_written_index.value}")
+
+    # Create DTO for sharing with another process
+    _dto = original.to_dto()
+    print(f"Created DTO: {repr(_dto)}")
+
+    # Simulate another process by recreating from DTO
+    print("Recreating from DTO (simulating another process)...")
+    _copy = SharedMemoryRingBuffer.recreate(dto=_dto, read_only=True)
+
+    # Get latest data from the _copy
+    print("Reading latest data...")
+    latest_data = _copy.get_latest_data()
+    print(f"Latest data: {latest_data}")
+
+    # Create a reader that consumes data sequentially
+    reader = SharedMemoryRingBuffer.recreate(dto=_dto, read_only=False)
+
+    print("Reading data sequentially...")
+    # Read all available data
+    while reader.new_data_available:
+        data = reader.get_next_data(
+            rec_array=np.recarray(1, dtype=test_dtype)  # Create a new recarray for reading
+        )
+        print(f"Read data: {data}")
+
+    # Write more data to test wrapping
+    print("\nTesting buffer wrapping...")
+    for i in range(6):  # Write more than buffer size to test wrapping
+        test_data = np.rec.array([(i * 10.0, i * 10.0 + 1, i * 10.0 + 2)], dtype=test_dtype)
+        original.put_data(test_data, overwrite=True)
+        print(f"Wrote data {i}: {test_data}")
+
+
+    while reader.new_data_available:
+        data = reader.get_next_data(
+            rec_array=None # test non-allocating read
+        )
+        print(f"Read data: {data}")
+
+    for i in range(6):  # Write more than buffer size to test wrapping
+        test_data = np.rec.array([(i * 10.0, i * 10.0 + 1, i * 10.0 + 2)], dtype=test_dtype)
+        original.put_data(test_data, overwrite=True)
+        print(f"Wrote data {i}: {test_data}")
+
+    print("\nReading latest data after wrapping...")
+    latest_data = _copy.get_latest_data()
+    print(f"Latest data: {latest_data}")
+
+    # Test valid flag
+    print(f"\nValid flag: {_copy.valid}")
+    original.valid = False
+    print(f"Valid flag after setting to False: {_copy.valid}")
+
+    # Clean up
+    print("\nCleaning up...")
+    _copy.close()
+    reader.close()
+    print("Closed copies.")
+
+    # Clean up original
+    original.close_and_unlink()
+    print("Closed and unlinked original.")
+
+    print("Test completed.")
