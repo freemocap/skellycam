@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.utilities.sample_statistics import DescriptiveStatistics
+from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms
 
 if TYPE_CHECKING:

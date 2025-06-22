@@ -1,6 +1,8 @@
+import enum
 from typing import Hashable
 
 from pydantic import BaseModel
+
 
 
 class ImageResolution(BaseModel):
@@ -15,18 +17,12 @@ class ImageResolution(BaseModel):
         height, width = tuple_str.replace("(", "").replace(")", "").split(delimiter)
         return cls(height=int(height), width=int(width))
 
-    @property
-    def orientation(self) -> str:
-        if self.width > self.height:
-            return "landscape"
-        if self.width < self.height:
-            return "portrait"
-        if self.width == self.height:
-            return "square"
 
     @property
     def aspect_ratio(self) -> float:
         return self.width / self.height
+
+
 
     @property
     def as_tuple(self) -> tuple:

@@ -47,13 +47,6 @@ class VideoRecorder(BaseModel):
                    video_file_path=video_file_path
                    )
 
-    def add_frames(self, frames: list[FramePayload]):
-        """
-        Adds multiple frames to the video recorder.
-        :param frames: List of FramePayloads to add.
-        """
-        for frame in frames:
-            self.add_frame(frame=frame)
 
     def add_frame(self, frame: FramePayload):
         self._validate_frame(frame)

@@ -44,7 +44,10 @@ class RecordingInfo(BaseModel):
         path.mkdir(parents=True, exist_ok=True)
         return str(path)
 
+    @property
+    def recording_info_path(self) -> str:
+        return str(Path(self.full_recording_path)/f"{self.recording_name}_info.json")
     def save_to_file(self):
-        logger.debug(f"Saving recording info to [{self.full_recording_path}_info.json]")
-        with open(str(Path(self.full_recording_path)/f"{self.recording_name}_info.json"), "w") as f:
+        logger.debug(f"Saving recording info to [{self.recording_info_path}]")
+        with open(self.recording_info_path, "w") as f:
             f.write(self.model_dump_json(indent=4))

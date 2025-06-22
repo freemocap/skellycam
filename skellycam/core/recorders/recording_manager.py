@@ -47,8 +47,6 @@ class RecordingManager(BaseModel):
                                                      should_close_self=should_close_self,
                                                      recording_info_subscription=ipc.pubsub.topics[
                                                          TopicTypes.RECORDING_INFO].get_subscription(),
-                                                     config_updates_subscription=ipc.pubsub.topics[
-                                                         TopicTypes.EXTRACTED_CONFIG].get_subscription(),
                                                      shm_updates_subscription=ipc.pubsub.topics[
                                                          TopicTypes.SHM_UPDATES].get_subscription(),
 
@@ -80,7 +78,6 @@ class RecordingManager(BaseModel):
     def _worker(ipc: CameraGroupIPC,
                 camera_ids: list[CameraIdString],
                 recording_info_subscription: TopicSubscriptionQueue,
-                config_updates_subscription: TopicSubscriptionQueue,
                 shm_updates_subscription: TopicSubscriptionQueue,
                 should_close_self: multiprocessing.Value
                 ):
@@ -95,18 +92,9 @@ class RecordingManager(BaseModel):
 
         status: RecordingManagerStatus = ipc.recording_manager_status
         camera_group_shm: CameraGroupSharedMemoryManager | None = None
-        camera_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in camera_ids}
 
-        while should_continue() and (
-                camera_group_shm is None or
-                any([config is None for config in camera_configs.values()])):
-            if not config_updates_subscription.empty():
-                config_message = config_updates_subscription.get()
-                if not isinstance(config_message, DeviceExtractedConfigMessage):
-                    raise RuntimeError(
-                        f"Expected DeviceExtractedConfigMessage, got {type(config_message)} in config_updates_subscription"
-                    )
-                camera_configs[config_message.extracted_config.camera_id] = config_message.extracted_config
+        while should_continue() and camera_group_shm is None:
+
             if not shm_updates_subscription.empty():
                 shm_message = shm_updates_subscription.get()
                 if not isinstance(shm_message, SetShmMessage):
@@ -117,16 +105,18 @@ class RecordingManager(BaseModel):
                     shm_dto=shm_message.camera_group_shm_dto,
                     read_only=False
                 )
+            else:
+                # wait for the shared memory to be created
+                wait_10ms()
 
         # Ensure camera_group_shm is properly initialized before proceeding
         if camera_group_shm is None or not camera_group_shm.valid:
             raise RuntimeError("Failed to initialize camera_group_shm")
 
-        # Ensure all camera configs are properly initialized before proceeding
-        if any([config is None for config in camera_configs.values()]):
-            raise RuntimeError(f"Failed to initialize camera_configs: {camera_configs}")
+
 
         video_manager: VideoManager | None = None
+        camera_configs: CameraConfigs| None = None
         audio_recorder: AudioRecorder | None = None
         status.is_running_flag.value = True
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
@@ -147,26 +137,17 @@ class RecordingManager(BaseModel):
                                                         camera_configs=camera_configs,
                                                         video_manager=video_manager)
 
-                # check for config updates
-                if not config_updates_subscription.empty():
-                    if status.recording:
-                        raise NotImplementedError("Config updates during recording are not implemented.")
-                    config_message = config_updates_subscription.get()
-                    if not isinstance(config_message, DeviceExtractedConfigMessage):
-                        raise RuntimeError(
-                            f"Expected DeviceExtractedConfigMessage, got {type(config_message)} in config_updates_subscription"
-                        )
-                    camera_configs[config_message.extracted_config.camera_id] = config_message.extracted_config
 
                 # check for shared memory updates
                 if not shm_updates_subscription.empty():
                     raise NotImplementedError("Runtime updates of shared memory are not yet implemented.")
 
                 # check/handle new multi-frames
-                video_manager = RecordingManager._get_and_handle_new_mfs(
+                video_manager, camera_configs = RecordingManager._get_and_handle_new_mfs(
                     status=status,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
+                    camera_configs=camera_configs
                 )
 
         except Exception as e:
@@ -188,31 +169,41 @@ class RecordingManager(BaseModel):
 
     @staticmethod
     def _get_and_handle_new_mfs(status: RecordingManagerStatus,
+                                camera_group_shm: CameraGroupSharedMemoryManager,
                                 video_manager: VideoManager | None,
-                                camera_group_shm: CameraGroupSharedMemoryManager) ->VideoManager | None:
+                                camera_configs: CameraConfigs | None,
+                                ) ->tuple[VideoManager | None, CameraConfigs | None]:
 
         latest_mf_recarrays = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
 
         if len(latest_mf_recarrays) > 0:
             # if new frames, add them to the recording manager (doesn't save them yet)
+            current_configs = {camera_id:CameraConfig.from_numpy_record_array(latest_mf_recarrays[0][camera_id].frame_metadata.camera_config[0])
+                                 for camera_id in latest_mf_recarrays[0].dtype.names}
+
             if video_manager is not None:
+                if camera_configs != current_configs:
+                    raise ValueError('Cannot change camera configs while recording is active!')
                 video_manager.add_multi_frame_recarrays(latest_mf_recarrays)
+            camera_configs = current_configs
         else:
             if video_manager:
                 if status.should_record.value:
                     # if we're recording and there are no new frames, opportunistically save one frame if we're recording
-                    video_manager.save_one_frame()
+                    video_manager.do_opportunistic_tasks()
                 else:
                     # if we have a video manager but not recording, then finish and close it
                     video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
 
-        return video_manager
+        return video_manager, camera_configs
 
     @staticmethod
     def start_recording(status: RecordingManagerStatus,
                         recording_info: RecordingInfo,
-                        camera_configs: CameraConfigs,
+                        camera_configs: CameraConfigs|None,
                         video_manager: VideoManager | None) -> VideoManager | None:
+        if camera_configs is None:
+            raise ValueError("camera_configs cannot be None when starting a recording")
         if isinstance(video_manager, VideoManager):
             RecordingManager.stop_recording(status=status, video_manager=video_manager)
 

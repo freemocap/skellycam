@@ -12,7 +12,7 @@ from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.utilities.sample_statistics import DescriptiveStatistics
+from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms, ms_to_sec, ns_to_sec
 
 logger = logging.getLogger(__name__)
@@ -36,10 +36,10 @@ class RecordingTimestamps(BaseModel):
         """
         if not self.multiframe_timestamps:
             raise ValueError("No multiframe timestamps available to save")
-
-        df = self.to_mf_dataframe()
-        df.to_csv(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_timestamps.csv",
-                  index_label="multiframe_number")
+        if self.number_of_cameras > 1:
+            mf_df = self.to_mf_dataframe()
+            mf_df.to_csv(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_timestamps.csv",
+                      index_label="multiframe_number")
         stats = self.to_stats()
         logger.info(f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
         logger.info(f"Recording stats:\n\n{stats}\n\n")
@@ -128,15 +128,16 @@ class RecordingTimestamps(BaseModel):
 
     @cached_property
     def framerate_stats(self) -> DescriptiveStatistics:
-        """
-        Returns the statistics of the frames per second.
-        """
+
+        if len(self.frames_per_second) == 0:
+            # Handle the case where we can't calculate framerate (only one frame)
+            raise ValueError("Cannot calculate framerate statistics with fewer than 2 frames")
+
         return DescriptiveStatistics.from_samples(
             samples=self.frames_per_second,
             name="frames_per_second",
             units="Hz"
         )
-
     @cached_property
     def frame_duration_stats(self) -> DescriptiveStatistics:
         """

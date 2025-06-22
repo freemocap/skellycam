@@ -54,7 +54,12 @@ class VideoManager(BaseModel):
                                                                     config=config,
                                                                     ) for camera_id, config in camera_configs.items()}
                    )
-
+    @property
+    def camera_configs(self) -> CameraConfigs:
+        """
+        Returns the camera configurations for all cameras in the recording.
+        """
+        return {camera_id: video_recorder.camera_config for camera_id, video_recorder in self.video_recorders.items()}
     @property
     def frame_counts_to_save(self) -> dict[CameraIdString, int]:
         """
@@ -80,7 +85,8 @@ class VideoManager(BaseModel):
 
     def do_opportunistic_tasks(self) -> bool:
         if len(self.mf_recarrays) > 0:
-            mf = MultiFramePayload.from_numpy_record_array(self.mf_recarrays.popleft(), apply_config_rotation=True)
+            mf = MultiFramePayload.from_numpy_record_array(self.mf_recarrays.popleft(),
+                                                           apply_config_rotation=True)
             self.add_multi_frame(mf_payload=mf)
             return True
         return self.try_save_one_frame()
@@ -102,7 +108,7 @@ class VideoManager(BaseModel):
         if self.is_finished:
             logger.warning(f"RecordingManager for `{self.recording_info.recording_name}` is already finished. Cannot save more frames.")
             return False
-        if max(self.frame_counts_to_save.values()) == 0:
+        if max(self.frame_counts_to_save.values()) == 0 and len(self.mf_recarrays) == 0:
             return False
         # Find the camera ID with the most frames to save
         camera_id_to_save = max(self.frame_counts_to_save, key=self.frame_counts_to_save.get)
@@ -132,6 +138,8 @@ class VideoManager(BaseModel):
 
     def close(self):
         logger.debug(f"Closing {self.__class__.__name__} for recording: `{self.recording_info.recording_name}`")
+        # Process any remaining frames before closing
+
         for recorder in self.video_recorders.values():
             recorder.close()
         self.finalize_recording()

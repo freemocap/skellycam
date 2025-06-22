@@ -51,7 +51,7 @@ class SampleData(BaseModel):
 
     def has_min_samples(self, min_count: int) -> bool:
         """Check if the sample has at least the minimum required count."""
-        return self.number_of_samples > min_count
+        return self.number_of_samples >= min_count
 
 
 class CentralTendencyMeasures(BaseModel):
@@ -81,6 +81,16 @@ class VariabilityMeasures(BaseModel):
 
     @classmethod
     def from_samples(cls, samples: SampleData) -> 'VariabilityMeasures':
+        # For a single sample, all variability measures should be zero
+        if samples.number_of_samples == 1:
+            return cls(
+                standard_deviation=0.0,
+                median_absolute_deviation=0.0,
+                interquartile_range=0.0,
+                confidence_interval_95=0.0,
+                coefficient_of_variation=0.0,
+            )
+
         # Standard deviation requires at least 2 samples
         std_dev = np.nanstd(samples.data) if samples.has_min_samples(2) else np.nan
 
@@ -115,8 +125,6 @@ class VariabilityMeasures(BaseModel):
             confidence_interval_95=ci_95,
             coefficient_of_variation=cv,
         )
-
-
 class DescriptiveStatistics(BaseModel):
     name: str = ""
     units: str = ""

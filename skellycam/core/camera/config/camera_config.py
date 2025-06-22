@@ -1,3 +1,4 @@
+import enum
 from typing import Tuple, Self, Any
 
 import cv2
@@ -26,6 +27,10 @@ DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
 DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
 DEFAULT_WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
 
+class OrientationTypes(enum.Enum):
+    LANDSCAPE = enum.auto()
+    PORTRAIT = enum.auto()
+    SQUARE = enum.auto()
 
 def get_video_file_type(fourcc_code: int) -> str:
     """
@@ -150,8 +155,13 @@ class CameraConfig(BaseModel):
         return self
 
     @property
-    def orientation(self) -> str:
-        return self.resolution.orientation
+    def orientation(self) -> OrientationTypes:
+        if self.resolution.width == self.resolution.height:
+            return OrientationTypes.SQUARE
+        if self.rotation in [RotationTypes.NO_ROTATION, RotationTypes.ROTATE_180]:
+            return OrientationTypes.LANDSCAPE
+
+        return OrientationTypes.PORTRAIT
 
     @property
     def aspect_ratio(self) -> float:
@@ -159,10 +169,18 @@ class CameraConfig(BaseModel):
 
     @property
     def image_shape(self) -> Tuple[int, ...]:
-        if self.color_channels == 1:
-            return self.resolution.height, self.resolution.width
-        else:
-            return self.resolution.height, self.resolution.width, self.color_channels
+
+        if self.orientation == OrientationTypes.PORTRAIT:
+            if self.color_channels == 1:
+                shape = self.resolution.height, self.resolution.width
+            else:
+                shape = self.resolution.height, self.resolution.width, self.color_channels
+        else:  # Landscape or Square
+            if self.color_channels == 1:
+                shape = self.resolution.height, self.resolution.width
+            else:
+                shape = self.resolution.height, self.resolution.width, self.color_channels
+        return  shape
 
     @property
     def image_size_bytes(self) -> int:

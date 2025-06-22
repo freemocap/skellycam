@@ -27,7 +27,9 @@ export const AvailableCamerasPanel = () => {
     const isLoading = useAppSelector((state) => state.cameras.isLoading);
 
     // Convert cameras record to array for easier rendering
-    const camerasArray = Object.values(camerasRecord);
+    const camerasArray = Object.values(camerasRecord).sort((a,b) =>
+        a.config.camera_index - b.config.camera_index
+    );
 
     const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(
         new Set()
