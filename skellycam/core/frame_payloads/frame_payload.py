@@ -70,7 +70,7 @@ class FramePayload(BaseModel):
         return cls(image=dummy_image, frame_metadata=frame_metadata)
 
     @classmethod
-    def create_dummy(cls, camera_config: CameraConfig, timebase_mapping:TimebaseMapping) -> "FramePayload":
+    def create_dummy(cls, camera_config: CameraConfig, timebase_mapping: TimebaseMapping) -> "FramePayload":
         """
         Create a dummy FramePayload with a dummy image and metadata, for shape and size inference.
         """
@@ -84,7 +84,8 @@ class FramePayload(BaseModel):
 
     @classmethod
     def create_from_numpy_record_array(cls, array: np.recarray, apply_config_rotation: bool = False):
-        if array.dtype != create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config[0])):
+        if array.dtype != create_frame_dtype(
+                CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config[0])):
             raise ValueError(f"FramePayload array shape mismatch - "
                              f"Expected: {create_frame_dtype(CameraConfig.from_numpy_record_array(array.frame_metadata.camera_config[0]))}, "
                              f"Actual: {array.dtype}")
@@ -95,9 +96,12 @@ class FramePayload(BaseModel):
         )
         if apply_config_rotation:
             instance.image = rotate_image(instance.image, instance.camera_config.rotation)
+
         return instance
+
     def initialize(self):
         self.frame_metadata.initialize()
+
     def update_from_numpy_record_array(self, frame_rec_array: np.recarray, apply_config_rotation: bool = False):
         """
         Update the FramePayload from a numpy record array.

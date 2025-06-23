@@ -90,7 +90,7 @@ class VideoRecorder(BaseModel):
             self.video_file_path,  # full path to video file
             cv2.VideoWriter_fourcc(*self.camera_config.writer_fourcc),  # fourcc
             self.camera_config.framerate,  # fps
-            (self.camera_config.resolution.width, self.camera_config.resolution.height),# frame size, note this is OPPOSITE of most of the rest of cv2's functions, which assume 'height, width' following numpy's row-major order
+            (self.camera_config.width, self.camera_config.height),# frame size, note this is OPPOSITE of most of the rest of cv2's functions, which assume 'height, width' following numpy's row-major order
         )
         if not self.video_writer.isOpened():
             logger.error(f"Failed to open video writer for camera {self.camera_config.camera_index}")

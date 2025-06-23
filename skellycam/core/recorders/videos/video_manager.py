@@ -83,13 +83,14 @@ class VideoManager(BaseModel):
             self.video_recorders[camera_id].add_frame(frame=frame)
         self.recording_timestamps.add_multiframe(mf_payload)
 
-    def do_opportunistic_tasks(self) -> bool:
-        if len(self.mf_recarrays) > 0:
-            mf = MultiFramePayload.from_numpy_record_array(self.mf_recarrays.popleft(),
-                                                           apply_config_rotation=True)
-            self.add_multi_frame(mf_payload=mf)
-            return True
-        return self.try_save_one_frame()
+    def _convert_mf_recarrays_to_payloads(self):
+        while len(self.mf_recarrays) > 0:
+            # Pop the first recarray from the deque
+            mf_recarray = self.mf_recarrays.popleft()
+            # Convert it to a MultiFramePayload
+            self.add_multi_frame(MultiFramePayload.from_numpy_record_array(mf_recarray, apply_config_rotation=True))
+
+
 
     def try_save_one_frame(self) -> bool:
         """
@@ -105,10 +106,11 @@ class VideoManager(BaseModel):
         """
         saves one frame from one video recorder
         """
+        self._convert_mf_recarrays_to_payloads()
         if self.is_finished:
             logger.warning(f"RecordingManager for `{self.recording_info.recording_name}` is already finished. Cannot save more frames.")
             return False
-        if max(self.frame_counts_to_save.values()) == 0 and len(self.mf_recarrays) == 0:
+        if max(self.frame_counts_to_save.values()) == 0:
             return False
         # Find the camera ID with the most frames to save
         camera_id_to_save = max(self.frame_counts_to_save, key=self.frame_counts_to_save.get)
@@ -125,9 +127,7 @@ class VideoManager(BaseModel):
 
         logger.info(f"Finishing up {len(self.video_recorders)} video recorders for recording: `{self.recording_info.recording_name}`")
         finish_threads = []
-        while self.do_opportunistic_tasks():
-            time.sleep(0.01)
-
+        self._convert_mf_recarrays_to_payloads()
         for recorder in self.video_recorders.values():
             finish_threads.append(threading.Thread(target=recorder.finish_and_close))
             finish_threads[-1].start()

@@ -190,7 +190,7 @@ class RecordingManager(BaseModel):
             if video_manager:
                 if status.should_record.value:
                     # if we're recording and there are no new frames, opportunistically save one frame if we're recording
-                    video_manager.do_opportunistic_tasks()
+                    video_manager.save_one_frame()
                 else:
                     # if we have a video manager but not recording, then finish and close it
                     video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)

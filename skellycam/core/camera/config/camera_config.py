@@ -166,15 +166,24 @@ class CameraConfig(BaseModel):
     @property
     def aspect_ratio(self) -> float:
         return self.resolution.aspect_ratio
-
+    @property
+    def width(self) -> int:
+        if self.orientation == OrientationTypes.PORTRAIT:
+            return self.resolution.height
+        return self.resolution.width
+    @property
+    def height(self) -> int:
+        if self.orientation == OrientationTypes.PORTRAIT:
+            return self.resolution.width
+        return self.resolution.height
     @property
     def image_shape(self) -> Tuple[int, ...]:
 
         if self.orientation == OrientationTypes.PORTRAIT:
             if self.color_channels == 1:
-                shape = self.resolution.height, self.resolution.width
+                shape = self.resolution.width, self.resolution.height
             else:
-                shape = self.resolution.height, self.resolution.width, self.color_channels
+                shape = self.resolution.width, self.resolution.height, self.color_channels
         else:  # Landscape or Square
             if self.color_channels == 1:
                 shape = self.resolution.height, self.resolution.width

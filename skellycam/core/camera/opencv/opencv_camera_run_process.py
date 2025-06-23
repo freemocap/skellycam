@@ -98,7 +98,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                                                    self_status=self_status,
                                                    update_camera_settings_subscription=update_camera_settings_subscription)
 
-            if not orchestrator.should_grab_by_id(camera_id=camera_id):
+            while not orchestrator.should_grab_by_id(camera_id=camera_id) and not self_status.should_pause.value and should_continue():
                 wait_10us()
                 continue
 

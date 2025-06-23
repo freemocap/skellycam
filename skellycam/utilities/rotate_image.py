@@ -1,9 +1,10 @@
 import cv2
+import numpy as np
 
 from skellycam.core.types.image_rotation_types import OPENCV_NO_ROTATION_PLACEHOLDER_VALUE, RotationTypes
 
 
-def rotate_image(image, rotation: RotationTypes):
+def rotate_image(image:np.ndarray, rotation: RotationTypes):
     rotation_constant = rotation.to_opencv_constant()
 
     # Rotate the image if needed
