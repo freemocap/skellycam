@@ -186,14 +186,14 @@ class RecordingManager(BaseModel):
                     raise ValueError('Cannot change camera configs while recording is active!')
                 video_manager.add_multi_frame_recarrays(latest_mf_recarrays)
             camera_configs = current_configs
-        else:
-            if video_manager:
-                if status.should_record.value:
-                    # if we're recording and there are no new frames, opportunistically save one frame if we're recording
-                    video_manager.save_one_frame()
-                else:
-                    # if we have a video manager but not recording, then finish and close it
-                    video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
+
+        if video_manager:
+            if status.should_record.value:
+                # if we're recording and there are no new frames, opportunistically save one frame if we're recording
+                video_manager.save_one_frame()
+            else:
+                # if we have a video manager but not recording, then finish and close it
+                video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
 
         return video_manager, camera_configs
 
