@@ -63,7 +63,7 @@ class FrameTimestampsCSVRow(BaseModel):
 
         frame_duration_ms = ns_to_ms(
             frame_timestamps.timestamp_ns - previous_frame_timestamps.timestamp_ns) if previous_frame_timestamps else None
-        framerate_hz = (frame_duration_ms**-1)/1000 if previous_frame_timestamps and frame_duration_ms >0 else None
+        framerate_hz = (frame_duration_ms**-1)*1000 if previous_frame_timestamps and frame_duration_ms >0 else None
 
         return cls(
             recording_frame_number=recording_frame_number,

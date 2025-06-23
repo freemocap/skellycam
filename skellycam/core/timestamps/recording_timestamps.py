@@ -11,7 +11,7 @@ from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.timestamps.multiframe_csv_row import MultiFrameTimestampsCSVRow
 from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.timestamps.timestamp_csv_row import FrameTimestampsCSVRow
+from skellycam.core.timestamps.frame_timestamp_csv_row import FrameTimestampsCSVRow
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms, ms_to_sec, ns_to_sec

@@ -37,7 +37,7 @@ class VideoRecorder(BaseModel):
                ):
 
         video_file_path = str(
-            Path(recording_info.videos_folder) / f"{recording_info.recording_name}.camera{config.camera_index}.{config.camera_id}.{config.video_file_extension}")
+            Path(recording_info.videos_folder) / f"{recording_info.recording_name}.camera{config.camera_index}.{config.video_file_extension}")
         Path(video_file_path).parent.mkdir(parents=True, exist_ok=True)
 
         logger.debug(f"Created VideoSaver for camera {config.camera_index} with video file path: {video_file_path}")

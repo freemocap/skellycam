@@ -52,19 +52,19 @@ def get_video_file_type(fourcc_code: int) -> str:
     '.mp4'
     """
     fourcc_to_extension = {
-        cv2.VideoWriter_fourcc(*'MP4V'): '.mp4',
-        cv2.VideoWriter_fourcc(*'H264'): '.mp4',
-        cv2.VideoWriter_fourcc(*'X264'): '.mp4',
+        cv2.VideoWriter_fourcc(*'MP4V'): 'mp4',
+        cv2.VideoWriter_fourcc(*'H264'): 'mp4',
+        cv2.VideoWriter_fourcc(*'X264'): 'mp4',
 
-        cv2.VideoWriter_fourcc(*'XVID'): '.avi',
-        cv2.VideoWriter_fourcc(*'DIVX'): '.avi',
+        cv2.VideoWriter_fourcc(*'XVID'): 'avi',
+        cv2.VideoWriter_fourcc(*'DIVX'): 'avi',
 
-        cv2.VideoWriter_fourcc(*'MJPG'): '.mjpeg',
-        cv2.VideoWriter_fourcc(*'VP80'): '.webm',
-        cv2.VideoWriter_fourcc(*'THEO'): '.ogv',
-        cv2.VideoWriter_fourcc(*'WMV1'): '.wmv',
-        cv2.VideoWriter_fourcc(*'WMV2'): '.wmv',
-        cv2.VideoWriter_fourcc(*'FLV1'): '.flv',
+        cv2.VideoWriter_fourcc(*'MJPG'): 'mjpeg',
+        cv2.VideoWriter_fourcc(*'VP80'): 'webm',
+        cv2.VideoWriter_fourcc(*'THEO'): 'ogv',
+        cv2.VideoWriter_fourcc(*'WMV1'): 'wmv',
+        cv2.VideoWriter_fourcc(*'WMV2'): 'wmv',
+        cv2.VideoWriter_fourcc(*'FLV1'): 'flv',
     }
 
     file_format = fourcc_to_extension.get(fourcc_code, None)
