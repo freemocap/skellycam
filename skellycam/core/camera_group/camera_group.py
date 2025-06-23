@@ -110,14 +110,6 @@ class CameraGroup:
         self.mf = MultiFramePayload.from_numpy_record_array(mf_rec_array=mf_rec_array, apply_config_rotation=True)
         return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=self.mf)
 
-    def close(self):
-        logger.debug("Closing camera group")
-
-        self.ipc.should_continue = False
-        self.recorder.close()
-        self.cameras.close()
-        self.shm.unlink_and_close()
-        logger.info("Camera group closed.")
 
     def pause(self, await_paused: bool = True):
         """
@@ -160,6 +152,28 @@ class CameraGroup:
         self.recorder.status.should_record.value = False
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
+    def close(self):
+        logger.debug("Closing camera group")
+
+        self.ipc.should_continue = False
+
+        try:
+            self.recorder.close()
+        except Exception as e:
+            logger.error(f"Error closing recorder: {type(e).__name__} - {e}")
+
+        try:
+            self.cameras.close()
+        except Exception as e:
+            logger.error(f"Error closing cameras: {type(e).__name__} - {e}")
+
+        if self.shm is not None:
+            try:
+                self.shm.unlink_and_close()
+            except Exception as e:
+                logger.error(f"Error closing shared memory: {type(e).__name__} - {e}")
+
+        logger.info("Camera group closed.")
 
 def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:
     updated_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in

@@ -1,9 +1,10 @@
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms
@@ -35,15 +36,27 @@ class MultiFrameTimestamps(BaseModel):
                    multiframe_number=multiframe.multi_frame_number)
 
     @cached_property
-    def timestamps_ns(self) -> dict[CameraIdString, int]:
-        return {camera_id: ts.timestamp_ns for camera_id, ts in self.frame_timestamps.items()}
-
+    def timebase_mapping(self) -> TimebaseMapping:
+        """
+        Returns the timebase mapping for the multi-frame timestamps.
+        This is derived from the timestamps of the first camera in the frame_timestamps.
+        """
+        if not self.frame_timestamps:
+            raise ValueError("No frame timestamps available to derive timebase mapping.")
+        tbs = [f.timebase_mapping for f in self.frame_timestamps.values()]
+        if not all(tb == tbs[0] for tb in tbs):
+            raise ValueError("All frame timestamps must have the same timebase mapping.")
+        return tbs[0]
     @cached_property
     def timestamp_ns(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
             samples=[ts_ns for ts_ns in self.timestamps_ns.values()],
             name="timestamp_ns",
             units="nanoseconds")
+
+    @cached_property
+    def timestamps_ns(self) -> dict[CameraIdString, int]:
+        return {camera_id: ts.timestamp_ns for camera_id, ts in self.frame_timestamps.items()}
 
     @cached_property
     def inter_camera_grab_range_ms(self) -> float:
@@ -95,7 +108,7 @@ class MultiFrameTimestamps(BaseModel):
         )
 
     @cached_property
-    def copy_to_camera_shm_ms(self) -> DescriptiveStatistics:
+    def pre_copy_to_camera_shm_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
             samples=[ns_to_ms(ts.pre_copy_to_camera_shm_ns) for ts in self.frame_timestamps.values()],
             name="copy_to_camera_shm_ms",

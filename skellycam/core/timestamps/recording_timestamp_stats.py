@@ -150,7 +150,7 @@ class RecordingTimestampsStats(BaseModel):
             ])
 
         # Add a separator line before the subtotal
-        table_data.append(["─" * 25, "─" * 12, "─" * 12, "─" * 12, "─" * 12, "─" * 12, "─" * 10])
+        table_data.append(["─" * 25, "" , "" , "" , "" , "" , ""])
 
         # Add Camera Frame Acquisition subtotal with highlighting
         acquisition_total_median = self.total_frame_acquisition_time_ms.median
@@ -192,7 +192,7 @@ class RecordingTimestampsStats(BaseModel):
             ])
 
         # Add a separator line before the subtotal
-        table_data.append(["─" * 25, "─" * 12, "─" * 12, "─" * 12, "─" * 12, "─" * 12, "─" * 10])
+        table_data.append(["─" * 25, "" , "" , "" , "" , "" , ""])
 
         # Add IPC Transfer Pipeline subtotal with highlighting
         ipc_total_median = self.total_ipc_travel_time_ms.median

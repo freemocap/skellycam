@@ -61,4 +61,4 @@ class FrameMetadata(BaseModel):
         return result
 
     def to_csv_row(self, recording_start_time_ns:int)->dict[str,object]:
-        return FrameTimestampCSVRow.from_frame_metadata(frame_metadata=self, recording_start_time_ns=recording_start_time_ns).model_dump()
+        return FrameTimestampCSVRow.from_mf_timestamps(frame_metadata=self, recording_start_time_ns=recording_start_time_ns).model_dump()

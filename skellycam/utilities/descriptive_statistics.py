@@ -56,10 +56,12 @@ class SampleData(BaseModel):
 
 class CentralTendencyMeasures(BaseModel):
     mean: float
-    median: float | None = None
+    median: float
 
     @classmethod
     def from_samples(cls, samples: SampleData) -> 'CentralTendencyMeasures':
+        if not samples.has_min_samples(1):
+            raise ValueError("Cannot calculate central tendency measures with less than 1 sample")
         # Mean requires at least 1 sample
         mean = np.nanmean(samples.data) if samples.has_min_samples(1) else np.nan
 
@@ -82,6 +84,8 @@ class VariabilityMeasures(BaseModel):
     @classmethod
     def from_samples(cls, samples: SampleData) -> 'VariabilityMeasures':
         # For a single sample, all variability measures should be zero
+        if not samples.has_min_samples(1):
+            raise ValueError("Cannot calculate variability measures with less than 1 sample")
         if samples.number_of_samples == 1:
             return cls(
                 standard_deviation=0.0,
@@ -125,6 +129,16 @@ class VariabilityMeasures(BaseModel):
             confidence_interval_95=ci_95,
             coefficient_of_variation=cv,
         )
+    def model_dump(self, **kwargs) -> dict:
+        """Dump the model data as a dictionary."""
+        return {
+            "standard_deviation": self.standard_deviation,
+            "median_absolute_deviation": self.median_absolute_deviation,
+            "interquartile_range": self.interquartile_range,
+            "confidence_interval_95": self.confidence_interval_95,
+            "coefficient_of_variation": self.coefficient_of_variation,
+        }
+
 class DescriptiveStatistics(BaseModel):
     name: str = ""
     units: str = ""
@@ -165,11 +179,11 @@ class DescriptiveStatistics(BaseModel):
     def number_of_samples(self) -> int:
         return self.sample_data.number_of_samples
 
-    @cached_property
+    @computed_field
     def measures_of_central_tendency(self) -> CentralTendencyMeasures:
         return CentralTendencyMeasures.from_samples(self.sample_data)
 
-    @cached_property
+    @computed_field
     def measures_of_variability(self) -> VariabilityMeasures:
         return VariabilityMeasures.from_samples(self.sample_data)
 
@@ -244,6 +258,20 @@ class DescriptiveStatistics(BaseModel):
             f"\tInterquartile Range: {format_value(self.interquartile_range)}\n"
             f"\t95% Confidence Interval: {format_value(self.confidence_interval_95)}\n"
         )
+    def model_dump(self, **kwargs) -> dict:
+        """Dump the model data as a dictionary."""
+        return {
+            "name": self.name,
+            "units": self.units,
+            "max": self.max,
+            "min": self.min,
+            "range": self.range,
+            "number_of_samples": self.number_of_samples,
+            "measures_of_central_tendency": self.measures_of_central_tendency.model_dump(),
+            "measures_of_variability": self.measures_of_variability.model_dump(),
+        }
+
+
 
 
 if __name__ == "__main__":

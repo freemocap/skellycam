@@ -206,10 +206,10 @@ class MultiframeTimestampsCSVRow(BaseModel):
             post_retrieve_ms_stddev=mf_timestamps.post_retrieve_ms.standard_deviation,
             post_retrieve_ms_range=mf_timestamps.post_retrieve_ms.range,
 
-            copy_to_camera_shm_ms_mean=mf_timestamps.copy_to_camera_shm_ms.mean,
-            copy_to_camera_shm_ms_median=mf_timestamps.copy_to_camera_shm_ms.median,
-            copy_to_camera_shm_ms_stddev=mf_timestamps.copy_to_camera_shm_ms.standard_deviation,
-            copy_to_camera_shm_ms_range=mf_timestamps.copy_to_camera_shm_ms.range,
+            copy_to_camera_shm_ms_mean=mf_timestamps.pre_copy_to_camera_shm_ms.mean,
+            copy_to_camera_shm_ms_median=mf_timestamps.pre_copy_to_camera_shm_ms.median,
+            copy_to_camera_shm_ms_stddev=mf_timestamps.pre_copy_to_camera_shm_ms.standard_deviation,
+            copy_to_camera_shm_ms_range=mf_timestamps.pre_copy_to_camera_shm_ms.range,
 
             pre_retrieve_from_camera_shm_ms_mean=mf_timestamps.pre_retrieve_from_camera_shm_ms.mean,
             pre_retrieve_from_camera_shm_ms_median=mf_timestamps.pre_retrieve_from_camera_shm_ms.median,

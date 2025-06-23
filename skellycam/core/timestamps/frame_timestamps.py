@@ -1,5 +1,6 @@
 import logging
 import time
+from functools import cached_property
 
 import numpy as np
 from pydantic import BaseModel, Field, computed_field
@@ -33,7 +34,7 @@ class FrameTimestamps(BaseModel):
         return (self.post_frame_grab_ns + self.pre_frame_grab_ns) // 2
 
 
-    @property
+    @cached_property
     def durations(self) -> 'FrameDurations':
         """
         Get a helper object that calculates various duration metrics.

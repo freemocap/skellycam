@@ -92,13 +92,9 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                 wait_10ms()
                 continue
             self_status.is_paused.value = False
-            frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
-                                                   cv2_video_capture=cv2_video_capture,
-                                                   ipc=ipc,
-                                                   self_status=self_status,
-                                                   update_camera_settings_subscription=update_camera_settings_subscription)
 
-            while not orchestrator.should_grab_by_id(camera_id=camera_id) and not self_status.should_pause.value and should_continue():
+
+            if not orchestrator.should_grab_by_id(camera_id=camera_id):
                 wait_10us()
                 continue
 
@@ -106,6 +102,11 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
             frame_rec_array = opencv_get_frame(cap=cv2_video_capture, frame_rec_array=frame_rec_array, )
             camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
             self_status.grabbing_frame.value = False
+            frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
+                                                   cv2_video_capture=cv2_video_capture,
+                                                   ipc=ipc,
+                                                   self_status=self_status,
+                                                   update_camera_settings_subscription=update_camera_settings_subscription)
             frame_rec_array = initialize_frame_timestamps(frame_rec_array=frame_rec_array)
             # Last camera to increment their frame count status triggers the next frame_grab
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]

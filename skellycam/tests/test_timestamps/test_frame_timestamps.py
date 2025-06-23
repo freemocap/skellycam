@@ -1,5 +1,4 @@
-import time
-from unittest.mock import MagicMock
+
 
 import numpy as np
 import pytest
@@ -182,7 +181,7 @@ class TestFrameTimestamps:
         assert durations.total_camera_to_recorder_time_ns == -1
 
         # Test to_dict method
-        durations_dict = durations.to_dict()
+        durations_dict = durations.model_dump(exclude={"timestamps"})
         assert all(value == -1 for value in durations_dict.values())
 
 

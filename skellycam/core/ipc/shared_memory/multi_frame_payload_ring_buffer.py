@@ -60,10 +60,10 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
     def get_next_multiframe(self) -> np.recarray:
         if not self.new_data_available:
             raise ValueError("No new multi-frame data available in shared memory!")
-        pre_tik = time.perf_counter_ns()
         mf_rec_array = self.get_next_data(None) # Don't pass an array, we want to create a new one since we want to store and record it
 
         for camera_id in mf_rec_array.dtype.names:
+            pre_tik = time.perf_counter_ns()
             mf_rec_array[camera_id].frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns = time.perf_counter_ns()
             mf_rec_array[camera_id].frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns = pre_tik
         return mf_rec_array

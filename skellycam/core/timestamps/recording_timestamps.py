@@ -5,12 +5,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import TYPE_CHECKING
 
 from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.timestamps.multiframe_csv_row import MultiFrameTimestampsCSVRow
 from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
+from skellycam.core.timestamps.timestamp_csv_row import FrameTimestampsCSVRow
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms, ms_to_sec, ns_to_sec
@@ -28,33 +29,10 @@ class RecordingTimestamps(BaseModel):
                     "This is as the Zero timebase to calculate relative timestamps for each multiframe payload.")
     recording_info: RecordingInfo
 
-
-    def save_timestamps(self):
-        """
-        Saves the timestamps to a CSV file in the recording info's timestamps folder.
-        The file is named with the recording name and has a .csv extension.
-        """
-        if not self.multiframe_timestamps:
-            raise ValueError("No multiframe timestamps available to save")
-        if self.number_of_cameras > 1:
-            mf_df = self.to_mf_dataframe()
-            mf_df.to_csv(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_timestamps.csv",
-                      index_label="multiframe_number")
-        stats = self.to_stats()
-        logger.info(f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
-        logger.info(f"Recording stats:\n\n{stats}\n\n")
-        Path(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_stats.json").write_text(stats.model_dump_json(exclude={'sample_data'},indent=2))
-        dfs = self.to_camera_dataframes()
-        for camera_id, camera_df in dfs.items():
-            camera_df.to_csv(
-                f"{self.recording_info.camera_timestamps_folder}/{self.recording_info.recording_name}_camera_{camera_id}_timestamps.csv",
-                index_label="frame_number")
-        logger.info(f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
-
-
     @cached_property
     def number_of_recorded_frames(self) -> int:
         return len(self.multiframe_timestamps)
+
     @cached_property
     def number_of_cameras(self) -> int:
         return len(self.multiframe_timestamps[0].frame_timestamps.values())
@@ -68,25 +46,8 @@ class RecordingTimestamps(BaseModel):
         """
         if not self.multiframe_timestamps:
             return 0.0
-        return ns_to_sec(self.multiframe_timestamps[-1].timestamp_ns.mean - self.multiframe_timestamps[0].timestamp_ns.mean)
-
-    def to_stats(self) -> 'RecordingTimestampsStats':
-        """
-        Converts the recording timestamps to a TimestampStats object.
-        This is used to generate statistics about the recording timestamps.
-        """
-        from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
-        return RecordingTimestampsStats.from_recording_timestamps(self)
-
-    def add_multiframe(self, multiframe: MultiFramePayload):
-        """
-        Adds a multiframe payload to the recording timestamps.
-        If the multiframe payload is empty, it will not be added.
-        """
-        if self.recording_start_ns is None:
-            self.recording_start_ns = multiframe.earliest_timestamp_ns
-        self.multiframe_timestamps.append(MultiFrameTimestamps.from_multiframe(multiframe=multiframe,
-                                                                               recording_start_time_ns=self.recording_start_ns))
+        return ns_to_sec(
+            self.multiframe_timestamps[-1].timestamp_ns.mean - self.multiframe_timestamps[0].timestamp_ns.mean)
 
     @cached_property
     def first_timestamp(self) -> MultiFrameTimestamps:
@@ -98,17 +59,16 @@ class RecordingTimestamps(BaseModel):
         return self.multiframe_timestamps[0]
 
     @cached_property
-    def recording_start_local_unix_ms(self) -> float:
-        """Returns the timestamp of the first frame in the recording"""
-        return min([mf_ts.frame_initialized_ms.mean for mf_ts in self.multiframe_timestamps])
-
-    @cached_property
     def timestamps_ms(self) -> list[float]:
         """
         Returns a list of timestamps in milliseconds for each multiframe payload,
         relative to the first frame.
         """
-        return [ns_to_ms(mf.timestamp_ns.mean) - self.recording_start_local_unix_ms for mf in
+        if self.recording_start_ns is None:
+            raise ValueError("Recording start time is not set. Cannot calculate timestamps.")
+        if not self.multiframe_timestamps:
+            return []
+        return [ns_to_ms(mf.timestamp_ns.mean - self.recording_start_ns) for mf in
                 self.multiframe_timestamps]
 
     @cached_property
@@ -138,6 +98,7 @@ class RecordingTimestamps(BaseModel):
             name="frames_per_second",
             units="Hz"
         )
+
     @cached_property
     def frame_duration_stats(self) -> DescriptiveStatistics:
         """
@@ -247,6 +208,7 @@ class RecordingTimestamps(BaseModel):
             name="idle_before_copy_to_multiframe_shm_ms",
             units="milliseconds"
         )
+
     @cached_property
     def stored_in_multiframe_shm_stats(self) -> DescriptiveStatistics:
         """
@@ -290,6 +252,7 @@ class RecordingTimestamps(BaseModel):
             name="total_ipc_travel_duration_ms",
             units="milliseconds"
         )
+
     @cached_property
     def total_camera_to_recorder_time_stats(self) -> DescriptiveStatistics:
 
@@ -298,12 +261,6 @@ class RecordingTimestamps(BaseModel):
             name="total_camera_to_recorder_time_ms",
             units="milliseconds"
         )
-    def to_mf_dataframe(self) -> pd.DataFrame:
-        records = [mf_ts.model_dump(exclude={'frame_timestamps', 'timestamps_local_unix_ms'}) for mf_ts in
-                             self.multiframe_timestamps]
-
-        return pd.DataFrame(records,
-                            index=[mf_ts.multiframe_number for mf_ts in self.multiframe_timestamps])
 
     @cached_property
     def timestamps_by_camera_id(self) -> dict[CameraIdString, list[FrameTimestamps]]:
@@ -327,6 +284,71 @@ class RecordingTimestamps(BaseModel):
         """
         return [mf_ts.multiframe_number for mf_ts in self.multiframe_timestamps]
 
+    def to_stats(self) -> 'RecordingTimestampsStats':
+        """
+        Converts the recording timestamps to a TimestampStats object.
+        This is used to generate statistics about the recording timestamps.
+        """
+        from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+        return RecordingTimestampsStats.from_recording_timestamps(self)
+
+    def add_multiframe(self, multiframe: MultiFramePayload):
+        """
+        Adds a multiframe payload to the recording timestamps.
+        If the multiframe payload is empty, it will not be added.
+        """
+        if self.recording_start_ns is None:
+            self.recording_start_ns = multiframe.earliest_timestamp_ns
+        self.multiframe_timestamps.append(MultiFrameTimestamps.from_multiframe(multiframe=multiframe,
+                                                                               recording_start_time_ns=self.recording_start_ns))
+
+    def to_mf_dataframe(self) -> pd.DataFrame:
+        """
+        Returns a dataframe containing the multiframe timestamps.
+        Each row represents a multiframe with statistics across all cameras.
+        """
+
+        # Create a list of MultiFrameTimestampsCSVRow objects
+        csv_rows = [MultiFrameTimestampsCSVRow.from_mf_timestamps(mf_timestamps=mf_ts,
+                                                                  connection_frame_number=self.frame_numbers[
+                                                                      rec_number],
+                                                                  recording_frame_number=rec_number,
+                                                                  recording_start_time_ns=self.recording_start_ns,
+                                                                  previous_mf_timestamps=self.multiframe_timestamps[
+                                                                      rec_number - 1] if rec_number > 0 else None, )
+                    for rec_number, mf_ts in enumerate(self.multiframe_timestamps)]
+
+        # Convert each row to a dictionary and create a DataFrame
+        rows_as_dicts = [row.model_dump(by_alias=True) for row in csv_rows]
+
+        return pd.DataFrame(rows_as_dicts)
+
+    def save_timestamps(self):
+        """
+        Saves the timestamps to a CSV file in the recording info's timestamps folder.
+        The file is named with the recording name and has a .csv extension.
+        """
+        if not self.multiframe_timestamps:
+            raise ValueError("No multiframe timestamps available to save")
+        if self.number_of_cameras > 1:
+            mf_df = self.to_mf_dataframe()
+            mf_df.to_csv(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_timestamps.csv",
+                         index=False)
+        stats = self.to_stats()
+        logger.info(
+            f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
+        logger.info(f"Recording stats:\n\n{stats}\n\n")
+        Path(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_stats.json").write_text(
+            stats.model_dump_json(exclude={'sample_data'}, indent=2), encoding='utf-8')
+        Path(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_stats.txt").write_text(str(stats), encoding='utf-8')
+        dfs = self.to_camera_dataframes()
+        for camera_id, camera_df in dfs.items():
+            camera_df.to_csv(
+                f"{self.recording_info.camera_timestamps_folder}/{self.recording_info.recording_name}_camera_{camera_id}_timestamps.csv",
+                index_label="frame_number")
+        logger.info(
+            f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
+
     def to_camera_dataframes(self) -> dict[CameraIdString, pd.DataFrame]:
         """
         Returns a dictionary of dataframes for each camera in the recording.
@@ -334,7 +356,20 @@ class RecordingTimestamps(BaseModel):
         """
         camera_dfs = {}
         for camera_id, frame_timestamps in self.timestamps_by_camera_id.items():
-            camera_dfs[camera_id] = pd.DataFrame([ts.model_dump() for ts in frame_timestamps],
-                                                 index=self.frame_numbers)
+            # Create a list of FrameTimestampsCSVRow objects
+            csv_rows = [
+                FrameTimestampsCSVRow.from_frame_timestamps(
+                    frame_timestamps=ts,
+                    recording_frame_number=recording_frame_number,
+                    connection_frame_number=self.frame_numbers[recording_frame_number],
+                    recording_start_time_ns=self.recording_start_ns,
+                    previous_frame_timestamps=frame_timestamps[
+                        recording_frame_number - 1] if recording_frame_number > 0 else None
+                ) for recording_frame_number, ts in enumerate(frame_timestamps)
+            ]
+
+            # Convert each row to a dictionary with aliases and create a DataFrame
+            rows_as_dicts = [row.model_dump(by_alias=True) for row in csv_rows]
+            camera_dfs[camera_id] = pd.DataFrame(rows_as_dicts, index=None)
 
         return camera_dfs

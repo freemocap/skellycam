@@ -11,17 +11,18 @@ if TYPE_CHECKING:
 
 
 class FrameTimestampsCSVRow(BaseModel):
-    frame_number: int
+    recording_frame_number: int
+    connection_frame_number: int
 
     # Timestamp fields
-    from_recording_start_ms: float = Field(serialization_alias="timestamp.from_recording_start.ms")
-    perf_counter_ns: int = Field(serialization_alias="timestamp.perf_counter_ns.ns")
+    from_recording_start_sec: float = Field(serialization_alias="timestamp.from_recording_start.sec")
     utc_sec: float = Field(serialization_alias="timestamp.utc.seconds")
     local_iso8601: str = Field(serialization_alias="timestamp.local.iso8601")
+    perf_counter_ns: int = Field(serialization_alias="timestamp.perf_counter_ns.ns")
 
     # From-previous measures (i.e. frame duration and framerate, which require knowledge of the previous frame)
-    frame_duration_ms: float = Field(serialization_alias="from_previous.frame_duration.ms")
-    framerate_hz: float = Field(serialization_alias="from_previous.framerate.hz")
+    frame_duration_ms: float|None = Field(serialization_alias="from_previous.frame_duration.ms")
+    framerate_hz: float|None = Field(serialization_alias="from_previous.framerate.hz")
 
     # Lifespan timestamp fields
     initialized_ns: int = Field(serialization_alias="frame.initialized.ns")
@@ -50,56 +51,53 @@ class FrameTimestampsCSVRow(BaseModel):
     total_ipc_travel_time_ns: int = Field(serialization_alias="duration.total_ipc_travel.ns")
 
     @classmethod
-    def from_frame_metadata(cls,
-                            frame_metadata: 'FrameMetadata',
-                            recording_start_time_ns: int,
-                            previous_frame_timestamps: FrameTimestamps| None = None,
-                            ) -> "FrameTimestampsCSVRow":
-        timestamps = frame_metadata.timestamps
-        timebase: TimebaseMapping = timestamps.timebase_mapping
+    def from_frame_timestamps(cls,
+                              frame_timestamps: FrameTimestamps,
+                              recording_frame_number: int,
+                              connection_frame_number: int,
+                              recording_start_time_ns: int,
+                              previous_frame_timestamps: FrameTimestamps| None = None,
+                              ) -> "FrameTimestampsCSVRow":
+
+        timebase: TimebaseMapping = frame_timestamps.timebase_mapping
 
         frame_duration_ms = ns_to_ms(
-            timestamps.timestamp_ns - previous_frame_timestamps.timestamp_ns) if previous_frame_timestamps else None
+            frame_timestamps.timestamp_ns - previous_frame_timestamps.timestamp_ns) if previous_frame_timestamps else None
         framerate_hz = (frame_duration_ms**-1)/1000 if previous_frame_timestamps and frame_duration_ms >0 else None
 
         return cls(
-            frame_number=frame_metadata.frame_number,
-            from_recording_start_ms=ns_to_ms(timestamps.timestamp_ns - recording_start_time_ns),
-            perf_counter_ns=timestamps.timestamp_ns,
-            utc_sec=ns_to_sec(timebase.convert_perf_counter_ns_to_unix_ns(timestamps.timestamp_ns, local_time=False)),
-            local_iso8601=timebase.convert_perf_counter_ns_to_local_iso8601(timestamps.timestamp_ns),
+            recording_frame_number=recording_frame_number,
+            connection_frame_number=connection_frame_number,
+            from_recording_start_sec=ns_to_sec(frame_timestamps.timestamp_ns - recording_start_time_ns),
+            perf_counter_ns=frame_timestamps.timestamp_ns,
+            utc_sec=ns_to_sec(timebase.convert_perf_counter_ns_to_unix_ns(frame_timestamps.timestamp_ns, local_time=False)),
+            local_iso8601=timebase.convert_perf_counter_ns_to_local_iso8601(frame_timestamps.timestamp_ns),
 
             frame_duration_ms=frame_duration_ms,
             framerate_hz= framerate_hz,
 
-            initialized_ns=timestamps.frame_initialized_ns,
-            pre_grab_ns=timestamps.pre_frame_grab_ns,
-            post_grab_ns=timestamps.post_frame_grab_ns,
-            pre_retrieve_ns=timestamps.pre_frame_retrieve_ns,
-            post_retrieve_ns=timestamps.post_frame_retrieve_ns,
-            copy_to_camera_shm_ns=timestamps.pre_copy_to_camera_shm_ns,
-            pre_retrieve_from_camera_shm_ns=timestamps.pre_retrieve_from_camera_shm_ns,
-            post_retrieve_from_camera_shm_ns=timestamps.post_retrieve_from_camera_shm_ns,
-            copy_to_multiframe_shm_ns=timestamps.pre_copy_to_multiframe_shm_ns,
-            pre_retrieve_from_multiframe_shm_ns=timestamps.pre_retrieve_from_multiframe_shm_ns,
-            post_retrieve_from_multiframe_shm_ns=timestamps.post_retrieve_from_multiframe_shm_ns,
+            initialized_ns=frame_timestamps.frame_initialized_ns-recording_start_time_ns,
+            pre_grab_ns=frame_timestamps.pre_frame_grab_ns-recording_start_time_ns,
+            post_grab_ns=frame_timestamps.post_frame_grab_ns-recording_start_time_ns,
+            pre_retrieve_ns=frame_timestamps.pre_frame_retrieve_ns-recording_start_time_ns,
+            post_retrieve_ns=frame_timestamps.post_frame_retrieve_ns-recording_start_time_ns,
+            copy_to_camera_shm_ns=frame_timestamps.pre_copy_to_camera_shm_ns-recording_start_time_ns,
+            pre_retrieve_from_camera_shm_ns=frame_timestamps.pre_retrieve_from_camera_shm_ns-recording_start_time_ns,
+            post_retrieve_from_camera_shm_ns=frame_timestamps.post_retrieve_from_camera_shm_ns-recording_start_time_ns,
+            copy_to_multiframe_shm_ns=frame_timestamps.pre_copy_to_multiframe_shm_ns-recording_start_time_ns,
+            pre_retrieve_from_multiframe_shm_ns=frame_timestamps.pre_retrieve_from_multiframe_shm_ns-recording_start_time_ns,
+            post_retrieve_from_multiframe_shm_ns=frame_timestamps.post_retrieve_from_multiframe_shm_ns-recording_start_time_ns,
 
-            idle_before_grab_ns=timestamps.durations["idle_before_grab_ns"],
-            during_frame_grab_ns=timestamps.durations["during_frame_grab_ns"],
-            idle_before_retrieve_ns=timestamps.durations["idle_before_retrieve_ns"],
-            during_frame_retrieve_ns=timestamps.durations["during_frame_retrieve_ns"],
-            idle_before_copy_to_camera_shm_ns=timestamps.durations["idle_before_copy_to_camera_shm_ns"],
-            stored_in_camera_shm_ns=timestamps.durations["stored_in_camera_shm_ns"],
-            during_copy_from_camera_shm_ns=timestamps.durations["during_copy_from_camera_shm_ns"],
-            idle_before_copy_to_multiframe_shm_ns=timestamps.durations["idle_before_copy_to_multiframe_shm_ns"],
-            stored_in_multiframe_shm_ns=timestamps.durations["stored_in_multiframe_shm_ns"],
-            total_frame_acquisition_time_ns=timestamps.durations["total_frame_acquisition_time_ns"],
-            total_ipc_travel_time_ns=timestamps.durations["total_ipc_travel_time_ns"],
+            idle_before_grab_ns=frame_timestamps.durations.idle_before_grab_ns,
+            during_frame_grab_ns=frame_timestamps.durations.during_frame_grab_ns,
+            idle_before_retrieve_ns=frame_timestamps.durations.idle_before_retrieve_ns,
+            during_frame_retrieve_ns=frame_timestamps.durations.during_frame_retrieve_ns,
+            idle_before_copy_to_camera_shm_ns=frame_timestamps.durations.idle_before_copy_to_camera_shm_ns,
+            stored_in_camera_shm_ns=frame_timestamps.durations.stored_in_camera_shm_ns,
+            during_copy_from_camera_shm_ns=frame_timestamps.durations.during_copy_from_camera_shm_ns,
+            idle_before_copy_to_multiframe_shm_ns=frame_timestamps.durations.idle_before_copy_to_multiframe_shm_ns,
+            stored_in_multiframe_shm_ns=frame_timestamps.durations.stored_in_multiframe_shm_ns,
+            total_frame_acquisition_time_ns=frame_timestamps.durations.total_frame_acquisition_time_ns,
+            total_ipc_travel_time_ns=frame_timestamps.durations.total_ipc_travel_time_ns,
         )
 
-    def to_csv_row_dict(self) -> dict[str, float|int|str]:
-        """
-        Returns the values for the CSV row as a dictionary,
-        with field names converted to a format suitable for CSV headers.
-        """
-        return self.model_dump(by_alias=True)

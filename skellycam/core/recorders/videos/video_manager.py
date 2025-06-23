@@ -4,6 +4,7 @@ import time
 import uuid
 from collections import deque
 from pathlib import Path
+import cv2
 
 import numpy as np
 from pydantic import BaseModel, Field
@@ -147,10 +148,7 @@ class VideoManager(BaseModel):
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file()
-        print("Starting to save timestamps...")
-        tik = time.perf_counter()
         self.recording_timestamps.save_timestamps()
-        print(f"Finished saving timestamps in {time.perf_counter() - tik:.2f} seconds")
         self._save_folder_readme()
         self.validate_recording()
         self.is_finished = True
@@ -158,6 +156,77 @@ class VideoManager(BaseModel):
             f"Recording `{self.recording_info.recording_name} Successfully recorded to: {self.recording_info.recording_directory}")
 
     def validate_recording(self):
-        logger.warning(
-            "Recording validation is not implemented yet. This method should do things like check if all video/timestamp files have the same number of frames, etc.")
-        pass
+        """
+        Validates the recording by checking:
+        1. All videos were saved and exist on disk
+        2. All videos have the same number of frames
+        3. Timestamps were saved and exist on disk
+        4. Timestamps have the same number of frames as the videos
+
+        Raises a ValueError if any validation check fails.
+        """
+        logger.debug(f"Validating recording: {self.recording_info.recording_name}")
+
+        # Check 1: Verify all video files exist
+        video_files = {}
+        for camera_id, recorder in self.video_recorders.items():
+            video_path = Path(recorder.video_file_path)
+            if not video_path.exists():
+                raise ValueError(f"Video file for camera {camera_id} does not exist: {video_path}")
+            video_files[camera_id] = video_path
+            logger.trace(f"Recording Validation Check#1 - Video file for camera {camera_id} exists: {video_path}")
+
+        # Check 2: Verify all videos have the same number of frames
+        frame_counts = {}
+        for camera_id, video_path in video_files.items():
+            cap = cv2.VideoCapture(str(video_path))
+            if not cap.isOpened():
+                raise ValueError(f"Failed to open video file for camera {camera_id}: {video_path}")
+
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            frame_counts[camera_id] = frame_count
+            cap.release()
+
+            logger.trace(f"Recording Validation Check#2 - Camera {camera_id} video has {frame_count} frames")
+
+        if len(set(frame_counts.values())) > 1:
+            frame_count_str = ", ".join([f"{camera_id}: {count}" for camera_id, count in frame_counts.items()])
+            raise ValueError(f"Videos have different frame counts: {frame_count_str}")
+
+        expected_frame_count = next(iter(frame_counts.values())) if frame_counts else 0
+        logger.trace(f"Recording Validation Check#2 - All videos have {expected_frame_count} frames")
+
+        # Check 3: Verify timestamp files exist
+        timestamp_file = Path(
+            f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_timestamps.csv")
+        if not timestamp_file.exists() and len(self.video_recorders) > 1:
+            raise ValueError(f"Multiframe timestamp file does not exist: {timestamp_file}")
+
+        camera_timestamp_files = {}
+        for camera_id in self.video_recorders.keys():
+            camera_ts_file = Path(
+                f"{self.recording_info.camera_timestamps_folder}/{self.recording_info.recording_name}_camera_{camera_id}_timestamps.csv")
+            if not camera_ts_file.exists():
+                raise ValueError(f"Camera timestamp file for camera {camera_id} does not exist: {camera_ts_file}")
+            camera_timestamp_files[camera_id] = camera_ts_file
+            logger.trace(f"Recording Validation Check#3 - Camera timestamp file for camera {camera_id} exists: {camera_ts_file}")
+
+        # Check 4: Verify timestamps have the same number of frames as videos
+        for camera_id, ts_file in camera_timestamp_files.items():
+            try:
+                import pandas as pd
+                df = pd.read_csv(ts_file)
+                ts_frame_count = len(df)
+
+                if ts_frame_count != frame_counts[camera_id]:
+                    raise ValueError(
+                        f"Camera {camera_id} has {frame_counts[camera_id]} video frames but {ts_frame_count} timestamp entries")
+
+                logger.trace(f"Recording Validation Check#4 - Camera {camera_id} has matching frame count in video and timestamps: {ts_frame_count}")
+            except Exception as e:
+                raise ValueError(f"Error validating timestamp file for camera {camera_id}: {e}")
+
+        # If we got here, all validation checks passed
+        logger.info(f"Recording validation successful for {self.recording_info.recording_name}"
+                       f"\n\t- {len(video_files)} videos saved with {expected_frame_count} frames each"
+                       f"\n\t- All timestamp files present and match video frame counts")

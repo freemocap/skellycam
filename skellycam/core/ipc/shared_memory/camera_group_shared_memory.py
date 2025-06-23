@@ -181,5 +181,10 @@ class CameraGroupSharedMemoryManager:
         self.multi_frame_ring_shm.unlink()
 
     def unlink_and_close(self):
-        self.unlink()
-        self.close()
+        try:
+            if self.original:
+                self.unlink()
+            self.close()
+        except Exception as e:
+            logger.error(f"Error during shared memory cleanup: {type(e).__name__} - {e}")
+            logger.exception(e)
