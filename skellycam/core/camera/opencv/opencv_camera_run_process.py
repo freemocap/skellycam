@@ -98,7 +98,7 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                     should_continue: callable,
                     update_camera_settings_subscription: TopicSubscriptionQueue):
     while should_continue():
-        if ipc.should_pause.value:
+        if self_status.should_pause.value:
             self_status.is_paused.value = True
             wait_10ms()
             continue
