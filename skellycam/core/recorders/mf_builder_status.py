@@ -9,6 +9,7 @@ class MultiFrameBuilderStatus(BaseModel):
         default_factory=lambda: multiprocessing.Value('b', False))
     is_running_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value('b', False))
+    should_pause: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value('b', False))

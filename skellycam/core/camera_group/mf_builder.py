@@ -75,7 +75,7 @@ class MultiframeBuilder:
             mf_rec_array[camera_id].frame_metadata.frame_number[0] = -1
         try:
             while should_continue():
-                if ipc.should_pause.value:
+                if ipc.mf_builder_status.should_pause.value:
                     ipc.mf_builder_status.is_paused.value = True
                     wait_10ms()
                     continue
@@ -83,7 +83,9 @@ class MultiframeBuilder:
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_1ms()
                     continue
+                ipc.mf_builder_status.building_mfs_flag.value = True
                 mf_rec_array = camera_group_shm.build_all_new_multiframes(mf_rec_array)
+                ipc.mf_builder_status.building_mfs_flag.value = False
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")

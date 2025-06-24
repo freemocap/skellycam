@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, SkipValidation, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.types.type_overloads import CameraIdString
+from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -116,3 +117,24 @@ class CameraOrchestrator:
             return True
         return False
 
+    def pause(self, await_paused: bool = True):
+        logger.debug(f"Pausing all cameras in orchestrator...")
+        for camera_id, status in self.camera_statuses.items():
+            if not status.is_paused.value:
+                logger.debug(f"Pausing camera {camera_id}...")
+                status.should_pause.value = True
+        if await_paused:
+            while not self.all_cameras_paused:
+                wait_10ms()
+            logger.debug(f"All cameras paused.")
+
+    def unpause(self, await_unpaused: bool = True):
+        logger.debug(f"Unpausing all cameras in orchestrator...")
+        for camera_id, status in self.camera_statuses.items():
+            if status.is_paused.value:
+                logger.debug(f"Unpausing camera {camera_id}...")
+                status.should_pause.value = False
+        if await_unpaused:
+            while self.any_cameras_paused:
+                wait_10ms()
+            logger.debug(f"All cameras unpaused.")

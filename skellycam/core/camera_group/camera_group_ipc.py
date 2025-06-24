@@ -28,9 +28,7 @@ class CameraGroupIPC(BaseModel):
     extracted_config_subscription: TopicSubscriptionQueue
 
     recording_manager_status: RecordingManagerStatus = Field(default_factory=RecordingManagerStatus)
-    mf_builder_status: MultiFrameBuilderStatus = Field(default_factory=RecordingManagerStatus)
-    should_pause: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
+    mf_builder_status: MultiFrameBuilderStatus = Field(default_factory=MultiFrameBuilderStatus)
     shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
 
@@ -97,7 +95,9 @@ class CameraGroupIPC(BaseModel):
         """
         Pause the camera group.
         """
-        self.should_pause.value = True
+        self.mf_builder_status.should_pause.value = True
+        self.recording_manager_status.should_pause.value = True
+        self.camera_orchestrator.pause(await_paused)
         if await_paused:
             while not self.all_paused:
                 wait_100ms()
@@ -106,7 +106,9 @@ class CameraGroupIPC(BaseModel):
         """
         Unpause the camera group.
         """
-        self.should_pause.value = False
+        self.mf_builder_status.should_pause.value = False
+        self.recording_manager_status.should_pause.value = False
+        self.camera_orchestrator.unpause(await_unpaused)
         if await_unpaused:
             while not self.all_unpaused:
                 wait_100ms()

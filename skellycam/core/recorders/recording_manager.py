@@ -123,7 +123,7 @@ class RecordingManager(BaseModel):
         try:
             while should_continue():
                 wait_1ms()
-                if not video_manager and ipc.should_pause.value:
+                if not video_manager and ipc.recording_manager_status.should_pause.value:
                     ipc.recording_manager_status.is_paused.value = True
                     wait_1s()
                     continue

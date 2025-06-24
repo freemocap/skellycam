@@ -160,7 +160,6 @@ class CameraGroup:
         self.ipc.pause(await_paused=True)
         self.ipc.should_continue = False
 
-
         try:
             self.recorder.close()
         except Exception as e:
