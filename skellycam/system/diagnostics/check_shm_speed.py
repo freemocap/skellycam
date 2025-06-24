@@ -5,7 +5,7 @@ from typing import Tuple
 
 import numpy as np
 
-from skellycam.core.camera_group.shmorchestrator.shared_memory.ring_buffer_shared_memory import \
+from skellycam.core.ipc.shared_memory import \
     SharedMemoryRingBufferDTO, SharedMemoryRingBuffer
 
 
@@ -34,7 +34,7 @@ def reader_process(ring_buffer_dto: SharedMemoryRingBufferDTO):
     read_data = []
     attempts = 0
     durations = []
-    while not ring_buffer.ready_to_read:
+    while not ring_buffer.first_data_written:
         sleep(0.001)
     print("Reader: SHM ready to read")
     while attempts < 1e3:
@@ -60,7 +60,7 @@ def watcher_process(ring_buffer_dto: SharedMemoryRingBufferDTO):
     last_data_max = -1
     durations = []
     attempts = 0
-    while not ring_buffer.ready_to_read:
+    while not ring_buffer.first_data_written:
         sleep(0.001)
     print(">>>>Watcher: SHM ready to read")
     while attempts < 1e3:
@@ -124,7 +124,7 @@ def check_shared_memory_ring_buffer_multiprocess():
         raise
     finally:
         # Clean up shared memory
-        ring_buffer.close_and_unlink()
+        ring_buffer.unlink_and_close()
 
 
 

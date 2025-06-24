@@ -19,32 +19,16 @@ export const camerasSlice = createSlice({
     name: 'cameras',
     initialState,
     reducers: {
-        setDetectedDevices: (state, action: PayloadAction<CameraDevice[]>) => {
-            // Create a new Record of cameras
-            const newCameras: Record<string, CameraDevice> = {};
-
-            // Process each device
+        setAvailableCameras: (state, action: PayloadAction<CameraDevice[]>) => {
             action.payload.forEach(device => {
                 const cameraId = device.cameraId;
-
-                // If the camera already exists, preserve its config and selected state
                 const existingCamera = state.cameras[cameraId];
 
-                // Instead of direct assignment, add each camera individually
                 state.cameras[cameraId] = {
                     ...device,
-                    // Preserve the existing selection state or default to false
-                    selected: existingCamera ? existingCamera.selected : true,
-                    // Preserve the existing config or create a new default one
-                    config: existingCamera?.config || createDefaultCameraConfig(device.index, device.label)
+                    selected: existingCamera ? existingCamera.selected : device.selected,
+                    config: existingCamera?.config || device.config
                 };
-            });
-
-            // Remove cameras that are no longer present
-            Object.keys(state.cameras).forEach(id => {
-                if (!action.payload.some(device => device.cameraId === id)) {
-                    delete state.cameras[id];
-                }
             });
         },
         setLoading: (state, action: PayloadAction<boolean>) => {
@@ -64,7 +48,6 @@ export const camerasSlice = createSlice({
             if (state.cameras[cameraId]) {
                 const newSelected = !state.cameras[cameraId].selected;
 
-                // Update both selected status and config
                 state.cameras[cameraId] = {
                     ...state.cameras[cameraId],
                     selected: newSelected,
@@ -91,16 +74,50 @@ export const camerasSlice = createSlice({
             }
         },
 
+        copyConfigToAllCameras: (state, action: PayloadAction<string>) => {
+            const sourceCameraId = action.payload;
+            const sourceCamera = state.cameras[sourceCameraId];
+
+            if (sourceCamera) {
+                const sourceConfig = sourceCamera.config;
+
+                // Copy specific config properties we want to share
+                // (excluding camera-specific properties like camera_id, camera_name, etc.)
+                const configToCopy = {
+                    resolution: sourceConfig.resolution,
+                    color_channels: sourceConfig.color_channels,
+                    pixel_format: sourceConfig.pixel_format,
+                    exposure_mode: sourceConfig.exposure_mode,
+                    exposure: sourceConfig.exposure,
+                    framerate: sourceConfig.framerate,
+                    rotation: sourceConfig.rotation,
+                    capture_fourcc: sourceConfig.capture_fourcc,
+                    writer_fourcc: sourceConfig.writer_fourcc,
+                };
+
+                // Apply to all other cameras
+                Object.keys(state.cameras).forEach(cameraId => {
+                    if (cameraId !== sourceCameraId) {
+                        state.cameras[cameraId] = {
+                            ...state.cameras[cameraId],
+                            config: {
+                                ...state.cameras[cameraId].config,
+                                ...configToCopy
+                            }
+                        };
+                    }
+                });
+            }
+        },
+
     },
 });
 
-// Selectors
 export const selectAllCameras = (state: RootState) => state.cameras.cameras;
 
 export const selectSelectedDevices = createSelector(
     [selectAllCameras],
     (cameras) => {
-        // Convert Record to array of selected cameras
         return Object.values(cameras).filter(camera => camera.selected);
     }
 );
@@ -122,12 +139,14 @@ export const selectConfigsForSelectedCameras = createSelector(
 );
 
 export const {
-    setDetectedDevices,
+    setAvailableCameras,
     setLoading,
     setCameraStatus,
     toggleCameraSelection,
     updateCameraConfig,
+    copyConfigToAllCameras,
     setError
 } = camerasSlice.actions;
 
 export default camerasSlice.reducer;
+

@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from skellycam.core.camera_group.camera.opencv.determine_backend import BackendSelection
+from skellycam.core.camera.opencv.determine_backend import BackendSelection
 
 
 def check_resolution(video_capture: cv2.VideoCapture, width: int, height: int) -> bool:
@@ -24,17 +24,17 @@ def measure_latency(video_capture: cv2.VideoCapture, max_frame_count: int = 30) 
     start_time = time.perf_counter()
 
     while frame_counts < max_frame_count:
-        pre_grab_ns = time.perf_counter_ns()
+        pre_frame_grab_ns = time.perf_counter_ns()
         video_capture.grab()
-        post_grab_ns = time.perf_counter_ns()
+        post_frame_grab_ns = time.perf_counter_ns()
 
-        pre_retrieve_ns = time.perf_counter_ns()
+        pre_frame_retrieve_ns = time.perf_counter_ns()
         ret, frame = video_capture.retrieve()
-        post_retrieve_ns = time.perf_counter_ns()
+        post_frame_retrieve_ns = time.perf_counter_ns()
 
         if ret:
-            grab_times.append((post_grab_ns - pre_grab_ns) / 1e6)  # Convert to milliseconds
-            retrieve_times.append((post_retrieve_ns - pre_retrieve_ns) / 1e6)  # Convert to milliseconds
+            grab_times.append((post_frame_grab_ns - pre_frame_grab_ns) / 1e6)  # Convert to milliseconds
+            retrieve_times.append((post_frame_retrieve_ns - pre_frame_retrieve_ns) / 1e6)  # Convert to milliseconds
             frame_counts += 1
         else:
             grab_times.append(np.nan)  # Convert to milliseconds

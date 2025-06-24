@@ -1,5 +1,6 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
 import {selectConfigsForSelectedCameras, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
+import { urlService } from "@/services/urlService";
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',
@@ -14,7 +15,7 @@ export const connectToCameras = createAsyncThunk(
         }
 
         dispatch(setLoading(true));
-        const connectUrl = 'http://localhost:8006/skellycam/cameras/connect';
+        const connectUrl = urlService.getCameraUrls().createGroup;
 
         const payload = {
             camera_configs: cameraConfigs

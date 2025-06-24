@@ -2,6 +2,7 @@
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {z} from 'zod';
 import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
+import {selectConfigsForSelectedCameras} from "@/store/slices/cameras-slices/camerasSlice";
 
 const RecordStartRequestSchema = z.object({
     recording_name: z.string(),
@@ -16,14 +17,15 @@ type StartRecordingParams = {
 
 export const startRecording = createAsyncThunk<void, StartRecordingParams>(
     'appState/startRecording',
-    async ({recordingName, recordingDirectory}, {dispatch}) => {
+    async ({recordingName, recordingDirectory}, {dispatch,}) => {
         console.log(`Starting recording with name: ${recordingName} in directory: ${recordingDirectory}`);
         try {
-            const recStartUrl = 'http://localhost:8006/skellycam/cameras/record/start';
+            const recStartUrl = 'http://localhost:8006/skellycam/camera/group/all/record/start';
 
             const requestPayload = RecordStartRequestSchema.parse({
                 recording_name: recordingName,
                 recording_directory: recordingDirectory,
+
             });
             console.log(`Request payload: ${JSON.stringify(requestPayload, null, 2)}`);
             const response = await fetch(recStartUrl, {
@@ -56,7 +58,7 @@ export const stopRecording = createAsyncThunk<void, void>(
     async (_, {dispatch}) => {
         console.log('Stopping recording...');
         try {
-            const recStopUrl = 'http://localhost:8006/skellycam/cameras/record/stop';
+            const recStopUrl = 'http://localhost:8006/skellycam/camera/group/all/record/stop';
             const response = await fetch(recStopUrl, {
                 method: 'GET',
             });

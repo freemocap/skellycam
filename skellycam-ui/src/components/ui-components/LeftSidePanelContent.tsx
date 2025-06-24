@@ -84,6 +84,7 @@ export const LeftSidePanelContent = () => {
                     }}
                 >
                     <Box component="span" sx={{ml: 1}}>SkellyCam💀📸</Box>
+
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <IconButton
                             color="inherit"
@@ -91,6 +92,7 @@ export const LeftSidePanelContent = () => {
                         >
                             <HomeIcon/>
                         </IconButton>
+
                         <IconButton
                             color="inherit"
                             onClick={() => navigate('/cameras')}
@@ -119,8 +121,8 @@ export const LeftSidePanelContent = () => {
                     overflowX: 'hidden',
                     ...scrollbarStyles
                 }}>
-                    <AvailableCamerasPanel/>
                     <RecordingInfoPanel/>
+                    <AvailableCamerasPanel/>
                 </Box>
             )}
 

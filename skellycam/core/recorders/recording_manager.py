@@ -1,172 +1,240 @@
 import logging
-import threading
-import time
-import uuid
-from pathlib import Path
-from typing import Dict
+import multiprocessing
 
-from pydantic import BaseModel, ValidationError
+import numpy as np
+from pydantic import BaseModel, ConfigDict, SkipValidation
 
-from skellycam.core import CameraIndex
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraIdString
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.recorders.timestamps.multiframe_timestamp_logger import MultiframeTimestampLogger
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
+from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, RecordingInfoMessage
+from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
+from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
+from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.recorders.videos.video_recorder import VideoRecorder
-
-# TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
-SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
-TIMESTAMPS_FOLDER_NAME = "synchronized_videos"
-
-SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME = f"{SYNCHRONIZED_VIDEOS_FOLDER_NAME}_README.md"
-
-# TODO - Flesh out the README content
-SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT = f"""# Synchronized Videos Folder
-This folder contains the synchronized videos and timestamps for a recording session.
-
-Each video in this folder should have precisely the same number of frames, each of which corresponds to the same time period across all cameras (i.e. 'frame 12 in camera 1' should represent an image of the same moment in time as 'frame 12 in camera 2' etc.) 
-"""
+from skellycam.core.recorders.videos.video_manager import VideoManager
+from skellycam.core.types.type_overloads import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
+from skellycam.utilities.wait_functions import wait_10ms, wait_1ms, wait_1s
 
 logger = logging.getLogger(__name__)
 
 
 class RecordingManager(BaseModel):
-    recording_uuid: str = str(uuid.uuid4())
-    recording_folder: str
-    videos_folder: str
-    recording_name: str
-    camera_configs: CameraConfigs
-    fresh: bool = True
-
-    video_recorders: dict[CameraIdString, VideoRecorder]
-    multi_frame_timestamp_logger: MultiframeTimestampLogger
-
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+    )
+    worker: WorkerType
+    ipc: CameraGroupIPC
+    should_close_self: SkipValidation[multiprocessing.Value]
 
     @property
-    def recording_info(self) -> "RecordingInfo":
-        return RecordingInfo.from_recording_manager(self)
-
-    @property
-    def number_of_frames_to_save(self) -> int:
-        return sum([video_recorder.number_of_frames_to_write for video_recorder in self.video_recorders.values()])
-
-    @property
-    def frames_to_save(self) -> bool:
-        return self.number_of_frames_to_save > 0
+    def status(self):
+        return self.ipc.recording_manager_status
 
     @classmethod
     def create(cls,
-               multi_frame_payload: MultiFramePayload,
-               camera_configs: CameraConfigs,
-               recording_folder: str):
+               ipc: CameraGroupIPC,
+               camera_ids: list[CameraIdString],
+               worker_strategy: WorkerStrategy):
+        should_close_self = multiprocessing.Value("b", False)
+        return cls(
+            ipc=ipc,
+            should_close_self=should_close_self,
+            worker=worker_strategy.value(target=cls._worker,
+                                         name='RecordingManagerWorker',
+                                         kwargs=dict(ipc=ipc,
+                                                     camera_ids=camera_ids,
+                                                     should_close_self=should_close_self,
+                                                     recording_info_subscription=ipc.pubsub.topics[
+                                                         TopicTypes.RECORDING_INFO].get_subscription(),
+                                                     shm_updates_subscription=ipc.pubsub.topics[
+                                                         TopicTypes.SHM_UPDATES].get_subscription(),
 
-        logger.debug(f"Creating FrameSaver for recording folder {recording_folder}")
+                                                     )),
+        )
 
-        recording_name = Path(recording_folder).name
-        videos_folder = str(Path(recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_NAME)
+    @property
+    def ready(self):
+        return self.worker.is_alive()
 
-        video_recorders = {}
-        for camera_id, config in camera_configs.items():
-            video_recorders[camera_id] = VideoRecorder.create(camera_id=camera_id,
-                                                              frame=multi_frame_payload.get_frame(camera_id),
-                                                              recording_name=recording_name,
-                                                              videos_folder=videos_folder,
-                                                              config=camera_configs[camera_id],
-                                                              )
+    def start(self):
+        logger.debug(f"Starting video worker process...")
+        self.worker.start()
 
-        return cls(recording_folder=recording_folder,
-                   videos_folder=videos_folder,
-                   recording_name=recording_name,
-                   camera_configs=camera_configs,
-                   video_recorders=video_recorders,
-                   multi_frame_timestamp_logger=MultiframeTimestampLogger.create(video_save_directory=videos_folder,
-                                                                                 recording_name=recording_name),
-                   )
+    def is_alive(self) -> bool:
+        return self.worker.is_alive()
 
-    def add_multi_frame(self, mf_payload: MultiFramePayload):
-        logger.loop(f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_name}")
-        self._validate_multi_frame(mf_payload=mf_payload)
-        # if self.fresh:
-        #     self.fresh = False
-        #     if self.audio_recorder:
-        #         self.audio_recorder.start_recording()
-
-        for camera_id in mf_payload.camera_ids:
-            frame = mf_payload.get_frame(camera_id)
-            self.video_recorders[camera_id].add_frame(frame=frame)
-        self.multi_frame_timestamp_logger.log_multiframe(multi_frame_payload=mf_payload)
-
-    def save_one_frame(self) -> bool | None:
-        """
-        saves one frame from one video recorder
-        """
-        if not self.frames_to_save:
-            return None
-
-        if not Path(self.recording_folder).exists():
-            self._create_video_recording_folder()
-
-        frame_counts = {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in
-                        self.video_recorders.items()}
-        camera_id_to_save = max(frame_counts, key=frame_counts.get)
-        tik = time.perf_counter_ns()
-        frame_number = self.video_recorders[camera_id_to_save].write_one_frame()
-        tok = time.perf_counter_ns()
-        if frame_number is None:
-            raise RuntimeError(
-                f"Frame number is None after writing frame to video recorder for camera {camera_id_to_save}")
-        # print(f"Camera {camera_id_to_save} wrote frame {frame_number} to file (write took: {(tok - tik)/1e6:.3f}ms)")
-        return True
-
-    def _save_folder_readme(self):
-        with open(str(Path(self.recording_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
-            f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
-
-    def _validate_multi_frame(self, mf_payload: MultiFramePayload):
-        # Note - individual VideoRecorders will validate the frames' resolutions and whatnot
-        if not self.camera_configs.keys() == mf_payload.frames.keys():
-            raise ValidationError(f"CameraConfigs and MultiFramePayload frames do not match")
-
-    def _create_video_recording_folder(self):
-        Path(self.videos_folder).mkdir(parents=True, exist_ok=True)
-
-    def finish_and_close(self):
-        logger.debug(f"Finishing up...")
-        finish_threads = []
-        for recorder in self.video_recorders.values():
-            finish_threads.append(threading.Thread(target=recorder.finish_and_close))
-            finish_threads[-1].start()
-        for thread in finish_threads:
-            thread.join()
-        self.close()
+    def join(self):
+        self.worker.join()
 
     def close(self):
-        logger.debug(f"Closing {self.__class__.__name__} for recording: `{self.recording_name}`")
-        for video_saver in self.video_recorders.values():
-            video_saver.close()
-        self.multi_frame_timestamp_logger.close()
-        self.finalize_recording()
+        logger.debug(f"Closing video worker process...")
+        self.should_close_self.value = False
+        if self.is_alive():
+            self.join()
+        logger.debug(f"Video worker closed")
 
-    def finalize_recording(self):
-        logger.debug(f"Finalizing recording: `{self.recording_name}`...")
-        self.finalize_timestamps()
-        self.save_recording_summary()
-        self.validate_recording()
-        # self._save_folder_readme() # TODO - uncomment this when ready, only save if recording is successful
-        logger.success(f"Recording `{self.recording_name} Successfully recorded to: {self.recording_folder}")
+    @staticmethod
+    def _worker(ipc: CameraGroupIPC,
+                camera_ids: list[CameraIdString],
+                recording_info_subscription: TopicSubscriptionQueue,
+                shm_updates_subscription: TopicSubscriptionQueue,
+                should_close_self: multiprocessing.Value
+                ):
+        if multiprocessing.parent_process():
+            # Configure logging if multiprocessing (i.e. if there is a parent process)
+            from skellycam.system.logging_configuration.configure_logging import configure_logging
+            from skellycam import LOG_LEVEL
+            configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
 
-    def finalize_timestamps(self):
-        # TODO - add clean up and optional tasks... calc stats, save to individual cam timestamp files, etc
-        pass
+        def should_continue():
+            return ipc.should_continue and not should_close_self.value
 
-    def save_recording_summary(self):
-        # TODO - Update the `recording_info` with the final recording info? Or maybe a separeate `RecordingStats` save?
-        # Save the recording info to a `[recording_name]_info.json` in the recording folder
-        # self.multi_frame_timestamp_logger.save_timestamp_stats()
-        self.recording_info.save_to_file()
+        status: RecordingManagerStatus = ipc.recording_manager_status
+        camera_group_shm: CameraGroupSharedMemoryManager | None = None
 
-    def validate_recording(self):
-        # TODO - validate the recording, like check that there are the right numbers of videos and timestamps and whatnot
-        pass
+        while should_continue() and camera_group_shm is None:
+
+            if not shm_updates_subscription.empty():
+                shm_message = shm_updates_subscription.get()
+                if not isinstance(shm_message, SetShmMessage):
+                    raise RuntimeError(
+                        f"Expected CameraGroupSharedMemoryManager, got {type(shm_message)} in shm_updates_subscription"
+                    )
+                camera_group_shm = CameraGroupSharedMemoryManager.recreate(
+                    shm_dto=shm_message.camera_group_shm_dto,
+                    read_only=False
+                )
+            else:
+                # wait for the shared memory to be created
+                wait_10ms()
+
+        # Ensure camera_group_shm is properly initialized before proceeding
+        if camera_group_shm is None or not camera_group_shm.valid:
+            raise RuntimeError("Failed to initialize camera_group_shm")
+
+
+
+        video_manager: VideoManager | None = None
+        camera_config_recarrays: dict[CameraIdString, np.recarray]| None = None
+        audio_recorder: AudioRecorder | None = None
+        status.is_running_flag.value = True
+        logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
+        try:
+            while should_continue():
+                wait_1ms()
+                if not video_manager and ipc.should_pause.value:
+                    ipc.recording_manager_status.is_paused.value = True
+                    wait_1s()
+                    continue
+                ipc.recording_manager_status.is_paused.value = False
+                # check for new recording info
+                if status.should_record.value and video_manager is None:
+                    recording_info_message = recording_info_subscription.get(block=True)
+                    if not isinstance(recording_info_message, RecordingInfoMessage):
+                        raise RuntimeError(
+                            f"Expected RecordingInfo, got {type(recording_info_message)} in recording_info_subscription"
+                        )
+
+                    video_manager = RecordingManager.start_recording(status=status,
+                                                                     recording_info=recording_info_message.recording_info,
+                                                                     camera_config_recarrays=camera_config_recarrays,
+                                                                     video_manager=video_manager)
+
+
+                # check for shared memory updates
+                if not shm_updates_subscription.empty():
+                    raise NotImplementedError("Runtime updates of shared memory are not yet implemented.")
+
+                # check/handle new multi-frames
+                video_manager, camera_config_recarrays = RecordingManager._get_and_handle_new_mfs(
+                    status=status,
+                    video_manager=video_manager,
+                    camera_group_shm=camera_group_shm,
+                    camera_config_recarrays=camera_config_recarrays
+                )
+
+        except Exception as e:
+            status.error.value = True
+            ipc.kill_everything()
+            logger.error(f"RecordingManager process error: {e}")
+            logger.exception(e)
+            raise
+
+        except KeyboardInterrupt:
+            pass
+        finally:
+            status.is_running_flag.value = False
+            should_close_self.value = True
+            if video_manager:
+                video_manager.finish_and_close()
+            camera_group_shm.close()
+            logger.debug(f"RecordingManager worker completed")
+
+    @staticmethod
+    def _get_and_handle_new_mfs(status: RecordingManagerStatus,
+                                camera_group_shm: CameraGroupSharedMemoryManager,
+                                video_manager: VideoManager | None,
+                                camera_config_recarrays: dict[CameraIdString, np.recarray] | None,
+                                ) ->tuple[VideoManager | None, CameraConfigs | None]:
+
+        latest_mf_recarrays = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
+
+        if len(latest_mf_recarrays) > 0:
+            # if new frames, add them to the recording manager (doesn't save them yet)
+            current_configs = {camera_id:latest_mf_recarrays[0][camera_id].frame_metadata.camera_config[0]
+                                 for camera_id in latest_mf_recarrays[0].dtype.names}
+
+            if video_manager is not None:
+                if camera_config_recarrays != current_configs:
+                    raise ValueError('Cannot change camera configs while recording is active!')
+                video_manager.add_multi_frame_recarrays(latest_mf_recarrays)
+            camera_config_recarrays = current_configs
+        else:
+            if video_manager:
+                if status.should_record.value:
+                    # if we're recording and there are no new frames, opportunistically save one frame if we're recording
+                    video_manager.save_one_frame()
+                else:
+                    # if we have a video manager but not recording, then finish and close it
+                    video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
+
+        return video_manager, camera_config_recarrays
+
+    @staticmethod
+    def start_recording(status: RecordingManagerStatus,
+                        recording_info: RecordingInfo,
+                        camera_config_recarrays: dict[CameraIdString, np.recarray],
+                        video_manager: VideoManager | None) -> VideoManager | None:
+        camera_configs = {camera_id: CameraConfig.from_numpy_record_array(camera_config_recarrays[camera_id])
+                                   for camera_id in camera_config_recarrays.keys()}
+        if isinstance(video_manager, VideoManager):
+            RecordingManager.stop_recording(status=status, video_manager=video_manager)
+
+        if not isinstance(recording_info, RecordingInfo):
+            raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
+        if not isinstance(camera_configs, dict) or any(
+                [not isinstance(config, CameraConfig) for config in camera_configs.values()]):
+            raise ValueError(f"Expected CameraConfigs, got {type(camera_configs)} in camera_configs")
+
+        logger.info(f"Creating RecodingManager for recording: `{recording_info.recording_name}`")
+        status.updating.value = True
+        video_manager = VideoManager.create(recording_info=recording_info,
+                                            camera_configs=camera_configs,
+                                            )
+        status.updating.value = False
+        status.is_recording_frames_flag.value = True
+        return video_manager
+
+    @staticmethod
+    def stop_recording(status: RecordingManagerStatus, video_manager: VideoManager) -> None:
+        logger.info(f"Stopping recording: `{video_manager.recording_info.recording_name}`...")
+        if not isinstance(video_manager, VideoManager):
+            raise ValueError(f"Expected VideoManager, got {type(video_manager)} in video_manager")
+        status.is_recording_frames_flag.value = False
+
+        status.finishing.value = True
+        video_manager.finish_and_close()
+        status.finishing.value = False
+
+        return None

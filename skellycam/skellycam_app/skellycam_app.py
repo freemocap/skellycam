@@ -3,121 +3,74 @@ import multiprocessing
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
-from uuid import uuid4
 
 from pydantic import BaseModel
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfigs, CameraConfig
-from skellycam.core.camera_group.camera.config.update_instructions import UpdateInstructions
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
-from skellycam.core.camera_group.camera_group_dto import CameraGroupDTO
-from skellycam.core.camera_group.shmorchestrator.camera_group_shmorchestrator import CameraGroupSharedMemoryOrchestrator
-from skellycam.core.camera_group.shmorchestrator.shared_memory.multi_frame_escape_ring_buffer import \
-    MultiFrameEscapeSharedMemoryRingBuffer
-from skellycam.core.recorders.timestamps.framerate_tracker import FramerateTrackers
+from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.skellycam_app.skellycam_app_ipc.ipc_manager import InterProcessCommunicationManager
 
 logger = logging.getLogger(__name__)
 
 
 
+
+
 @dataclass
 class SkellycamApplication:
+    global_kill_flag: multiprocessing.Value
+    camera_group_manager: CameraGroupManager
 
-    ipc: InterProcessCommunicationManager
-    camera_group: CameraGroup | None = None
-    shmorchestrator: CameraGroupSharedMemoryOrchestrator | None = None
-    framerate: FramerateTrackers| None = None
 
     @classmethod
-    def create(cls, global_kill_flag: multiprocessing.Value) -> "SkellycamApplication":
-        return cls(ipc=InterProcessCommunicationManager(global_kill_flag=global_kill_flag))
+    def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):
+        return cls(global_kill_flag=global_kill_flag,
+                     camera_group_manager=CameraGroupManager(global_kill_flag=global_kill_flag))
 
     @property
-    def frame_escape_shm(self) -> MultiFrameEscapeSharedMemoryRingBuffer| None:
-        if not self.camera_group:
-            return None
-        return self.camera_group.multi_frame_escape_ring_shm
+    def should_continue(self) -> bool:
+        """
+        Check if the application should continue running.
+        """
+        return not self.global_kill_flag.value
 
+    def create_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
 
-    @property
-    def camera_group_configs(self) -> CameraConfigs | None:
-        if self.camera_group is None:
-            return  None
-        return self.camera_group.camera_configs
+        logger.info(f"Creating camera group with cameras: {list(camera_configs.keys())}")
+        camera_group = self.camera_group_manager.create_and_start_camera_group(camera_configs=camera_configs)
 
-    def create_or_update_camera_group(self,
-                                        camera_configs: CameraConfigs):
-            if self.camera_group is None:
-                self.create_camera_group(camera_configs=camera_configs)
-            else:
-                self.update_camera_group(camera_configs=camera_configs)
+        logger.info(f"Camera group created with ID: {camera_group.id} and cameras: {list(camera_configs.keys())}")
+        return camera_group
 
-    def create_camera_group(self, camera_configs: CameraConfigs):
-        if self.camera_group is not None:
-            self.camera_group.close()
-        logger.info(f"Creating camera group with cameras: {camera_configs.keys()}")
-        self.camera_group = CameraGroup.create(camera_group_dto=CameraGroupDTO(ipc=self.ipc,
-                                                                               group_uuid=str(uuid4()),
-                                                                               camera_configs=camera_configs),
-                                               )
-        self.camera_group.start()
-        logger.info(f"Camera group created successfully for cameras: {self.camera_group.camera_ids}")
+    def get_new_frontend_payloads(self, if_newer_than:int) -> list[FrontendFramePayload]:
+        return self.camera_group_manager.get_latest_frontend_payloads(if_newer_than=if_newer_than)
+    
+    def update_camera_configs(self,
+                              camera_configs: CameraConfigs) -> CameraConfigs:
+        return self.camera_group_manager.update_camera_settings(camera_configs=camera_configs)
 
-    def set_device_extracted_camera_configs(self, configs: CameraConfigs):
-        if self.camera_group is None or self.camera_group.camera_configs is None:
-            raise ValueError("Cannot set device extracted camera config without CameraGroup!")
-        self.camera_group.camera_configs.update(configs)
-        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
+    def close_all_camera_groups(self):
+        self.camera_group_manager.close_all_camera_groups()
+        logger.success("Camera groups closed successfully")
 
-
-    def update_camera_group(self,
-                            camera_configs: CameraConfigs):
-        if self.camera_group is None or self.camera_group.camera_configs is None:
-            raise ValueError("Cannot update CameraGroup if it does not exist!")
-        update_instructions = UpdateInstructions.from_configs(new_configs=camera_configs,
-                                                              old_configs=self.camera_group.camera_configs)
-        logger.trace(f"Camera Config Update instructions: {update_instructions}")
-        self.camera_group.update_camera_configs(camera_configs=camera_configs,
-                                                update_instructions=update_instructions)
-
-    def close_camera_group(self):
-        if self.camera_group is None:
-            return
-        logger.debug("Closing existing camera group...")
-        self._reset()
-        logger.success("Camera group closed successfully")
-
-    def start_recording(self, recording_info:RecordingInfo):
-        if self.camera_group is None:
-            raise ValueError("Cannot start recording without CameraGroup!")
-        if self.ipc.record_frames_flag.value:
-            raise ValueError("Cannot start recording when already recording!")
-        self.ipc.start_recording_queue.put(recording_info)
-
-        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
+    def start_recording(self, recording_info: RecordingInfo):
+        self.camera_group_manager.start_recording_all_groups(recording_info=recording_info)
 
     def stop_recording(self):
-        self.ipc.record_frames_flag.value = False
-        self.ipc.ws_ipc_relay_queue.put(self.state_dto())
+        self.camera_group_manager.stop_recording_all_groups()
 
     def state_dto(self):
         return SkellycamAppStateDTO.from_state(self)
 
-    def _reset(self):
-        if self.camera_group:
-            self.close_camera_group()
-        if self.shmorchestrator:
-            self.shmorchestrator.close_and_unlink()
-        self.camera_group = None
-        self.shmorchestrator = None
-        self.ipc = InterProcessCommunicationManager(global_kill_flag=self.ipc.global_kill_flag)
-
     def shutdown_skellycam(self):
-        self.ipc.global_kill_flag.value = True
-        if self.camera_group:
-            self.close_camera_group()
+        self.global_kill_flag.value = True
+        self.camera_group_manager.close_all_camera_groups()
+
+    def kill_everything(self):
+        logger.exception("Something went wrong, killing everything!")
+        self.shutdown_skellycam()
 
 
 class SkellycamAppStateDTO(BaseModel):
@@ -146,7 +99,7 @@ def create_skellycam_app(global_kill_flag: multiprocessing.Value,
                          ) -> SkellycamApplication:
     global SKELLYCAM_APP_STATE
     if not SKELLYCAM_APP_STATE:
-        SKELLYCAM_APP_STATE = SkellycamApplication.create(global_kill_flag=global_kill_flag)
+        SKELLYCAM_APP_STATE = SkellycamApplication.initialize_skellycam_app(global_kill_flag=global_kill_flag)
     else:
         raise ValueError("SkellycamAppState already exists!")
     return SKELLYCAM_APP_STATE

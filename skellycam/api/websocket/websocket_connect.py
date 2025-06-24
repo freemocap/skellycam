@@ -6,7 +6,7 @@ from skellycam.api.websocket.websocket_server import WebsocketServer
 
 logger = logging.getLogger(__name__)
 
-websocket_router = APIRouter(tags=["Websocket"])
+websocket_router = APIRouter(tags=["Websocket"], prefix="/websocket")
 
 
 @websocket_router.websocket("/connect")

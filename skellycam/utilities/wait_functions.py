@@ -13,9 +13,26 @@ def wait_100ms():
 def wait_10ms():
     time.sleep(1e-2)
 
+def wait_30ms():
+    """
+    Once per frame-ish
+    """
+    wait_10ms()
+    wait_10ms()
+    wait_10ms()
+
 
 def wait_1ms():
     time.sleep(1e-3)
+
+def wait_100us():
+    time.sleep(1e-4)
+
+def wait_10us():
+    time.sleep(1e-5)
+
+def wait_1us():
+    time.sleep(1e-6)
 
 
 

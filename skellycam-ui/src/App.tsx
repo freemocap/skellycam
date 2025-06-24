@@ -1,15 +1,12 @@
 import React from 'react';
-import {PaperbaseContent} from "@/layout/paperbase_theme/PaperbaseContent";
-import {Provider} from "react-redux";
-import {AppStateStore} from "@/store/AppStateStore";
-import {WebSocketContextProvider} from "@/context/websocket-context/WebSocketContext";
-
+import { PaperbaseContent } from "@/layout/paperbase_theme/PaperbaseContent";
+import { Provider } from "react-redux";
+import { AppStateStore } from "@/store/AppStateStore";
+import { WebSocketContextProvider } from "@/context/websocket-context/WebSocketContext";
+import { urlService } from '@/services/urlService';
 
 function App() {
-    const _port = 8006;
-    const wsUrl = `ws://localhost:${_port}/skellycam/websocket/connect`;
-
-
+    const wsUrl = urlService.getWebSocketUrl();
     return (
         <Provider store={AppStateStore}>
                 <WebSocketContextProvider url={wsUrl}>
@@ -20,3 +17,4 @@ function App() {
 }
 
 export default App;
+

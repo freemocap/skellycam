@@ -2,16 +2,13 @@ import asyncio
 import json
 import logging
 import multiprocessing
-import time
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.core.camera_group.camera.config.camera_config import CameraConfig
-from skellycam.core.frames.payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.frames.payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.recorders.timestamps.framerate_tracker import CurrentFramerate, FramerateTracker
-from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app, SkellycamAppStateDTO
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel
+from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
+from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
+from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
+    get_websocket_log_queue
 from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -23,11 +20,10 @@ class WebsocketServer:
         self.websocket = websocket
         self._app: SkellycamApplication = get_skellycam_app()
 
-        self.latest_backend_framerate: CurrentFramerate | None = None
-        self.latest_frontend_framerate: CurrentFramerate | None = None
-
         self._websocket_should_continue = True
         self.ws_tasks: list[asyncio.Task] = []
+        self.last_received_frontend_confirmation: int = -1
+        self.last_sent_frame_number: int = -1
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -41,16 +37,16 @@ class WebsocketServer:
         # Only close if still connected
         if self.websocket.client_state == WebSocketState.CONNECTED:
             await self.websocket.close()
-
-        if not self._app.ipc.global_kill_flag.value:
-            logger.error("Websocket connection closed, but global kill flag is not set. "
-                         "This indicates a potential issue with the application state."
-                         )
+        # Cancel all tasks
+        for task in self.ws_tasks:
+            if not task.done():
+                task.cancel()
+        logger.debug("WebsocketRunner context manager exited.")
 
     @property
     def should_continue(self):
         return (
-                self._app.ipc.global_should_continue
+                self._app.should_continue
                 and self._websocket_should_continue
                 and self.websocket.client_state == WebSocketState.CONNECTED
         )
@@ -58,7 +54,7 @@ class WebsocketServer:
     async def run(self):
         logger.info("Starting websocket runner...")
         self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
-                         asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
+                         # asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
                          asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
                          asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler")]
 
@@ -72,119 +68,52 @@ class WebsocketServer:
                     task.cancel()
             raise
 
-    async def _ipc_queue_relay(self):
-        """
-        Relay messages from the sub-processes to the frontend via the websocket.
-        """
-        logger.info("Starting websocket relay listener...")
-
-        try:
-            while self.should_continue:
-                if not self._app.ipc.ws_ipc_relay_queue.empty():
-                    try:
-                        await self._handle_ipc_queue_message(message=self._app.ipc.ws_ipc_relay_queue.get())
-                    except multiprocessing.queues.Empty:
-                        continue
-                    except Exception as e:
-                        logger.exception(f"Error handling IPC queue message: {e.__class__}: {e}")
-                        raise
-                else:
-                    await async_wait_1ms()
-
-        except WebSocketDisconnect:
-            logger.api("Client disconnected, ending listener task...")
-        except asyncio.CancelledError:
-            pass
-        finally:
-            logger.info("Ending listener for frontend payload messages in queue...")
-        logger.info("Ending listener for client messages...")
-
-    async def _handle_ipc_queue_message(self, message: object | None = None):
-        if isinstance(message, SkellycamAppStateDTO):
-            logger.trace(f"Relaying SkellycamAppStateDTO to frontend")
-        elif isinstance(message, dict) and isinstance(list(message.values())[0], CameraConfig):
-            logger.trace(f"Updating device extracted camera configs")
-            self._app.set_device_extracted_camera_configs(message)
-            return
-        elif isinstance(message, CurrentFramerate):
-            self.latest_backend_framerate = message
-            return  # will send framerate update bundled with frontend payload
-        else:
-            logger.warning(f"Unknown message type: {type(message)}")
-
-        await self.websocket.send_json(message.model_dump())
-
     async def _frontend_image_relay(self):
         """
         Relay image payloads from the shared memory to the frontend via the websocket.
         """
         logger.info(
             f"Starting frontend image payload relay...")
-        frontend_framerate_tracker = FramerateTracker.create(framerate_source="frontend")
-        camera_group_uuid = None
-        latest_mf_number = -1
         try:
             while self.should_continue:
-                await async_wait_1ms()
+                await async_wait_10ms()
+                if  self.last_received_frontend_confirmation >= self.last_sent_frame_number:
 
-                if not self._app.frame_escape_shm:
-                    latest_mf_number = -1
-                    continue
+                    new_frontend_payloads: list[FrontendFramePayload] = self._app.get_new_frontend_payloads(
+                        if_newer_than=self.last_sent_frame_number)
+                    for fe_payload in new_frontend_payloads:
+                        if not self.websocket.client_state == WebSocketState.CONNECTED:
+                            logger.error("Websocket is not connected, cannot send payload!")
+                            raise RuntimeError("Websocket is not connected, cannot send payload!")
 
-                if self._app.camera_group and camera_group_uuid != self._app.camera_group.uuid:
-                    latest_mf_number = -1
-                    camera_group_uuid = self._app.camera_group.uuid
-                    continue
+                        if self.websocket.client_state != WebSocketState.CONNECTED:
+                            return
 
-                if not self._app.frame_escape_shm.latest_mf_number.value > latest_mf_number:
-                    continue
-
-                mf_payload = self._app.frame_escape_shm.get_multi_frame_payload(
-                    camera_configs=self._app.camera_group.camera_configs,
-                    retrieve_type="latest")
-                frontend_framerate_tracker.update(time.perf_counter_ns())
-                if mf_payload.multi_frame_number % 10 == 0:
-                    # update every 10 multi-frames to match backend framerate behavior
-                    self.latest_frontend_framerate = frontend_framerate_tracker.current_framerate
-                await self._send_frontend_payload(mf_payload)
-                latest_mf_number = mf_payload.multi_frame_number
-
+                        payload_json = fe_payload.model_dump_json()
+                        payload_bytes = payload_json.encode('utf-8')
+                        # if fe_payload.multi_frame_number %2 == 0:
+                        #     continue
+                        await self.websocket.send_bytes(payload_bytes)
+                        self.last_sent_frame_number = fe_payload.multi_frame_number
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
         except asyncio.CancelledError:
             pass
         except Exception as e:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
+            get_skellycam_app().kill_everything()
             raise
-
-    async def _send_frontend_payload(self,
-                                     mf_payload: MultiFramePayload):
-        mf_payload.backend_framerate = self.latest_backend_framerate
-        mf_payload.frontend_framerate = self.latest_frontend_framerate
-        frontend_payload = FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=mf_payload)
-        logger.loop(f"Sending frontend payload through websocket...")
-        if not self.websocket.client_state == WebSocketState.CONNECTED:
-            logger.error("Websocket is not connected, cannot send payload!")
-            raise RuntimeError("Websocket is not connected, cannot send payload!")
-
-        if self.websocket.client_state != WebSocketState.CONNECTED:
-            return
-
-        await self.websocket.send_bytes(frontend_payload.model_dump_json().encode('utf-8'))
-
-        if not self.websocket.client_state == WebSocketState.CONNECTED:
-            logger.error("Websocket shut down while sending payload!")
-            raise RuntimeError("Websocket shut down while sending payload!")
 
     async def _logs_relay(self):
         logger.info("Starting websocket log relay listener...")
+        logs_queue = get_websocket_log_queue()
         try:
             while self.should_continue:
-                if not self._app.ipc.ws_logs_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
+                if not logs_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
                     try:
-                        log_record: LogRecordModel = self._app.ipc.ws_logs_queue.get_nowait()
-                        await self.websocket.send_json(log_record)
-                    except (multiprocessing.queues.Empty, self._app.ipc.ws_logs_queue.Empty):
+                        log_record: LogRecordModel = logs_queue.get_nowait()
+                        # await self.websocket.send_json(log_record)
+                    except (multiprocessing.queues.Empty, logs_queue.Empty):
                         await async_wait_1ms()
                 else:
                     await async_wait_10ms()
@@ -200,17 +129,54 @@ class WebsocketServer:
         try:
             while self.should_continue:
                 try:
-                    message = await self.websocket.receive_text()
-                    data = json.loads(message)
-                    logger.info(f"Received message from client: {data}")
+                    message = await self.websocket.receive()
+                    if message:
+                        if "text" in message:
+                            text_content = message.get("text", "")
+                            # Try to parse as JSON if it looks like JSON
+                            if text_content.strip().startswith('{') or text_content.strip().startswith('['):
+                                try:
+                                    data = json.loads(text_content)
 
+                                    # Handle received_frame acknowledgment
+                                    if 'multi_frame_number' in data:
+                                        self.last_received_frontend_confirmation = data['multi_frame_number']
+
+                                except json.JSONDecodeError as e:
+                                    logger.error(f"Failed to decode JSON message: {e}")
+                            else:
+                                # Handle plain text messages
+                                logger.info(f"Websocket received message: `{text_content}`")
+                                # Add any specific handling for plain text commands here
+
+                        elif "bytes" in message:
+                            bytes_content = message.get("bytes", b"")
+                            logger.debug(f"Received bytes message of length {len(bytes_content)}")
+                            try:
+                                # Attempt to decode bytes as JSON
+                                text_content = bytes_content.decode('utf-8')
+                                if text_content.strip().startswith('{') or text_content.strip().startswith('['):
+                                    data = json.loads(text_content)
+                                    logger.info(f"Processed JSON message from client: {data}")
+
+                                    # Handle received_frame acknowledgment
+                                    if 'received_frame' in data:
+                                        self.last_received_frontend_confirmation = data['received_frame']
+                                        logger.debug(
+                                            f"Frontend acknowledged receipt of frame {self.last_received_frontend_confirmation}")
+                            except (UnicodeDecodeError, json.JSONDecodeError) as e:
+                                logger.error(f"Failed to decode bytes message: {e}")
+
+                        else:
+                            logger.warning(f"Received unexpected message format: {message}")
 
                 except WebSocketDisconnect:
-                    logger.api("Client disconnected, ending client message handler...")
+                    logger.info("Client disconnected, ending client message handler...")
+                    self._websocket_should_continue = False
                     break
                 except Exception as e:
                     logger.exception(f"Error handling client message: {e.__class__}: {e}")
         except asyncio.CancelledError:
-            pass
+            logger.debug("Client message handler task cancelled")
         finally:
             logger.info("Ending client message handler...")

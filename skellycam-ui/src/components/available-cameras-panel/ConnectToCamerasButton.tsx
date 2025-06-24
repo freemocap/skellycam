@@ -1,6 +1,6 @@
 // ConnectToCamerasButton.tsx
 import React from 'react';
-import {Button} from '@mui/material';
+import {Button, Typography} from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {selectSelectedDevices} from "@/store/slices/cameras-slices/camerasSlice";
@@ -48,19 +48,22 @@ export const ConnectToCamerasButton: React.FC<ConnectToCamerasButtonProps> = ({ 
             onClick={handleConnectClick}
             disabled={!hasSelectedCameras || isLoading}
             sx={{
-                m: 1,
-                p: 2,
+                ml: 1,
                 fontSize: 'small',
                 color: extendedPaperbaseTheme.palette.primary.contrastText,
                 backgroundColor: "#900078",
-                border: `2px solid ${extendedPaperbaseTheme.palette.primary.light}`,
+                borderStyle: 'solid',
+                borderWidth: '1px',
+                borderColor: '#000b10',
                 '&:disabled': {
                     backgroundColor: "#9d729c",
                     color: "#333",
                 }
             }}
         >
-            {isLoading ? 'Connecting...' : 'Connect/Apply'}
+            <Typography variant={'h6'}>
+            {isLoading ? 'Connecting...' : 'Connect'}
+            </Typography>
         </Button>
     );
 };

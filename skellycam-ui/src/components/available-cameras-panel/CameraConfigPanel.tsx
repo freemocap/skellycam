@@ -1,10 +1,13 @@
-import {Box, Collapse, useTheme} from "@mui/material";
-import Grid from '@mui/material/Grid2'; // Updated import
+import {Box, Collapse, IconButton, Tooltip, useTheme} from "@mui/material";
+import Grid from "@mui/material/Grid2";
+import MediationIcon from '@mui/icons-material/Mediation';
 import * as React from "react";
 import {CameraConfigResolution} from "./CameraConfigResolution";
 import {CameraConfigExposure} from "./CameraConfigExposure";
 import {CameraConfigRotation} from "./CameraConfigRotation";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
+import {copyConfigToAllCameras} from "@/store/slices/cameras-slices/camerasSlice";
+import {useAppDispatch} from "@/store/AppStateStore";
 
 interface CameraConfigPanelProps {
     config: CameraConfig;
@@ -13,19 +16,25 @@ interface CameraConfigPanelProps {
 }
 
 export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
-    config,
-    onConfigChange,
-    isExpanded
-}) => {
+                                                                        config,
+                                                                        onConfigChange,
+                                                                        isExpanded,
+                                                                    }) => {
     const theme = useTheme();
+    const dispatch = useAppDispatch();
 
-    const handleChange = (field: keyof CameraConfig, value: any) => {
+    const handleChange = <K extends keyof CameraConfig>(
+        key: K,
+        value: CameraConfig[K]
+    ) => {
         onConfigChange({
             ...config,
-            [field]: value
+            [key]: value,
         });
     };
-
+    const handleCopyToAllCameras = () => {
+        dispatch(copyConfigToAllCameras(config.camera_id));
+    };
     return (
         <Collapse in={isExpanded}>
             <Box
@@ -38,32 +47,48 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                     border: `1px solid ${theme.palette.divider}`,
                 }}
             >
+
                 <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    {/* Top row with Resolution, Rotation, and Copy Settings */}
+                    <Grid size={{xs: 12, sm: 5}}>
                         <CameraConfigResolution
                             resolution={config.resolution}
                             onChange={(width, height) =>
-                                handleChange('resolution', { width, height })}
+                                handleChange("resolution", {width, height})
+                            }
                         />
                     </Grid>
 
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid size={{xs: 12, sm: 5}}>
                         <CameraConfigRotation
                             rotation={config.rotation}
-                            onChange={(value) => handleChange('rotation', value)}
+                            onChange={(value) => handleChange("rotation", value)}
                         />
                     </Grid>
+
+                    <Grid size={{xs: 12, sm: 2}} sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                        <Tooltip title="Copy settings to all cameras">
+                            <IconButton
+                                size="small"
+                                onClick={handleCopyToAllCameras}
+                                aria-label="Copy settings to all cameras"
+                            >
+                                <MediationIcon/>
+                            </IconButton>
+                        </Tooltip>
+                    </Grid>
+
+                    {/* Bottom row with Exposure controls */}
                     <Grid size={12}>
                         <CameraConfigExposure
                             exposureMode={config.exposure_mode}
                             exposure={config.exposure}
                             onExposureModeChange={(mode) =>
-                                handleChange('exposure_mode', mode)}
-                            onExposureValueChange={(value) =>
-                                handleChange('exposure', value)}
+                                handleChange("exposure_mode", mode)
+                            }
+                            onExposureValueChange={(value) => handleChange("exposure", value)}
                         />
                     </Grid>
-
                 </Grid>
             </Box>
         </Collapse>

@@ -1,17 +1,15 @@
 import logging
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
 
 from pydantic import BaseModel, Field
 
-from skellycam.core import CameraIndex
-from skellycam.core.recorders.timestamps.full_timestamp import FullTimestamp
-
-if TYPE_CHECKING:
-    from skellycam.core.recorders.recording_manager import RecordingManager
+from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
 
 logger = logging.getLogger(__name__)
+SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
+TIMESTAMPS_FOLDER_NAME = "synchronized_videos/timestamps"
+CAMERA_TIMESTAMPS_FOLDER_NAME = "synchronized_videos/timestamps/camera_timestamps"
 
 
 class RecordingInfo(BaseModel):
@@ -24,15 +22,32 @@ class RecordingInfo(BaseModel):
 
     @property
     def full_recording_path(self) -> str:
-        return str(Path(f"{self.recording_directory}/{self.recording_name}"))
+        rec_path = Path(f"{self.recording_directory}/{self.recording_name}")
+        rec_path.mkdir(parents=True, exist_ok=True)
+        return str(rec_path)
 
-    @classmethod
-    def from_recording_manager(cls, recording_manager: 'RecordingManager'):
-        return cls(recording_name=recording_manager.recording_name,
-                   recording_directory=recording_manager.recording_folder
-                     )
+    @property
+    def videos_folder(self) -> str:
+        path = Path(self.full_recording_path)/SYNCHRONIZED_VIDEOS_FOLDER_NAME
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
 
+    @property
+    def timestamps_folder(self) -> str:
+        path = Path(self.full_recording_path) / TIMESTAMPS_FOLDER_NAME
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
+
+    @property
+    def camera_timestamps_folder(self) -> str:
+        path = Path(self.full_recording_path)/CAMERA_TIMESTAMPS_FOLDER_NAME
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
+
+    @property
+    def recording_info_path(self) -> str:
+        return str(Path(self.full_recording_path)/f"{self.recording_name}_info.json")
     def save_to_file(self):
-        logger.debug(f"Saving recording info to [{self.recording_directory}/{self.recording_name}_info.json]")
-        with open(f"{self.recording_directory}/{self.recording_name}_info.json", "w") as f:
+        logger.debug(f"Saving recording info to [{self.recording_info_path}]")
+        with open(self.recording_info_path, "w") as f:
             f.write(self.model_dump_json(indent=4))
