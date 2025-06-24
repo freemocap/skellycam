@@ -7,7 +7,7 @@ import pytest
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 
 

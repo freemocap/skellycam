@@ -1,17 +1,15 @@
 import logging
 import threading
-import time
 import uuid
 from collections import deque
 from pathlib import Path
-import cv2
 
+import cv2
 import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.timestamps.recording_timestamps import RecordingTimestamps
+from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import CameraIdString, RecordingManagerIdString
@@ -38,12 +36,14 @@ class VideoManager(BaseModel):
     recording_timestamps: RecordingTimestamps
     mf_recarrays: deque[np.recarray] = Field(default_factory=deque)
     is_finished: bool = False
+
     class Config:
         arbitrary_types_allowed = True
+
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
-                camera_configs: CameraConfigs,
+               camera_configs: CameraConfigs,
                ):
 
         logger.debug(f"Creating RecordingManager for recording folder {recording_info.recording_name}")
@@ -55,12 +55,7 @@ class VideoManager(BaseModel):
                                                                     config=config,
                                                                     ) for camera_id, config in camera_configs.items()}
                    )
-    @property
-    def camera_configs(self) -> CameraConfigs:
-        """
-        Returns the camera configurations for all cameras in the recording.
-        """
-        return {camera_id: video_recorder.camera_config for camera_id, video_recorder in self.video_recorders.items()}
+
     @property
     def frame_counts_to_save(self) -> dict[CameraIdString, int]:
         """
@@ -69,29 +64,17 @@ class VideoManager(BaseModel):
         return {camera_id: video_recorder.number_of_frames_to_write for camera_id, video_recorder in
                 self.video_recorders.items()}
 
-
     def add_multi_frame_recarrays(self, mf_recarrays: list[np.recarray]):
-        self.mf_recarrays.extend(mf_recarrays)
+        for index in range(len(mf_recarrays)):
+            self.add_multi_frame(mf_recarrays[index])
 
+    def add_multi_frame(self, mf_recarray: np.recarray):
+        # logger.loop(
+        #     f"Adding multi-frame {mf_recarray.multi_frame_number} to video recorder for:  {self.recording_info.recording_name}")
 
-    def add_multi_frame(self, mf_payload: MultiFramePayload):
-        logger.loop(
-            f"Adding multi-frame {mf_payload.multi_frame_number} to video recorder for:  {self.recording_info.recording_name}")
-
-
-        for camera_id in mf_payload.camera_ids:
-            frame = mf_payload.get_frame(camera_id)
-            self.video_recorders[camera_id].add_frame(frame=frame)
-        self.recording_timestamps.add_multiframe(mf_payload)
-
-    def _convert_mf_recarrays_to_payloads(self):
-        while len(self.mf_recarrays) > 0:
-            # Pop the first recarray from the deque
-            mf_recarray = self.mf_recarrays.popleft()
-            # Convert it to a MultiFramePayload
-            self.add_multi_frame(MultiFramePayload.from_numpy_record_array(mf_recarray, apply_config_rotation=True))
-
-
+        self.recording_timestamps.add_multiframe(mf_recarray)
+        for camera_id in mf_recarray.dtype.names:
+            self.video_recorders[camera_id].add_frame(frame=mf_recarray[camera_id])
 
     def try_save_one_frame(self) -> bool:
         """
@@ -107,9 +90,9 @@ class VideoManager(BaseModel):
         """
         saves one frame from one video recorder
         """
-        self._convert_mf_recarrays_to_payloads()
         if self.is_finished:
-            logger.warning(f"RecordingManager for `{self.recording_info.recording_name}` is already finished. Cannot save more frames.")
+            logger.warning(
+                f"RecordingManager for `{self.recording_info.recording_name}` is already finished. Cannot save more frames.")
             return False
         if max(self.frame_counts_to_save.values()) == 0:
             return False
@@ -126,16 +109,15 @@ class VideoManager(BaseModel):
 
     def finish_and_close(self):
 
-        logger.info(f"Finishing up {len(self.video_recorders)} video recorders for recording: `{self.recording_info.recording_name}`")
+        logger.info(
+            f"Finishing up {len(self.video_recorders)} video recorders for recording: `{self.recording_info.recording_name}`")
         finish_threads = []
-        self._convert_mf_recarrays_to_payloads()
         for recorder in self.video_recorders.values():
             finish_threads.append(threading.Thread(target=recorder.finish_and_close))
             finish_threads[-1].start()
         for thread in finish_threads:
             thread.join()
         self.close()
-
 
     def close(self):
         logger.debug(f"Closing {self.__class__.__name__} for recording: `{self.recording_info.recording_name}`")
@@ -209,7 +191,8 @@ class VideoManager(BaseModel):
             if not camera_ts_file.exists():
                 raise ValueError(f"Camera timestamp file for camera {camera_id} does not exist: {camera_ts_file}")
             camera_timestamp_files[camera_id] = camera_ts_file
-            logger.trace(f"Recording Validation Check#3 - Camera timestamp file for camera {camera_id} exists: {camera_ts_file}")
+            logger.trace(
+                f"Recording Validation Check#3 - Camera timestamp file for camera {camera_id} exists: {camera_ts_file}")
 
         # Check 4: Verify timestamps have the same number of frames as videos
         for camera_id, ts_file in camera_timestamp_files.items():
@@ -222,11 +205,12 @@ class VideoManager(BaseModel):
                     raise ValueError(
                         f"Camera {camera_id} has {frame_counts[camera_id]} video frames but {ts_frame_count} timestamp entries")
 
-                logger.trace(f"Recording Validation Check#4 - Camera {camera_id} has matching frame count in video and timestamps: {ts_frame_count}")
+                logger.trace(
+                    f"Recording Validation Check#4 - Camera {camera_id} has matching frame count in video and timestamps: {ts_frame_count}")
             except Exception as e:
                 raise ValueError(f"Error validating timestamp file for camera {camera_id}: {e}")
 
         # If we got here, all validation checks passed
         logger.info(f"Recording validation successful for {self.recording_info.recording_name}"
-                       f"\n\t- {len(video_files)} videos saved with {expected_frame_count} frames each"
-                       f"\n\t- All timestamp files present and match video frame counts")
+                    f"\n\t- {len(video_files)} videos saved with {expected_frame_count} frames each"
+                    f"\n\t- All timestamp files present and match video frame counts")

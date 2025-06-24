@@ -148,6 +148,12 @@ class DescriptiveStatistics(BaseModel):
 
     @classmethod
     def from_samples(cls, samples: SamplesType, name: str = "", units: str = "") -> 'DescriptiveStatistics':
+        # throw error on empty samples
+        if isinstance(samples, list) and len(samples) == 0:
+            raise ValueError("Sample list cannot be empty")
+        if isinstance(samples, np.ndarray) and samples.size == 0:
+            raise ValueError("Sample array cannot be empty")
+
         return cls(
             name=name,
             units=units,

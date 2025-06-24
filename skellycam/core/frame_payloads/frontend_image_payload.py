@@ -9,8 +9,7 @@ from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.core.types.type_overloads import CameraIndex, Base64JPEGImage
 

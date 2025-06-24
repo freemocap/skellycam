@@ -11,13 +11,11 @@ from skellycam.core.camera.opencv.opencv_apply_config import apply_camera_config
 from skellycam.core.camera.opencv.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
-from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtractedConfigMessage, \
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
@@ -48,68 +46,27 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
     def should_continue():
         return ipc.should_continue and not close_self_flag.value
 
-    # Create cv2.VideoCapture object
-    try:
-        cv2_video_capture, config = create_cv2_video_capture(config)
-    except Exception as e:
-        logger.exception(f"Failed to create cv2.VideoCapture for camera {camera_id}: {e}")
-        self_status.signal_error()
-        close_self_flag.value = True
-        ipc.kill_everything()
-        raise RuntimeError(f"Could not create cv2.VideoCapture for camera {camera_id}") from e
-    ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(DeviceExtractedConfigMessage(extracted_config=config))
-    self_status.connected.value = True
-
-    logger.debug(f"Camera {config.camera_id} connected, awaiting shm message...")
-
-    while camera_shm is None and should_continue():
-        wait_10ms()
-        if not shm_subscription.empty():
-            shm_message: SetShmMessage = shm_subscription.get()
-            if not isinstance(shm_message, SetShmMessage):
-                raise RuntimeError(
-                    f"Expected SetShmMessage for camera {camera_id}, but received {type(shm_message)}"
-                )
-            camera_shm_dto = shm_message.camera_group_shm_dto.camera_shm_dtos[camera_id]
-            logger.debug(f"Creating camera shared memory for camera {camera_id}...")
-            camera_shm = FramePayloadSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
-                                                                     read_only=False)
-
-    # Ensure camera_group_shm is properly initialized before proceeding
-    if camera_shm is None or not camera_shm.valid:
-        raise RuntimeError("Failed to initialize camera_group_shm")
-    logger.success(f"Camera {camera_id} ready!")
-
-    while not ipc.all_ready and should_continue():
-        wait_10ms()
-    frame_rec_array = create_initial_frame_rec_array(config=config,
-                                                     ipc=ipc)
+    (camera_shm,
+     config,
+     cv2_video_capture,
+     frame_rec_array) = setup_camera_loop(camera_shm=camera_shm,
+                                          close_self_flag=close_self_flag,
+                                          config=config,
+                                          ipc=ipc,
+                                          self_status=self_status,
+                                          shm_subscription=shm_subscription,
+                                          should_continue=should_continue)
     try:
         logger.debug(f"Camera {config.camera_id} frame grab loop starting...")
-        while should_continue():
-            if self_status.should_pause.value or not config.use_this_camera:
-                self_status.is_paused.value = True
-                wait_10ms()
-                continue
-            self_status.is_paused.value = False
-
-
-            if not orchestrator.should_grab_by_id(camera_id=camera_id):
-                wait_10us()
-                continue
-
-            self_status.grabbing_frame.value = True
-            frame_rec_array = opencv_get_frame(cap=cv2_video_capture, frame_rec_array=frame_rec_array, )
-            camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
-            self_status.grabbing_frame.value = False
-            frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
-                                                   cv2_video_capture=cv2_video_capture,
-                                                   ipc=ipc,
-                                                   self_status=self_status,
-                                                   update_camera_settings_subscription=update_camera_settings_subscription)
-            frame_rec_array = initialize_frame_timestamps(frame_rec_array=frame_rec_array)
-            # Last camera to increment their frame count status triggers the next frame_grab
-            self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+        run_camera_loop(camera_shm=camera_shm,
+                        config=config,
+                        cv2_video_capture=cv2_video_capture,
+                        frame_rec_array=frame_rec_array,
+                        ipc=ipc,
+                        orchestrator=orchestrator,
+                        self_status=self_status,
+                        should_continue=should_continue,
+                        update_camera_settings_subscription=update_camera_settings_subscription)
 
 
 
@@ -131,6 +88,83 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         logger.debug(f"Camera {config.camera_index} process completed")
 
 
+def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
+                    config: CameraConfig,
+                    cv2_video_capture: cv2.VideoCapture,
+                    frame_rec_array: np.recarray,
+                    ipc: CameraGroupIPC,
+                    orchestrator: CameraOrchestrator,
+                    self_status: CameraStatus,
+                    should_continue: callable,
+                    update_camera_settings_subscription: TopicSubscriptionQueue):
+    while should_continue():
+        if ipc.should_pause.value:
+            self_status.is_paused.value = True
+            wait_10ms()
+            continue
+        self_status.is_paused.value = False
+
+        if not orchestrator.should_grab_by_id(camera_id=config.camera_id):
+            wait_10us()
+            continue
+
+        self_status.grabbing_frame.value = True
+        frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
+                                           frame_rec_array=frame_rec_array, )
+        camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
+        self_status.grabbing_frame.value = False
+        frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
+                                               cv2_video_capture=cv2_video_capture,
+                                               ipc=ipc,
+                                               self_status=self_status,
+                                               update_camera_settings_subscription=update_camera_settings_subscription)
+        frame_rec_array = initialize_frame_timestamps(frame_rec_array=frame_rec_array)
+        # Last camera to increment their frame count status triggers the next frame_grab
+        self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+
+
+def setup_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer | None,
+                      close_self_flag: multiprocessing.Value,
+                      config: CameraConfig,
+                      ipc: CameraGroupIPC,
+                      self_status: CameraStatus,
+                      shm_subscription:       TopicSubscriptionQueue,
+                      should_continue: callable) -> tuple[FramePayloadSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
+    # Create cv2.VideoCapture object
+    try:
+        cv2_video_capture, config = create_cv2_video_capture(config)
+    except Exception as e:
+        logger.exception(f"Failed to create cv2.VideoCapture for camera {config.camera_id}: {e}")
+        self_status.signal_error()
+        close_self_flag.value = True
+        ipc.kill_everything()
+        raise RuntimeError(f"Could not create cv2.VideoCapture for camera {config.camera_id}") from e
+    ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(DeviceExtractedConfigMessage(extracted_config=config))
+    self_status.connected.value = True
+    logger.debug(f"Camera {config.camera_id} connected, awaiting shm message...")
+    while camera_shm is None and should_continue():
+        wait_10ms()
+        if not shm_subscription.empty():
+            shm_message: SetShmMessage = shm_subscription.get()
+            if not isinstance(shm_message, SetShmMessage):
+                raise RuntimeError(
+                    f"Expected SetShmMessage for camera {config.camera_id}, but received {type(shm_message)}"
+                )
+            camera_shm_dto = shm_message.camera_group_shm_dto.camera_shm_dtos[config.camera_id]
+            logger.debug(f"Creating camera shared memory for camera {config.camera_id}...")
+            camera_shm = FramePayloadSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
+                                                                     read_only=False)
+    # Ensure camera_group_shm is properly initialized before proceeding
+    if camera_shm is None or not camera_shm.valid:
+        raise RuntimeError("Failed to initialize camera_group_shm")
+    logger.success(f"Camera {config.camera_id} ready!")
+    while not ipc.all_ready and should_continue():
+        wait_10ms()
+    frame_rec_array = create_initial_frame_rec_array(config=config,
+                                                     ipc=ipc)
+    return camera_shm, config, cv2_video_capture, frame_rec_array
+
+
 def create_initial_frame_rec_array(config: CameraConfig, ipc: CameraGroupIPC) -> np.recarray:
     # Create initial frame record array
     frame_dtype = create_frame_dtype(config)
@@ -141,7 +175,7 @@ def create_initial_frame_rec_array(config: CameraConfig, ipc: CameraGroupIPC) ->
     frame_rec_array.frame_metadata.timestamps.timebase_mapping[0] = ipc.timebase_mapping.to_numpy_record_array()
     # Initialize the image with zeros
     image_shape = (config.resolution.height, config.resolution.width, config.color_channels)
-    frame_rec_array.image[0] = np.zeros(image_shape, dtype=np.uint8)+ config.camera_index
+    frame_rec_array.image[0] = np.zeros(image_shape, dtype=np.uint8) + config.camera_index
     return frame_rec_array
 
 
@@ -169,7 +203,8 @@ def check_for_new_config(frame_rec_array: np.recarray,
             frame_rec_array.frame_metadata.camera_config[0] = extracted_config.to_numpy_record_array()
             ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
                 DeviceExtractedConfigMessage(
-                    extracted_config=CameraConfig.from_numpy_record_array(frame_rec_array.frame_metadata.camera_config[0])))
+                    extracted_config=CameraConfig.from_numpy_record_array(
+                        frame_rec_array.frame_metadata.camera_config[0])))
             self_status.updating.value = False
 
     return frame_rec_array

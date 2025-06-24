@@ -7,10 +7,10 @@ import pandas as pd
 import pytest
 
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.timestamps.recording_timestamps import RecordingTimestamps
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps import FrameTimestamps
+from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
+from skellycam.core.camera_group.timestamps import RecordingTimestamps
+from skellycam.core.camera_group.timestamps import TimebaseMapping
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 

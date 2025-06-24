@@ -2,7 +2,7 @@
 from pydantic import BaseModel
 from tabulate import tabulate
 
-from skellycam.core.timestamps.recording_timestamps import RecordingTimestamps
+from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 

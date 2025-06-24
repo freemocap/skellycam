@@ -3,8 +3,8 @@ from numpydantic import NDArray, Shape
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.utilities.rotate_image import rotate_image
 

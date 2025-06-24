@@ -11,8 +11,8 @@ import numpy as np
 import pyaudio
 from pydantic import BaseModel
 
-from skellycam.core.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 
 logger = logging.getLogger(__name__)
 

@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.mf_publisher import MultiframeBuilder
+from skellycam.core.camera_group.mf_builder import MultiframeBuilder
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
     RecordingInfoMessage
@@ -116,14 +116,17 @@ class CameraGroup:
         Pause the camera group operations.
         """
         logger.info(f"Pausing camera group ID: {self.id}")
-        self.cameras.pause(await_paused)
+        self.ipc.pause(await_paused=await_paused)
+        logger.info(f"Camera group ID: {self.id} is paused.")
+
 
     def unpause(self, await_unpaused: bool = True):
         """
         Unpause the camera group operations.
         """
         logger.info(f"Unpausing camera group ID: {self.id}")
-        self.cameras.unpause(await_unpaused)
+        self.ipc.unpause(await_unpaused)
+        logger.info(f"Camera group ID: {self.id} is unpaused.")
 
     def update_camera_settings(self, requested_configs: CameraConfigs) -> CameraConfigs:
         """
@@ -154,8 +157,9 @@ class CameraGroup:
 
     def close(self):
         logger.debug("Closing camera group")
-
+        self.ipc.pause(await_paused=True)
         self.ipc.should_continue = False
+
 
         try:
             self.recorder.close()
@@ -166,6 +170,11 @@ class CameraGroup:
             self.cameras.close()
         except Exception as e:
             logger.error(f"Error closing cameras: {type(e).__name__} - {e}")
+
+        try:
+            self.mf_builder.close()
+        except Exception as e:
+            logger.error(f"Error closing multi-frame builder: {type(e).__name__} - {e}")
 
         if self.shm is not None:
             try:

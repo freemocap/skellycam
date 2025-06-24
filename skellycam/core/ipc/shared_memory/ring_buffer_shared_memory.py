@@ -136,6 +136,8 @@ class SharedMemoryRingBuffer(BaseModel):
             raise ValueError("Ring buffer is not ready to read yet.")
         if not self.new_data_available:
             raise ValueError("No new data available to read.")
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         return self._read_next_data(rec_array)
 
     def _read_next_data(self, rec_array: np.recarray | None) -> np.recarray | None:

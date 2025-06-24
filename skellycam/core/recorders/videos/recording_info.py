@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
 
 logger = logging.getLogger(__name__)
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"

@@ -2,8 +2,8 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 
 
@@ -60,5 +60,3 @@ class FrameMetadata(BaseModel):
 
         return result
 
-    def to_csv_row(self, recording_start_time_ns:int)->dict[str,object]:
-        return FrameTimestampCSVRow.from_mf_timestamps(frame_metadata=self, recording_start_time_ns=recording_start_time_ns).model_dump()

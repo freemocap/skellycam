@@ -1,20 +1,20 @@
 import logging
 import multiprocessing
-import tracemalloc
+
+import numpy as np
 from pydantic import BaseModel, ConfigDict, SkipValidation
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, SetShmMessage, RecordingInfoMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_manager import VideoManager
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
-from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_1ms, wait_1s
 
 logger = logging.getLogger(__name__)
 
@@ -116,14 +116,18 @@ class RecordingManager(BaseModel):
 
 
         video_manager: VideoManager | None = None
-        camera_configs: CameraConfigs| None = None
+        camera_config_recarrays: dict[CameraIdString, np.recarray]| None = None
         audio_recorder: AudioRecorder | None = None
         status.is_running_flag.value = True
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
             while should_continue():
                 wait_1ms()
-
+                if not video_manager and ipc.should_pause.value:
+                    ipc.recording_manager_status.is_paused.value = True
+                    wait_1s()
+                    continue
+                ipc.recording_manager_status.is_paused.value = False
                 # check for new recording info
                 if status.should_record.value and video_manager is None:
                     recording_info_message = recording_info_subscription.get(block=True)
@@ -133,9 +137,9 @@ class RecordingManager(BaseModel):
                         )
 
                     video_manager = RecordingManager.start_recording(status=status,
-                                                        recording_info=recording_info_message.recording_info,
-                                                        camera_configs=camera_configs,
-                                                        video_manager=video_manager)
+                                                                     recording_info=recording_info_message.recording_info,
+                                                                     camera_config_recarrays=camera_config_recarrays,
+                                                                     video_manager=video_manager)
 
 
                 # check for shared memory updates
@@ -143,11 +147,11 @@ class RecordingManager(BaseModel):
                     raise NotImplementedError("Runtime updates of shared memory are not yet implemented.")
 
                 # check/handle new multi-frames
-                video_manager, camera_configs = RecordingManager._get_and_handle_new_mfs(
+                video_manager, camera_config_recarrays = RecordingManager._get_and_handle_new_mfs(
                     status=status,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
-                    camera_configs=camera_configs
+                    camera_config_recarrays=camera_config_recarrays
                 )
 
         except Exception as e:
@@ -171,39 +175,39 @@ class RecordingManager(BaseModel):
     def _get_and_handle_new_mfs(status: RecordingManagerStatus,
                                 camera_group_shm: CameraGroupSharedMemoryManager,
                                 video_manager: VideoManager | None,
-                                camera_configs: CameraConfigs | None,
+                                camera_config_recarrays: dict[CameraIdString, np.recarray] | None,
                                 ) ->tuple[VideoManager | None, CameraConfigs | None]:
 
         latest_mf_recarrays = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
 
         if len(latest_mf_recarrays) > 0:
             # if new frames, add them to the recording manager (doesn't save them yet)
-            current_configs = {camera_id:CameraConfig.from_numpy_record_array(latest_mf_recarrays[0][camera_id].frame_metadata.camera_config[0])
+            current_configs = {camera_id:latest_mf_recarrays[0][camera_id].frame_metadata.camera_config[0]
                                  for camera_id in latest_mf_recarrays[0].dtype.names}
 
             if video_manager is not None:
-                if camera_configs != current_configs:
+                if camera_config_recarrays != current_configs:
                     raise ValueError('Cannot change camera configs while recording is active!')
                 video_manager.add_multi_frame_recarrays(latest_mf_recarrays)
-            camera_configs = current_configs
+            camera_config_recarrays = current_configs
+        else:
+            if video_manager:
+                if status.should_record.value:
+                    # if we're recording and there are no new frames, opportunistically save one frame if we're recording
+                    video_manager.save_one_frame()
+                else:
+                    # if we have a video manager but not recording, then finish and close it
+                    video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
 
-        if video_manager:
-            if status.should_record.value:
-                # if we're recording and there are no new frames, opportunistically save one frame if we're recording
-                video_manager.save_one_frame()
-            else:
-                # if we have a video manager but not recording, then finish and close it
-                video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
-
-        return video_manager, camera_configs
+        return video_manager, camera_config_recarrays
 
     @staticmethod
     def start_recording(status: RecordingManagerStatus,
                         recording_info: RecordingInfo,
-                        camera_configs: CameraConfigs|None,
+                        camera_config_recarrays: dict[CameraIdString, np.recarray],
                         video_manager: VideoManager | None) -> VideoManager | None:
-        if camera_configs is None:
-            raise ValueError("camera_configs cannot be None when starting a recording")
+        camera_configs = {camera_id: CameraConfig.from_numpy_record_array(camera_config_recarrays[camera_id])
+                                   for camera_id in camera_config_recarrays.keys()}
         if isinstance(video_manager, VideoManager):
             RecordingManager.stop_recording(status=status, video_manager=video_manager)
 

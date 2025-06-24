@@ -4,8 +4,8 @@ import time
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 
 logger = logging.getLogger(__name__)

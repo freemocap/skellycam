@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 
 
 class FullTimestamp(BaseModel):

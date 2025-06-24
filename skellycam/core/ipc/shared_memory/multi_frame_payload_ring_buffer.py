@@ -4,10 +4,9 @@ import time
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.utilities.time_unit_conversion import ns_to_ms
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +73,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         """
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+        #TODO - use new data indicies to slice the new arrays into a mf_recarray thats `num of new mfs` long rather than looping appends into a list
         mfs: list[np.recarray] = []
         new_data_indicies = self.new_data_indicies
         for _ in new_data_indicies:

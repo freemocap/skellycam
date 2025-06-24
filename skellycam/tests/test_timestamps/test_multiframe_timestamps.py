@@ -1,14 +1,11 @@
-import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
-from skellycam.core.timestamps.frame_timestamps import FrameTimestamps, FrameDurations
-from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps import FrameTimestamps
+from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
+from skellycam.core.camera_group.timestamps import TimebaseMapping
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
-from skellycam.utilities.time_unit_conversion import ns_to_ms
 
 
 class TestMultiframeTimestamps:

@@ -1,6 +1,5 @@
 import shutil
 import tempfile
-from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
@@ -18,13 +17,13 @@ from skellycam.core.camera.config.camera_config import (
 )
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.recorders.videos.video_manager import VideoManager, SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME
+from skellycam.core.recorders.videos.video_manager import VideoManager
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
-from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.timestamps.full_timestamp import FullTimestamp
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps import FrameTimestamps
+from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.camera_group.timestamps import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString, CameraIndex
 
 

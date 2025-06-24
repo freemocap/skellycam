@@ -4,9 +4,9 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
+from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.frame_payloads.multi_frame_metadata import MultiFrameMetadata
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.frame_payloads.multiframes.multi_frame_metadata import MultiFrameMetadata
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -68,7 +68,8 @@ class MultiFramePayload(BaseModel):
         """
         if not self.full:
             raise ValueError("MultiFramePayload is not full, cannot get timestamp")
-        return int(np.min([frame.frame_metadata.timestamps.pre_frame_grab_ns for frame in self.frames.values() if frame is not None]))
+        return int(np.min([frame.frame_metadata.timestamps.pre_frame_grab_ns
+                           for frame in self.frames.values() if frame is not None]))
     @property
     def multi_frame_number(self) -> int:
         frame_numbers = [frame.frame_metadata.frame_number for frame in self.frames.values()]

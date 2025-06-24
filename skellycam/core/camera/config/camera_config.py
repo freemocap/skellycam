@@ -192,6 +192,14 @@ class CameraConfig(BaseModel):
         return  shape
 
     @property
+    def video_image_shape(self) -> Tuple[int, int]:
+        """
+        Returns the image shape as (width, height) for video processing.
+        Note this is different from the numpy image shape, which is (height, width, channels), i.e. row-major.
+        """
+        return self.resolution.width, self.resolution.height
+
+    @property
     def image_size_bytes(self) -> int:
         return self.resolution.width * self.resolution.height * self.color_channels * BYTES_PER_MONO_PIXEL
 

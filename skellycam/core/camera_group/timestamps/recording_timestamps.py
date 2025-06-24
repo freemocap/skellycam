@@ -4,14 +4,14 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.multiframes.multiframe_recarray_utilities import mf_recarray_find_earliest_timestamps
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.timestamps.frame_timestamps import FrameTimestamps
-from skellycam.core.timestamps.multiframe_csv_row import MultiFrameTimestampsCSVRow
-from skellycam.core.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.timestamps.frame_timestamp_csv_row import FrameTimestampsCSVRow
+from skellycam.core.camera_group.timestamps.frame_timestamp_csv_row import FrameTimestampsCSVRow
+from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
+from skellycam.core.camera_group.timestamps.multiframe_csv_row import MultiFrameTimestampsCSVRow
+from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms, ms_to_sec, ns_to_sec
@@ -19,7 +19,13 @@ from skellycam.utilities.time_unit_conversion import ns_to_ms, ms_to_sec, ns_to_
 logger = logging.getLogger(__name__)
 
 
+
 class RecordingTimestamps(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    frame_timestamp_recarrays: list[np.recarray] = Field(
+        default_factory=list,
+        description="List of numpy record arrays containing frame timestamps for each multiframe payload in the recording session."
+                    "Stored as recarray during recording and converted to MultiFrameTimestamps after recording is complete (Pydantic validation is relatively slow!).")
     multiframe_timestamps: list[MultiFrameTimestamps] = Field(
         default_factory=list,
         description="List of timestamps for each multi-frame payload in the recording session")
@@ -255,7 +261,8 @@ class RecordingTimestamps(BaseModel):
 
     @cached_property
     def total_camera_to_recorder_time_stats(self) -> DescriptiveStatistics:
-
+        if not self.multiframe_timestamps:
+            raise ValueError("No multiframe timestamps available")
         return DescriptiveStatistics.from_samples(
             samples=[ts.total_camera_to_recorder_time_ms.median for ts in self.multiframe_timestamps],
             name="total_camera_to_recorder_time_ms",
@@ -268,6 +275,8 @@ class RecordingTimestamps(BaseModel):
         Returns a dictionary mapping camera IDs to lists of FrameLifespanTimestamps.
         Each list contains the timestamps for that camera across all multiframe payloads.
         """
+        if not self.multiframe_timestamps:
+            raise ValueError("No multiframe timestamps available")
         camera_timestamps = {}
         for mf_ts in self.multiframe_timestamps:
             for camera_id, frame_ts in mf_ts.frame_timestamps.items():
@@ -282,6 +291,8 @@ class RecordingTimestamps(BaseModel):
         Returns a list of frame numbers for all frames in the recording.
         This is derived from the multiframe timestamps.
         """
+        if not self.multiframe_timestamps:
+            raise ValueError("No multiframe timestamps available")
         return [mf_ts.multiframe_number for mf_ts in self.multiframe_timestamps]
 
     def to_stats(self) -> 'RecordingTimestampsStats':
@@ -289,25 +300,23 @@ class RecordingTimestamps(BaseModel):
         Converts the recording timestamps to a TimestampStats object.
         This is used to generate statistics about the recording timestamps.
         """
-        from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+        from skellycam.core.camera_group.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+        if not self.multiframe_timestamps:
+            raise ValueError("No multiframe timestamps available")
         return RecordingTimestampsStats.from_recording_timestamps(self)
 
-    def add_multiframe(self, multiframe: MultiFramePayload):
-        """
-        Adds a multiframe payload to the recording timestamps.
-        If the multiframe payload is empty, it will not be added.
-        """
+    def add_multiframe(self, mf_recarray: np.recarray):
         if self.recording_start_ns is None:
-            self.recording_start_ns = multiframe.earliest_timestamp_ns
-        self.multiframe_timestamps.append(MultiFrameTimestamps.from_multiframe(multiframe=multiframe,
-                                                                               recording_start_time_ns=self.recording_start_ns))
+            self.recording_start_ns = mf_recarray_find_earliest_timestamps(mf_recarray)
+        self.frame_timestamp_recarrays.append(mf_recarray)
 
     def to_mf_dataframe(self) -> pd.DataFrame:
         """
         Returns a dataframe containing the multiframe timestamps.
         Each row represents a multiframe with statistics across all cameras.
         """
-
+        if not self.multiframe_timestamps:
+            raise ValueError("No multiframe timestamps available")
         # Create a list of MultiFrameTimestampsCSVRow objects
         csv_rows = [MultiFrameTimestampsCSVRow.from_mf_timestamps(mf_timestamps=mf_ts,
                                                                   connection_frame_number=self.frame_numbers[
@@ -328,8 +337,10 @@ class RecordingTimestamps(BaseModel):
         Saves the timestamps to a CSV file in the recording info's timestamps folder.
         The file is named with the recording name and has a .csv extension.
         """
-        if not self.multiframe_timestamps:
-            raise ValueError("No multiframe timestamps available to save")
+        self.multiframe_timestamps = [
+            MultiFrameTimestamps.from_mf_recarray(mf_recarray=mf_recarray,
+                                                  recording_start_time_ns=self.recording_start_ns)
+            for mf_recarray in self.frame_timestamp_recarrays]
         if self.number_of_cameras > 1:
             mf_df = self.to_mf_dataframe()
             mf_df.to_csv(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_timestamps.csv",
@@ -340,7 +351,8 @@ class RecordingTimestamps(BaseModel):
         logger.info(f"Recording stats:\n\n{stats}\n\n")
         Path(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_stats.json").write_text(
             stats.model_dump_json(exclude={'sample_data'}, indent=2), encoding='utf-8')
-        Path(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_stats.txt").write_text(str(stats), encoding='utf-8')
+        Path(f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_stats.txt").write_text(
+            str(stats), encoding='utf-8')
         dfs = self.to_camera_dataframes()
         for camera_id, camera_df in dfs.items():
             camera_df.to_csv(
@@ -354,6 +366,8 @@ class RecordingTimestamps(BaseModel):
         Returns a dictionary of dataframes for each camera in the recording.
         Each dataframe contains the timestamps for that camera.
         """
+        if not self.multiframe_timestamps:
+            raise ValueError("No multiframe timestamps available")
         camera_dfs = {}
         for camera_id, frame_timestamps in self.timestamps_by_camera_id.items():
             # Create a list of FrameTimestampsCSVRow objects

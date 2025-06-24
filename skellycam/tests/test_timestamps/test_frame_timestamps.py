@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from skellycam.core.timestamps.frame_timestamps import FrameTimestamps, FrameDurations
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps import FrameTimestamps, FrameDurations
+from skellycam.core.camera_group.timestamps import TimebaseMapping
 from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
 
 

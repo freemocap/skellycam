@@ -6,7 +6,6 @@ from dataclasses import dataclass
 import numpy as np
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
@@ -14,7 +13,6 @@ from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGr
 from skellycam.core.recorders.recording_manager import WorkerType
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, WorkerStrategy
-from skellycam.utilities.time_unit_conversion import ns_to_ms
 from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
 
 logger = logging.getLogger(__name__)
@@ -68,6 +66,7 @@ class MultiframeBuilder:
         shm_dto: CameraGroupSharedMemoryDTO = shm_message.camera_group_shm_dto
         camera_group_shm = CameraGroupSharedMemoryManager.recreate(shm_dto=shm_dto, read_only=False)
         logger.success(f"Starting multi-frame publication thread for camera group {ipc.group_id}...")
+
         # Create multiframe dtype based on camera configs
         multiframe_dtype = create_multiframe_dtype(camera_group_shm.camera_configs)
         mf_rec_array = np.recarray(1, dtype=multiframe_dtype)
@@ -76,18 +75,15 @@ class MultiframeBuilder:
             mf_rec_array[camera_id].frame_metadata.frame_number[0] = -1
         try:
             while should_continue():
-                tik0 = time.perf_counter_ns()
-                if not ipc.camera_orchestrator.all_cameras_ready:
+                if ipc.should_pause.value:
+                    ipc.mf_builder_status.is_paused.value = True
                     wait_10ms()
                     continue
-                tik1 = time.perf_counter_ns()
+                ipc.mf_builder_status.is_paused.value = False
+                if not ipc.camera_orchestrator.all_cameras_ready:
+                    wait_1ms()
+                    continue
                 mf_rec_array = camera_group_shm.build_all_new_multiframes(mf_rec_array)
-                tik2 = time.perf_counter_ns()
-                wait_1ms()
-                tik3 = time.perf_counter_ns()
-                # print(f"mf build times: (0) [{ns_to_ms(tik1 - tik0):.3f}ms], "
-                #       f"(1) [{ns_to_ms(tik2 - tik1):.3f}ms], "
-                #       f"(2) [{ns_to_ms(tik3 - tik2):.3f}ms]")
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")

@@ -5,9 +5,9 @@ import numpy as np
 import pytest
 
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.frame_payloads.multi_frame_payload import MultiFramePayload
+from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
-from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.camera_group.timestamps import TimebaseMapping
 
 
 # Define process functions at module level so they can be pickled
