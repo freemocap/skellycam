@@ -15,9 +15,13 @@ from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGr
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy
-from skellycam.utilities.wait_functions import wait_10ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)
+
+
+def wait_1sec():
+    pass
 
 
 @dataclass
@@ -158,7 +162,9 @@ class CameraGroup:
     def close(self):
         logger.debug("Closing camera group")
         self.ipc.pause(await_paused=True)
+        wait_100ms()
         self.ipc.should_continue = False
+        wait_1sec()
 
         try:
             self.recorder.close()

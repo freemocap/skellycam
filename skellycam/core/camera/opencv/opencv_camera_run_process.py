@@ -99,7 +99,9 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                     update_camera_settings_subscription: TopicSubscriptionQueue):
     while should_continue():
         if self_status.should_pause.value:
-            self_status.is_paused.value = True
+            if not self_status.is_paused.value:
+                logger.trace(f"Pausing camera {config.camera_id}...")
+                self_status.is_paused.value = True
             wait_10ms()
             continue
         self_status.is_paused.value = False

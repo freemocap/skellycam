@@ -200,7 +200,7 @@ const ImageGrid: React.FC = () => {
                                         zIndex: 1,
                                     }}
                                 >
-                                    Camera {cameraConfigs[image.cameraId]?.camera_index !== undefined ? cameraConfigs[image.cameraId]?.camera_index : '?'} ({image.cameraId})
+                                    Camera {cameraConfigs[image.cameraId]?.camera_index ?? '?'} ({image.cameraId})
 
                                 </Box>
                                 <Box

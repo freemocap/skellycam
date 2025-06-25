@@ -1,6 +1,6 @@
 /**
  * URL Service
- * 
+ *
  * Provides centralized URL generation for all API endpoints and WebSocket connections.
  * This ensures consistency across the application and simplifies changes to URL structure.
  */
@@ -46,6 +46,8 @@ class UrlService {
       updateConfig: this.getApiUrl('/camera/update'),
       startRecording: this.getApiUrl('/camera/group/all/record/start'),
       stopRecording: this.getApiUrl('/camera/group/all/record/stop'),
+      pauseCameras: this.getApiUrl('/camera/group/all/pause'),
+      unpauseCameras: this.getApiUrl('/camera/group/all/unpause'),
     };
   }
 }

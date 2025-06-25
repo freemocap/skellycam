@@ -4,6 +4,7 @@ import { Button, keyframes, CircularProgress } from '@mui/material';
 import { styled } from '@mui/system';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
+import {urlService} from "@/services/urlService";
 
 interface PauseUnpauseButtonProps {
     disabled?: boolean;
@@ -38,49 +39,51 @@ export const PauseUnpauseButton: React.FC<PauseUnpauseButtonProps> = ({
                                                                       }) => {
     const [isPaused, setIsPaused] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-
-    const handlePause = async () => {
+    // Add a timeout to prevent indefinite loading state
+    const handleApiCall = async (url: string, successAction: () => void) => {
         setIsLoading(true);
+
+        // Create an AbortController to handle timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
         try {
-            console.log('Pausing...');
-            const pauseUrl = 'http://localhost:8006/skellycam/camera/group/all/pause';
-            const response = await fetch(pauseUrl, {
+            const response = await fetch(url, {
                 method: 'GET',
+                signal: controller.signal
             });
 
             if (response.ok) {
-                console.log('Paused successfully');
-                setIsPaused(true);
+                successAction();
             } else {
-                console.error(`Failed to Pause: ${response.statusText}`);
+                console.error(`API call failed: ${response.statusText}`);
             }
         } catch (error) {
-            console.error('Pause failed:', error);
+            if (error.name === 'AbortError') {
+                console.error('API call timed out');
+            } else {
+                console.error('API call failed:', error);
+            }
         } finally {
+            clearTimeout(timeoutId);
             setIsLoading(false);
         }
     };
 
-    const handleUnpause = async () => {
-        setIsLoading(true);
-        try {
-            console.log('Unpausing...');
-            const unpauseUrl = 'http://localhost:8006/skellycam/camera/group/all/unpause';
-            const response = await fetch(unpauseUrl, {
-                method: 'GET',
-            });
+    const handlePause = () => {
+        const pauseUrl = urlService.getCameraUrls().pauseCameras;
+        handleApiCall(pauseUrl, () => {
+            console.log('Paused successfully');
+            setIsPaused(true);
+        });
+    };
 
-            if (response.ok) {
-                console.log('Unpaused successfully');
-                setIsPaused(false);
-            } else {
-                console.error(`Failed to unpause: ${response.statusText}`);
-            }
-        } catch (error) {
-            console.error('Unpause failed:', error);
-        } finally {
-            setIsLoading(false);
-        }
+    const handleUnpause = () => {
+        const unpauseUrl = urlService.getCameraUrls().unpauseCameras;
+        handleApiCall(unpauseUrl, () => {
+            console.log('Unpaused successfully');
+            setIsPaused(false);
+        });
     };
 
     const handleClick = () => {

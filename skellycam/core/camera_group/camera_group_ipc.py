@@ -68,16 +68,16 @@ class CameraGroupIPC(BaseModel):
     def all_paused(self) -> bool:
         return all([
             self.camera_orchestrator.all_cameras_paused,
-            self.recording_manager_status.is_paused.value,
-            self.mf_builder_status.is_paused.value
+            # self.recording_manager_status.is_paused.value,
+            # self.mf_builder_status.is_paused.value
         ])
 
     @property
     def all_unpaused(self) -> bool:
         return not any([
             self.camera_orchestrator.all_cameras_paused,
-            self.recording_manager_status.is_paused.value,
-            self.mf_builder_status.is_paused.value
+            # self.recording_manager_status.is_paused.value,
+            # self.mf_builder_status.is_paused.value
         ])
     def publish_shm_message(self, shm_dto) -> None:
         """
@@ -95,8 +95,8 @@ class CameraGroupIPC(BaseModel):
         """
         Pause the camera group.
         """
-        self.mf_builder_status.should_pause.value = True
-        self.recording_manager_status.should_pause.value = True
+        # self.mf_builder_status.should_pause.value = True
+        # self.recording_manager_status.should_pause.value = True
         self.camera_orchestrator.pause(await_paused)
         if await_paused:
             while not self.all_paused:
@@ -106,8 +106,8 @@ class CameraGroupIPC(BaseModel):
         """
         Unpause the camera group.
         """
-        self.mf_builder_status.should_pause.value = False
-        self.recording_manager_status.should_pause.value = False
+        # self.mf_builder_status.should_pause.value = False
+        # self.recording_manager_status.should_pause.value = False
         self.camera_orchestrator.unpause(await_unpaused)
         if await_unpaused:
             while not self.all_unpaused:

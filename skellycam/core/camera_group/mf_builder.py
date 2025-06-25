@@ -13,7 +13,7 @@ from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGr
 from skellycam.core.recorders.recording_manager import WorkerType
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, WorkerStrategy
-from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_1ms, wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -75,11 +75,7 @@ class MultiframeBuilder:
             mf_rec_array[camera_id].frame_metadata.frame_number[0] = -1
         try:
             while should_continue():
-                if ipc.mf_builder_status.should_pause.value:
-                    ipc.mf_builder_status.is_paused.value = True
-                    wait_10ms()
-                    continue
-                ipc.mf_builder_status.is_paused.value = False
+
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_1ms()
                     continue

@@ -46,7 +46,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     # that was in the field of view of the camera during the frame/timeslice
     # when the image was 'grabbed' in the previous step.
     # This is the empirical measurement upon which most/all our future calculations and inferences will be based.
-    retrieve_success, _ = cap.retrieve(image=frame_rec_array.image[0])  # provide pre-allocated image  for speed
+    retrieve_success, _ = cap.retrieve(image=frame_rec_array.image[0])  # provide pre-allocated image for speed
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = time.perf_counter_ns()
 
     if not retrieve_success:

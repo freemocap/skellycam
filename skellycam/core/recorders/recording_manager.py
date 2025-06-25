@@ -14,7 +14,7 @@ from skellycam.core.recorders.recording_manager_status import RecordingManagerSt
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_manager import VideoManager
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
-from skellycam.utilities.wait_functions import wait_10ms, wait_1ms, wait_1s
+from skellycam.utilities.wait_functions import wait_10ms, wait_1ms, wait_1s, wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -123,11 +123,7 @@ class RecordingManager(BaseModel):
         try:
             while should_continue():
                 wait_1ms()
-                if not video_manager and ipc.recording_manager_status.should_pause.value:
-                    ipc.recording_manager_status.is_paused.value = True
-                    wait_1s()
-                    continue
-                ipc.recording_manager_status.is_paused.value = False
+
                 # check for new recording info
                 if status.should_record.value and video_manager is None:
                     recording_info_message = recording_info_subscription.get(block=True)
