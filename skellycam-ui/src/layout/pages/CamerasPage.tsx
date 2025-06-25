@@ -4,7 +4,8 @@ import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
 import {useTheme} from "@mui/material/styles";
-import CameraGridDisplay from '@/components/CamerasView';
+import StaticCameraGridDisplay from "@/components/camera-views/StaticCamerasView";
+import ResizableCameraGridDisplay from "@/components/camera-views/ResizableCamerasView";
 
 export const CamerasPage = () => {
     const theme = useTheme();
@@ -33,7 +34,8 @@ export const CamerasPage = () => {
                     overflow: 'hidden',
                 }}>
                     <ErrorBoundary>
-                        <CameraGridDisplay/>
+                        {/*<ResizableCameraGridDisplay/>*/}
+                        <StaticCameraGridDisplay/>
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{p: 1}}>

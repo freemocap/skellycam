@@ -231,7 +231,7 @@ const ImageGrid: React.FC = () => {
     );
 };
 
-const CameraGridDisplay: React.FC = () => {
+const StaticCameraGridDisplay: React.FC = () => {
     const {latestImageBitmaps, isConnected} = useWebSocketContext();
     const [isLoading, setIsLoading] = useState(true);
     const hasImages = Object.keys(latestImageBitmaps).length > 0;
@@ -307,4 +307,4 @@ const CameraGridDisplay: React.FC = () => {
     );
 };
 
-export default CameraGridDisplay;
+export default StaticCameraGridDisplay;
