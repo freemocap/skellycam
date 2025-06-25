@@ -34,8 +34,8 @@ export const CamerasPage = () => {
                     overflow: 'hidden',
                 }}>
                     <ErrorBoundary>
-                        {/*<ResizableCameraGridDisplay/>*/}
-                        <StaticCameraGridDisplay/>
+                        <ResizableCameraGridDisplay/>
+                        {/*<StaticCameraGridDisplay/>*/}
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{p: 1}}>
