@@ -8,6 +8,7 @@ import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext"
 interface ProcessedImageInfo {
     cameraId: string;
     aspectRatio: number; // width / height
+    cameraIndex: number; // Added camera index for sorting
 }
 
 const ImageGrid: React.FC = () => {
@@ -33,23 +34,21 @@ const ImageGrid: React.FC = () => {
     // Container dimensions for layout calculations
     const [containerDimensions, setContainerDimensions] = useState({width: 0, height: 0});
 
-    // Calculate image info (just cameraId and aspectRatio) from bitmaps
-    const processedImages = useMemo(() => {
-        const images: Record<string, ProcessedImageInfo> = {};
+    // Calculate image info and sort by camera index
+    const sortedProcessedImages = useMemo(() => {
+        // Create array of image info objects
+        const images: ProcessedImageInfo[] = Object.entries(latestImageBitmaps).map(([cameraId, bitmap]) => ({
+            cameraId,
+            aspectRatio: bitmap.width / bitmap.height,
+            cameraIndex: cameraConfigs[cameraId]?.camera_index ?? Number.MAX_SAFE_INTEGER
+        }));
 
-        Object.entries(latestImageBitmaps).forEach(([cameraId, bitmap]) => {
-            images[cameraId] = {
-                cameraId,
-                aspectRatio: bitmap.width / bitmap.height,
-            };
-        });
-
-        return images;
-    }, [latestImageBitmaps]);
+        // Sort by camera index
+        return images.sort((a, b) => a.cameraIndex - b.cameraIndex);
+    }, [latestImageBitmaps, cameraConfigs]);
 
     // Draw bitmaps to canvases whenever they change
     useEffect(() => {
-
         Object.entries(latestImageBitmaps).forEach(([cameraId, bitmap]) => {
             const canvas = canvasRefs.current[cameraId];
             if (canvas) {
@@ -94,8 +93,7 @@ const ImageGrid: React.FC = () => {
 
     // Calculate optimal grid layout
     const {cols, rows} = useMemo(() => {
-        const images = Object.values(processedImages);
-        if (images.length === 0) return {cols: 1, rows: 1};
+        if (sortedProcessedImages.length === 0) return {cols: 1, rows: 1};
 
         // Find the grid configuration that maximizes image size
         let bestLayout = {cols: 1, rows: 1, area: 0};
@@ -103,8 +101,8 @@ const ImageGrid: React.FC = () => {
         const containerHeight = containerDimensions.height || 800;
 
         // Try different grid configurations
-        for (let cols = 1; cols <= images.length; cols++) {
-            const rows = Math.ceil(images.length / cols);
+        for (let cols = 1; cols <= sortedProcessedImages.length; cols++) {
+            const rows = Math.ceil(sortedProcessedImages.length / cols);
 
             // Calculate the area each image would get
             const cellWidth = containerWidth / cols;
@@ -112,7 +110,7 @@ const ImageGrid: React.FC = () => {
 
             // Calculate minimum scaling factor across all images
             let minScale = Infinity;
-            images.forEach(image => {
+            sortedProcessedImages.forEach(image => {
                 const scaleWidth = cellWidth / (image.aspectRatio * cellHeight);
                 const scaleHeight = cellHeight / (image.aspectRatio === 0 ? 1 : cellWidth / image.aspectRatio);
                 minScale = Math.min(minScale, Math.min(scaleWidth, scaleHeight));
@@ -127,7 +125,7 @@ const ImageGrid: React.FC = () => {
         }
 
         return {cols: bestLayout.cols, rows: bestLayout.rows};
-    }, [processedImages, containerDimensions.width, containerDimensions.height]);
+    }, [sortedProcessedImages, containerDimensions.width, containerDimensions.height]);
 
 
     return (
@@ -143,7 +141,7 @@ const ImageGrid: React.FC = () => {
                 position: 'relative',
             }}
         >
-            {Object.keys(processedImages).length === 0 ? (
+            {sortedProcessedImages.length === 0 ? (
                 <Box
                     sx={{
                         display: 'flex',
@@ -167,10 +165,10 @@ const ImageGrid: React.FC = () => {
                         boxSizing: 'border-box',
                     }}
                 >
-                    {Object.entries(processedImages).map(([cameraId, image]) => (
+                    {sortedProcessedImages.map((image) => (
                         <Grid
                             item
-                            key={cameraId}
+                            key={image.cameraId}
                             xs={12 / cols}
                             sx={{
                                 height: `${100 / rows}%`,
@@ -202,7 +200,8 @@ const ImageGrid: React.FC = () => {
                                         zIndex: 1,
                                     }}
                                 >
-                                    Camera {cameraConfigs[cameraId]?.camera_index || '?'} ({cameraId})
+                                    Camera {cameraConfigs[image.cameraId]?.camera_index !== undefined ? cameraConfigs[image.cameraId]?.camera_index : '?'} ({image.cameraId})
+
                                 </Box>
                                 <Box
                                     sx={{
@@ -215,7 +214,7 @@ const ImageGrid: React.FC = () => {
                                     }}
                                 >
                                     <canvas
-                                        ref={el => canvasRefs.current[cameraId] = el}
+                                        ref={el => canvasRefs.current[image.cameraId] = el}
                                         style={{
                                             maxWidth: '100%',
                                             maxHeight: '100%',

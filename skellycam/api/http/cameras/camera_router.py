@@ -128,3 +128,18 @@ def camera_update_put_endpoint(
                              detail=f"Error when processing `/camera/update` request: {type(e).__name__} - {e}")
 
 
+@camera_router.get("/group/all/pause",
+                  summary="Pause all camera groups")
+def pause_camera_groups():
+    logger.api("Received `/pause` request...")
+    get_skellycam_app().pause_camera_groups()
+    logger.api("`/pause` request handled successfully.")
+    return True
+
+@camera_router.get("/group/all/unpause",
+                  summary="Unpause all camera groups")
+def unpause_camera_groups():
+    logger.api("Received `/unpause` request...")
+    get_skellycam_app().unpause_camera_groups()
+    logger.api("`/unpause` request handled successfully.")
+    return True

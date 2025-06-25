@@ -14,9 +14,9 @@ import {selectAllCameras, toggleCameraSelection, updateCameraConfig,} from "@/st
 import {detectCameraDevices} from "@/store/thunks/detect-cameras-thunks";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 import {CloseCamerasButton} from "@/components/available-cameras-panel/CloseCamerasButton";
-import {updateCameraConfigsThunk} from "@/store/thunks/update-camera-configs-thunk";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 import {ApplyCameraConfigsButton} from "@/components/available-cameras-panel/ApplyCameraConfigsButton";
+import {PauseUnpauseButton} from "../PauseUnpauseButton";
 
 export const AvailableCamerasPanel = () => {
     const theme = useTheme();
@@ -27,7 +27,7 @@ export const AvailableCamerasPanel = () => {
     const isLoading = useAppSelector((state) => state.cameras.isLoading);
 
     // Convert cameras record to array for easier rendering
-    const camerasArray = Object.values(camerasRecord).sort((a,b) =>
+    const camerasArray = Object.values(camerasRecord).sort((a, b) =>
         a.config.camera_index - b.config.camera_index
     );
 
@@ -68,10 +68,6 @@ export const AvailableCamerasPanel = () => {
         );
     };
 
-    const handleApplyConfigs = () => {
-        dispatch(updateCameraConfigsThunk());
-    };
-
     return (
         <Accordion
             defaultExpanded
@@ -108,11 +104,13 @@ export const AvailableCamerasPanel = () => {
                     <Stack direction="row" alignItems="center" spacing={1}>
                         <VideocamIcon/>
                         <Typography variant="subtitle1" fontWeight="medium">
-                            Available Cameras
+                            Cameras
                         </Typography>
                     </Stack>
                 </AccordionSummary>
-
+                <Box sx={{pr: 2}}>
+                    <PauseUnpauseButton/>
+                </Box>
                 <Box sx={{pr: 2}}>
                     <ConnectToCamerasButton onClick={handleConnectCameras}/>
                 </Box>

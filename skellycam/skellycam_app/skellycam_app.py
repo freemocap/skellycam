@@ -64,6 +64,13 @@ class SkellycamApplication:
     def state_dto(self):
         return SkellycamAppStateDTO.from_state(self)
 
+    def pause_camera_groups(self):
+        self.camera_group_manager.pause_all_groups()
+        logger.success("Camera groups paused successfully")
+
+    def unpause_camera_groups(self):
+        self.camera_group_manager.unpause_all_groups()
+        logger.success("Camera groups unpaused successfully")
     def shutdown_skellycam(self):
         self.global_kill_flag.value = True
         self.camera_group_manager.close_all_camera_groups()

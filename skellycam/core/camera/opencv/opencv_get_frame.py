@@ -37,7 +37,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     frame_rec_array.frame_metadata.timestamps.post_frame_grab_ns[0] = time.perf_counter_ns()
 
     if not grab_success:
-        raise RuntimeError(f"Failed to grab frame from camera {frame_rec_array.frame_metadata.config.camera_id[0]}")
+        raise RuntimeError(f"Failed to grab frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
 
     frame_rec_array.frame_metadata.timestamps.pre_frame_retrieve_ns[0] = time.perf_counter_ns()
     # decode the frame buffer into an image!

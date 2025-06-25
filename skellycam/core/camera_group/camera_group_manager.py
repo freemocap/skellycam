@@ -113,3 +113,25 @@ class CameraGroupManager:
             if isinstance(fe_payload, FrontendFramePayload):
                 fe_payloads.append(fe_payload)
         return fe_payloads
+
+    def pause_all_groups(self, await_paused: bool = True) -> None:
+        """
+        Pause all camera groups.
+        """
+        if self.closing:
+            logger.warning("Cannot pause, camera groups are closing.")
+            return
+        for camera_group in self.camera_groups.values():
+            camera_group.pause(await_paused=await_paused)
+            logger.info(f"Paused camera group ID: {camera_group.id}")
+
+    def unpause_all_groups(self, await_unpaused: bool = True) -> None:
+        """
+        Unpause all camera groups.
+        """
+        if self.closing:
+            logger.warning("Cannot unpause, camera groups are closing.")
+            return
+        for camera_group in self.camera_groups.values():
+            camera_group.unpause(await_unpaused=await_unpaused)
+            logger.info(f"Unpaused camera group ID: {camera_group.id}")
