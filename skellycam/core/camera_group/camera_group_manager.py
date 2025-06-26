@@ -2,11 +2,13 @@ import logging
 import multiprocessing
 from dataclasses import dataclass, field
 
+import numpy as np
+
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.type_overloads import CameraGroupIdString, CameraIdString
+from skellycam.core.types.type_overloads import CameraGroupIdString, CameraIdString, FrameNumberInt
 from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)
@@ -104,14 +106,13 @@ class CameraGroupManager:
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 
-    def get_latest_frontend_payloads(self, if_newer_than:int) -> list[FrontendFramePayload]:
+    def get_latest_frontend_payloads(self, if_newer_than:int) -> dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]]:
+        fe_payloads:dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = {}
         if self.closing:
-            return []
-        fe_payloads = []
+            return fe_payloads
         for camera_group in self.camera_groups.values():
-            fe_payload =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than)
-            if isinstance(fe_payload, FrontendFramePayload):
-                fe_payloads.append(fe_payload)
+            frame_number, fe_payload =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than)
+            fe_payloads[camera_group.id] = (frame_number, fe_payload) if fe_payload is not None else None
         return fe_payloads
 
     def pause_all_groups(self, await_paused: bool = True) -> None:

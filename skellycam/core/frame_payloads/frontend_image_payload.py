@@ -11,7 +11,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.core.types.type_overloads import CameraIndex, Base64JPEGImage
+from skellycam.core.types.type_overloads import CameraIndexInt, Base64JPEGImage
 
 DEFAULT_FRONTEND_IMAGE_RESIZE = 0.5
 DEFAULT_JPEG_QUALITY = 80
@@ -32,7 +32,7 @@ class FrontendFramePayload(BaseModel):
     @classmethod
     def from_multi_frame_payload(cls,
                                  multi_frame_payload: MultiFramePayload,
-                                 image_sizes: dict[CameraIndex, dict[str, int]] | None = None,
+                                 image_sizes: dict[CameraIndexInt, dict[str, int]] | None = None,
                                  resize_image: float = DEFAULT_FRONTEND_IMAGE_RESIZE,
                                  jpeg_quality: int = DEFAULT_JPEG_QUALITY) -> "FrontendFramePayload":
 
@@ -60,7 +60,7 @@ class FrontendFramePayload(BaseModel):
 
     @staticmethod
     def _resize_image(frame: FramePayload,
-                      image_sizes: Dict[CameraIndex, Dict[str, int]],
+                      image_sizes: Dict[CameraIndexInt, Dict[str, int]],
                       fallback_resize_ratio: float) -> np.ndarray:
         image = frame.image
         camera_id = frame.camera_id

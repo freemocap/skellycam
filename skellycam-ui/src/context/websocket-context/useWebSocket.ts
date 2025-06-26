@@ -90,12 +90,12 @@ export const useWebSocket = (wsUrl: string) => {
                         setLatestImageBitmaps(newBitmaps);
 
                         // Clean up old bitmaps in the next tick to avoid blocking
-                        setTimeout(() => {
+                        queueMicrotask(() => {
                             Object.values(oldBitmaps).forEach(bitmap => {
                                 bitmap.close();
                             });
-                        }, 0);
-                        // Send acknowledgment for the received frame, triggeing the next one to be sent
+                        });
+                        // Send acknowledgment for the received frame, triggering the next one to be sent
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             const ackMessage = JSON.stringify({
                                 type: 'received_frame',

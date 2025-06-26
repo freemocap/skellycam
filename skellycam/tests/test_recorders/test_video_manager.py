@@ -24,7 +24,7 @@ from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.camera_group.timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.camera_group.timestamps import TimebaseMapping
-from skellycam.core.types.type_overloads import CameraIdString, CameraIndex
+from skellycam.core.types.type_overloads import CameraIdString, CameraIndexInt
 
 
 class TestVideoManager(TestCase):
@@ -39,7 +39,7 @@ class TestVideoManager(TestCase):
         for i, camera_id in enumerate(self.camera_ids):
             self.camera_configs[camera_id] = CameraConfig(
                 camera_id=camera_id,
-                camera_index=CameraIndex(i),
+                camera_index=CameraIndexInt(i),
                 resolution=DEFAULT_RESOLUTION,
                 exposure_mode=DEFAULT_EXPOSURE_MODE,
                 exposure=DEFAULT_EXPOSURE,

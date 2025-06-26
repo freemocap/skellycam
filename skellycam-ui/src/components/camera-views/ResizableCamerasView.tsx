@@ -91,6 +91,8 @@ const ImageGrid: React.FC = () => {
     const theme = useTheme();
     const {latestImageBitmaps} = useWebSocketContext();
     const latestPayload = useAppSelector(state => state.latestPayload);
+    const canvasContextRefs = useRef<Record<string, CanvasRenderingContext2D | null>>({});
+    const dimensionsRef = useRef<Record<string, { width: number, height: number }>>({});
 
     // Safely parse camera configs with a fallback to empty object
     const cameraConfigs = useMemo(() => {
@@ -129,12 +131,18 @@ const ImageGrid: React.FC = () => {
             Object.entries(latestImageBitmaps).forEach(([cameraId, bitmap]) => {
                 const canvas = canvasRefs.current[cameraId];
                 if (canvas) {
-                    const ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for performance
+                    if (!canvasContextRefs.current[cameraId]) {
+                        canvasContextRefs.current[cameraId] = canvas.getContext('2d', { alpha: false });
+                    }
+                    const ctx = canvasContextRefs.current[cameraId];
                     if (ctx) {
-                        // Only resize canvas when dimensions change
-                        if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) {
+                        if (!dimensionsRef.current[cameraId] || 
+                            dimensionsRef.current[cameraId].width !== bitmap.width || 
+                            dimensionsRef.current[cameraId].height !== bitmap.height) {
+                            
                             canvas.width = bitmap.width;
                             canvas.height = bitmap.height;
+                            dimensionsRef.current[cameraId] = { width: bitmap.width, height: bitmap.height };
                         }
 
                         // Draw the bitmap

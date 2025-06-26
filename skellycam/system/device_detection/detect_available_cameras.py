@@ -3,7 +3,7 @@ import platform
 from enum import Enum
 from typing import List, Tuple
 
-from skellycam.core.types.type_overloads import CameraIndex
+from skellycam.core.types.type_overloads import CameraIndexInt
 from skellycam.system.device_detection.camera_device_info import CameraDeviceInfo, AvailableCameras
 from skellycam.system.device_detection.detection_strategies.detect_opencv_ports import detect_opencv_ports, \
     get_available_cameras_opencv
@@ -78,7 +78,7 @@ def _get_available_cameras_pygrabber(remove_camera_names) -> AvailableCameras:
         if any(name in device_name.lower() for name in remove_camera_names):
             logger.debug(f"Skipping camera: {device_name}")
             continue
-        available_cameras[CameraIndex(device_index)] = CameraDeviceInfo.from_pygrabber_device(
+        available_cameras[CameraIndexInt(device_index)] = CameraDeviceInfo.from_pygrabber_device(
             device_index=device_index, device_name=f"{device_name}[{str(device_index)}]"
         )
     return available_cameras

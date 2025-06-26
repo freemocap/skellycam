@@ -5,13 +5,13 @@ import cv2
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.image_resolution import ImageResolution
 from skellycam.core.types.image_rotation_types import RotationTypes
-from skellycam.core.types.type_overloads import CameraIndex
+from skellycam.core.types.type_overloads import CameraIndexInt
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
 logger = logging.getLogger(__name__)
 
 
-def extract_config_from_cv2_capture(camera_index: CameraIndex,
+def extract_config_from_cv2_capture(camera_index: CameraIndexInt,
                                     camera_id: str,
                                     camera_name: str,
                                     cv2_capture: cv2.VideoCapture,

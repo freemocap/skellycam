@@ -79,7 +79,7 @@ class WebsocketServer:
                 await async_wait_10ms()
                 if  self.last_received_frontend_confirmation >= self.last_sent_frame_number:
 
-                    new_frontend_payloads: list[FrontendFramePayload] = self._app.get_new_frontend_payloads(
+                    new_frontend_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = self._app.get_new_frontend_payloads(
                         if_newer_than=self.last_sent_frame_number)
                     for fe_payload in new_frontend_payloads:
                         if not self.websocket.client_state == WebSocketState.CONNECTED:
@@ -89,11 +89,8 @@ class WebsocketServer:
                         if self.websocket.client_state != WebSocketState.CONNECTED:
                             return
 
-                        payload_json = fe_payload.model_dump_json()
-                        payload_bytes = payload_json.encode('utf-8')
-                        # if fe_payload.multi_frame_number %2 == 0:
-                        #     continue
-                        await self.websocket.send_bytes(payload_bytes)
+
+                        await self.websocket.send_bytes(fe_payload)
                         self.last_sent_frame_number = fe_payload.multi_frame_number
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")

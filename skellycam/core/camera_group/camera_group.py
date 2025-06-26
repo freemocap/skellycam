@@ -14,7 +14,8 @@ from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy
+from skellycam.core.types.numpy_record_dtypes import create_frontend_payload_from_mf_recarray
+from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt
 from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ class CameraGroup:
 
 
 
-    def get_latest_frontend_payload(self, if_newer_than: int ) -> FrontendFramePayload | None:
+    def get_latest_frontend_payload(self, if_newer_than: int ) -> tuple[FrameNumberInt, bytes]| None:
         if self.shm is None or not self.shm.valid:
             return None
         if self.shm.latest_multiframe_number.value <= if_newer_than:
@@ -111,8 +112,11 @@ class CameraGroup:
         mf_rec_array = self.shm.multi_frame_ring_shm.get_latest_multiframe()
         if mf_rec_array is None:
             return None
-        self.mf = MultiFramePayload.from_numpy_record_array(mf_rec_array=mf_rec_array, apply_config_rotation=True)
-        return FrontendFramePayload.from_multi_frame_payload(multi_frame_payload=self.mf)
+        return create_frontend_payload_from_mf_recarray(
+            mf_rec_array=mf_rec_array,
+        )
+
+
 
 
     def pause(self, await_paused: bool = True):
