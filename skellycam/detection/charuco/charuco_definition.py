@@ -20,6 +20,7 @@ class CharucoBoardDefinition:
         )
 
         self.number_of_charuco_corners = (self.number_of_squares_width - 1) * (self.number_of_squares_height - 1)
+        self.charuco_detector = cv2.aruco.CharucoDetector(self.charuco_board)
 
 
 def charuco_7x5() -> CharucoBoardDefinition:
