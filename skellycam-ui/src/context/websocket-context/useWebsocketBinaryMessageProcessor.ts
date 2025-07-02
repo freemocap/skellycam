@@ -63,8 +63,6 @@ export const useWebsocketBinaryMessageProcessor = () => {
             // Skip remaining padding in the header (4 bytes)
             offset += 4;
 
-            console.info(`Processing frame ${frameNumber} with ${numberOfCameras} cameras`);
-
             // Process each camera frame
             const newBitmaps: Record<string, ImageBitmap> = {};
             const oldBitmaps = {...bitmapCleanupRef.current};

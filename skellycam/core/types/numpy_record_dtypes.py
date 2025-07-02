@@ -106,6 +106,7 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
 
 JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 
+_reusable_bytes_payload: bytearray = bytearray(0)  # Will be resized on first use
 
 def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_image: float = 0.5,
                                              jpeg_encoding_parameters: list[int] = JPEG_ENCODING_PARAMETERS) -> tuple[
@@ -118,6 +119,8 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
 
     We then convert that list into a bytes object for websocket transmission.
     """
+    global _reusable_bytes_payload
+
     camera_ids = mf_rec_array.dtype.names
     frame_numbers = [mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in camera_ids]
     if len(set(frame_numbers)) != 1:
@@ -127,7 +130,15 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
 
     # Pre-allocate approximate size to avoid reallocations
     estimated_size = 13 + (number_of_cameras * (41 + ONE_MEGABYTE)) + 13  # Header + frames + footer
-    bytes_payload = bytearray(estimated_size)
+
+    # Reuse existing bytearray if it's large enough, otherwise resize it
+    if len(_reusable_bytes_payload) < estimated_size:
+        if len(_reusable_bytes_payload) > 0:
+            logger.warning(f"Reusable bytes payload size ({len(_reusable_bytes_payload)} bytes) is smaller than estimated size ({estimated_size} bytes), resizing.")
+        logger.debug(f"Set reusable bytes payload to {estimated_size} bytes")
+        _reusable_bytes_payload = bytearray(estimated_size)
+
+    # Reset position counter
     current_pos = 0
 
     # Add header
@@ -136,7 +147,7 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
     header_bytes = payload_header.tobytes()
 
 
-    bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
+    _reusable_bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
     current_pos += len(header_bytes)
 
     for camera_id in camera_ids:
@@ -156,17 +167,20 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
                                   frame_recarray.image.shape[2],
                                   jpeg_string_length)], dtype=FRONTEND_FRAME_HEADER_DTYPE)
         frame_header_bytes = frame_header.tobytes()
-        # Ensure enough space in bytearray
-        if current_pos + len(frame_header_bytes) + jpeg_string_length > len(bytes_payload):
-            og_len = len(bytes_payload)
-            bytes_payload.extend(bytearray(max(1000000, len(frame_header_bytes) + jpeg_string_length)))
-            logging.warning(
-                f"Payload size ({og_len}bytes) exceeded pre-allocated size, resized to {len(bytes_payload)} bytes - change default pre-allocated size!")
 
-        # Copy data
-        bytes_payload[current_pos:current_pos + len(frame_header_bytes)] = frame_header_bytes
+        # Ensure enough space in bytearray
+        required_size = current_pos + len(frame_header_bytes) + jpeg_string_length
+        if required_size > len(_reusable_bytes_payload):
+            old_size = len(_reusable_bytes_payload)
+            # resize the bytearray to accommodate the new data ([plus an additional 1MB for future frames])
+            _reusable_bytes_payload.extend(bytearray((required_size - old_size) + ONE_MEGABYTE))
+            logger.warning(
+                f"Payload size ({old_size} bytes) exceeded pre-allocated size, resized to {len(_reusable_bytes_payload)} bytes")
+
+        # Copy data into the reusable bytearray
+        _reusable_bytes_payload[current_pos:current_pos + len(frame_header_bytes)] = frame_header_bytes
         current_pos += len(frame_header_bytes)
-        bytes_payload[current_pos:current_pos + jpeg_string_length] = jpeg_string
+        _reusable_bytes_payload[current_pos:current_pos + jpeg_string_length] = jpeg_string
         current_pos += jpeg_string_length
 
     # Add footer
@@ -175,14 +189,14 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
     footer_bytes = payload_footer.tobytes()
 
     # Ensure enough space
-    if current_pos + len(footer_bytes) > len(bytes_payload):
-        og_len = len(bytes_payload)
-        bytes_payload.extend(bytearray(len(footer_bytes)))
+    if current_pos + len(footer_bytes) > len(_reusable_bytes_payload):
+        og_len = len(_reusable_bytes_payload)
+        _reusable_bytes_payload.extend(bytearray(len(footer_bytes)))
         logging.warning(
-            f"Payload size ({og_len}bytes) exceeded pre-allocated size, resized to {len(bytes_payload)} bytes - change default pre-allocated size!")
+            f"Payload size ({og_len}bytes) exceeded pre-allocated size, resized to {len(_reusable_bytes_payload)} bytes - change default pre-allocated size!")
 
-    bytes_payload[current_pos:current_pos + len(footer_bytes)] = footer_bytes
+    _reusable_bytes_payload[current_pos:current_pos + len(footer_bytes)] = footer_bytes
     current_pos += len(footer_bytes)
 
-    frontend_bytes = bytes_payload[:current_pos]
+    frontend_bytes = _reusable_bytes_payload[:current_pos]
     return frame_number, frontend_bytes
