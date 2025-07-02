@@ -4,8 +4,9 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 
-from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE
+from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
 from skellycam.core.types.type_overloads import FrameNumberInt
+from skellycam.utilities.rotate_image import rotate_image
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ CAMERA_CONFIG_DTYPE = np.dtype([
     ('exposure_mode', 'U32'),
     ('exposure', np.int32),
     ('framerate', np.float32),
-    ('rotation', 'U8'),
+    ('rotation', np.int32),
     ('capture_fourcc', 'U4'),
     ('writer_fourcc', 'U4'),
 ], align=True)
@@ -129,13 +130,13 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
     number_of_cameras = len(camera_ids)
 
     # Pre-allocate approximate size to avoid reallocations
-    estimated_size = 13 + (number_of_cameras * (41 + ONE_MEGABYTE)) + 13  # Header + frames + footer
+    estimated_size = (number_of_cameras+1)*ONE_MEGABYTE
 
     # Reuse existing bytearray if it's large enough, otherwise resize it
     if len(_reusable_bytes_payload) < estimated_size:
         if len(_reusable_bytes_payload) > 0:
             logger.warning(f"Reusable bytes payload size ({len(_reusable_bytes_payload)} bytes) is smaller than estimated size ({estimated_size} bytes), resizing.")
-        logger.debug(f"Set reusable bytes payload to {estimated_size} bytes")
+        logger.debug(f"Set reusable bytes payload to {estimated_size//ONE_KILOBYTE} kilobytes")
         _reusable_bytes_payload = bytearray(estimated_size)
 
     # Reset position counter
@@ -152,7 +153,11 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
 
     for camera_id in camera_ids:
         frame_recarray = mf_rec_array[camera_id][0]
-        image = frame_recarray.image[:]
+
+        if frame_recarray.frame_metadata.camera_config.rotation != -1:
+            image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
+        else:
+            image = frame_recarray.image[:]
         # Faster resize using nearest neighbor interpolation
         resized_img = cv2.resize(image, dsize=None, fx=resize_image, fy=resize_image,
                                  interpolation=cv2.INTER_NEAREST)

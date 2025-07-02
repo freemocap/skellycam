@@ -43,7 +43,13 @@ class VideoRecorder(BaseModel):
             Path(
                 recording_info.videos_folder) / f"{recording_info.recording_name}.camera{config.camera_index}.{config.video_file_extension}")
         Path(video_file_path).parent.mkdir(parents=True, exist_ok=True)
-        video_image_shape = config.video_image_shape
+        if config.rotation.value == -1 or config.rotation.value == cv2.ROTATE_180:
+            video_image_shape = config.resolution.width, config.resolution.height  # (width, height) as per OpenCV's convention (NOT numpy's row-major order)
+        else:
+            video_image_shape = config.resolution.height, config.resolution.width # swap width and height for portrait mode rotations
+
+
+
         logger.debug(f"Created VideoSaver for camera {config.camera_index} with video file path: {video_file_path}")
         return cls(camera_id=camera_id,
                    camera_index=config.camera_index,
@@ -54,7 +60,6 @@ class VideoRecorder(BaseModel):
                    )
 
     def add_frame(self, frame: np.recarray):
-        self._validate_frame_shape(frame)
         self.frames_to_write.append(frame)
 
     def write_one_frame(self) -> int | None:
@@ -67,10 +72,17 @@ class VideoRecorder(BaseModel):
             raise ValueError(f"VideoWriter not open (before adding frame)!")
 
         frame = self.frames_to_write.popleft()
-        self._validate_frame_shape(frame)
+
         self._validate_frame_number(frame)
+        self._validate_rotation(frame)
+        if frame.frame_metadata.camera_config.rotation != -1:
+            image = cv2.rotate(frame.image[0], frame.frame_metadata.camera_config.rotation[0])
+        else:
+            image = frame.image[0]
+        self._validate_image_shape(image)
         self.previous_frame = frame
-        self.video_writer.write(frame.image[0])
+
+        self.video_writer.write(image)
         logger.loop(
             f"VideoRecorder for Camera {self.camera_id} wrote frame {frame.frame_metadata.frame_number} to video file: {self.video_file_path}")
         if not self.video_writer.isOpened():
@@ -99,11 +111,11 @@ class VideoRecorder(BaseModel):
         logger.debug(
             f"Initialized VideoWriter for camera {self.camera_index} - Video file will be saved to {self.video_file_path}")
 
-    def _validate_frame_shape(self, frame: np.recarray):
-        image_video_shape = (frame.image[0].shape[1], frame.image[0].shape[0])
+    def _validate_image_shape(self, image: np.ndarray):
+        image_video_shape = (image.shape[1], image.shape[0])
         if image_video_shape != self.video_image_shape:
             raise ValueError(
-                f"Frame shape ({frame.image.shape}) does not match expected shape ({self.video_image_shape})")
+                f"Frame shape ({image_video_shape}) does not match expected shape ({self.video_image_shape})")
 
     def _validate_frame_number(self, frame: np.recarray):
         if self.previous_frame is not None:
@@ -111,6 +123,17 @@ class VideoRecorder(BaseModel):
                 raise ValueError(f"Frame numbers for camera {self.camera_id} are not consecutive! \n "
                                  f"Previous frame number: {self.previous_frame.frame_metadata.frame_number}, \n"
                                  f"Current frame number: {frame.frame_metadata.frame_number}\n")
+
+    def _validate_rotation(self, frame: np.recarray):
+        """Validate that rotation hasn't changed mid-recording"""
+        if self.previous_frame is not None:
+            current_rotation = frame.frame_metadata.camera_config.rotation
+            previous_rotation = self.previous_frame.frame_metadata.camera_config.rotation
+            if current_rotation != previous_rotation:
+                raise ValueError(f"Rotation changed mid-recording for camera {self.camera_id}! "
+                                 f"Previous rotation: {previous_rotation}, "
+                                 f"Current rotation: {current_rotation}")
+
     def close(self):
         if self.video_writer:
             self.video_writer.release()

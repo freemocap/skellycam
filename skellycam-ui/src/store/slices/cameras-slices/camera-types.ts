@@ -4,7 +4,8 @@ import {z} from 'zod';
 export const PixelFormats = ['RGB', 'BGR', 'GRAY'];
 export const ExposureModes = ['MANUAL', 'AUTO', 'RECOMMEND'];
 export const CameraStatus = ['CONNECTED', 'AVAILABLE', 'UNAVAILABLE', 'IN_USE', 'ERROR'];
-export const RotationOptions = ['0', '90', '180', '270'];
+export const RotationOptions = [-1, 0, 1, 2]; // NO_ROTATION, cv2.CLOCKWISE_90, cv2.ROTATE_180, cv2.COUNTERCLOCKWISE_90
+export const RotationLabels = ['None', '90°', '180°', '270°']; // Human-readable labels
 export const FourccOptions = ['MJPG', 'X264', 'YUYV', 'H264'];
 export const ResolutionPresets = [
     {width: 640, height: 480, label: "VGA (4:3)"},
@@ -63,7 +64,7 @@ export const createDefaultCameraConfig = (index: number, label: string, id: stri
     exposure_mode: ExposureModes[2], // RECOMMEND
     exposure: CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
     framerate: CAMERA_DEFAULT_CONSTRAINTS.framerate.default,
-    rotation: RotationOptions[0], // '0'
+    rotation: RotationOptions[0], // '-1' for NO_ROTATION
     capture_fourcc: FourccOptions[0], // 'MJPG'
     writer_fourcc: FourccOptions[1], // 'X264'
 });
@@ -82,7 +83,7 @@ export const CameraConfigSchema = z.object({
     exposure_mode: z.string(),
     exposure: z.number(),
     framerate: z.number(),
-    rotation: z.string(),
+    rotation: z.number(),
     capture_fourcc: z.string(),
     writer_fourcc: z.string(),
 });

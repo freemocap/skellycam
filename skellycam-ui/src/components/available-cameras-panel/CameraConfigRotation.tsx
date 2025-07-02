@@ -3,25 +3,25 @@ import * as React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import {Box, Tooltip, useTheme} from '@mui/material';
-import {RotationOptionSchema} from "@/store/slices/cameras-slices/camera-types";
+import {RotationOptions, RotationLabels} from "@/store/slices/cameras-slices/camera-types";
 import {z} from 'zod';
 
 interface CameraConfigRotationProps {
-    rotation?: z.infer<typeof RotationOptionSchema>; // Make rotation optional
-    onChange: (rotation: z.infer<typeof RotationOptionSchema>) => void;
+    rotation?: number; // Use number directly
+    onChange: (rotation: number) => void;
 }
 
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
-    rotation = "0", // Set default value to "0"
+    rotation = -1, // Set default value to -1 for NO_ROTATION
     onChange
 }) => {
-    const  theme = useTheme();
+    const theme = useTheme();
     const handleChange = (
         event: React.MouseEvent<HTMLElement>,
-        newRotation: string,
+        newRotation: number,
     ) => {
         if (newRotation !== null) {
-            onChange(newRotation as z.infer<typeof RotationOptionSchema>);
+            onChange(newRotation);
         }
     };
 
@@ -46,10 +46,12 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                         }
                     }}
                 >
-                    <ToggleButton value="0">0°</ToggleButton>
-                    <ToggleButton value="90">90°</ToggleButton>
-                    <ToggleButton value="180">180°</ToggleButton>
-                    <ToggleButton value="270">270°</ToggleButton>
+                    {/* Map through RotationOptions and RotationLabels to create buttons */}
+                    {RotationOptions.map((value, index) => (
+                        <ToggleButton key={value} value={value}>
+                            {RotationLabels[index]}
+                        </ToggleButton>
+                    ))}
                 </ToggleButtonGroup>
             </Tooltip>
         </Box>
