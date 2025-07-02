@@ -22,7 +22,7 @@ const pulseAnimation = keyframes`
     }
 `;
 
-const PulsingButton = styled(Button)(({ pulsing }: { pulsing: boolean }) => ({
+const PulsingButton = styled(Button)<{ pulsing?: boolean }>(({ pulsing }) => ({
     backgroundColor: '#1976d2', // MUI primary blue
     borderRadius: '8px',
     padding: '10px 16px',

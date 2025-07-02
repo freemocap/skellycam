@@ -111,7 +111,10 @@ class CameraGroupManager:
         if self.closing:
             return fe_payloads
         for camera_group in self.camera_groups.values():
-            frame_number, fe_payload =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than)
+            fe_return =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than)
+            if fe_return is None:
+                continue
+            frame_number, fe_payload = fe_return
             fe_payloads[camera_group.id] = (frame_number, fe_payload) if fe_payload is not None else None
         return fe_payloads
 

@@ -5,7 +5,7 @@ import multiprocessing
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
-from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
+from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue
@@ -81,7 +81,8 @@ class WebsocketServer:
 
                     new_frontend_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = self._app.get_new_frontend_payloads(
                         if_newer_than=self.last_sent_frame_number)
-                    for fe_payload in new_frontend_payloads:
+                    for camera_group_id, (frame_number, payload_bytes) in new_frontend_payloads.items():
+
                         if not self.websocket.client_state == WebSocketState.CONNECTED:
                             logger.error("Websocket is not connected, cannot send payload!")
                             raise RuntimeError("Websocket is not connected, cannot send payload!")
@@ -89,9 +90,8 @@ class WebsocketServer:
                         if self.websocket.client_state != WebSocketState.CONNECTED:
                             return
 
-
-                        await self.websocket.send_bytes(fe_payload)
-                        self.last_sent_frame_number = fe_payload.multi_frame_number
+                        await self.websocket.send_bytes(payload_bytes)
+                        self.last_sent_frame_number = frame_number
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
         except asyncio.CancelledError:
@@ -136,8 +136,8 @@ class WebsocketServer:
                                     data = json.loads(text_content)
 
                                     # Handle received_frame acknowledgment
-                                    if 'multi_frame_number' in data:
-                                        self.last_received_frontend_confirmation = data['multi_frame_number']
+                                    if 'frame_number' in data:
+                                        self.last_received_frontend_confirmation = data['frame_number']
 
                                 except json.JSONDecodeError as e:
                                     logger.error(f"Failed to decode JSON message: {e}")

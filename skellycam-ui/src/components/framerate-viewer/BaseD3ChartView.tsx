@@ -50,9 +50,10 @@ export default function BaseD3ChartView({
     d3.select(svgRef.current).selectAll("*").remove()
 
     // Set up dimensions
-    const width = svgRef.current.clientWidth - margin.left - margin.right
-    const height = svgRef.current.clientHeight - margin.top - margin.bottom
-
+    let width = svgRef.current.clientWidth - margin.left - margin.right
+    let height = svgRef.current.clientHeight - margin.top - margin.bottom
+    if (width <0) {width = 0}
+    if (height <0) {height = 0}
     // Create SVG with a clip path for zooming
     const svg = d3.select(svgRef.current)
       .append("g")

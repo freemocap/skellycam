@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
 from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
 
+ONE_KILOBYTE = 1024
+ONE_MEGABYTE = 1024 ** 2
 ONE_GIGABYTE = 1024 ** 3
 
 import logging

@@ -9,7 +9,7 @@ from skellycam.core.camera.config.image_resolution import ImageResolution
 from skellycam.core.types.image_rotation_types import RotationTypes
 from skellycam.core.types.numpy_record_dtypes import CAMERA_CONFIG_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL, CameraNameString
-from skellycam.core.types.type_overloads import CameraIndexInt, CameraName
+from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 
 DEFAULT_IMAGE_HEIGHT: int = 720
@@ -96,7 +96,7 @@ class CameraConfig(BaseModel):
         default=DEFAULT_CAMERA_INDEX,
         description="The index of the camera in the system. This is used to create the `cv2.VideoCapture` object. ")
 
-    camera_name: CameraName = Field(
+    camera_name: CameraNameString = Field(
         default=DEFAULT_CAMERA_NAME,
         description="The name of the camera, if known. May be used for display purposes, does not need to be unique.",
     )

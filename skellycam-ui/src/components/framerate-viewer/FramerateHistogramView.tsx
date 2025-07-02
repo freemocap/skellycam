@@ -182,16 +182,17 @@ export default function FramerateHistogramView({
         .attr("class", `bar-${source.id}`)
         .attr("x", d => xScaleZoomed(d.x0))
         .attr("width", d => Math.max(0, xScaleZoomed(d.x1) - xScaleZoomed(d.x0) - 1))
-        // FIX: Calculate y and height correctly to avoid negative values
         .attr("y", d => {
           const y = yScaleZoomed(d.density);
-          // Ensure y is not larger than height
-          return isNaN(y) || y > height ? height : Math.max(0, y);
+          // Ensure y is valid and not greater than height
+          return isNaN(y) ? height : Math.min(height, Math.max(0, y));
         })
         .attr("height", d => {
           const y = yScaleZoomed(d.density);
-          // Ensure height is always positive
-          return isNaN(y) || y > height ? 0 : Math.max(0, height - y);
+          // Calculate height ensuring it's always positive
+          if (isNaN(y)) return 0;
+          const barHeight = height - Math.min(height, Math.max(0, y));
+          return Math.max(0, barHeight);
         })
         .attr("fill", source.color)
         .attr("stroke", theme.palette.background.paper)
