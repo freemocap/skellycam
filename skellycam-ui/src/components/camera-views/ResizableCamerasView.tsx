@@ -111,7 +111,7 @@ const ImageGrid: React.FC = () => {
     const canvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
 
     // Calculate image info and sort by camera index
-    const sortedProcessedImages = useMemo(() => 
+    const sortedProcessedImages = useMemo(() =>
         sortCamerasByIndex(latestImageBitmaps, cameraConfigs),
     [latestImageBitmaps, cameraConfigs]);
 
@@ -132,10 +132,10 @@ const ImageGrid: React.FC = () => {
                     }
                     const ctx = canvasContextRefs.current[cameraId];
                     if (ctx) {
-                        if (!dimensionsRef.current[cameraId] || 
-                            dimensionsRef.current[cameraId].width !== bitmap.width || 
+                        if (!dimensionsRef.current[cameraId] ||
+                            dimensionsRef.current[cameraId].width !== bitmap.width ||
                             dimensionsRef.current[cameraId].height !== bitmap.height) {
-                            
+
                             canvas.width = bitmap.width;
                             canvas.height = bitmap.height;
                             dimensionsRef.current[cameraId] = { width: bitmap.width, height: bitmap.height };
@@ -180,7 +180,7 @@ const ImageGrid: React.FC = () => {
 
         // Create rows of panels
         const rows = [];
-        const { rows: numRows, cols: numCols } = initialLayout;
+        const { rows: numRows, columns: numCols } = initialLayout;
 
         for (let r = 0; r < numRows; r++) {
             const rowCameras = sortedProcessedImages.slice(

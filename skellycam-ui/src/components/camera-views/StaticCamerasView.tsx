@@ -37,14 +37,14 @@ const ImageGrid: React.FC = () => {
     const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
 
     // Calculate image info and sort by camera index
-    const sortedProcessedImages = useMemo(() => 
+    const sortedProcessedImages = useMemo(() =>
         sortCamerasByIndex(latestImageBitmaps, cameraConfigs),
     [latestImageBitmaps, cameraConfigs]);
 
     // Calculate optimal grid layout
-    const { cols, rows } = useCameraGridLayout(
-        sortedProcessedImages, 
-        containerDimensions.width, 
+    const { columns, rows } = useCameraGridLayout(
+        sortedProcessedImages,
+        containerDimensions.width,
         containerDimensions.height
     );
 
@@ -134,7 +134,7 @@ const ImageGrid: React.FC = () => {
                         <Grid
                             item
                             key={image.cameraId}
-                            xs={12 / cols}
+                            xs={12 / columns}
                             sx={{
                                 height: `${100 / rows}%`,
                                 padding: '4px',

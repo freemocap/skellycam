@@ -23,30 +23,62 @@ export function ThreeJsCameraImagePlane({
     bitmap: ImageBitmap;
 }) {
     const texture = useMemo(() => {
-        // Validate bitmap dimensions before creating texture
-        if (!bitmap || bitmap.width <= 0 || bitmap.height <= 0) {
-            console.warn(`Invalid bitmap dimensions for camera ${image.cameraId}: ${bitmap?.width}x${bitmap?.height}`);
-            // Return a small placeholder texture instead
+        // Create a default placeholder texture
+        const createPlaceholder = (color = 'gray') => {
             const canvas = document.createElement('canvas');
-            canvas.width = 1;
-            canvas.height = 1;
+            canvas.width = 2; // Use 2x2 instead of 1x1 to avoid some WebGL warnings
+            canvas.height = 2;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                ctx.fillStyle = 'gray';
-                ctx.fillRect(0, 0, 1, 1);
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, 2, 2);
             }
             const tex = new THREE.CanvasTexture(canvas);
             tex.needsUpdate = true;
             return tex;
-        }
-        const tex = new THREE.Texture(bitmap);
-        tex.needsUpdate = true;
-        tex.minFilter = LinearFilter;
-        tex.generateMipmaps = false;
-        tex.flipY = false;
-        return tex;
-    }, [bitmap]);
+        };
 
+        // Validate bitmap dimensions and state before creating texture
+        if (!bitmap ||
+            bitmap.width <= 0 ||
+            bitmap.height <= 0 ||
+            bitmap.width === undefined ||
+            bitmap.height === undefined) {
+            console.warn(`Invalid bitmap dimensions for camera ${image.cameraId}: ${bitmap?.width}x${bitmap?.height}`);
+            return createPlaceholder('gray');
+        }
+
+        try {
+            // Create a copy of the bitmap to prevent detachment issues
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext('2d');
+
+            if (ctx) {
+                try {
+                    // Draw the bitmap to the canvas
+                    ctx.drawImage(bitmap, 0, 0);
+
+                    // Create texture from the canvas instead of directly from bitmap
+                    const tex = new THREE.CanvasTexture(canvas);
+                    tex.needsUpdate = true;
+                    tex.minFilter = LinearFilter;
+                    tex.generateMipmaps = false;
+                    tex.flipY = false;
+                    return tex;
+                } catch (e) {
+                    console.warn(`Bitmap for camera ${image.cameraId} appears to be detached:`, e);
+                    return createPlaceholder('red');
+                }
+            }
+
+            return createPlaceholder('blue');
+        } catch (e) {
+            console.error(`Error creating texture for camera ${image.cameraId}:`, e);
+            return createPlaceholder('purple');
+        }
+    }, [bitmap, image.cameraId]);
     return (
         <group position={position}>
             <mesh scale={[scale[0], -scale[1], scale[2]]}>

@@ -10,6 +10,7 @@ import {ThreeJSCameraGrid} from "@/components/camera-views/threejs-strategy/thre
 import {PlaceholderImage} from "@/components/camera-views/threejs-strategy/threejs-helper-components/PlaceholderImage";
 import {LoadingIndicator} from "@/components/camera-views/threejs-strategy/threejs-helper-components/LoadingIndicator";
 import {useTheme} from "@mui/material/styles";
+import {ThreeJSGridResizeProvider} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSGridResizeContext";
 
 export function ThreeJSScene() {
     const theme = useTheme();
@@ -53,11 +54,13 @@ export function ThreeJSScene() {
             <color attach="background" args={[theme.palette.background.default]}/>
 
             {hasImages ? (
-                <ThreeJSCameraGrid
-                    images={sortedProcessedImages}
-                    cameraConfigs={cameraConfigs}
-                    bitmaps={latestImageBitmaps}
-                />
+                <ThreeJSGridResizeProvider>
+                    <ThreeJSCameraGrid
+                        images={sortedProcessedImages}
+                        cameraConfigs={cameraConfigs}
+                        bitmaps={latestImageBitmaps}
+                    />
+                </ThreeJSGridResizeProvider>
             ) : (
                 <Suspense fallback={<LoadingIndicator/>}>
                     <PlaceholderImage/>
