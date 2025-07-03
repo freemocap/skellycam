@@ -11,7 +11,7 @@ import {RefreshDetectedCamerasButton} from "@/components/available-cameras-panel
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
 import {selectAllCameras, toggleCameraSelection, updateCameraConfig,} from "@/store/slices/cameras-slices/camerasSlice";
-import {detectCameraDevices} from "@/store/thunks/detect-cameras-thunks";
+import {detectCameraDevices} from "@/store/thunks/detect-cameras-client-thunks";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 import {CloseCamerasButton} from "@/components/available-cameras-panel/CloseCamerasButton";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
