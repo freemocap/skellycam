@@ -77,7 +77,7 @@ class WebsocketServer:
         try:
             while self.should_continue:
                 await async_wait_10ms()
-                if  self.last_received_frontend_confirmation >= self.last_sent_frame_number:
+                if self.last_received_frontend_confirmation >= self.last_sent_frame_number or self.last_sent_frame_number == -1:
 
                     new_frontend_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = self._app.get_new_frontend_payloads(
                         if_newer_than=self.last_sent_frame_number)
@@ -87,11 +87,14 @@ class WebsocketServer:
                             logger.error("Websocket is not connected, cannot send payload!")
                             raise RuntimeError("Websocket is not connected, cannot send payload!")
 
-                        if self.websocket.client_state != WebSocketState.CONNECTED:
-                            return
 
                         await self.websocket.send_bytes(payload_bytes)
                         self.last_sent_frame_number = frame_number
+                else:
+                    backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
+                    if backpressure > 10:
+                        logger.warning(
+                            f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
         except asyncio.CancelledError:
