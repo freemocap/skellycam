@@ -5,7 +5,7 @@ from skellycam.opencv.camera.types.camera_id import CameraId
 
 class CameraConfig(BaseModel):
     camera_id: CameraId = "0"
-    exposure: int = -7
+    exposure: int = 0
     resolution_width: int = 960
     resolution_height: int = 540
     framerate: int = 30
