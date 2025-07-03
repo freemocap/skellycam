@@ -6,7 +6,7 @@ from typing import List, Union
 import cv2
 from PySide6.QtCore import Signal, Qt, QThread
 from PySide6.QtGui import QImage
-from skellycam.detection.charuco.charuco_definition import CharucoBoardDefinition
+from skellycam.detection.charuco.charuco_definition import CHARUCO_BOARDS, charuco_7x5
 from skellycam.detection.charuco.charuco_detection import draw_charuco_on_image
 
 from skellycam.detection.models.frame_payload import FramePayload
@@ -48,6 +48,8 @@ class CamGroupThreadWorker(QThread):
         self._updating_camera_settings_bool = False
         self._current_recording_name = None
         self._video_save_process = None
+
+        self._charuco_board = charuco_7x5()
 
         if self._camera_ids is not None:
             self._camera_group = self._create_camera_group(self._camera_ids)
@@ -100,6 +102,18 @@ class CamGroupThreadWorker(QThread):
     def is_recording(self):
         return self._should_record_frames_bool
 
+    @property
+    def charuco_board(self):
+        return self._charuco_board
+    
+    @charuco_board.setter
+    def charuco_board(self, charuco_name: str):
+        if charuco_name in CHARUCO_BOARDS:
+            self._charuco_board = CHARUCO_BOARDS[charuco_name]()
+            logger.info(f"Set charuco board to {charuco_name}")
+        else:
+            logger.error(f"Charuco board {charuco_name} not found in CHARUCO_BOARDS.")
+
     def run(self):
         logger.info("Starting camera group thread worker")
         self._camera_group.start()
@@ -107,9 +121,6 @@ class CamGroupThreadWorker(QThread):
 
         logger.info("Emitting `cameras_connected_signal`")
         self.cameras_connected_signal.emit()
-
-        if self.annotate_images:
-            charuco_board = CharucoBoardDefinition()
 
         while self._camera_group.is_capturing and should_continue:
             if self._updating_camera_settings_bool:
@@ -124,7 +135,7 @@ class CamGroupThreadWorker(QThread):
                             logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
 
                         if self.annotate_images:
-                            draw_charuco_on_image(image=frame_payload.image, charuco_board=charuco_board)
+                            draw_charuco_on_image(image=frame_payload.image, charuco_board=self.charuco_board)
 
                         q_image = self._convert_frame(frame_payload)
 

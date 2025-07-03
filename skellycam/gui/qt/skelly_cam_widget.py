@@ -287,6 +287,9 @@ class SkellyCamWidget(QWidget):
             camera_config_dictionary=camera_config_dictionary
         )
 
+    def set_charuco_board(self, charuco_name: str):
+        self._cam_group_frame_worker.charuco_board = charuco_name
+
     def _get_landscape_or_portrait(self, camera_config: CameraConfig) -> str:
         if (
                 camera_config.rotate_video_cv2_code == cv2.ROTATE_90_CLOCKWISE
