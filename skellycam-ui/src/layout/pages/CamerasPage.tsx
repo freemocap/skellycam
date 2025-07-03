@@ -6,6 +6,7 @@ import {Copyright} from "@/components/ui-components/Copyright";
 import {useTheme} from "@mui/material/styles";
 import StaticCameraGridDisplay from "@/components/camera-views/StaticCamerasView";
 import ResizableCameraGridDisplay from "@/components/camera-views/ResizableCamerasView";
+import ThreeJSCameraDisplayGrid from "@/components/camera-views/threejs-strategy/ThreeJSCameraDisplayGrid";
 
 export const CamerasPage = () => {
     const theme = useTheme();
@@ -34,7 +35,8 @@ export const CamerasPage = () => {
                     overflow: 'hidden',
                 }}>
                     <ErrorBoundary>
-                        <ResizableCameraGridDisplay/>
+                         <ThreeJSCameraDisplayGrid/>
+                        {/*<ResizableCameraGridDisplay/>*/}
                         {/*<StaticCameraGridDisplay/>*/}
                     </ErrorBoundary>
                 </Box>

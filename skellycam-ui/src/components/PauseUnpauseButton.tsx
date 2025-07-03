@@ -1,7 +1,7 @@
 // skellycam-ui/src/components/PauseUnpauseButton.tsx
-import React, { useState } from 'react';
-import { Button, keyframes, CircularProgress } from '@mui/material';
-import { styled } from '@mui/system';
+import React, {useState} from 'react';
+import {Button, CircularProgress, keyframes} from '@mui/material';
+import {styled} from '@mui/system';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import {urlService} from "@/services/urlService";
@@ -22,7 +22,7 @@ const pulseAnimation = keyframes`
     }
 `;
 
-const PulsingButton = styled(Button)<{ pulsing?: boolean }>(({ pulsing }) => ({
+const PulsingButton = styled(Button)<{ pulsing?: boolean }>(({pulsing}) => ({
     backgroundColor: '#1976d2', // MUI primary blue
     borderRadius: '8px',
     padding: '10px 16px',
@@ -59,11 +59,7 @@ export const PauseUnpauseButton: React.FC<PauseUnpauseButtonProps> = ({
                 console.error(`API call failed: ${response.statusText}`);
             }
         } catch (error) {
-            if (error.name === 'AbortError') {
-                console.error('API call timed out');
-            } else {
-                console.error('API call failed:', error);
-            }
+            console.error('An error occured:', error);
         } finally {
             clearTimeout(timeoutId);
             setIsLoading(false);
@@ -98,12 +94,12 @@ export const PauseUnpauseButton: React.FC<PauseUnpauseButtonProps> = ({
         <PulsingButton
             onClick={handleClick}
             variant="contained"
-            pulsing={isPaused}
+            pulsing={isPaused ? true : undefined}
             fullWidth
             disabled={disabled || isLoading}
-            startIcon={isLoading ? undefined : isPaused ? <PlayArrowIcon /> : <PauseIcon />}
+            startIcon={isLoading ? undefined : isPaused ? <PlayArrowIcon/> : <PauseIcon/>}
         >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : (isPaused ? 'Resume' : 'Pause')}
+            {isLoading ? <CircularProgress size={24} color="inherit"/> : (isPaused ? 'Resume' : 'Pause')}
         </PulsingButton>
     );
 };

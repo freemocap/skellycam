@@ -4,6 +4,7 @@ import {useAppSelector} from '@/store/AppStateStore';
 import {CameraConfigsSchema} from "@/store/slices/cameras-slices/camera-types";
 import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
 import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
+import { sortCamerasByIndex, useCameraGridLayout } from '@/hooks/useCameraGridLayout';
 
 // Represents image data for a camera
 interface ProcessedImageInfo {
@@ -14,10 +15,10 @@ interface ProcessedImageInfo {
 
 // Memoized camera panel component to reduce re-renders
 const CameraPanel = React.memo(({
-                                    image,
-                                    cameraConfigs,
-                                    canvasRef
-                                }: {
+    image,
+    cameraConfigs,
+    canvasRef
+}: {
     image: ProcessedImageInfo;
     cameraConfigs: Record<string, any>;
     canvasRef: (el: HTMLCanvasElement | null) => void;
@@ -89,7 +90,7 @@ const ResizeHandle = React.memo(({ direction, theme }: { direction: 'horizontal'
 
 const ImageGrid: React.FC = () => {
     const theme = useTheme();
-    const {latestImageBitmaps} = useWebSocketContext();
+    const { latestImageBitmaps } = useWebSocketContext();
     const latestPayload = useAppSelector(state => state.latestPayload);
     const canvasContextRefs = useRef<Record<string, CanvasRenderingContext2D | null>>({});
     const dimensionsRef = useRef<Record<string, { width: number, height: number }>>({});
@@ -110,17 +111,12 @@ const ImageGrid: React.FC = () => {
     const canvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
 
     // Calculate image info and sort by camera index
-    const sortedProcessedImages = useMemo(() => {
-        // Create array of image info objects
-        const images: ProcessedImageInfo[] = Object.entries(latestImageBitmaps).map(([cameraId, bitmap]) => ({
-            cameraId,
-            aspectRatio: bitmap.width / bitmap.height,
-            cameraIndex: cameraConfigs[cameraId]?.camera_index ?? Number.MAX_SAFE_INTEGER
-        }));
+    const sortedProcessedImages = useMemo(() => 
+        sortCamerasByIndex(latestImageBitmaps, cameraConfigs),
+    [latestImageBitmaps, cameraConfigs]);
 
-        // Sort by camera index
-        return images.sort((a, b) => a.cameraIndex - b.cameraIndex);
-    }, [latestImageBitmaps, cameraConfigs]);
+    // Calculate optimal grid layout
+    const initialLayout = useCameraGridLayout(sortedProcessedImages);
 
     // Optimize canvas drawing with requestAnimationFrame and offscreen canvas when available
     useEffect(() => {
@@ -158,17 +154,6 @@ const ImageGrid: React.FC = () => {
             cancelAnimationFrame(animationFrameId);
         };
     }, [latestImageBitmaps]);
-
-    // Calculate optimal initial layout
-    const initialLayout = useMemo(() => {
-        const count = sortedProcessedImages.length;
-        if (count <= 1) return { rows: 1, cols: 1 };
-        if (count <= 2) return { rows: 1, cols: 2 };
-        if (count <= 4) return { rows: 2, cols: 2 };
-        if (count <= 6) return { rows: 2, cols: 3 };
-        if (count <= 9) return { rows: 3, cols: 3 };
-        return { rows: Math.ceil(Math.sqrt(count)), cols: Math.ceil(Math.sqrt(count)) };
-    }, [sortedProcessedImages.length]);
 
     // Memoized canvas ref callback
     const getCanvasRef = useCallback((cameraId: string) => {

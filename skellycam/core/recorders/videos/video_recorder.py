@@ -72,7 +72,6 @@ class VideoRecorder(BaseModel):
             raise ValueError(f"VideoWriter not open (before adding frame)!")
 
         frame = self.frames_to_write.popleft()
-
         self._validate_frame_number(frame)
         self._validate_rotation(frame)
         if frame.frame_metadata.camera_config.rotation != -1:
