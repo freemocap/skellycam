@@ -36,7 +36,7 @@ export function ThreeJSResizeHandle({
         onDragStart();
 
         // Store initial position
-        const startPosition = e.point.clone();
+        const startPosition = (e as any).point.clone();
         let isCurrentlyDragging = true;
 
         // Handle pointer move

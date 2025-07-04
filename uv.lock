@@ -922,6 +922,7 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "nuitka" },
     { name = "pytest" },
 ]
 
@@ -954,7 +955,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8.4.0" }]
+dev = [
+    { name = "nuitka", specifier = ">=2.7.7" },
+    { name = "pytest", specifier = ">=8.4.0" },
+]
 
 [[package]]
 name = "sniffio"

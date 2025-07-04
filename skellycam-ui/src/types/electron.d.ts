@@ -4,6 +4,7 @@ declare global {
             selectDirectory: () => Promise<string | null>;
             openFolder: (folderPath: string) => Promise<boolean>;
             getHomeDirectory: () => Promise<string>;
+            expandPath: (path: string) => Promise<string>;
             getFolderContents: (folderPath: string) => Promise<{
                 path: string;
                 contents?: Array<{

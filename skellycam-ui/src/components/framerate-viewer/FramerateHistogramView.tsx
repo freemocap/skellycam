@@ -50,7 +50,21 @@ export default function FramerateHistogramView({
     };
   };
 
-  const renderChart = useCallback(({ svg, chartArea, width, height, margin, transform }) => {
+  const renderChart = useCallback(({ 
+    svg, 
+    chartArea, 
+    width, 
+    height, 
+    margin, 
+    transform 
+  }: { 
+    svg: d3.Selection<SVGGElement, unknown, null, undefined>; 
+    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>; 
+    width: number; 
+    height: number; 
+    margin: {top: number; right: number; bottom: number; left: number}; 
+    transform: d3.ZoomTransform; 
+  }) => {
     // Prepare the sources with histogram data
     const sources = [
       {

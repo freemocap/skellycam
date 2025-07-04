@@ -198,14 +198,13 @@ export function updateTimeSeriesOnZoom(
   yScale: d3.ScaleLinear<number, number>
 ) {
   // Update line paths
-  chartArea.selectAll("path")
-    .attr("d",
+chartArea.selectAll("path")
+    .attr("d", (data) => 
       d3.line<any>()
         .x(d => transform.applyX(xScale(new Date(d.timestamp))))
         .y(d => transform.applyY(yScale(d.value)))
-        .curve(d3.curveLinear)
+        .curve(d3.curveLinear)(data as any)
     );
-
   // Update data points
   chartArea.selectAll("circle")
     .attr("cx", (d: any) => transform.applyX(xScale(new Date(d.timestamp))))

@@ -20,6 +20,14 @@ type FramerateTimeseriesProps = {
   backendColor: string
   title?: string
 }
+type ChartRenderProps = {
+  svg: d3.Selection<SVGGElement, unknown, null, undefined>;
+  chartArea: d3.Selection<SVGGElement, unknown, null, undefined>;
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  transform: d3.ZoomTransform;
+};
 
 export default function FramerateTimeseriesView({
                                                   frontendFramerate,
@@ -32,7 +40,7 @@ export default function FramerateTimeseriesView({
                                                 }: FramerateTimeseriesProps) {
   const theme = useTheme()
 
-  const renderChart = useCallback(({ svg, chartArea, width, height, margin, transform }) => {
+  const renderChart = useCallback(({ svg, chartArea, width, height, margin, transform }: ChartRenderProps) => {
     // Prepare data sources - using the recent frame durations arrays
     const sources = [
       {
@@ -187,9 +195,10 @@ export default function FramerateTimeseriesView({
 
       chartArea
           .selectAll(`.data-point-${source.id}`)
-          .on("mouseover", function (event, d) {
-            d3.select(this).attr("r", 5).attr("fill", d3.color(source.color)!.brighter(0.5).toString());
-
+          .on("mouseover", function(event: MouseEvent, d: any) {
+            const element = this as unknown as SVGCircleElement;
+            d3.select(element).attr("r", 5).attr("fill", d3.color(source.color)!.brighter(0.5).toString());
+          
             tooltip
                 .style("opacity", 1)
                 .html(`
@@ -207,7 +216,7 @@ export default function FramerateTimeseriesView({
                 .style("left", event.pageX + 10 + "px")
                 .style("top", event.pageY - 28 + "px");
           })
-          .on("mouseout", function () {
+          .on("mouseout", function(event: MouseEvent, d: any) {
             d3.select(this).attr("r", 3).attr("fill", source.color);
             tooltip.style("opacity", 0);
           });

@@ -6,9 +6,10 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString
+from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, CameraBackendInt
 from skellycam.skellycam_app.skellycam_app import get_skellycam_app
 from skellycam.system.default_paths import default_recording_name, get_default_recording_folder_path
+from skellycam.system.device_detection.detect_cameras_devices import CameraDeviceInfo, detect_available_cameras
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,29 @@ class CreateCameraGroupResponse(BaseModel):
     camera_configs: CameraConfigs
 
 
+class DetectedCamerasResponse(BaseModel):
+    cameras: list[CameraDeviceInfo]
+
+
+@camera_router.get("/detect",
+                   summary="Detect available camera devices",
+                   )
+def cameras_detect_get_endpoint(filter_virtual: bool = True,
+                                backend_id: CameraBackendInt | None = None) -> DetectedCamerasResponse:
+    logger.api(f"Received `skellycam/cameras/detect` POST request with filter_virtual={filter_virtual}...")
+    try:
+
+        logger.api("`skellycam/cameras/detect` POST request handled successfully.")
+
+        cameras = detect_available_cameras(backend_id=backend_id, filter_virtual=filter_virtual)
+        return DetectedCamerasResponse(cameras=cameras)
+    except Exception as e:
+        logger.error(f"Error when processing `skellycam/cameras/detect` request: {type(e).__name__} - {e}")
+        logger.exception(e)
+        raise HTTPException(status_code=500,
+                            detail=f"Error when processing `skellycam/cameras/detect` request: {type(e).__name__} - {e}")
+
+
 @camera_router.post("/group/create",
                     summary="Create camera group with provided configuration settings",
                     )
@@ -56,7 +80,7 @@ def camera_group_create_post_endpoint(
         request: CameraGroupCreateRequest = Body(...,
                                                  description="Request body containing desired camera configuration",
                                                  examples=[
-                                                     CameraGroupCreateRequest.example()]), ) -> CreateCameraGroupResponse :
+                                                     CameraGroupCreateRequest.example()]), ) -> CreateCameraGroupResponse:
     logger.api(f"Received `skellycam/cameras/group/create` POST request with config:  {request.camera_configs}...")
     try:
         configs = request.camera_configs
@@ -68,11 +92,11 @@ def camera_group_create_post_endpoint(
         logger.error(f"Error when processing `skellycam/cameras/group/create` request: {type(e).__name__} - {e}")
         logger.exception(e)
         raise HTTPException(status_code=500,
-                             detail=f"Error when processing `skellycam/cameras/group/create` request: {type(e).__name__} - {e}")
+                            detail=f"Error when processing `skellycam/cameras/group/create` request: {type(e).__name__} - {e}")
 
 
 @camera_router.post("/group/all/record/start",
-                            summary="Start recording video from all camera groups")
+                    summary="Start recording video from all camera groups")
 def start_recording(request: StartRecordingRequest = Body(..., examples=[StartRecordingRequest()])):
     logger.api("Received `/record/start` request...")
     if request.recording_directory.startswith("~"):
@@ -84,7 +108,7 @@ def start_recording(request: StartRecordingRequest = Body(..., examples=[StartRe
 
 
 @camera_router.get("/group/all/record/stop",
-                           summary="Stop recording video from camera groups")
+                   summary="Stop recording video from camera groups")
 def stop_recording():
     logger.api("Received `/record/stop` request...")
     get_skellycam_app().stop_recording()
@@ -113,31 +137,34 @@ def camera_group_close_all_delete_endpoint():
     "/update",
     summary="Update specified camera and apply provided configuration settings")
 def camera_update_put_endpoint(
-        request: CameraUpdateRequest = Body(..., description="Request body containing a dictionary of camera configurations keyed by camera IDs",
+        request: CameraUpdateRequest = Body(...,
+                                            description="Request body containing a dictionary of camera configurations keyed by camera IDs",
                                             examples=[CameraUpdateRequest.example()])) -> CameraConfigs:
     logger.api(
         f"Received `cameras/update` PUT request with cameras configs for cameras: {list(request.camera_configs.keys())}...")
     try:
-        extracted_configs = get_skellycam_app().camera_group_manager.update_camera_settings(camera_configs=request.camera_configs)
+        extracted_configs = get_skellycam_app().camera_group_manager.update_camera_settings(
+            camera_configs=request.camera_configs)
         logger.api("`skellycam/connect` POST request handled successfully.")
         return extracted_configs
     except Exception as e:
         logger.error(f"Error when processing `/connect` request: {type(e).__name__} - {e}")
         logger.exception(e)
         raise HTTPException(status_code=500,
-                             detail=f"Error when processing `/camera/update` request: {type(e).__name__} - {e}")
+                            detail=f"Error when processing `/camera/update` request: {type(e).__name__} - {e}")
 
 
 @camera_router.get("/group/all/pause",
-                  summary="Pause all camera groups")
+                   summary="Pause all camera groups")
 def pause_camera_groups():
     logger.api("Received `/pause` request...")
     get_skellycam_app().pause_camera_groups()
     logger.api("`/pause` request handled successfully.")
     return True
 
+
 @camera_router.get("/group/all/unpause",
-                  summary="Unpause all camera groups")
+                   summary="Unpause all camera groups")
 def unpause_camera_groups():
     logger.api("Received `/unpause` request...")
     get_skellycam_app().unpause_camera_groups()

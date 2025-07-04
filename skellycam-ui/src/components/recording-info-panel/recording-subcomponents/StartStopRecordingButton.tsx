@@ -21,7 +21,7 @@ const pulseAnimation = keyframes`
 `;
 
 
-const PulsingButton = styled(Button)(({pulsing}: { pulsing: boolean }) => ({
+const PulsingButton = styled(Button)(({pulsing}: { pulsing: boolean | undefined }) => ({
     backgroundColor: '#9f1810',
     borderStyle: 'solid',
     borderWidth: '1px',

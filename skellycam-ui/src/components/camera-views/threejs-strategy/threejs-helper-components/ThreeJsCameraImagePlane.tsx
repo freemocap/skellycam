@@ -100,7 +100,7 @@ export function ThreeJsCameraImagePlane({
                     whiteSpace: 'nowrap',
                 }}
             >
-                Camera {cameraConfigs[image.cameraId]?.camera_index ?? '?'} ({image.cameraId})
+                Camera {image.cameraIndex} ({image.cameraId})
             </Html>
         </group>
     );
