@@ -1,0 +1,69 @@
+name: Build python executables
+
+on:
+  push:
+    branches: [jon/react-electron]
+    paths-ignore:
+      - '../../..' # Ignore all paths, i.e. disable this workflow
+      - "../../../skellycam"
+      - "build_pyinstaller_executables.yml"
+      - "../../../pyproject.toml"
+      - "../../build_executable/build_pyinstaller_executable.py"
+      - "../../build_executable/skellycam.spec"
+#  workflow_dispatch:
+
+jobs:
+
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Install dependencies on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libpulse0 libegl1
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Activate virtual environment
+        if : runner.os == 'Windows'
+        run: |
+          .\.venv\Scripts\activate
+          python -c "import sys; print(sys.executable)"
+
+
+      - name: Activate virtual environment
+        if : runner.os == 'Linux'
+        run: source .venv/bin/activate
+
+      - name: Activate virtual environment
+        if : runner.os == 'macOS'
+        run: source venv/bin/activate
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Build the project
+        run: skellycam-build
+
+      - name: Upload artifact (GUI)
+        uses: actions/upload-artifact@v3
+        with:
+          name: skellycam-${{ matrix.os }}
+          path: dist/
