@@ -6,7 +6,6 @@ import numpy as np
 
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
 from skellycam.core.types.type_overloads import FrameNumberInt
-from skellycam.utilities.rotate_image import rotate_image
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
@@ -99,6 +98,7 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
     ('message_type', '<u1'),  # 1 byte: 0 = payload_header, 1 = frame_metadata, 2 = payload_footer
     ('frame_number', '<i8'),  # 8 bytes, little-endian int64
     ('camera_id', 'S16'),  # 16 bytes fixed-length camera ID
+    ('camera_index', '<i4'),  # 4 bytes, little-endian int32
     ('image_width', '<i4'),  # 4 bytes, little-endian int32
     ('image_height', '<i4'),  # 4 bytes, little-endian int32
     ('color_channels', '<i4'),  # 4 bytes, little-endian int32
@@ -108,6 +108,7 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
 JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 
 _reusable_bytes_payload: bytearray = bytearray(0)  # Will be resized on first use
+
 
 def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_image: float = 0.5,
                                              jpeg_encoding_parameters: list[int] = JPEG_ENCODING_PARAMETERS) -> tuple[
@@ -130,13 +131,14 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
     number_of_cameras = len(camera_ids)
 
     # Pre-allocate approximate size to avoid reallocations
-    estimated_size = (number_of_cameras+1)*ONE_MEGABYTE
+    estimated_size = (number_of_cameras + 1) * ONE_MEGABYTE
 
     # Reuse existing bytearray if it's large enough, otherwise resize it
     if len(_reusable_bytes_payload) < estimated_size:
         if len(_reusable_bytes_payload) > 0:
-            logger.warning(f"Reusable bytes payload size ({len(_reusable_bytes_payload)} bytes) is smaller than estimated size ({estimated_size} bytes), resizing.")
-        logger.debug(f"Set reusable bytes payload to {estimated_size//ONE_KILOBYTE} kilobytes")
+            logger.warning(
+                f"Reusable bytes payload size ({len(_reusable_bytes_payload)} bytes) is smaller than estimated size ({estimated_size} bytes), resizing.")
+        logger.debug(f"Set reusable bytes payload to {estimated_size // ONE_KILOBYTE} kilobytes")
         _reusable_bytes_payload = bytearray(estimated_size)
 
     # Reset position counter
@@ -146,7 +148,6 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
     payload_header = np.array([(0, frame_number, number_of_cameras)],
                               dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
     header_bytes = payload_header.tobytes()
-
 
     _reusable_bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
     current_pos += len(header_bytes)
@@ -167,8 +168,9 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
         frame_header = np.array([(1,
                                   frame_number,
                                   camera_id.encode('utf-8'),
-                                  frame_recarray.image.shape[0],
+                                  frame_recarray.frame_metadata.camera_config.camera_index,
                                   frame_recarray.image.shape[1],
+                                  frame_recarray.image.shape[0  ],
                                   frame_recarray.image.shape[2],
                                   jpeg_string_length)], dtype=FRONTEND_FRAME_HEADER_DTYPE)
         frame_header_bytes = frame_header.tobytes()

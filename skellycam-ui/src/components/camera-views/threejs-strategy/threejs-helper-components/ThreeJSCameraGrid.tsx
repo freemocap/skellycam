@@ -5,18 +5,15 @@ import React, {useEffect, useMemo} from "react";
 import {ThreeJsCameraImagePlane} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJsCameraImagePlane";
 import {ThreeJSResizeHandle} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSResizeHandle";
 import {useThreeJSGridResize} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSGridResizeContext";
+import {ImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
 export function ThreeJSCameraGrid({
-                                      images,
-                                      cameraConfigs,
-                                      bitmaps
+                                      imageData
                                   }: {
-    images: ProcessedImageInfo[];
-    cameraConfigs: Record<string, any>;
-    bitmaps: Record<string, ImageBitmap>;
+    imageData: ImageData[];
 }) {
     const {viewport} = useThree();
-    const layout = useCameraGridLayout(images, viewport.width, viewport.height);
+    const layout = useCameraGridLayout(imageData, viewport.width, viewport.height);
     const {gridCells, initializeGrid, startResizing, updateResize, endResizing} = useThreeJSGridResize();
 
     // Initialize grid cells based on layout
@@ -26,9 +23,10 @@ export function ThreeJSCameraGrid({
         }
     }, [layout.rows, layout.columns, initializeGrid]);
 
+
     // Calculate grid positions and scales
     const gridItems = useMemo(() => {
-        if (gridCells.length === 0) return [];
+        if (gridCells.length === 0 || imageData.length === 0) return [];
 
         const items = [];
         const {rows, columns} = layout;
@@ -36,13 +34,11 @@ export function ThreeJSCameraGrid({
         for (let row = 0; row < rows; row++) {
             for (let column = 0; column < columns; column++) {
                 const index = row * columns + column;
-                if (index >= images.length) continue;
+                if (index >= imageData.length) continue;
 
-                const image = images[index];
-                const bitmap = bitmaps[image.cameraId];
-
-                // Skip if bitmap is missing or has invalid dimensions
-                if (!bitmap || bitmap.width <= 0 || bitmap.height <= 0) continue;
+                // Get the camera data for this grid position
+                const cameraImageData = imageData[index];
+                if (!cameraImageData) continue;
 
                 // Find the corresponding grid cell
                 const cell = gridCells.find(cell => cell.row === row && cell.column === column);
@@ -54,31 +50,33 @@ export function ThreeJSCameraGrid({
                 const x = -viewport.width / 2 + (cell.x * viewport.width) + (cellWidth / 2);
                 const y = viewport.height / 2 - (cell.y * viewport.height) - (cellHeight / 2);
 
+                // Calculate aspect ratio from image dimensions
+                const aspectRatio = cameraImageData.imageWidth / cameraImageData.imageHeight;
+
                 // Calculate scale to fit in cell while maintaining aspect ratio
                 const maxWidth = cellWidth * 0.95;
                 const maxHeight = cellHeight * 0.95;
                 let width, height;
 
-                if (image.aspectRatio > maxWidth / maxHeight) {
+                if (aspectRatio > maxWidth / maxHeight) {
                     width = maxWidth;
-                    height = width / image.aspectRatio;
+                    height = width / aspectRatio;
                 } else {
                     height = maxHeight;
-                    width = height * image.aspectRatio;
+                    width = height * aspectRatio;
                 }
 
                 items.push({
-                    image,
                     position: [x, y, 0] as [number, number, number],
                     scale: [width, height, 1] as [number, number, number],
-                    bitmap,
+                    imageData: cameraImageData,
                     cell
                 });
             }
         }
 
         return items;
-    }, [images, layout, viewport.width, viewport.height, bitmaps, gridCells]);
+    }, [layout, viewport.width, viewport.height, imageData, gridCells]);
     // Generate resize handles
     const resizeHandles = useMemo(() => {
         if (gridCells.length === 0) return [];
@@ -127,7 +125,7 @@ export function ThreeJSCameraGrid({
                     handles.push({
                         id: handleId,
                         direction: "vertical" as const,
-                        position: [x, y,1] as [number, number, number],
+                        position: [x, y, 1] as [number, number, number],
                         length: length,
                         thickness: 5,
                         onDragStart: () => startResizing(handleId),
@@ -141,16 +139,15 @@ export function ThreeJSCameraGrid({
         return handles;
     }, [gridCells, layout, viewport.width, viewport.height, startResizing, updateResize, endResizing]);
 
+
     return (
         <>
             {gridItems.map((item, index) => (
                 <ThreeJsCameraImagePlane
-                    key={item.image.cameraId}
-                    image={item.image}
+                    key={`camera-${item.imageData.cameraId}-${index}`}
                     position={item.position}
                     scale={item.scale}
-                    cameraConfigs={cameraConfigs}
-                    bitmap={item.bitmap}
+                    imageData={item.imageData}
                 />
             ))}
 

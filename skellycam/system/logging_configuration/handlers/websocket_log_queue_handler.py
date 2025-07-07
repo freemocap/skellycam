@@ -11,6 +11,7 @@ from ..formatters.custom_formatter import CustomFormatter
 from ..log_format_string import LOG_FORMAT_STRING
 
 
+
 class LogRecordModel(BaseModel):
     name: str
     msg: str|None = None
@@ -37,6 +38,8 @@ class LogRecordModel(BaseModel):
     asctime: str
     formatted_message: str
     type: str
+class LogsToSend(BaseModel):
+    logs: list[LogRecordModel] = []
 
 class WebSocketQueueHandler(logging.Handler):
     """Formats logs and puts them in a queue for websocket distribution"""

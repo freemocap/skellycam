@@ -1,15 +1,16 @@
 import asyncio
 import json
 import logging
-import multiprocessing
+import time
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
 from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
-    get_websocket_log_queue
-from skellycam.utilities.wait_functions import async_wait_1ms, async_wait_10ms
+    get_websocket_log_queue, LogsToSend
+from skellycam.system.logging_configuration.log_levels import LogLevels
+from skellycam.utilities.wait_functions import async_wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class WebsocketServer:
         logger.info("Starting websocket runner...")
         self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
                          # asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
-                         asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
+                         # asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
                          asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler")]
 
         try:
@@ -92,7 +93,7 @@ class WebsocketServer:
                         self.last_sent_frame_number = frame_number
                 else:
                     backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
-                    if backpressure > 10:
+                    if backpressure > 1:
                         logger.warning(
                             f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
         except WebSocketDisconnect:
@@ -104,22 +105,33 @@ class WebsocketServer:
             get_skellycam_app().kill_everything()
             raise
 
-    async def _logs_relay(self):
+    async def _logs_relay(self, ws_log_level:LogLevels=LogLevels.DEBUG, ws_log_throttle: float = 0.5):
         logger.info("Starting websocket log relay listener...")
         logs_queue = get_websocket_log_queue()
+        last_log_ws_sent = time.perf_counter()
+        logs_to_send = LogsToSend(logs=[])
         try:
             while self.should_continue:
-                if not logs_queue.empty() or self.websocket.client_state != WebSocketState.CONNECTED:
-                    try:
-                        log_record: LogRecordModel = logs_queue.get_nowait()
-                        # await self.websocket.send_json(log_record)
-                    except (multiprocessing.queues.Empty, logs_queue.Empty):
-                        await async_wait_1ms()
+                if not logs_queue.empty() and self.websocket.client_state == WebSocketState.CONNECTED:
+                    log_record: LogRecordModel = LogRecordModel(**logs_queue.get_nowait())
+                    if log_record.levelno < ws_log_level.value:
+                        continue  # Skip logs below the specified level
+                    logs_to_send.logs.append(log_record)
+                    if time.perf_counter() - last_log_ws_sent < ws_log_throttle:
+                        continue
+                    await self.websocket.send_json(logs_to_send.model_dump())
+                    logs_to_send.logs= []  # Clear the list after sending
+                    last_log_ws_sent = time.perf_counter()
                 else:
                     await async_wait_10ms()
-
         except asyncio.CancelledError:
             logger.debug("Log relay task cancelled")
+        except WebSocketDisconnect:
+            logger.info("Client disconnected, ending log relay task...")
+        except Exception as e:
+            logger.exception(f"Error in websocket log relay: {e.__class__}: {e}")
+            get_skellycam_app().kill_everything()
+            raise
 
     async def _client_message_handler(self):
         """
@@ -128,55 +140,36 @@ class WebsocketServer:
         logger.info("Starting client message handler...")
         try:
             while self.should_continue:
-                try:
-                    message = await self.websocket.receive()
-                    if message:
-                        if "text" in message:
-                            text_content = message.get("text", "")
-                            # Try to parse as JSON if it looks like JSON
-                            if text_content.strip().startswith('{') or text_content.strip().startswith('['):
-                                try:
-                                    data = json.loads(text_content)
-
-                                    # Handle received_frame acknowledgment
-                                    if 'frame_number' in data:
-                                        self.last_received_frontend_confirmation = data['frame_number']
-
-                                except json.JSONDecodeError as e:
-                                    logger.error(f"Failed to decode JSON message: {e}")
-                            else:
-                                # Handle plain text messages
-                                logger.info(f"Websocket received message: `{text_content}`")
-                                # Add any specific handling for plain text commands here
-
-                        elif "bytes" in message:
-                            bytes_content = message.get("bytes", b"")
-                            logger.debug(f"Received bytes message of length {len(bytes_content)}")
+                message = await self.websocket.receive()
+                if message:
+                    if "text" in message:
+                        text_content = message.get("text", "")
+                        # Try to parse as JSON if it looks like JSON
+                        if text_content.strip().startswith('{') or text_content.strip().startswith('['):
                             try:
-                                # Attempt to decode bytes as JSON
-                                text_content = bytes_content.decode('utf-8')
-                                if text_content.strip().startswith('{') or text_content.strip().startswith('['):
-                                    data = json.loads(text_content)
-                                    logger.info(f"Processed JSON message from client: {data}")
+                                data = json.loads(text_content)
 
-                                    # Handle received_frame acknowledgment
-                                    if 'received_frame' in data:
-                                        self.last_received_frontend_confirmation = data['received_frame']
-                                        logger.debug(
-                                            f"Frontend acknowledged receipt of frame {self.last_received_frontend_confirmation}")
-                            except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                                logger.error(f"Failed to decode bytes message: {e}")
+                                # Handle received_frame acknowledgment
+                                if 'frame_number' in data:
+                                    self.last_received_frontend_confirmation = data['frame_number']
 
+
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Failed to decode JSON message: {e}")
                         else:
-                            logger.warning(f"Received unexpected message format: {message}")
+                            # Handle plain text messages
+                            logger.info(f"Websocket received message: `{text_content}`")
+                            # Add any specific handling for plain text commands here
 
-                except WebSocketDisconnect:
-                    logger.info("Client disconnected, ending client message handler...")
-                    self._websocket_should_continue = False
-                    break
-                except Exception as e:
-                    logger.exception(f"Error handling client message: {e.__class__}: {e}")
+
+                    else:
+                        logger.warning(f"Received unexpected message format: {message}")
+
         except asyncio.CancelledError:
             logger.debug("Client message handler task cancelled")
+        except Exception as e:
+            logger.exception(f"Error handling client message: {e.__class__}: {e}")
+            get_skellycam_app().kill_everything()
+            raise
         finally:
             logger.info("Ending client message handler...")

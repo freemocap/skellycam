@@ -1,11 +1,5 @@
 import { useMemo } from 'react';
-
-// Represents image data for a camera
-export interface ProcessedImageInfo {
-    cameraId: string;
-    aspectRatio: number; // width / height
-    cameraIndex: number; // Added camera index for sorting
-}
+import {ImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
 interface GridLayout {
     rows: number;
@@ -16,24 +10,24 @@ interface GridLayout {
  * Hook to calculate optimal grid layout for camera views
  */
 export function useCameraGridLayout(
-    images: ProcessedImageInfo[],
+    imageData: ImageData[],
     containerWidth?: number,
     containerHeight?: number
 ): GridLayout {
     return useMemo(() => {
-        if (images.length === 0) return { rows: 1, columns: 1 };
+        if (!imageData || imageData.length === 0) return { rows: 1, columns: 1 };
 
         // For static grid without container dimensions, use simple layout
         if (!containerWidth || !containerHeight) {
             // Simple layout calculation based on number of cameras
-            if (images.length <= 1) return { rows: 1, columns: 1 };
-            if (images.length <= 2) return { rows: 1, columns: 2 };
-            if (images.length <= 4) return { rows: 2, columns: 2 };
-            if (images.length <= 6) return { rows: 2, columns: 3 };
-            if (images.length <= 9) return { rows: 3, columns: 3 };
+            if (imageData.length <= 1) return { rows: 1, columns: 1 };
+            if (imageData.length <= 2) return { rows: 1, columns: 2 };
+            if (imageData.length <= 4) return { rows: 2, columns: 2 };
+            if (imageData.length <= 6) return { rows: 2, columns: 3 };
+            if (imageData.length <= 9) return { rows: 3, columns: 3 };
             return {
-                rows: Math.ceil(Math.sqrt(images.length)),
-                columns: Math.ceil(Math.sqrt(images.length))
+                rows: Math.ceil(Math.sqrt(imageData.length)),
+                columns: Math.ceil(Math.sqrt(imageData.length))
             };
         }
 
@@ -42,8 +36,8 @@ export function useCameraGridLayout(
         let bestLayout = { columns: 1, rows: 1, area: 0 };
 
         // Try different grid configurations
-        for (let columns = 1; columns <= images.length; columns++) {
-            const rows = Math.ceil(images.length / columns);
+        for (let columns = 1; columns <= imageData.length; columns++) {
+            const rows = Math.ceil(imageData.length / columns);
 
             // Calculate the area each image would get
             const cellWidth = containerWidth / columns;
@@ -51,9 +45,10 @@ export function useCameraGridLayout(
 
             // Calculate minimum scaling factor across all images
             let minScale = Infinity;
-            images.forEach(image => {
-                const scaleWidth = cellWidth / (image.aspectRatio * cellHeight);
-                const scaleHeight = cellHeight / (image.aspectRatio === 0 ? 1 : cellWidth / image.aspectRatio);
+            imageData.forEach(image => {
+                const aspectRatio = image.imageWidth / image.imageHeight;
+                const scaleWidth = cellWidth / (aspectRatio * cellHeight);
+                const scaleHeight = cellHeight / (aspectRatio === 0 ? 1 : cellWidth / aspectRatio);
                 minScale = Math.min(minScale, Math.min(scaleWidth, scaleHeight));
             });
 
@@ -66,23 +61,5 @@ export function useCameraGridLayout(
         }
 
         return { columns: bestLayout.columns, rows: bestLayout.rows };
-    }, [images, containerWidth, containerHeight]);
-}
-
-/**
- * Helper function to sort camera images by camera index
- */
-export function sortCamerasByIndex(
-    imageBitmaps: Record<string, ImageBitmap>,
-    cameraConfigs: Record<string, any>
-): ProcessedImageInfo[] {
-    // Create array of image info objects
-    const images: ProcessedImageInfo[] = Object.entries(imageBitmaps).map(([cameraId, bitmap]) => ({
-        cameraId,
-        aspectRatio: bitmap.width / bitmap.height,
-        cameraIndex: cameraConfigs[cameraId]?.camera_index ?? Number.MAX_SAFE_INTEGER
-    }));
-
-    // Sort by camera index
-    return images.sort((a, b) => a.cameraIndex - b.cameraIndex);
+    }, [imageData, containerWidth, containerHeight]);
 }

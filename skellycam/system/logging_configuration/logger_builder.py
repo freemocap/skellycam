@@ -10,9 +10,6 @@ from .log_format_string import LOG_FORMAT_STRING
 from .log_levels import LogLevels
 from ..default_paths import get_log_file_path
 
-MAX_DELTA_T_LEN = 10
-
-
 class LoggerBuilder:
 
     def __init__(self,
@@ -36,11 +33,8 @@ class LoggerBuilder:
         if self.queue:
             root.addHandler(self._build_websocket_handler())
 
-        if True:#not os.getenv("SKELLYCAM_RUNNING_IN_ELECTRON"):
-            # only add console handler if not running in electron, otherwise logs will go through the websocket handler
-            root.addHandler(self._build_console_handler())
-        else:
-            print("Running in electron, not adding console handler to python root logger")
+        root.addHandler(self._build_console_handler())
+
 
     def _build_console_handler(self):
         handler = ColoredConsoleHandler()

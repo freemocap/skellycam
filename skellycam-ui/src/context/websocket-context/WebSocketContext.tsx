@@ -5,7 +5,7 @@ interface WebSocketContextProps {
     isConnected: boolean;
     connect: () => void;
     disconnect: () => void;
-    latestImageBitmaps: Record<string, ImageBitmap>;
+    latestImageData: Record<string, ImageData>;
 }
 
 
@@ -17,10 +17,10 @@ interface WebSocketProviderProps {
 const WebSocketContext = createContext<WebSocketContextProps | undefined>(undefined);
 
 export const WebSocketContextProvider: React.FC<WebSocketProviderProps> = ({url, children}) => {
-    const {isConnected, connect, disconnect, latestImageBitmaps} = useWebSocket(url);
+    const {isConnected, connect, disconnect, latestImageData} = useWebSocket(url);
 
     return (
-        <WebSocketContext.Provider value={{isConnected, connect, disconnect,latestImageBitmaps}}>
+        <WebSocketContext.Provider value={{isConnected, connect, disconnect,latestImageData}}>
             {children}
         </WebSocketContext.Provider>
     )

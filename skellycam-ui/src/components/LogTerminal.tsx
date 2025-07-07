@@ -1,6 +1,6 @@
 import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup, useTheme} from "@mui/material";
 import {useEffect, useRef, useState} from "react";
-import {LogEntry, LogSeverity} from "@/store/slices/logRecordsSlice";
+import {LogRecord} from "@/store/slices/logRecordsSlice";
 import {useAppSelector} from "@/store/AppStateStore";
 
 
@@ -12,13 +12,13 @@ const LOG_COLORS = {
     "SUCCESS": "#FF66FF",
     "API": "#66FF66",
     "WARNING": "#FFFF66",
-    "ERROR": "#FF6666"
+    "ERROR": "#FF6666",
+    "CRITICAL": "#FF0000"
 } as const;
 
-
-const LogEntryComponent = ({log}: { log: LogEntry }) => {
+const LogEntryComponent = ({log}: { log: LogRecord }) => {
     const [expanded, setExpanded] = useState(false);
-    const color = LOG_COLORS[log.severity.toUpperCase() as keyof typeof LOG_COLORS];
+    const color = LOG_COLORS[log.levelname.toUpperCase() as keyof typeof LOG_COLORS];
     const theme = useTheme();
 
     const renderWithFormatting = (text: string) => {
@@ -59,9 +59,9 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                     color: theme.palette.mode === 'dark' ? '#888' : '#555',
                     fontSize: '0.9em'
                 }}>
-                    {new Date(log.timestamp).toLocaleTimeString()}
+                    {log.asctime}
                 </span>
-                <Chip size="small" label={log.severity} sx={{
+                <Chip size="small" label={log.levelname} sx={{
                     backgroundColor: color,
                     color: '#000',
                     height: 16,
@@ -92,11 +92,11 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                             : 'rgba(0,0,0,0.1)'
                     }}
                 >
-                    <div>Location: {log.module}:{log.functionName}:Line#{log.lineNumber}</div>
+                    <div>Location: {log.module}:{log.funcName}:Line#{log.lineno}</div>
                     <div>File: {log.filename}</div>
                     <div>Time delta: {log.delta_t}</div>
                     <div>Path: {log.pathname}</div>
-                    <div>Raw message: {renderWithFormatting(log.rawMessage)}</div>
+                    <div>Raw message: {renderWithFormatting(log.formatted_message)}</div>
                     <div>Thread: {log.threadName} (ID: {log.thread})</div>
                     <div>Process: {log.processName} (ID: {log.process})</div>
 
@@ -108,7 +108,7 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                         </div>
                     )}
 
-                    {log.stackTrace && (
+                    {log.stack_info && (
                         <div>
                             <div>Stack Trace:</div>
                             <pre style={{
@@ -118,7 +118,7 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
                                 borderRadius: 4,
                                 margin: '8px 0'
                             }}>
-                                {renderWithFormatting(log.stackTrace)}
+                                {renderWithFormatting(log.stack_info)}
                             </pre>
                         </div>
                     )}
@@ -131,11 +131,11 @@ const LogEntryComponent = ({log}: { log: LogEntry }) => {
 export const LogTerminal = () => {
     const theme = useTheme();
     const logs = useAppSelector(state => state.logRecords.entries);
-    const [selectedLevels, setSelectedLevels] = useState<LogSeverity[]>([]);
+    const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
     const logEndRef = useRef<HTMLDivElement>(null);
 
     const filteredLogs = logs.filter(log =>
-        selectedLevels.length === 0 || selectedLevels.includes(log.severity)
+        selectedLevels.length === 0 || selectedLevels.includes(log.levelname.toLowerCase())
     );
 
     useEffect(() => {
