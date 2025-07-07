@@ -5,7 +5,7 @@ interface WebSocketContextProps {
     isConnected: boolean;
     connect: () => void;
     disconnect: () => void;
-    latestImageData: Record<string, ImageData>;
+    latestImageData: ImageData[];
 }
 
 

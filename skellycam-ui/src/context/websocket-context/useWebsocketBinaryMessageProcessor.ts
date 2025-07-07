@@ -74,22 +74,48 @@ export interface ImageData {
     cameraIndex: number;
     imageWidth: number;
     imageHeight: number;}
-
+// Number of frames to keep in the rolling buffer
+const MAX_BLOB_URLS_PER_CAMERA = 100;
 export const useWebsocketBinaryMessageProcessor = () => {
     const [latestImageData, setLatestImageData] = useState<ImageData[]>([]);
 
-    const urlCleanupRef = useRef<Record<string, string>>({});
+    // Use a ref to track all active blob URLs with their metadata
+    const blobUrlsRef = useRef<Record<string, BlobUrlInfo[]>>({});
 
     // Reuse these objects for efficiency
     const textDecoderRef = useRef(new TextDecoder());
 
-    // Clean up old URLs when component unmounts
+    // Clean up all URLs when component unmounts
     useEffect(() => {
         return () => {
-            Object.values(urlCleanupRef.current).forEach((url) => {
-                URL.revokeObjectURL(url);
+            // Flatten all camera arrays and revoke all URLs
+            Object.values(blobUrlsRef.current).forEach(cameraUrls => {
+                cameraUrls.forEach(info => {
+                    URL.revokeObjectURL(info.url);
+                });
             });
         };
+    }, []);
+    // Helper function to clean up old blob URLs
+    const cleanupOldBlobUrls = useCallback(() => {
+        const cameras = Object.keys(blobUrlsRef.current);
+
+        cameras.forEach(cameraId => {
+            const cameraUrls = blobUrlsRef.current[cameraId] || [];
+
+            // If we have more URLs than our limit, remove the oldest ones
+            if (cameraUrls.length > MAX_BLOB_URLS_PER_CAMERA) {
+                const urlsToRemove = cameraUrls.slice(0, cameraUrls.length - MAX_BLOB_URLS_PER_CAMERA);
+
+                // Remove these URLs from our tracking and revoke them
+                urlsToRemove.forEach(info => {
+                    URL.revokeObjectURL(info.url);
+                });
+
+                // Update the array to only keep the most recent URLs
+                blobUrlsRef.current[cameraId] = cameraUrls.slice(-(MAX_BLOB_URLS_PER_CAMERA));
+            }
+        });
     }, []);
 
     const parsePayloadHeader = useCallback((dataView: DataView): MessageHeaderFooter | null => {
@@ -177,6 +203,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
         }
     }, []);
 
+
     const processBinaryMessage = useCallback(async (data: ArrayBuffer): Promise<number | null> => {
         try {
             let offset = 0;
@@ -199,8 +226,6 @@ export const useWebsocketBinaryMessageProcessor = () => {
 
             // Process each camera frame
             const newImageDataArray: ImageData[] = [];
-            const oldUrls = {...urlCleanupRef.current};
-            const newUrls: Record<string, string> = {};
             const textDecoder = textDecoderRef.current;
 
             for (let i = 0; i < numberOfCameras; i++) {
@@ -228,6 +253,18 @@ export const useWebsocketBinaryMessageProcessor = () => {
                     const blob = new Blob([jpegData], {type: 'image/jpeg'});
                     const url = URL.createObjectURL(blob);
 
+                    // Store the new URL in our tracking system
+                    if (!blobUrlsRef.current[frameHeader.cameraId]) {
+                        blobUrlsRef.current[frameHeader.cameraId] = [];
+                    }
+
+                    blobUrlsRef.current[frameHeader.cameraId].push({
+                        url,
+                        frameNumber: frameHeader.frameNumber,
+                        cameraId: frameHeader.cameraId,
+                        createdAt: Date.now()
+                    });
+
                     newImageDataArray.push({
                         url,
                         frameNumber: frameHeader.frameNumber,
@@ -236,8 +273,6 @@ export const useWebsocketBinaryMessageProcessor = () => {
                         imageWidth: frameHeader.imageWidth,
                         imageHeight: frameHeader.imageHeight
                     });
-
-                    newUrls[frameHeader.cameraId] = url;
                 } catch (error) {
                     console.error(`Failed to create Blob URL for camera ${frameHeader.cameraId}:`, error);
                 }
@@ -257,27 +292,24 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 return null;
             }
 
-            // Update state with new image URLs
-            urlCleanupRef.current = newUrls;
-
             // Sort by camera index
             newImageDataArray.sort((a, b) => a.cameraIndex - b.cameraIndex);
 
+            // Update state with new image URLs
             setLatestImageData(newImageDataArray);
 
-            // Clean up old URLs
-            queueMicrotask(() => {
-                Object.values(oldUrls).forEach(url => {
-                    URL.revokeObjectURL(url);
-                });
-            });
+            // Clean up old URLs (but not immediately, to give time for textures to load)
+            setTimeout(() => {
+                cleanupOldBlobUrls();
+            }, 1000); // Wait 1 second before cleaning up
 
             return frameNumber;
         } catch (error) {
             console.error('Error processing binary frame:', error);
             return null;
         }
-    }, [parsePayloadHeader, parseFrameHeader, parsePayloadFooter]);
+    }, [parsePayloadHeader, parseFrameHeader, parsePayloadFooter, cleanupOldBlobUrls]);
+
     return {
         latestImageData,
         processBinaryMessage

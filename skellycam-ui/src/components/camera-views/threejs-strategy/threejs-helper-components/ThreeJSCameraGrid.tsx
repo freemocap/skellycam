@@ -1,5 +1,5 @@
 // Camera Grid component
-import {ProcessedImageInfo, useCameraGridLayout} from "@/hooks/useCameraGridLayout";
+import {useCameraGridLayout} from "@/hooks/useCameraGridLayout";
 import {useThree} from "@react-three/fiber";
 import React, {useEffect, useMemo} from "react";
 import {ThreeJsCameraImagePlane} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJsCameraImagePlane";

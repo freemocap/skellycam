@@ -1,6 +1,4 @@
 import {useCallback, useEffect, useState} from 'react';
-import {z} from 'zod';
-import {addLog, addLogs, IncomingLogsSchema, LogRecordSchema} from "@/store/slices/logRecordsSlice";
 import {useAppDispatch} from "@/store/AppStateStore";
 import {useWebsocketBinaryMessageProcessor} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
@@ -29,11 +27,10 @@ export const useWebSocket = (wsUrl: string) => {
 
         // Handle binary data
         if (data instanceof ArrayBuffer) {
-            processBinaryMessage(data).then(frameNumber => {
-                if (frameNumber !== null && ws.readyState === WebSocket.OPEN) {
+            const frameNumber = await processBinaryMessage(data);
+            if (frameNumber !== null && ws.readyState === WebSocket.OPEN) {
                     ws.send(createAcknowledgment(frameNumber));
-                }
-            });
+            }
         }
         //
         //

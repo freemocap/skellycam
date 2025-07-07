@@ -1,7 +1,7 @@
-import React, {useEffect, useRef, useState} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import {Html} from "@react-three/drei";
-import {ImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import { Html, useTexture } from "@react-three/drei";
+import { ImageData } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
 export function ThreeJsCameraImagePlane({
                                             imageData,
@@ -13,63 +13,75 @@ export function ThreeJsCameraImagePlane({
     imageData: ImageData;
 }) {
     const meshRef = useRef<THREE.Mesh>(null);
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [texture, setTexture] = useState<THREE.Texture | null>(null);
+    const textureRef = useRef<THREE.Texture | null>(null);
+    const textureLoader = useRef(new THREE.TextureLoader());
+    const [textureUrl, setTextureUrl] = useState<string | null>(null);
 
-    // Create and configure the texture when component mounts
+    // Update the texture URL when imageData changes
     useEffect(() => {
-        const newTexture = new THREE.Texture();
-        newTexture.minFilter = THREE.LinearFilter;
-        newTexture.magFilter = THREE.LinearFilter;
-        newTexture.generateMipmaps = false;
-        newTexture.flipY = true; // Important for correct orientation
-        setTexture(newTexture);
+        if (imageData?.url && imageData.url !== textureUrl) {
+            setTextureUrl(imageData.url);
+        }
+    }, [imageData, textureUrl]);
 
-        // Clean up when component unmounts
+    // Load and update texture when URL changes
+    useEffect(() => {
+        if (!textureUrl) return;
+
+        // Dispose previous texture to prevent memory leaks
+        if (textureRef.current) {
+            textureRef.current.dispose();
+        }
+
+        // Load the new texture
+        textureLoader.current.load(
+            textureUrl,
+            (loadedTexture) => {
+                // Configure texture settings
+                loadedTexture.minFilter = THREE.LinearFilter;
+                loadedTexture.magFilter = THREE.LinearFilter;
+                loadedTexture.generateMipmaps = false;
+                loadedTexture.flipY = true;
+                loadedTexture.needsUpdate = true;
+
+                // Store the texture reference
+                textureRef.current = loadedTexture;
+
+                // Update the material's map if mesh exists
+                if (meshRef.current && meshRef.current.material) {
+                    (meshRef.current.material as THREE.MeshBasicMaterial).map = loadedTexture;
+                    (meshRef.current.material as THREE.MeshBasicMaterial).needsUpdate = true;
+                }
+            },
+            undefined,
+            (error) => {
+                console.error(`Error loading texture for camera ${imageData.cameraId}:`, error);
+            }
+        );
+
+
+    }, [textureUrl]);
+
+    // Final cleanup when component unmounts
+    useEffect(() => {
         return () => {
-            if (newTexture) {
-                newTexture.dispose();
+            if (textureRef.current) {
+                textureRef.current.dispose();
+                textureRef.current = null;
             }
         };
     }, []);
-
-    // Update the texture when imageData changes
-    useEffect(() => {
-        if (!texture || !imageData || !imageData.url) {
-            setIsLoaded(false);
-            return;
-        }
-
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-
-        img.onload = () => {
-            if (texture) {
-                texture.image = img;
-                texture.needsUpdate = true; // Critical for updating the texture
-                setIsLoaded(true);
-            }
-        };
-
-        img.onerror = (e) => {
-            console.error(`Error loading image for camera ${imageData.cameraId}:`, e);
-            setIsLoaded(false);
-        };
-
-        img.src = imageData.url;
-    }, [imageData, texture]);
 
     return (
         <group position={position}>
             <mesh
                 ref={meshRef}
-                scale={[scale[0], -scale[1], scale[2]]}
+                scale={[scale[0], scale[1], scale[2]]}
             >
                 <planeGeometry />
                 <meshBasicMaterial
-                    map={texture}
+                    color={textureRef.current ? undefined : "gray"}
                     transparent={true}
-                    opacity={isLoaded ? 1 : 0.5}
                 />
             </mesh>
             <Html

@@ -165,12 +165,20 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
         _, jpeg_data = cv2.imencode('.jpg', resized_img, jpeg_encoding_parameters)
         jpeg_string = jpeg_data.tobytes()
         jpeg_string_length = len(jpeg_string)
+
+        if frame_recarray.frame_metadata.camera_config.rotation == -1 or frame_recarray.frame_metadata.camera_config.rotation == cv2.ROTATE_180:
+            frame_height = resized_img.shape[0]
+            frame_width = resized_img.shape[1]
+        else:
+            frame_height = frame_recarray.image.shape[1]
+            frame_width = frame_recarray.image.shape[0]
+
         frame_header = np.array([(1,
                                   frame_number,
                                   camera_id.encode('utf-8'),
                                   frame_recarray.frame_metadata.camera_config.camera_index,
-                                  frame_recarray.image.shape[1],
-                                  frame_recarray.image.shape[0  ],
+                                  frame_width,
+                                  frame_height,
                                   frame_recarray.image.shape[2],
                                   jpeg_string_length)], dtype=FRONTEND_FRAME_HEADER_DTYPE)
         frame_header_bytes = frame_header.tobytes()
