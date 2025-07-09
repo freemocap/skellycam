@@ -42,7 +42,8 @@ class SkellycamApplication:
 
         logger.info(f"Creating camera group with cameras: {list(camera_configs.keys())}")
         camera_group = self.camera_group_manager.create_and_start_camera_group(camera_configs=camera_configs)
-
+        if camera_group is None:
+            logger.error("Failed to create camera group!")
         logger.info(f"Camera group created with ID: {camera_group.id} and cameras: {list(camera_configs.keys())}")
         return camera_group
 

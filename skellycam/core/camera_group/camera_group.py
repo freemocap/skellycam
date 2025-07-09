@@ -15,13 +15,10 @@ from skellycam.core.recorders.recording_manager import RecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import create_frontend_payload_from_mf_recarray
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1s
 
 logger = logging.getLogger(__name__)
 
-
-def wait_1sec():
-    pass
 
 
 @dataclass
@@ -43,8 +40,8 @@ class CameraGroup:
                camera_configs: CameraConfigs,
                global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None,
-               camera_strategy: WorkerStrategy = WorkerStrategy.THREAD,
-               camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
+               camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
+
                recorder_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
                mf_builder_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
 
@@ -52,7 +49,6 @@ class CameraGroup:
                                     camera_configs=camera_configs,
                                     global_kill_flag=global_kill_flag)
         recorder = RecordingManager.create(ipc=ipc,
-                                           camera_ids=list(camera_configs.keys()),
                                            worker_strategy=recorder_strategy
                                            )
         mf_builder = MultiframeBuilder.create(ipc=ipc,
@@ -61,7 +57,6 @@ class CameraGroup:
         # note - create cameras last so others can subscribe to camera updates
         cameras = CameraManager.create(ipc=ipc,
                                        camera_configs=camera_configs,
-                                       camera_manager_strategy=camera_manager_strategy,
                                        camera_strategy=camera_strategy,
                                        )
 
@@ -84,6 +79,7 @@ class CameraGroup:
                                                          timebase_mapping=self.ipc.timebase_mapping,
                                                          read_only=True)
         self.ipc.publish_shm_message(shm_dto=self.shm.to_dto())
+        self.configs = extracted_configs
         return extracted_configs
 
     @property
@@ -94,6 +90,9 @@ class CameraGroup:
     def all_alive(self):
         return all([self.cameras.all_alive, self.recorder.is_alive()])
 
+    @property
+    def any_alive(self):
+        return any([self.cameras.any_alive, self.recorder.is_alive(), self.mf_builder.is_alive()])
     @property
     def all_ready(self) -> bool:
         if self.shm is None:
@@ -143,7 +142,8 @@ class CameraGroup:
             UpdateCamerasSettingsMessage(requested_configs=requested_configs))
 
         updated_configs = await_extracted_configs(ipc=self.ipc, requested_configs=requested_configs)
-        self.configs.update(updated_configs)
+        self.configs = updated_configs
+        logger.info(f"Updated camera configs - {list(requested_configs.keys())}")
         return self.configs
 
     def start_recording(self, recording_info: RecordingInfo):
@@ -165,32 +165,25 @@ class CameraGroup:
     def close(self):
         logger.debug("Closing camera group")
         self.ipc.pause(await_paused=True)
-        wait_100ms()
         self.ipc.should_continue = False
-        wait_1sec()
+        wait_1s()
+        self.mf_builder.close()
 
-        try:
-            self.recorder.close()
-        except Exception as e:
-            logger.error(f"Error closing recorder: {type(e).__name__} - {e}")
+        while self.any_alive:
+            logger.debug(f"Waiting for all camera group processes to close, cameras: {self.cameras.any_alive}, "
+                         f"recorder: {self.recorder.is_alive()}, mf_builder: {self.mf_builder.is_alive()}")
+            wait_1s()
 
-        try:
-            self.cameras.close()
-        except Exception as e:
-            logger.error(f"Error closing cameras: {type(e).__name__} - {e}")
-
-        try:
-            self.mf_builder.close()
-        except Exception as e:
-            logger.error(f"Error closing multi-frame builder: {type(e).__name__} - {e}")
 
         if self.shm is not None:
             try:
                 self.shm.unlink_and_close()
             except Exception as e:
                 logger.error(f"Error closing shared memory: {type(e).__name__} - {e}")
+        
+            logger.success("Shared memory closed and unlinked if applicable.")
 
-        logger.info("Camera group closed.")
+        logger.success("Camera group closed successfully.")
 
 def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:
     updated_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in
@@ -205,5 +198,5 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
                     extracted_config_message.extracted_config.camera_id] = extracted_config_message.extracted_config
         wait_10ms()
     validate_camera_configs(updated_configs)
-    logger.info(f"Updated camera configs - {list(requested_configs.keys())}")
+
     return updated_configs

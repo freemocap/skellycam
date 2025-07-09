@@ -75,6 +75,7 @@ class CameraGroupManager:
         self.closing = True
         if not self.camera_groups:
             logger.warning("No camera groups to close.")
+            self.closing = False
             return
         for camera_group in self.camera_groups.values():
             camera_group.should_continue = False

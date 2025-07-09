@@ -73,6 +73,25 @@ export const camerasSlice = createSlice({
                 };
             }
         },
+        updateCameraConfigs: (state, action: PayloadAction<Record<string, CameraConfig>>) => {
+            const configs = action.payload;
+            console.log(`Updating camera configs for Cameras: `, Object.keys(configs));
+            Object.keys(configs).forEach(cameraId => {
+                if (state.cameras[cameraId]) {
+                    state.cameras[cameraId] = {
+                        ...state.cameras[cameraId],
+                        config: {
+                            ...state.cameras[cameraId].config,
+                            ...configs[cameraId]
+                        }
+                    };
+                } else {
+                    // If camera doesn't exist, throw an error
+                    throw  new Error(`Camera with ID ${cameraId} does not exist in the state.`);
+                }
+            });
+        },
+
 
         copyConfigToAllCameras: (state, action: PayloadAction<string>) => {
             const sourceCameraId = action.payload;
@@ -144,6 +163,7 @@ export const {
     setCameraStatus,
     toggleCameraSelection,
     updateCameraConfig,
+    updateCameraConfigs,
     copyConfigToAllCameras,
     setError
 } = camerasSlice.actions;

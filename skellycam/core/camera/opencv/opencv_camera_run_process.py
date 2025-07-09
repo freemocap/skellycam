@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import time
 
 import cv2
@@ -28,7 +27,6 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                                 ipc: CameraGroupIPC,
                                 update_camera_settings_subscription: TopicSubscriptionQueue,
                                 shm_subscription: TopicSubscriptionQueue,
-                                close_self_flag: multiprocessing.Value,
                                 camera_worker_strategy: WorkerStrategy,
                                 ):
     # Configure logging in the child process
@@ -43,19 +41,14 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
     self_status.running.value = True
     camera_shm: FramePayloadSharedMemoryRingBuffer | None = None
 
-    def should_continue():
-        return ipc.should_continue and not close_self_flag.value
-
     (camera_shm,
      config,
      cv2_video_capture,
      frame_rec_array) = setup_camera_loop(camera_shm=camera_shm,
-                                          close_self_flag=close_self_flag,
                                           config=config,
                                           ipc=ipc,
                                           self_status=self_status,
-                                          shm_subscription=shm_subscription,
-                                          should_continue=should_continue)
+                                          shm_subscription=shm_subscription)
     try:
         logger.debug(f"Camera {config.camera_id} frame grab loop starting...")
         run_camera_loop(camera_shm=camera_shm,
@@ -65,7 +58,6 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                         ipc=ipc,
                         orchestrator=orchestrator,
                         self_status=self_status,
-                        should_continue=should_continue,
                         update_camera_settings_subscription=update_camera_settings_subscription)
 
 
@@ -78,7 +70,6 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
     finally:
         logger.debug(f"Releasing camera {camera_id} `cv2.VideoCapture` and shutting down CameraProcess")
         self_status.signal_closing()
-        close_self_flag.value = True
         ipc.should_continue = False
         if cv2_video_capture:
             cv2_video_capture.release()
@@ -95,56 +86,61 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                     ipc: CameraGroupIPC,
                     orchestrator: CameraOrchestrator,
                     self_status: CameraStatus,
-                    should_continue: callable,
                     update_camera_settings_subscription: TopicSubscriptionQueue):
-    while should_continue():
-        if self_status.should_pause.value:
-            if not self_status.is_paused.value:
-                logger.trace(f"Pausing camera {config.camera_id}...")
-                self_status.is_paused.value = True
-            wait_10ms()
-            continue
-        self_status.is_paused.value = False
+    try:
+        while ipc.should_continue:
+            if self_status.should_pause.value:
+                if not self_status.is_paused.value:
+                    logger.trace(f"Pausing camera {config.camera_id}...")
+                    self_status.is_paused.value = True
+                wait_10ms()
+                continue
+            self_status.is_paused.value = False
 
-        if not orchestrator.should_grab_by_id(camera_id=config.camera_id):
-            wait_10us()
-            continue
+            if not orchestrator.should_grab_by_id(camera_id=config.camera_id):
+                wait_10us()
+                continue
 
-        self_status.grabbing_frame.value = True
-        frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
-                                           frame_rec_array=frame_rec_array, )
-        camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
-        self_status.grabbing_frame.value = False
-        frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
-                                               cv2_video_capture=cv2_video_capture,
-                                               ipc=ipc,
-                                               self_status=self_status,
-                                               update_camera_settings_subscription=update_camera_settings_subscription)
-        frame_rec_array = initialize_frame_timestamps(frame_rec_array=frame_rec_array)
-        # Last camera to increment their frame count status triggers the next frame_grab
-        self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
-
+            self_status.grabbing_frame.value = True
+            frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
+                                               frame_rec_array=frame_rec_array, )
+            camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
+            self_status.grabbing_frame.value = False
+            frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
+                                                   cv2_video_capture=cv2_video_capture,
+                                                   ipc=ipc,
+                                                   self_status=self_status,
+                                                   update_camera_settings_subscription=update_camera_settings_subscription)
+            frame_rec_array = initialize_frame_timestamps(frame_rec_array=frame_rec_array)
+            # Last camera to increment their frame count status triggers the next frame_grab
+            self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+    except Exception as e:
+        self_status.signal_error()
+        logger.exception(f"Exception occurred in camera loop for Camera: {config.camera_id} - {e}")
+        ipc.kill_everything()
+        raise
+    finally:
+        self_status.running.value = False
+        logger.debug(f"Camera {config.camera_id} loop ended.")
 
 def setup_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer | None,
-                      close_self_flag: multiprocessing.Value,
                       config: CameraConfig,
                       ipc: CameraGroupIPC,
                       self_status: CameraStatus,
-                      shm_subscription:       TopicSubscriptionQueue,
-                      should_continue: callable) -> tuple[FramePayloadSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
+                      shm_subscription: TopicSubscriptionQueue) -> tuple[
+    FramePayloadSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
     # Create cv2.VideoCapture object
     try:
         cv2_video_capture, config = create_cv2_video_capture(config)
     except Exception as e:
         logger.exception(f"Failed to create cv2.VideoCapture for camera {config.camera_id}: {e}")
         self_status.signal_error()
-        close_self_flag.value = True
         ipc.kill_everything()
         raise RuntimeError(f"Could not create cv2.VideoCapture for camera {config.camera_id}") from e
     ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(DeviceExtractedConfigMessage(extracted_config=config))
     self_status.connected.value = True
     logger.debug(f"Camera {config.camera_id} connected, awaiting shm message...")
-    while camera_shm is None and should_continue():
+    while camera_shm is None and ipc.should_continue:
         wait_10ms()
         if not shm_subscription.empty():
             shm_message: SetShmMessage = shm_subscription.get()
@@ -160,7 +156,7 @@ def setup_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer | None,
     if camera_shm is None or not camera_shm.valid:
         raise RuntimeError("Failed to initialize camera_group_shm")
     logger.success(f"Camera {config.camera_id} ready!")
-    while not ipc.all_ready and should_continue():
+    while not ipc.all_ready and ipc.should_continue:
         wait_10ms()
     frame_rec_array = create_initial_frame_rec_array(config=config,
                                                      ipc=ipc)

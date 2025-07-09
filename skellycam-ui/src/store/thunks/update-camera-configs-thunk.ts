@@ -3,7 +3,7 @@ import {
     selectCameraById,
     selectConfigsForSelectedCameras,
     setError,
-    setLoading, updateCameraConfig
+    setLoading, updateCameraConfig, updateCameraConfigs
 } from "@/store/slices/cameras-slices/camerasSlice";
 import { CameraConfig } from "../slices/cameras-slices/camera-types";
 
@@ -40,14 +40,7 @@ export const updateCameraConfigsThunk = createAsyncThunk(
                 throw new Error(errorMsg);
             }
             // Convert the response data to a Record<string, CameraConfig>
-            data.extracted_configs.forEach((config: CameraConfig) => {
-                dispatch(updateCameraConfig(
-                    {
-                        cameraId: config.camera_id,
-                        config: config
-                    }
-                ))
-            });
+            dispatch(updateCameraConfigs(data.camera_configs as Record<string, CameraConfig>));
             dispatch(setError(null));
             return data;
         } catch (error) {

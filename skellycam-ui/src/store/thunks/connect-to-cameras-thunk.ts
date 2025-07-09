@@ -1,6 +1,12 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
-import {selectConfigsForSelectedCameras, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
+import {
+    selectConfigsForSelectedCameras,
+    setError,
+    setLoading,
+    updateCameraConfigs
+} from "@/store/slices/cameras-slices/camerasSlice";
 import { urlService } from "@/services/urlService";
+import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',
@@ -44,6 +50,7 @@ export const connectToCameras = createAsyncThunk(
             }
 
             dispatch(setError(null));
+            dispatch(updateCameraConfigs(data.camera_configs as Record<string, CameraConfig>));
             return data;
         } catch (error) {
             // Handle network errors and JSON parsing errors

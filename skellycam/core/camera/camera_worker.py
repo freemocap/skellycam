@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class CameraStrategies(enum.Enum):
-    OPEN_CV = opencv_camera_worker_method
+    OPEN_CV = opencv_camera_worker_method 
 
 
 
@@ -23,7 +23,6 @@ class CameraWorker:
     camera_id: CameraIdString
     worker: WorkerType
     ipc: CameraGroupIPC
-    close_self_flag: multiprocessing.Value
 
     @classmethod
     def create(cls,
@@ -37,19 +36,16 @@ class CameraWorker:
                ):
 
 
-        close_self_flag = multiprocessing.Value("b", False)
 
 
         return cls(camera_id=camera_id,
                    ipc=ipc,
-                   close_self_flag=close_self_flag,
                    worker=camera_worker_strategy.value(target=camera_strategy,
                                        name=f"Camera{config.camera_index}-{camera_id}-Process",
                                        daemon=True,
                                        kwargs=dict(camera_id=camera_id,
                                                    ipc=ipc,
                                                    config=config,
-                                                   close_self_flag=close_self_flag,
                                                    update_camera_settings_subscription=update_camera_settings_subscription,
                                                    shm_subscription=shm_subscription,
                                                    camera_worker_strategy=camera_worker_strategy,
@@ -61,14 +57,7 @@ class CameraWorker:
     def start(self):
         self.worker.start()
 
-    def join(self):
-        self.worker.join()
-
-    def close(self):
-        logger.info(f"Closing camera {self.camera_id}")
-        self.close_self_flag.value = True
-        self.worker.join()
-        logger.info(f"Camera {self.camera_id} closed!")
-
     def is_alive(self) -> bool:
         return self.worker.is_alive()
+    def join(self, timeout: float | None = None):
+        self.worker.join(timeout=timeout)

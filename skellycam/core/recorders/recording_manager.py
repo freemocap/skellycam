@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, SkipValidation
+from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
@@ -14,7 +14,7 @@ from skellycam.core.recorders.recording_manager_status import RecordingManagerSt
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_manager import VideoManager
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
-from skellycam.utilities.wait_functions import wait_10ms, wait_1ms, wait_1s, wait_100ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ class RecordingManager(BaseModel):
     )
     worker: WorkerType
     ipc: CameraGroupIPC
-    should_close_self: SkipValidation[multiprocessing.Value]
 
     @property
     def status(self):
@@ -34,23 +33,19 @@ class RecordingManager(BaseModel):
     @classmethod
     def create(cls,
                ipc: CameraGroupIPC,
-               camera_ids: list[CameraIdString],
                worker_strategy: WorkerStrategy):
-        should_close_self = multiprocessing.Value("b", False)
         return cls(
             ipc=ipc,
-            should_close_self=should_close_self,
-            worker=worker_strategy.value(target=cls._worker,
+            worker=worker_strategy.value(target=cls._run_recording_manager,
                                          name='RecordingManagerWorker',
                                          kwargs=dict(ipc=ipc,
-                                                     camera_ids=camera_ids,
-                                                     should_close_self=should_close_self,
                                                      recording_info_subscription=ipc.pubsub.topics[
                                                          TopicTypes.RECORDING_INFO].get_subscription(),
                                                      shm_updates_subscription=ipc.pubsub.topics[
                                                          TopicTypes.SHM_UPDATES].get_subscription(),
 
-                                                     )),
+                                                     ),
+                                         daemon=True),
         )
 
     @property
@@ -64,36 +59,24 @@ class RecordingManager(BaseModel):
     def is_alive(self) -> bool:
         return self.worker.is_alive()
 
-    def join(self):
-        self.worker.join()
 
-    def close(self):
-        logger.debug(f"Closing video worker process...")
-        self.should_close_self.value = False
-        if self.is_alive():
-            self.join()
-        logger.debug(f"Video worker closed")
 
     @staticmethod
-    def _worker(ipc: CameraGroupIPC,
-                camera_ids: list[CameraIdString],
-                recording_info_subscription: TopicSubscriptionQueue,
-                shm_updates_subscription: TopicSubscriptionQueue,
-                should_close_self: multiprocessing.Value
-                ):
+    def _run_recording_manager(ipc: CameraGroupIPC,
+                               recording_info_subscription: TopicSubscriptionQueue,
+                               shm_updates_subscription: TopicSubscriptionQueue,
+                               ):
         if multiprocessing.parent_process():
             # Configure logging if multiprocessing (i.e. if there is a parent process)
             from skellycam.system.logging_configuration.configure_logging import configure_logging
             from skellycam import LOG_LEVEL
             configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
 
-        def should_continue():
-            return ipc.should_continue and not should_close_self.value
 
         status: RecordingManagerStatus = ipc.recording_manager_status
         camera_group_shm: CameraGroupSharedMemoryManager | None = None
 
-        while should_continue() and camera_group_shm is None:
+        while ipc.should_continue  and camera_group_shm is None:
 
             if not shm_updates_subscription.empty():
                 shm_message = shm_updates_subscription.get()
@@ -121,9 +104,8 @@ class RecordingManager(BaseModel):
         status.is_running_flag.value = True
         logger.success(f"VideoManager process started for camera group `{ipc.group_id}`")
         try:
-            while should_continue():
+            while ipc.should_continue :
                 wait_1ms()
-
                 # check for new recording info
                 if status.should_record.value and video_manager is None:
                     recording_info_message = recording_info_subscription.get(block=True)
@@ -161,11 +143,13 @@ class RecordingManager(BaseModel):
             pass
         finally:
             status.is_running_flag.value = False
-            should_close_self.value = True
+            ipc.should_continue = False
             if video_manager:
                 video_manager.finish_and_close()
-            camera_group_shm.close()
-            logger.debug(f"RecordingManager worker completed")
+            if camera_group_shm:
+                camera_group_shm.close()
+                logger.trace("Camera group shared memory closed in RecordingManager worker.")
+            logger.debug("RecordingManager worker completed")
 
     @staticmethod
     def _get_and_handle_new_mfs(status: RecordingManagerStatus,
@@ -207,8 +191,7 @@ class RecordingManager(BaseModel):
         if isinstance(video_manager, VideoManager):
             RecordingManager.stop_recording(status=status, video_manager=video_manager)
 
-        if not isinstance(recording_info, RecordingInfo):
-            raise ValueError(f"Expected RecordingInfo, got {type(recording_info)} in recording_info_queue")
+
         if not isinstance(camera_configs, dict) or any(
                 [not isinstance(config, CameraConfig) for config in camera_configs.values()]):
             raise ValueError(f"Expected CameraConfigs, got {type(camera_configs)} in camera_configs")
@@ -225,8 +208,6 @@ class RecordingManager(BaseModel):
     @staticmethod
     def stop_recording(status: RecordingManagerStatus, video_manager: VideoManager) -> None:
         logger.info(f"Stopping recording: `{video_manager.recording_info.recording_name}`...")
-        if not isinstance(video_manager, VideoManager):
-            raise ValueError(f"Expected VideoManager, got {type(video_manager)} in video_manager")
         status.is_recording_frames_flag.value = False
 
         status.finishing.value = True

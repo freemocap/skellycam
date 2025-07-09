@@ -85,9 +85,11 @@ def camera_group_create_post_endpoint(
     try:
         configs = request.camera_configs
         camera_group = get_skellycam_app().create_camera_group(camera_configs=configs)
-        logger.api("`skellycam/cameras/group/create` POST request handled successfully.")
-        return CreateCameraGroupResponse(group_id=camera_group.id,
-                                         camera_configs=camera_group.configs)
+        response = CreateCameraGroupResponse(group_id=camera_group.id,
+                                             camera_configs=camera_group.configs)
+        logger.api(
+            f"`skellycam/cameras/group/create` POST request handled successfully - \n {response.model_dump_json(indent=2)}")
+        return response
     except Exception as e:
         logger.error(f"Error when processing `skellycam/cameras/group/create` request: {type(e).__name__} - {e}")
         logger.exception(e)

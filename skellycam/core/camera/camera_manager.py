@@ -6,8 +6,8 @@ from skellycam.core.camera.camera_worker import CameraWorker
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.types.type_overloads import WorkerStrategy, WorkerType, TopicSubscriptionQueue
-from skellycam.utilities.wait_functions import wait_10ms
+from skellycam.core.types.type_overloads import WorkerStrategy, WorkerType, TopicSubscriptionQueue, CameraIdString
+from skellycam.utilities.wait_functions import  wait_1s
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +16,17 @@ logger = logging.getLogger(__name__)
 class CameraManager:
     ipc: CameraGroupIPC
     worker: WorkerType
-    close_self_flag: multiprocessing.Value
 
     @classmethod
     def create(cls,
                ipc: CameraGroupIPC,
                camera_configs: CameraConfigs,
-               camera_manager_strategy: WorkerStrategy,
                camera_strategy: WorkerStrategy):
+        if camera_strategy == WorkerStrategy.THREAD:
+            camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS
+        else:
+            camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
 
-        close_self_flag = multiprocessing.Value("b", False)
         config_subscription_by_camera= {camera_id: ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription() for camera_id in camera_configs.keys()}
         shm_subscription_by_camera= {camera_id: ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription() for camera_id in camera_configs.keys()}
         worker = camera_manager_strategy.value(
@@ -35,7 +36,6 @@ class CameraManager:
             kwargs=dict(
                 ipc=ipc,
                 camera_configs=camera_configs,
-                close_self_flag=close_self_flag,
                 camera_strategy=camera_strategy,
                 config_subscription_by_camera=config_subscription_by_camera,
                 shm_subscription_by_camera=shm_subscription_by_camera,
@@ -43,13 +43,11 @@ class CameraManager:
         )
 
         return cls(ipc=ipc,
-                   worker=worker,
-                   close_self_flag=close_self_flag)
+                   worker=worker)
 
     @staticmethod
     def _camera_manager_worker(ipc: CameraGroupIPC,
                                camera_configs: CameraConfigs,
-                               close_self_flag: multiprocessing.Value,
                                camera_strategy: WorkerStrategy,
                                  config_subscription_by_camera: dict[str, TopicSubscriptionQueue],
                                  shm_subscription_by_camera: dict[str, TopicSubscriptionQueue]
@@ -63,10 +61,10 @@ class CameraManager:
         logger.info(f"Starting camera manager process with {len(camera_configs)} cameras")
 
 
-        camera_processes = {}
+        camera_workers: dict[CameraIdString, CameraWorker] = {}
         for camera_id, camera_config in camera_configs.items():
 
-            camera_processes[camera_id] = CameraWorker.create(
+            camera_workers[camera_id] = CameraWorker.create(
                 camera_id=camera_id,
                 ipc=ipc,
                 config=camera_config,
@@ -75,29 +73,24 @@ class CameraManager:
                 shm_subscription=shm_subscription_by_camera[camera_id],
             )
 
-        for process in camera_processes.values():
-            process.start()
+        for worker in camera_workers.values():
+            worker.start()
 
-        while not close_self_flag.value and ipc.should_continue:
-            wait_10ms()
-
-        logger.info("Camera manager worker closing all camera workers")
-        for camera_process in camera_processes.values():
-            camera_process.close()
-        for camera_process in camera_processes.values():
-            camera_process.join()
-
-        logger.info("Camera manager worker exiting")
+        while ipc.should_continue:
+            wait_1s()
+        logger.debug("Awaiting camera processes to finish...")
+        for camera_id, worker in camera_workers.items():
+            worker.join()
+            logger.debug(f"Camera worker {camera_id} has finished.")
+        logger.info("Camera manager worker is shut down")
 
 
     def close(self):
-        if not self.worker:
-            raise ValueError("Camera manager worker not initialized!")
-
-        logger.info("Closing camera manager process...")
-        self.close_self_flag.value = True
-        self.worker.join()
-        logger.info("Camera manager worker closed.")
+        if self.worker and self.worker.is_alive():
+            logger.debug("Closing camera manager worker...")
+            self.ipc.should_continue = False
+            self.worker.join()
+        logger.success("Camera manager worker closed successfully.")
 
     @property
     def any_alive(self) -> bool:
