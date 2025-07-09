@@ -12,15 +12,15 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const location = useLocation();
 
     // Only show panels on cameras and videos pages
-    const showPanels = location.pathname === '/cameras' || location.pathname === '/videos';
+    // const showPanels = location.pathname === '/cameras' || location.pathname === '/videos';
 
-    if (!showPanels) {
-        return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-                {children}
-            </Box>
-        );
-    }
+    // if (!showPanels) {
+    //     return (
+    //         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    //             {children}
+    //         </Box>
+    //     );
+    // }
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -29,7 +29,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                 style={{ flex: 1 }}
             >
                 {/* Top section (horizontal panels) - 80% height */}
-                <Panel defaultSize={80} minSize={20}>
+                <Panel defaultSize={96} minSize={20}>
                     <PanelGroup direction="horizontal">
                         <Panel collapsible defaultSize={40} minSize={10} collapsedSize={4}>
                             <LeftSidePanelContent/>
@@ -59,7 +59,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                     }}
                 />
 
-                <Panel collapsible defaultSize={20} minSize={10} collapsedSize={4}>
+                <Panel collapsible defaultSize={4} minSize={10} collapsedSize={4}>
                     <BottomPanelContent/>
                 </Panel>
             </PanelGroup>

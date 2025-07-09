@@ -38,10 +38,11 @@ export function ThreeJsCameraImagePlane({
             textureUrl,
             (loadedTexture) => {
                 // Configure texture settings
-                loadedTexture.minFilter = THREE.LinearFilter;
-                loadedTexture.magFilter = THREE.LinearFilter;
+                loadedTexture.minFilter = THREE.NearestFilter;
+                loadedTexture.magFilter = THREE.NearestFilter;
                 loadedTexture.generateMipmaps = false;
                 loadedTexture.flipY = true;
+                loadedTexture.colorSpace = THREE.SRGBColorSpace;
                 loadedTexture.needsUpdate = true;
 
                 // Store the texture reference
@@ -50,6 +51,7 @@ export function ThreeJsCameraImagePlane({
                 // Update the material's map if mesh exists
                 if (meshRef.current && meshRef.current.material) {
                     (meshRef.current.material as THREE.MeshBasicMaterial).map = loadedTexture;
+                    (meshRef.current.material as THREE.MeshBasicMaterial).transparent = false;
                     (meshRef.current.material as THREE.MeshBasicMaterial).needsUpdate = true;
                 }
             },
@@ -58,8 +60,6 @@ export function ThreeJsCameraImagePlane({
                 console.error(`Error loading texture for camera ${imageData.cameraId}:`, error);
             }
         );
-
-
     }, [textureUrl]);
 
     // Final cleanup when component unmounts
@@ -100,9 +100,6 @@ export function ThreeJsCameraImagePlane({
                 }}
             >
                 Camera {imageData?.cameraIndex} ({imageData?.cameraId}) Frame# {imageData?.frameNumber}
-                {imageData?.imageWidth && imageData?.imageHeight && (
-                    <span> - {imageData.imageWidth}x{imageData.imageHeight}</span>
-                )}
             </Html>
         </group>
     );

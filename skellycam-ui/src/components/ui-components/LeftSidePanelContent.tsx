@@ -114,7 +114,7 @@ export const LeftSidePanelContent = () => {
 
             <WebsocketConnectionStatus/>
 
-            {location.pathname === '/cameras' && (
+            {location.pathname === '/cameras' || location.pathname === '/' && (
                 <Box sx={{
                     flex: 1,
                     overflowY: 'auto',

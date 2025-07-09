@@ -8,8 +8,8 @@ import VideosPage from "@/layout/pages/VideosPage";
 export const BaseContentRouter: React.FC = () => {
     return (
         <Routes>
-            <Route path="/" element={<WelcomePage />} />
-            <Route path="/cameras" element={<CamerasPage />} />
+            {/*<Route path="/" element={<WelcomePage />} />*/}
+            <Route path="/" element={<CamerasPage />} />
             <Route path="/videos" element={<VideosPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

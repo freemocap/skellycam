@@ -99,6 +99,7 @@ class CameraOrchestrator:
     @property
     def any_grabbing_frame(self) -> bool:
         return any([status.grabbing_frame.value for status in self.camera_statuses.values()])
+
     def should_grab_by_id(self, camera_id: CameraIdString) -> bool:
         if not camera_id in self.camera_statuses:
             raise ValueError(f"Camera ID {camera_id} not found in orchestrator: {self.camera_statuses.keys()}")
