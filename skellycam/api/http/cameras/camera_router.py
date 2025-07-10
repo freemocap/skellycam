@@ -54,7 +54,7 @@ class DetectedCamerasResponse(BaseModel):
     cameras: list[CameraDeviceInfo]
 
 
-@camera_router.get("/detect",
+@camera_router.post("/detect",
                    summary="Detect available camera devices",
                    )
 def cameras_detect_endpoint(filter_virtual: bool = True,

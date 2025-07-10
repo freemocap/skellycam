@@ -24,7 +24,13 @@ export const detectCameraDevices = createAsyncThunk<
             const connectUrl = urlService.getCameraUrls().detectCameras;
 
             console.log(`Detecting cameras at ${connectUrl}`);
-            const response = await fetch('${connectUrl}?filter_virtual=${filterVirtual}');
+            const response = await fetch(connectUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ filterVirtual }),
+            });
 
             const data = await response.json();
             const serverCameras = data.cameras;
