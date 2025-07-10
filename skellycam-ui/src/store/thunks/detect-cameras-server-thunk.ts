@@ -63,7 +63,7 @@ export const detectCameraDevices = createAsyncThunk<
                     createDefaultCameraConfig(
                         serverCamera.index,
                         serverCamera.name,
-                        serverCamera.index
+                        serverCamera.index.toString()
                     )
                 };
 
