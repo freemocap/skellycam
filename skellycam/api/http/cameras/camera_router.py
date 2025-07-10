@@ -57,7 +57,7 @@ class DetectedCamerasResponse(BaseModel):
 @camera_router.get("/detect",
                    summary="Detect available camera devices",
                    )
-def cameras_detect_get_endpoint(filter_virtual: bool = True,
+def cameras_detect_endpoint(filter_virtual: bool = True,
                                 backend_id: CameraBackendInt | None = None) -> DetectedCamerasResponse:
     logger.api(f"Received `skellycam/cameras/detect` POST request with filter_virtual={filter_virtual}...")
     try:

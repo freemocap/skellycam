@@ -39,9 +39,9 @@ export const CAMERA_DEFAULT_CONSTRAINTS = {
 };
 
 export interface CameraDevice {
-    index: number;
+    index: string;
     deviceId: string;
-    cameraId: string; // Camera ID is the last 5 characters of the device ID
+    cameraId: number;
     status: string;
     groupId: string;
     kind: string;
@@ -53,7 +53,7 @@ export interface CameraDevice {
 
 
 // Helper function
-export const createDefaultCameraConfig = (index: number, label: string, id: string): CameraConfig => ({
+export const createDefaultCameraConfig = (index: string, label: string, id: number): CameraConfig => ({
     camera_index: index,
     camera_name: label || `Camera ${index}`,
     camera_id: id || `camera-${index}`,
