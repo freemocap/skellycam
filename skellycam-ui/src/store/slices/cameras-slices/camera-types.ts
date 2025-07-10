@@ -39,9 +39,9 @@ export const CAMERA_DEFAULT_CONSTRAINTS = {
 };
 
 export interface CameraDevice {
-    index: string;
+    index: number;
     deviceId: string;
-    cameraId: number;
+    cameraId: string;
     status: string;
     groupId: string;
     kind: string;
