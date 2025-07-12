@@ -12,7 +12,7 @@ from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtractedConfigMessage, \
-    UpdateCamerasSettingsMessage
+    UpdateCamerasSettingsMessage, RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
@@ -28,6 +28,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                                 ipc: CameraGroupIPC,
                                 update_camera_settings_subscription: TopicSubscriptionQueue,
                                 shm_subscription: TopicSubscriptionQueue,
+                                recording_info_subscription: TopicSubscriptionQueue,
                                 camera_worker_strategy: WorkerStrategy,
                                 ):
     # Configure logging in the child process
@@ -60,7 +61,8 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
                         ipc=ipc,
                         orchestrator=orchestrator,
                         self_status=self_status,
-                        update_camera_settings_subscription=update_camera_settings_subscription)
+                        update_camera_settings_subscription=update_camera_settings_subscription,
+                        recording_info_subscription=recording_info_subscription)
 
 
 
@@ -88,12 +90,9 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                     ipc: CameraGroupIPC,
                     orchestrator: CameraOrchestrator,
                     self_status: CameraStatus,
-                    update_camera_settings_subscription: TopicSubscriptionQueue):
-    video_recorder: VideoRecorder = VideoRecorder.create(
-        recording_info=None,
-        config=config,
-    )
-    is_recording: bool = False
+                    update_camera_settings_subscription: TopicSubscriptionQueue,
+                    recording_info_subscription: TopicSubscriptionQueue):
+    video_recorder: VideoRecorder|None = None
     try:
         while ipc.should_continue:
             if self_status.should_pause.value:
@@ -114,22 +113,46 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             self_status.grabbing_frame.value = False
 
             camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
+            if not recording_info_subscription.empty():
+
+                recording_info_message = recording_info_subscription.get()
+                if not isinstance(recording_info_message, RecordingInfoMessage):
+                    raise RuntimeError(
+                        f"Expected RecordingInfoMessage for camera {config.camera_id}, "
+                        f"but received {type(recording_info_message)}"
+                    )
+                recording_info = recording_info_message.recording_info
+                if video_recorder is not None:
+                    logger.info(
+                        f"New recording info received, closing recording: {video_recorder.recording_info.recording_name} for camera {config.camera_id}")
+                    video_recorder.finish_and_close()
+                logger.info(
+                    f"Camera {config.camera_id} creating recorder for recording: {recording_info.recording_name}")
+                video_recorder = VideoRecorder.create(
+                    recording_info=recording_info,
+                    config=config,
+                )
+                self_status.ready_to_record.value = True
+
             if self_status.should_record.value:
-                is_recording = True
+                self_status.is_recording.value = True
+                if video_recorder is None:
+                    raise RuntimeError("Record requested before video_recorder was created.")
                 video_recorder.record_frame(frame=frame_rec_array)
             else:
-                if is_recording:
+                if video_recorder is not None and video_recorder.any_data_saved:
+                    logger.debug(f"Camera {config.camera_id} finishing and closing video recorder...")
                     video_recorder.finish_and_close()
-                    video_recorder = VideoRecorder.create(
-                        recording_info=None,
-                        config=config,
-                    )
-                    is_recording = False
-            frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
-                                                   cv2_video_capture=cv2_video_capture,
-                                                   ipc=ipc,
-                                                   self_status=self_status,
-                                                   update_camera_settings_subscription=update_camera_settings_subscription)
+                    video_recorder = None
+                    self_status.ready_to_record.value = False
+                    self_status.is_recording.value = False
+
+
+                frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
+                                                       cv2_video_capture=cv2_video_capture,
+                                                       ipc=ipc,
+                                                       self_status=self_status,
+                                                       update_camera_settings_subscription=update_camera_settings_subscription)
             frame_rec_array = initialize_frame_timestamps(frame_rec_array=frame_rec_array)
             # Last camera to increment their frame count status triggers the next frame_grab
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]

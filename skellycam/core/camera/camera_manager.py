@@ -7,7 +7,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.types.type_overloads import WorkerStrategy, WorkerType, TopicSubscriptionQueue, CameraIdString
-from skellycam.utilities.wait_functions import  wait_1s
+from skellycam.utilities.wait_functions import wait_1s
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,14 @@ class CameraManager:
         else:
             camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
 
-        config_subscription_by_camera= {camera_id: ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription() for camera_id in camera_configs.keys()}
-        shm_subscription_by_camera= {camera_id: ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription() for camera_id in camera_configs.keys()}
+        config_subscription_by_camera = {
+            camera_id: ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription() for camera_id in
+            camera_configs.keys()}
+        shm_subscription_by_camera = {camera_id: ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription() for
+                                      camera_id in camera_configs.keys()}
+        recording_info_subscription_by_camera = {
+            camera_id: ipc.pubsub.topics[TopicTypes.RECORDING_INFO].get_subscription() for camera_id in
+            camera_configs.keys()}
         worker = camera_manager_strategy.value(
             target=cls._camera_manager_worker,
             name=f"{cls.__name__}-Worker",
@@ -38,6 +44,7 @@ class CameraManager:
                 camera_configs=camera_configs,
                 camera_strategy=camera_strategy,
                 config_subscription_by_camera=config_subscription_by_camera,
+                recording_info_subscription_by_camera=recording_info_subscription_by_camera,
                 shm_subscription_by_camera=shm_subscription_by_camera,
             )
         )
@@ -49,9 +56,9 @@ class CameraManager:
     def _camera_manager_worker(ipc: CameraGroupIPC,
                                camera_configs: CameraConfigs,
                                camera_strategy: WorkerStrategy,
-                                 config_subscription_by_camera: dict[str, TopicSubscriptionQueue],
-                                 shm_subscription_by_camera: dict[str, TopicSubscriptionQueue]
-
+                               config_subscription_by_camera: dict[str, TopicSubscriptionQueue],
+                               shm_subscription_by_camera: dict[str, TopicSubscriptionQueue],
+                               recording_info_subscription_by_camera: dict[str, TopicSubscriptionQueue]
                                ):
         if multiprocessing.parent_process():
             # Configure logging if multiprocessing (i.e. if there is a parent process)
@@ -60,10 +67,8 @@ class CameraManager:
             configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
         logger.info(f"Starting camera manager process with {len(camera_configs)} cameras")
 
-
         camera_workers: dict[CameraIdString, CameraWorker] = {}
         for camera_id, camera_config in camera_configs.items():
-
             camera_workers[camera_id] = CameraWorker.create(
                 camera_id=camera_id,
                 ipc=ipc,
@@ -71,6 +76,7 @@ class CameraManager:
                 camera_worker_strategy=camera_strategy,
                 update_camera_settings_subscription=config_subscription_by_camera[camera_id],
                 shm_subscription=shm_subscription_by_camera[camera_id],
+                recording_info_subscription=recording_info_subscription_by_camera[camera_id],
             )
 
         for worker in camera_workers.values():
@@ -83,7 +89,6 @@ class CameraManager:
             worker.join()
             logger.debug(f"Camera worker {camera_id} has finished.")
         logger.info("Camera manager worker is shut down")
-
 
     def close(self):
         if self.worker and self.worker.is_alive():

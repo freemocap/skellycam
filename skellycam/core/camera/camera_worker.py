@@ -31,8 +31,10 @@ class CameraWorker:
                config: CameraConfig,
                update_camera_settings_subscription: TopicSubscriptionQueue,
                 shm_subscription: TopicSubscriptionQueue,
+               recording_info_subscription: TopicSubscriptionQueue,
                camera_worker_strategy: WorkerStrategy,
                camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
+
                ):
 
 
@@ -48,6 +50,7 @@ class CameraWorker:
                                                    config=config,
                                                    update_camera_settings_subscription=update_camera_settings_subscription,
                                                    shm_subscription=shm_subscription,
+                                                    recording_info_subscription=recording_info_subscription,
                                                    camera_worker_strategy=camera_worker_strategy,
                                                    )
                                        )

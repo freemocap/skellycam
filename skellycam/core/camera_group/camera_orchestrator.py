@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, SkipValidation, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.utilities.wait_functions import wait_10ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,8 @@ class CameraStatus(BaseModel):
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     should_pause: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     should_record: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    ready_to_record: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    is_recording: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
@@ -88,6 +90,10 @@ class CameraOrchestrator:
         return all([status.ready for status in self.camera_statuses.values()])
 
     @property
+    def cameras_ready_to_record(self):
+        return all([status.ready_to_record.value for status in self.camera_statuses.values()])
+
+    @property
     def any_cameras_paused(self):
         return any([status.is_paused.value for status in self.camera_statuses.values()])
 
@@ -145,9 +151,12 @@ class CameraOrchestrator:
 
     def start_recording(self):
         logger.debug(f"Starting recording for all cameras in orchestrator...")
+
         self.pause(await_paused=True)
+        wait_10ms()
         for camera_id, status in self.camera_statuses.items():
             status.should_record.value = True
+        wait_10ms()
         self.unpause(await_unpaused=True)
 
     def stop_recording(self):

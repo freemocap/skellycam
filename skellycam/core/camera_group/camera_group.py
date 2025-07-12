@@ -158,7 +158,9 @@ class CameraGroup:
         Start recording for the camera group.
         """
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
-        # self.recorder.status.should_record.value = True
+        while not self.ipc.camera_orchestrator.cameras_ready_to_record and self.ipc.should_continue:
+            wait_10ms()
+
         self.ipc.camera_orchestrator.start_recording()
         logger.info(
             f"Started recording for camera group ID: {self.id} wit recording name: {recording_info.recording_name}")

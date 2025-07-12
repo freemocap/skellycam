@@ -29,6 +29,10 @@ class VideoRecorder(BaseModel):
         arbitrary_types_allowed = True
 
     @property
+    def any_data_saved(self) -> bool:
+        return self.previous_frame_number is not None
+
+    @property
     def number_of_frames_to_write(self) -> int:
         return len(self.frames_to_write)
 
