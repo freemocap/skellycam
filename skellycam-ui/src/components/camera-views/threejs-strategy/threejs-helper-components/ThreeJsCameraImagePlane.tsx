@@ -42,7 +42,6 @@ export function ThreeJsCameraImagePlane({
                 loadedTexture.magFilter = THREE.NearestFilter;
                 loadedTexture.generateMipmaps = false;
                 loadedTexture.flipY = true;
-                loadedTexture.colorSpace = THREE.SRGBColorSpace;
                 loadedTexture.needsUpdate = true;
 
                 // Store the texture reference

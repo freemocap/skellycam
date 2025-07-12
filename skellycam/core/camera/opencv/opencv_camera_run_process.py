@@ -15,6 +15,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtract
     UpdateCamerasSettingsMessage
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
+from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms
@@ -40,6 +41,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
     self_status.running.value = True
     camera_shm: FramePayloadSharedMemoryRingBuffer | None = None
+
 
     (camera_shm,
      config,
@@ -87,6 +89,11 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                     orchestrator: CameraOrchestrator,
                     self_status: CameraStatus,
                     update_camera_settings_subscription: TopicSubscriptionQueue):
+    video_recorder: VideoRecorder = VideoRecorder.create(
+        recording_info=None,
+        config=config,
+    )
+    is_recording: bool = False
     try:
         while ipc.should_continue:
             if self_status.should_pause.value:
@@ -104,8 +111,20 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             self_status.grabbing_frame.value = True
             frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
                                                frame_rec_array=frame_rec_array, )
-            camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
             self_status.grabbing_frame.value = False
+
+            camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
+            if self_status.should_record.value:
+                is_recording = True
+                video_recorder.record_frame(frame=frame_rec_array)
+            else:
+                if is_recording:
+                    video_recorder.finish_and_close()
+                    video_recorder = VideoRecorder.create(
+                        recording_info=None,
+                        config=config,
+                    )
+                    is_recording = False
             frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
                                                    cv2_video_capture=cv2_video_capture,
                                                    ipc=ipc,

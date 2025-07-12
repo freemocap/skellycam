@@ -27,7 +27,7 @@ class CameraGroupIPC(BaseModel):
     camera_orchestrator: CameraOrchestrator
     extracted_config_subscription: TopicSubscriptionQueue
 
-    recording_manager_status: RecordingManagerStatus = Field(default_factory=RecordingManagerStatus)
+    # recording_manager_status: RecordingManagerStatus = Field(default_factory=RecordingManagerStatus)
     mf_builder_status: MultiFrameBuilderStatus = Field(default_factory=MultiFrameBuilderStatus)
     shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
@@ -35,7 +35,9 @@ class CameraGroupIPC(BaseModel):
     global_kill_flag: SkipValidation[multiprocessing.Value]
 
     @classmethod
-    def create(cls, camera_configs: CameraConfigs, global_kill_flag: multiprocessing.Value,
+    def create(cls,
+               camera_configs: CameraConfigs,
+               global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None) -> 'CameraGroupIPC':
         validate_camera_configs(camera_configs)
         if group_id is None:
@@ -63,7 +65,7 @@ class CameraGroupIPC(BaseModel):
         """
         Check if all cameras in the group are ready.
         """
-        return self.camera_orchestrator.all_cameras_ready and self.recording_manager_status.is_running_flag.value
+        return self.camera_orchestrator.all_cameras_ready # and self.mf_builder_status.is_running_flag#and self.recording_manager_status.is_running_flag.value
     @property
     def all_paused(self) -> bool:
         return all([

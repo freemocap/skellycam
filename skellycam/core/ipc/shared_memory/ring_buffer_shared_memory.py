@@ -117,14 +117,14 @@ class SharedMemoryRingBuffer(BaseModel):
     def _check_for_overwrite(self, next_index: int) -> bool:
         return next_index % self.ring_buffer_length == self.last_read_index.value % self.ring_buffer_length
 
-    def put_data(self, data: np.recarray, overwrite: bool = False):
+    def put_data(self, data: np.recarray, overwrite_allowed: bool = False):
         if self.read_only:
             raise ValueError("Cannot write to read-only SharedMemoryRingBuffer.")
         if data.dtype != self.dtype:
             raise ValueError(f"Data type {data.dtype} does not match SharedMemoryRingBuffer data type {self.dtype}.")
 
         index_to_write = self.last_written_index.value + 1
-        if self._check_for_overwrite(index_to_write) and not overwrite and False:
+        if self._check_for_overwrite(index_to_write) and not overwrite_allowed and False:
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 
         self.ring_shm.buffer[index_to_write % self.ring_buffer_length] = data
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     print("\nTesting buffer wrapping...")
     for i in range(6):  # Write more than buffer size to test wrapping
         test_data = np.rec.array([(i * 10.0, i * 10.0 + 1, i * 10.0 + 2)], dtype=test_dtype)
-        original.put_data(test_data, overwrite=True)
+        original.put_data(test_data, overwrite_allowed=True)
         print(f"Wrote data {i}: {test_data}")
 
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
 
     for i in range(6):  # Write more than buffer size to test wrapping
         test_data = np.rec.array([(i * 10.0, i * 10.0 + 1, i * 10.0 + 2)], dtype=test_dtype)
-        original.put_data(test_data, overwrite=True)
+        original.put_data(test_data, overwrite_allowed=True)
         print(f"Wrote data {i}: {test_data}")
 
     print("\nReading latest data after wrapping...")

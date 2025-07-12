@@ -27,7 +27,7 @@ class CameraGroup:
     configs: CameraConfigs
     cameras: CameraManager
     mf_builder: MultiframeBuilder
-    recorder: RecordingManager
+    # recorder: RecordingManager
     shm: CameraGroupSharedMemoryManager | None = None
     mf: MultiFramePayload | None = None  # Local copy of the latest multi-frame payload
 
@@ -42,15 +42,15 @@ class CameraGroup:
                group_id: CameraGroupIdString | None = None,
                camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
 
-               recorder_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
+               # recorder_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
                mf_builder_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
 
         ipc = CameraGroupIPC.create(group_id=group_id,
                                     camera_configs=camera_configs,
                                     global_kill_flag=global_kill_flag)
-        recorder = RecordingManager.create(ipc=ipc,
-                                           worker_strategy=recorder_strategy
-                                           )
+        # recorder = RecordingManager.create(ipc=ipc,
+        #                                    worker_strategy=recorder_strategy
+        #                                    )
         mf_builder = MultiframeBuilder.create(ipc=ipc,
                                               worker_strategy=mf_builder_strategy)
 
@@ -63,7 +63,7 @@ class CameraGroup:
         return cls(
             ipc=ipc,
             cameras=cameras,
-            recorder=recorder,
+            # recorder=recorder,
             configs=camera_configs,
             mf_builder=mf_builder,
         )
@@ -71,7 +71,7 @@ class CameraGroup:
     def start(self) -> CameraConfigs:
         logger.info(f"Starting camera group ID: {self.id} with cameras: {list(self.configs.keys())}")
         self.cameras.start()
-        self.recorder.start()
+        # self.recorder.start()
         self.mf_builder.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
@@ -88,16 +88,23 @@ class CameraGroup:
 
     @property
     def all_alive(self):
-        return all([self.cameras.all_alive, self.recorder.is_alive()])
+        return all([self.cameras.all_alive,
+                    # self.recorder.is_alive(),
+                    self.mf_builder.is_alive()])
 
     @property
     def any_alive(self):
-        return any([self.cameras.any_alive, self.recorder.is_alive(), self.mf_builder.is_alive()])
+        return any([self.cameras.any_alive,
+                    # self.recorder.is_alive(),
+                    self.mf_builder.is_alive()])
     @property
     def all_ready(self) -> bool:
         if self.shm is None:
             return False
-        return all([self.cameras.all_ready, self.recorder.ready, self.mf_builder.ready, self.shm.valid])
+        return all([self.cameras.all_ready,
+                    # self.recorder.ready,
+                    self.mf_builder.ready,
+                    self.shm.valid])
 
 
 
@@ -151,7 +158,8 @@ class CameraGroup:
         Start recording for the camera group.
         """
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
-        self.recorder.status.should_record.value = True
+        # self.recorder.status.should_record.value = True
+        self.ipc.camera_orchestrator.start_recording()
         logger.info(
             f"Started recording for camera group ID: {self.id} wit recording name: {recording_info.recording_name}")
 
@@ -159,7 +167,8 @@ class CameraGroup:
         """
         Stop recording for the camera group.
         """
-        self.recorder.status.should_record.value = False
+        # self.recorder.status.should_record.value = False
+        self.ipc.camera_orchestrator.stop_recording()
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
     def close(self):
@@ -170,8 +179,7 @@ class CameraGroup:
         self.mf_builder.close()
 
         while self.any_alive:
-            logger.debug(f"Waiting for all camera group processes to close, cameras: {self.cameras.any_alive}, "
-                         f"recorder: {self.recorder.is_alive()}, mf_builder: {self.mf_builder.is_alive()}")
+            logger.debug(f"Waiting for all camera group processes to close, cameras: {self.cameras.any_alive}, mf_builder: {self.mf_builder.is_alive()}")
             wait_1s()
 
 

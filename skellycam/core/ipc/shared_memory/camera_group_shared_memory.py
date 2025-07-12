@@ -140,7 +140,7 @@ class CameraGroupSharedMemoryManager:
                 raise ValueError(f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
 
         self.multi_frame_ring_shm.put_multiframe(mf_rec_array =mf_rec_array,
-                                                 overwrite=False)  # Don't overwrite to ensure all frames are saved
+                                                 overwrite_allowed=False)  # Don't overwrite to ensure all frames are saved
 
         mf_numbers = set(mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in self.camera_ids)
         if len(mf_numbers) > 1:

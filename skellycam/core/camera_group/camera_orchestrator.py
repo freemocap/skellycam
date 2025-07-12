@@ -23,6 +23,7 @@ class CameraStatus(BaseModel):
         default_factory=lambda: multiprocessing.Value("b", False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     should_pause: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_record: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
@@ -48,12 +49,14 @@ class CameraStatus(BaseModel):
         self.running.value = False
         self.grabbing_frame.value = False
         self.is_paused.value = False
+        self.should_record.value = False
 
     def signal_closing(self):
         self.closing.value = True
         self.running.value = False
         self.grabbing_frame.value = False
         self.is_paused.value = False
+        self.should_record.value = False
         self.should_close.value = True
 
 
@@ -139,3 +142,17 @@ class CameraOrchestrator:
             while self.any_cameras_paused:
                 wait_10ms()
             logger.debug(f"All cameras unpaused.")
+
+    def start_recording(self):
+        logger.debug(f"Starting recording for all cameras in orchestrator...")
+        self.pause(await_paused=True)
+        for camera_id, status in self.camera_statuses.items():
+            status.should_record.value = True
+        self.unpause(await_unpaused=True)
+
+    def stop_recording(self):
+        logger.debug(f"Stopping recording for all cameras in orchestrator...")
+        self.pause(await_paused=True)
+        for camera_id, status in self.camera_statuses.items():
+            status.should_record.value = False
+        self.unpause(await_unpaused=True)

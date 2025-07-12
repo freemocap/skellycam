@@ -26,7 +26,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
 
     def put_multiframe(self,
                        mf_rec_array: np.recarray,
-                       overwrite: bool) -> None:
+                       overwrite_allowed: bool) -> None:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot write to it!")
         if self.read_only:
@@ -36,7 +36,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
             mf_rec_array[camera_id].frame_metadata.timestamps.pre_copy_to_multiframe_shm_ns = time.perf_counter_ns()
             mf_numbers.append(mf_rec_array[camera_id].frame_metadata.frame_number[0])
         tik = time.perf_counter_ns()
-        self.put_data(data=mf_rec_array, overwrite=overwrite)
+        self.put_data(data=mf_rec_array, overwrite_allowed=overwrite_allowed)
 
         if len(set(mf_numbers)) != 1:
             raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_numbers}, expected only one.")

@@ -44,7 +44,7 @@ class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         if self.read_only:
             raise ValueError("Cannot put new frame into read-only instance of shared memory!")
         frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = time.perf_counter_ns()
-        self.put_data(frame_rec_array, overwrite=overwrite)
+        self.put_data(frame_rec_array, overwrite_allowed=overwrite)
 
     def retrieve_latest_frame(self, frame_rec_array:np.recarray) -> np.recarray:
         pre_retrieve_tik = time.perf_counter_ns()
