@@ -3,7 +3,7 @@ import React from 'react';
 import { CircularProgress, IconButton, Tooltip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAppDispatch } from '@/store/AppStateStore';
-import { detectCameraDevices } from "@/store/thunks/detect-cameras-client-thunks";
+import { detectCameraDevices } from '@/store/thunks/detect-cameras-server-thunk';
 
 interface RefreshDetectedCamerasButtonProps {
     isLoading: boolean;
@@ -14,7 +14,7 @@ export const RefreshDetectedCamerasButton: React.FC<RefreshDetectedCamerasButton
 
     const handleRefresh = () => {
         if (!isLoading) {
-            dispatch(detectCameraDevices(true));
+            dispatch(detectCameraDevices());
         }
     };
 

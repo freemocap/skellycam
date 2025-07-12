@@ -41,7 +41,7 @@ export const CAMERA_DEFAULT_CONSTRAINTS = {
 export interface CameraDevice {
     index: number;
     deviceId: string;
-    cameraId: string; // Camera ID is the last 5 characters of the device ID
+    cameraId: string;
     status: string;
     groupId: string;
     kind: string;
@@ -56,7 +56,7 @@ export interface CameraDevice {
 export const createDefaultCameraConfig = (index: number, label: string, id: string): CameraConfig => ({
     camera_index: index,
     camera_name: label || `Camera ${index}`,
-    camera_id: id || `camera-${index}`,
+    camera_id: id,
     use_this_camera: true,
     resolution: CAMERA_DEFAULT_CONSTRAINTS.resolution.default,
     color_channels: 3,
