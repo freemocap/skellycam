@@ -10,6 +10,9 @@ from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
     CameraProductIdInt, CameraDevicePathString, CameraBackendNameString
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 # define a function to search for a camera
 def find_camera(
         index: CameraIndexInt | None = None,
@@ -70,20 +73,20 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
     Returns a list of CameraInfo objects for each detected camera.
     """
     if backend_id is None:
-
         backend_id = supported_backends[0] if len(supported_backends) > 0 else cv2.CAP_ANY
 
 
     cameras: list[CameraDeviceInfo] =  []
     for camera_info in enumerate_cameras(apiPreference=backend_id):
+        device = CameraDeviceInfo.from_camera_info(camera_info)
+        logger.debug(f"Detected camera: {device.model_dump_json(indent=2)}")
         if filter_virtual and 'virtual' in camera_info.name.lower():
             continue
         if camera_info.vid is None or camera_info.pid is None:
             if 'facetime' not in camera_info.name.lower():
                 # Skip cameras without VID and PID (unless its a 'facetime' camera on macOS)
                 continue
-
-        cameras.append(CameraDeviceInfo.from_camera_info(camera_info))
+        cameras.append(device)
     return cameras
 
 if __name__ == "__main__":
