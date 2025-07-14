@@ -12,14 +12,14 @@ from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGr
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.recorders.videos.video_manager import VideoManager
+from skellycam.core.recorders.videos.recording_manager import RecordingManager
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, CameraIdString, WorkerType, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
 
-class RecordingManager(BaseModel):
+class OldRecordingManager(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
@@ -98,7 +98,7 @@ class RecordingManager(BaseModel):
 
 
 
-        video_manager: VideoManager | None = None
+        video_manager: RecordingManager | None = None
         camera_config_recarrays: dict[CameraIdString, np.recarray]| None = None
         audio_recorder: AudioRecorder | None = None
         status.is_running_flag.value = True
@@ -114,10 +114,10 @@ class RecordingManager(BaseModel):
                             f"Expected RecordingInfo, got {type(recording_info_message)} in recording_info_subscription"
                         )
 
-                    video_manager = RecordingManager.start_recording(status=status,
-                                                                     recording_info=recording_info_message.recording_info,
-                                                                     camera_config_recarrays=camera_config_recarrays,
-                                                                     video_manager=video_manager)
+                    video_manager = OldRecordingManager.start_recording(status=status,
+                                                                        recording_info=recording_info_message.recording_info,
+                                                                        camera_config_recarrays=camera_config_recarrays,
+                                                                        video_manager=video_manager)
 
 
                 # check for shared memory updates
@@ -125,7 +125,7 @@ class RecordingManager(BaseModel):
                     raise NotImplementedError("Runtime updates of shared memory are not yet implemented.")
 
                 # check/handle new multi-frames
-                video_manager, camera_config_recarrays = RecordingManager._get_and_handle_new_mfs(
+                video_manager, camera_config_recarrays = OldRecordingManager._get_and_handle_new_mfs(
                     status=status,
                     video_manager=video_manager,
                     camera_group_shm=camera_group_shm,
@@ -154,9 +154,9 @@ class RecordingManager(BaseModel):
     @staticmethod
     def _get_and_handle_new_mfs(status: RecordingManagerStatus,
                                 camera_group_shm: CameraGroupSharedMemoryManager,
-                                video_manager: VideoManager | None,
+                                video_manager: RecordingManager | None,
                                 camera_config_recarrays: dict[CameraIdString, np.recarray] | None,
-                                ) ->tuple[VideoManager | None, CameraConfigs | None]:
+                                ) ->tuple[RecordingManager | None, CameraConfigs | None]:
 
         latest_mf_recarrays = camera_group_shm.multi_frame_ring_shm.get_all_new_multiframes()
 
@@ -177,7 +177,7 @@ class RecordingManager(BaseModel):
                     video_manager.save_one_frame()
                 else:
                     # if we have a video manager but not recording, then finish and close it
-                    video_manager = RecordingManager.stop_recording(status=status, video_manager=video_manager)
+                    video_manager = OldRecordingManager.stop_recording(status=status, video_manager=video_manager)
 
         return video_manager, camera_config_recarrays
 
@@ -185,11 +185,11 @@ class RecordingManager(BaseModel):
     def start_recording(status: RecordingManagerStatus,
                         recording_info: RecordingInfo,
                         camera_config_recarrays: dict[CameraIdString, np.recarray],
-                        video_manager: VideoManager | None) -> VideoManager | None:
+                        video_manager: RecordingManager | None) -> RecordingManager | None:
         camera_configs = {camera_id: CameraConfig.from_numpy_record_array(camera_config_recarrays[camera_id])
                                    for camera_id in camera_config_recarrays.keys()}
-        if isinstance(video_manager, VideoManager):
-            RecordingManager.stop_recording(status=status, video_manager=video_manager)
+        if isinstance(video_manager, RecordingManager):
+            OldRecordingManager.stop_recording(status=status, video_manager=video_manager)
 
 
         if not isinstance(camera_configs, dict) or any(
@@ -198,15 +198,15 @@ class RecordingManager(BaseModel):
 
         logger.info(f"Creating RecodingManager for recording: `{recording_info.recording_name}`")
         status.updating.value = True
-        video_manager = VideoManager.create(recording_info=recording_info,
-                                            camera_configs=camera_configs,
-                                            )
+        video_manager = RecordingManager.create(recording_info=recording_info,
+                                                camera_configs=camera_configs,
+                                                )
         status.updating.value = False
         status.is_recording_frames_flag.value = True
         return video_manager
 
     @staticmethod
-    def stop_recording(status: RecordingManagerStatus, video_manager: VideoManager) -> None:
+    def stop_recording(status: RecordingManagerStatus, video_manager: RecordingManager) -> None:
         logger.info(f"Stopping recording: `{video_manager.recording_info.recording_name}`...")
         status.is_recording_frames_flag.value = False
 

@@ -49,8 +49,7 @@ class PubSubTopicABC(BaseModel, ABC):
         if len(self.subscriptions) == 0:
             logger.warning(f"Publishing message of type {self.message_type} with no subscribers, message will be lost")
             return
-        if platform != "darwin":  # no qsize attribute on macOS
-            logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers with ~{np.mean([sub.qsize() for sub in self.subscriptions]):.2f} messages per subscriber")
+        logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
         for sub in self.subscriptions:
             if overwrite:
                 overwrote = 0

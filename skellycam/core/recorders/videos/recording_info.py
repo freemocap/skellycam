@@ -64,3 +64,8 @@ class RecordingInfo(BaseModel):
         logger.debug(f"Saving recording info to [{self.recording_info_path}]")
         with open(self.recording_info_path, "w") as f:
             f.write(self.model_dump_json(indent=4))
+
+    def video_file_path_from_camera_config(self, config) -> str:
+        return str(
+            Path(
+                self.videos_folder) / f"{self.recording_name}.camera{config.camera_index}.{config.video_file_extension}")

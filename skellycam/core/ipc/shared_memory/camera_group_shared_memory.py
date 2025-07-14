@@ -137,9 +137,10 @@ class CameraGroupSharedMemoryManager:
 
             mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[camera_id])
             if mf_rec_array[camera_id].frame_metadata.frame_number[0] != self.latest_multiframe_number.value + 1:
-                raise ValueError(f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
+                raise ValueError(
+                    f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
 
-        self.multi_frame_ring_shm.put_multiframe(mf_rec_array =mf_rec_array,
+        self.multi_frame_ring_shm.put_multiframe(mf_rec_array=mf_rec_array,
                                                  overwrite_allowed=False)  # Don't overwrite to ensure all frames are saved
 
         mf_numbers = set(mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in self.camera_ids)
@@ -152,10 +153,17 @@ class CameraGroupSharedMemoryManager:
 
         return mf_rec_array
 
-    def build_all_new_multiframes(self, mf_rec_array:np.recarray) -> np.recarray:
+    def build_all_new_multiframes(self, mf_rec_array: np.recarray) -> tuple[bool, np.recarray, list[dict[CameraIdString, np.recarray]]]:
+        mf_timestamps: list[dict[CameraIdString, np.recarray]] = []
+        new_data = False
         while self.new_multi_frame_available:
+            new_data = True
             mf_rec_array = self.build_next_multi_frame_payload(mf_rec_array)
-        return  mf_rec_array #recycle the mf object to save memory
+            cam_timestamps: dict[CameraIdString, np.recarray] = {}
+            for camera_id in mf_rec_array.dtype.names:
+                cam_timestamps[camera_id] = mf_rec_array[camera_id].frame_metadata.timestamps[0]
+            mf_timestamps.append(cam_timestamps)
+        return new_data, mf_rec_array, mf_timestamps  # recycle the mf object to save memory
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it
@@ -181,3 +189,5 @@ class CameraGroupSharedMemoryManager:
         except Exception as e:
             logger.error(f"Error during shared memory cleanup: {type(e).__name__} - {e}")
             logger.exception(e)
+
+

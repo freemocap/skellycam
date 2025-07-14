@@ -95,24 +95,6 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
     video_recorder: VideoRecorder|None = None
     try:
         while ipc.should_continue:
-            if self_status.should_pause.value:
-                if not self_status.is_paused.value:
-                    logger.trace(f"Pausing camera {config.camera_id}...")
-                    self_status.is_paused.value = True
-                wait_10ms()
-                continue
-            self_status.is_paused.value = False
-
-            if not orchestrator.should_grab_by_id(camera_id=config.camera_id):
-                wait_10us()
-                continue
-
-            self_status.grabbing_frame.value = True
-            frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
-                                               frame_rec_array=frame_rec_array, )
-            self_status.grabbing_frame.value = False
-
-            camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
             if not recording_info_subscription.empty():
 
                 recording_info_message = recording_info_subscription.get()
@@ -134,7 +116,27 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                 )
                 self_status.ready_to_record.value = True
 
-            if self_status.should_record.value:
+            if ipc.should_pause.value:
+                if not self_status.is_paused.value:
+                    logger.trace(f"Pausing camera {config.camera_id}...")
+                    self_status.is_paused.value = True
+                wait_10ms()
+                continue
+            self_status.is_paused.value = False
+
+            if not orchestrator.should_grab_by_id(camera_id=config.camera_id):
+                wait_10us()
+                continue
+
+            self_status.grabbing_frame.value = True
+            frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
+                                               frame_rec_array=frame_rec_array, )
+            self_status.grabbing_frame.value = False
+
+            camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
+            print(f"Camera {config.camera_id} frame number: {frame_rec_array.frame_metadata.frame_number[0]}")
+
+            if ipc.should_record.value:
                 self_status.is_recording.value = True
                 if video_recorder is None:
                     raise RuntimeError("Record requested before video_recorder was created.")
@@ -198,7 +200,7 @@ def setup_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer | None,
     if camera_shm is None or not camera_shm.valid:
         raise RuntimeError("Failed to initialize camera_group_shm")
     logger.success(f"Camera {config.camera_id} ready!")
-    while not ipc.all_ready and ipc.should_continue:
+    while not ipc.all_ready_to_start and ipc.should_continue:
         wait_10ms()
     frame_rec_array = create_initial_frame_rec_array(config=config,
                                                      ipc=ipc)

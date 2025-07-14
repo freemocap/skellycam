@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field, ConfigDict
 
-from skellycam.core.frame_payloads.multiframes.multiframe_recarray_utilities import mf_recarray_find_earliest_timestamps
+from skellycam.core.frame_payloads.multiframes.multiframe_recarray_utilities import \
+    mf_recarray_find_earliest_timestamps, mf_timestamps_find_earliest
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.camera_group.timestamps.frame_timestamp_csv_row import FrameTimestampsCSVRow
 from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
@@ -22,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 class RecordingTimestamps(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    frame_timestamp_recarrays: list[np.recarray] = Field(
+    frame_timestamp_recarrays: dict[CameraIdString, list[np.recarray]] = Field(
         default_factory=list,
-        description="List of numpy record arrays containing frame timestamps for each multiframe payload in the recording session."
-                    "Stored as recarray during recording and converted to MultiFrameTimestamps after recording is complete (Pydantic validation is relatively slow!).")
+        description="Dict of Lists of numpy record arrays containing frame timestamps for each camera's payloads in the recording session."
+                    "Stored as recarrays during recording and converted to MultiFrameTimestamps after recording is complete (Pydantic validation is relatively slow!).")
     multiframe_timestamps: list[MultiFrameTimestamps] = Field(
         default_factory=list,
         description="List of timestamps for each multi-frame payload in the recording session")
@@ -35,6 +36,9 @@ class RecordingTimestamps(BaseModel):
                     "This is as the Zero timebase to calculate relative timestamps for each multiframe payload.")
     recording_info: RecordingInfo
 
+    @property
+    def anything_recorded(self) -> bool:
+        return self.recording_start_ns is not None
     @cached_property
     def number_of_recorded_frames(self) -> int:
         return len(self.multiframe_timestamps)
@@ -309,6 +313,14 @@ class RecordingTimestamps(BaseModel):
         if self.recording_start_ns is None:
             self.recording_start_ns = mf_recarray_find_earliest_timestamps(mf_recarray)
         self.frame_timestamp_recarrays.append(mf_recarray)
+
+    def add_mf_timestamps(self, mf_timestamps: dict[CameraIdString, np.recarray]):
+        if self.recording_start_ns is None:
+            self.recording_start_ns = mf_timestamps_find_earliest(mf_timestamps)
+        for camera_id, timestamps in mf_timestamps.items():
+            if camera_id not in self.timestamps_by_camera_id:
+                self.frame_timestamp_recarrays[camera_id] = []
+            self.frame_timestamp_recarrays[camera_id].append(timestamps)
 
     def to_mf_dataframe(self) -> pd.DataFrame:
         """

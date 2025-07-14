@@ -1,5 +1,7 @@
 import numpy as np
 
+from skellycam.core.types.type_overloads import CameraIdString
+
 
 def mf_recarray_find_earliest_timestamps(mf: np.recarray) -> int:
     """
@@ -19,6 +21,27 @@ def mf_recarray_find_earliest_timestamps(mf: np.recarray) -> int:
     if len(ts) == 0:
         raise ValueError("No timestamps found in the multiframe record array.")
     return int(np.min(ts))
+
+
+def mf_timestamps_find_earliest(mf_timestamps: dict[CameraIdString, np.recarray]) -> int:
+    """
+    Find the earliest timestamp in a multiframe record array.
+
+    Args:
+        mf_timestamps (dict[CameraIdString, np.recarray]): A dictionary mapping camera IDs to their respective timestamps.
+
+    Returns:
+        int: The earliest timestamp in nanoseconds.
+    """
+    if len(mf_timestamps) == 0:
+        raise ValueError("The multiframe record array is empty.")
+    ts = []
+    for timestamps in mf_timestamps.values():
+        ts.append(timestamps.pre_frame_grab_ns[0])
+    if len(ts) == 0:
+        raise ValueError("No timestamps found in the multiframe record array.")
+    return int(np.min(ts))
+
 
 def mf_recarray_find_multiframe_number(mf: np.recarray) -> int:
     if mf.size == 0:

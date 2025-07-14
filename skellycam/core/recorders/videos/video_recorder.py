@@ -43,9 +43,7 @@ class VideoRecorder(BaseModel):
                ):
         if recording_info is None:
             recording_info = RecordingInfo.create_temp()
-        video_file_path = str(
-            Path(
-                recording_info.videos_folder) / f"{recording_info.recording_name}.camera{config.camera_index}.{config.video_file_extension}")
+        video_file_path = recording_info.video_file_path_from_camera_config(config)
         Path(video_file_path).parent.mkdir(parents=True, exist_ok=True)
         if config.rotation.value == -1 or config.rotation.value == cv2.ROTATE_180:
             video_image_shape = config.resolution.width, config.resolution.height  # (width, height) as per OpenCV's convention (NOT numpy's row-major order)

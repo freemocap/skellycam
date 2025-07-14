@@ -11,7 +11,7 @@ from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
     RecordingInfoMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
-from skellycam.core.recorders.recording_manager import RecordingManager
+from skellycam.core.recorders.old_recording_manager import OldRecordingManager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import create_frontend_payload_from_mf_recarray
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt
@@ -107,7 +107,6 @@ class CameraGroup:
                     self.shm.valid])
 
 
-
     def get_latest_frontend_payload(self, if_newer_than: int ) -> tuple[FrameNumberInt, bytes]| None:
         if self.shm is None or not self.shm.valid:
             return None
@@ -157,11 +156,18 @@ class CameraGroup:
         """
         Start recording for the camera group.
         """
+        self.ipc.pause(await_paused=True)
+        logger.info("Publishing recording info message...")
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
-        while not self.ipc.camera_orchestrator.cameras_ready_to_record and self.ipc.should_continue:
+        while not self.ipc.all_ready_to_record and self.ipc.should_continue:
             wait_10ms()
+        logger.api(f"All cameras are ready to record for camera group ID: {self.id}")
+        self.ipc.should_record.value = True
+        wait_10ms()
+        logger.api("Unpausing camera group to start recording...")
+        self.ipc.unpause(await_unpaused=True)
+        logger.info("Camera group unpaused - Recording successfully started.")
 
-        self.ipc.camera_orchestrator.start_recording()
         logger.info(
             f"Started recording for camera group ID: {self.id} wit recording name: {recording_info.recording_name}")
 
@@ -169,8 +175,11 @@ class CameraGroup:
         """
         Stop recording for the camera group.
         """
-        # self.recorder.status.should_record.value = False
-        self.ipc.camera_orchestrator.stop_recording()
+
+        logger.debug(f"Stopping recording for all cameras in orchestrator...")
+        self.pause(await_paused=True)
+        self.ipc.should_record.value = False
+        self.unpause(await_unpaused=True)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
     def close(self):
