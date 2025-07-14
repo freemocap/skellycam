@@ -6,6 +6,7 @@ from cv2_enumerate_cameras import supported_backends, enumerate_cameras
 from cv2_enumerate_cameras.camera_info import CameraInfo
 from pydantic import BaseModel
 
+from skellycam.core.camera.opencv.determine_backend import determine_opencv_camera_backend, OpenCVBackend
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString, CameraBackendInt, CameraVendorIdInt, \
     CameraProductIdInt, CameraDevicePathString, CameraBackendNameString
 
@@ -73,11 +74,13 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
     Returns a list of CameraInfo objects for each detected camera.
     """
     if backend_id is None:
-        backend_id = supported_backends[0] if len(supported_backends) > 0 else cv2.CAP_ANY
+        backend = determine_opencv_camera_backend()
+    else:
+        backend = OpenCVBackend.from_backend_id(backend_id)
 
 
     cameras: list[CameraDeviceInfo] =  []
-    for camera_info in enumerate_cameras(apiPreference=backend_id):
+    for camera_info in enumerate_cameras(apiPreference=backend.id):
         device = CameraDeviceInfo.from_camera_info(camera_info)
         logger.debug(f"Detected camera: {device.model_dump_json(indent=2)}")
         if filter_virtual and 'virtual' in camera_info.name.lower():

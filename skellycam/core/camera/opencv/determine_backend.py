@@ -1,28 +1,38 @@
-import enum
-import platform
+import logging
+from platform import platform
 
 import cv2
+from cv2.videoio_registry import getBackendName
+from cv2_enumerate_cameras import supported_backends
+from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
-class BackendSelection(enum.Enum):
-    CAP_ANY = cv2.CAP_ANY
-    CAP_FFMPEG = cv2.CAP_FFMPEG
-    CAP_OPENCV_MJPEG = cv2.CAP_OPENCV_MJPEG
-    CAP_DSHOW = cv2.CAP_DSHOW
-    CAP_MSMF = cv2.CAP_MSMF
-    CAP_VFW = cv2.CAP_VFW
-    CAP_V4L = cv2.CAP_V4L
-    CAP_V4L2 = cv2.CAP_V4L2
-    CAP_QT = cv2.CAP_QT
+class OpenCVBackend(BaseModel):
+    id: int
+    name: str
+
+    @classmethod
+    def from_backend_id(cls, backend_id: int) -> 'OpenCVBackend':
+        name = getBackendName(backend_id)
+        if name is None:
+            logger.warning(f"Unknown OpenCV backend ID: {backend_id}. Defaulting to cv2.CAP_ANY.")
+            backend_id = cv2.CAP_ANY
+            name = getBackendName(backend_id)
+        return cls(id=backend_id, name=name)
 
 
-def determine_backend() -> BackendSelection:
-    if platform.system() == "Windows":
-        return BackendSelection.CAP_DSHOW
+def determine_opencv_camera_backend() -> OpenCVBackend:
+    if "windows" in platform().lower():
+        # TODO - Try MSMF? We've used CAP_DSHOW for a long time, but MSMF is the default on Windows 10+ so may be worth trying.
+        backend = OpenCVBackend.from_backend_id(cv2.CAP_DSHOW)
     else:
-        return BackendSelection.CAP_ANY  # TODO - Figure out how to do this better for non-Windows systems, this works on Linux but seems to max at 25fps (for 30fps camera)
+        backend = OpenCVBackend.from_backend_id(supported_backends[0] if len(supported_backends) > 0 else cv2.CAP_ANY)
+    logger.debug(f"Determined OpenCV backend: {backend.name} (ID: {backend.id})")
+    return backend
 
 
 if __name__ == "__main__":
-    b = determine_backend()
-    print(b.name)
+    b = determine_opencv_camera_backend()
+    print(f"OpenCV Backend: {b.name} (ID: {b.id})")
