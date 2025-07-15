@@ -117,12 +117,14 @@ class MultiframeBuilder:
                             raise ValueError(f"All cameras must either record or not record, got recording bools: {record_bools} for camera group {ipc.group_id}")
                         if all(list(record_bools.values())):
                             should_record = True
-                        print(f"Should record: {should_record}")
                         if should_record:
                             if recording_manager is None:
                                 raise ValueError("RecordingManager is not initialized, but should be recording!")
                             ipc.mf_builder_status.is_recording.value = True
+                            frame_numbers = {camera_id: md.frame_number for camera_id,  md in frame_medata.items()}
+                            print(f"Logging timestamps for frame numbers: {frame_numbers}")
                             recording_manager.add_mf_metadatas(frame_metadatas)
+
                         else:
                             if recording_manager is not None and recording_manager.anything_recorded:
                                 recording_manager.finalize_recording()

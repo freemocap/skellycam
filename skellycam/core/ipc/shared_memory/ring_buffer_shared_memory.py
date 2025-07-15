@@ -1,3 +1,5 @@
+from copy import copy
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -127,7 +129,7 @@ class SharedMemoryRingBuffer(BaseModel):
         if self._check_for_overwrite(index_to_write) and not overwrite_allowed and False:
             raise ValueError("Cannot overwrite data that hasn't been read yet.")
 
-        self.ring_shm.buffer[index_to_write % self.ring_buffer_length] = data
+        self.ring_shm.buffer[index_to_write % self.ring_buffer_length] = copy(data)
         self.last_written_index.value = index_to_write
 
     def get_next_data(self, rec_array: np.recarray | None) -> np.recarray:

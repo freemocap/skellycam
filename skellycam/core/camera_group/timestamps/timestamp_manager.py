@@ -50,6 +50,7 @@ class TimestampManager(BaseModel):
         Saves the timestamps to a CSV file in the recording info's timestamps folder.
         The file is named with the recording name and has a .csv extension.
         """
+
         if not self.anything_recorded:
             raise ValueError("No timestamps recorded. Cannot save timestamps.")
         recording_timestamps = RecordingTimestamps.from_camera_timestamps(

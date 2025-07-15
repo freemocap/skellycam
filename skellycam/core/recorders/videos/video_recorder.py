@@ -88,12 +88,11 @@ class VideoRecorder(BaseModel):
         else:
             image = frame.image[0]
         self._validate_image_shape(image)
-        logger.api(f"Writing frame {frame.frame_metadata.frame_number[0]} for camera {self.camera_id} to video file")
-        self.previous_frame_number = frame.frame_metadata.frame_number[0]
-
         self.video_writer.write(image)
+        self.previous_frame_number = frame.frame_metadata.frame_number[0]
         if not self.video_writer.isOpened():
             raise ValueError(f"VideoWriter not open (after adding frame)!")
+        print(f"Camera {self.camera_id} - Wrote frame {frame.frame_metadata.frame_number[0]} to video")
         return frame.frame_metadata.frame_number
 
     def finish_and_close(self):

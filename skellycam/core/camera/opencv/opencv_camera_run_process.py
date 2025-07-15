@@ -18,7 +18,7 @@ from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer im
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
-from skellycam.utilities.wait_functions import wait_10us, wait_10ms
+from skellycam.utilities.wait_functions import wait_10us, wait_10ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,7 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
     video_recorder: VideoRecorder|None = None
     try:
         while ipc.should_continue:
+
             if not recording_info_subscription.empty():
                 recording_info_message = recording_info_subscription.get()
                 if not isinstance(recording_info_message, RecordingInfoMessage):
@@ -115,6 +116,9 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                     config=config,
                 )
                 self_status.ready_to_record.value = True
+                while not orchestrator.all_cameras_ready_to_record and ipc.should_continue:
+                    # Wait for all cameras to be ready to record before starting the recording
+                    wait_1ms()
 
             if ipc.should_pause.value:
                 if not self_status.is_paused.value:
@@ -136,14 +140,17 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             while orchestrator.any_grabbing_frame and ipc.should_continue:
                 # Wait for all cameras to finish grabbing frames to ensure we're all checking the same state in the update checks below
                 wait_10us()
+
             if ipc.should_continue:
 
                 if ipc.should_record.value:
+
                     self_status.is_recording.value = True
                     if video_recorder is None:
                         raise RuntimeError("Record requested before video_recorder was created.")
                     video_recorder.record_frame(frame=frame_rec_array)
                     frame_rec_array.frame_metadata.frame_recorded[0] = True
+
                 else:
                     if video_recorder is not None and video_recorder.any_data_saved:
                         logger.debug(f"Camera {config.camera_id} finishing and closing video recorder...")
@@ -159,10 +166,14 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                                                            ipc=ipc,
                                                            self_status=self_status,
                                                            update_camera_settings_subscription=update_camera_settings_subscription)
+
                 camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
+
                 frame_rec_array = initialize_frame_recarray(frame_rec_array=frame_rec_array)
+
                 # Last camera to increment their frame count status triggers the next frame_grab
                 self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+
     except Exception as e:
         self_status.signal_error()
         logger.exception(f"Exception occurred in camera loop for Camera: {config.camera_id} - {e}")

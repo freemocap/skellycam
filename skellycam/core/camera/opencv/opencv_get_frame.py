@@ -48,9 +48,18 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     # This is the empirical measurement upon which most/all our future calculations and inferences will be based.
     retrieve_success, _ = cap.retrieve(image=frame_rec_array.image[0])  # provide pre-allocated image for speed
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = time.perf_counter_ns()
-
+    frame_rec_array.frame_metadata.frame_number[0] += 1
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
-    frame_rec_array.frame_metadata.frame_number[0] += 1
+
+    cv2.putText(frame_rec_array.image[0],
+                f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]} - Frame#{frame_rec_array.frame_metadata.frame_number[0]}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 5, 255),
+                2,
+                cv2.LINE_AA)
+
     logger.loop(f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]} grabbed frame {frame_rec_array.frame_metadata.frame_number[0]}")
     return frame_rec_array

@@ -34,10 +34,9 @@ class RecordingTimestamps(BaseModel):
                                recording_start_ns: int,
                                recording_info: RecordingInfo,
                                mf_metadatas: list[dict[CameraIdString, np.recarray]]):
-        print(f"received {len(mf_metadatas)} multiframe metadata entries")
+
         for mf_metadata in mf_metadatas:
             frame_numbers = {name: md.frame_number for name, md in mf_metadata.items()}
-            print(f"Multiframe metadata frame numbers: {frame_numbers}")
 
         multiframe_timestamps = [MultiFrameTimestamps.from_frame_metadata(frame_metadata_by_camera=frame_metadata_by_camera,
                                                                           recording_start_time_ns=recording_start_ns)
