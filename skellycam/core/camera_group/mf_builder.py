@@ -64,7 +64,7 @@ class MultiframeBuilder:
                     raise ValueError(f"Expected SetShmMessage, got {type(shm_message)}")
                 shm_dto: CameraGroupSharedMemoryDTO = shm_message.camera_group_shm_dto
                 camera_group_shm = CameraGroupSharedMemoryManager.recreate(shm_dto=shm_dto, read_only=False)
-                logger.success(f"Starting multi-frame publication thread for camera group {ipc.group_id}...")
+                logger.info(f"Initialized shared memory for camera group {ipc.group_id} with {len(camera_group_shm.camera_configs)} cameras in multi-frame builder.")
                 break
             except Exception as e:
                 if not ipc.should_continue:
@@ -103,30 +103,42 @@ class MultiframeBuilder:
                     ipc.mf_builder_status.ready_to_record.value = True
 
                 ipc.mf_builder_status.building_mfs_flag.value = True
-                new_data, mf_rec_array, mf_metadatas = camera_group_shm.build_all_new_multiframes(mf_rec_array)
+                new_data, mf_rec_array, frame_metadatas = camera_group_shm.build_all_new_multiframes(mf_rec_array)
                 ipc.mf_builder_status.building_mfs_flag.value = False
 
+
+                if new_data:
+                    for frame_medata in frame_metadatas:
+                        should_record = False
+                        record_bools = {}
+                        for camera_id, frame_metadata in frame_medata.items():
+                            record_bools[camera_id] =  frame_metadata.frame_recorded
+                        if any(list(record_bools.values())) and not all(list(record_bools.values())):
+                            raise ValueError(f"All cameras must either record or not record, got recording bools: {record_bools} for camera group {ipc.group_id}")
+                        if all(list(record_bools.values())):
+                            should_record = True
+                        print(f"Should record: {should_record}")
+                        if should_record:
+                            if recording_manager is None:
+                                raise ValueError("RecordingManager is not initialized, but should be recording!")
+                            ipc.mf_builder_status.is_recording.value = True
+                            recording_manager.add_mf_metadatas(frame_metadatas)
+                        else:
+                            if recording_manager is not None and recording_manager.anything_recorded:
+                                recording_manager.finalize_recording()
+                                recording_manager = None
+                                ipc.mf_builder_status.ready_to_record.value = False
+                                ipc.mf_builder_status.is_recording.value = False
+                else:
+                    wait_10ms()
                 if ipc.should_pause.value:
                     if not ipc.mf_builder_status.is_paused.value:
                         logger.trace(f"Pausing multi-frame builder for camera group {ipc.group_id}...")
                         ipc.mf_builder_status.is_paused.value = True
-                    continue
+                        wait_100ms()
+                    else: #one more loop before pausing to make sure we clear the camera buffers
+                        continue
                 ipc.mf_builder_status.is_paused.value = False
-
-                if new_data:
-                    if ipc.should_record.value:
-                        if recording_manager is None:
-                            raise ValueError("RecordingManager is not initialized, but should be recording!")
-                        ipc.mf_builder_status.is_recording.value = True
-                        recording_manager.add_mf_metadatas(mf_metadatas)
-                    else:
-                        if recording_manager is not None and recording_manager.anything_recorded:
-                            recording_manager.finalize_recording()
-                            recording_manager = None
-                            ipc.mf_builder_status.ready_to_record.value = False
-                            ipc.mf_builder_status.is_recording.value = False
-                else:
-                    wait_10ms()
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")

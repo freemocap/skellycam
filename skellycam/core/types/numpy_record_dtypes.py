@@ -49,6 +49,7 @@ FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
 ], align=True)
 
 FRAME_METADATA_DTYPE = np.dtype([
+    ('frame_recorded', np.bool_),
     ('camera_config', CAMERA_CONFIG_DTYPE),
     ('frame_number', np.int64),
     ('timestamps', FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)

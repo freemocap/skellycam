@@ -156,14 +156,14 @@ class CameraGroupSharedMemoryManager:
         return mf_rec_array
 
     def build_all_new_multiframes(self, mf_rec_array: np.recarray) -> tuple[bool, np.recarray, list[dict[CameraIdString, np.recarray]]]:
-        mf_metadatas: list[dict[CameraIdString, np.recarray]] = []
+        frame_metadatas: list[dict[CameraIdString, np.recarray]] = []
         new_data = False
         while self.new_multi_frame_available:
             new_data = True
             mf_rec_array = self.build_next_multi_frame_payload(mf_rec_array)
             cam_metadatas =  {name: copy(mf_rec_array[name].frame_metadata[0]) for name in mf_rec_array.dtype.names}
-            mf_metadatas.append(cam_metadatas)
-        return new_data, mf_rec_array, mf_metadatas  # recycle the mf object to save memory
+            frame_metadatas.append(cam_metadatas)
+        return new_data, mf_rec_array, frame_metadatas  # recycle the mf object to save memory
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it

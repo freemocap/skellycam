@@ -10,9 +10,8 @@ from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms
 
-if TYPE_CHECKING:
-    from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
-
+import logging
+logger = logging.getLogger(__name__)
 
 class MultiFrameTimestamps(BaseModel):
     """
@@ -37,7 +36,7 @@ class MultiFrameTimestamps(BaseModel):
 
         if len(set(frame_numbers.values())) > 1:
             raise ValueError(f"All cameras must have the same frame number for a multi-frame payload, received:  frame_numbers={frame_numbers}")
-        print(f"---- MultiFrameTimestamps.from_frame_metadata: frame_numbers={frame_numbers}")
+        logger.api(f"---- MultiFrameTimestamps.from_frame_metadata: frame_numbers={frame_numbers}")
         frame_timestamps = {camera_id: FrameTimestamps.from_frame_metadata_recarray(frame_metadata=frame_metadata) for camera_id, frame_metadata in
                             frame_metadata_by_camera.items()}
         return cls(frame_timestamps=frame_timestamps,

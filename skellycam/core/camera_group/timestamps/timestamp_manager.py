@@ -44,9 +44,6 @@ class TimestampManager(BaseModel):
             self.recording_start_ns = find_earliest_frame_metadata(mf_metadatas[0])
 
         self.mf_metadatas.extend(mf_metadatas)
-        for num, mf_metadata in enumerate(self.mf_metadatas):
-            frame_numbers = {name: md.frame_number for name, md in mf_metadata.items()}
-            print(f"pojsiodjaiosdja #{num}= Multiframe metadata frame numbers: {frame_numbers}")
 
     def save_timestamps(self, recording_info: RecordingInfo):
         """
