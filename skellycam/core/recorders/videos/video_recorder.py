@@ -116,7 +116,7 @@ class VideoRecorder(BaseModel):
             logger.error(f"Failed to open video writer for camera {self.camera_index}")
             raise RuntimeError(f"Failed to open video writer for camera {self.camera_index}")
         logger.debug(
-            f"Initialized VideoWriter for camera {self.camera_index} - Video file will be saved to {self.video_file_path}")
+            f"Initialized VideoRecorder for camera {self.camera_index} - Video file will be saved to {self.video_file_path}")
 
 
     def _validate_image_shape(self, image: np.ndarray):

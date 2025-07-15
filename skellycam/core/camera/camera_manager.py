@@ -56,9 +56,9 @@ class CameraManager:
     def _camera_manager_worker(ipc: CameraGroupIPC,
                                camera_configs: CameraConfigs,
                                camera_strategy: WorkerStrategy,
-                               config_subscription_by_camera: dict[str, TopicSubscriptionQueue],
-                               shm_subscription_by_camera: dict[str, TopicSubscriptionQueue],
-                               recording_info_subscription_by_camera: dict[str, TopicSubscriptionQueue]
+                               config_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue],
+                               shm_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue],
+                               recording_info_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue]
                                ):
         if multiprocessing.parent_process():
             # Configure logging if multiprocessing (i.e. if there is a parent process)

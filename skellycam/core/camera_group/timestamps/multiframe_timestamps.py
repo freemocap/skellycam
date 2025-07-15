@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 from pydantic import BaseModel, Field
 
-from skellycam.core.frame_payloads.multiframes.multiframe_recarray_utilities import mf_recarray_find_multiframe_number
 from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.types.type_overloads import CameraIdString
@@ -28,28 +27,46 @@ class MultiFrameTimestamps(BaseModel):
     recording_start_time_ns: int
 
     @classmethod
-    def from_mf_recarray(cls,
-                         mf_recarray: np.recarray,
-                         recording_start_time_ns: int) -> 'MultiFrameTimestamps':
+    def from_frame_metadata(cls,
+                            frame_metadata_by_camera: dict[CameraIdString, np.recarray],
+                            recording_start_time_ns: int) -> 'MultiFrameTimestamps':
         """
-        Create a MultiFrameTimestamps from a multi-frame recarray.
+        Create a MultiFrameTimestamps from a dictionary of FrameTimestamps.
         """
-        fr_ts = {name: FrameTimestamps.from_numpy_record_array(mf_recarray[name].frame_metadata.timestamps[0])
-                 for name in mf_recarray.dtype.names}
+        frame_numbers = {camera_id: frame_metadata.frame_number for camera_id, frame_metadata in frame_metadata_by_camera.items()}
 
-        return cls(frame_timestamps=fr_ts,
-                   recording_start_time_ns=recording_start_time_ns,
-                   multiframe_number=mf_recarray_find_multiframe_number(mf_recarray))
+        if len(set(frame_numbers.values())) > 1:
+            raise ValueError(f"All cameras must have the same frame number for a multi-frame payload, received:  frame_numbers={frame_numbers}")
+        print(f"---- MultiFrameTimestamps.from_frame_metadata: frame_numbers={frame_numbers}")
+        frame_timestamps = {camera_id: FrameTimestamps.from_frame_metadata_recarray(frame_metadata=frame_metadata) for camera_id, frame_metadata in
+                            frame_metadata_by_camera.items()}
+        return cls(frame_timestamps=frame_timestamps,
+                   multiframe_number=set(frame_numbers.values()).pop(),
+                   recording_start_time_ns=recording_start_time_ns)
 
-    @classmethod
-    def from_multiframe(cls, multiframe: 'MultiFramePayload', recording_start_time_ns: int) -> 'MultiFrameTimestamps':
-        """
-        Create a MultiframeLifespanTimestamps from a MultiFramePayload.
-        """
-        return cls(frame_timestamps={camera_id: frame.frame_metadata.timestamps
-                                     for camera_id, frame in multiframe.frames.items()},
-                   recording_start_time_ns=recording_start_time_ns,
-                   multiframe_number=multiframe.multi_frame_number)
+    # @classmethod
+    # def from_mf_recarray(cls,
+    #                      mf_recarray: np.recarray,
+    #                      recording_start_time_ns: int) -> 'MultiFrameTimestamps':
+    #     """
+    #     Create a MultiFrameTimestamps from a multi-frame recarray.
+    #     """
+    #     fr_ts = {name: FrameTimestamps.from_numpy_record_array(mf_recarray[name].frame_metadata.timestamps[0])
+    #              for name in mf_recarray.dtype.names}
+    #
+    #     return cls(frame_timestamps=fr_ts,
+    #                recording_start_time_ns=recording_start_time_ns,
+    #                multiframe_number=mf_recarray_find_multiframe_number(mf_recarray))
+    #
+    # @classmethod
+    # def from_multiframe(cls, multiframe: 'MultiFramePayload', recording_start_time_ns: int) -> 'MultiFrameTimestamps':
+    #     """
+    #     Create a MultiframeLifespanTimestamps from a MultiFramePayload.
+    #     """
+    #     return cls(frame_timestamps={camera_id: frame.frame_metadata.timestamps
+    #                                  for camera_id, frame in multiframe.frames.items()},
+    #                recording_start_time_ns=recording_start_time_ns,
+    #                multiframe_number=multiframe.multi_frame_number)
 
     @cached_property
     def timebase_mapping(self) -> TimebaseMapping:

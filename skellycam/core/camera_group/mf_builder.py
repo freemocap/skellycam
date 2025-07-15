@@ -30,8 +30,7 @@ class MultiframeBuilder:
 
         worker = worker_strategy.value(target=cls._run_mf_builder_loop,
                                                       kwargs=dict(ipc=ipc,
-                                                                  new_shm_subscription=ipc.pubsub.topics[
-                                                                      TopicTypes.SHM_UPDATES].get_subscription(),
+                                                                  new_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
                                                                   recording_info_subscription=ipc.pubsub.topics[TopicTypes.RECORDING_INFO].get_subscription()),
                                                       daemon=True)
         return cls(ipc=ipc,
@@ -73,12 +72,12 @@ class MultiframeBuilder:
                         f"Exiting multi-frame builder loop during initialization for camera group {ipc.group_id}")
                     return
                 logger.error(f"Error initializing multi-frame builder: {e}")
-                wait_100ms()
         # If we couldn't initialize the shared memory and we're shutting down, exit gracefully
         if camera_group_shm is None:
             logger.error(f"Failed to initialize shared memory for camera group {ipc.group_id}")
             ipc.kill_everything()
             return
+
         # Create multiframe dtype based on camera configs
         multiframe_dtype = create_multiframe_dtype(camera_group_shm.camera_configs)
         mf_rec_array = np.recarray(1, dtype=multiframe_dtype)
@@ -104,28 +103,30 @@ class MultiframeBuilder:
                     ipc.mf_builder_status.ready_to_record.value = True
 
                 ipc.mf_builder_status.building_mfs_flag.value = True
-                new_data, mf_rec_array, mf_timestamps = camera_group_shm.build_all_new_multiframes(mf_rec_array)
+                new_data, mf_rec_array, mf_metadatas = camera_group_shm.build_all_new_multiframes(mf_rec_array)
                 ipc.mf_builder_status.building_mfs_flag.value = False
 
                 if ipc.should_pause.value:
-                    ipc.mf_builder_status.is_paused.value = True
+                    if not ipc.mf_builder_status.is_paused.value:
+                        logger.trace(f"Pausing multi-frame builder for camera group {ipc.group_id}...")
+                        ipc.mf_builder_status.is_paused.value = True
                     continue
-
+                ipc.mf_builder_status.is_paused.value = False
 
                 if new_data:
-                    print(f"\t\tBuilt multi-frame # {mf_rec_array[mf_rec_array.dtype.names[0]].frame_metadata.frame_number[0]} for camera group {ipc.group_id}")
                     if ipc.should_record.value:
                         if recording_manager is None:
                             raise ValueError("RecordingManager is not initialized, but should be recording!")
                         ipc.mf_builder_status.is_recording.value = True
-                        recording_manager.add_mf_timestamps(mf_timestamps)
+                        recording_manager.add_mf_metadatas(mf_metadatas)
                     else:
                         if recording_manager is not None and recording_manager.anything_recorded:
                             recording_manager.finalize_recording()
                             recording_manager = None
                             ipc.mf_builder_status.ready_to_record.value = False
                             ipc.mf_builder_status.is_recording.value = False
-
+                else:
+                    wait_10ms()
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")

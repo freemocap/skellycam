@@ -35,7 +35,6 @@ class CameraStatus(BaseModel):
                     not self.closing.value,
                     not self.closed.value,
                     not self.updating.value,
-                    not self.is_paused.value,
                     not self.error.value,
                     ])
 

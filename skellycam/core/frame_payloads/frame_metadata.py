@@ -43,7 +43,7 @@ class FrameMetadata(BaseModel):
         return cls(
             frame_number=array.frame_number,
             camera_config=CameraConfig.from_numpy_record_array(array.camera_config),
-            timestamps=FrameTimestamps.from_numpy_record_array(array.timestamps),
+            timestamps=FrameTimestamps.from_frame_metadata_recarray(array.timestamps),
         )
 
     def to_numpy_record_array(self) -> np.recarray:

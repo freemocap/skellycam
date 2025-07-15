@@ -128,7 +128,7 @@ class CameraGroupIPC(BaseModel):
         """
         # self.mf_builder_status.should_pause.value = False
         # self.recording_manager_status.should_pause.value = False
-        self.should_pause.value = True
+        self.should_pause.value = False
         if await_unpaused:
             while self.any_paused:
                 wait_100ms()

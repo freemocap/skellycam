@@ -134,7 +134,6 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             self_status.grabbing_frame.value = False
 
             camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
-            print(f"Camera {config.camera_id} frame number: {frame_rec_array.frame_metadata.frame_number[0]}")
 
             if ipc.should_record.value:
                 self_status.is_recording.value = True

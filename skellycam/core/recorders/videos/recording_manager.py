@@ -9,7 +9,8 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
+from skellycam.core.camera_group.timestamps.timestamp_manager import TimestampManager
+
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import CameraIdString, RecordingManagerIdString
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 class RecordingManager(BaseModel):
     recording_info: RecordingInfo
     camera_configs: CameraConfigs
-    recording_timestamps: RecordingTimestamps
+    timestamp_manager: TimestampManager = TimestampManager()
     is_finished: bool = False
 
     model_config = ConfigDict(arbitrary_types_allowed = True)
@@ -47,25 +48,24 @@ class RecordingManager(BaseModel):
 
         return cls(recording_info=recording_info,
                      camera_configs=camera_configs,
-                   recording_timestamps=RecordingTimestamps(recording_info=recording_info),
                    )
 
     @property
     def anything_recorded(self) -> bool:
-        return self.recording_timestamps.anything_recorded
+        return self.timestamp_manager.anything_recorded
 
-    def add_mf_timestamps(self,  mf_timestamps: dict[CameraIdString, np.recarray]):
+    def add_mf_metadatas(self, mf_metadatas: list[dict[CameraIdString, np.recarray]]):
         """
         Adds multi-frame timestamps to the recording manager.
         This is used to synchronize frames across multiple cameras.
         """
-        self.recording_timestamps.add_mf_timestamps(mf_timestamps)
+        self.timestamp_manager.add_mf_metadatas(mf_metadatas)
 
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file()
+        self.timestamp_manager.save_timestamps(self.recording_info)
         self.validate_recording()
-        self.recording_timestamps.save_timestamps()
         self._save_folder_readme()
         self.is_finished = True
         logger.success(
@@ -123,15 +123,13 @@ class RecordingManager(BaseModel):
         logger.trace(f"Recording Validation Check#2 - All videos have {expected_frame_count} frames")
 
         # Check 3: Verify timestamp files exist
-        timestamp_file = Path(
-            f"{self.recording_info.timestamps_folder}/{self.recording_info.recording_name}_timestamps.csv")
-        if not timestamp_file.exists() and len(self.video_recorders) > 1:
+        timestamp_file = Path(self.recording_info.timestamp_file_path)
+        if not timestamp_file.exists():
             raise ValueError(f"Multiframe timestamp file does not exist: {timestamp_file}")
 
         camera_timestamp_files = {}
-        for camera_id in self.video_recorders.keys():
-            camera_ts_file = Path(
-                f"{self.recording_info.camera_timestamps_folder}/{self.recording_info.recording_name}_camera_{camera_id}_timestamps.csv")
+        for camera_id in self.camera_configs.keys():
+            camera_ts_file = Path(self.recording_info.camera_timestamps_file_path_from_camera_id(camera_id))
             if not camera_ts_file.exists():
                 raise ValueError(f"Camera timestamp file for camera {camera_id} does not exist: {camera_ts_file}")
             camera_timestamp_files[camera_id] = camera_ts_file

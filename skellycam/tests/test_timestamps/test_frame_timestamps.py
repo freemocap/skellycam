@@ -129,7 +129,7 @@ class TestFrameTimestamps:
         assert record_array.post_retrieve_from_multiframe_shm_ns[0] == 11000
 
         # Convert back to FrameTimestamps
-        reconstructed = FrameTimestamps.from_numpy_record_array(record_array)
+        reconstructed = FrameTimestamps.from_frame_metadata_recarray(record_array)
 
         # Check that the reconstructed object has the same values
         assert reconstructed.frame_initialized_ns == original.frame_initialized_ns
@@ -157,7 +157,7 @@ class TestFrameTimestamps:
 
         # Should raise ValueError
         with pytest.raises(ValueError):
-            FrameTimestamps.from_numpy_record_array(wrong_array)
+            FrameTimestamps.from_frame_metadata_recarray(wrong_array)
 
     def test_negative_durations_for_unset_values(self):
         """Test that duration metrics return -1 when timestamps are not set."""

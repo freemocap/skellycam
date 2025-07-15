@@ -1,11 +1,13 @@
 import logging
 import time
+from copy import copy
 from dataclasses import dataclass
 
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
@@ -154,16 +156,14 @@ class CameraGroupSharedMemoryManager:
         return mf_rec_array
 
     def build_all_new_multiframes(self, mf_rec_array: np.recarray) -> tuple[bool, np.recarray, list[dict[CameraIdString, np.recarray]]]:
-        mf_timestamps: list[dict[CameraIdString, np.recarray]] = []
+        mf_metadatas: list[dict[CameraIdString, np.recarray]] = []
         new_data = False
         while self.new_multi_frame_available:
             new_data = True
             mf_rec_array = self.build_next_multi_frame_payload(mf_rec_array)
-            cam_timestamps: dict[CameraIdString, np.recarray] = {}
-            for camera_id in mf_rec_array.dtype.names:
-                cam_timestamps[camera_id] = mf_rec_array[camera_id].frame_metadata.timestamps[0]
-            mf_timestamps.append(cam_timestamps)
-        return new_data, mf_rec_array, mf_timestamps  # recycle the mf object to save memory
+            cam_metadatas =  {name: copy(mf_rec_array[name].frame_metadata[0]) for name in mf_rec_array.dtype.names}
+            mf_metadatas.append(cam_metadatas)
+        return new_data, mf_rec_array, mf_metadatas  # recycle the mf object to save memory
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it

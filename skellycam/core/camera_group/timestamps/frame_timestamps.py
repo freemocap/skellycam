@@ -6,7 +6,7 @@ import numpy as np
 from pydantic import BaseModel, Field, computed_field
 
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
+from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE, FRAME_METADATA_DTYPE
 
 logger = logging.getLogger(__name__)
 
@@ -42,24 +42,24 @@ class FrameTimestamps(BaseModel):
         return FrameDurations(timestamps=self)
 
     @classmethod
-    def from_numpy_record_array(cls, array: np.recarray):
-        if array.dtype != FRAME_LIFECYCLE_TIMESTAMPS_DTYPE:
+    def from_frame_metadata_recarray(cls, frame_metadata: np.recarray):
+        if frame_metadata.dtype != FRAME_METADATA_DTYPE:
             raise ValueError(f"Metadata array shape mismatch - "
-                             f"Expected: {FRAME_LIFECYCLE_TIMESTAMPS_DTYPE}, "
-                             f"Actual: {array.dtype}")
+                             f"\nExpected:\n\t {FRAME_METADATA_DTYPE}, "
+                             f"\nReceived: \n\t {frame_metadata.dtype}")
         return cls(
-            frame_initialized_ns=array.frame_initialized_ns,
-            pre_frame_grab_ns=array.pre_frame_grab_ns,
-            post_frame_grab_ns=array.post_frame_grab_ns,
-            pre_frame_retrieve_ns=array.pre_frame_retrieve_ns,
-            post_frame_retrieve_ns=array.post_frame_retrieve_ns,
-            pre_copy_to_camera_shm_ns=array.pre_copy_to_camera_shm_ns,
-            pre_retrieve_from_camera_shm_ns=array.pre_retrieve_from_camera_shm_ns,
-            post_retrieve_from_camera_shm_ns=array.post_retrieve_from_camera_shm_ns,
-            pre_copy_to_multiframe_shm_ns=array.pre_copy_to_multiframe_shm_ns,
-            pre_retrieve_from_multiframe_shm_ns=array.pre_retrieve_from_multiframe_shm_ns,
-            post_retrieve_from_multiframe_shm_ns=array.post_retrieve_from_multiframe_shm_ns,
-            timebase_mapping=TimebaseMapping.from_numpy_record_array(array.timebase_mapping)
+            frame_initialized_ns=frame_metadata.timestamps.frame_initialized_ns,
+            pre_frame_grab_ns=frame_metadata.timestamps.pre_frame_grab_ns,
+            post_frame_grab_ns=frame_metadata.timestamps.post_frame_grab_ns,
+            pre_frame_retrieve_ns=frame_metadata.timestamps.pre_frame_retrieve_ns,
+            post_frame_retrieve_ns=frame_metadata.timestamps.post_frame_retrieve_ns,
+            pre_copy_to_camera_shm_ns=frame_metadata.timestamps.pre_copy_to_camera_shm_ns,
+            pre_retrieve_from_camera_shm_ns=frame_metadata.timestamps.pre_retrieve_from_camera_shm_ns,
+            post_retrieve_from_camera_shm_ns=frame_metadata.timestamps.post_retrieve_from_camera_shm_ns,
+            pre_copy_to_multiframe_shm_ns=frame_metadata.timestamps.pre_copy_to_multiframe_shm_ns,
+            pre_retrieve_from_multiframe_shm_ns=frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns,
+            post_retrieve_from_multiframe_shm_ns=frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns,
+            timebase_mapping=TimebaseMapping.from_numpy_record_array(frame_metadata.timestamps.timebase_mapping)
         )
 
     def to_numpy_record_array(self) -> np.recarray:

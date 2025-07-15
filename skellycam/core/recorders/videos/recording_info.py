@@ -52,6 +52,10 @@ class RecordingInfo(BaseModel):
         return str(path)
 
     @property
+    def timestamp_file_path(self) -> str:
+        return f"{self.timestamps_folder}/{self.recording_name}_timestamps.csv"
+
+    @property
     def camera_timestamps_folder(self) -> str:
         path = Path(self.full_recording_path)/CAMERA_TIMESTAMPS_FOLDER_NAME
         path.mkdir(parents=True, exist_ok=True)
@@ -60,6 +64,11 @@ class RecordingInfo(BaseModel):
     @property
     def recording_info_path(self) -> str:
         return str(Path(self.full_recording_path)/f"{self.recording_name}_info.json")
+
+    @property
+    def timestamp_stats_file_path(self) -> str:
+        return f"{self.timestamps_folder}/{self.recording_name}_stats.txt"
+
     def save_to_file(self):
         logger.debug(f"Saving recording info to [{self.recording_info_path}]")
         with open(self.recording_info_path, "w") as f:
@@ -69,3 +78,5 @@ class RecordingInfo(BaseModel):
         return str(
             Path(
                 self.videos_folder) / f"{self.recording_name}.camera{config.camera_index}.{config.video_file_extension}")
+    def camera_timestamps_file_path_from_camera_id(self, camera_id: str) -> str:
+        return str(Path(self.camera_timestamps_folder) / f"{self.recording_name}.camera{camera_id}.timestamps.csv")
