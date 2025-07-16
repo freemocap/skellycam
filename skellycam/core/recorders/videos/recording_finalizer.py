@@ -53,8 +53,6 @@ class RecordingFinalizer(BaseModel):
         self.recording_timestamps.save_timestamps()
         self._save_folder_readme()
         self.validate_recording()
-        logger.success(
-            f"Recording `{self.recording_info.recording_name} Successfully recorded to: {self.recording_info.recording_directory}")
 
     def _save_folder_readme(self):
         with open(str(Path(self.recording_info.videos_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:

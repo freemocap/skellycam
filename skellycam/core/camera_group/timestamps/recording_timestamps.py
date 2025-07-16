@@ -415,7 +415,6 @@ class RecordingTimestamps(BaseModel):
         mf_df = self.to_mf_dataframe()
         mf_df.to_csv(self.recording_info.timestamp_file_path,index=False)
         stats = self.to_stats()
-        logger.info(f"Recording stats:\n\n{stats}\n\n")
 
 
         Path(self.recording_info.timestamp_stats_file_path).write_text(

@@ -214,7 +214,8 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
                 updated_configs[
                     extracted_config_message.extracted_config.camera_id] = extracted_config_message.extracted_config
         wait_10ms()
-    validate_camera_configs(updated_configs)
+    if not ipc.should_continue:
+        validate_camera_configs(updated_configs)
 
     return updated_configs
 
@@ -249,4 +250,4 @@ def finalize_recording(ipc: CameraGroupIPC):
         frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items() if message is not None},
     )
     recording_finalizer.finalize_recording()
-    logger.success(f"Recording finalized for recording name: {recording_info.recording_name}.")
+    logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")

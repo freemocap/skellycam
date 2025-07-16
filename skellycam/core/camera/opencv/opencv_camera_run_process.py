@@ -284,13 +284,13 @@ def check_for_new_config(frame_rec_array: np.recarray,
             new_config = update_message.requested_configs[frame_rec_array.frame_metadata.camera_config.camera_id[0]]
             extracted_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
                                                           prior_config=CameraConfig.from_numpy_record_array(
-                                                              frame_rec_array.frame_metadata.camera_config[0]),
+                                                              frame_rec_array.frame_metadata.camera_config),
                                                           config=new_config, )
             frame_rec_array.frame_metadata.camera_config[0] = extracted_config.to_numpy_record_array()
             ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
                 DeviceExtractedConfigMessage(
                     extracted_config=CameraConfig.from_numpy_record_array(
-                        frame_rec_array.frame_metadata.camera_config[0])))
+                        frame_rec_array.frame_metadata.camera_config)))
             self_status.updating.value = False
 
     return frame_rec_array
