@@ -7,13 +7,12 @@ import numpy as np
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, RecordingInfoMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
-from skellycam.core.recorders.videos.recording_manager import RecordingManager
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, WorkerStrategy, WorkerType
-from skellycam.utilities.wait_functions import wait_10ms, wait_1ms, wait_100ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +29,7 @@ class MultiframeBuilder:
 
         worker = worker_strategy.value(target=cls._run_mf_builder_loop,
                                                       kwargs=dict(ipc=ipc,
-                                                                  new_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription(),
-                                                                  recording_info_subscription=ipc.pubsub.topics[TopicTypes.RECORDING_INFO].get_subscription()),
+                                                                  new_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription()),
                                                       daemon=True)
         return cls(ipc=ipc,
                    worker=worker,
@@ -40,7 +38,6 @@ class MultiframeBuilder:
     @staticmethod
     def _run_mf_builder_loop(ipc: CameraGroupIPC,
                              new_shm_subscription: TopicSubscriptionQueue,
-                                recording_info_subscription: TopicSubscriptionQueue
                              ):
 
         """
@@ -85,62 +82,18 @@ class MultiframeBuilder:
             mf_rec_array[camera_id].frame_metadata.camera_config[0] = camera_group_shm.camera_configs[camera_id].to_numpy_record_array()
             mf_rec_array[camera_id].frame_metadata.frame_number[0] = -1
 
-        recording_manager: RecordingManager | None = None
         try:
             while ipc.should_continue:
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_1ms()
                     continue
 
-                if not recording_info_subscription.empty():
-                    recording_info_message = recording_info_subscription.get(block=False)
-                    if not isinstance(recording_info_message, RecordingInfoMessage):
-                        raise ValueError(f"Expected SetShmMessage, got {type(recording_info_message)}")
-                    # Update the shared memory with the new recording info
-                    recording_manager = RecordingManager.create(recording_info=recording_info_message.recording_info,
-                                                        camera_configs=camera_group_shm.camera_configs,
-                                                        )
-                    ipc.mf_builder_status.ready_to_record.value = True
-
                 ipc.mf_builder_status.building_mfs_flag.value = True
-                new_data, mf_rec_array, frame_metadatas = camera_group_shm.build_all_new_multiframes(mf_rec_array)
+                new_data, mf_rec_array = camera_group_shm.build_all_new_multiframes(mf_rec_array)
                 ipc.mf_builder_status.building_mfs_flag.value = False
 
-
-                if new_data:
-                    for frame_medata in frame_metadatas:
-                        should_record = False
-                        record_bools = {}
-                        for camera_id, frame_metadata in frame_medata.items():
-                            record_bools[camera_id] =  frame_metadata.frame_recorded
-                        if any(list(record_bools.values())) and not all(list(record_bools.values())):
-                            raise ValueError(f"All cameras must either record or not record, got recording bools: {record_bools} for camera group {ipc.group_id}")
-                        if all(list(record_bools.values())):
-                            should_record = True
-                        if should_record:
-                            if recording_manager is None:
-                                raise ValueError("RecordingManager is not initialized, but should be recording!")
-                            ipc.mf_builder_status.is_recording.value = True
-                            frame_numbers = {camera_id: md.frame_number for camera_id,  md in frame_medata.items()}
-                            print(f"Logging timestamps for frame numbers: {frame_numbers}")
-                            recording_manager.add_mf_metadatas(frame_metadatas)
-
-                        else:
-                            if recording_manager is not None and recording_manager.anything_recorded:
-                                recording_manager.finalize_recording()
-                                recording_manager = None
-                                ipc.mf_builder_status.ready_to_record.value = False
-                                ipc.mf_builder_status.is_recording.value = False
-                else:
+                if not new_data:
                     wait_10ms()
-                if ipc.should_pause.value:
-                    if not ipc.mf_builder_status.is_paused.value:
-                        logger.trace(f"Pausing multi-frame builder for camera group {ipc.group_id}...")
-                        ipc.mf_builder_status.is_paused.value = True
-                        wait_100ms()
-                    else: #one more loop before pausing to make sure we clear the camera buffers
-                        continue
-                ipc.mf_builder_status.is_paused.value = False
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")

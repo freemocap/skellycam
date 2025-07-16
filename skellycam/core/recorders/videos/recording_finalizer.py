@@ -1,19 +1,15 @@
 import logging
-import threading
-import uuid
-from collections import deque
 from pathlib import Path
 
 import cv2
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.timestamps.timestamp_manager import TimestampManager
-
+from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
-from skellycam.core.recorders.videos.video_recorder import VideoRecorder
-from skellycam.core.types.type_overloads import CameraIdString, RecordingManagerIdString
+from skellycam.core.types.type_overloads import CameraIdString
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
 
@@ -30,46 +26,36 @@ Each video in this folder should have precisely the same number of frames, each 
 logger = logging.getLogger(__name__)
 
 
-class RecordingManager(BaseModel):
+class RecordingFinalizer(BaseModel):
     recording_info: RecordingInfo
+    recording_timestamps: RecordingTimestamps
     camera_configs: CameraConfigs
-    timestamp_manager: TimestampManager = TimestampManager()
-    is_finished: bool = False
 
-    model_config = ConfigDict(arbitrary_types_allowed = True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
-               camera_configs: CameraConfigs,
+               frame_metadatas_by_camera: dict[CameraIdString, list[FrameMetadata]],
                ):
 
-        logger.debug(f"Creating RecordingManager for recording folder {recording_info.recording_name}")
-
         return cls(recording_info=recording_info,
-                     camera_configs=camera_configs,
+                   recording_timestamps=RecordingTimestamps.from_frame_metadata_by_camera(
+                       recording_info=recording_info,
+                       frame_metadatas_by_camera=frame_metadatas_by_camera),
+                     camera_configs={camera_id: metadatas[0].camera_config for camera_id, metadatas in frame_metadatas_by_camera.items()}
                    )
 
-    @property
-    def anything_recorded(self) -> bool:
-        return self.timestamp_manager.anything_recorded
-
-    def add_mf_metadatas(self, mf_metadatas: list[dict[CameraIdString, np.recarray]]):
-        """
-        Adds multi-frame timestamps to the recording manager.
-        This is used to synchronize frames across multiple cameras.
-        """
-        self.timestamp_manager.add_mf_metadatas(mf_metadatas)
 
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file()
-        self.timestamp_manager.save_timestamps(self.recording_info)
-        self.validate_recording()
+        self.recording_timestamps.save_timestamps()
         self._save_folder_readme()
-        self.is_finished = True
+        self.validate_recording()
         logger.success(
             f"Recording `{self.recording_info.recording_name} Successfully recorded to: {self.recording_info.recording_directory}")
+
     def _save_folder_readme(self):
         with open(str(Path(self.recording_info.videos_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
@@ -91,10 +77,11 @@ class RecordingManager(BaseModel):
         for camera_config in self.camera_configs.values():
             video_path = Path(self.recording_info.video_file_path_from_camera_config(camera_config))
             if video_path.exists() and video_path.is_file():
-                logger.trace(f"Recording Validation Check#1 - Found video file for camera {camera_config.camera_id}: {video_path}")
+                logger.trace(
+                    f"Recording Validation Check#1 - Found video file for camera {camera_config.camera_id}: {video_path}")
             video_paths[camera_config.camera_id] = video_path
 
-        #Verify all videos are expected shape and have the same number of frames
+        # Verify all videos are expected shape and have the same number of frames
         frame_counts = {}
         for camera_id, video_path in video_paths.items():
             cap = cv2.VideoCapture(str(video_path))

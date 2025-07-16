@@ -6,19 +6,19 @@ from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.mf_builder import MultiframeBuilder
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
-    RecordingInfoMessage
+    RecordingInfoMessage, RecordingFinishedMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
-from skellycam.core.recorders.old_recording_manager import OldRecordingManager
+from skellycam.core.recorders.videos.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import create_frontend_payload_from_mf_recarray
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1s
+from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms
 
 logger = logging.getLogger(__name__)
-
 
 
 @dataclass
@@ -97,6 +97,7 @@ class CameraGroup:
         return any([self.cameras.any_alive,
                     # self.recorder.is_alive(),
                     self.mf_builder.is_alive()])
+
     @property
     def all_ready(self) -> bool:
         if self.shm is None:
@@ -106,8 +107,7 @@ class CameraGroup:
                     self.mf_builder.ready,
                     self.shm.valid])
 
-
-    def get_latest_frontend_payload(self, if_newer_than: int ) -> tuple[FrameNumberInt, bytes]| None:
+    def get_latest_frontend_payload(self, if_newer_than: int) -> tuple[FrameNumberInt, bytes] | None:
         if self.shm is None or not self.shm.valid:
             return None
         if self.shm.latest_multiframe_number.value <= if_newer_than:
@@ -120,9 +120,6 @@ class CameraGroup:
             mf_rec_array=mf_rec_array,
         )
 
-
-
-
     def pause(self, await_paused: bool = True):
         """
         Pause the camera group operations.
@@ -130,7 +127,6 @@ class CameraGroup:
         logger.info(f"Pausing camera group ID: {self.id}")
         self.ipc.pause(await_paused=await_paused)
         logger.info(f"Camera group ID: {self.id} is paused.")
-
 
     def unpause(self, await_unpaused: bool = True):
         """
@@ -180,6 +176,7 @@ class CameraGroup:
         self.pause(await_paused=True)
         self.ipc.should_record.value = False
         self.unpause(await_unpaused=True)
+        finalize_recording(ipc=self.ipc)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
     def close(self):
@@ -190,19 +187,20 @@ class CameraGroup:
         self.mf_builder.close()
 
         while self.any_alive:
-            logger.debug(f"Waiting for all camera group processes to close, cameras: {self.cameras.any_alive}, mf_builder: {self.mf_builder.is_alive()}")
+            logger.debug(
+                f"Waiting for all camera group processes to close, cameras: {self.cameras.any_alive}, mf_builder: {self.mf_builder.is_alive()}")
             wait_1s()
-
 
         if self.shm is not None:
             try:
                 self.shm.unlink_and_close()
             except Exception as e:
                 logger.error(f"Error closing shared memory: {type(e).__name__} - {e}")
-        
+
             logger.success("Shared memory closed and unlinked if applicable.")
 
         logger.success("Camera group closed successfully.")
+
 
 def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:
     updated_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in
@@ -219,3 +217,36 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
     validate_camera_configs(updated_configs)
 
     return updated_configs
+
+
+def finalize_recording(ipc: CameraGroupIPC):
+    recording_finished_messages_by_camera: dict[CameraIdString, RecordingFinishedMessage | None] = {camera_id: None for camera_id in
+                                                                                   ipc.camera_ids}
+    recording_info: RecordingInfo | None = None
+    while any([not isinstance(response, RecordingFinishedMessage) for response in
+               recording_finished_messages_by_camera.values()]) and ipc.should_continue:
+        if not ipc.recording_finished_subscription.empty():
+            recording_finished_message = ipc.recording_finished_subscription.get()
+            if not isinstance(recording_finished_message, RecordingFinishedMessage):
+                raise RuntimeError(f"Received unexpected message type: {type(recording_finished_message)}")
+
+            if recording_finished_messages_by_camera[recording_finished_message.camera_id] is not None:
+                raise RuntimeError(
+                    f"Received multiple recording finished messages for camera {recording_finished_message.camera_id}.")
+
+            logger.debug(f"Recieved recording finished message for camera {recording_finished_message.camera_id}.")
+            recording_finished_messages_by_camera[recording_finished_message.camera_id] = recording_finished_message
+            if recording_info is None:
+                recording_info = recording_finished_message.recording_info
+            elif recording_info != recording_finished_message.recording_info:
+                raise RuntimeError(
+                    f"Received multiple recording info messages with different recording names: "
+                    f"{recording_info.recording_name} and {recording_finished_message.recording_info.recording_name}")
+        wait_30ms()
+
+    recording_finalizer = RecordingFinalizer.create(
+        recording_info=recording_info,
+        frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items() if message is not None},
+    )
+    recording_finalizer.finalize_recording()
+    logger.success(f"Recording finalized for recording name: {recording_info.recording_name}.")

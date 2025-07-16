@@ -26,6 +26,7 @@ class CameraGroupIPC(BaseModel):
     timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping)
     camera_orchestrator: CameraOrchestrator
     extracted_config_subscription: TopicSubscriptionQueue
+    recording_finished_subscription: TopicSubscriptionQueue
 
     # recording_manager_status: RecordingManagerStatus = Field(default_factory=RecordingManagerStatus)
     mf_builder_status: MultiFrameBuilderStatus = Field(default_factory=MultiFrameBuilderStatus)
@@ -52,6 +53,7 @@ class CameraGroupIPC(BaseModel):
             pubsub=pubsub,
             camera_orchestrator=CameraOrchestrator.from_camera_ids(camera_ids=list(camera_configs.keys())),
             extracted_config_subscription=pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
+            recording_finished_subscription=pubsub.topics[TopicTypes.RECORDING_FINISHED].get_subscription(),
             global_kill_flag=global_kill_flag,
 
         )
@@ -75,29 +77,25 @@ class CameraGroupIPC(BaseModel):
         """
         Check if all cameras in the group are ready.
         """
-        return self.camera_orchestrator.all_cameras_ready and self.mf_builder_status.is_running_flag#and self.recording_manager_status.is_running_flag.value
+        return self.camera_orchestrator.all_cameras_ready and self.mf_builder_status.is_running_flag
 
     @property
     def all_ready_to_record(self) -> bool:
         """
         Check if all cameras in the group are ready to record.
         """
-        return self.camera_orchestrator.all_cameras_ready_to_record and self.mf_builder_status.ready_to_record.value
+        return self.camera_orchestrator.all_cameras_recording
+
     @property
     def all_paused(self) -> bool:
         return all([
             self.camera_orchestrator.all_cameras_paused,
-            self.mf_builder_status.is_paused.value,
-            # self.recording_manager_status.is_paused.value,
         ])
 
     @property
     def any_paused(self) -> bool:
         return not any([
             self.camera_orchestrator.any_cameras_paused,
-            self.mf_builder_status.is_paused.value
-            # self.recording_manager_status.is_paused.value,
-
         ])
     def publish_shm_message(self, shm_dto) -> None:
         """
@@ -115,8 +113,6 @@ class CameraGroupIPC(BaseModel):
         """
         Pause the camera group.
         """
-        # self.mf_builder_status.should_pause.value = True
-        # self.recording_manager_status.should_pause.value = True
         self.should_pause.value = True
         if await_paused:
             while not self.all_paused:
@@ -126,8 +122,6 @@ class CameraGroupIPC(BaseModel):
         """
         Unpause the camera group.
         """
-        # self.mf_builder_status.should_pause.value = False
-        # self.recording_manager_status.should_pause.value = False
         self.should_pause.value = False
         if await_unpaused:
             while self.any_paused:

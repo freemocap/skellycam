@@ -10,6 +10,7 @@ from skellycam.core.camera_group.timestamps.frame_timestamp_csv_row import Frame
 from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps.multiframe_csv_row import MultiFrameTimestampsCSVRow
 from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
@@ -18,49 +19,75 @@ from skellycam.utilities.time_unit_conversion import ns_to_ms, ms_to_sec, ns_to_
 
 logger = logging.getLogger(__name__)
 
+def find_earliest_frame_metadata(frame_metadatas: dict[CameraIdString, FrameMetadata]) -> int:
+
+    if len(frame_metadatas) == 0:
+        raise ValueError("The multiframe record array is empty.")
+    ts = []
+    for metadata in frame_metadatas.values():
+        ts.append(metadata.timestamps.timestamp_ns)
+    if len(ts) == 0:
+        raise ValueError("No metadata found in the multiframe record array.")
+    return int(np.min(ts))
 
 class RecordingTimestamps(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     multiframe_timestamps: list[MultiFrameTimestamps] = Field(
         description="List of timestamps for each multi-frame payload in the recording session")
-    recording_start_ns: int = Field(
-        description="The timestamp of the earliest 'grab' timestamp from the frames in the first multiframe of this recording, in nanoseconds. "
-                    "This is as the Zero timebase to calculate relative timestamps for each multiframe payload.")
+    recording_start_time_ns: int= Field(
+        description="The start time of the recording session in nanoseconds. "
+                    "This is used to calculate relative timestamps for each multiframe payload."
+    )
+
     recording_info: RecordingInfo
 
 
     @classmethod
-    def from_camera_timestamps(cls,
-                               recording_start_ns: int,
-                               recording_info: RecordingInfo,
-                               mf_metadatas: list[dict[CameraIdString, np.recarray]]):
+    def from_frame_metadata_by_camera(cls,
+                                      recording_info: RecordingInfo,
+                                      frame_metadatas_by_camera: dict[CameraIdString, list[FrameMetadata]]):
+        recording_start_time_ns = find_earliest_frame_metadata({camera_id: frame_metadata[0] for camera_id, frame_metadata in frame_metadatas_by_camera.items()})
+        frame_counts = [len(frame_metadata) for frame_metadata in frame_metadatas_by_camera.values()]
 
-        for mf_metadata in mf_metadatas:
-            frame_numbers = {name: md.frame_number for name, md in mf_metadata.items()}
+        if len(set(frame_counts)) > 1:
+            raise ValueError("All cameras must have the same number of frames recorded. "
+                             f"Found {len(frame_metadatas_by_camera)} cameras with different frame counts: "
+                             f"{[len(frame_metadata) for frame_metadata in frame_metadatas_by_camera.values()]}")
+        frame_count = frame_counts[0]
+        frame_metadata_by_multiframe:list[dict[CameraIdString, FrameMetadata]] = []
+        for frame_number in range(frame_count):
+            frame_metadata = {}
+            for camera_id, frame_metadata_list in frame_metadatas_by_camera.items():
+                if frame_number >= len(frame_metadata_list):
+                    raise ValueError(f"Camera {camera_id} does not have enough frames recorded. "
+                                     f"Expected {frame_count}, but got {len(frame_metadata_list)}.")
+                frame_metadata[camera_id] = frame_metadata_list[frame_number]
+            frame_metadata_by_multiframe.append(frame_metadata)
+
+
 
         multiframe_timestamps = [MultiFrameTimestamps.from_frame_metadata(frame_metadata_by_camera=frame_metadata_by_camera,
-                                                                          recording_start_time_ns=recording_start_ns)
-            for frame_metadata_by_camera in mf_metadatas]
+                                                                          recording_start_time_ns=recording_start_time_ns)
+                                 for frame_metadata_by_camera in frame_metadata_by_multiframe]
 
-        previous_multiframe_number = multiframe_timestamps[0].multiframe_number-1
+        previous_frame_number = multiframe_timestamps[0].multiframe_number-1
+        previous_timestamp = None
         for mf_ts in multiframe_timestamps:
-            if not mf_ts.multiframe_number == previous_multiframe_number + 1:
-                raise ValueError(f"Multiframe numbers are not sequential. Expected {previous_multiframe_number + 1}, "
+            if not mf_ts.multiframe_number == previous_frame_number + 1:
+                raise ValueError(f"Multiframe numbers are not sequential. Expected {previous_frame_number + 1}, "
                                  f"but got {mf_ts.multiframe_number}.")
-            previous_multiframe_number = mf_ts.multiframe_number
+            if previous_timestamp is not None and mf_ts.timestamp_ns.mean < previous_timestamp:
+                raise ValueError(f"Timestamps are not monotonically increasing. Previous: {previous_timestamp}, "
+                                 f"Current: {mf_ts.timestamp_ns.mean}")
+            previous_frame_number = mf_ts.multiframe_number
+            previous_timestamp = mf_ts.timestamp_ns.mean
 
         return cls(
             multiframe_timestamps=multiframe_timestamps,
-            recording_start_ns=recording_start_ns,
+            recording_start_time_ns=recording_start_time_ns,
             recording_info=recording_info
         )
 
-
-
-
-    @property
-    def anything_recorded(self) -> bool:
-        return self.recording_start_ns is not None
 
     @cached_property
     def number_of_recorded_frames(self) -> int:
@@ -97,11 +124,11 @@ class RecordingTimestamps(BaseModel):
         Returns a list of timestamps in milliseconds for each multiframe payload,
         relative to the first frame.
         """
-        if self.recording_start_ns is None:
+        if self.recording_start_time_ns is None:
             raise ValueError("Recording start time is not set. Cannot calculate timestamps.")
         if not self.multiframe_timestamps:
             return []
-        return [ns_to_ms(mf.timestamp_ns.mean - self.recording_start_ns) for mf in
+        return [ns_to_ms(mf.timestamp_ns.mean - self.recording_start_time_ns) for mf in
                 self.multiframe_timestamps]
 
     @cached_property
@@ -344,7 +371,7 @@ class RecordingTimestamps(BaseModel):
                                                                   connection_frame_number=self.frame_numbers[
                                                                       rec_number],
                                                                   recording_frame_number=rec_number,
-                                                                  recording_start_time_ns=self.recording_start_ns,
+                                                                  recording_start_time_ns=self.recording_start_time_ns,
                                                                   previous_mf_timestamps=self.multiframe_timestamps[
                                                                       rec_number - 1] if rec_number > 0 else None, )
                     for rec_number, mf_ts in enumerate(self.multiframe_timestamps)]
@@ -370,7 +397,7 @@ class RecordingTimestamps(BaseModel):
                     frame_timestamps=ts,
                     recording_frame_number=recording_frame_number,
                     connection_frame_number=self.frame_numbers[recording_frame_number],
-                    recording_start_time_ns=self.recording_start_ns,
+                    recording_start_time_ns=self.recording_start_time_ns,
                     previous_frame_timestamps=frame_timestamps[
                         recording_frame_number - 1] if recording_frame_number > 0 else None
                 ) for recording_frame_number, ts in enumerate(frame_timestamps)
@@ -388,15 +415,17 @@ class RecordingTimestamps(BaseModel):
         mf_df = self.to_mf_dataframe()
         mf_df.to_csv(self.recording_info.timestamp_file_path,index=False)
         stats = self.to_stats()
-        logger.info(
-            f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
         logger.info(f"Recording stats:\n\n{stats}\n\n")
+
 
         Path(self.recording_info.timestamp_stats_file_path).write_text(
             stats.model_dump_json(exclude={'sample_data'}, indent=2), encoding='utf-8')
 
         Path(self.recording_info.timestamp_stats_file_path).write_text(
             str(stats), encoding='utf-8')
+
+        logger.info(
+            f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
 
         dfs = self.to_camera_dataframes()
         for camera_id, camera_df in dfs.items():

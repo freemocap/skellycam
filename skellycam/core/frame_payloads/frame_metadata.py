@@ -35,15 +35,15 @@ class FrameMetadata(BaseModel):
         self.timestamps = FrameTimestamps(timebase_mapping=self.timestamps.timebase_mapping)
 
     @classmethod
-    def from_numpy_record_array(cls, array: np.recarray):
+    def from_recarray(cls, array: np.recarray):
         if array.dtype != FRAME_METADATA_DTYPE:
             raise ValueError(f"Metadata array shape mismatch - "
                              f"Expected: {FRAME_METADATA_DTYPE}, "
                              f"Actual: {array.dtype}")
         return cls(
-            frame_number=array.frame_number,
+            frame_number=array.frame_number[0],
             camera_config=CameraConfig.from_numpy_record_array(array.camera_config),
-            timestamps=FrameTimestamps.from_frame_metadata_recarray(array.timestamps),
+            timestamps=FrameTimestamps.from_frame_timestamps_recarray(array.timestamps),
         )
 
     def to_numpy_record_array(self) -> np.recarray:

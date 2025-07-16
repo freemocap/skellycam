@@ -80,3 +80,8 @@ class RecordingInfo(BaseModel):
                 self.videos_folder) / f"{self.recording_name}.camera{config.camera_index}.{config.video_file_extension}")
     def camera_timestamps_file_path_from_camera_id(self, camera_id: str) -> str:
         return str(Path(self.camera_timestamps_folder) / f"{self.recording_name}.camera{camera_id}.timestamps.csv")
+
+    def __eq__(self, other):
+        if not isinstance(other, RecordingInfo):
+            return NotImplemented
+        return self.model_dump_json() == other.model_dump_json()

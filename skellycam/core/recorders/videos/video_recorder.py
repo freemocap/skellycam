@@ -1,5 +1,6 @@
 import logging
 from collections import deque
+from copy import copy
 from pathlib import Path
 
 import cv2
@@ -7,6 +8,7 @@ import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -21,6 +23,8 @@ class VideoRecorder(BaseModel):
         int, int]  # NOTE - this is (width, height) as per OpenCV's convention, which is opposite of numpy's row-major order
     framerate: float
     writer_fourcc: str
+    recording_info: RecordingInfo
+    video_frame_metadata: deque[np.recarray] = deque()  # stores metadata for each frame written to the video
     previous_frame_number: int | None = None
     frames_to_write: deque[np.recarray] = deque()
     video_writer: cv2.VideoWriter | None = None
@@ -51,8 +55,6 @@ class VideoRecorder(BaseModel):
         else:
             video_image_shape = config.resolution.height, config.resolution.width # swap width and height for portrait mode rotations
 
-
-
         logger.debug(f"Created VideoSaver for camera {config.camera_index} with video file path: {video_file_path}")
         instance =  cls(camera_id=config.camera_id,
                         camera_index=config.camera_index,
@@ -60,6 +62,7 @@ class VideoRecorder(BaseModel):
                         video_image_shape=video_image_shape,
                         framerate=config.framerate,
                         writer_fourcc=config.writer_fourcc,
+                        recording_info=recording_info,
                         )
         instance._initialize_video_writer()
         return instance
@@ -92,16 +95,27 @@ class VideoRecorder(BaseModel):
         self.previous_frame_number = frame.frame_metadata.frame_number[0]
         if not self.video_writer.isOpened():
             raise ValueError(f"VideoWriter not open (after adding frame)!")
-        print(f"Camera {self.camera_id} - Wrote frame {frame.frame_metadata.frame_number[0]} to video")
+        self.video_frame_metadata.append(copy(frame.frame_metadata))
         return frame.frame_metadata.frame_number
 
-    def finish_and_close(self):
+    def finish_and_close(self) -> list[FrameMetadata]:
         logger.debug(
             f"Finishing and closing VideoSaver for camera {self.camera_id} with {self.number_of_frames_to_write} frames to left write.")
         while len(self.frames_to_write) > 0:
             self.write_one_frame()
 
         self.close()
+        return self._create_metadata_objects()
+
+    def _create_metadata_objects(self) -> list[FrameMetadata]:
+        """
+        Create a list of FrameMetadata objects from the deque of video frame metadata.
+        This is useful for saving metadata to a file or for further processing.
+        """
+        metadata_objects = []
+        for metadata in self.video_frame_metadata:
+            metadata_objects.append(FrameMetadata.from_recarray(metadata))
+        return metadata_objects
 
     def _initialize_video_writer(self):
 

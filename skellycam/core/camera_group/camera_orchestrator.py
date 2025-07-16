@@ -20,8 +20,8 @@ class CameraStatus(BaseModel):
         default_factory=lambda: multiprocessing.Value("b", False))
     closing: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    ready_to_record: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    is_recording: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    recording_in_progress: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    is_recording_frame: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
@@ -83,8 +83,8 @@ class CameraOrchestrator:
         return all([status.ready for status in self.camera_statuses.values()])
 
     @property
-    def all_cameras_ready_to_record(self):
-        return all([status.ready_to_record.value for status in self.camera_statuses.values()])
+    def all_cameras_recording(self):
+        return all([status.recording_in_progress.value for status in self.camera_statuses.values()])
 
     @property
     def any_cameras_paused(self):
@@ -101,6 +101,10 @@ class CameraOrchestrator:
     @property
     def any_grabbing_frame(self) -> bool:
         return any([status.grabbing_frame.value for status in self.camera_statuses.values()])
+
+    @property
+    def any_recording_frame(self) -> bool:
+        return any([status.is_recording_frame.value for status in self.camera_statuses.values()])
 
     def should_grab_by_id(self, camera_id: CameraIdString) -> bool:
         if not camera_id in self.camera_statuses:

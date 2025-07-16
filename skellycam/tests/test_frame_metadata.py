@@ -135,4 +135,4 @@ class TestFrameMetadata:
         wrong_array = np.recarray(1, dtype=wrong_dtype)
 
         with pytest.raises(ValueError):
-            FrameMetadata.from_numpy_record_array(wrong_array)
+            FrameMetadata.from_recarray(wrong_array)
