@@ -16,7 +16,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, DeviceExtract
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
     FramePayloadSharedMemoryRingBuffer
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
-from skellycam.core.types.numpy_record_dtypes import create_frame_dtype, FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
+from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 from skellycam.utilities.wait_functions import wait_10us, wait_10ms, wait_1ms
 
@@ -42,7 +42,6 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
     self_status.running.value = True
     camera_shm: FramePayloadSharedMemoryRingBuffer | None = None
-
 
     (camera_shm,
      config,
@@ -93,7 +92,7 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                     self_status: CameraStatus,
                     update_camera_settings_subscription: TopicSubscriptionQueue,
                     recording_info_subscription: TopicSubscriptionQueue):
-    video_recorder: VideoRecorder|None = None
+    video_recorder: VideoRecorder | None = None
     try:
         while ipc.should_continue:
 
@@ -149,14 +148,12 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                 ))
                 video_recorder = None
 
-
-            frame_rec_array = check_for_new_config(frame_rec_array=frame_rec_array,
-                                                   cv2_video_capture=cv2_video_capture,
-                                                   ipc=ipc,
-                                                   self_status=self_status,
-                                                   update_camera_settings_subscription=update_camera_settings_subscription)
-
-
+            frame_rec_array, config = check_for_new_config(current_config=config,
+                frame_rec_array=frame_rec_array,
+                                                           cv2_video_capture=cv2_video_capture,
+                                                           ipc=ipc,
+                                                           self_status=self_status,
+                                                           update_camera_settings_subscription=update_camera_settings_subscription)
 
             frame_rec_array = initialize_frame_recarray(frame_rec_array=frame_rec_array)
 
@@ -265,11 +262,12 @@ def create_initial_frame_rec_array(config: CameraConfig, ipc: CameraGroupIPC) ->
     return frame_rec_array
 
 
-def check_for_new_config(frame_rec_array: np.recarray,
+def check_for_new_config(current_config: CameraConfig,
+                         frame_rec_array: np.recarray,
                          cv2_video_capture: cv2.VideoCapture,
                          ipc: CameraGroupIPC,
                          self_status: CameraStatus,
-                         update_camera_settings_subscription) -> np.recarray:
+                         update_camera_settings_subscription) -> tuple[np.recarray, CameraConfig]:
     if not update_camera_settings_subscription.empty():
         logger.debug(
             f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]} received update_camera_settings_subscription message")
@@ -288,12 +286,11 @@ def check_for_new_config(frame_rec_array: np.recarray,
                                                           config=new_config, )
             frame_rec_array.frame_metadata.camera_config[0] = extracted_config.to_numpy_record_array()
             ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
-                DeviceExtractedConfigMessage(
-                    extracted_config=CameraConfig.from_numpy_record_array(
-                        frame_rec_array.frame_metadata.camera_config)))
+                DeviceExtractedConfigMessage(extracted_config=extracted_config))
             self_status.updating.value = False
+            current_config = extracted_config
 
-    return frame_rec_array
+    return frame_rec_array, current_config
 
 
 def initialize_frame_recarray(frame_rec_array: np.recarray) -> np.recarray:
