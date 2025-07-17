@@ -81,10 +81,33 @@ useEffect(() => {
 
   const getTimestampString = (): string => {
     const now = new Date();
-    return now.toISOString()
-      .replace(/[:.]/g, '-')
-      .replace('T', '_')
-      .split('.')[0];
+    
+    // Format date in local time with timezone info
+    const dateOptions: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZoneName: 'shortOffset'
+    };
+    
+    // Get formatted parts
+    const formatter = new Intl.DateTimeFormat('en-US', dateOptions);
+    const parts = formatter.formatToParts(now);
+    
+    // Create a map of the parts for easy access
+    const partMap: Record<string, string> = {};
+    parts.forEach(part => {
+      partMap[part.type] = part.value;
+    });
+    
+    // Build the timestamp string in a filename-friendly format
+    const timestamp = `${partMap.year}-${partMap.month}-${partMap.day}_${partMap.hour}-${partMap.minute}-${partMap.second}_${partMap.timeZoneName.replace(':', '')}`;
+    
+    return timestamp;
   };
 
   const buildRecordingName = (): string => {
