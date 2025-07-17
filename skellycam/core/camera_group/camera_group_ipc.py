@@ -30,8 +30,6 @@ class CameraGroupIPC(BaseModel):
 
     # recording_manager_status: RecordingManagerStatus = Field(default_factory=RecordingManagerStatus)
     mf_builder_status: MultiFrameBuilderStatus = Field(default_factory=MultiFrameBuilderStatus)
-    should_record: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
     should_pause: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
     shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
@@ -48,10 +46,12 @@ class CameraGroupIPC(BaseModel):
         if group_id is None:
             group_id = create_camera_group_id()
         pubsub = create_pubsub_manager(group_id=group_id)
+        should_record_frames = multiprocessing.Value("b", False)
         return cls(
             group_id=group_id,
             pubsub=pubsub,
-            camera_orchestrator=CameraOrchestrator.from_camera_ids(camera_ids=list(camera_configs.keys())),
+            camera_orchestrator=CameraOrchestrator.from_camera_ids(camera_ids=list(camera_configs.keys()),
+                                                                   should_record_frames = should_record_frames),
             extracted_config_subscription=pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
             recording_finished_subscription=pubsub.topics[TopicTypes.RECORDING_FINISHED].get_subscription(),
             global_kill_flag=global_kill_flag,

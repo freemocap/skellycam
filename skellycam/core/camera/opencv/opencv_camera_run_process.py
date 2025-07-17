@@ -107,7 +107,7 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                 if not self_status.is_paused.value:
                     logger.trace(f"Pausing camera {config.camera_id}...")
                     self_status.is_paused.value = True
-                wait_10ms()
+                wait_1ms()
                 continue
             self_status.is_paused.value = False
 
@@ -118,38 +118,38 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             self_status.grabbing_frame.value = True
             frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
                                                frame_rec_array=frame_rec_array, )
-            if orchestrator.all_cameras_recording:
-                self_status.is_recording_frame.value = True
+
+            # get `should_record` bool BEFORE unsetting 'grabbing_frame' to avoid gaps between cameras
+            should_record_frame, should_finish_recording = orchestrator.should_record_frame_number(
+                frame_number=frame_rec_array.frame_metadata.frame_number[0], )
+
             self_status.grabbing_frame.value = False
 
             while orchestrator.any_grabbing_frame and ipc.should_continue:
-                # Wait for all cameras to finish grabbing frames to ensure we're all checking the same state and to avoid potential IO blocking during frame recording
+                # Wait for all cameras to finish grabbing frames
                 wait_10us()
 
-            if self_status.is_recording_frame.value:
+            if should_record_frame:
                 if video_recorder is None:
                     raise RuntimeError("Record requested before video_recorder was created.")
+                self_status.is_recording_frame.value = True
                 video_recorder.record_frame(frame=frame_rec_array)
                 self_status.is_recording_frame.value = False
-
-            while orchestrator.any_recording_frame and ipc.should_continue:
-                # Wait for all cameras to finish recording frames keep recording in sync
-                wait_10us()
+            if should_finish_recording and video_recorder is not None:
+                if not self_status.recording_in_progress.value:
+                    raise RuntimeError(
+                        f"Finish recording requested but no recording in progress for camera {config.camera_id}.")
+                if video_recorder is None or not video_recorder.any_data_saved:
+                    raise RuntimeError(
+                        f"Recording in progress but no video_recorder or no data saved for camera {config.camera_id}.")
+                logger.info(f"Camera {config.camera_id} finishing and closing video recorder...")
+                finish_recording(ipc=ipc,video_recorder=video_recorder)
+                video_recorder = None
+                self_status.recording_in_progress.value = False
 
             camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
-
-            if not ipc.should_record.value and video_recorder is not None and video_recorder.any_data_saved:
-                self_status.recording_in_progress.value = False
-                logger.debug(f"Camera {config.camera_id} finishing and closing video recorder...")
-                frame_metadatas = video_recorder.finish_and_close()
-                ipc.pubsub.topics[TopicTypes.RECORDING_FINISHED].publish(RecordingFinishedMessage(
-                    recording_info=video_recorder.recording_info,
-                    frame_metadatas=frame_metadatas,
-                ))
-                video_recorder = None
-
             frame_rec_array, config = check_for_new_config(current_config=config,
-                frame_rec_array=frame_rec_array,
+                                                           frame_rec_array=frame_rec_array,
                                                            cv2_video_capture=cv2_video_capture,
                                                            ipc=ipc,
                                                            self_status=self_status,
@@ -170,12 +170,24 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
         logger.debug(f"Camera {config.camera_id} loop ended.")
 
 
+def finish_recording(ipc: CameraGroupIPC,
+                        video_recorder: VideoRecorder) ->  None:
+    frame_metadatas = video_recorder.finish_and_close()
+    ipc.pubsub.topics[TopicTypes.RECORDING_FINISHED].publish(RecordingFinishedMessage(
+        recording_info=video_recorder.recording_info,
+        frame_metadatas=frame_metadatas,
+    ))
+    video_recorder = None
+    return video_recorder
+
+
 def check_for_new_recording_info(config: CameraConfig,
                                  ipc: CameraGroupIPC,
                                  orchestrator: CameraOrchestrator,
                                  recording_info_subscription: TopicSubscriptionQueue,
                                  self_status: CameraStatus,
                                  video_recorder: VideoRecorder | None) -> VideoRecorder | None:
+
     if not recording_info_subscription.empty():
         recording_info_message = recording_info_subscription.get()
         if not isinstance(recording_info_message, RecordingInfoMessage):
@@ -187,11 +199,8 @@ def check_for_new_recording_info(config: CameraConfig,
         if video_recorder is not None:
             logger.info(
                 f"New recording info received, closing recording: {video_recorder.recording_info.recording_name} for camera {config.camera_id}")
-            frame_metadatas = video_recorder.finish_and_close()
-            ipc.pubsub.publications[TopicTypes.RECORDING_FINISHED].publish(RecordingFinishedMessage(
-                recording_info=video_recorder.recording_info,
-                frame_metadatas=frame_metadatas,
-            ))
+            finish_recording(ipc=ipc, video_recorder=video_recorder)
+
         logger.info(
             f"Camera {config.camera_id} creating recorder for recording: {recording_info.recording_name}")
         video_recorder = VideoRecorder.create(
@@ -306,5 +315,7 @@ def initialize_frame_recarray(frame_rec_array: np.recarray) -> np.recarray:
     frame_rec_array.frame_metadata.timestamps.pre_copy_to_multiframe_shm_ns[0] = 0
     frame_rec_array.frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns[0] = 0
     frame_rec_array.frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns[0] = 0
+
     frame_rec_array.frame_metadata.timestamps.frame_initialized_ns[0] = time.perf_counter_ns()
+
     return frame_rec_array

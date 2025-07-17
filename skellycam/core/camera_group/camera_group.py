@@ -27,7 +27,6 @@ class CameraGroup:
     configs: CameraConfigs
     cameras: CameraManager
     mf_builder: MultiframeBuilder
-    # recorder: RecordingManager
     shm: CameraGroupSharedMemoryManager | None = None
     mf: MultiFramePayload | None = None  # Local copy of the latest multi-frame payload
 
@@ -41,16 +40,11 @@ class CameraGroup:
                global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None,
                camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
-
-               # recorder_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
                mf_builder_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
 
         ipc = CameraGroupIPC.create(group_id=group_id,
                                     camera_configs=camera_configs,
                                     global_kill_flag=global_kill_flag)
-        # recorder = RecordingManager.create(ipc=ipc,
-        #                                    worker_strategy=recorder_strategy
-        #                                    )
         mf_builder = MultiframeBuilder.create(ipc=ipc,
                                               worker_strategy=mf_builder_strategy)
 
@@ -158,7 +152,7 @@ class CameraGroup:
         while not self.ipc.all_ready_to_record and self.ipc.should_continue:
             wait_10ms()
         logger.api(f"All cameras are ready to record for camera group ID: {self.id}")
-        self.ipc.should_record.value = True
+        self.ipc.camera_orchestrator.should_record_frames.value = True
         wait_10ms()
         logger.api("Unpausing camera group to start recording...")
         self.ipc.unpause(await_unpaused=True)
@@ -174,7 +168,7 @@ class CameraGroup:
 
         logger.debug(f"Stopping recording for all cameras in orchestrator...")
         self.pause(await_paused=True)
-        self.ipc.should_record.value = False
+        self.ipc.camera_orchestrator.should_record_frames.value = False
         self.unpause(await_unpaused=True)
         finalize_recording(ipc=self.ipc)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
