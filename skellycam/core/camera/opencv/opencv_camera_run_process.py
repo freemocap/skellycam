@@ -114,7 +114,7 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             if not orchestrator.should_grab_by_id(camera_id=config.camera_id):
                 wait_10us()
                 continue
-
+            frame_rec_array.frame_metadata.timestamps.pre_frame_grab_ns[0] = time.perf_counter_ns()
             self_status.grabbing_frame.value = True
             frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
                                                frame_rec_array=frame_rec_array, )
@@ -172,6 +172,7 @@ def run_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
 
 def finish_recording(ipc: CameraGroupIPC,
                         video_recorder: VideoRecorder) ->  None:
+    logger.debug(f"Camera {video_recorder.camera_id} finishing recording: {video_recorder.recording_info.recording_name}")
     frame_metadatas = video_recorder.finish_and_close()
     ipc.pubsub.topics[TopicTypes.RECORDING_FINISHED].publish(RecordingFinishedMessage(
         recording_info=video_recorder.recording_info,

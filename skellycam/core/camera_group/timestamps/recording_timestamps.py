@@ -367,6 +367,7 @@ class RecordingTimestamps(BaseModel):
         if not self.multiframe_timestamps:
             raise ValueError("No multiframe timestamps available")
         # Create a list of MultiFrameTimestampsCSVRow objects
+
         csv_rows = [MultiFrameTimestampsCSVRow.from_mf_timestamps(mf_timestamps=mf_ts,
                                                                   connection_frame_number=self.frame_numbers[
                                                                       rec_number],
@@ -378,7 +379,7 @@ class RecordingTimestamps(BaseModel):
 
         # Convert each row to a dictionary and create a DataFrame
         rows_as_dicts = [row.model_dump(by_alias=True) for row in csv_rows]
-
+        logger.debug(f"Converting {len(rows_as_dicts)} multiframe timestamps to dataframe")
         return pd.DataFrame(rows_as_dicts)
 
 
@@ -413,26 +414,27 @@ class RecordingTimestamps(BaseModel):
         if self.number_of_cameras == 0:
             raise ValueError("No cameras recorded. Cannot save timestamps.")
         mf_df = self.to_mf_dataframe()
+        if mf_df.empty:
+            raise ValueError("No multiframe timestamps available. Cannot save timestamps.")
+        logger.debug(f"Generated multiframe timestamps dataframe with {len(mf_df)} rows and {len(mf_df.columns)} columns.")
         mf_df.to_csv(self.recording_info.timestamp_file_path,index=False)
         stats = self.to_stats()
 
-
         Path(self.recording_info.timestamp_stats_file_path).write_text(
             stats.model_dump_json(exclude={'sample_data'}, indent=2), encoding='utf-8')
-
+        logger.debug(f"Saved recording timestamps stats to {self.recording_info.timestamp_stats_file_path}")
         Path(self.recording_info.timestamp_stats_file_path).write_text(
             str(stats), encoding='utf-8')
-
         logger.info(
-            f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
+            f"Saved recording timestamps to {self.recording_info.timestamp_stats_file_path}")
 
         dfs = self.to_camera_dataframes()
         for camera_id, camera_df in dfs.items():
             camera_df.to_csv(
                 self.recording_info.camera_timestamps_file_path_from_camera_id(camera_id),
                 index_label="frame_number")
-        logger.info(
-            f"Saved recording timestamps and stats to {self.recording_info.timestamps_folder} and {self.recording_info.camera_timestamps_folder}")
+            logger.trace(
+                f"Saved Camera {camera_id} recording timestamps {self.recording_info.camera_timestamps_file_path_from_camera_id(camera_id)}")
 
 
 
