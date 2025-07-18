@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
@@ -30,15 +31,10 @@ def find_earliest_frame_metadata(frame_metadatas: dict[CameraIdString, FrameMeta
         raise ValueError("No metadata found in the multiframe record array.")
     return int(np.min(ts))
 
-class RecordingTimestamps(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    multiframe_timestamps: list[MultiFrameTimestamps] = Field(
-        description="List of timestamps for each multi-frame payload in the recording session")
-    recording_start_time_ns: int= Field(
-        description="The start time of the recording session in nanoseconds. "
-                    "This is used to calculate relative timestamps for each multiframe payload."
-    )
-
+@dataclass
+class RecordingTimestamps:
+    multiframe_timestamps: list[MultiFrameTimestamps]
+    recording_start_time_ns: int
     recording_info: RecordingInfo
 
 

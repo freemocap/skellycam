@@ -6,7 +6,7 @@ from cv2_enumerate_cameras import supported_backends, enumerate_cameras
 from cv2_enumerate_cameras.camera_info import CameraInfo
 from pydantic import BaseModel
 
-from skellycam.core.camera.opencv.determine_backend import determine_opencv_camera_backend, OpenCVBackend
+from skellycam.core.camera.opencv.opencv_helpers.determine_backend import determine_opencv_camera_backend, OpenCVBackend
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString, CameraBackendInt, CameraVendorIdInt, \
     CameraProductIdInt, CameraDevicePathString, CameraBackendNameString
 

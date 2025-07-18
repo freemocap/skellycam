@@ -40,12 +40,10 @@ FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
     ('post_frame_grab_ns', np.uint64),
     ('pre_frame_retrieve_ns', np.uint64),
     ('post_frame_retrieve_ns', np.uint64),
-    ('pre_copy_to_camera_shm_ns', np.uint64),
-    ('pre_retrieve_from_camera_shm_ns', np.uint64),
-    ('post_retrieve_from_camera_shm_ns', np.uint64),
-    ('pre_copy_to_multiframe_shm_ns', np.uint64),
-    ('pre_retrieve_from_multiframe_shm_ns', np.uint64),
-    ('post_retrieve_from_multiframe_shm_ns', np.uint64),
+    ('pre_frame_record_ns', np.uint64),
+    ('post_frame_record_ns', np.uint64),
+    ('pre_put_in_camera_shm_ns', np.uint64),
+    ('post_put_in_camera_shm_ns', np.uint64),
 ], align=True)
 
 FRAME_METADATA_DTYPE = np.dtype([

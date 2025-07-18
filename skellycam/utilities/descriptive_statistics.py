@@ -1,6 +1,6 @@
+from dataclasses import dataclass
+
 import numpy as np
-from numpydantic import NDArray
-from pydantic import BaseModel, ConfigDict, computed_field
 from functools import cached_property
 
 Z_SCORE_95_CI = 1.96  # Z-score for 95% confidence interval
@@ -26,8 +26,9 @@ def validate_samples(data: np.ndarray) -> None:
         raise ValueError("Sample list sum is close to zero")
 
 
-class SampleData(BaseModel):
-    data: NDArray
+@dataclass
+class SampleData:
+    data: np.ndarray
 
     @classmethod
     def from_samples(cls, samples: SamplesType):
@@ -53,8 +54,8 @@ class SampleData(BaseModel):
         """Check if the sample has at least the minimum required count."""
         return self.number_of_samples >= min_count
 
-
-class CentralTendencyMeasures(BaseModel):
+@dataclass
+class CentralTendencyMeasures:
     mean: float
     median: float
 
@@ -73,8 +74,15 @@ class CentralTendencyMeasures(BaseModel):
             median=median,
         )
 
+    def model_dump(self, **kwargs) -> dict:
+        """Dump the model data as a dictionary."""
+        return {
+            "mean": self.mean,
+            "median": self.median,
+        }
 
-class VariabilityMeasures(BaseModel):
+@dataclass
+class VariabilityMeasures:
     standard_deviation: float | None = None
     median_absolute_deviation: float | None = None
     interquartile_range: float | None = None
@@ -139,12 +147,12 @@ class VariabilityMeasures(BaseModel):
             "coefficient_of_variation": self.coefficient_of_variation,
         }
 
-class DescriptiveStatistics(BaseModel):
+@dataclass
+class DescriptiveStatistics:
+    sample_data: SampleData
     name: str = ""
     units: str = ""
-    sample_data: SampleData
 
-    model_config = ConfigDict(model_title_generator=lambda x: f"DescriptiveStatistics[{x.name}] (units:{x.units})")
 
     @classmethod
     def from_samples(cls, samples: SamplesType, name: str = "", units: str = "") -> 'DescriptiveStatistics':
@@ -185,19 +193,19 @@ class DescriptiveStatistics(BaseModel):
     def number_of_samples(self) -> int:
         return self.sample_data.number_of_samples
 
-    @computed_field
+    @cached_property
     def measures_of_central_tendency(self) -> CentralTendencyMeasures:
         return CentralTendencyMeasures.from_samples(self.sample_data)
 
-    @computed_field
+    @cached_property
     def measures_of_variability(self) -> VariabilityMeasures:
         return VariabilityMeasures.from_samples(self.sample_data)
 
-    @property
+    @cached_property
     def samples(self) -> SamplesType:
         return self.sample_data.samples
 
-    @property
+    @cached_property
     def data(self) -> np.ndarray:
         return self.sample_data.data
 
@@ -290,4 +298,4 @@ if __name__ == "__main__":
                                                        units="units")
     print(too_few_stats)
 
-    print(stats.model_dump_json(exclude={'sample_data'}, indent=4))
+    print(stats.model_dump(exclude={'sample_data'}, indent=4))

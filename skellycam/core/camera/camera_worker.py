@@ -3,7 +3,7 @@ import logging
 from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_worker_method
+from skellycam.core.camera.opencv.opencv_camera_worker_method import opencv_camera_worker_method
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.types.type_overloads import CameraIdString, WorkerStrategy, TopicSubscriptionQueue, WorkerType
 

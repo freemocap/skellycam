@@ -22,18 +22,6 @@ class FrameMetadata(BaseModel):
     def camera_id(self) -> str:
         return self.camera_config.camera_id
 
-
-    @classmethod
-    def create_initial(cls, camera_config: CameraConfig, timebase_mapping:TimebaseMapping) -> "FrameMetadata":
-        return cls(
-            frame_number=-1,
-            camera_config=camera_config,
-            timestamps=FrameTimestamps(timebase_mapping=timebase_mapping),
-        )
-
-    def initialize(self):
-        self.timestamps = FrameTimestamps(timebase_mapping=self.timestamps.timebase_mapping)
-
     @classmethod
     def from_recarray(cls, array: np.recarray):
         if array.dtype != FRAME_METADATA_DTYPE:
@@ -45,18 +33,4 @@ class FrameMetadata(BaseModel):
             camera_config=CameraConfig.from_numpy_record_array(array.camera_config),
             timestamps=FrameTimestamps.from_frame_timestamps_recarray(array.timestamps),
         )
-
-    def to_numpy_record_array(self) -> np.recarray:
-        """
-        Convert the FrameMetadata to a numpy record array.
-        """
-        # Create a record array with the correct shape (1,) to match the expected structure
-        result = np.recarray(1, dtype=FRAME_METADATA_DTYPE)
-
-        # Assign values to the record array
-        result.camera_config[0] = self.camera_config.to_numpy_record_array()[0]
-        result.frame_number[0] = self.frame_number
-        result.timestamps[0] = self.timestamps.to_numpy_record_array()[0]
-
-        return result
 

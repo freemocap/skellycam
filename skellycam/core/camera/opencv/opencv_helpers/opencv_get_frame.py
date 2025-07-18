@@ -32,10 +32,9 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     # https://docs.opencv.org/3.4/d8/dfe/classcv_1_1VideoCapture.html#ae38c2a053d39d6b20c9c649e08ff0146
     """
 
-
+    frame_rec_array.frame_metadata.timestamps.pre_frame_grab_ns[0] = time.perf_counter_ns()
     grab_success = cap.grab()  # This is as close as we get to the moment of transduction, where the light is captured by the sensor. This is where the light gets in ✨
     frame_rec_array.frame_metadata.timestamps.post_frame_grab_ns[0] = time.perf_counter_ns()
-    frame_rec_array.frame_metadata.timestamps.pre_frame_retrieve_ns[0] = time.perf_counter_ns()
 
     if not grab_success:
         raise RuntimeError(f"Failed to grab frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
@@ -46,21 +45,12 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     # that was in the field of view of the camera during the frame/timeslice
     # when the image was 'grabbed' in the previous step.
     # This is the empirical measurement upon which most/all our future calculations and inferences will be based.
+    frame_rec_array.frame_metadata.timestamps.pre_frame_retrieve_ns[0] = time.perf_counter_ns()
     retrieve_success, _ = cap.retrieve(image=frame_rec_array.image[0])  # provide pre-allocated image for speed
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = time.perf_counter_ns()
     frame_rec_array.frame_metadata.frame_number[0] += 1
     if not retrieve_success:
         raise ValueError(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
-
-
-    cv2.putText(frame_rec_array.image[0],
-                f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]} - Frame#{frame_rec_array.frame_metadata.frame_number[0]}",
-                (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (255, 5, 255),
-                2,
-                cv2.LINE_AA)
 
     logger.loop(f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]} grabbed frame {frame_rec_array.frame_metadata.frame_number[0]}")
     return frame_rec_array
