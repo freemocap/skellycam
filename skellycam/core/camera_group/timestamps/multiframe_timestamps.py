@@ -132,7 +132,7 @@ class MultiFrameTimestamps:
     @cached_property
     def pre_put_in_camera_shm_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.pre_put_in_camera_shm_ns) for ts in self.frame_timestamps.values()],
+            samples=[ns_to_ms(ts.pre_copy_to_camera_shm_ns) for ts in self.frame_timestamps.values()],
             name="pre_put_in_camera_shm_ms",
             units="milliseconds"
         )
@@ -140,7 +140,7 @@ class MultiFrameTimestamps:
     @cached_property
     def post_put_in_camera_shm_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.post_put_in_camera_shm_ns) for ts in self.frame_timestamps.values()],
+            samples=[ns_to_ms(ts.post_copy_to_camera_shm_ns) for ts in self.frame_timestamps.values()],
             name="post_put_in_camera_shm_ms",
             units="milliseconds"
         )
@@ -173,18 +173,18 @@ class MultiFrameTimestamps:
         )
 
     @cached_property
-    def idle_before_record_ms(self) -> DescriptiveStatistics:
+    def idle_before_frame_record_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.durations.idle_before_record_ns) for ts in self.frame_timestamps.values()],
+            samples=[ns_to_ms(ts.durations.idle_before_frame_record_ns) for ts in self.frame_timestamps.values()],
             name="idle_before_record_ms",
             units="milliseconds"
         )
 
     @cached_property
-    def during_record_ms(self) -> DescriptiveStatistics:
+    def during_frame_record_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.durations.stored_in_camera_shm_ns) for ts in self.frame_timestamps.values()],
-            name="during_record_ms",
+            samples=[ns_to_ms(ts.durations.during_frame_record_ns) for ts in self.frame_timestamps.values()],
+            name="during_frame_record_ns",
             units="milliseconds"
         )
 
@@ -206,16 +206,16 @@ class MultiFrameTimestamps:
         )
 
     @cached_property
-    def total_frame_processing_time_ns(self) -> DescriptiveStatistics:
+    def total_frame_processing_time_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
             samples=[ns_to_ms(ts.durations.total_frame_processing_time_ns) for ts in self.frame_timestamps.values()],
-            name="total_frame_processing_time_ns",
+            name="total_frame_processing_time_ms",
             units="milliseconds"
         )
     @cached_property
-    def total_idle_time_ms(self) -> DescriptiveStatistics:
+    def total_camera_idle_time_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.durations.total_idle_time_ns) for ts in self.frame_timestamps.values()],
+            samples=[ns_to_ms(ts.durations.total_camera_idle_time_ns) for ts in self.frame_timestamps.values()],
             name="total_idle_time_ms",
             units="milliseconds"
         )

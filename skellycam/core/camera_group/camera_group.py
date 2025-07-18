@@ -239,9 +239,12 @@ def finalize_recording(ipc: CameraGroupIPC):
                     f"{recording_info.recording_name} and {recording_finished_message.recording_info.recording_name}")
         wait_30ms()
 
+    if not all([isinstance(response, RecordingFinishedMessage) for response in
+               recording_finished_messages_by_camera.values()]):
+        raise RuntimeError("Not all cameras finished recording successfully.")
     recording_finalizer = RecordingFinalizer.create(
         recording_info=recording_info,
-        frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items() if message is not None},
+        frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items()},
     )
     recording_finalizer.finalize_recording()
     logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")

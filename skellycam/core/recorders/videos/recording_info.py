@@ -66,8 +66,12 @@ class RecordingInfo(BaseModel):
         return str(Path(self.full_recording_path)/f"{self.recording_name}_info.json")
 
     @property
-    def timestamp_stats_file_path(self) -> str:
+    def timestamp_stats_text_file_path(self) -> str:
         return f"{self.timestamps_folder}/{self.recording_name}_stats.txt"
+
+    @property
+    def timestamp_stats_json_file_path(self) -> str:
+        return f"{self.timestamps_folder}/{self.recording_name}_stats.json"
 
     def save_to_file(self):
         logger.debug(f"Saving recording info to [{self.recording_info_path}]")

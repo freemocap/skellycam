@@ -93,9 +93,9 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                 video_recorder = None
                 self_status.recording_in_progress.value = False
 
-            frame_rec_array.frame_metadata.timestamps.pre_put_in_camera_shm_ns[0] = time.perf_counter_ns()
+            frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = time.perf_counter_ns()
             camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
-            frame_rec_array.frame_metadata.timestamps.post_put_in_camera_shm_ns[0] = time.perf_counter_ns()
+            frame_rec_array.frame_metadata.timestamps.post_copy_to_camera_shm_ns[0] = time.perf_counter_ns()
 
             frame_rec_array = initialize_frame_recarray(frame_rec_array=frame_rec_array)
 
@@ -123,8 +123,8 @@ def initialize_frame_recarray(frame_rec_array: np.recarray) -> np.recarray:
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = 0
     frame_rec_array.frame_metadata.timestamps.pre_frame_record_ns[0] = 0
     frame_rec_array.frame_metadata.timestamps.post_frame_record_ns[0] = 0
-    frame_rec_array.frame_metadata.timestamps.pre_put_in_camera_shm_ns[0] = 0
-    frame_rec_array.frame_metadata.timestamps.post_put_in_camera_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = 0
+    frame_rec_array.frame_metadata.timestamps.post_copy_to_camera_shm_ns[0] = 0
 
     frame_rec_array.frame_metadata.timestamps.frame_initialized_ns[0] = time.perf_counter_ns()
 

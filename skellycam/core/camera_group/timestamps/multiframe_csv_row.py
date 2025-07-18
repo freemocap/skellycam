@@ -22,53 +22,48 @@ class MultiFrameTimestampsCSVRow(BaseModel):
     frame_duration_ms: float|None = Field(serialization_alias="from_previous.frame_duration.ms")
     framerate_hz: float|None = Field(serialization_alias="from_previous.framerate.hz")
 
+    # Lifespan duration fields
+    during_frame_grab_mean_ms: float = Field(serialization_alias="duration.during_frame_grab.mean.ms")
+    idle_before_retrieve_mean_ms: float = Field(serialization_alias="duration.idle_before_retrieve.mean.ms")
+    during_frame_retrieve_mean_ms: float = Field(serialization_alias="duration.during_frame_retrieve.mean.ms")
+    idle_before_record_mean_ms: float = Field(serialization_alias="duration.idle_before_record.mean.ms")
+    during_frame_record_mean_ms: float = Field(serialization_alias="duration.during_frame_record.mean.ms")
+    idle_before_copy_to_camera_shm_mean_ms: float = Field(serialization_alias="duration.idle_before_copy_to_camera_shm.mean.ms")
+    during_copy_to_camera_shm_mean_ms: float = Field(serialization_alias="duration.during_copy_to_camera_shm.mean.ms")
+    total_frame_acquisition_time_mean_ms: float = Field(serialization_alias="duration.total_frame_acquisition.mean.ms")
+    camera_idle_time_mean_ms: float = Field(serialization_alias="duration.camera_idle_time.mean.ms")
+
+    during_frame_grab_std_ms: float = Field(serialization_alias="duration.during_frame_grab.std.ms")
+    idle_before_retrieve_std_ms: float = Field(serialization_alias="duration.idle_before_retrieve.std.ms")
+    during_frame_retrieve_std_ms: float = Field(serialization_alias="duration.during_frame_retrieve.std.ms")
+    idle_before_record_std_ms: float = Field(serialization_alias="duration.idle_before_record.std.ms")
+    during_frame_record_std_ms: float = Field(serialization_alias="duration.during_frame_record.std.ms")
+    idle_before_copy_to_camera_shm_std_ms: float = Field(serialization_alias="duration.idle_before_copy_to_camera_shm.std.ms")
+    during_copy_to_camera_shm_std_ms: float = Field(serialization_alias="duration.during_copy_to_camera_shm.std.ms")
+    total_frame_acquisition_time_std_ms: float = Field(serialization_alias="duration.total_frame_acquisition.std.ms")
+    camera_idle_time_std_ms: float = Field(serialization_alias="duration.camera_idle_time.std.ms")
+
     # Lifespan timestamp fields
     initialized_mean_ms: float = Field(serialization_alias="frame.initialized.mean.ms")
-    initialized_std_ms: float = Field(serialization_alias="frame.initialized.std.ms")
     pre_grab_mean_ms: float = Field(serialization_alias="frame.pre_grab.mean.ms")
-    pre_grab_std_ms: float = Field(serialization_alias="frame.pre_grab.std.ms")
     post_grab_mean_ms: float = Field(serialization_alias="frame.post_grab.mean.ms")
-    post_grab_std_ms: float = Field(serialization_alias="frame.post_grab.std.ms")
     pre_retrieve_mean_ms: float = Field(serialization_alias="frame.pre_retrieve.mean.ms")
-    pre_retrieve_std_ms: float = Field(serialization_alias="frame.pre_retrieve.std.ms")
     post_retrieve_mean_ms: float = Field(serialization_alias="frame.post_retrieve.mean.ms")
-    post_retrieve_std_ms: float = Field(serialization_alias="frame.post_retrieve.std.ms")
-    pre_copy_to_camera_shm_mean_ms: float = Field(serialization_alias="frame.copy_to_camera_shm.mean.ms")
-    pre_copy_to_camera_shm_std_ms: float = Field(serialization_alias="frame.copy_to_camera_shm.std.ms")
-    pre_retrieve_from_camera_shm_mean_ms: float = Field(serialization_alias="frame.pre_retrieve_from_camera_shm.mean.ms")
-    pre_retrieve_from_camera_shm_std_ms: float = Field(serialization_alias="frame.pre_retrieve_from_camera_shm.std.ms")
-    post_retrieve_from_camera_shm_mean_ms: float = Field(serialization_alias="frame.post_retrieve_from_camera_shm.mean.ms")
-    post_retrieve_from_camera_shm_std_ms: float = Field(serialization_alias="frame.post_retrieve_from_camera_shm.std.ms")
-    pre_copy_to_multiframe_shm_mean_ms: float = Field(serialization_alias="frame.copy_to_multiframe_shm.mean.ms")
-    pre_copy_to_multiframe_shm_std_ms: float = Field(serialization_alias="frame.copy_to_multiframe_shm.std.ms")
-    pre_retrieve_from_multiframe_shm_mean_ms: float = Field(serialization_alias="frame.pre_retrieve_from_multiframe_shm.mean.ms")
-    pre_retrieve_from_multiframe_shm_std_ms: float = Field(serialization_alias="frame.pre_retrieve_from_multiframe_shm.std.ms")
-    post_retrieve_from_multiframe_shm_mean_ms: float = Field(serialization_alias="frame.post_retrieve_from_multiframe_shm.mean.ms")
-    post_retrieve_from_multiframe_shm_std_ms: float = Field(serialization_alias="frame.post_retrieve_from_multiframe_shm.std.ms")
+    pre_frame_record_mean_ms: float = Field(serialization_alias="frame.pre_record.mean.ms")
+    post_frame_record_mean_ms: float = Field(serialization_alias="frame.post_record.mean.ms")
+    pre_put_in_camera_shm_mean_ms: float = Field(serialization_alias="frame.pre_put_in_camera_shm.mean.ms")
+    post_put_in_camera_shm_mean_ms: float = Field(serialization_alias="frame.post_put_in_camera_shm.mean.ms")
 
-    # Lifespan duration fields
-    idle_before_grab_mean_ms: float = Field(serialization_alias="duration.idle_before_grab.mean.ms")
-    idle_before_grab_std_ms: float = Field(serialization_alias="duration.idle_before_grab.std.ms")
-    during_frame_grab_mean_ms: float = Field(serialization_alias="duration.during_frame_grab.mean.ms")
-    during_frame_grab_std_ms: float = Field(serialization_alias="duration.during_frame_grab.std.ms")
-    idle_before_retrieve_mean_ms: float = Field(serialization_alias="duration.idle_before_retrieve.mean.ms")
-    idle_before_retrieve_std_ms: float = Field(serialization_alias="duration.idle_before_retrieve.std.ms")
-    during_frame_retrieve_mean_ms: float = Field(serialization_alias="duration.during_frame_retrieve.mean.ms")
-    during_frame_retrieve_std_ms: float = Field(serialization_alias="duration.during_frame_retrieve.std.ms")
-    idle_before_copy_to_camera_shm_mean_ms: float = Field(serialization_alias="duration.idle_before_copy_to_camera_shm.mean.ms")
-    idle_before_copy_to_camera_shm_std_ms: float = Field(serialization_alias="duration.idle_before_copy_to_camera_shm.std.ms")
-    stored_in_camera_shm_mean_ms: float = Field(serialization_alias="duration.stored_in_camera_shm.mean.ms")
-    stored_in_camera_shm_std_ms: float = Field(serialization_alias="duration.stored_in_camera_shm.std.ms")
-    during_copy_from_camera_shm_mean_ms: float = Field(serialization_alias="duration.during_copy_from_camera_shm.mean.ms")
-    during_copy_from_camera_shm_std_ms: float = Field(serialization_alias="duration.during_copy_from_camera_shm.std.ms")
-    idle_before_copy_to_multiframe_shm_mean_ms: float = Field(serialization_alias="duration.idle_before_copy_to_multiframe_shm.mean.ms")
-    idle_before_copy_to_multiframe_shm_std_ms: float = Field(serialization_alias="duration.idle_before_copy_to_multiframe_shm.std.ms")
-    stored_in_multiframe_shm_mean_ms: float = Field(serialization_alias="duration.stored_in_multiframe_shm.mean.ms")
-    stored_in_multiframe_shm_std_ms: float = Field(serialization_alias="duration.stored_in_multiframe_shm.std.ms")
-    total_frame_acquisition_time_mean_ms: float = Field(serialization_alias="duration.total_frame_acquisition.mean.ms")
-    total_frame_acquisition_time_std_ms: float = Field(serialization_alias="duration.total_frame_acquisition.std.ms")
-    total_ipc_travel_time_mean_ms: float = Field(serialization_alias="duration.total_ipc_travel.mean.ms")
-    total_ipc_travel_time_std_ms: float = Field(serialization_alias="duration.total_ipc_travel.std.ms")
+    initialized_std_ms: float = Field(serialization_alias="frame.initialized.std.ms")
+    pre_grab_std_ms: float = Field(serialization_alias="frame.pre_grab.std.ms")
+    post_grab_std_ms: float = Field(serialization_alias="frame.post_grab.std.ms")
+    pre_retrieve_std_ms: float = Field(serialization_alias="frame.pre_retrieve.std.ms")
+    post_retrieve_std_ms: float = Field(serialization_alias="frame.post_retrieve.std.ms")
+    pre_frame_record_std_ms: float = Field(serialization_alias="frame.pre_record.std.ms")
+    post_frame_record_std_ms: float = Field(serialization_alias="frame.post_record.std.ms")
+    pre_put_in_camera_shm_std_ms: float = Field(serialization_alias="frame.pre_put_in_camera_shm.std.ms")
+    post_put_in_camera_shm_std_ms: float = Field(serialization_alias="frame.post_put_in_camera_shm.std.ms")
+
 
     @classmethod
     def from_mf_timestamps(cls,
@@ -98,53 +93,47 @@ class MultiFrameTimestampsCSVRow(BaseModel):
             inter_camera_grab_range_ms =mf_timestamps.inter_camera_grab_range_ms,
             frame_duration_ms=frame_duration_ms,
             framerate_hz= framerate_hz,
+
             initialized_mean_ms=mf_timestamps.frame_initialized_ms.mean - recording_start_ms,
             pre_grab_mean_ms=mf_timestamps.pre_grab_ms.mean - recording_start_ms,
             post_grab_mean_ms=mf_timestamps.post_grab_ms.mean - recording_start_ms,
             pre_retrieve_mean_ms=mf_timestamps.pre_retrieve_ms.mean - recording_start_ms,
             post_retrieve_mean_ms=mf_timestamps.post_retrieve_ms.mean - recording_start_ms,
-            pre_copy_to_camera_shm_mean_ms=mf_timestamps.pre_copy_to_camera_shm_ms.mean - recording_start_ms,
-            pre_retrieve_from_camera_shm_mean_ms=mf_timestamps.pre_retrieve_from_camera_shm_ms.mean - recording_start_ms,
-            post_retrieve_from_camera_shm_mean_ms=mf_timestamps.post_retrieve_from_camera_shm_ms.mean - recording_start_ms,
-            pre_copy_to_multiframe_shm_mean_ms=mf_timestamps.pre_copy_to_multiframe_shm_ms.mean - recording_start_ms,
-            pre_retrieve_from_multiframe_shm_mean_ms=mf_timestamps.pre_retrieve_from_multiframe_shm_ms.mean - recording_start_ms,
-            post_retrieve_from_multiframe_shm_mean_ms=mf_timestamps.post_retrieve_from_multiframe_shm_ms.mean - recording_start_ms,
+            pre_frame_record_mean_ms=mf_timestamps.pre_frame_record_ms.mean - recording_start_ms,
+            post_frame_record_mean_ms=mf_timestamps.post_frame_record_ms.mean - recording_start_ms,
+            pre_put_in_camera_shm_mean_ms=mf_timestamps.pre_put_in_camera_shm_ms.mean - recording_start_ms,
+            post_put_in_camera_shm_mean_ms=mf_timestamps.post_put_in_camera_shm_ms.mean - recording_start_ms,
 
-            idle_before_grab_mean_ms=mf_timestamps.idle_before_grab_ms.mean,
+
             during_frame_grab_mean_ms=mf_timestamps.during_frame_grab_ms.mean,
             idle_before_retrieve_mean_ms=mf_timestamps.idle_before_retrieve_ms.mean,
             during_frame_retrieve_mean_ms=mf_timestamps.during_frame_retrieve_ms.mean,
+            idle_before_record_mean_ms=mf_timestamps.idle_before_frame_record_ms.mean,
+            during_frame_record_mean_ms=mf_timestamps.during_frame_record_ms.mean,
             idle_before_copy_to_camera_shm_mean_ms=mf_timestamps.idle_before_copy_to_camera_shm_ms.mean,
-            stored_in_camera_shm_mean_ms=mf_timestamps.stored_in_camera_shm_ms.mean,
-            during_copy_from_camera_shm_mean_ms=mf_timestamps.during_copy_from_camera_shm_ms.mean,
-            idle_before_copy_to_multiframe_shm_mean_ms=mf_timestamps.idle_before_copy_to_multiframe_shm_ms.mean,
-            stored_in_multiframe_shm_mean_ms=mf_timestamps.stored_in_multiframe_shm_ms.mean,
-            total_frame_acquisition_time_mean_ms=mf_timestamps.total_frame_acquisition_time_ms.mean,
-            total_ipc_travel_time_mean_ms=mf_timestamps.total_ipc_travel_time_ms.mean,
+            during_copy_to_camera_shm_mean_ms=mf_timestamps.during_copy_to_camera_shm_ms.mean,
+            total_frame_acquisition_time_mean_ms=mf_timestamps.total_frame_processing_time_ms.mean,
+            camera_idle_time_mean_ms=mf_timestamps.total_camera_idle_time_ms.mean,
 
             initialized_std_ms=mf_timestamps.frame_initialized_ms.standard_deviation,
             pre_grab_std_ms=mf_timestamps.pre_grab_ms.standard_deviation,
             post_grab_std_ms=mf_timestamps.post_grab_ms.standard_deviation,
             pre_retrieve_std_ms=mf_timestamps.pre_retrieve_ms.standard_deviation,
             post_retrieve_std_ms=mf_timestamps.post_retrieve_ms.standard_deviation,
-            pre_copy_to_camera_shm_std_ms=mf_timestamps.pre_copy_to_camera_shm_ms.standard_deviation,
-            pre_retrieve_from_camera_shm_std_ms=mf_timestamps.pre_retrieve_from_camera_shm_ms.standard_deviation,
-            post_retrieve_from_camera_shm_std_ms=mf_timestamps.post_retrieve_from_camera_shm_ms.standard_deviation,
-            pre_copy_to_multiframe_shm_std_ms=mf_timestamps.pre_copy_to_multiframe_shm_ms.standard_deviation,
-            pre_retrieve_from_multiframe_shm_std_ms=mf_timestamps.pre_retrieve_from_multiframe_shm_ms.standard_deviation,
-            post_retrieve_from_multiframe_shm_std_ms=mf_timestamps.post_retrieve_from_multiframe_shm_ms.standard_deviation,
+            pre_frame_record_std_ms=mf_timestamps.pre_frame_record_ms.standard_deviation,
+            post_frame_record_std_ms=mf_timestamps.post_frame_record_ms.standard_deviation,
+            pre_put_in_camera_shm_std_ms=mf_timestamps.pre_put_in_camera_shm_ms.standard_deviation,
+            post_put_in_camera_shm_std_ms=mf_timestamps.post_put_in_camera_shm_ms.standard_deviation,
 
-            idle_before_grab_std_ms=mf_timestamps.idle_before_grab_ms.standard_deviation,
             during_frame_grab_std_ms=mf_timestamps.during_frame_grab_ms.standard_deviation,
             idle_before_retrieve_std_ms=mf_timestamps.idle_before_retrieve_ms.standard_deviation,
             during_frame_retrieve_std_ms=mf_timestamps.during_frame_retrieve_ms.standard_deviation,
+            idle_before_record_std_ms=mf_timestamps.idle_before_frame_record_ms.standard_deviation,
+            during_frame_record_std_ms=mf_timestamps.during_frame_record_ms.standard_deviation,
             idle_before_copy_to_camera_shm_std_ms=mf_timestamps.idle_before_copy_to_camera_shm_ms.standard_deviation,
-            stored_in_camera_shm_std_ms=mf_timestamps.stored_in_camera_shm_ms.standard_deviation,
-            during_copy_from_camera_shm_std_ms=mf_timestamps.during_copy_from_camera_shm_ms.standard_deviation,
-            idle_before_copy_to_multiframe_shm_std_ms=mf_timestamps.idle_before_copy_to_multiframe_shm_ms.standard_deviation,
-            stored_in_multiframe_shm_std_ms=mf_timestamps.stored_in_multiframe_shm_ms.standard_deviation,
-            total_frame_acquisition_time_std_ms=mf_timestamps.total_frame_acquisition_time_ms.standard_deviation,
-            total_ipc_travel_time_std_ms=mf_timestamps.total_ipc_travel_time_ms.standard_deviation,
+            during_copy_to_camera_shm_std_ms=mf_timestamps.during_copy_to_camera_shm_ms.standard_deviation,
+            total_frame_acquisition_time_std_ms=mf_timestamps.total_frame_processing_time_ms.standard_deviation,
+            camera_idle_time_std_ms=mf_timestamps.total_camera_idle_time_ms.standard_deviation,
         )
 
 

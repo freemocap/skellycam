@@ -428,7 +428,7 @@ class TestRecordingTimestamps:
         # Test a few representative duration statistics properties
 
         # idle_before_grab_duration_stats
-        stats = self.recording_timestamps.idle_before_grab_duration_stats
+        stats = self.recording_timestamps.camera_idle_time_duration_stats
         assert isinstance(stats, DescriptiveStatistics)
         assert stats.mean == pytest.approx(1.0, abs=0.1)  # 1ms
 
@@ -448,7 +448,7 @@ class TestRecordingTimestamps:
         assert stats.mean == pytest.approx(2.0, abs=0.1)  # 2ms
 
         # total_frame_acquisition_time_stats
-        stats = self.recording_timestamps.total_frame_acquisition_time_stats
+        stats = self.recording_timestamps.total_frame_processing_time_stats
         assert isinstance(stats, DescriptiveStatistics)
         assert stats.mean == pytest.approx(5.0, abs=0.1)  # 5ms (from pre_grab to post_retrieve)
 

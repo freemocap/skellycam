@@ -73,7 +73,7 @@ class TestFrameTimestamps:
         assert isinstance(durations, FrameDurations)
 
         # Test that durations are calculated correctly
-        assert durations.idle_before_grab_ns == 1000  # 2000 - 1000
+        assert durations.total_camera_idle_time_ns == 1000  # 2000 - 1000
         assert durations.during_frame_grab_ns == 1000  # 3000 - 2000
         assert durations.idle_before_retrieve_ns == 1000  # 4000 - 3000
         assert durations.during_frame_retrieve_ns == 1000  # 5000 - 4000
@@ -85,7 +85,7 @@ class TestFrameTimestamps:
         assert durations.during_copy_from_multiframe_shm_ns == 1000  # 11000 - 10000
 
         # Test higher-level category timing metrics
-        assert durations.total_frame_acquisition_time_ns == 3000  # 5000 - 2000
+        assert durations.total_frame_processing_time_ns == 3000  # 5000 - 2000
         assert durations.total_ipc_travel_time_ns == 6000  # 11000 - 5000
         assert durations.total_camera_to_recorder_time_ns == 8500  # 11000 - 2500
 
@@ -166,7 +166,7 @@ class TestFrameTimestamps:
         durations = timestamps.durations
 
         # All metrics should return -1 since no timestamps are set (except frame_initialized_ns)
-        assert durations.idle_before_grab_ns == -1
+        assert durations.total_camera_idle_time_ns == -1
         assert durations.during_frame_grab_ns == -1
         assert durations.idle_before_retrieve_ns == -1
         assert durations.during_frame_retrieve_ns == -1
@@ -176,7 +176,7 @@ class TestFrameTimestamps:
         assert durations.idle_before_copy_to_multiframe_shm_ns == -1
         assert durations.stored_in_multiframe_shm_ns == -1
         assert durations.during_copy_from_multiframe_shm_ns == -1
-        assert durations.total_frame_acquisition_time_ns == -1
+        assert durations.total_frame_processing_time_ns == -1
         assert durations.total_ipc_travel_time_ns == -1
         assert durations.total_camera_to_recorder_time_ns == -1
 
@@ -210,7 +210,7 @@ class TestFrameTimestamps:
         durations = timestamps.durations
 
         # Verify durations are exactly as expected (since we're using fixed values)
-        assert durations.idle_before_grab_ns == 100_000_000  # 100ms
+        assert durations.total_camera_idle_time_ns == 100_000_000  # 100ms
         assert durations.during_frame_grab_ns == 200_000_000  # 200ms
         assert durations.idle_before_retrieve_ns == 300_000_000  # 300ms
         assert durations.during_frame_retrieve_ns == 400_000_000  # 400ms
@@ -222,7 +222,7 @@ class TestFrameTimestamps:
         assert durations.stored_in_multiframe_shm_ns == 1_900_000_000  # 1900ms (from pre_copy_to_multiframe_shm to post_retrieve_from_multiframe_shm)
 
         # Check total_frame_acquisition_time_ns (should be 900ms = 1000ms - 100ms)
-        assert durations.total_frame_acquisition_time_ns == 900_000_000  # post_frame_retrieve_ns - pre_frame_grab_ns
+        assert durations.total_frame_processing_time_ns == 900_000_000  # post_frame_retrieve_ns - pre_frame_grab_ns
 
         # Check total_ipc_travel_time_ns (should be 4500ms = 5500ms - 1000ms)
         assert durations.total_ipc_travel_time_ns == 4_500_000_000  # post_retrieve_from_multiframe_shm_ns - post_frame_retrieve_ns

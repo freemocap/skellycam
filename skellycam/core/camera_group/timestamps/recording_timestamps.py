@@ -5,14 +5,12 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core.camera_group.timestamps.frame_timestamp_csv_row import FrameTimestampsCSVRow
 from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps.multiframe_csv_row import MultiFrameTimestampsCSVRow
 from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
@@ -178,13 +176,13 @@ class RecordingTimestamps:
         )
 
     @cached_property
-    def idle_before_grab_duration_stats(self) -> DescriptiveStatistics:
+    def camera_idle_time_duration_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before grabbing a frame.
         """
         return DescriptiveStatistics.from_samples(
-            samples=[ts.idle_before_grab_ms.median for ts in self.multiframe_timestamps],
-            name="idle_before_grab_ms",
+            samples=[ts.total_camera_idle_time_ms.median for ts in self.multiframe_timestamps],
+            name="camera_idle_time_ms",
             units="milliseconds"
         )
 
@@ -222,9 +220,32 @@ class RecordingTimestamps:
         )
 
     @cached_property
-    def idle_before_copy_to_camera_shm_stats(self) -> DescriptiveStatistics:
+    def idle_before_frame_record_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before copying to camera shared memory.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.idle_before_frame_record_ms.median for ts in self.multiframe_timestamps],
+            name="idle_before_copy_to_camera_shm_ms",
+            units="milliseconds"
+        )
+
+    @cached_property
+    def during_frame_record_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the frame record duration.
+        This is the time taken to copy the frame to camera shared memory.
+        """
+        return DescriptiveStatistics.from_samples(
+            samples=[ts.during_frame_record_ms.median for ts in self.multiframe_timestamps],
+            name="during_frame_record_ms",
+            units="milliseconds"
+        )
+
+    @cached_property
+    def idle_before_copy_to_camera_shm_stats(self) -> DescriptiveStatistics:
+        """
+        Returns the statistics of the idle time in camera shared memory.
         """
         return DescriptiveStatistics.from_samples(
             samples=[ts.idle_before_copy_to_camera_shm_ms.median for ts in self.multiframe_timestamps],
@@ -233,91 +254,38 @@ class RecordingTimestamps:
         )
 
     @cached_property
-    def stored_in_camera_shm_stats(self) -> DescriptiveStatistics:
-        """
-        Returns the statistics of the idle time in camera shared memory.
-        """
-        return DescriptiveStatistics.from_samples(
-            samples=[ts.stored_in_camera_shm_ms.median for ts in self.multiframe_timestamps],
-            name="stored_in_camera_shm_ms",
-            units="milliseconds"
-        )
-
-    @cached_property
-    def during_copy_from_camera_shm_stats(self) -> DescriptiveStatistics:
+    def during_copy_to_camera_shm_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the idle time before copying to multiframe shared memory.
         """
         return DescriptiveStatistics.from_samples(
-            samples=[ts.during_copy_from_camera_shm_ms.median for ts in self.multiframe_timestamps],
-            name="during_copy_from_camera_shm_ms",
+            samples=[ts.during_copy_to_camera_shm_ms.median for ts in self.multiframe_timestamps],
+            name="during_copy_to_camera_shm_ms",
             units="milliseconds"
         )
 
     @cached_property
-    def idle_before_copy_to_multiframe_shm_stats(self) -> DescriptiveStatistics:
-        """
-        Returns the statistics of the idle time before copying to multiframe shared memory.
-        """
-        return DescriptiveStatistics.from_samples(
-            samples=[ts.idle_before_copy_to_multiframe_shm_ms.median for ts in self.multiframe_timestamps],
-            name="idle_before_copy_to_multiframe_shm_ms",
-            units="milliseconds"
-        )
-
-    @cached_property
-    def stored_in_multiframe_shm_stats(self) -> DescriptiveStatistics:
-        """
-        Returns the statistics of the idle time in multiframe shared memory.
-        """
-        return DescriptiveStatistics.from_samples(
-            samples=[ts.stored_in_multiframe_shm_ms.median for ts in self.multiframe_timestamps],
-            name="stored_in_multiframe_shm_ms",
-            units="milliseconds"
-        )
-
-    @cached_property
-    def during_copy_from_multiframe_shm_stats(self) -> DescriptiveStatistics:
-        """
-        Returns the statistics of the idle time before copying to multiframe shared memory.
-        """
-        return DescriptiveStatistics.from_samples(
-            samples=[ts.during_copy_from_multiframe_shm_ms.median for ts in self.multiframe_timestamps],
-            name="during_copy_from_multiframe_shm_ms",
-            units="milliseconds"
-        )
-
-    @cached_property
-    def total_frame_acquisition_time_stats(self) -> DescriptiveStatistics:
+    def total_frame_processing_time_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the total frame acquisition duration.
         """
         return DescriptiveStatistics.from_samples(
-            samples=[ts.total_frame_acquisition_time_ms.median for ts in self.multiframe_timestamps],
-            name="total_frame_acquisition_time_ms",
+            samples=[ts.total_frame_processing_time_ms.median for ts in self.multiframe_timestamps],
+            name="total_frame_processing_time_ms",
             units="milliseconds"
         )
 
     @cached_property
-    def total_ipc_travel_time_stats(self) -> DescriptiveStatistics:
+    def total_camera_idle_time_stats(self) -> DescriptiveStatistics:
         """
         Returns the statistics of the total IPC travel duration.
         """
         return DescriptiveStatistics.from_samples(
-            samples=[ts.total_ipc_travel_time_ms.median for ts in self.multiframe_timestamps],
-            name="total_ipc_travel_duration_ms",
+            samples=[ts.total_camera_idle_time_ms.median for ts in self.multiframe_timestamps],
+            name="total_camera_idle_time_stats",
             units="milliseconds"
         )
 
-    @cached_property
-    def total_camera_to_recorder_time_stats(self) -> DescriptiveStatistics:
-        if not self.multiframe_timestamps:
-            raise ValueError("No multiframe timestamps available")
-        return DescriptiveStatistics.from_samples(
-            samples=[ts.total_camera_to_recorder_time_ms.median for ts in self.multiframe_timestamps],
-            name="total_camera_to_recorder_time_ms",
-            units="milliseconds"
-        )
 
     @cached_property
     def timestamps_by_camera_id(self) -> dict[CameraIdString, list[FrameTimestamps]]:
@@ -416,13 +384,13 @@ class RecordingTimestamps:
         mf_df.to_csv(self.recording_info.timestamp_file_path,index=False)
         stats = self.to_stats()
 
-        Path(self.recording_info.timestamp_stats_file_path).write_text(
-            stats.model_dump_json(exclude={'sample_data'}, indent=2), encoding='utf-8')
-        logger.debug(f"Saved recording timestamps stats to {self.recording_info.timestamp_stats_file_path}")
-        Path(self.recording_info.timestamp_stats_file_path).write_text(
+        Path(self.recording_info.timestamp_stats_text_file_path).write_text(
+            stats.to_json(exclude={'sample_data'}, indent=2), encoding='utf-8')
+        logger.debug(f"Saved recording timestamps stats to {self.recording_info.timestamp_stats_text_file_path}")
+        Path(self.recording_info.timestamp_stats_text_file_path).write_text(
             str(stats), encoding='utf-8')
         logger.info(
-            f"Saved recording timestamps to {self.recording_info.timestamp_stats_file_path}")
+            f"Saved recording timestamps to {self.recording_info.timestamp_stats_text_file_path}")
 
         dfs = self.to_camera_dataframes()
         for camera_id, camera_df in dfs.items():
