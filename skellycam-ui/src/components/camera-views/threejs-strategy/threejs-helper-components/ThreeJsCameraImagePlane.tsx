@@ -1,75 +1,86 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { Html, useTexture } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { ImageData } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
 export function ThreeJsCameraImagePlane({
-                                            imageData,
-                                            position,
-                                            scale,
-                                        }: {
+    imageData,
+    position,
+    scale,
+}: {
     position: [number, number, number];
     scale: [number, number, number];
     imageData: ImageData;
 }) {
     const meshRef = useRef<THREE.Mesh>(null);
     const textureRef = useRef<THREE.Texture | null>(null);
-    const textureLoader = useRef(new THREE.TextureLoader());
-    const [textureUrl, setTextureUrl] = useState<string | null>(null);
-
-    // Update the texture URL when imageData changes
+    const materialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+    
+    // Create texture and material only once
     useEffect(() => {
-        if (imageData?.url && imageData.url !== textureUrl) {
-            setTextureUrl(imageData.url);
+        // Create a texture that we'll reuse
+        const texture = new THREE.Texture();
+        texture.minFilter = THREE.NearestFilter;
+        texture.magFilter = THREE.NearestFilter;
+        texture.generateMipmaps = false;
+        texture.flipY = true;
+        textureRef.current = texture;
+        
+        // Create material that references this texture
+        const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true
+        });
+        materialRef.current = material;
+        
+        // Apply to mesh if it exists
+        if (meshRef.current) {
+            meshRef.current.material = material;
         }
-    }, [imageData, textureUrl]);
-
-    // Load and update texture when URL changes
-    useEffect(() => {
-        if (!textureUrl) return;
-
-        // Dispose previous texture to prevent memory leaks
-        if (textureRef.current) {
-            textureRef.current.dispose();
-        }
-
-        // Load the new texture
-        textureLoader.current.load(
-            textureUrl,
-            (loadedTexture) => {
-                // Configure texture settings
-                loadedTexture.minFilter = THREE.NearestFilter;
-                loadedTexture.magFilter = THREE.NearestFilter;
-                loadedTexture.generateMipmaps = false;
-                loadedTexture.flipY = true;
-                loadedTexture.needsUpdate = true;
-
-                // Store the texture reference
-                textureRef.current = loadedTexture;
-
-                // Update the material's map if mesh exists
-                if (meshRef.current && meshRef.current.material) {
-                    (meshRef.current.material as THREE.MeshBasicMaterial).map = loadedTexture;
-                    (meshRef.current.material as THREE.MeshBasicMaterial).transparent = false;
-                    (meshRef.current.material as THREE.MeshBasicMaterial).needsUpdate = true;
-                }
-            },
-            undefined,
-            (error) => {
-                console.error(`Error loading texture for camera ${imageData.cameraId}:`, error);
-            }
-        );
-    }, [textureUrl]);
-
-    // Final cleanup when component unmounts
-    useEffect(() => {
+        
+        // Cleanup on unmount
         return () => {
-            if (textureRef.current) {
-                textureRef.current.dispose();
-                textureRef.current = null;
-            }
+            if (texture) texture.dispose();
+            if (material) material.dispose();
         };
     }, []);
+    
+    // Update texture when new JPEG data arrives
+    useEffect(() => {
+        if (!imageData?.jpegData || !textureRef.current || !materialRef.current) return;
+        
+        // Create a temporary blob from the JPEG data
+        const blob = new Blob([imageData.jpegData], { type: 'image/jpeg' });
+        const tempUrl = URL.createObjectURL(blob);
+        
+        // Create a temporary image element to load the JPEG
+        const img = new Image();
+        img.onload = () => {
+            // Update our reused texture with the new image
+            if (textureRef.current) {
+                textureRef.current.image = img;
+                textureRef.current.needsUpdate = true;
+                
+                // Ensure material is using the texture
+                if (materialRef.current) {
+                    materialRef.current.map = textureRef.current;
+                    materialRef.current.transparent = false;
+                    materialRef.current.needsUpdate = true;
+                }
+            }
+            
+            // Clean up
+            URL.revokeObjectURL(tempUrl);
+        };
+        
+        img.onerror = (error) => {
+            console.error(`Error loading image for camera ${imageData.cameraId}:`, error);
+            URL.revokeObjectURL(tempUrl);
+        };
+        
+        // Start loading the image
+        img.src = tempUrl;
+    }, [imageData?.jpegData]);
 
     return (
         <group position={position}>
@@ -78,10 +89,7 @@ export function ThreeJsCameraImagePlane({
                 scale={[scale[0], scale[1], scale[2]]}
             >
                 <planeGeometry />
-                <meshBasicMaterial
-                    color={textureRef.current ? undefined : "gray"}
-                    transparent={true}
-                />
+                {/* Material will be set by the useEffect */}
             </mesh>
             <Html
                 position={[

@@ -68,55 +68,21 @@ interface FrameHeader {
 }
 
 export interface ImageData {
-    url: string;
+    jpegData: Uint8Array;
     frameNumber: number;
     cameraId: string;
     cameraIndex: number;
     imageWidth: number;
     imageHeight: number;}
 // Number of frames to keep in the rolling buffer
-const MAX_BLOB_URLS_PER_CAMERA = 100;
 export const useWebsocketBinaryMessageProcessor = () => {
     const [latestImageData, setLatestImageData] = useState<ImageData[]>([]);
 
-    // Use a ref to track all active blob URLs with their metadata
-    const blobUrlsRef = useRef<Record<string, BlobUrlInfo[]>>({});
 
     // Reuse these objects for efficiency
     const textDecoderRef = useRef(new TextDecoder());
 
-    // Clean up all URLs when component unmounts
-    useEffect(() => {
-        return () => {
-            // Flatten all camera arrays and revoke all URLs
-            Object.values(blobUrlsRef.current).forEach(cameraUrls => {
-                cameraUrls.forEach(info => {
-                    URL.revokeObjectURL(info.url);
-                });
-            });
-        };
-    }, []);
-    // Helper function to clean up old blob URLs
-    const cleanupOldBlobUrls = useCallback(() => {
-        const cameras = Object.keys(blobUrlsRef.current);
 
-        cameras.forEach(cameraId => {
-            const cameraUrls = blobUrlsRef.current[cameraId] || [];
-
-            // If we have more URLs than our limit, remove the oldest ones
-            if (cameraUrls.length > MAX_BLOB_URLS_PER_CAMERA) {
-                const urlsToRemove = cameraUrls.slice(0, cameraUrls.length - MAX_BLOB_URLS_PER_CAMERA);
-
-                // Remove these URLs from our tracking and revoke them
-                urlsToRemove.forEach(info => {
-                    URL.revokeObjectURL(info.url);
-                });
-
-                // Update the array to only keep the most recent URLs
-                blobUrlsRef.current[cameraId] = cameraUrls.slice(-(MAX_BLOB_URLS_PER_CAMERA));
-            }
-        });
-    }, []);
 
     const parsePayloadHeader = useCallback((dataView: DataView): MessageHeaderFooter | null => {
         try {
@@ -248,34 +214,15 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 const jpegData = new Uint8Array(data, offset, frameHeader.jpegStringLength);
                 offset += frameHeader.jpegStringLength;
 
-                // Create blob URL directly
-                try {
-                    const blob = new Blob([jpegData], {type: 'image/jpeg'});
-                    const url = URL.createObjectURL(blob);
-
-                    // Store the new URL in our tracking system
-                    if (!blobUrlsRef.current[frameHeader.cameraId]) {
-                        blobUrlsRef.current[frameHeader.cameraId] = [];
-                    }
-
-                    blobUrlsRef.current[frameHeader.cameraId].push({
-                        url,
-                        frameNumber: frameHeader.frameNumber,
-                        cameraId: frameHeader.cameraId,
-                        createdAt: Date.now()
-                    });
-
-                    newImageDataArray.push({
-                        url,
-                        frameNumber: frameHeader.frameNumber,
-                        cameraId: frameHeader.cameraId,
-                        cameraIndex: frameHeader.cameraIndex,
-                        imageWidth: frameHeader.imageWidth,
-                        imageHeight: frameHeader.imageHeight
-                    });
-                } catch (error) {
-                    console.error(`Failed to create Blob URL for camera ${frameHeader.cameraId}:`, error);
-                }
+            // Instead of creating a Blob URL, pass the JPEG data directly
+            newImageDataArray.push({
+                jpegData, // Image data as JPEG encoded Uint8Array
+                frameNumber: frameHeader.frameNumber,
+                cameraId: frameHeader.cameraId,
+                cameraIndex: frameHeader.cameraIndex,
+                imageWidth: frameHeader.imageWidth,
+                imageHeight: frameHeader.imageHeight
+            });
             }
 
             // Process payload footer as a chunk
@@ -298,17 +245,13 @@ export const useWebsocketBinaryMessageProcessor = () => {
             // Update state with new image URLs
             setLatestImageData(newImageDataArray);
 
-            // Clean up old URLs (but not immediately, to give time for textures to load)
-            setTimeout(() => {
-                cleanupOldBlobUrls();
-            }, 1000); // Wait 1 second before cleaning up
 
             return frameNumber;
         } catch (error) {
             console.error('Error processing binary frame:', error);
             return null;
         }
-    }, [parsePayloadHeader, parseFrameHeader, parsePayloadFooter, cleanupOldBlobUrls]);
+    }, [parsePayloadHeader, parseFrameHeader, parsePayloadFooter]);
 
     return {
         latestImageData,
