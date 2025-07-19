@@ -2,10 +2,9 @@ import logging
 from pathlib import Path
 
 import cv2
-import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
@@ -40,12 +39,11 @@ class RecordingFinalizer(BaseModel):
                ):
 
         return cls(recording_info=recording_info,
-                   recording_timestamps=RecordingTimestamps.from_frame_metadata_by_camera(
-                       recording_info=recording_info,
-                       frame_metadatas_by_camera=frame_metadatas_by_camera),
-                     camera_configs={camera_id: metadatas[0].camera_config for camera_id, metadatas in frame_metadatas_by_camera.items()}
+                   recording_timestamps=RecordingTimestamps.from_frame_metadata_by_camera(recording_info=recording_info,
+                                                                                          frame_metadatas_by_camera=frame_metadatas_by_camera),
+                   camera_configs={camera_id: metadatas[0].camera_config
+                                   for camera_id, metadatas in frame_metadatas_by_camera.items()}
                    )
-
 
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")

@@ -34,8 +34,10 @@ class MultiFrameTimestamps:
 
         if len(set(frame_numbers.values())) > 1:
             raise ValueError(f"All cameras must have the same frame number for a multi-frame payload, received:  frame_numbers={frame_numbers}")
+
         frame_timestamps = {camera_id: frame_metadata.timestamps for camera_id, frame_metadata in
                             frame_metadata_by_camera.items()}
+
         return cls(frame_timestamps=frame_timestamps,
                    multiframe_number=set(frame_numbers.values()).pop(),
                    recording_start_time_ns=recording_start_time_ns)
@@ -171,6 +173,22 @@ class MultiFrameTimestamps:
             name="during_frame_retrieve_ms",
             units="milliseconds"
         )
+    @cached_property
+    def idle_before_copy_to_camera_shm_ms(self) -> DescriptiveStatistics:
+        return DescriptiveStatistics.from_samples(
+            samples=[ns_to_ms(ts.durations.idle_before_copy_to_camera_shm_ns) for ts in self.frame_timestamps.values()],
+            name="idle_before_copy_to_camera_shm_ms",
+            units="milliseconds"
+        )
+
+    @cached_property
+    def during_copy_to_camera_shm_ms(self) -> DescriptiveStatistics:
+        return DescriptiveStatistics.from_samples(
+            samples=[ns_to_ms(ts.durations.during_copy_to_camera_shm_ns) for ts in
+                     self.frame_timestamps.values()],
+            name="during_copy_to_camera_shm_ms",
+            units="milliseconds"
+        )
 
     @cached_property
     def idle_before_frame_record_ms(self) -> DescriptiveStatistics:
@@ -188,22 +206,6 @@ class MultiFrameTimestamps:
             units="milliseconds"
         )
 
-    @cached_property
-    def idle_before_copy_to_camera_shm_ms(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.durations.idle_before_copy_to_camera_shm_ns) for ts in self.frame_timestamps.values()],
-            name="idle_before_copy_to_camera_shm_ms",
-            units="milliseconds"
-        )
-
-    @cached_property
-    def during_copy_to_camera_shm_ms(self) -> DescriptiveStatistics:
-        return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.durations.during_copy_to_camera_shm_ns) for ts in
-                     self.frame_timestamps.values()],
-            name="during_copy_to_camera_shm_ms",
-            units="milliseconds"
-        )
 
     @cached_property
     def total_frame_processing_time_ms(self) -> DescriptiveStatistics:

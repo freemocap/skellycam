@@ -27,10 +27,10 @@ class RecordingTimestampsStats:
     during_frame_grab_ms: DescriptiveStatistics
     idle_before_retrieve_ms: DescriptiveStatistics
     during_frame_retrieve_ms: DescriptiveStatistics
-    idle_before_frame_record_ms: DescriptiveStatistics
-    during_frame_record_ms: DescriptiveStatistics
     idle_before_copy_to_camera_shm_ms: DescriptiveStatistics
     during_copy_to_camera_shm_ms: DescriptiveStatistics
+    idle_before_frame_record_ms: DescriptiveStatistics
+    during_frame_record_ms: DescriptiveStatistics
     total_frame_processing_time_ms: DescriptiveStatistics
     total_camera_idle_time_ms: DescriptiveStatistics
 
@@ -48,13 +48,12 @@ class RecordingTimestampsStats:
             during_frame_grab_ms=recording_timestamps.during_frame_grab_stats,
             idle_before_retrieve_ms=recording_timestamps.idle_before_retrieve_duration_stats,
             during_frame_retrieve_ms=recording_timestamps.during_frame_retrieve_stats,
-            idle_before_frame_record_ms=recording_timestamps.idle_before_frame_record_stats,
-            during_frame_record_ms=recording_timestamps.during_frame_record_stats,
             idle_before_copy_to_camera_shm_ms=recording_timestamps.idle_before_copy_to_camera_shm_stats,
             during_copy_to_camera_shm_ms=recording_timestamps.during_copy_to_camera_shm_stats,
+            idle_before_frame_record_ms=recording_timestamps.idle_before_frame_record_stats,
+            during_frame_record_ms=recording_timestamps.during_frame_record_stats,
             total_frame_processing_time_ms=recording_timestamps.total_frame_processing_time_stats,
             total_camera_idle_time_ms=recording_timestamps.total_camera_idle_time_stats,
-
         )
 
     def to_json(self, exclude: set[str] = None, indent: int = None) -> str:
@@ -144,10 +143,10 @@ class RecordingTimestampsStats:
             ("During frame grab", self.during_frame_grab_ms),
             ("Idle before retrieve", self.idle_before_retrieve_ms),
             ("During frame retrieve", self.during_frame_retrieve_ms),
-            ("Idle before frame record", self.idle_before_frame_record_ms),
-            ("During frame record", self.during_frame_record_ms),
             ("Idle before copy to camera SHM", self.idle_before_copy_to_camera_shm_ms),
             ("During copy to camera SHM", self.during_copy_to_camera_shm_ms),
+            ("Idle before frame record", self.idle_before_frame_record_ms),
+            ("During frame record", self.during_frame_record_ms),
         ]
 
         for stage_name, stats in acquisition_stages:
@@ -187,7 +186,7 @@ class RecordingTimestampsStats:
             f"{total_idle_stats.standard_deviation:.{precision}f}",
             f"{total_idle_stats.min:.{precision}f}",
             f"{total_idle_stats.max:.{precision}f}",
-            f"100%"
+            f"{100-processing_percentage:.1f}%"
         ])
 
         processing_table = tabulate(
@@ -215,11 +214,7 @@ class RecordingTimestampsStats:
     FRAME PROCESSING TIMESTAMPS
     $processing_table
 
-    SUMMARY METRICS
-    Frame Processing Efficiency: $proc_ratio% of time spent processing frames
-    Camera Idle Time: $idle_ratio% of time cameras were idle
-    Average Framerate: $avg_fps FPS
-    Frame Synchronization (inter-camera): $sync_ms ms (average difference)
+
     """
 
         # Create a template and substitute values

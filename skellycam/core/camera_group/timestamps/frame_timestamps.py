@@ -14,15 +14,16 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FrameTimestamps:
     timebase_mapping:TimebaseMapping
-    frame_initialized_ns: int =0
+    frame_initialized_ns: int = 0
     pre_frame_grab_ns: int = 0
     post_frame_grab_ns: int = 0
     pre_frame_retrieve_ns: int = 0
     post_frame_retrieve_ns: int = 0
-    pre_frame_record_ns: int = 0
-    post_frame_record_ns: int = 0
     pre_copy_to_camera_shm_ns: int = 0
     post_copy_to_camera_shm_ns: int = 0
+    pre_frame_record_ns: int = 0
+    post_frame_record_ns: int = 0
+
 
     @property
     def timestamp_ns(self) -> int:
@@ -53,10 +54,11 @@ class FrameTimestamps:
             post_frame_grab_ns=timestamps.post_frame_grab_ns[0],
             pre_frame_retrieve_ns=timestamps.pre_frame_retrieve_ns[0],
             post_frame_retrieve_ns=timestamps.post_frame_retrieve_ns[0],
-            pre_frame_record_ns=timestamps.pre_frame_record_ns[0],
-            post_frame_record_ns=timestamps.post_frame_record_ns[0],
             pre_copy_to_camera_shm_ns=timestamps.pre_copy_to_camera_shm_ns[0],
             post_copy_to_camera_shm_ns=timestamps.post_copy_to_camera_shm_ns[0],
+            pre_frame_record_ns=timestamps.pre_frame_record_ns[0],
+            post_frame_record_ns=timestamps.post_frame_record_ns[0],
+
             timebase_mapping=TimebaseMapping.from_numpy_record_array(timestamps.timebase_mapping)
         )
 
@@ -74,10 +76,10 @@ class FrameTimestamps:
         result.post_frame_grab_ns[0] = self.post_frame_grab_ns
         result.pre_frame_retrieve_ns[0] = self.pre_frame_retrieve_ns
         result.post_frame_retrieve_ns[0] = self.post_frame_retrieve_ns
-        result.pre_frame_record_ns[0] = self.pre_frame_record_ns
-        result.post_frame_record_ns[0] = self.post_frame_record_ns
         result.pre_copy_to_camera_shm_ns[0] = self.pre_copy_to_camera_shm_ns
         result.post_copy_to_camera_shm_ns[0] = self.post_copy_to_camera_shm_ns
+        result.pre_frame_record_ns[0] = self.pre_frame_record_ns
+        result.post_frame_record_ns[0] = self.post_frame_record_ns
 
         return result
 
@@ -112,24 +114,10 @@ class FrameDurations:
         return -1
 
     @cached_property
-    def idle_before_frame_record_ns(self) -> int:
-        """Time between frame retrieval and copying to camera shared memory."""
-        if self.timestamps.pre_frame_record_ns and self.timestamps.post_frame_retrieve_ns:
-            return self.timestamps.pre_frame_record_ns - self.timestamps.post_frame_retrieve_ns
-        return -1
-
-    @cached_property
-    def during_frame_record_ns(self) -> int:
-        """Time between frame retrieval and copying to camera shared memory."""
-        if self.timestamps.post_frame_record_ns and self.timestamps.pre_frame_record_ns:
-            return self.timestamps.post_frame_record_ns - self.timestamps.pre_frame_record_ns
-        return -1
-
-    @cached_property
     def idle_before_copy_to_camera_shm_ns(self) -> int:
         """Time between frame retrieval and copying to camera shared memory."""
-        if self.timestamps.post_frame_record_ns and self.timestamps.pre_copy_to_camera_shm_ns:
-            return self.timestamps.post_frame_record_ns - self.timestamps.pre_copy_to_camera_shm_ns
+        if self.timestamps.post_frame_retrieve_ns and self.timestamps.pre_copy_to_camera_shm_ns:
+            return self.timestamps.pre_copy_to_camera_shm_ns - self.timestamps.post_frame_retrieve_ns
         return -1
 
     @cached_property
@@ -139,12 +127,27 @@ class FrameDurations:
             return self.timestamps.post_copy_to_camera_shm_ns - self.timestamps.pre_copy_to_camera_shm_ns
         return -1
 
+    @cached_property
+    def idle_before_frame_record_ns(self) -> int:
+        """Time between frame retrieval and copying to camera shared memory."""
+        if self.timestamps.pre_frame_record_ns and self.timestamps.post_copy_to_camera_shm_ns:
+            return self.timestamps.pre_frame_record_ns  - self.timestamps.post_copy_to_camera_shm_ns
+        return -1
+
+    @cached_property
+    def during_frame_record_ns(self) -> int:
+        """Time between frame retrieval and copying to camera shared memory."""
+        if self.timestamps.post_frame_record_ns and self.timestamps.pre_frame_record_ns:
+            return self.timestamps.post_frame_record_ns - self.timestamps.pre_frame_record_ns
+        return -1
+
+
 
     @cached_property
     def total_frame_processing_time_ns(self) -> int:
         """Total time spent in frame acquisition (grab + retrieve)"""
-        if self.timestamps.post_copy_to_camera_shm_ns and self.timestamps.pre_frame_grab_ns:
-            return self.timestamps.post_copy_to_camera_shm_ns - self.timestamps.pre_frame_grab_ns
+        if self.timestamps.post_frame_record_ns and self.timestamps.pre_frame_grab_ns:
+            return self.timestamps.post_frame_record_ns - self.timestamps.pre_frame_grab_ns
         return -1
 
     @cached_property

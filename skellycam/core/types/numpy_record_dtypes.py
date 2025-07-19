@@ -34,16 +34,17 @@ TIMEBASE_MAPPING_DTYPE = np.dtype([
 ], align=True)
 
 FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
-    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE),
+    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE), #TODO - move to frame_metadata
+
     ('frame_initialized_ns', np.uint64),
     ('pre_frame_grab_ns', np.uint64),
     ('post_frame_grab_ns', np.uint64),
     ('pre_frame_retrieve_ns', np.uint64),
     ('post_frame_retrieve_ns', np.uint64),
-    ('pre_frame_record_ns', np.uint64),
-    ('post_frame_record_ns', np.uint64),
     ('pre_copy_to_camera_shm_ns', np.uint64),
     ('post_copy_to_camera_shm_ns', np.uint64),
+    ('pre_frame_record_ns', np.uint64),
+    ('post_frame_record_ns', np.uint64),
 ], align=True)
 
 FRAME_METADATA_DTYPE = np.dtype([

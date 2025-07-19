@@ -37,7 +37,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     frame_rec_array.frame_metadata.timestamps.post_frame_grab_ns[0] = time.perf_counter_ns()
 
     if not grab_success:
-        raise RuntimeError(f"Failed to grab frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
+        raise RuntimeError("Failed to grab frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
 
     # decode the frame buffer into an image!
     # The light is now in the camera's memory,
@@ -45,12 +45,13 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     # that was in the field of view of the camera during the frame/timeslice
     # when the image was 'grabbed' in the previous step.
     # This is the empirical measurement upon which most/all our future calculations and inferences will be based.
+
     frame_rec_array.frame_metadata.timestamps.pre_frame_retrieve_ns[0] = time.perf_counter_ns()
     retrieve_success, _ = cap.retrieve(image=frame_rec_array.image[0])  # provide pre-allocated image for speed
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = time.perf_counter_ns()
+
     frame_rec_array.frame_metadata.frame_number[0] += 1
     if not retrieve_success:
-        raise ValueError(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
+        raise ValueError("Failed to retrieve frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
 
-    logger.loop(f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]} grabbed frame {frame_rec_array.frame_metadata.frame_number[0]}")
     return frame_rec_array

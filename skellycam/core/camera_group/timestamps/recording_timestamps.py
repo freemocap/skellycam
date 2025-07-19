@@ -323,7 +323,7 @@ class RecordingTimestamps:
             raise ValueError("No multiframe timestamps available")
         return RecordingTimestampsStats.from_recording_timestamps(self)
 
-    def to_mf_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self) -> pd.DataFrame:
         """
         Returns a dataframe containing the multiframe timestamps.
         Each row represents a multiframe with statistics across all cameras.
@@ -375,15 +375,15 @@ class RecordingTimestamps:
         return camera_dfs
 
     def save_timestamps(self):
-        if self.number_of_cameras == 0:
-            raise ValueError("No cameras recorded. Cannot save timestamps.")
-        mf_df = self.to_mf_dataframe()
-        if mf_df.empty:
-            raise ValueError("No multiframe timestamps available. Cannot save timestamps.")
-        logger.debug(f"Generated multiframe timestamps dataframe with {len(mf_df)} rows and {len(mf_df.columns)} columns.")
-        mf_df.to_csv(self.recording_info.timestamp_file_path,index=False)
-        stats = self.to_stats()
+        """
+        Saves the recording timestamps to their specified files.
+        This includes saving the multiframe timestamps and camera timestamps.
+        """
+        self.save_timestamp_stats()
+        self.save_timestamp_csvs()
 
+    def save_timestamp_stats(self):
+        stats = self.to_stats()
         Path(self.recording_info.timestamp_stats_text_file_path).write_text(
             stats.to_json(exclude={'sample_data'}, indent=2), encoding='utf-8')
         logger.debug(f"Saved recording timestamps stats to {self.recording_info.timestamp_stats_text_file_path}")
@@ -391,6 +391,19 @@ class RecordingTimestamps:
             str(stats), encoding='utf-8')
         logger.info(
             f"Saved recording timestamps to {self.recording_info.timestamp_stats_text_file_path}")
+
+    def save_timestamp_csvs(self):
+
+        if self.number_of_cameras == 0:
+            raise ValueError("No cameras recorded. Cannot save timestamps.")
+
+        mf_df = self.to_dataframe()
+
+        if mf_df.empty:
+            raise ValueError("No multiframe timestamps available. Cannot save timestamps.")
+        logger.debug(f"Generated multiframe timestamps dataframe with {len(mf_df)} rows and {len(mf_df.columns)} columns.")
+        mf_df.to_csv(self.recording_info.timestamp_file_path,index=False)
+
 
         dfs = self.to_camera_dataframes()
         for camera_id, camera_df in dfs.items():
