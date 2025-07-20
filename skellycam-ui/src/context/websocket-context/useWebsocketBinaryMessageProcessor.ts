@@ -74,9 +74,10 @@ export interface ImageData {
     cameraIndex: number;
     imageWidth: number;
     imageHeight: number;}
-// Number of frames to keep in the rolling buffer
+
 export const useWebsocketBinaryMessageProcessor = () => {
     const [latestImageData, setLatestImageData] = useState<ImageData[]>([]);
+    const cameraIds = useRef<string[]>([]);
 
 
     // Reuse these objects for efficiency
@@ -133,6 +134,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
             const imageHeight = dataView.getInt32(FRAME_HEADER_IMAGE_HEIGHT_OFFSET, true);
             const colorChannels = dataView.getInt32(FRAME_HEADER_COLOR_CHANNELS_OFFSET, true);
             const jpegStringLength = dataView.getInt32(FRAME_HEADER_JPEG_LENGTH_OFFSET, true);
+
 
             return {
                 messageType,
@@ -242,9 +244,12 @@ export const useWebsocketBinaryMessageProcessor = () => {
             // Sort by camera index
             newImageDataArray.sort((a, b) => a.cameraIndex - b.cameraIndex);
 
+
             // Update state with new image URLs
             setLatestImageData(newImageDataArray);
 
+            // Update camera IDs
+            cameraIds.current  = newImageDataArray.map(image => image.cameraId);
 
             return frameNumber;
         } catch (error) {
@@ -255,6 +260,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
 
     return {
         latestImageData,
-        processBinaryMessage
+        processBinaryMessage,
+        cameraIds: cameraIds.current
     };
 };
