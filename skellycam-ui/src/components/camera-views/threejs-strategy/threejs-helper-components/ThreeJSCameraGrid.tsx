@@ -1,17 +1,42 @@
 // Camera Grid component
 import {useCameraGridLayout} from "@/hooks/useCameraGridLayout";
 import {useThree} from "@react-three/fiber";
-import React, {useEffect, useMemo} from "react";
-import {ThreeJsCameraImagePlane} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJsCameraImagePlane";
-import {ThreeJSResizeHandle} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSResizeHandle";
-import {useThreeJSGridResize} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSGridResizeContext";
-import {ImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import React, {useCallback, useEffect, useMemo, useRef} from "react";
+import {
+    ThreeJsCameraImagePlane
+} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJsCameraImagePlane";
+import {
+    ThreeJSResizeHandle
+} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSResizeHandle";
+import {
+    useThreeJSGridResize
+} from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSGridResizeContext";
+import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {FrameRenderAcknowledgment} from "@/context/websocket-context/useWebSocket";
+
+export interface CameraGridItem {
+    position: [number, number, number];
+    scale: [number, number, number];
+    imageData: CameraImageData;
+    cell: {
+        row: number;
+        column: number;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+}
 
 export function ThreeJSCameraGrid({
-                                      imageData
+                                      imageData,
+                                      sendFrameAcknowledgment
                                   }: {
-    imageData: ImageData[];
+    imageData: Record<string, CameraImageData>;
+    sendFrameAcknowledgment: (acknowledgment: FrameRenderAcknowledgment) => void;
 }) {
+    const cameraRenderAcknowledgment = useRef<Record<string, number>>({});
+    const latestFrameNumber = useRef<number>(-1);
     const {viewport} = useThree();
     const layout = useCameraGridLayout(imageData, viewport.width, viewport.height);
     const {gridCells, initializeGrid, startResizing, updateResize, endResizing} = useThreeJSGridResize();
@@ -24,20 +49,36 @@ export function ThreeJSCameraGrid({
     }, [layout.rows, layout.columns, initializeGrid]);
 
 
+    const acknowledgeCameraFrameUpdate = useCallback(
+        (cameraId: string, frameNumber: number) => {
+            cameraRenderAcknowledgment.current[cameraId] = frameNumber
+                latestFrameNumber.current = Math.max(latestFrameNumber.current, frameNumber);
+            const allCamerasAcknowledged = Object.values(cameraRenderAcknowledgment.current).every(
+                (acknowledgedFrame) => acknowledgedFrame >= latestFrameNumber.current
+            );
+            if (allCamerasAcknowledged) {
+                sendFrameAcknowledgment({
+                        frameNumber: latestFrameNumber.current,
+                        cameraDisplaySizes: {} // TODO - add camera display sizes
+                    }
+                )
+            }
+        }, [cameraRenderAcknowledgment, latestFrameNumber, sendFrameAcknowledgment]);
     // Calculate grid positions and scales
-    const gridItems = useMemo(() => {
-        if (gridCells.length === 0 || imageData.length === 0) return [];
+    const cameraGridItems: CameraGridItem[] = useMemo(() => {
+        const imageDataArray: CameraImageData[] = Object.values(imageData);
+        if (gridCells.length === 0 || imageDataArray.length === 0) return [];
 
-        const items = [];
+        const gridItems: CameraGridItem[] = [];
         const {rows, columns} = layout;
 
         for (let row = 0; row < rows; row++) {
             for (let column = 0; column < columns; column++) {
                 const index = row * columns + column;
-                if (index >= imageData.length) continue;
+                if (index >= imageDataArray.length) continue;
 
                 // Get the camera data for this grid position
-                const cameraImageData = imageData[index];
+                const cameraImageData = imageDataArray[index];
                 if (!cameraImageData) continue;
 
                 // Find the corresponding grid cell
@@ -51,7 +92,7 @@ export function ThreeJSCameraGrid({
                 const y = viewport.height / 2 - (cell.y * viewport.height) - (cellHeight / 2);
 
                 // Calculate aspect ratio from image dimensions
-                const aspectRatio = cameraImageData.imageWidth / cameraImageData.imageHeight;
+                const aspectRatio = cameraImageData.imageBitmap.width / cameraImageData.imageBitmap.height;
 
                 // Calculate scale to fit in cell while maintaining aspect ratio
                 const maxWidth = cellWidth * 0.95;
@@ -66,7 +107,7 @@ export function ThreeJSCameraGrid({
                     width = height * aspectRatio;
                 }
 
-                items.push({
+                gridItems.push({
                     position: [x, y, 0] as [number, number, number],
                     scale: [width, height, 1] as [number, number, number],
                     imageData: cameraImageData,
@@ -75,7 +116,7 @@ export function ThreeJSCameraGrid({
             }
         }
 
-        return items;
+        return gridItems;
     }, [layout, viewport.width, viewport.height, imageData, gridCells]);
     // Generate resize handles
     const resizeHandles = useMemo(() => {
@@ -93,7 +134,7 @@ export function ThreeJSCameraGrid({
                 if (leftCell && rightCell) {
                     const handleId = `h_row${row}_column${column}`;
                     const x = -viewport.width / 2 + (leftCell.x + leftCell.width) * viewport.width;
-                    const y = viewport.height / 2 - (leftCell.y + leftCell.height/2) * viewport.height;
+                    const y = viewport.height / 2 - (leftCell.y + leftCell.height / 2) * viewport.height;
                     const length = leftCell.height * viewport.height * 0.9;
 
                     handles.push({
@@ -118,7 +159,7 @@ export function ThreeJSCameraGrid({
 
                 if (topCell && bottomCell) {
                     const handleId = `v_row${row}_column${column}`;
-                    const x = -viewport.width / 2 + (topCell.x + topCell.width/2) * viewport.width;
+                    const x = -viewport.width / 2 + (topCell.x + topCell.width / 2) * viewport.width;
                     const y = viewport.height / 2 - (topCell.y + topCell.height) * viewport.height;
                     const length = topCell.width * viewport.width * 0.9;
 
@@ -142,12 +183,13 @@ export function ThreeJSCameraGrid({
 
     return (
         <>
-            {gridItems.map((item, index) => (
+            {cameraGridItems.map((item, index) => (
                 <ThreeJsCameraImagePlane
                     key={`camera-${item.imageData.cameraId}-${index}`}
                     position={item.position}
                     scale={item.scale}
                     imageData={item.imageData}
+                    acknowledgeCameraFrameUpdate={acknowledgeCameraFrameUpdate}
                 />
             ))}
 

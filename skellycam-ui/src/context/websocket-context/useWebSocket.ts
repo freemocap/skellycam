@@ -1,142 +1,122 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAppDispatch } from "@/store/AppStateStore";
-import { useWebsocketBinaryMessageProcessor } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {useCallback, useEffect, useState} from "react";
+import {useAppDispatch} from "@/store/AppStateStore";
+import {useWebsocketBinaryMessageProcessor} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
-const MAX_RECONNECT_ATTEMPTS = 30;
-
+export interface CameraDisplaySize {
+    cameraId: string;
+    imageDisplayWidth: number;
+    imageDisplayHeight: number;
+}
+export interface FrameRenderAcknowledgment {
+    frameNumber: number;
+    cameraDisplaySizes: Record<string, CameraDisplaySize>;
+}
 export const useWebSocket = (wsUrl: string) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [websocket, setWebSocket] = useState<WebSocket | null>(null);
-  const [connectAttempt, setConnectAttempt] = useState(0);
-  const frameReceiptAcknowledgments = useRef(new Map<string, boolean>());
-  const dispatch = useAppDispatch();
+    const [isConnected, setIsConnected] = useState(false);
+    const [websocket, setWebSocket] = useState<WebSocket | null>(null);
+    const [connectAttempt, setConnectAttempt] = useState(0);
+    const dispatch = useAppDispatch();
 
-  const { processBinaryMessage, latestImageData, cameraIds } =
-    useWebsocketBinaryMessageProcessor();
+    const {processBinaryMessage, latestImageData} =
+        useWebsocketBinaryMessageProcessor();
 
-  const sendFrameAcknowledgment = useCallback(
-    (cameraId: string, frameNumber: number) => {
-      // Set this camera as acknowledged
-      frameReceiptAcknowledgments.current.set(cameraId, true);
+    const sendFrameAcknowledgment = useCallback(
+        (acknowledgment: FrameRenderAcknowledgment ) => {
 
-      // Check if we have acknowledgments for all known cameras
-      const allCameraIds = cameraIds || [];
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(
+                    JSON.stringify({
+                        ...acknowledgment,
+                    })
+                );
 
-      // If we have no camera IDs yet (first frame), just acknowledge immediately
-      if (allCameraIds.length === 0) {
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.send(
-            JSON.stringify({
-              type: "acknowledgment",
-              frame_number: frameNumber,
-            })
-          );
+            }
+        },
+        [websocket]
+    );
+
+    const handleIncomingMessage = useCallback(
+        async (event: MessageEvent, ws: WebSocket) => {
+            const data = event.data;
+
+            // Handle binary data
+            if (data instanceof ArrayBuffer) {
+                await processBinaryMessage(data);
+            }
+            // Handle text data
+            else if (typeof data === "string") {
+                if (data == 'ping') {
+                    console.log("Received ping message, sending pong response");
+                    ws.send("pong");
+                    return;
+                }
+                try {
+                    const message = JSON.parse(data);
+                    console.log("Received JSON message:", JSON.stringify(message, null, 2));
+                } catch (error) {
+                    console.log("Received non-JSON string data:", data);
+                }
+            } else {
+                console.warn("Received unsupported message type:", typeof data);
+            }
+        },
+        [dispatch, processBinaryMessage]
+    );
+    const connect = useCallback(() => {
+        if (websocket && websocket.readyState !== WebSocket.CLOSED) {
+            return;
         }
-        return;
-      }
 
-      // Check if all cameras have acknowledged
-      const allAcknowledged = allCameraIds.every(
-        (id) => frameReceiptAcknowledgments.current.get(id) === true
-      );
+        const ws = new WebSocket(wsUrl);
+        ws.binaryType = "arraybuffer";
 
-      if (allAcknowledged) {
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.send(
-            JSON.stringify({
-              type: "acknowledgment",
-              frame_number: frameNumber,
-            })
-          );
+        ws.onopen = () => {
+            setIsConnected(true);
+            setConnectAttempt(0);
+            ws.send("Hello from the Skellycam Frontend💀📸👋");
+            console.log(`Websocket is connected to url: ${wsUrl}`);
+        };
 
-          // Reset acknowledgments for next frame
-          allCameraIds.forEach((id) =>
-            frameReceiptAcknowledgments.current.set(id, false)
-          );
+        ws.onclose = () => {
+            setIsConnected(false);
+            setConnectAttempt((prev) => prev + 1);
+        };
+
+        ws.onmessage = (event) => {
+            handleIncomingMessage(event, ws);
+        };
+
+        ws.onerror = (error) => {
+            console.error("Websocket error:", error);
+        };
+        setWebSocket(ws);
+    }, [wsUrl, websocket, connectAttempt]);
+
+    const disconnect = useCallback(() => {
+        if (websocket) {
+            websocket.close();
+            setWebSocket(null);
         }
-      }
-    },
-    [websocket, cameraIds]
-  );
+    }, [websocket]);
 
-  const handleIncomingMessage = useCallback(
-    async (event: MessageEvent, ws: WebSocket) => {
-      const data = event.data;
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            console.log(
+                `Connecting  to websocket at url: ${wsUrl} (attempt #${connectAttempt + 1})`
+            );
+            connect();
+        }, Math.min(1000 * Math.pow(2, connectAttempt), 10000)); // exponential backoff
 
-      // Handle binary data
-      if (data instanceof ArrayBuffer) {
-        // Reset acknowledgments for all known cameras
-        const currentCameraIds = cameraIds || [];
-        currentCameraIds.forEach((cameraId) =>
-          frameReceiptAcknowledgments.current.set(cameraId, false)
-        );
-        await processBinaryMessage(data);
-      }
-    },
-    [dispatch, processBinaryMessage, cameraIds, frameReceiptAcknowledgments]
-  );
-  const connect = useCallback(() => {
-    if (websocket && websocket.readyState !== WebSocket.CLOSED) {
-      return;
-    }
-    if (connectAttempt >= MAX_RECONNECT_ATTEMPTS) {
-      console.error(
-        `Max reconnection attempts reached. Could not connect to ${wsUrl}`
-      );
-      return;
-    }
-    const ws = new WebSocket(wsUrl);
-    ws.binaryType = "arraybuffer";
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, [connect, connectAttempt, wsUrl]);
 
-    ws.onopen = () => {
-      setIsConnected(true);
-      setConnectAttempt(0);
-      ws.send("Hello from the Skellycam Frontend💀📸👋");
-      console.log(`Websocket is connected to url: ${wsUrl}`);
+    return {
+        isConnected,
+        connect,
+        disconnect,
+        latestImageData,
+        sendFrameAcknowledgment,
     };
-
-    ws.onclose = () => {
-      setIsConnected(false);
-      setConnectAttempt((prev) => prev + 1);
-    };
-
-    ws.onmessage = (event) => {
-      handleIncomingMessage(event, ws);
-    };
-
-    ws.onerror = (error) => {
-      console.error("Websocket error:", error);
-    };
-    setWebSocket(ws);
-  }, [wsUrl, websocket, connectAttempt]);
-
-  const disconnect = useCallback(() => {
-    if (websocket) {
-      websocket.close();
-      setWebSocket(null);
-    }
-  }, [websocket]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      console.log(
-        `Connecting (attempt #${
-          connectAttempt + 1
-        } of ${MAX_RECONNECT_ATTEMPTS}) to websocket at url: ${wsUrl}`
-      );
-      connect();
-    }, Math.min(1000 * Math.pow(2, connectAttempt), 30000)); // exponential backoff
-
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [connect, connectAttempt, wsUrl]);
-
-  return {
-    isConnected,
-    connect,
-    disconnect,
-    latestImageData,
-    sendFrameAcknowledgment,
-  };
 };

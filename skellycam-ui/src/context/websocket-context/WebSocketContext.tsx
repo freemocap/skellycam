@@ -1,12 +1,14 @@
 import React, {createContext, ReactNode, useContext} from "react";
-import {useWebSocket} from "@/context/websocket-context/useWebSocket";
+import {FrameRenderAcknowledgment, useWebSocket} from "@/context/websocket-context/useWebSocket";
+import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+
 
 interface WebSocketContextProps {
     isConnected: boolean;
     connect: () => void;
     disconnect: () => void;
-    latestImageData: ImageData[];
-    sendFrameAcknowledgment: (cameraId:string,frameNumber: number) => void;
+    latestImageData: Record<string, CameraImageData>;
+    sendFrameAcknowledgment: (acknowledgment:FrameRenderAcknowledgment) => void;
 }
 
 

@@ -69,6 +69,10 @@ class WebsocketServer:
                     task.cancel()
             raise
 
+    def check_frame_acknowledgment_status(self) -> bool:
+        if self.last_sent_frame_number == -1:
+            return True
+        return  self.last_received_frontend_confirmation >= self.last_sent_frame_number
     async def _frontend_image_relay(self):
         """
         Relay image payloads from the shared memory to the frontend via the websocket.
@@ -78,7 +82,7 @@ class WebsocketServer:
         try:
             while self.should_continue:
                 await async_wait_10ms()
-                if self.last_received_frontend_confirmation >= self.last_sent_frame_number or self.last_sent_frame_number == -1:
+                if self.check_frame_acknowledgment_status():
 
                     new_frontend_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = self._app.get_new_frontend_payloads(
                         if_newer_than=self.last_sent_frame_number)
@@ -87,7 +91,6 @@ class WebsocketServer:
                         if not self.websocket.client_state == WebSocketState.CONNECTED:
                             logger.error("Websocket is not connected, cannot send payload!")
                             raise RuntimeError("Websocket is not connected, cannot send payload!")
-
 
                         await self.websocket.send_bytes(payload_bytes)
                         self.last_sent_frame_number = frame_number
@@ -150,8 +153,9 @@ class WebsocketServer:
                                 data = json.loads(text_content)
 
                                 # Handle received_frame acknowledgment
-                                if 'frame_number' in data:
-                                    self.last_received_frontend_confirmation = data['frame_number']
+                                if 'frameNumber' in data:
+                                    self.last_received_frontend_confirmation = data['frameNumber']
+                                    # TODO - also get the image sizes, and use to resize FE payloads
 
 
                             except json.JSONDecodeError as e:

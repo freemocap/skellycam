@@ -1,26 +1,18 @@
-import React, {useEffect, useMemo, useRef, useState, useCallback} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Box, CircularProgress, Paper, Typography, useTheme} from '@mui/material';
-import {useAppSelector} from '@/store/AppStateStore';
-import {CameraConfigsSchema} from "@/store/slices/cameras-slices/camera-types";
 import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
 import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
-import { sortCamerasByIndex, useCameraGridLayout } from '@/hooks/useCameraGridLayout';
+import {useCameraGridLayout} from '@/hooks/useCameraGridLayout';
+import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {FrameRenderAcknowledgment} from "@/context/websocket-context/useWebSocket";
+import {PlaceholderImage} from "@/components/camera-views/threejs-strategy/threejs-helper-components/PlaceholderImage";
 
-// Represents image data for a camera
-interface ProcessedImageInfo {
-    cameraId: string;
-    aspectRatio: number; // width / height
-    cameraIndex: number; // Added camera index for sorting
-}
 
-// Memoized camera panel component to reduce re-renders
-const CameraPanel = React.memo(({
-    image,
-    cameraConfigs,
-    canvasRef
-}: {
-    image: ProcessedImageInfo;
-    cameraConfigs: Record<string, any>;
+const CameraCanvasPanel = React.memo(({
+                                          cameraImageData,
+                                          canvasRef
+                                      }: {
+    cameraImageData: CameraImageData;
     canvasRef: (el: HTMLCanvasElement | null) => void;
 }) => {
     const theme = useTheme();
@@ -50,7 +42,7 @@ const CameraPanel = React.memo(({
                     zIndex: 1,
                 }}
             >
-                Camera {cameraConfigs[image.cameraId]?.camera_index ?? '?'} ({image.cameraId})
+                Camera {cameraImageData.cameraIndex ?? '?'} ({cameraImageData.cameraId})
             </Box>
             <Box
                 sx={{
@@ -77,8 +69,7 @@ const CameraPanel = React.memo(({
     );
 });
 
-// Memoized resize handle to prevent unnecessary re-renders
-const ResizeHandle = React.memo(({ direction, theme }: { direction: 'horizontal' | 'vertical', theme: any }) => (
+const ResizeHandle = React.memo(({direction, theme}: { direction: 'horizontal' | 'vertical', theme: any }) => (
     <PanelResizeHandle
         style={{
             [direction === 'horizontal' ? 'width' : 'height']: "2px",
@@ -88,35 +79,21 @@ const ResizeHandle = React.memo(({ direction, theme }: { direction: 'horizontal'
     />
 ));
 
-const ImageGrid: React.FC = () => {
+const CameraCanvasGridPanel: React.FC = () => {
     const theme = useTheme();
-    const { latestImageBitmaps } = useWebSocketContext();
-    const latestPayload = useAppSelector(state => state.latestPayload);
+    const {latestImageData, sendFrameAcknowledgment} = useWebSocketContext();
     const canvasContextRefs = useRef<Record<string, CanvasRenderingContext2D | null>>({});
     const dimensionsRef = useRef<Record<string, { width: number, height: number }>>({});
 
-    // Safely parse camera configs with a fallback to empty object
-    const cameraConfigs = useMemo(() => {
-        if (!latestPayload.latestFrontendPayload?.camera_configs) return {};
-        try {
-            return CameraConfigsSchema.parse(latestPayload.latestFrontendPayload.camera_configs);
-        } catch (e) {
-            console.error('Failed to parse camera configs:', e);
-            return {};
-        }
-    }, [latestPayload.latestFrontendPayload?.camera_configs]);
 
     // Refs for container and canvases
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
 
-    // Calculate image info and sort by camera index
-    const sortedProcessedImages = useMemo(() =>
-        sortCamerasByIndex(latestImageBitmaps, cameraConfigs),
-    [latestImageBitmaps, cameraConfigs]);
 
     // Calculate optimal grid layout
-    const initialLayout = useCameraGridLayout(sortedProcessedImages);
+
+    const initialLayout = useCameraGridLayout(latestImageData, containerRef.current?.clientWidth, containerRef.current?.clientHeight);
 
     // Optimize canvas drawing with requestAnimationFrame and offscreen canvas when available
     useEffect(() => {
@@ -124,28 +101,48 @@ const ImageGrid: React.FC = () => {
         let animationFrameId: number;
 
         const updateCanvases = () => {
-            Object.entries(latestImageBitmaps).forEach(([cameraId, bitmap]) => {
+            const frameRenderAcknowledgment: FrameRenderAcknowledgment = {
+                frameNumber: -1,
+                cameraDisplaySizes: {}
+            }
+            Object.entries(latestImageData).forEach(([cameraId, cameraImageData]) => {
                 const canvas = canvasRefs.current[cameraId];
                 if (canvas) {
                     if (!canvasContextRefs.current[cameraId]) {
-                        canvasContextRefs.current[cameraId] = canvas.getContext('2d', { alpha: false });
+                        canvasContextRefs.current[cameraId] = canvas.getContext('2d', {alpha: false});
                     }
                     const ctx = canvasContextRefs.current[cameraId];
                     if (ctx) {
                         if (!dimensionsRef.current[cameraId] ||
-                            dimensionsRef.current[cameraId].width !== bitmap.width ||
-                            dimensionsRef.current[cameraId].height !== bitmap.height) {
+                            dimensionsRef.current[cameraId].width !== cameraImageData.imageBitmap.width ||
+                            dimensionsRef.current[cameraId].height !== cameraImageData.imageBitmap.height) {
 
-                            canvas.width = bitmap.width;
-                            canvas.height = bitmap.height;
-                            dimensionsRef.current[cameraId] = { width: bitmap.width, height: bitmap.height };
+                            canvas.width = cameraImageData.imageBitmap.width;
+                            canvas.height = cameraImageData.imageBitmap.height;
+                            dimensionsRef.current[cameraId] = {
+                                width: cameraImageData.imageBitmap.width,
+                                height: cameraImageData.imageBitmap.height
+                            };
                         }
 
                         // Draw the bitmap
-                        ctx.drawImage(bitmap, 0, 0);
+                        ctx.drawImage(cameraImageData.imageBitmap, 0, 0);
                     }
                 }
+                if (!(frameRenderAcknowledgment.frameNumber === -1) &&
+                    !(cameraImageData.frameNumber === frameRenderAcknowledgment.frameNumber)) {
+                    throw new Error(`Frame number mismatch for camera ${cameraId}: expected ${frameRenderAcknowledgment.frameNumber}, got ${cameraImageData.frameNumber}`);
+                }
+                frameRenderAcknowledgment.frameNumber = cameraImageData.frameNumber;
+                frameRenderAcknowledgment.cameraDisplaySizes[cameraId] = {
+                    cameraId: cameraImageData.cameraId,
+                    imageDisplayWidth: cameraImageData.imageBitmap.width, // TODO - send actual display size
+                    imageDisplayHeight: cameraImageData.imageBitmap.height // TODO - send actual display size
+                };
             });
+            // Send acknowledgment after all canvases are updated
+            console.log("Sending frame acknowledgment:", frameRenderAcknowledgment);
+            sendFrameAcknowledgment(frameRenderAcknowledgment);
         };
 
         animationFrameId = requestAnimationFrame(updateCanvases);
@@ -153,7 +150,7 @@ const ImageGrid: React.FC = () => {
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [latestImageBitmaps]);
+    }, [latestImageData]);
 
     // Memoized canvas ref callback
     const getCanvasRef = useCallback((cameraId: string) => {
@@ -164,53 +161,20 @@ const ImageGrid: React.FC = () => {
 
     // Create a nested panel structure - memoized to prevent unnecessary recalculations
     const panelStructure = useMemo(() => {
-        if (sortedProcessedImages.length === 0) return null;
-
-        // For a single camera, just render it directly
-        if (sortedProcessedImages.length === 1) {
-            const image = sortedProcessedImages[0];
-            return (
-                <CameraPanel
-                    image={image}
-                    cameraConfigs={cameraConfigs}
-                    canvasRef={getCanvasRef(image.cameraId)}
-                />
-            );
-        }
+        if (sortedCameraImageDataArray.length === 0) return null;
 
         // Create rows of panels
         const rows = [];
-        const { rows: numRows, columns: numCols } = initialLayout;
+        const {rows: numRows, columns: numCols} = initialLayout;
 
         for (let r = 0; r < numRows; r++) {
-            const rowCameras = sortedProcessedImages.slice(
+            const rowCameras = sortedCameraImageDataArray.slice(
                 r * numCols,
-                Math.min((r + 1) * numCols, sortedProcessedImages.length)
+                Math.min((r + 1) * numCols, sortedCameraImageDataArray.length)
             );
 
             // Skip empty rows
             if (rowCameras.length === 0) continue;
-
-            // For a single camera in a row, don't need inner PanelGroup
-            if (rowCameras.length === 1) {
-                rows.push(
-                    <Panel key={`row-${r}`} defaultSize={100 / numRows}>
-                        <CameraPanel
-                            image={rowCameras[0]}
-                            cameraConfigs={cameraConfigs}
-                            canvasRef={getCanvasRef(rowCameras[0].cameraId)}
-                        />
-                    </Panel>
-                );
-
-                // Add resize handle if not the last row
-                if (r < numRows - 1) {
-                    rows.push(
-                        <ResizeHandle key={`row-handle-${r}`} direction="vertical" theme={theme} />
-                    );
-                }
-                continue;
-            }
 
             // Create a row with multiple cameras
             const rowContent = (
@@ -218,12 +182,11 @@ const ImageGrid: React.FC = () => {
                     {rowCameras.map((image, colIndex) => (
                         <React.Fragment key={image.cameraId}>
                             {colIndex > 0 && (
-                                <ResizeHandle direction="horizontal" theme={theme} />
+                                <ResizeHandle direction="horizontal" theme={theme}/>
                             )}
                             <Panel defaultSize={100 / rowCameras.length}>
-                                <CameraPanel
-                                    image={image}
-                                    cameraConfigs={cameraConfigs}
+                                <CameraCanvasPanel
+                                    cameraImageData={image}
                                     canvasRef={getCanvasRef(image.cameraId)}
                                 />
                             </Panel>
@@ -241,13 +204,13 @@ const ImageGrid: React.FC = () => {
             // Add resize handle if not the last row
             if (r < numRows - 1) {
                 rows.push(
-                    <ResizeHandle key={`row-handle-${r}`} direction="vertical" theme={theme} />
+                    <ResizeHandle key={`row-handle-${r}`} direction="vertical" theme={theme}/>
                 );
             }
         }
 
         return rows;
-    }, [sortedProcessedImages, initialLayout, cameraConfigs, theme, getCanvasRef]);
+    }, [sortedCameraImageDataArray, initialLayout, theme, getCanvasRef]);
 
     return (
         <Box
@@ -262,7 +225,7 @@ const ImageGrid: React.FC = () => {
                 position: 'relative',
             }}
         >
-            {sortedProcessedImages.length === 0 ? (
+            {sortedCameraImageDataArray.length === 0 ? (
                 <Box
                     sx={{
                         display: 'flex',
@@ -276,7 +239,7 @@ const ImageGrid: React.FC = () => {
                     </Typography>
                 </Box>
             ) : (
-                <PanelGroup direction="vertical" style={{ height: '100%' }}>
+                <PanelGroup direction="vertical" style={{height: '100%'}}>
                     {panelStructure}
                 </PanelGroup>
             )}
@@ -285,25 +248,11 @@ const ImageGrid: React.FC = () => {
 };
 
 // Memoize the entire CameraGridDisplay component to prevent unnecessary re-renders
-const ResizableCameraGridDisplay: React.FC = React.memo(() => {
-    const {latestImageBitmaps, isConnected} = useWebSocketContext();
-    const [isLoading, setIsLoading] = useState(true);
-    const hasImages = Object.keys(latestImageBitmaps).length > 0;
+export const ResizableCameraGridDisplay: React.FC = React.memo(() => {
+    const {latestImageData} = useWebSocketContext();
+    const hasImages = Object.keys(latestImageData).length > 0;
 
-    // Set loading state based on connection and images
-    useEffect(() => {
-        if (isConnected) {
-            // If connected, wait a short time for images
-            const timeout = setTimeout(() => {
-                setIsLoading(false);
-            }, 3000);
 
-            return () => clearTimeout(timeout);
-        } else {
-            // If not connected, keep loading state
-            setIsLoading(true);
-        }
-    }, [isConnected]);
 
     return (
         <Box
@@ -316,23 +265,7 @@ const ResizableCameraGridDisplay: React.FC = React.memo(() => {
                 position: 'relative',
             }}
         >
-            {isLoading ? (
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '100%',
-                        gap: 2,
-                    }}
-                >
-                    <CircularProgress/>
-                    <Typography variant="h6" color="text.secondary">
-                        Connecting to camera feed...
-                    </Typography>
-                </Box>
-            ) : !hasImages ? (
+            { !hasImages ? (
                 <Box
                     sx={{
                         display: 'flex',
@@ -342,9 +275,7 @@ const ResizableCameraGridDisplay: React.FC = React.memo(() => {
                         height: '100%',
                     }}
                 >
-                    <Typography variant="h6" color="text.secondary">
-                        No camera feeds available
-                    </Typography>
+                    no images available
                 </Box>
             ) : (
                 <Box
@@ -354,11 +285,9 @@ const ResizableCameraGridDisplay: React.FC = React.memo(() => {
                         overflow: 'hidden',
                     }}
                 >
-                    <ImageGrid/>
+                    <CameraCanvasGridPanel/>
                 </Box>
             )}
         </Box>
     );
 });
-
-export default ResizableCameraGridDisplay;

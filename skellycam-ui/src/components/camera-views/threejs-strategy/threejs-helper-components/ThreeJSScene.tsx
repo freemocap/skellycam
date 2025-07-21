@@ -15,15 +15,10 @@ import {
 
 export function ThreeJSScene() {
     const theme = useTheme();
-    const {latestImageData} = useWebSocketContext();
+    const {latestImageData, sendFrameAcknowledgment} = useWebSocketContext();
 
+    const hasImages = Object.keys(latestImageData).length > 0;
 
-
-
-    const hasImages = latestImageData.length > 0;
-
-    // Set up orthographic camera
-    const {viewport} = useThree();
 
     return (
         <>
@@ -40,6 +35,7 @@ export function ThreeJSScene() {
                 <ThreeJSGridResizeProvider>
                     <ThreeJSCameraGrid
                         imageData={latestImageData}
+                        sendFrameAcknowledgment={sendFrameAcknowledgment}
                     />
                 </ThreeJSGridResizeProvider>
             ) : (

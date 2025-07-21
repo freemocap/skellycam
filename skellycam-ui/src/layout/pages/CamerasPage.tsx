@@ -5,8 +5,8 @@ import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
 import {useTheme} from "@mui/material/styles";
 import StaticCameraGridDisplay from "@/components/camera-views/StaticCamerasView";
-import ResizableCameraGridDisplay from "@/components/camera-views/ResizableCamerasView";
 import ThreeJSCameraDisplayGrid from "@/components/camera-views/threejs-strategy/ThreeJSCameraDisplayGrid";
+import {ResizableCameraGridDisplay} from "@/components/camera-views/ResizableCamerasView";
 
 export const CamerasPage = () => {
     const theme = useTheme();

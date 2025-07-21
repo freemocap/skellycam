@@ -67,20 +67,15 @@ interface FrameHeader {
     jpegStringLength: number;
 }
 
-export interface ImageData {
-    jpegData: Uint8Array;
+export interface CameraImageData {
+    imageBitmap: ImageBitmap;
     frameNumber: number;
     cameraId: string;
     cameraIndex: number;
-    imageWidth: number;
-    imageHeight: number;}
+}
 
 export const useWebsocketBinaryMessageProcessor = () => {
-    const [latestImageData, setLatestImageData] = useState<ImageData[]>([]);
-    const cameraIds = useRef<string[]>([]);
-
-
-    // Reuse these objects for efficiency
+    const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string,CameraImageData>>({});
     const textDecoderRef = useRef(new TextDecoder());
 
 
@@ -193,9 +188,8 @@ export const useWebsocketBinaryMessageProcessor = () => {
             }
 
             // Process each camera frame
-            const newImageDataArray: ImageData[] = [];
             const textDecoder = textDecoderRef.current;
-
+            const newCameraImages: Record<string, CameraImageData> = {};
             for (let i = 0; i < numberOfCameras; i++) {
                 // Process frame header as a chunk
                 const frameHeaderView = new DataView(data, offset, FRAME_HEADER_SIZE);
@@ -215,16 +209,18 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 // Extract JPEG data as a chunk
                 const jpegData = new Uint8Array(data, offset, frameHeader.jpegStringLength);
                 offset += frameHeader.jpegStringLength;
-
-            // Instead of creating a Blob URL, pass the JPEG data directly
-            newImageDataArray.push({
-                jpegData, // Image data as JPEG encoded Uint8Array
-                frameNumber: frameHeader.frameNumber,
-                cameraId: frameHeader.cameraId,
-                cameraIndex: frameHeader.cameraIndex,
-                imageWidth: frameHeader.imageWidth,
-                imageHeight: frameHeader.imageHeight
-            });
+                const blob = new Blob([jpegData], { type: "image/jpeg" });
+                const imageBitmap = await createImageBitmap(blob);
+                if (!(imageBitmap.width === frameHeader.imageWidth) || !(imageBitmap.height === frameHeader.imageHeight)) {
+                    console.error(`Image dimensions mismatch: expected ${frameHeader.imageWidth}x${frameHeader.imageHeight}, got ${imageBitmap.width}x${imageBitmap.height}`);
+                    return null;
+                }
+                newCameraImages[frameHeader.cameraId] = {
+                    imageBitmap,
+                    frameNumber: frameHeader.frameNumber,
+                    cameraId: frameHeader.cameraId,
+                    cameraIndex: frameHeader.cameraIndex,
+                };
             }
 
             // Process payload footer as a chunk
@@ -241,15 +237,9 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 return null;
             }
 
-            // Sort by camera index
-            newImageDataArray.sort((a, b) => a.cameraIndex - b.cameraIndex);
-
 
             // Update state with new image URLs
-            setLatestImageData(newImageDataArray);
-
-            // Update camera IDs
-            cameraIds.current  = newImageDataArray.map(image => image.cameraId);
+            setLatestCameraImageData(newCameraImages);
 
             return frameNumber;
         } catch (error) {
@@ -259,8 +249,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
     }, [parsePayloadHeader, parseFrameHeader, parsePayloadFooter]);
 
     return {
-        latestImageData,
+        latestImageData: latestCameraImageData,
         processBinaryMessage,
-        cameraIds: cameraIds.current
     };
 };

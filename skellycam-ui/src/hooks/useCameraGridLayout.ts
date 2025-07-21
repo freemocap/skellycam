@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import {ImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
 interface GridLayout {
     rows: number;
@@ -10,24 +10,25 @@ interface GridLayout {
  * Hook to calculate optimal grid layout for camera views
  */
 export function useCameraGridLayout(
-    imageData: ImageData[],
+    imageData: Record<string, CameraImageData>,
     containerWidth?: number,
     containerHeight?: number
 ): GridLayout {
     return useMemo(() => {
-        if (!imageData || imageData.length === 0) return { rows: 1, columns: 1 };
+        const imageDataArray:CameraImageData[] = Object.values(imageData);
+        if (!imageDataArray || imageDataArray.length === 0) return { rows: 1, columns: 1 };
 
         // For static grid without container dimensions, use simple layout
         if (!containerWidth || !containerHeight) {
             // Simple layout calculation based on number of cameras
-            if (imageData.length <= 1) return { rows: 1, columns: 1 };
-            if (imageData.length <= 2) return { rows: 1, columns: 2 };
-            if (imageData.length <= 4) return { rows: 2, columns: 2 };
-            if (imageData.length <= 6) return { rows: 2, columns: 3 };
-            if (imageData.length <= 9) return { rows: 3, columns: 3 };
+            if (imageDataArray.length <= 1) return { rows: 1, columns: 1 };
+            if (imageDataArray.length <= 2) return { rows: 1, columns: 2 };
+            if (imageDataArray.length <= 4) return { rows: 2, columns: 2 };
+            if (imageDataArray.length <= 6) return { rows: 2, columns: 3 };
+            if (imageDataArray.length <= 9) return { rows: 3, columns: 3 };
             return {
-                rows: Math.ceil(Math.sqrt(imageData.length)),
-                columns: Math.ceil(Math.sqrt(imageData.length))
+                rows: Math.ceil(Math.sqrt(imageDataArray.length)),
+                columns: Math.ceil(Math.sqrt(imageDataArray.length))
             };
         }
 
@@ -36,8 +37,8 @@ export function useCameraGridLayout(
         let bestLayout = { columns: 1, rows: 1, area: 0 };
 
         // Try different grid configurations
-        for (let columns = 1; columns <= imageData.length; columns++) {
-            const rows = Math.ceil(imageData.length / columns);
+        for (let columns = 1; columns <= imageDataArray.length; columns++) {
+            const rows = Math.ceil(imageDataArray.length / columns);
 
             // Calculate the area each image would get
             const cellWidth = containerWidth / columns;
@@ -45,8 +46,8 @@ export function useCameraGridLayout(
 
             // Calculate minimum scaling factor across all images
             let minScale = Infinity;
-            imageData.forEach(image => {
-                const aspectRatio = image.imageWidth / image.imageHeight;
+            imageDataArray.forEach(image => {
+                const aspectRatio = image.imageBitmap.width / image.imageBitmap.height;
                 const scaleWidth = cellWidth / (aspectRatio * cellHeight);
                 const scaleHeight = cellHeight / (aspectRatio === 0 ? 1 : cellWidth / aspectRatio);
                 minScale = Math.min(minScale, Math.min(scaleWidth, scaleHeight));
