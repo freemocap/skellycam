@@ -32,7 +32,7 @@ export function ThreeJSCameraGrid({
                                       sendFrameAcknowledgment
                                   }: {
     imageData: Record<string, CameraImageData>;
-    sendFrameAcknowledgment: (cameraId: string, frameNumber: number) => void;
+    sendFrameAcknowledgment: (cameraId: string, frameNumber: number, imageDisplayWidth:number, imageDisplayHeight:number) => void;
 }) {
     const {viewport} = useThree();
     const layout = useCameraGridLayout(imageData, viewport.width, viewport.height);
@@ -74,7 +74,7 @@ export function ThreeJSCameraGrid({
                 const y = viewport.height / 2 - (cell.y * viewport.height) - (cellHeight / 2);
 
                 // Calculate aspect ratio from image dimensions
-                const aspectRatio = cameraImageData.imageBitmap.width / cameraImageData.imageBitmap.height;
+                const aspectRatio = cameraImageData.imageWidth / cameraImageData.imageHeight;
 
                 // Calculate scale to fit in cell while maintaining aspect ratio
                 const maxWidth = cellWidth * 0.95;

@@ -3,14 +3,13 @@ import {useAppDispatch} from "@/store/AppStateStore";
 import {useWebsocketBinaryMessageProcessor} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
 export interface CameraDisplaySize {
-    cameraId: string;
-    imageDisplayWidth: number;
-    imageDisplayHeight: number;
+    width: number;
+    height: number;
 }
 
 export interface FrameRenderAcknowledgment {
     frameNumber: number;
-    cameraDisplaySizes: Record<string, CameraDisplaySize>;
+    displayImageSizes: Record<string, CameraDisplaySize>;
 }
 
 export const useWebSocket = (wsUrl: string) => {
@@ -20,25 +19,36 @@ export const useWebSocket = (wsUrl: string) => {
     const dispatch = useAppDispatch();
     const latestFrameNumber = useRef<number>(-1);
     const cameraRenderAcknowledgment = useRef<Record<string, number>>({});
+    const latestFrameRenderAcknowledgment = useRef<FrameRenderAcknowledgment>({
+        frameNumber: -1,
+        displayImageSizes: {}
+    });
     const {processBinaryMessage, latestImageData} =
         useWebsocketBinaryMessageProcessor();
 
 
     const sendFrameAcknowledgment = useCallback(
-        (cameraId: string, frameNumber: number) => {
+        (cameraId: string, frameNumber: number, imageDisplayWidth: number, imageDisplayHeight: number) => {
             cameraRenderAcknowledgment.current[cameraId] = frameNumber
             latestFrameNumber.current = Math.max(latestFrameNumber.current, frameNumber);
             const allCamerasAcknowledged = Object.values(cameraRenderAcknowledgment.current).every(
                 (acknowledgedFrame) => acknowledgedFrame >= latestFrameNumber.current
             );
-
+            latestFrameRenderAcknowledgment.current = {
+                frameNumber: Math.max(latestFrameRenderAcknowledgment.current.frameNumber, frameNumber),
+                displayImageSizes: {
+                    ...latestFrameRenderAcknowledgment.current.displayImageSizes,
+                    [cameraId]: {
+                        width: imageDisplayWidth,
+                        height: imageDisplayHeight
+                    }
+                }
+            }
             if (allCamerasAcknowledged) {
+                console.log(`All cameras acknowledged frame ${latestFrameRenderAcknowledgment.current.frameNumber}, sending acknowledgment to server ${JSON.stringify(latestFrameRenderAcknowledgment.current, null, 2)}`);
                 if (websocket && websocket.readyState === WebSocket.OPEN) {
                     websocket.send(
-                        JSON.stringify({
-                            frameNumber: latestFrameNumber.current,
-                            cameraDisplaySizes: {} // TODO send actual display sizes so we can scale images correctly before sending
-                        } as FrameRenderAcknowledgment)
+                        JSON.stringify(latestFrameRenderAcknowledgment.current)
                     )
                 }
             }

@@ -13,31 +13,32 @@ export function ThreeJsCameraImagePlane({
     position: [number, number, number];
     scale: [number, number, number];
     imageData: CameraImageData;
-    sendFrameAcknowledgment: (cameraId: string, frameNumber: number) => void;
+    sendFrameAcknowledgment: (cameraId: string, frameNumber: number, imageDisplayWidth:number, imageDisplayHeight:number) => void;
 }) {
     const meshRef = useRef<THREE.Mesh>(null);
     const textureRef = useRef<THREE.Texture | null>(null);
     const materialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+    const scaleRef = useRef<[number, number, number]>(null);
+
 
 
     // Create texture and material only once
     useEffect(() => {
         // Create a texture that we'll reuse
-        if (textureRef.current) {
-            // If texture already exists, just return
+        if (textureRef.current && materialRef.current && scaleRef.current && scaleRef.current === scale) {
+            // Recreate texture one first render and if scale has changed
             return;
         }
         const texture = new THREE.Texture();
         texture.minFilter = THREE.NearestFilter;
         texture.magFilter = THREE.NearestFilter;
         texture.generateMipmaps = false;
-        texture.flipY = false;
+        texture.flipY = true;
         textureRef.current = texture;
 
         // Create material that references this texture
         const material = new THREE.MeshBasicMaterial({
             map: texture,
-            transparent: true,
         });
         materialRef.current = material;
 
@@ -71,7 +72,7 @@ export function ThreeJsCameraImagePlane({
             }
 
             // Send acknowledgment after texture is updated
-            sendFrameAcknowledgment(imageData.cameraId, imageData.frameNumber);
+            sendFrameAcknowledgment(imageData.cameraId, imageData.frameNumber, scale[0], scale[1]);
         }
     }, [imageData, sendFrameAcknowledgment]);
 

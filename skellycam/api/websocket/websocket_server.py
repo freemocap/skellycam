@@ -25,6 +25,7 @@ class WebsocketServer:
         self.ws_tasks: list[asyncio.Task] = []
         self.last_received_frontend_confirmation: int = -1
         self.last_sent_frame_number: int = -1
+        self._display_image_sizes: dict[CameraGroupIdString, dict[str, float]]|None = None
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -89,7 +90,8 @@ class WebsocketServer:
                         skipped_previous = False
                     else:
                         new_frontend_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = self._app.get_new_frontend_payloads(
-                            if_newer_than=self.last_sent_frame_number)
+                            if_newer_than=self.last_sent_frame_number,
+                        display_image_sizes=self._display_image_sizes)
                         for camera_group_id, (frame_number, payload_bytes) in new_frontend_payloads.items():
                             await self.websocket.send_bytes(payload_bytes)
                             self.last_sent_frame_number = frame_number
@@ -155,7 +157,7 @@ class WebsocketServer:
                                 # Handle received_frame acknowledgment
                                 if 'frameNumber' in data:
                                     self.last_received_frontend_confirmation = data['frameNumber']
-                                    # TODO - also get the image sizes, and use to resize FE payloads
+                                    self._display_image_sizes = data.get('displayImageSizes', None)
 
 
                             except json.JSONDecodeError as e:

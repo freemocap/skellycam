@@ -69,6 +69,8 @@ interface FrameHeader {
 
 export interface CameraImageData {
     imageBitmap: ImageBitmap;
+    imageWidth: number;
+    imageHeight: number;
     frameNumber: number;
     cameraId: string;
     cameraIndex: number;
@@ -209,14 +211,12 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 // Extract JPEG data as a chunk
                 const jpegData = new Uint8Array(data, offset, frameHeader.jpegStringLength);
                 offset += frameHeader.jpegStringLength;
-                const blob = new Blob([jpegData], { type: "image/jpeg" });
-                const imageBitmap = await createImageBitmap(blob)
-                if (!(imageBitmap.width === frameHeader.imageWidth) || !(imageBitmap.height === frameHeader.imageHeight)) {
-                    console.error(`Image dimensions mismatch: expected ${frameHeader.imageWidth}x${frameHeader.imageHeight}, got ${imageBitmap.width}x${imageBitmap.height}`);
-                    return null;
-                }
+
+
                 newCameraImages[frameHeader.cameraId] = {
-                    imageBitmap,
+                    imageBitmap: await createImageBitmap(new Blob([jpegData], { type: "image/jpeg" })),
+                    imageWidth: frameHeader.imageWidth,
+                    imageHeight: frameHeader.imageHeight,
                     frameNumber: frameHeader.frameNumber,
                     cameraId: frameHeader.cameraId,
                     cameraIndex: frameHeader.cameraIndex,

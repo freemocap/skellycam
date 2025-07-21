@@ -8,7 +8,7 @@ interface WebSocketContextProps {
     connect: () => void;
     disconnect: () => void;
     latestImageData: Record<string, CameraImageData>;
-    sendFrameAcknowledgment: (cameraId:string, frameNumber:number) => void;
+    sendFrameAcknowledgment:(cameraId: string, frameNumber: number, imageDisplayWidth:number, imageDisplayHeight:number)=> void;
 }
 
 

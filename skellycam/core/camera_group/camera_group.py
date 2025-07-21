@@ -101,7 +101,7 @@ class CameraGroup:
                     self.mf_builder.ready,
                     self.shm.valid])
 
-    def get_latest_frontend_payload(self, if_newer_than: int) -> tuple[FrameNumberInt, bytes] | None:
+    def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt, bytes] | None:
         if self.shm is None or not self.shm.valid:
             return None
         if self.shm.latest_multiframe_number.value <= if_newer_than:
@@ -112,6 +112,7 @@ class CameraGroup:
             return None
         return create_frontend_payload_from_mf_recarray(
             mf_rec_array=mf_rec_array,
+            display_image_sizes=display_image_sizes,
         )
 
     def pause(self, await_paused: bool = True):

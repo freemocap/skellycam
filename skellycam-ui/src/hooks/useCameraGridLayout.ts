@@ -47,7 +47,7 @@ export function useCameraGridLayout(
             // Calculate minimum scaling factor across all images
             let minScale = Infinity;
             imageDataArray.forEach(image => {
-                const aspectRatio = image.imageBitmap.width / image.imageBitmap.height;
+                const aspectRatio = image.imageWidth / image.imageHeight;
                 const scaleWidth = cellWidth / (aspectRatio * cellHeight);
                 const scaleHeight = cellHeight / (aspectRatio === 0 ? 1 : cellWidth / aspectRatio);
                 minScale = Math.min(minScale, Math.min(scaleWidth, scaleHeight));
