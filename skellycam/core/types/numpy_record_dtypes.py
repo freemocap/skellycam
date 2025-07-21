@@ -153,7 +153,7 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
 
     _reusable_bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
     current_pos += len(header_bytes)
-
+    image_scale= np.max([len(camera_ids)**-1, 0.1])
     for camera_id in camera_ids:
         frame_recarray = mf_rec_array[camera_id][0]
 
@@ -163,8 +163,8 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
             image = frame_recarray.image[:]
         if display_image_sizes is None or camera_id not in display_image_sizes.keys() or True: # TODO - Disable resizing for now, but should revisit
             # Default resize to 50% if no sizes provided
-            resize_image_height = int(image.shape[0] * len(camera_ids)**-1)
-            resize_image_width = int(image.shape[1] * len(camera_ids)**-1)
+            resize_image_height = int(image.shape[0] * image_scale)
+            resize_image_width = int(image.shape[1] * image_scale)
         else:
             resize_image_height = int(display_image_sizes[camera_id]['height'])
             resize_image_width = int(display_image_sizes[camera_id]['width'])
