@@ -8,12 +8,12 @@ export function ThreeJsCameraImagePlane({
                                             imageData,
                                             position,
                                             scale,
-                                            acknowledgeCameraFrameUpdate
+                                            sendFrameAcknowledgment
                                         }: {
     position: [number, number, number];
     scale: [number, number, number];
     imageData: CameraImageData;
-    acknowledgeCameraFrameUpdate: (cameraId: string, frameNumber: number) => void;
+    sendFrameAcknowledgment: (cameraId: string, frameNumber: number) => void;
 }) {
     const meshRef = useRef<THREE.Mesh>(null);
     const textureRef = useRef<THREE.Texture | null>(null);
@@ -23,6 +23,10 @@ export function ThreeJsCameraImagePlane({
     // Create texture and material only once
     useEffect(() => {
         // Create a texture that we'll reuse
+        if (textureRef.current) {
+            // If texture already exists, just return
+            return;
+        }
         const texture = new THREE.Texture();
         texture.minFilter = THREE.NearestFilter;
         texture.magFilter = THREE.NearestFilter;
@@ -47,14 +51,12 @@ export function ThreeJsCameraImagePlane({
             if (texture) texture.dispose();
             if (material) material.dispose();
         };
-    }, []);
+    }, [ textureRef, materialRef ]);
 
-// Update texture when new JPEG data arrives
+    // Update texture when new JPEG data arrives
     useEffect(() => {
         if (!imageData?.imageBitmap || !textureRef.current || !materialRef.current)
             return;
-
-        // Create a temporary blob from the JPEG data
 
         // Update our reused texture with the new image
         if (textureRef.current) {
@@ -69,9 +71,9 @@ export function ThreeJsCameraImagePlane({
             }
 
             // Send acknowledgment after texture is updated
-            acknowledgeCameraFrameUpdate(imageData.cameraId, imageData.frameNumber);
+            sendFrameAcknowledgment(imageData.cameraId, imageData.frameNumber);
         }
-    }, [imageData, acknowledgeCameraFrameUpdate]);
+    }, [imageData, sendFrameAcknowledgment]);
 
     return (
         <group position={position}>

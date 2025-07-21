@@ -1,7 +1,7 @@
 // Camera Grid component
 import {useCameraGridLayout} from "@/hooks/useCameraGridLayout";
 import {useThree} from "@react-three/fiber";
-import React, {useCallback, useEffect, useMemo, useRef} from "react";
+import React, {useEffect, useMemo} from "react";
 import {
     ThreeJsCameraImagePlane
 } from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJsCameraImagePlane";
@@ -12,7 +12,6 @@ import {
     useThreeJSGridResize
 } from "@/components/camera-views/threejs-strategy/threejs-helper-components/ThreeJSGridResizeContext";
 import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
-import {FrameRenderAcknowledgment} from "@/context/websocket-context/useWebSocket";
 
 export interface CameraGridItem {
     position: [number, number, number];
@@ -33,10 +32,8 @@ export function ThreeJSCameraGrid({
                                       sendFrameAcknowledgment
                                   }: {
     imageData: Record<string, CameraImageData>;
-    sendFrameAcknowledgment: (acknowledgment: FrameRenderAcknowledgment) => void;
+    sendFrameAcknowledgment: (cameraId: string, frameNumber: number) => void;
 }) {
-    const cameraRenderAcknowledgment = useRef<Record<string, number>>({});
-    const latestFrameNumber = useRef<number>(-1);
     const {viewport} = useThree();
     const layout = useCameraGridLayout(imageData, viewport.width, viewport.height);
     const {gridCells, initializeGrid, startResizing, updateResize, endResizing} = useThreeJSGridResize();
@@ -49,21 +46,6 @@ export function ThreeJSCameraGrid({
     }, [layout.rows, layout.columns, initializeGrid]);
 
 
-    const acknowledgeCameraFrameUpdate = useCallback(
-        (cameraId: string, frameNumber: number) => {
-            cameraRenderAcknowledgment.current[cameraId] = frameNumber
-                latestFrameNumber.current = Math.max(latestFrameNumber.current, frameNumber);
-            const allCamerasAcknowledged = Object.values(cameraRenderAcknowledgment.current).every(
-                (acknowledgedFrame) => acknowledgedFrame >= latestFrameNumber.current
-            );
-            if (allCamerasAcknowledged) {
-                sendFrameAcknowledgment({
-                        frameNumber: latestFrameNumber.current,
-                        cameraDisplaySizes: {} // TODO - add camera display sizes
-                    }
-                )
-            }
-        }, [cameraRenderAcknowledgment, latestFrameNumber, sendFrameAcknowledgment]);
     // Calculate grid positions and scales
     const cameraGridItems: CameraGridItem[] = useMemo(() => {
         const imageDataArray: CameraImageData[] = Object.values(imageData);
@@ -189,7 +171,7 @@ export function ThreeJSCameraGrid({
                     position={item.position}
                     scale={item.scale}
                     imageData={item.imageData}
-                    acknowledgeCameraFrameUpdate={acknowledgeCameraFrameUpdate}
+                    sendFrameAcknowledgment={sendFrameAcknowledgment}
                 />
             ))}
 

@@ -210,7 +210,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 const jpegData = new Uint8Array(data, offset, frameHeader.jpegStringLength);
                 offset += frameHeader.jpegStringLength;
                 const blob = new Blob([jpegData], { type: "image/jpeg" });
-                const imageBitmap = await createImageBitmap(blob);
+                const imageBitmap = await createImageBitmap(blob)
                 if (!(imageBitmap.width === frameHeader.imageWidth) || !(imageBitmap.height === frameHeader.imageHeight)) {
                     console.error(`Image dimensions mismatch: expected ${frameHeader.imageWidth}x${frameHeader.imageHeight}, got ${imageBitmap.width}x${imageBitmap.height}`);
                     return null;
