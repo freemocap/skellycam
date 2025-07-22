@@ -153,7 +153,6 @@ class WebsocketServer:
                         if text_content.strip().startswith('{') or text_content.strip().startswith('['):
                             try:
                                 data = json.loads(text_content)
-
                                 # Handle received_frame acknowledgment
                                 if 'frameNumber' in data:
                                     self.last_received_frontend_confirmation = data['frameNumber']

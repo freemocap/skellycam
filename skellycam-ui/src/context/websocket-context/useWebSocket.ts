@@ -1,58 +1,23 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import {useAppDispatch} from "@/store/AppStateStore";
-import {useWebsocketBinaryMessageProcessor} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {
+    FrameRenderAcknowledgment,
+    useWebsocketBinaryMessageProcessor
+} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
-export interface CameraDisplaySize {
-    width: number;
-    height: number;
-}
-
-export interface FrameRenderAcknowledgment {
-    frameNumber: number;
-    displayImageSizes: Record<string, CameraDisplaySize>;
-}
 
 export const useWebSocket = (wsUrl: string) => {
     const [isConnected, setIsConnected] = useState(false);
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
     const dispatch = useAppDispatch();
-    const latestFrameNumber = useRef<number>(-1);
-    const cameraRenderAcknowledgment = useRef<Record<string, number>>({});
-    const latestFrameRenderAcknowledgment = useRef<FrameRenderAcknowledgment>({
-        frameNumber: -1,
-        displayImageSizes: {}
-    });
-    const {processBinaryMessage, latestImageData} =
-        useWebsocketBinaryMessageProcessor();
+    const {
+        processBinaryMessage,
+        latestImageData,
+        registerCameraViewTexture
+    } = useWebsocketBinaryMessageProcessor();
 
 
-    const sendFrameAcknowledgment = useCallback(
-        (cameraId: string, frameNumber: number, imageDisplayWidth: number, imageDisplayHeight: number) => {
-            cameraRenderAcknowledgment.current[cameraId] = frameNumber
-            latestFrameNumber.current = Math.max(latestFrameNumber.current, frameNumber);
-            const allCamerasAcknowledged = Object.values(cameraRenderAcknowledgment.current).every(
-                (acknowledgedFrame) => acknowledgedFrame >= latestFrameNumber.current
-            );
-            latestFrameRenderAcknowledgment.current = {
-                frameNumber: Math.max(latestFrameRenderAcknowledgment.current.frameNumber, frameNumber),
-                displayImageSizes: {
-                    ...latestFrameRenderAcknowledgment.current.displayImageSizes,
-                    [cameraId]: {
-                        width: imageDisplayWidth,
-                        height: imageDisplayHeight
-                    }
-                }
-            }
-            if (allCamerasAcknowledged) {
-                console.log(`All cameras acknowledged frame ${latestFrameRenderAcknowledgment.current.frameNumber}, sending acknowledgment to server ${JSON.stringify(latestFrameRenderAcknowledgment.current, null, 2)}`);
-                if (websocket && websocket.readyState === WebSocket.OPEN) {
-                    websocket.send(
-                        JSON.stringify(latestFrameRenderAcknowledgment.current)
-                    )
-                }
-            }
-        }, [websocket, cameraRenderAcknowledgment, latestFrameNumber]);
 
 
     const handleIncomingMessage = useCallback(
@@ -61,15 +26,17 @@ export const useWebSocket = (wsUrl: string) => {
 
             // Handle binary data
             if (data instanceof ArrayBuffer) {
-                const frameNumber = await processBinaryMessage(data);
-                if (frameNumber !== null) {
-                    latestFrameNumber.current = frameNumber
+                const frameRenderAcknowledgment = await processBinaryMessage(data);
+                if (frameRenderAcknowledgment) {
+                    console.log(`${JSON.stringify(frameRenderAcknowledgment, null, 2)}`);
+                    ws.send(
+                        JSON.stringify(frameRenderAcknowledgment)
+                    )
                 }
             } else if (typeof data === "string") {
                 if (data == 'ping') {
                     console.log("Received ping message, sending pong response");
                     ws.send("pong");
-                    return;
                 }
                 try {
                     const message = JSON.parse(data);
@@ -104,7 +71,12 @@ export const useWebSocket = (wsUrl: string) => {
         };
 
         ws.onmessage = (event) => {
-            handleIncomingMessage(event, ws);
+            handleIncomingMessage(event, ws).then(
+                () => {}
+            ).catch((error) => {
+                console.error("Error processing incoming message:", error);
+            }
+            );
         };
 
         ws.onerror = (error) => {
@@ -138,6 +110,6 @@ export const useWebSocket = (wsUrl: string) => {
         connect,
         disconnect,
         latestImageData,
-        sendFrameAcknowledgment,
+        registerCameraViewTexture,
     };
 };

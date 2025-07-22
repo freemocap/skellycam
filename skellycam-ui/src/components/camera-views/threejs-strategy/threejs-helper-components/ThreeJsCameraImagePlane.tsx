@@ -8,32 +8,24 @@ export function ThreeJsCameraImagePlane({
                                             imageData,
                                             position,
                                             scale,
-                                            sendFrameAcknowledgment
                                         }: {
     position: [number, number, number];
     scale: [number, number, number];
     imageData: CameraImageData;
-    sendFrameAcknowledgment: (cameraId: string, frameNumber: number, imageDisplayWidth:number, imageDisplayHeight:number) => void;
 }) {
     const meshRef = useRef<THREE.Mesh>(null);
-    const textureRef = useRef<THREE.Texture | null>(null);
+    const textureRef = useRef<THREE.VideoFrameTexture | null>(null);
     const materialRef = useRef<THREE.MeshBasicMaterial | null>(null);
-    const scaleRef = useRef<[number, number, number]>(null);
+    const{registerCameraViewTexture} = useWebSocketContext();
 
 
-
-    // Create texture and material only once
+    // Create (or recreate) texture and material when the ImageData (i.e. scale) changes
     useEffect(() => {
-        // Create a texture that we'll reuse
-        if (textureRef.current && materialRef.current && scaleRef.current && scaleRef.current === scale) {
-            // Recreate texture one first render and if scale has changed
-            return;
-        }
-        const texture = new THREE.Texture();
+        console.log(`Creating texture for camera ${imageData.cameraId} at position ${position} with scale ${scale}`);
+        const texture = new THREE.VideoFrameTexture();
         texture.minFilter = THREE.NearestFilter;
         texture.magFilter = THREE.NearestFilter;
         texture.generateMipmaps = false;
-        texture.flipY = true;
         textureRef.current = texture;
 
         // Create material that references this texture
@@ -46,41 +38,16 @@ export function ThreeJsCameraImagePlane({
         if (meshRef.current) {
             meshRef.current.material = material;
         }
+        registerCameraViewTexture(imageData.cameraId, texture);
+    }, [ textureRef, materialRef, registerCameraViewTexture , imageData.cameraId]);
 
-        // Cleanup on unmount
-        return () => {
-            if (texture) texture.dispose();
-            if (material) material.dispose();
-        };
-    }, [ textureRef, materialRef ]);
 
-    // Update texture when new JPEG data arrives
-    useEffect(() => {
-        if (!imageData?.imageBitmap || !textureRef.current || !materialRef.current)
-            return;
-
-        // Update our reused texture with the new image
-        if (textureRef.current) {
-            textureRef.current.image = imageData.imageBitmap;
-            textureRef.current.needsUpdate = true;
-
-            // Ensure material is using the texture
-            if (materialRef.current) {
-                materialRef.current.map = textureRef.current;
-                materialRef.current.transparent = false;
-                materialRef.current.needsUpdate = true;
-            }
-
-            // Send acknowledgment after texture is updated
-            sendFrameAcknowledgment(imageData.cameraId, imageData.frameNumber, scale[0], scale[1]);
-        }
-    }, [imageData, sendFrameAcknowledgment]);
 
     return (
         <group position={position}>
             <mesh ref={meshRef} scale={[scale[0], scale[1], scale[2]]}>
                 <planeGeometry/>
-                {/* Material will be set by the useEffect */}
+                {/* Material and texture will be set by the useEffect */}
             </mesh>
             <Html
                 position={[-scale[0] / 2 + 0.05, scale[1] / 2 - 0.05, 0.1]}

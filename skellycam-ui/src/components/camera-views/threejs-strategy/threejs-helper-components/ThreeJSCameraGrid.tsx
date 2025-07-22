@@ -1,6 +1,8 @@
 // Camera Grid component
 import {useCameraGridLayout} from "@/hooks/useCameraGridLayout";
 import {useThree} from "@react-three/fiber";
+import * as THREE from "three";
+
 import React, {useEffect, useMemo} from "react";
 import {
     ThreeJsCameraImagePlane
@@ -29,10 +31,8 @@ export interface CameraGridItem {
 
 export function ThreeJSCameraGrid({
                                       imageData,
-                                      sendFrameAcknowledgment
                                   }: {
     imageData: Record<string, CameraImageData>;
-    sendFrameAcknowledgment: (cameraId: string, frameNumber: number, imageDisplayWidth:number, imageDisplayHeight:number) => void;
 }) {
     const {viewport} = useThree();
     const layout = useCameraGridLayout(imageData, viewport.width, viewport.height);
@@ -171,7 +171,6 @@ export function ThreeJSCameraGrid({
                     position={item.position}
                     scale={item.scale}
                     imageData={item.imageData}
-                    sendFrameAcknowledgment={sendFrameAcknowledgment}
                 />
             ))}
 

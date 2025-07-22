@@ -15,7 +15,7 @@ import {
 
 export function ThreeJSScene() {
     const theme = useTheme();
-    const {latestImageData, sendFrameAcknowledgment} = useWebSocketContext();
+    const {latestImageData} = useWebSocketContext();
 
     const hasImages = Object.keys(latestImageData).length > 0;
 
@@ -35,7 +35,6 @@ export function ThreeJSScene() {
                 <ThreeJSGridResizeProvider>
                     <ThreeJSCameraGrid
                         imageData={latestImageData}
-                        sendFrameAcknowledgment={sendFrameAcknowledgment}
                     />
                 </ThreeJSGridResizeProvider>
             ) : (

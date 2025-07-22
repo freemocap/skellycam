@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {useCallback, useRef, useState} from "react";
+import * as THREE from "three";
 
 // Define the message types from the Python code
 enum MessageType {
@@ -68,7 +69,6 @@ interface FrameHeader {
 }
 
 export interface CameraImageData {
-    imageBitmap: ImageBitmap;
     imageWidth: number;
     imageHeight: number;
     frameNumber: number;
@@ -76,11 +76,30 @@ export interface CameraImageData {
     cameraIndex: number;
 }
 
+export interface CameraDisplaySize {
+    width: number;
+    height: number;
+}
+
+export interface FrameRenderAcknowledgment {
+    frameNumber: number;
+    displayImageSizes: Record<string, CameraDisplaySize>;
+}
 export const useWebsocketBinaryMessageProcessor = () => {
-    const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string,CameraImageData>>({});
+    const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string, CameraImageData>>({});
+    const registeredCameraViewTextures = useRef<Record<string, THREE.VideoFrameTexture>>({});
+
+
     const textDecoderRef = useRef(new TextDecoder());
 
 
+
+    const registerCameraViewTexture = useCallback((cameraId: string, texture: THREE.VideoFrameTexture) => {
+        if (registeredCameraViewTextures.current[cameraId]) {
+            console.warn(`Texture for camera ${cameraId} is already registered. Overwriting.`);
+        }
+        registeredCameraViewTextures.current[cameraId] = texture;
+    }, [registeredCameraViewTextures]);
 
     const parsePayloadHeader = useCallback((dataView: DataView): MessageHeaderFooter | null => {
         try {
@@ -94,7 +113,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
             const frameNumber = Number(dataView.getBigInt64(PAYLOAD_HEADER_FRAME_NUMBER_OFFSET, true));
             const numberOfCameras = dataView.getInt32(PAYLOAD_HEADER_NUM_CAMERAS_OFFSET, true);
 
-            return { messageType, frameNumber, numberOfCameras };
+            return {messageType, frameNumber, numberOfCameras};
         } catch (error) {
             console.error('Error parsing payload header:', error);
             return null;
@@ -149,7 +168,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
         }
     }, []);
 
-    const parsePayloadFooter = useCallback((dataView: DataView): MessageHeaderFooter | null => {
+    const parsePayloadFooter = useCallback((dataView: DataView,): MessageHeaderFooter | null => {
         try {
             const messageType = dataView.getUint8(PAYLOAD_FOOTER_MESSAGE_TYPE_OFFSET);
 
@@ -161,7 +180,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
             const frameNumber = Number(dataView.getBigInt64(PAYLOAD_FOOTER_FRAME_NUMBER_OFFSET, true));
             const numberOfCameras = dataView.getInt32(PAYLOAD_FOOTER_NUM_CAMERAS_OFFSET, true);
 
-            return { messageType, frameNumber, numberOfCameras };
+            return {messageType, frameNumber, numberOfCameras};
         } catch (error) {
             console.error('Error parsing payload footer:', error);
             return null;
@@ -169,7 +188,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
     }, []);
 
 
-    const processBinaryMessage = useCallback(async (data: ArrayBuffer): Promise<number | null> => {
+    const processBinaryMessage = useCallback(async (data: ArrayBuffer): Promise<FrameRenderAcknowledgment | null> => {
         try {
             let offset = 0;
 
@@ -181,17 +200,21 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 return null;
             }
 
-            const { frameNumber, numberOfCameras } = payloadHeader;
+            const {frameNumber, numberOfCameras} = payloadHeader;
             offset += PAYLOAD_HEADER_SIZE;
 
             if (numberOfCameras <= 0) {
                 console.warn(`No cameras found in frame ${frameNumber}`);
                 return null;
             }
+            const frameRenderAcknowledgment: FrameRenderAcknowledgment = {
+                frameNumber: frameNumber,
+                displayImageSizes: {},
+            }
 
             // Process each camera frame
             const textDecoder = textDecoderRef.current;
-            const newCameraImages: Record<string, CameraImageData> = {};
+
             for (let i = 0; i < numberOfCameras; i++) {
                 // Process frame header as a chunk
                 const frameHeaderView = new DataView(data, offset, FRAME_HEADER_SIZE);
@@ -213,14 +236,31 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 offset += frameHeader.jpegStringLength;
 
 
-                newCameraImages[frameHeader.cameraId] = {
-                    imageBitmap: await createImageBitmap(new Blob([jpegData], { type: "image/jpeg" })),
-                    imageWidth: frameHeader.imageWidth,
-                    imageHeight: frameHeader.imageHeight,
-                    frameNumber: frameHeader.frameNumber,
-                    cameraId: frameHeader.cameraId,
-                    cameraIndex: frameHeader.cameraIndex,
-                };
+                if (latestCameraImageData[frameHeader.cameraId]?.imageWidth !== frameHeader.imageWidth ||
+                    latestCameraImageData[frameHeader.cameraId]?.imageHeight !== frameHeader.imageHeight) {
+                    // If the image dimensions or frame number have changed, update the state
+
+                    setLatestCameraImageData(prevData => ({
+                        ...prevData,
+                        [frameHeader.cameraId]: {
+                            imageWidth: frameHeader.imageWidth,
+                            imageHeight: frameHeader.imageHeight,
+                            frameNumber: frameHeader.frameNumber,
+                            cameraId: frameHeader.cameraId,
+                            cameraIndex: frameHeader.cameraIndex,
+                        }
+                    }));
+
+                }
+                if (registeredCameraViewTextures.current[frameHeader.cameraId]) {
+                    // Update existing texture
+                    registeredCameraViewTextures.current[frameHeader.cameraId].setFrame(await createImageBitmap(new Blob([jpegData], {type: "image/jpeg"})));
+                    registeredCameraViewTextures.current[frameHeader.cameraId].needsUpdate = true;
+                    frameRenderAcknowledgment.displayImageSizes[frameHeader.cameraId] = {
+                        width: frameHeader.imageWidth,
+                        height: frameHeader.imageHeight,
+                    }
+                }
             }
 
             // Process payload footer as a chunk
@@ -238,10 +278,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
             }
 
 
-            // Update state with new image URLs
-            setLatestCameraImageData(newCameraImages);
-
-            return frameNumber;
+            return frameRenderAcknowledgment;
         } catch (error) {
             console.error('Error processing binary frame:', error);
             return null;
@@ -250,6 +287,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
 
     return {
         latestImageData: latestCameraImageData,
+        registerCameraViewTexture,
         processBinaryMessage,
     };
 };

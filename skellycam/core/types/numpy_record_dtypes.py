@@ -153,7 +153,8 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
 
     _reusable_bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
     current_pos += len(header_bytes)
-    image_scale= np.max([len(camera_ids)**-1, 0.1])
+    # image_scale= np.min([np.max([(len(camera_ids)*2)**-1, 0.2]), 1.0])
+    image_scale= .5
     for camera_id in camera_ids:
         frame_recarray = mf_rec_array[camera_id][0]
 
