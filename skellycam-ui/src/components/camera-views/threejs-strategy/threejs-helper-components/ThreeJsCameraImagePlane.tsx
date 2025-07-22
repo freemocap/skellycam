@@ -26,6 +26,7 @@ export function ThreeJsCameraImagePlane({
         texture.minFilter = THREE.NearestFilter;
         texture.magFilter = THREE.NearestFilter;
         texture.generateMipmaps = false;
+        texture.flipY = false;
         textureRef.current = texture;
 
         // Create material that references this texture
@@ -38,6 +39,7 @@ export function ThreeJsCameraImagePlane({
         if (meshRef.current) {
             meshRef.current.material = material;
         }
+
         registerCameraViewTexture(imageData.cameraId, texture);
     }, [ textureRef, materialRef, registerCameraViewTexture , imageData.cameraId]);
 
