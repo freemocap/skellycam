@@ -28,6 +28,7 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                            update_camera_settings_subscription: TopicSubscriptionQueue,
                            recording_info_subscription: TopicSubscriptionQueue):
     video_recorder: VideoRecorder | None = None
+    previous_tik = time.perf_counter_ns()
     try:
         while ipc.should_continue:
 
@@ -43,24 +44,30 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                                                       self_status=self_status,
                                                       update_camera_settings_subscription=update_camera_settings_subscription,
                                                       video_recorder=video_recorder)
-
+            # print(f"Camera {config.camera_id} loop UPDATE CHECKS took {(time.perf_counter_ns() - og_tik)/1e6} ms for update checks")
+            tik = time.perf_counter_ns()
             if self_status.is_paused.value:
                 wait_1ms()
                 continue
 
+#             # print("Camera {config.camera_id} loop PAUSE CHECK took {(time.perf_counter_ns() - tik)/1e6} ms for pause check")
             if not orchestrator.should_grab_by_id(camera_id=config.camera_id):
                 wait_10us()
                 continue
-
+            tik = time.perf_counter_ns()
+#             print(f"Camera {config.camera_id} loop GRAB CHECK took {(time.perf_counter_ns() - tik)/1e6} ms for grab check")
+            tik = time.perf_counter_ns()
             self_status.grabbing_frame.value = True
             frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
                                                frame_rec_array=frame_rec_array, )
-
+#             print(f"Camera {config.camera_id} loop GET FRAME took {(time.perf_counter_ns() - tik)/1e6} ms for frame grab")
             # NOTE - Get `should_record` flags BEFORE unsetting 'grabbing_frame' to avoid
             # potential race-condition-generating flag setting gaps between cameras
+            tik = time.perf_counter_ns()
             (should_record_frame,
              should_finish_recording) = orchestrator.should_record_frame_number(
                 frame_number=frame_rec_array.frame_metadata.frame_number[0], )
+#             print(f"Camera {config.camera_id} loop SHOULD RECORD CHECK took {(time.perf_counter_ns() - tik)/1e6} ms for should record check")
 
             self_status.grabbing_frame.value = False
 
@@ -68,11 +75,11 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             # while orchestrator.any_grabbing_frame and ipc.should_continue:
             #     # Wait for all cameras to finish grabbing frames
             #     wait_10us()
-
+            tik = time.perf_counter_ns()
             frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = time.perf_counter_ns()
             camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
             frame_rec_array.frame_metadata.timestamps.post_copy_to_camera_shm_ns[0] = time.perf_counter_ns()
-
+#             print(f"Camera {config.camera_id} loop COPY TO SHM took {(time.perf_counter_ns() - tik)/1e6} ms for copy to shared memory")
             video_recorder = handle_video_recording(config=config,
                                                     frame_rec_array=frame_rec_array,
                                                     ipc=ipc,
@@ -86,6 +93,10 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
 
             # Last camera to increment their frame count status triggers the next frame_grab
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+            # tik = time.perf_counter_ns()
+            # print(f"Camera {config.camera_id} loop took {(tik - previous_tik) / 1e6} ms for full loop iteration")
+            # previous_tik = tik
+
 
     except Exception as e:
         self_status.signal_error()

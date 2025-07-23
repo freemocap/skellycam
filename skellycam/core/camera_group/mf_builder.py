@@ -83,12 +83,11 @@ class MultiframeBuilder:
             mf_rec_array[camera_id].frame_metadata.frame_number[0] = -1
 
         try:
+            previous_tik = time.perf_counter_ns()
             while ipc.should_continue:
-                print('weeeeeeeeeeeeeeee')
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_1ms()
                     continue
-                print('weeeeeeeeeeeeeeeeppppppppppppppppppppppp')
 
                 ipc.mf_builder_status.building_mfs_flag.value = True
                 new_data, mf_rec_array = camera_group_shm.build_all_new_multiframes(mf_rec_array)
@@ -96,14 +95,18 @@ class MultiframeBuilder:
 
                 if not new_data:
                     wait_1ms()
-                print('weessssssssssp')
+                    continue
+
+                # tik = time.perf_counter_ns()
+                # print(f"Multi-frame builder for camera group {ipc.group_id} built new multi-frame in {(tik - previous_tik) / 1e6} ms and got {len(new_data)} new multi-frames")
+                # previous_tik = tik
+
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")
             ipc.kill_everything()
             raise
         finally:
-            print('mf closing.......................)')
             camera_group_shm.close()
             ipc.mf_builder_status.is_running.value = False
             ipc.mf_builder_status.closed.value = True

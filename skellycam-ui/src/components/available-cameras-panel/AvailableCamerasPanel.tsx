@@ -51,6 +51,10 @@ export const AvailableCamerasPanel = () => {
 
     // Initial camera detection
     useEffect(() => {
+        if (camerasArray.length > 0) {
+            // If cameras are already detected, we don't need to detect again
+            return;
+        }
         dispatch(detectCameraDevices());
     }, [dispatch]);
 
