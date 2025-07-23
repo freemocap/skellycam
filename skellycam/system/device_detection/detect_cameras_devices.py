@@ -97,9 +97,9 @@ if __name__ == "__main__":
     print(f"Platform: {platform()}")
     print(f"OpenCV Version: {cv2.__version__}")
     print(f"Supported Backends: {[getBackendName(b) for b in supported_backends]}")
-    cameras = detect_available_cameras()
-    if not cameras:
-        print("No cameras detected.")
+    _cameras = detect_available_cameras()
+    if not _cameras:
+        print("No _cameras detected.")
     else:
-        for cam in cameras:
+        for cam in _cameras:
             print(f"Camera Index: {cam.index}, Name: {cam.name}, Vendor ID: {cam.vendor_id}, Product ID: {cam.product_id}, Path: {cam.path}, Backend: {cam.backend_name} ({cam.backend_id})")

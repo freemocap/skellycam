@@ -83,14 +83,12 @@ class CameraGroup:
     @property
     def all_alive(self):
         return all([self.cameras.all_alive,
-                    # self.recorder.is_alive(),
-                    self.mf_builder.is_alive()])
+                    self.mf_builder.is_alive])
 
     @property
     def any_alive(self):
         return any([self.cameras.any_alive,
-                    # self.recorder.is_alive(),
-                    self.mf_builder.is_alive()])
+                    self.mf_builder.is_alive])
 
     @property
     def all_ready(self) -> bool:
@@ -98,7 +96,7 @@ class CameraGroup:
             return False
         return all([self.cameras.all_ready,
                     # self.recorder.ready,
-                    self.mf_builder.ready,
+                    self.mf_builder.is_alive,
                     self.shm.valid])
 
     def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt, bytes] | None:
@@ -179,13 +177,13 @@ class CameraGroup:
         self.ipc.pause(await_paused=True)
         self.ipc.should_continue = False
         wait_1s()
-        self.mf_builder.close()
 
         while self.any_alive:
-            logger.debug(
-                f"Waiting for all camera group processes to close, cameras: {self.cameras.any_alive}, mf_builder: {self.mf_builder.is_alive()}")
             wait_1s()
-
+        while not self.cameras.ready_to_shutdown.value:
+            wait_1s()
+        self.cameras.worker.join()
+        self.mf_builder.worker.terminate() # TODO - Die better
         if self.shm is not None:
             try:
                 self.shm.unlink_and_close()

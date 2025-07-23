@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class CameraManager:
     ipc: CameraGroupIPC
     worker: WorkerType
+    ready_to_shutdown: multiprocessing.Value
 
     @classmethod
     def create(cls,
@@ -26,7 +27,7 @@ class CameraManager:
             camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS
         else:
             camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
-
+        ready_to_shutdown = multiprocessing.Value("b", False)
         config_subscription_by_camera = {
             camera_id: ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription() for camera_id in
             camera_configs.keys()}
@@ -46,11 +47,15 @@ class CameraManager:
                 config_subscription_by_camera=config_subscription_by_camera,
                 recording_info_subscription_by_camera=recording_info_subscription_by_camera,
                 shm_subscription_by_camera=shm_subscription_by_camera,
+                ready_to_shutdown=ready_to_shutdown
             )
+
         )
 
         return cls(ipc=ipc,
-                   worker=worker)
+                   worker=worker,
+                   ready_to_shutdown=ready_to_shutdown
+                   )
 
     @staticmethod
     def _camera_manager_worker(ipc: CameraGroupIPC,
@@ -58,7 +63,9 @@ class CameraManager:
                                camera_strategy: WorkerStrategy,
                                config_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue],
                                shm_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue],
-                               recording_info_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue]
+                               recording_info_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue],
+                               ready_to_shutdown: multiprocessing.Value
+
                                ):
         if multiprocessing.parent_process():
             # Configure logging if multiprocessing (i.e. if there is a parent process)
@@ -85,33 +92,24 @@ class CameraManager:
         while ipc.should_continue:
             wait_1s()
         logger.debug("Awaiting camera processes to finish...")
-        for camera_id, worker in camera_workers.items():
-            worker.join()
-            logger.debug(f"Camera worker {camera_id} has finished.")
+        while ipc.camera_orchestrator.any_cameras_alive:
+            wait_1s()
+        for worker in camera_workers.values():
+            worker.worker.terminate() #TODO - Die better
+        ready_to_shutdown.value = True
         logger.info("Camera manager worker is shut down")
-
-    def close(self):
-        if self.worker and self.worker.is_alive():
-            logger.debug("Closing camera manager worker...")
-            self.ipc.should_continue = False
-            self.worker.join()
-        logger.success("Camera manager worker closed successfully.")
-
-    @property
-    def any_alive(self) -> bool:
-        if not self.worker or not self.worker.is_alive():
-            return False
-        return True
 
     @property
     def all_ready(self) -> bool:
         return self.ipc.camera_orchestrator.all_cameras_ready
 
     @property
+    def any_alive(self) -> bool:
+        return self.ipc.camera_orchestrator.any_cameras_alive
+
+    @property
     def all_alive(self) -> bool:
-        if not self.worker or not self.worker.is_alive():
-            return False
-        return True
+        return all([not status.closed.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
 
     @property
     def cameras_connected(self) -> bool:

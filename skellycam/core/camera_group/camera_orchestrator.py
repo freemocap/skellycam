@@ -89,6 +89,15 @@ class CameraOrchestrator:
         return any([status.is_paused.value for status in self.camera_statuses.values()])
 
     @property
+    def any_cameras_alive(self) -> bool:
+        return any([not status.closed.value for status in self.camera_statuses.values()])
+
+    @property
+    def all_cameras_alive(self) -> bool:
+        return any([not status.closed.value for status in self.camera_statuses.values()])
+
+
+    @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:
         return {camera_id: status.frame_count.value for camera_id, status in self.camera_statuses.items()}
 

@@ -70,6 +70,7 @@ class CameraGroupIPC(BaseModel):
 
     @should_continue.setter
     def should_continue(self, value: bool) -> None:
+        logger.api(f"Setting should_continue to {value} for camera group {self.group_id}")
         self.shutdown_camera_group_flag.value = not value
 
     @property
@@ -77,7 +78,7 @@ class CameraGroupIPC(BaseModel):
         """
         Check if all cameras in the group are ready.
         """
-        return self.camera_orchestrator.all_cameras_ready and self.mf_builder_status.is_running_flag
+        return self.camera_orchestrator.all_cameras_ready and self.mf_builder_status.is_running.value
 
     @property
     def all_ready_to_record(self) -> bool:

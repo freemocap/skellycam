@@ -28,9 +28,9 @@ class MultiframeBuilder:
                worker_strategy: WorkerStrategy):
 
         worker = worker_strategy.value(target=cls._run_mf_builder_loop,
-                                                      kwargs=dict(ipc=ipc,
-                                                                  new_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription()),
-                                                      daemon=True)
+                                       kwargs=dict(ipc=ipc,
+                                                   new_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription()),
+                                       daemon=True)
         return cls(ipc=ipc,
                    worker=worker,
                    )
@@ -48,7 +48,7 @@ class MultiframeBuilder:
             from skellycam.system.logging_configuration.configure_logging import configure_logging
             from skellycam import LOG_LEVEL
             configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
-
+        ipc.mf_builder_status.is_running.value = True
         camera_group_shm:CameraGroupSharedMemoryManager|None = None
         while ipc.should_continue:
             try:
@@ -84,41 +84,38 @@ class MultiframeBuilder:
 
         try:
             while ipc.should_continue:
+                print('weeeeeeeeeeeeeeee')
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_1ms()
                     continue
+                print('weeeeeeeeeeeeeeeeppppppppppppppppppppppp')
 
                 ipc.mf_builder_status.building_mfs_flag.value = True
                 new_data, mf_rec_array = camera_group_shm.build_all_new_multiframes(mf_rec_array)
                 ipc.mf_builder_status.building_mfs_flag.value = False
 
                 if not new_data:
-                    wait_10ms()
+                    wait_1ms()
+                print('weessssssssssp')
 
         except Exception as e:
             logger.exception(f"Exception in multi-frame publication thread: {e}")
             ipc.kill_everything()
             raise
         finally:
-            logger.info(f"Multi-frame publication thread for camera group {ipc.group_id} exited")
-            ipc.should_continue = False
+            print('mf closing.......................)')
             camera_group_shm.close()
+            ipc.mf_builder_status.is_running.value = False
+            ipc.mf_builder_status.closed.value = True
+            logger.info(f"Multi-frame publication thread for camera group {ipc.group_id} exited")
+
 
 
     def start(self):
         logger.debug(f"Starting multi-frame publisher for camera group {self.ipc.group_id}...")
         self.worker.start()
 
-    def is_alive(self) -> bool:
-        return self.worker.is_alive()
-
-    def close(self):
-        if self.worker.is_alive():
-            logger.debug(f"Closing multi-frame publisher for camera group {self.ipc.group_id}...")
-            self.ipc.should_continue = False
-            self.worker.join()
-        logger.success(f"Multi-frame publisher for camera group {self.ipc.group_id} closed successfully.")
 
     @property
-    def ready(self) -> bool:
-        return self.worker.is_alive()
+    def is_alive(self) -> bool:
+        return not self.ipc.mf_builder_status.closed.value
