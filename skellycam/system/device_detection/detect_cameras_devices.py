@@ -5,6 +5,7 @@ from cv2.videoio_registry import getBackendName
 from cv2_enumerate_cameras import supported_backends, enumerate_cameras
 from cv2_enumerate_cameras.camera_info import CameraInfo
 from pydantic import BaseModel
+from tabulate import tabulate
 
 from skellycam.core.camera.opencv.opencv_helpers.determine_backend import determine_opencv_camera_backend, OpenCVBackend
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString, CameraBackendInt, CameraVendorIdInt, \
@@ -82,7 +83,6 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
     cameras: list[CameraDeviceInfo] =  []
     for camera_info in enumerate_cameras(apiPreference=backend.id):
         device = CameraDeviceInfo.from_camera_info(camera_info)
-        logger.debug(f"Detected camera: {device.model_dump_json(indent=2)}")
         if filter_virtual and 'virtual' in camera_info.name.lower():
             continue
         if camera_info.vid is None or camera_info.pid is None:
@@ -90,6 +90,7 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
                 # Skip cameras without VID and PID (unless its a 'facetime' camera on macOS)
                 continue
         cameras.append(device)
+    logger.debug(f"Detected {len(cameras)} cameras:\n {tabulate([camera.model_dump() for camera in cameras], headers='keys')}\n)")
     return cameras
 
 if __name__ == "__main__":

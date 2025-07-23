@@ -41,13 +41,13 @@ export const detectCameraDevices = createAsyncThunk<
             const existingCameras = state.cameras.cameras;
 
             Object.keys(existingCameras).forEach(cameraId => {
-                const stillExists = serverCameras.some(device => device.index === parseInt(cameraId));
+                const stillExists = serverCameras.some((device: { index: number; }) => device.index === parseInt(cameraId));
                 if (!stillExists) {
                     dispatch(setCameraStatus({ cameraId, status: 'UNAVAILABLE' }));
                 }
             });
 
-            for (const serverCamera of serverCameras) {                
+            for (const serverCamera of serverCameras) {
                 const existingCamera = existingCameras[serverCamera.index];
                 const newCamera: CameraDevice = {
                     index: serverCamera.index,
@@ -59,7 +59,7 @@ export const detectCameraDevices = createAsyncThunk<
                     groupId: '', // TODO: not sure if this needs to be passed form the server?
                     kind: 'videoinput',
                     constraints: CAMERA_DEFAULT_CONSTRAINTS,
-                    config: existingCamera?.config || 
+                    config: existingCamera?.config ||
                     createDefaultCameraConfig(
                         serverCamera.index,
                         serverCamera.name,
