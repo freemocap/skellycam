@@ -1,3 +1,4 @@
+import enum
 import time
 from typing import List, Tuple, Dict
 
@@ -5,8 +6,18 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from skellycam.core.camera.opencv.determine_backend import BackendSelection
 
+
+class BackendSelectionEnum(enum.Enum):
+    CAP_ANY = cv2.CAP_ANY
+    CAP_FFMPEG = cv2.CAP_FFMPEG
+    CAP_OPENCV_MJPEG = cv2.CAP_OPENCV_MJPEG
+    CAP_DSHOW = cv2.CAP_DSHOW
+    CAP_MSMF = cv2.CAP_MSMF
+    CAP_VFW = cv2.CAP_VFW
+    CAP_V4L = cv2.CAP_V4L
+    CAP_V4L2 = cv2.CAP_V4L2
+    CAP_QT = cv2.CAP_QT
 
 def check_resolution(video_capture: cv2.VideoCapture, width: int, height: int) -> bool:
     return int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)) == width and int(
@@ -53,7 +64,7 @@ def measure_latency(video_capture: cv2.VideoCapture, max_frame_count: int = 30) 
 def run_camera_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_codes: List[str]):
     results = []
     try:
-        for backend in BackendSelection:
+        for backend in BackendSelectionEnum:
             if backend.value not in [cv2.CAP_DSHOW, cv2.CAP_V4L, cv2.CAP_V4L2, cv2.CAP_ANY, cv2.CAP_FFMPEG, cv2.CAP_OPENCV_MJPEG]:
                 continue
             for code in fourcc_codes:

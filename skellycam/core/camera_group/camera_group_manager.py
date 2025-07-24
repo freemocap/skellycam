@@ -107,12 +107,13 @@ class CameraGroupManager:
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 
-    def get_latest_frontend_payloads(self, if_newer_than:int) -> dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]]:
+    def get_latest_frontend_payloads(self, if_newer_than:int, display_image_sizes:dict[CameraIdString,dict[str,float]]) -> dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]]:
         fe_payloads:dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = {}
         if self.closing:
             return fe_payloads
         for camera_group in self.camera_groups.values():
-            fe_return =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than)
+            fe_return =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than,
+                                                                  display_image_sizes=display_image_sizes)
             if fe_return is None:
                 continue
             frame_number, fe_payload = fe_return

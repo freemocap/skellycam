@@ -1,12 +1,14 @@
 # Remove the nested duplicate class and move the __str__ method to the top-level class
-from pydantic import BaseModel
-from tabulate import tabulate
+import dataclasses
+import json
+from dataclasses import dataclass
 
 from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 
-class RecordingTimestampsStats(BaseModel):
+@dataclass
+class RecordingTimestampsStats:
     """
     A class to hold statistics about timestamps in a recording session.
     This is used to generate statistics about the recording timestamps.
@@ -18,19 +20,16 @@ class RecordingTimestampsStats(BaseModel):
     framerate_stats: DescriptiveStatistics
     frame_duration_stats: DescriptiveStatistics
     inter_camera_grab_range_ms: DescriptiveStatistics
-    idle_before_grab_ms: DescriptiveStatistics
+
     during_frame_grab_ms: DescriptiveStatistics
     idle_before_retrieve_ms: DescriptiveStatistics
     during_frame_retrieve_ms: DescriptiveStatistics
     idle_before_copy_to_camera_shm_ms: DescriptiveStatistics
-    stored_in_camera_shm_ms: DescriptiveStatistics
-    during_copy_from_camera_shm_ms: DescriptiveStatistics
-    idle_before_copy_to_multiframe_shm_ms: DescriptiveStatistics
-    stored_in_multiframe_shm_ms: DescriptiveStatistics
-    during_copy_from_multiframe_shm_ms: DescriptiveStatistics
-    total_frame_acquisition_time_ms: DescriptiveStatistics
-    total_ipc_travel_time_ms: DescriptiveStatistics
-    total_camera_to_recorder_time_ms: DescriptiveStatistics
+    during_copy_to_camera_shm_ms: DescriptiveStatistics
+    idle_before_frame_record_ms: DescriptiveStatistics
+    during_frame_record_ms: DescriptiveStatistics
+    total_frame_processing_time_ms: DescriptiveStatistics
+    total_camera_idle_time_ms: DescriptiveStatistics
 
     @classmethod
     def from_recording_timestamps(cls, recording_timestamps: RecordingTimestamps):
@@ -42,40 +41,63 @@ class RecordingTimestampsStats(BaseModel):
             framerate_stats=recording_timestamps.framerate_stats,
             frame_duration_stats=recording_timestamps.frame_duration_stats,
             inter_camera_grab_range_ms=recording_timestamps.inter_camera_grab_range_stats,
-            idle_before_grab_ms=recording_timestamps.idle_before_grab_duration_stats,
+
             during_frame_grab_ms=recording_timestamps.during_frame_grab_stats,
             idle_before_retrieve_ms=recording_timestamps.idle_before_retrieve_duration_stats,
             during_frame_retrieve_ms=recording_timestamps.during_frame_retrieve_stats,
             idle_before_copy_to_camera_shm_ms=recording_timestamps.idle_before_copy_to_camera_shm_stats,
-            stored_in_camera_shm_ms=recording_timestamps.stored_in_camera_shm_stats,
-            during_copy_from_camera_shm_ms=recording_timestamps.during_copy_from_camera_shm_stats,
-            idle_before_copy_to_multiframe_shm_ms=recording_timestamps.idle_before_copy_to_multiframe_shm_stats,
-            stored_in_multiframe_shm_ms=recording_timestamps.stored_in_multiframe_shm_stats,
-            during_copy_from_multiframe_shm_ms=recording_timestamps.during_copy_from_multiframe_shm_stats,
-            total_frame_acquisition_time_ms=recording_timestamps.total_frame_acquisition_time_stats,
-            total_ipc_travel_time_ms=recording_timestamps.total_ipc_travel_time_stats,
-            total_camera_to_recorder_time_ms=recording_timestamps.total_camera_to_recorder_time_stats
+            during_copy_to_camera_shm_ms=recording_timestamps.during_copy_to_camera_shm_stats,
+            idle_before_frame_record_ms=recording_timestamps.idle_before_frame_record_stats,
+            during_frame_record_ms=recording_timestamps.during_frame_record_stats,
+            total_frame_processing_time_ms=recording_timestamps.total_frame_processing_time_stats,
+            total_camera_idle_time_ms=recording_timestamps.total_camera_idle_time_stats,
         )
+
+    def to_json(self, exclude: set[str] = None, indent: int = None) -> str:
+        """
+        Convert the dataclass to a JSON string, similar to Pydantic's model_dump_json.
+
+        Args:
+            exclude: Set of field names to exclude from the JSON output
+            indent: Number of spaces for indentation in the JSON output
+
+        Returns:
+            JSON string representation of the dataclass
+        """
+        exclude = exclude or set()
+
+        # Convert dataclass to dict, excluding specified fields
+        def dataclass_to_dict(obj):
+            if dataclasses.is_dataclass(obj):
+                result = {}
+                for field in dataclasses.fields(obj):
+                    if field.name not in exclude:
+                        value = getattr(obj, field.name)
+                        result[field.name] = dataclass_to_dict(value)
+                return result
+            elif isinstance(obj, list):
+                return [dataclass_to_dict(item) for item in obj]
+            elif isinstance(obj, dict):
+                return {key: dataclass_to_dict(value) for key, value in obj.items()}
+            else:
+                return obj
+
+        # Convert to dict and then to JSON
+        obj_dict = dataclass_to_dict(self)
+        return json.dumps(obj_dict, indent=indent, default=lambda o: o.__dict__)
 
     def __str__(self):
         """
-        Create an attractive and informative string representation of the stats using tabulate,
-        showing key statistics about recording timestamps and time spent in
-        different stages of the frame acquisition process.
+        Create an attractive and informative string representation of the stats using Python's string templates.
+        This approach makes the output more maintainable and debuggable.
         """
+        from string import Template
+        from tabulate import tabulate
+
         # Set precision for consistent decimal places
         precision = 3
 
-        # Header with basic recording info
-        header = "_" * 80 + "\n\n"
-        header += f"Timestamp Statistics for recording: {self.recording_name}\n\n"
-        header += f"Number of Cameras: {self.number_of_cameras}\n"
-        header += f"Total Frames: {self.number_of_frames}\n"
-        header += f"Total Duration: {self.total_duration_sec:.3f} seconds\n\n"
-        # Frame timing section with table for framerate, frame duration, and inter-camera timestamp range
-        timing_section = "FRAME TIMING STATISTICS\n"
-
-        # Create table for timing metrics with aligned decimals
+        # Create timing table
         timing_data = [
             ["Framerate/FPS (Hz)",
              f"{self.framerate_stats.median:.{precision}f}",
@@ -104,37 +126,24 @@ class RecordingTimestampsStats(BaseModel):
             timing_data,
             headers=["Metric", "Median", "Mean", "Std", "Min", "Max"],
             tablefmt="rst",
-            floatfmt=f".{precision}f"  # This ensures decimal alignment
+            floatfmt=f".{precision}f"
         )
-        timing_section += timing_table + "\n\n"
-
-        # Frame acquisition pipeline section
-        pipeline_section = "FRAME LIFESPAN TIMESTAMPS\n"
 
         # Calculate total time for percentage calculations
-        total_time = self.total_camera_to_recorder_time_ms.mean
+        total_time = self.total_camera_idle_time_ms.mean
 
-
-        # Create table data for pipeline stages, now with categories and subtotals
-        idle_percentage = (self.idle_before_grab_ms.mean / total_time) * 100 if total_time > 0 else 0
-
-        idle_data =[
-            "Idle Before Grab Signal",
-            f"{self.idle_before_grab_ms.median:.{precision}f}",
-            f"{self.idle_before_grab_ms.mean:.{precision}f}",
-            f"{self.idle_before_grab_ms.standard_deviation:.{precision}f}",
-            f"{self.idle_before_grab_ms.min:.{precision}f}",
-            f"{self.idle_before_grab_ms.max:.{precision}f}",
-            f"--"
-        ]
-        table_data = [idle_data,
-                      ["", "", "", "", "", "", ""]]
+        # Create processing table data
+        table_data = []
 
         # Add Camera Frame Acquisition stages
         acquisition_stages = [
             ("During frame grab", self.during_frame_grab_ms),
             ("Idle before retrieve", self.idle_before_retrieve_ms),
             ("During frame retrieve", self.during_frame_retrieve_ms),
+            ("Idle before copy to camera SHM", self.idle_before_copy_to_camera_shm_ms),
+            ("During copy to camera SHM", self.during_copy_to_camera_shm_ms),
+            ("Idle before frame record", self.idle_before_frame_record_ms),
+            ("During frame record", self.during_frame_record_ms),
         ]
 
         for stage_name, stats in acquisition_stages:
@@ -149,120 +158,74 @@ class RecordingTimestampsStats(BaseModel):
                 f"{percentage:.1f}%"
             ])
 
-        # Add a separator line before the subtotal
-        table_data.append(["─" * 25, "" , "" , "" , "" , "" , ""])
-
-        # Add Camera Frame Acquisition subtotal with highlighting
-        acquisition_total_median = self.total_frame_acquisition_time_ms.median
-        acquisition_total_mean = self.total_frame_acquisition_time_ms.mean
-        acquisition_percentage = (acquisition_total_mean / total_time) * 100 if total_time > 0 else 0
-        table_data.append([
-            "Subtotal (Acquisition)".upper(),
-            f"{acquisition_total_median:.{precision}f}",
-            f"{acquisition_total_mean:.{precision}f}",
-            f"{self.total_frame_acquisition_time_ms.standard_deviation:.{precision}f}",
-            f"{self.total_frame_acquisition_time_ms.min:.{precision}f}",
-            f"{self.total_frame_acquisition_time_ms.max:.{precision}f}",
-            f"{acquisition_percentage:.1f}%"
-        ])
-
-        # Add IPC Transfer Pipeline category header
-        table_data.append(["", "", "", "", "", "", ""],)
-
-        # Add IPC Transfer Pipeline stages
-        ipc_stages = [
-            ("Idle before copy to camera SHM", self.idle_before_copy_to_camera_shm_ms),
-            ("Stored in camera SHM", self.stored_in_camera_shm_ms),
-            ("During copy from camera SHM", self.during_copy_from_camera_shm_ms),
-            ("Idle before copy to multiframe SHM", self.idle_before_copy_to_multiframe_shm_ms),
-            ("Stored in multiframe SHM", self.stored_in_multiframe_shm_ms),
-            ("During copy from multiframe SHM", self.during_copy_from_multiframe_shm_ms),
-        ]
-
-        for stage_name, stats in ipc_stages:
-            percentage = (stats.mean / total_time) * 100 if total_time > 0 else 0
-            table_data.append([
-                stage_name,
-                f"{stats.median:.{precision}f}",
-                f"{stats.mean:.{precision}f}",
-                f"{stats.standard_deviation:.{precision}f}",
-                f"{stats.min:.{precision}f}",
-                f"{stats.max:.{precision}f}",
-                f"{percentage:.1f}%"
-            ])
-
-        # Add a separator line before the subtotal
-        table_data.append(["─" * 25, "" , "" , "" , "" , "" , ""])
-
-        # Add IPC Transfer Pipeline subtotal with highlighting
-        ipc_total_median = self.total_ipc_travel_time_ms.median
-        ipc_total_mean = self.total_ipc_travel_time_ms.mean
-        ipc_percentage = (ipc_total_mean / total_time) * 100 if total_time > 0 else 0
-        table_data.append([
-            "Subtotal (IPC)".upper(),
-            f"{ipc_total_median:.{precision}f}",
-            f"{ipc_total_mean:.{precision}f}",
-            f"{self.total_ipc_travel_time_ms.standard_deviation:.{precision}f}",
-            f"{self.total_ipc_travel_time_ms.min:.{precision}f}",
-            f"{self.total_ipc_travel_time_ms.max:.{precision}f}",
-            f"{ipc_percentage:.1f}%"
-        ])
-
-        # Add a double separator line before the total
+        # Add a separator line before the total
         table_data.append(["═" * 25, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 10])
 
-        # Add Total Camera-to-Recorder Time with highlighting
-        total_stats = self.total_camera_to_recorder_time_ms
-        # Use the calculated percentage, which should be close to 100% if measurements are accurate
+        # Add Total Processing Time with highlighting
+        total_processing_stats = self.total_frame_processing_time_ms
+        processing_percentage = (total_processing_stats.mean / total_time) * 100 if total_time > 0 else 0
         table_data.append([
-            "Total Camera-to-Recorder Time".upper(),
-            f"{total_stats.median:.{precision}f}",
-            f"{total_stats.mean:.{precision}f}",
-            f"{total_stats.standard_deviation:.{precision}f}",
-            f"{total_stats.min:.{precision}f}",
-            f"{total_stats.max:.{precision}f}",
-            f"100%"
+            "Total Frame Processing Time".upper(),
+            f"{total_processing_stats.median:.{precision}f}",
+            f"{total_processing_stats.mean:.{precision}f}",
+            f"{total_processing_stats.standard_deviation:.{precision}f}",
+            f"{total_processing_stats.min:.{precision}f}",
+            f"{total_processing_stats.max:.{precision}f}",
+            f"{processing_percentage:.1f}%"
         ])
-        # Create the pipeline table
-        pipeline_table = tabulate(
+
+        # Add Total Camera Idle Time
+        total_idle_stats = self.total_camera_idle_time_ms
+        table_data.append([
+            "Total Camera Idle Time".upper(),
+            f"{total_idle_stats.median:.{precision}f}",
+            f"{total_idle_stats.mean:.{precision}f}",
+            f"{total_idle_stats.standard_deviation:.{precision}f}",
+            f"{total_idle_stats.min:.{precision}f}",
+            f"{total_idle_stats.max:.{precision}f}",
+            f"{100-processing_percentage:.1f}%"
+        ])
+
+        processing_table = tabulate(
             table_data,
             headers=["Stage", "Median (ms)", "Mean (ms)", "Std (ms)", "Min (ms)", "Max (ms)", "% of Total"],
             tablefmt="rst",
-            floatfmt=f".{precision}f"  # This ensures decimal alignment
+            floatfmt=f".{precision}f"
         )
-        pipeline_section += pipeline_table + "\n\n"
 
-        # Summary section with table
-        summary_section = "SUMMARY METRICS\n"
+        # Calculate efficiency metrics
+        processing_ratio = (self.total_frame_processing_time_ms.mean / total_time) * 100 if total_time > 0 else 0
 
-        summary_data = [
-            ["frame acquisition time",
-             f"{self.total_frame_acquisition_time_ms.median:.{precision}f}",
-             f"{self.total_frame_acquisition_time_ms.mean:.{precision}f}",
-             f"{self.total_frame_acquisition_time_ms.standard_deviation:.{precision}f}",
-             f"{self.total_frame_acquisition_time_ms.min:.{precision}f}",
-             f"{self.total_frame_acquisition_time_ms.max:.{precision}f}"],
-            ["IPC travel time",
-             f"{self.total_ipc_travel_time_ms.median:.{precision}f}",
-             f"{self.total_ipc_travel_time_ms.mean:.{precision}f}",
-             f"{self.total_ipc_travel_time_ms.standard_deviation:.{precision}f}",
-             f"{self.total_ipc_travel_time_ms.min:.{precision}f}",
-             f"{self.total_ipc_travel_time_ms.max:.{precision}f}"],
-            ["Camera-to-Recorder Time",
-             f"{total_stats.median:.{precision}f}",
-             f"{total_stats.mean:.{precision}f}",
-             f"{total_stats.standard_deviation:.{precision}f}",
-             f"{total_stats.min:.{precision}f}",
-             f"{total_stats.max:.{precision}f}"]
-        ]
+        # Define the template as a multi-line string
+        template_str = """$separator
 
-        summary_table = tabulate(
-            summary_data,
-            headers=["Metric", "Median (ms)", "Mean (ms)", "Std (ms)", "Min (ms)", "Max (ms)"],
-            tablefmt="rst",
-            floatfmt=f".{precision}f"  # This ensures decimal alignment
+    Timestamp Statistics for recording: $recording_name
+
+    Number of Cameras: $num_cameras
+    Total Frames: $num_frames
+    Total Duration: $duration seconds
+
+    FRAME TIMING STATISTICS
+    $timing_table
+
+    FRAME PROCESSING TIMESTAMPS
+    $processing_table
+
+
+    """
+
+        # Create a template and substitute values
+        template = Template(template_str)
+        return template.substitute(
+            separator="_" * 80,
+            recording_name=self.recording_name,
+            num_cameras=self.number_of_cameras,
+            num_frames=self.number_of_frames,
+            duration=f"{self.total_duration_sec:.3f}",
+            timing_table=timing_table,
+            processing_table=processing_table,
+            proc_ratio=f"{processing_ratio:.1f}",
+            idle_ratio=f"{(100 - processing_ratio):.1f}",
+            avg_fps=f"{self.framerate_stats.mean:.2f}",
+            sync_ms=f"{self.inter_camera_grab_range_ms.mean:.2f}"
         )
-        summary_section += summary_table
-
-        # Combine all sections
-        return header + timing_section + pipeline_section + summary_section

@@ -26,22 +26,20 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
 
     def put_multiframe(self,
                        mf_rec_array: np.recarray,
-                       overwrite: bool) -> None:
+                       overwrite_allowed: bool) -> None:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot write to it!")
         if self.read_only:
             raise ValueError("Cannot write to read-only shared memory!")
+        self.put_data(data=mf_rec_array, overwrite_allowed=overwrite_allowed)
+
         mf_numbers: list[int] = []
         for camera_id in mf_rec_array.dtype.names:
-            mf_rec_array[camera_id].frame_metadata.timestamps.pre_copy_to_multiframe_shm_ns = time.perf_counter_ns()
             mf_numbers.append(mf_rec_array[camera_id].frame_metadata.frame_number[0])
-        tik = time.perf_counter_ns()
-        self.put_data(data=mf_rec_array, overwrite=overwrite)
 
         if len(set(mf_numbers)) != 1:
             raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_numbers}, expected only one.")
 
-        # print(f"Put multi-frame {mf_numbers.pop()} to shared memory, took {ns_to_ms(time.perf_counter_ns() - tik):.3f} ms")
 
 
     def get_latest_multiframe(self) -> np.recarray|None:
@@ -50,10 +48,6 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         pre_tik = time.perf_counter_ns()
         mf_rec_array = self.get_latest_data()
 
-        for camera_id in mf_rec_array.dtype.names:
-
-            mf_rec_array[camera_id].frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns = time.perf_counter_ns()
-            mf_rec_array[camera_id].frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns = pre_tik
         return mf_rec_array
 
     def get_next_multiframe(self) -> np.recarray:
@@ -61,10 +55,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
             raise ValueError("No new multi-frame data available in shared memory!")
         mf_rec_array = self.get_next_data(None) # Don't pass an array, we want to create a new one since we want to store and record it
 
-        for camera_id in mf_rec_array.dtype.names:
-            pre_tik = time.perf_counter_ns()
-            mf_rec_array[camera_id].frame_metadata.timestamps.post_retrieve_from_multiframe_shm_ns = time.perf_counter_ns()
-            mf_rec_array[camera_id].frame_metadata.timestamps.pre_retrieve_from_multiframe_shm_ns = pre_tik
+
         return mf_rec_array
 
     def get_all_new_multiframes(self) -> list[np.recarray]:

@@ -12,7 +12,7 @@ from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt
+from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, CameraIdString
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,9 @@ class SkellycamApplication:
         logger.info(f"Camera group created with ID: {camera_group.id} and cameras: {list(camera_configs.keys())}")
         return camera_group
 
-    def get_new_frontend_payloads(self, if_newer_than:int) -> dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]]:
-        return self.camera_group_manager.get_latest_frontend_payloads(if_newer_than=if_newer_than)
+    def get_new_frontend_payloads(self, if_newer_than:int, display_image_sizes:dict[CameraIdString, dict[str,float]]) -> dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]]:
+        return self.camera_group_manager.get_latest_frontend_payloads(if_newer_than=if_newer_than,
+                                                                        display_image_sizes=display_image_sizes)
     
     def update_camera_configs(self,
                               camera_configs: CameraConfigs) -> CameraConfigs:

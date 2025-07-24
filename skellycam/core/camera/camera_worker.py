@@ -1,13 +1,11 @@
 import enum
 import logging
-import multiprocessing
 from dataclasses import dataclass
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.opencv_camera_run_process import opencv_camera_worker_method
+from skellycam.core.camera.opencv.opencv_camera_worker_method import opencv_camera_worker_method
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.recorders.recording_manager import WorkerType
-from skellycam.core.types.type_overloads import CameraIdString, WorkerStrategy, TopicSubscriptionQueue
+from skellycam.core.types.type_overloads import CameraIdString, WorkerStrategy, TopicSubscriptionQueue, WorkerType
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +29,10 @@ class CameraWorker:
                config: CameraConfig,
                update_camera_settings_subscription: TopicSubscriptionQueue,
                 shm_subscription: TopicSubscriptionQueue,
+               recording_info_subscription: TopicSubscriptionQueue,
                camera_worker_strategy: WorkerStrategy,
                camera_strategy: CameraStrategies = CameraStrategies.OPEN_CV,
+
                ):
 
 
@@ -48,6 +48,7 @@ class CameraWorker:
                                                    config=config,
                                                    update_camera_settings_subscription=update_camera_settings_subscription,
                                                    shm_subscription=shm_subscription,
+                                                    recording_info_subscription=recording_info_subscription,
                                                    camera_worker_strategy=camera_worker_strategy,
                                                    )
                                        )

@@ -3,8 +3,8 @@ import logging
 import cv2
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.determine_backend import determine_backend
-from skellycam.core.camera.opencv.opencv_apply_config import apply_camera_configuration
+from skellycam.core.camera.opencv.opencv_helpers.determine_backend import determine_opencv_camera_backend
+from skellycam.core.camera.opencv.opencv_helpers.opencv_apply_config import apply_camera_configuration
 from skellycam.utilities.wait_functions import wait_1s
 
 
@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tuple[cv2.VideoCapture, CameraConfig]:
-    cap_backend = determine_backend()
+    cap_backend = determine_opencv_camera_backend()
     attempts = -1
     capture: cv2.VideoCapture | None = None
     while attempts < retry_count and capture is None:
         attempts += 1
-        capture = cv2.VideoCapture(int(config.camera_index), cap_backend.value)
+        capture = cv2.VideoCapture(int(config.camera_index), cap_backend.id)
         if not capture.isOpened():
             if attempts < retry_count:
                 logger.warning(

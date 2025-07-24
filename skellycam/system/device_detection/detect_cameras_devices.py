@@ -5,10 +5,15 @@ from cv2.videoio_registry import getBackendName
 from cv2_enumerate_cameras import supported_backends, enumerate_cameras
 from cv2_enumerate_cameras.camera_info import CameraInfo
 from pydantic import BaseModel
+from tabulate import tabulate
 
+from skellycam.core.camera.opencv.opencv_helpers.determine_backend import determine_opencv_camera_backend, OpenCVBackend
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString, CameraBackendInt, CameraVendorIdInt, \
     CameraProductIdInt, CameraDevicePathString, CameraBackendNameString
 
+
+import logging
+logger = logging.getLogger(__name__)
 
 # define a function to search for a camera
 def find_camera(
@@ -70,29 +75,31 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
     Returns a list of CameraInfo objects for each detected camera.
     """
     if backend_id is None:
-
-        backend_id = supported_backends[0] if len(supported_backends) > 0 else cv2.CAP_ANY
+        backend = determine_opencv_camera_backend()
+    else:
+        backend = OpenCVBackend.from_backend_id(backend_id)
 
 
     cameras: list[CameraDeviceInfo] =  []
-    for camera_info in enumerate_cameras(apiPreference=backend_id):
+    for camera_info in enumerate_cameras(apiPreference=backend.id):
+        device = CameraDeviceInfo.from_camera_info(camera_info)
         if filter_virtual and 'virtual' in camera_info.name.lower():
             continue
         if camera_info.vid is None or camera_info.pid is None:
             if 'facetime' not in camera_info.name.lower():
                 # Skip cameras without VID and PID (unless its a 'facetime' camera on macOS)
                 continue
-
-        cameras.append(CameraDeviceInfo.from_camera_info(camera_info))
+        cameras.append(device)
+    logger.debug(f"Detected {len(cameras)} cameras:\n {tabulate([camera.model_dump() for camera in cameras], headers='keys')}\n)")
     return cameras
 
 if __name__ == "__main__":
     print(f"Platform: {platform()}")
     print(f"OpenCV Version: {cv2.__version__}")
     print(f"Supported Backends: {[getBackendName(b) for b in supported_backends]}")
-    cameras = detect_available_cameras()
-    if not cameras:
-        print("No cameras detected.")
+    _cameras = detect_available_cameras()
+    if not _cameras:
+        print("No _cameras detected.")
     else:
-        for cam in cameras:
+        for cam in _cameras:
             print(f"Camera Index: {cam.index}, Name: {cam.name}, Vendor ID: {cam.vendor_id}, Product ID: {cam.product_id}, Path: {cam.path}, Backend: {cam.backend_name} ({cam.backend_id})")

@@ -92,7 +92,7 @@ class FramePayload(BaseModel):
 
         instance = cls(
             image=array.image[0],
-            frame_metadata=FrameMetadata.from_numpy_record_array(array.frame_metadata[0])
+            frame_metadata=FrameMetadata.from_recarray(array.frame_metadata[0])
         )
         if apply_config_rotation:
             instance.image = rotate_image(instance.image, instance.camera_config.rotation)
@@ -116,7 +116,7 @@ class FramePayload(BaseModel):
                              f"Actual: {frame_rec_array.frame_metadata.timestamps.timebase_mapping}")
 
         self.image = frame_rec_array.image.copy()
-        self.frame_metadata = FrameMetadata.from_numpy_record_array(frame_rec_array.frame_metadata.copy())
+        self.frame_metadata = FrameMetadata.from_recarray(frame_rec_array.frame_metadata.copy())
 
         if apply_config_rotation:
             self.image = rotate_image(self.image, self.camera_config.rotation)

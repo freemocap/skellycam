@@ -11,12 +11,13 @@ import {RefreshDetectedCamerasButton} from "@/components/available-cameras-panel
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
 import {selectAllCameras, toggleCameraSelection, updateCameraConfig,} from "@/store/slices/cameras-slices/camerasSlice";
-import {detectCameraDevices} from "@/store/thunks/detect-cameras-client-thunks";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 import {CloseCamerasButton} from "@/components/available-cameras-panel/CloseCamerasButton";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
 import {ApplyCameraConfigsButton} from "@/components/available-cameras-panel/ApplyCameraConfigsButton";
 import {PauseUnpauseButton} from "../PauseUnpauseButton";
+// import { detectCameraDevices } from "@/store/thunks/detect-cameras-client-thunks";
+import { detectCameraDevices } from "@/store/thunks/detect-cameras-server-thunk";
 
 export const AvailableCamerasPanel = () => {
     const theme = useTheme();
@@ -50,7 +51,11 @@ export const AvailableCamerasPanel = () => {
 
     // Initial camera detection
     useEffect(() => {
-        dispatch(detectCameraDevices(true));
+        if (camerasArray.length > 0) {
+            // If cameras are already detected, we don't need to detect again
+            return;
+        }
+        dispatch(detectCameraDevices());
     }, [dispatch]);
 
     // Handle connection to selected cameras

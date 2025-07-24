@@ -6,19 +6,19 @@ from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.mf_builder import MultiframeBuilder
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
-    RecordingInfoMessage
+    RecordingInfoMessage, RecordingFinishedMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
-from skellycam.core.recorders.recording_manager import RecordingManager
+from skellycam.core.recorders.videos.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import create_frontend_payload_from_mf_recarray
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, wait_1s
+from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms
 
 logger = logging.getLogger(__name__)
-
 
 
 @dataclass
@@ -27,7 +27,6 @@ class CameraGroup:
     configs: CameraConfigs
     cameras: CameraManager
     mf_builder: MultiframeBuilder
-    recorder: RecordingManager
     shm: CameraGroupSharedMemoryManager | None = None
     mf: MultiFramePayload | None = None  # Local copy of the latest multi-frame payload
 
@@ -41,16 +40,11 @@ class CameraGroup:
                global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None,
                camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
-
-               recorder_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
                mf_builder_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
 
         ipc = CameraGroupIPC.create(group_id=group_id,
                                     camera_configs=camera_configs,
                                     global_kill_flag=global_kill_flag)
-        recorder = RecordingManager.create(ipc=ipc,
-                                           worker_strategy=recorder_strategy
-                                           )
         mf_builder = MultiframeBuilder.create(ipc=ipc,
                                               worker_strategy=mf_builder_strategy)
 
@@ -63,7 +57,7 @@ class CameraGroup:
         return cls(
             ipc=ipc,
             cameras=cameras,
-            recorder=recorder,
+            # recorder=recorder,
             configs=camera_configs,
             mf_builder=mf_builder,
         )
@@ -71,7 +65,7 @@ class CameraGroup:
     def start(self) -> CameraConfigs:
         logger.info(f"Starting camera group ID: {self.id} with cameras: {list(self.configs.keys())}")
         self.cameras.start()
-        self.recorder.start()
+        # self.recorder.start()
         self.mf_builder.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
@@ -88,20 +82,24 @@ class CameraGroup:
 
     @property
     def all_alive(self):
-        return all([self.cameras.all_alive, self.recorder.is_alive()])
+        return all([self.cameras.all_alive,
+                    self.mf_builder.is_alive])
 
     @property
     def any_alive(self):
-        return any([self.cameras.any_alive, self.recorder.is_alive(), self.mf_builder.is_alive()])
+        return any([self.cameras.any_alive,
+                    self.mf_builder.is_alive])
+
     @property
     def all_ready(self) -> bool:
         if self.shm is None:
             return False
-        return all([self.cameras.all_ready, self.recorder.ready, self.mf_builder.ready, self.shm.valid])
+        return all([self.cameras.all_ready,
+                    # self.recorder.ready,
+                    self.mf_builder.is_alive,
+                    self.shm.valid])
 
-
-
-    def get_latest_frontend_payload(self, if_newer_than: int ) -> tuple[FrameNumberInt, bytes]| None:
+    def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt, bytes] | None:
         if self.shm is None or not self.shm.valid:
             return None
         if self.shm.latest_multiframe_number.value <= if_newer_than:
@@ -112,10 +110,8 @@ class CameraGroup:
             return None
         return create_frontend_payload_from_mf_recarray(
             mf_rec_array=mf_rec_array,
+            display_image_sizes=display_image_sizes,
         )
-
-
-
 
     def pause(self, await_paused: bool = True):
         """
@@ -124,7 +120,6 @@ class CameraGroup:
         logger.info(f"Pausing camera group ID: {self.id}")
         self.ipc.pause(await_paused=await_paused)
         logger.info(f"Camera group ID: {self.id} is paused.")
-
 
     def unpause(self, await_unpaused: bool = True):
         """
@@ -150,8 +145,18 @@ class CameraGroup:
         """
         Start recording for the camera group.
         """
+        self.ipc.pause(await_paused=True)
+        logger.info("Publishing recording info message...")
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
-        self.recorder.status.should_record.value = True
+        while not self.ipc.all_ready_to_record and self.ipc.should_continue:
+            wait_10ms()
+        logger.api(f"All cameras are ready to record for camera group ID: {self.id}")
+        self.ipc.camera_orchestrator.should_record_frames.value = True
+        wait_10ms()
+        logger.api("Unpausing camera group to start recording...")
+        self.ipc.unpause(await_unpaused=True)
+        logger.info("Camera group unpaused - Recording successfully started.")
+
         logger.info(
             f"Started recording for camera group ID: {self.id} wit recording name: {recording_info.recording_name}")
 
@@ -159,7 +164,12 @@ class CameraGroup:
         """
         Stop recording for the camera group.
         """
-        self.recorder.status.should_record.value = False
+
+        logger.debug(f"Stopping recording for all cameras in orchestrator...")
+        self.pause(await_paused=True)
+        self.ipc.camera_orchestrator.should_record_frames.value = False
+        self.unpause(await_unpaused=True)
+        finalize_recording(ipc=self.ipc)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
     def close(self):
@@ -167,23 +177,23 @@ class CameraGroup:
         self.ipc.pause(await_paused=True)
         self.ipc.should_continue = False
         wait_1s()
-        self.mf_builder.close()
 
         while self.any_alive:
-            logger.debug(f"Waiting for all camera group processes to close, cameras: {self.cameras.any_alive}, "
-                         f"recorder: {self.recorder.is_alive()}, mf_builder: {self.mf_builder.is_alive()}")
             wait_1s()
-
-
+        while not self.cameras.ready_to_shutdown.value:
+            wait_1s()
+        self.cameras.worker.join()
+        self.mf_builder.worker.terminate() # TODO - Die better
         if self.shm is not None:
             try:
                 self.shm.unlink_and_close()
             except Exception as e:
                 logger.error(f"Error closing shared memory: {type(e).__name__} - {e}")
-        
+
             logger.success("Shared memory closed and unlinked if applicable.")
 
         logger.success("Camera group closed successfully.")
+
 
 def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:
     updated_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in
@@ -197,6 +207,43 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
                 updated_configs[
                     extracted_config_message.extracted_config.camera_id] = extracted_config_message.extracted_config
         wait_10ms()
-    validate_camera_configs(updated_configs)
+    if not ipc.should_continue:
+        validate_camera_configs(updated_configs)
 
     return updated_configs
+
+
+def finalize_recording(ipc: CameraGroupIPC):
+    recording_finished_messages_by_camera: dict[CameraIdString, RecordingFinishedMessage | None] = {camera_id: None for camera_id in
+                                                                                   ipc.camera_ids}
+    recording_info: RecordingInfo | None = None
+    while any([not isinstance(response, RecordingFinishedMessage) for response in
+               recording_finished_messages_by_camera.values()]) and ipc.should_continue:
+        if not ipc.recording_finished_subscription.empty():
+            recording_finished_message = ipc.recording_finished_subscription.get()
+            if not isinstance(recording_finished_message, RecordingFinishedMessage):
+                raise RuntimeError(f"Received unexpected message type: {type(recording_finished_message)}")
+
+            if recording_finished_messages_by_camera[recording_finished_message.camera_id] is not None:
+                raise RuntimeError(
+                    f"Received multiple recording finished messages for camera {recording_finished_message.camera_id}.")
+
+            logger.debug(f"Recieved recording finished message for camera {recording_finished_message.camera_id}.")
+            recording_finished_messages_by_camera[recording_finished_message.camera_id] = recording_finished_message
+            if recording_info is None:
+                recording_info = recording_finished_message.recording_info
+            elif recording_info != recording_finished_message.recording_info:
+                raise RuntimeError(
+                    f"Received multiple recording info messages with different recording names: "
+                    f"{recording_info.recording_name} and {recording_finished_message.recording_info.recording_name}")
+        wait_30ms()
+
+    if not all([isinstance(response, RecordingFinishedMessage) for response in
+               recording_finished_messages_by_camera.values()]):
+        raise RuntimeError("Not all cameras finished recording successfully.")
+    recording_finalizer = RecordingFinalizer.create(
+        recording_info=recording_info,
+        frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items()},
+    )
+    recording_finalizer.finalize_recording()
+    logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")

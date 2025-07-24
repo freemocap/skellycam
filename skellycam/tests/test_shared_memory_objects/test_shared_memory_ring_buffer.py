@@ -260,7 +260,7 @@ class TestSharedMemoryRingBuffer:
         # Fill the buffer and then some to test wrapping
         for i in range(10):  # More than buffer size (5)
             test_data = np.rec.array([(float(i), float(i * 2), float(i * 3))], dtype=simple_dtype)
-            simple_ring_buffer.put_data(test_data, overwrite=True)
+            simple_ring_buffer.put_data(test_data, overwrite_allowed=True)
 
         # Verify last_written_index
         assert simple_ring_buffer.last_written_index.value == 9

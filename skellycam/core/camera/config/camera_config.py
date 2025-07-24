@@ -52,19 +52,19 @@ def get_video_file_type(fourcc_code: int) -> str:
     '.mp4'
     """
     fourcc_to_extension = {
-        cv2.VideoWriter_fourcc(*'MP4V'): 'mp4',
-        cv2.VideoWriter_fourcc(*'H264'): 'mp4',
-        cv2.VideoWriter_fourcc(*'X264'): 'mp4',
+        cv2.VideoWriter.fourcc(*'MP4V'): 'mp4',
+        cv2.VideoWriter.fourcc(*'H264'): 'mp4',
+        cv2.VideoWriter.fourcc(*'X264'): 'mp4',
 
-        cv2.VideoWriter_fourcc(*'XVID'): 'avi',
-        cv2.VideoWriter_fourcc(*'DIVX'): 'avi',
+        cv2.VideoWriter.fourcc(*'XVID'): 'avi',
+        cv2.VideoWriter.fourcc(*'DIVX'): 'avi',
 
-        cv2.VideoWriter_fourcc(*'MJPG'): 'mjpeg',
-        cv2.VideoWriter_fourcc(*'VP80'): 'webm',
-        cv2.VideoWriter_fourcc(*'THEO'): 'ogv',
-        cv2.VideoWriter_fourcc(*'WMV1'): 'wmv',
-        cv2.VideoWriter_fourcc(*'WMV2'): 'wmv',
-        cv2.VideoWriter_fourcc(*'FLV1'): 'flv',
+        cv2.VideoWriter.fourcc(*'MJPG'): 'mjpeg',
+        cv2.VideoWriter.fourcc(*'VP80'): 'webm',
+        cv2.VideoWriter.fourcc(*'THEO'): 'ogv',
+        cv2.VideoWriter.fourcc(*'WMV1'): 'wmv',
+        cv2.VideoWriter.fourcc(*'WMV2'): 'wmv',
+        cv2.VideoWriter.fourcc(*'FLV1'): 'flv',
     }
 
     file_format = fourcc_to_extension.get(fourcc_code, None)
@@ -284,22 +284,22 @@ class CameraConfig(BaseModel):
                              f"Expected: {CAMERA_CONFIG_DTYPE}, "
                              f"Actual: {array.dtype}")
         return cls(
-            camera_id=array.camera_id,
-            camera_index=array.camera_index,
-            camera_name=array.camera_name,
-            use_this_camera=array.use_this_camera,
+            camera_id=array.camera_id[0],
+            camera_index=array.camera_index[0],
+            camera_name=array.camera_name[0],
+            use_this_camera=array.use_this_camera[0],
             resolution=ImageResolution(
-                height=array.resolution_height,
-                width=array.resolution_width
+                height=array.resolution_height[0],
+                width=array.resolution_width[0]
             ),
-            color_channels=array.color_channels,
-            pixel_format=array.pixel_format,
-            exposure_mode=array.exposure_mode,
-            exposure=array.exposure,
-            framerate=array.framerate,
-            rotation=RotationTypes(array.rotation),
-            capture_fourcc=array.capture_fourcc,
-            writer_fourcc=array.writer_fourcc
+            color_channels=array.color_channels[0],
+            pixel_format=array.pixel_format[0],
+            exposure_mode=array.exposure_mode[0],
+            exposure=array.exposure[0],
+            framerate=array.framerate[0],
+            rotation=RotationTypes(array.rotation[0]),
+            capture_fourcc=array.capture_fourcc[0],
+            writer_fourcc=array.writer_fourcc[0]
         )
 
     def __eq__(self, other: "CameraConfig") -> bool:

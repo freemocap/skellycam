@@ -1,6 +1,7 @@
 import logging
 from abc import ABC
 from multiprocessing.process import parent_process
+from sys import platform
 from typing import Type
 
 import numpy as np
@@ -48,7 +49,7 @@ class PubSubTopicABC(BaseModel, ABC):
         if len(self.subscriptions) == 0:
             logger.warning(f"Publishing message of type {self.message_type} with no subscribers, message will be lost")
             return
-        logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers with ~{np.mean([sub.qsize() for sub in self.subscriptions]):.2f} messages per subscriber")
+        logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
         for sub in self.subscriptions:
             if overwrite:
                 overwrote = 0

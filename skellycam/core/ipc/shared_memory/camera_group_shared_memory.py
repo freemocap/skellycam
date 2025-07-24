@@ -1,11 +1,13 @@
 import logging
 import time
+from copy import copy
 from dataclasses import dataclass
 
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.multi_frame_payload_ring_buffer import MultiFrameSharedMemoryRingBuffer
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
@@ -122,25 +124,24 @@ class CameraGroupSharedMemoryManager:
         """
         Retrieves the latest frame from each camera shm and copies it to the MultiFrameSharedMemoryRingBuffer.
         """
-        mf_build_start_ns = time.perf_counter_ns()
         if self.read_only:
             raise ValueError(
                 "Cannot use `get_next_multi_frame_payload` in read-only mode - use `get_latest_multi_frame_payload` instead!")
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
 
-        # print(f"mf_init_dur: {ns_to_ms(time.perf_counter_ns() - mf_build_start_ns):.3f}")
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
 
-            mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[camera_id])
+            mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[camera_id])# TODO - check frame number available before grab - there's a race condition here that causes frame mismatch between cameras on occasion
             if mf_rec_array[camera_id].frame_metadata.frame_number[0] != self.latest_multiframe_number.value + 1:
-                raise ValueError(f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
+                raise ValueError(
+                    f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
 
-        self.multi_frame_ring_shm.put_multiframe(mf_rec_array =mf_rec_array,
-                                                 overwrite=False)  # Don't overwrite to ensure all frames are saved
+        self.multi_frame_ring_shm.put_multiframe(mf_rec_array=mf_rec_array,
+                                                 overwrite_allowed=False)  # Don't overwrite to ensure all frames are saved
 
         mf_numbers = set(mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in self.camera_ids)
         if len(mf_numbers) > 1:
@@ -152,10 +153,12 @@ class CameraGroupSharedMemoryManager:
 
         return mf_rec_array
 
-    def build_all_new_multiframes(self, mf_rec_array:np.recarray) -> np.recarray:
+    def build_all_new_multiframes(self, mf_rec_array: np.recarray) -> tuple[bool, np.recarray]:
+        new_data = False
         while self.new_multi_frame_available:
+            new_data = True
             mf_rec_array = self.build_next_multi_frame_payload(mf_rec_array)
-        return  mf_rec_array #recycle the mf object to save memory
+        return new_data, mf_rec_array  # recycle the mf object to save memory
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it
@@ -181,3 +184,5 @@ class CameraGroupSharedMemoryManager:
         except Exception as e:
             logger.error(f"Error during shared memory cleanup: {type(e).__name__} - {e}")
             logger.exception(e)
+
+

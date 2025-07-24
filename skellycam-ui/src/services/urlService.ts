@@ -41,6 +41,7 @@ class UrlService {
   // Camera API endpoints
   getCameraUrls() {
     return {
+      detectCameras: this.getApiUrl('/camera/detect'),
       createGroup: this.getApiUrl('/camera/group/create'),
       closeAll: this.getApiUrl('/camera/group/close/all'),
       updateConfig: this.getApiUrl('/camera/update'),

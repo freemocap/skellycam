@@ -14,7 +14,7 @@ from skellycam.utilities.wait_functions import async_wait_10ms
 
 logger = logging.getLogger(__name__)
 
-BACKPRESSURE_WARNING_THRESHOLD: int = 5 # Number of frames before we warn about backpressure
+BACKPRESSURE_WARNING_THRESHOLD: int = 5# Number of frames before we warn about backpressure
 class WebsocketServer:
     def __init__(self, websocket: WebSocket):
 
@@ -25,6 +25,7 @@ class WebsocketServer:
         self.ws_tasks: list[asyncio.Task] = []
         self.last_received_frontend_confirmation: int = -1
         self.last_sent_frame_number: int = -1
+        self._display_image_sizes: dict[CameraGroupIdString, dict[str, float]]|None = None
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -69,6 +70,11 @@ class WebsocketServer:
                     task.cancel()
             raise
 
+    def check_frame_acknowledgment_status(self) -> bool:
+        if self.last_sent_frame_number == -1:
+            return True
+        return  self.last_received_frontend_confirmation >= self.last_sent_frame_number
+
     async def _frontend_image_relay(self):
         """
         Relay image payloads from the shared memory to the frontend via the websocket.
@@ -76,24 +82,23 @@ class WebsocketServer:
         logger.info(
             f"Starting frontend image payload relay...")
         try:
+            skipped_previous = False
             while self.should_continue:
                 await async_wait_10ms()
-                if self.last_received_frontend_confirmation >= self.last_sent_frame_number or self.last_sent_frame_number == -1:
-
-                    new_frontend_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = self._app.get_new_frontend_payloads(
-                        if_newer_than=self.last_sent_frame_number)
-                    for camera_group_id, (frame_number, payload_bytes) in new_frontend_payloads.items():
-
-                        if not self.websocket.client_state == WebSocketState.CONNECTED:
-                            logger.error("Websocket is not connected, cannot send payload!")
-                            raise RuntimeError("Websocket is not connected, cannot send payload!")
-
-
-                        await self.websocket.send_bytes(payload_bytes)
-                        self.last_sent_frame_number = frame_number
+                if self.check_frame_acknowledgment_status():
+                    if skipped_previous: # skip an extra frame if there was backpressure from frontend
+                        skipped_previous = False
+                    else:
+                        new_frontend_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = self._app.get_new_frontend_payloads(
+                            if_newer_than=self.last_sent_frame_number,
+                        display_image_sizes=self._display_image_sizes)
+                        for camera_group_id, (frame_number, payload_bytes) in new_frontend_payloads.items():
+                            await self.websocket.send_bytes(payload_bytes)
+                            self.last_sent_frame_number = frame_number
                 else:
+                    skipped_previous = True
                     backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
-                    if backpressure >BACKPRESSURE_WARNING_THRESHOLD:
+                    if backpressure > BACKPRESSURE_WARNING_THRESHOLD:
                         logger.warning(
                             f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
         except WebSocketDisconnect:
@@ -148,10 +153,10 @@ class WebsocketServer:
                         if text_content.strip().startswith('{') or text_content.strip().startswith('['):
                             try:
                                 data = json.loads(text_content)
-
                                 # Handle received_frame acknowledgment
-                                if 'frame_number' in data:
-                                    self.last_received_frontend_confirmation = data['frame_number']
+                                if 'frameNumber' in data:
+                                    self.last_received_frontend_confirmation = data['frameNumber']
+                                    self._display_image_sizes = data.get('displayImageSizes', None)
 
 
                             except json.JSONDecodeError as e:

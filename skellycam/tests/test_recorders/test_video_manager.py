@@ -19,7 +19,7 @@ from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.frame_payload import FramePayload
 from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.recorders.videos.video_manager import VideoManager
+from skellycam.core.recorders.videos.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.camera_group.timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
@@ -60,7 +60,7 @@ class TestVideoManager(TestCase):
         self.timebase_mapping = TimebaseMapping()
 
         # Create a video manager
-        self.video_manager = VideoManager.create(
+        self.video_manager = RecordingFinalizer.create(
             recording_info=self.recording_info,
             camera_configs=self.camera_configs
         )

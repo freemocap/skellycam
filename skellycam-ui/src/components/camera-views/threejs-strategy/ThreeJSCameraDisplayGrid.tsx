@@ -8,7 +8,6 @@ import {LoadingIndicator} from "@/components/camera-views/threejs-strategy/three
 
 
 const ThreeJSCameraDisplayGrid: React.FC = () => {
-    const theme = useTheme();
     const {latestImageData} = useWebSocketContext();
     const hasImages = Object.keys(latestImageData).length > 0;
 

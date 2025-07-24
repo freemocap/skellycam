@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core.ipc.pubsub.pubsub_abcs import PubSubTopicABC
 from skellycam.core.ipc.pubsub.pubsub_topics import LogsTopic, UpdateCamerasSettingsTopic, DeviceExtractedConfigTopic, \
-    SetShmTopic, RecordingInfoTopic
+    SetShmTopic, RecordingInfoTopic, RecordingFinishedTopic
 from skellycam.core.types.type_overloads import CameraGroupIdString, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,7 @@ class TopicTypes(Enum):
     EXTRACTED_CONFIG = auto() #Camera Configs extracted from the camera (i.e. the actual camera settings)
     SHM_UPDATES = auto()
     RECORDING_INFO = auto()
+    RECORDING_FINISHED = auto()
     LOGS = auto()
 
 
@@ -26,6 +27,7 @@ class PubSubTopicManager(BaseModel):
         TopicTypes.EXTRACTED_CONFIG: DeviceExtractedConfigTopic(),
         TopicTypes.SHM_UPDATES: SetShmTopic(),
         TopicTypes.RECORDING_INFO: RecordingInfoTopic(),
+        TopicTypes.RECORDING_FINISHED: RecordingFinishedTopic(),
         TopicTypes.LOGS: LogsTopic(),
     })
     model_config = ConfigDict(

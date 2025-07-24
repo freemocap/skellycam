@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {useCallback, useRef, useState} from "react";
+import * as THREE from "three";
 
 // Define the message types from the Python code
 enum MessageType {
@@ -67,56 +68,38 @@ interface FrameHeader {
     jpegStringLength: number;
 }
 
-export interface ImageData {
-    url: string;
+export interface CameraImageData {
+    imageWidth: number;
+    imageHeight: number;
     frameNumber: number;
     cameraId: string;
     cameraIndex: number;
-    imageWidth: number;
-    imageHeight: number;}
-// Number of frames to keep in the rolling buffer
-const MAX_BLOB_URLS_PER_CAMERA = 100;
+}
+
+export interface CameraDisplaySize {
+    width: number;
+    height: number;
+}
+
+export interface FrameRenderAcknowledgment {
+    frameNumber: number;
+    displayImageSizes: Record<string, CameraDisplaySize>;
+}
 export const useWebsocketBinaryMessageProcessor = () => {
-    const [latestImageData, setLatestImageData] = useState<ImageData[]>([]);
+    const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string, CameraImageData>>({});
+    const registeredCameraViewTextures = useRef<Record<string, THREE.VideoFrameTexture>>({});
 
-    // Use a ref to track all active blob URLs with their metadata
-    const blobUrlsRef = useRef<Record<string, BlobUrlInfo[]>>({});
 
-    // Reuse these objects for efficiency
     const textDecoderRef = useRef(new TextDecoder());
 
-    // Clean up all URLs when component unmounts
-    useEffect(() => {
-        return () => {
-            // Flatten all camera arrays and revoke all URLs
-            Object.values(blobUrlsRef.current).forEach(cameraUrls => {
-                cameraUrls.forEach(info => {
-                    URL.revokeObjectURL(info.url);
-                });
-            });
-        };
-    }, []);
-    // Helper function to clean up old blob URLs
-    const cleanupOldBlobUrls = useCallback(() => {
-        const cameras = Object.keys(blobUrlsRef.current);
 
-        cameras.forEach(cameraId => {
-            const cameraUrls = blobUrlsRef.current[cameraId] || [];
 
-            // If we have more URLs than our limit, remove the oldest ones
-            if (cameraUrls.length > MAX_BLOB_URLS_PER_CAMERA) {
-                const urlsToRemove = cameraUrls.slice(0, cameraUrls.length - MAX_BLOB_URLS_PER_CAMERA);
-
-                // Remove these URLs from our tracking and revoke them
-                urlsToRemove.forEach(info => {
-                    URL.revokeObjectURL(info.url);
-                });
-
-                // Update the array to only keep the most recent URLs
-                blobUrlsRef.current[cameraId] = cameraUrls.slice(-(MAX_BLOB_URLS_PER_CAMERA));
-            }
-        });
-    }, []);
+    const registerCameraViewTexture = useCallback((cameraId: string, texture: THREE.VideoFrameTexture) => {
+        if (registeredCameraViewTextures.current[cameraId]) {
+            console.warn(`Texture for camera ${cameraId} is already registered. Overwriting.`);
+        }
+        registeredCameraViewTextures.current[cameraId] = texture;
+    }, [registeredCameraViewTextures]);
 
     const parsePayloadHeader = useCallback((dataView: DataView): MessageHeaderFooter | null => {
         try {
@@ -130,7 +113,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
             const frameNumber = Number(dataView.getBigInt64(PAYLOAD_HEADER_FRAME_NUMBER_OFFSET, true));
             const numberOfCameras = dataView.getInt32(PAYLOAD_HEADER_NUM_CAMERAS_OFFSET, true);
 
-            return { messageType, frameNumber, numberOfCameras };
+            return {messageType, frameNumber, numberOfCameras};
         } catch (error) {
             console.error('Error parsing payload header:', error);
             return null;
@@ -168,6 +151,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
             const colorChannels = dataView.getInt32(FRAME_HEADER_COLOR_CHANNELS_OFFSET, true);
             const jpegStringLength = dataView.getInt32(FRAME_HEADER_JPEG_LENGTH_OFFSET, true);
 
+
             return {
                 messageType,
                 frameNumber,
@@ -184,7 +168,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
         }
     }, []);
 
-    const parsePayloadFooter = useCallback((dataView: DataView): MessageHeaderFooter | null => {
+    const parsePayloadFooter = useCallback((dataView: DataView,): MessageHeaderFooter | null => {
         try {
             const messageType = dataView.getUint8(PAYLOAD_FOOTER_MESSAGE_TYPE_OFFSET);
 
@@ -196,7 +180,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
             const frameNumber = Number(dataView.getBigInt64(PAYLOAD_FOOTER_FRAME_NUMBER_OFFSET, true));
             const numberOfCameras = dataView.getInt32(PAYLOAD_FOOTER_NUM_CAMERAS_OFFSET, true);
 
-            return { messageType, frameNumber, numberOfCameras };
+            return {messageType, frameNumber, numberOfCameras};
         } catch (error) {
             console.error('Error parsing payload footer:', error);
             return null;
@@ -204,7 +188,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
     }, []);
 
 
-    const processBinaryMessage = useCallback(async (data: ArrayBuffer): Promise<number | null> => {
+    const processBinaryMessage = useCallback(async (data: ArrayBuffer): Promise<FrameRenderAcknowledgment | null> => {
         try {
             let offset = 0;
 
@@ -216,16 +200,19 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 return null;
             }
 
-            const { frameNumber, numberOfCameras } = payloadHeader;
+            const {frameNumber, numberOfCameras} = payloadHeader;
             offset += PAYLOAD_HEADER_SIZE;
 
             if (numberOfCameras <= 0) {
                 console.warn(`No cameras found in frame ${frameNumber}`);
                 return null;
             }
+            const frameRenderAcknowledgment: FrameRenderAcknowledgment = {
+                frameNumber: frameNumber,
+                displayImageSizes: {},
+            }
 
             // Process each camera frame
-            const newImageDataArray: ImageData[] = [];
             const textDecoder = textDecoderRef.current;
 
             for (let i = 0; i < numberOfCameras; i++) {
@@ -248,33 +235,31 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 const jpegData = new Uint8Array(data, offset, frameHeader.jpegStringLength);
                 offset += frameHeader.jpegStringLength;
 
-                // Create blob URL directly
-                try {
-                    const blob = new Blob([jpegData], {type: 'image/jpeg'});
-                    const url = URL.createObjectURL(blob);
 
-                    // Store the new URL in our tracking system
-                    if (!blobUrlsRef.current[frameHeader.cameraId]) {
-                        blobUrlsRef.current[frameHeader.cameraId] = [];
+                if (latestCameraImageData[frameHeader.cameraId]?.imageWidth !== frameHeader.imageWidth ||
+                    latestCameraImageData[frameHeader.cameraId]?.imageHeight !== frameHeader.imageHeight) {
+                    // If the image dimensions or frame number have changed, update the state
+
+                    setLatestCameraImageData(prevData => ({
+                        ...prevData,
+                        [frameHeader.cameraId]: {
+                            imageWidth: frameHeader.imageWidth,
+                            imageHeight: frameHeader.imageHeight,
+                            frameNumber: frameHeader.frameNumber,
+                            cameraId: frameHeader.cameraId,
+                            cameraIndex: frameHeader.cameraIndex,
+                        }
+                    }));
+
+                }
+                if (registeredCameraViewTextures.current[frameHeader.cameraId]) {
+                    // Update existing texture
+                    registeredCameraViewTextures.current[frameHeader.cameraId].setFrame(await createImageBitmap(new Blob([jpegData], {type: "image/jpeg"})));
+                    registeredCameraViewTextures.current[frameHeader.cameraId].needsUpdate = true;
+                    frameRenderAcknowledgment.displayImageSizes[frameHeader.cameraId] = {
+                        width: frameHeader.imageWidth,
+                        height: frameHeader.imageHeight,
                     }
-
-                    blobUrlsRef.current[frameHeader.cameraId].push({
-                        url,
-                        frameNumber: frameHeader.frameNumber,
-                        cameraId: frameHeader.cameraId,
-                        createdAt: Date.now()
-                    });
-
-                    newImageDataArray.push({
-                        url,
-                        frameNumber: frameHeader.frameNumber,
-                        cameraId: frameHeader.cameraId,
-                        cameraIndex: frameHeader.cameraIndex,
-                        imageWidth: frameHeader.imageWidth,
-                        imageHeight: frameHeader.imageHeight
-                    });
-                } catch (error) {
-                    console.error(`Failed to create Blob URL for camera ${frameHeader.cameraId}:`, error);
                 }
             }
 
@@ -292,26 +277,17 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 return null;
             }
 
-            // Sort by camera index
-            newImageDataArray.sort((a, b) => a.cameraIndex - b.cameraIndex);
 
-            // Update state with new image URLs
-            setLatestImageData(newImageDataArray);
-
-            // Clean up old URLs (but not immediately, to give time for textures to load)
-            setTimeout(() => {
-                cleanupOldBlobUrls();
-            }, 1000); // Wait 1 second before cleaning up
-
-            return frameNumber;
+            return frameRenderAcknowledgment;
         } catch (error) {
             console.error('Error processing binary frame:', error);
             return null;
         }
-    }, [parsePayloadHeader, parseFrameHeader, parsePayloadFooter, cleanupOldBlobUrls]);
+    }, [parsePayloadHeader, parseFrameHeader, parsePayloadFooter]);
 
     return {
-        latestImageData,
-        processBinaryMessage
+        latestImageData: latestCameraImageData,
+        registerCameraViewTexture,
+        processBinaryMessage,
     };
 };

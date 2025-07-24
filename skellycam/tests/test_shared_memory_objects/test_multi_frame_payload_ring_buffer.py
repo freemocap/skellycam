@@ -100,7 +100,7 @@ def writer_process_func(dto_dict, iterations, camera_configs_dict, timebase_mapp
             frame.frame_metadata.frame_number = i
 
         mf_rec_array = mf_payload.to_numpy_record_array()
-        ring_buffer.put_multiframe(mf_rec_array, overwrite=True)
+        ring_buffer.put_multiframe(mf_rec_array, overwrite_allowed=True)
         time.sleep(0.02)
 
     # Clean up
@@ -182,7 +182,7 @@ class TestMultiFrameSharedMemoryRingBuffer:
         assert np.array_equal(result, output_multiframe)
 
         # Put a multiframe into shared memory
-        multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite=False)
+        multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite_allowed=False)
 
         # Verify frame is available
         assert multiframe_buffer.first_data_written is True
@@ -204,7 +204,7 @@ class TestMultiFrameSharedMemoryRingBuffer:
         # Put another multiframe with updated frame numbers
         for camera_id in example_multiframe_rec_array.dtype.names:
             example_multiframe_rec_array[camera_id].frame_metadata.frame_number[0] = 1
-        multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite=False)
+        multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite_allowed=False)
 
         # Verify updated index
         assert multiframe_buffer.last_written_index.value == 1
@@ -222,7 +222,7 @@ class TestMultiFrameSharedMemoryRingBuffer:
         for i in range(3):
             for camera_id in example_multiframe_rec_array.dtype.names:
                 example_multiframe_rec_array[camera_id].frame_metadata.frame_number = i
-            multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite=False)
+            multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite_allowed=False)
 
         # Verify multiframes are available
         assert multiframe_buffer.first_data_written is True
@@ -250,7 +250,7 @@ class TestMultiFrameSharedMemoryRingBuffer:
 
         # Attempt to put a multiframe
         with pytest.raises(ValueError, match="Cannot write to read-only shared memory!"):
-            read_only_buffer.put_multiframe(example_multiframe_rec_array, overwrite=False)
+            read_only_buffer.put_multiframe(example_multiframe_rec_array, overwrite_allowed=False)
 
         # Clean up
         read_only_buffer.close()
@@ -342,7 +342,7 @@ class TestMultiFrameSharedMemoryRingBuffer:
         for i in range(total_frames):
             for camera_id in example_multiframe_rec_array.dtype.names:
                 example_multiframe_rec_array[camera_id].frame_metadata.frame_number[0] = i
-            multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite=True)
+            multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite_allowed=True)
 
         # Verify last_written_index
         assert multiframe_buffer.last_written_index.value == total_frames - 1
@@ -368,7 +368,7 @@ class TestMultiFrameSharedMemoryRingBuffer:
         """Test that timestamps are updated when putting and retrieving multiframes."""
         # Put a multiframe
         before_put = time.perf_counter_ns()
-        multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite=False)
+        multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite_allowed=False)
         after_put = time.perf_counter_ns()
 
         # Verify timestamps were set for each camera
@@ -395,7 +395,7 @@ class TestMultiFrameSharedMemoryRingBuffer:
         for i in range(3):
             for camera_id in example_multiframe_rec_array.dtype.names:
                 example_multiframe_rec_array[camera_id].frame_metadata.frame_number[0] = i
-            multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite=False)
+            multiframe_buffer.put_multiframe(example_multiframe_rec_array, overwrite_allowed=False)
 
         # Get all new multiframes
         multiframes = multiframe_buffer.get_all_new_multiframes()

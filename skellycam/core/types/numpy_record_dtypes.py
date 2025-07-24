@@ -34,18 +34,17 @@ TIMEBASE_MAPPING_DTYPE = np.dtype([
 ], align=True)
 
 FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
-    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE),
+    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE), #TODO - move to frame_metadata
+
     ('frame_initialized_ns', np.uint64),
     ('pre_frame_grab_ns', np.uint64),
     ('post_frame_grab_ns', np.uint64),
     ('pre_frame_retrieve_ns', np.uint64),
     ('post_frame_retrieve_ns', np.uint64),
     ('pre_copy_to_camera_shm_ns', np.uint64),
-    ('pre_retrieve_from_camera_shm_ns', np.uint64),
-    ('post_retrieve_from_camera_shm_ns', np.uint64),
-    ('pre_copy_to_multiframe_shm_ns', np.uint64),
-    ('pre_retrieve_from_multiframe_shm_ns', np.uint64),
-    ('post_retrieve_from_multiframe_shm_ns', np.uint64),
+    ('post_copy_to_camera_shm_ns', np.uint64),
+    ('pre_frame_record_ns', np.uint64),
+    ('post_frame_record_ns', np.uint64),
 ], align=True)
 
 FRAME_METADATA_DTYPE = np.dtype([
@@ -110,8 +109,9 @@ JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 _reusable_bytes_payload: bytearray = bytearray(0)  # Will be resized on first use
 
 
-def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_image: float = 0.5,
-                                             jpeg_encoding_parameters: list[int] = JPEG_ENCODING_PARAMETERS) -> tuple[
+def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
+                                             display_image_sizes: dict[str, dict[str, float]] | None = None,
+                                             jpeg_encoding_parameters=None) -> tuple[
     FrameNumberInt, bytes]:
     """
     Convert a multi-frame record array into a list of record arrays for each camera.
@@ -122,6 +122,8 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
     We then convert that list into a bytes object for websocket transmission.
     """
     global _reusable_bytes_payload
+    if jpeg_encoding_parameters is None:
+        jpeg_encoding_parameters = JPEG_ENCODING_PARAMETERS
 
     camera_ids = mf_rec_array.dtype.names
     frame_numbers = [mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in camera_ids]
@@ -151,17 +153,23 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray, resize_i
 
     _reusable_bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
     current_pos += len(header_bytes)
-
+    # image_scale= np.min([np.max([(len(camera_ids)*2)**-1, 0.2]), 1.0])
+    image_scale= .5
     for camera_id in camera_ids:
         frame_recarray = mf_rec_array[camera_id][0]
-
+        image = cv2.rotate(frame_recarray.image[:], cv2.ROTATE_180)
         if frame_recarray.frame_metadata.camera_config.rotation != -1:
-            image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
+            image = cv2.rotate(image, frame_recarray.frame_metadata.camera_config.rotation)
+
+        if display_image_sizes is None or camera_id not in display_image_sizes.keys() or True: # TODO - Disable resizing for now, but should revisit
+            # Default resize to 50% if no sizes provided
+            resize_image_height = int(image.shape[0] * image_scale)
+            resize_image_width = int(image.shape[1] * image_scale)
         else:
-            image = frame_recarray.image[:]
-        # Faster resize using nearest neighbor interpolation
-        resized_img = cv2.resize(image, dsize=None, fx=resize_image, fy=resize_image,
-                                 interpolation=cv2.INTER_NEAREST)
+            resize_image_height = int(display_image_sizes[camera_id]['height'])
+            resize_image_width = int(display_image_sizes[camera_id]['width'])
+        resized_img = cv2.resize(image, dsize=(resize_image_width, resize_image_height),
+                                 interpolation=cv2.INTER_LINEAR) #TODO - see if other interpolation methods are faster/better
         _, jpeg_data = cv2.imencode('.jpg', resized_img, jpeg_encoding_parameters)
         jpeg_string = jpeg_data.tobytes()
         jpeg_string_length = len(jpeg_string)

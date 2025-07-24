@@ -262,7 +262,7 @@ class TestRecordingTimestamps:
     def test_save_timestamps(self, mock_logger):
         """Test the save_timestamps method."""
         # Call the method
-        self.recording_timestamps.save_timestamps()
+        self.recording_timestamps.save_timestamp_csvs()
 
         # Check that the CSV files were created
         mf_csv_path = Path(
@@ -322,7 +322,7 @@ class TestRecordingTimestamps:
 
     def test_to_mf_dataframe(self):
         """Test the to_mf_dataframe method."""
-        df = self.recording_timestamps.to_mf_dataframe()
+        df = self.recording_timestamps.to_dataframe()
 
         # Check that it's a pandas DataFrame
         assert isinstance(df, pd.DataFrame)
@@ -408,7 +408,7 @@ class TestRecordingTimestamps:
 
         # save_timestamps should raise ValueError
         with pytest.raises(ValueError):
-            empty_recording.save_timestamps()
+            empty_recording.save_timestamp_csvs()
 
     def test_add_multiframe_sets_recording_start_ns(self):
         """Test that add_multiframe sets recording_start_ns if it's None."""
@@ -428,7 +428,7 @@ class TestRecordingTimestamps:
         # Test a few representative duration statistics properties
 
         # idle_before_grab_duration_stats
-        stats = self.recording_timestamps.idle_before_grab_duration_stats
+        stats = self.recording_timestamps.camera_idle_time_duration_stats
         assert isinstance(stats, DescriptiveStatistics)
         assert stats.mean == pytest.approx(1.0, abs=0.1)  # 1ms
 
@@ -448,7 +448,7 @@ class TestRecordingTimestamps:
         assert stats.mean == pytest.approx(2.0, abs=0.1)  # 2ms
 
         # total_frame_acquisition_time_stats
-        stats = self.recording_timestamps.total_frame_acquisition_time_stats
+        stats = self.recording_timestamps.total_frame_processing_time_stats
         assert isinstance(stats, DescriptiveStatistics)
         assert stats.mean == pytest.approx(5.0, abs=0.1)  # 5ms (from pre_grab to post_retrieve)
 

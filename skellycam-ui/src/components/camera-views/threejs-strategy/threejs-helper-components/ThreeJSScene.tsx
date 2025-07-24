@@ -17,13 +17,8 @@ export function ThreeJSScene() {
     const theme = useTheme();
     const {latestImageData} = useWebSocketContext();
 
+    const hasImages = Object.keys(latestImageData).length > 0;
 
-
-
-    const hasImages = latestImageData.length > 0;
-
-    // Set up orthographic camera
-    const {viewport} = useThree();
 
     return (
         <>

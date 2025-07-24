@@ -1,8 +1,9 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from "react";
 import {useAppDispatch} from "@/store/AppStateStore";
-import {useWebsocketBinaryMessageProcessor} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
-
-const MAX_RECONNECT_ATTEMPTS = 30;
+import {
+    FrameRenderAcknowledgment,
+    useWebsocketBinaryMessageProcessor
+} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 
 
 export const useWebSocket = (wsUrl: string) => {
@@ -10,78 +11,76 @@ export const useWebSocket = (wsUrl: string) => {
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
     const dispatch = useAppDispatch();
-
-    const {processBinaryMessage,
-        latestImageData
+    const {
+        processBinaryMessage,
+        latestImageData,
+        registerCameraViewTexture
     } = useWebsocketBinaryMessageProcessor();
 
 
-    const createAcknowledgment = (frameNumber: number): string => {
-        return JSON.stringify({
-            type: 'acknowledgment',
-            frame_number: frameNumber
-        });
-    };
-    const handleIncomingMessage = useCallback(async (event: MessageEvent, ws: WebSocket) => {
-        const data = event.data;
 
-        // Handle binary data
-        if (data instanceof ArrayBuffer) {
-            const frameNumber = await processBinaryMessage(data);
-            if (frameNumber !== null && ws.readyState === WebSocket.OPEN) {
-                    ws.send(createAcknowledgment(frameNumber));
+
+    const handleIncomingMessage = useCallback(
+        async (event: MessageEvent, ws: WebSocket) => {
+            const data = event.data;
+
+            // Handle binary data
+            if (data instanceof ArrayBuffer) {
+                const frameRenderAcknowledgment = await processBinaryMessage(data);
+                if (frameRenderAcknowledgment) {
+                    console.log(`${JSON.stringify(frameRenderAcknowledgment, null, 2)}`);
+                    ws.send(
+                        JSON.stringify(frameRenderAcknowledgment)
+                    )
+                }
+            } else if (typeof data === "string") {
+                if (data == 'ping') {
+                    console.log("Received ping message, sending pong response");
+                    ws.send("pong");
+                }
+                try {
+                    const message = JSON.parse(data);
+                    console.log("Received JSON message:", JSON.stringify(message, null, 2));
+                } catch (error) {
+                    console.log("Received non-JSON string data:", data);
+                }
+            } else {
+                console.warn("Received unsupported message type:", typeof data);
             }
-        }
-        //
-        //
-        // // Handle text/JSON data (for other message types)
-        // if (typeof data === 'string') {
-        //     try {
-        //         const parsedData = JSON.parse(data);
-        //         try {
-        //             const incomingLogs = IncomingLogsSchema.parse(parsedData);
-        //
-        //             dispatch(addLogs(incomingLogs));
-        //             return;
-        //         } catch (e) {
-        //             if (!(e instanceof z.ZodError)) throw e;
-        //             console.error("Failed to parse log record:", e);
-        //         }
-        //
-        //     } catch (e) {
-        //         console.error(`Failed to parse websocket message: ${e}`);
-        //     }
-        // }
-    }, [dispatch, processBinaryMessage]);
+        },
+        [dispatch, processBinaryMessage]
+    );
     const connect = useCallback(() => {
         if (websocket && websocket.readyState !== WebSocket.CLOSED) {
             return;
         }
-        if (connectAttempt >= MAX_RECONNECT_ATTEMPTS) {
-            console.error(`Max reconnection attempts reached. Could not connect to ${wsUrl}`);
-            return;
-        }
+
         const ws = new WebSocket(wsUrl);
-        ws.binaryType = 'arraybuffer';
+        ws.binaryType = "arraybuffer";
 
         ws.onopen = () => {
             setIsConnected(true);
             setConnectAttempt(0);
             ws.send("Hello from the Skellycam Frontend💀📸👋");
-            console.log(`Websocket is connected to url: ${wsUrl}`)
+            console.log(`Websocket is connected to url: ${wsUrl}`);
         };
 
         ws.onclose = () => {
             setIsConnected(false);
-            setConnectAttempt(prev => prev + 1);
+            setConnectAttempt((prev) => prev + 1);
         };
 
         ws.onmessage = (event) => {
-            handleIncomingMessage(event, ws);
+            handleIncomingMessage(event, ws).then(
+                () => {}
+            ).catch((error) => {
+                console.error("Error processing incoming message:", error);
+            }
+            );
         };
 
         ws.onerror = (error) => {
-            console.error('Websocket error:', error);
+            console.error("Websocket error:", error);
         };
         setWebSocket(ws);
     }, [wsUrl, websocket, connectAttempt]);
@@ -91,25 +90,26 @@ export const useWebSocket = (wsUrl: string) => {
             websocket.close();
             setWebSocket(null);
         }
-
     }, [websocket]);
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            console.log(`Connecting (attempt #${connectAttempt + 1} of ${MAX_RECONNECT_ATTEMPTS}) to websocket at url: ${wsUrl}`);
+            console.log(
+                `Connecting  to websocket at url: ${wsUrl} (attempt #${connectAttempt + 1})`
+            );
             connect();
-        }, Math.min(1000 * Math.pow(2, connectAttempt), 30000)); // exponential backoff
+        }, Math.min(1000 * Math.pow(2, connectAttempt), 10000)); // exponential backoff
 
         return () => {
             clearTimeout(timeout);
         };
-
     }, [connect, connectAttempt, wsUrl]);
 
     return {
         isConnected,
         connect,
         disconnect,
-        latestImageData
+        latestImageData,
+        registerCameraViewTexture,
     };
 };
