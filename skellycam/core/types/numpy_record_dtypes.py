@@ -157,9 +157,11 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
     image_scale= .5
     for camera_id in camera_ids:
         frame_recarray = mf_rec_array[camera_id][0]
-        image = cv2.rotate(frame_recarray.image[:], cv2.ROTATE_180)
+
         if frame_recarray.frame_metadata.camera_config.rotation != -1:
-            image = cv2.rotate(image, frame_recarray.frame_metadata.camera_config.rotation)
+            image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
+        else:
+            image = frame_recarray.image[:]
 
         if display_image_sizes is None or camera_id not in display_image_sizes.keys() or True: # TODO - Disable resizing for now, but should revisit
             # Default resize to 50% if no sizes provided

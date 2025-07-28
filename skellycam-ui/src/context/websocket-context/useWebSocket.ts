@@ -28,7 +28,6 @@ export const useWebSocket = (wsUrl: string) => {
             if (data instanceof ArrayBuffer) {
                 const frameRenderAcknowledgment = await processBinaryMessage(data);
                 if (frameRenderAcknowledgment) {
-                    console.log(`${JSON.stringify(frameRenderAcknowledgment, null, 2)}`);
                     ws.send(
                         JSON.stringify(frameRenderAcknowledgment)
                     )
