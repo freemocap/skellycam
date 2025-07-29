@@ -253,16 +253,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 }
                 setLatestCameraImageData(newCameraImageData);
 
-                // if (registeredCameraViewTextures.current[frameHeader.cameraId]) {
-                //     // Update existing texture
-                //     registeredCameraViewTextures.current[frameHeader.cameraId].setFrame(await createImageBitmap(new Blob([jpegData], {type: "image/jpeg"})));
-                //     registeredCameraViewTextures.current[frameHeader.cameraId].needsUpdate = true;
-                //     frameRenderAcknowledgment.displayImageSizes[frameHeader.cameraId] = {
-                //         width: frameHeader.imageWidth,
-                //         height: frameHeader.imageHeight,
-                //     }
-                // }
-            // }
+
 
             // Process payload footer as a chunk
             const footerView = new DataView(data, offset, PAYLOAD_FOOTER_SIZE);
