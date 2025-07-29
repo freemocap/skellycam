@@ -1,73 +1,42 @@
-import { Box } from "@mui/material";
+import { Box, Button, ButtonGroup, FormControlLabel, Switch, Typography } from "@mui/material";
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {CameraImage} from "@/components/camera-views/og-canvas-strategy/CameraImage";
 import { CameraImageData } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 import {useCameraGridLayout} from "@/hooks/useCameraGridLayout";
+import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
 
-interface CameraImagesGridProps {
-    imageData:  Record<string, CameraImageData>;
-    showAnnotation: boolean;
-}
+// Utility function to debounce function calls
+const debounce = (fn: Function, ms = 50) => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    return function(...args: any[]) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), ms);
+    };
+};
 
-export const CameraImagesGrid = ({ imageData, showAnnotation }: CameraImagesGridProps) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [containerDimensions, setContainerDimensions] = useState<{ width: number; height: number } | null>(null);
-    // Update container dimensions when the component mounts or resizes
-    useEffect(() => {
-        const updateDimensions = () => {
-            if (containerRef.current) {
-                setContainerDimensions({
-                    width: containerRef.current.clientWidth,
-                    height: containerRef.current.clientHeight
-                });
-            }
-        };
+export const CameraImagesGrid = () => {
+    const {latestImageData} = useWebSocketContext();
 
-        updateDimensions();
-
-        // Set up resize observer to handle container size changes
-        const resizeObserver = new ResizeObserver(updateDimensions);
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, []);
-    // Calculate the optimal grid layout
-    const { rows, columns } = useCameraGridLayout(
-        imageData,
-        containerDimensions?.width,
-        containerDimensions?.height
-    );
-
-    // Calculate cell dimensions
-    const cellWidth = containerDimensions ? containerDimensions.width / columns : 0;
-    const cellHeight = containerDimensions ? containerDimensions.height / rows : 0;
     return (
-        <Box
-            ref={containerRef}
-            sx={{
-                height: '100%',
-                width: '100%',
-                display: "grid",
-                gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                gridTemplateRows: `repeat(${rows}, 1fr)`,
-                gap: 1,
-            }}
-        >
-            {Object.entries(imageData).map(([cameraId, cameraImageData]) =>
-                cameraImageData ? (
-                    <CameraImage
-                        key={cameraId}
-                        cameraImageData={cameraImageData}
-                        showAnnotation={showAnnotation}
-                        cellWidth={cellWidth}
-                        cellHeight={cellHeight}
-                    />
-                ) : null
-            )}
+        <Box sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+
+            {/* Camera Grid */}
+            <Box
+                sx={{
+                    flexGrow: 1,
+                    gap: .5,
+                    border: "3px solid #c00",
+                }}
+            >
+                {Object.entries(latestImageData).map(([cameraId, cameraImageData]) =>
+                    cameraImageData ? (
+                        <CameraImage
+                            key={cameraId}
+                            cameraImageData={cameraImageData}
+                        />
+                    ) : null
+                )}
+            </Box>
         </Box>
     );
 };

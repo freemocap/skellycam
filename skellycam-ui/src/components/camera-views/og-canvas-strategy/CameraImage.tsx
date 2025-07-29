@@ -4,39 +4,11 @@ import { CameraImageData } from "@/context/websocket-context/useWebsocketBinaryM
 
 interface CameraImageProps {
     cameraImageData: CameraImageData;
-    showAnnotation: boolean;
-    cellWidth: number;
-    cellHeight: number;
 }
 
-export const CameraImage = ({ cameraImageData, showAnnotation, cellWidth, cellHeight }: CameraImageProps) => {
+export const CameraImage = ({ cameraImageData}: CameraImageProps) => {
     const { cameraId, imageBitmap, imageWidth, imageHeight, cameraIndex } = cameraImageData;
     const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    // Calculate the scaling factor to fit the image within the cell
-    const { scale, scaledWidth, scaledHeight } = useMemo(() => {
-        if (!cellWidth || !cellHeight || !imageWidth || !imageHeight) {
-            return { scale: 1, scaledWidth: imageWidth, scaledHeight: imageHeight };
-        }
-
-        const imageAspectRatio = imageWidth / imageHeight;
-        const cellAspectRatio = cellWidth / cellHeight;
-
-        let scale: number;
-        if (imageAspectRatio > cellAspectRatio) {
-            // Image is wider than cell, scale by width
-            scale = cellWidth / imageWidth;
-        } else {
-            // Image is taller than cell, scale by height
-            scale = cellHeight / imageHeight;
-        }
-
-        // Calculate scaled dimensions
-        const scaledWidth = imageWidth * scale;
-        const scaledHeight = imageHeight * scale;
-
-        return { scale, scaledWidth, scaledHeight };
-    }, [imageWidth, imageHeight, cellWidth, cellHeight]);
 
     // Directly render the bitmap when the ref callback is called
     const setCanvasRef = (canvas: HTMLCanvasElement | null) => {
@@ -71,25 +43,18 @@ export const CameraImage = ({ cameraImageData, showAnnotation, cellWidth, cellHe
             key={cameraId}
             sx={{
                 position: 'relative',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                height: '100%',
-                overflow: 'hidden',
+                border: "1px solid #00c",
             }}
         >
             <canvas
                 ref={setCanvasRef}
                 style={{
-                    width: `${scaledWidth}px`,
-                    height: `${scaledHeight}px`,
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
+                    width: `$640px`,
+                    height: `$480px`,
+
+                    objectFit: 'cover',
                 }}
             />
-            {showAnnotation && (
                 <Typography
                     variant="caption"
                     sx={{
@@ -105,7 +70,7 @@ export const CameraImage = ({ cameraImageData, showAnnotation, cellWidth, cellHe
                 >
                     Camera {cameraIndex}
                 </Typography>
-            )}
+
         </Box>
     );
 };

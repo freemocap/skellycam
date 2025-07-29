@@ -43,7 +43,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     # The light is now in the camera's memory,
     # and we have a digital representation of the pattern of light
     # that was in the field of view of the camera during the frame/timeslice
-    # when the image was 'grabbed' in the previous step.
+    # when the image was grabbed in the previous step.
     # This is the empirical measurement upon which most/all our future calculations and inferences will be based.
 
     frame_rec_array.frame_metadata.timestamps.pre_frame_retrieve_ns[0] = time.perf_counter_ns()

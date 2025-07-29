@@ -5,6 +5,8 @@ import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
 import {useTheme} from "@mui/material/styles";
 import {CamerasView} from "@/components/camera-views/og-canvas-strategy/CamerasView";
+import MasonryCameraView from "@/components/camera-views/masonry-camera-grid-strategy/MasonryCameraView";
+import {CameraImagesGrid} from "@/components/camera-views/og-canvas-strategy/CameraImagesGrid";
 
 export const CamerasPage = () => {
     const theme = useTheme();
@@ -24,13 +26,16 @@ export const CamerasPage = () => {
                     : theme.palette.background.paper,
                 borderStyle: 'solid',
                 borderWidth: '3px',
-                borderColor: 'green'
+                borderColor: 'green',
+                overflow: "scroll"
+
             }}>
                 <Box >
                     <ErrorBoundary>
                          {/*<ThreeJSCameraDisplayGrid/>*/}
                         {/*<ResizableCameraGridDisplay/>*/}
-                        <CamerasView/>
+                        <CameraImagesGrid/>
+                        {/*{<MasonryCameraView/>}*/}
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{p: 1}}>
