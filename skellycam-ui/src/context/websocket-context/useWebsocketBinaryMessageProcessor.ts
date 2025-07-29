@@ -88,19 +88,10 @@ export interface FrameRenderAcknowledgment {
 }
 export const useWebsocketBinaryMessageProcessor = () => {
     const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string, CameraImageData>>({});
-    const registeredCameraViewTextures = useRef<Record<string, THREE.VideoFrameTexture>>({});
 
 
     const textDecoderRef = useRef(new TextDecoder());
 
-
-
-    const registerCameraViewTexture = useCallback((cameraId: string, texture: THREE.VideoFrameTexture) => {
-        if (registeredCameraViewTextures.current[cameraId]) {
-            console.warn(`Texture for camera ${cameraId} is already registered. Overwriting.`);
-        }
-        registeredCameraViewTextures.current[cameraId] = texture;
-    }, [registeredCameraViewTextures]);
 
     const parsePayloadHeader = useCallback((dataView: DataView): MessageHeaderFooter | null => {
         try {
@@ -279,7 +270,6 @@ export const useWebsocketBinaryMessageProcessor = () => {
 
     return {
         latestImageData: latestCameraImageData,
-        registerCameraViewTexture,
         processBinaryMessage,
     };
 };

@@ -14,11 +14,25 @@ export const useWebSocket = (wsUrl: string) => {
     const {
         processBinaryMessage,
         latestImageData,
-        registerCameraViewTexture
     } = useWebsocketBinaryMessageProcessor();
+    const latestFrameAcknowledgment = useRef<FrameRenderAcknowledgment | null>(null);
+    const latestCameraFrameAcknowledgment = useRef<Record<string, number>>({});
 
 
+    const acknowledgeFrameRendered = useCallback(
+        (cameraId: string, frameNumber: number) => {
+            latestCameraFrameAcknowledgment.current[cameraId] = frameNumber;
+            const allAcknowledged = Object.values(latestCameraFrameAcknowledgment.current).every(
+                (acknowledgedFrame) => acknowledgedFrame === latestFrameAcknowledgment.current?.frameNumber);
 
+        if (allAcknowledged && latestFrameAcknowledgment.current) {
+            websocket?.send(
+                JSON.stringify(latestFrameAcknowledgment.current)
+            )
+
+        }},
+        [latestCameraFrameAcknowledgment, latestFrameAcknowledgment, websocket]
+    )
 
     const handleIncomingMessage = useCallback(
         async (event: MessageEvent, ws: WebSocket) => {
@@ -26,12 +40,7 @@ export const useWebSocket = (wsUrl: string) => {
 
             // Handle binary data
             if (data instanceof ArrayBuffer) {
-                const frameRenderAcknowledgment = await processBinaryMessage(data);
-                if (frameRenderAcknowledgment) {
-                    ws.send(
-                        JSON.stringify(frameRenderAcknowledgment)
-                    )
-                }
+                latestFrameAcknowledgment.current = await processBinaryMessage(data);
             } else if (typeof data === "string") {
                 if (data == 'ping') {
                     console.log("Received ping message, sending pong response");
@@ -47,7 +56,7 @@ export const useWebSocket = (wsUrl: string) => {
                 console.warn("Received unsupported message type:", typeof data);
             }
         },
-        [dispatch, processBinaryMessage]
+        [dispatch, processBinaryMessage, latestFrameAcknowledgment]
     );
     const connect = useCallback(() => {
         if (websocket && websocket.readyState !== WebSocket.CLOSED) {
@@ -109,6 +118,6 @@ export const useWebSocket = (wsUrl: string) => {
         connect,
         disconnect,
         latestImageData,
-        registerCameraViewTexture,
+        acknowledgeFrameRendered,
     };
 };

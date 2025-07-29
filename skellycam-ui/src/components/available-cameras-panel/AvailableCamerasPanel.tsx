@@ -13,7 +13,7 @@ import {ConnectToCamerasButton} from "@/components/available-cameras-panel/Conne
 import {selectAllCameras, toggleCameraSelection, updateCameraConfig,} from "@/store/slices/cameras-slices/camerasSlice";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 import {CloseCamerasButton} from "@/components/available-cameras-panel/CloseCamerasButton";
-import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
+import {CameraConfig, CameraDevice} from "@/store/slices/cameras-slices/camera-types";
 import {ApplyCameraConfigsButton} from "@/components/available-cameras-panel/ApplyCameraConfigsButton";
 import {PauseUnpauseButton} from "../PauseUnpauseButton";
 // import { detectCameraDevices } from "@/store/thunks/detect-cameras-client-thunks";
@@ -26,15 +26,26 @@ export const AvailableCamerasPanel = () => {
     // Get data from the unified slice
     const camerasRecord = useAppSelector(selectAllCameras);
     const isLoading = useAppSelector((state) => state.cameras.isLoading);
+    const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set());
+    const [camerasArray, setCamerasArray] = useState<CameraDevice[]>([]);
 
-    // Convert cameras record to array for easier rendering
-    const camerasArray = Object.values(camerasRecord).sort((a, b) =>
-        a.config.camera_index - b.config.camera_index
-    );
+    useEffect(() => {
+        // Whenever the camerasRecord changes, update the camerasArray
+        if (!camerasRecord) {
+            setCamerasArray([]);
+            return;
+        }
 
-    const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(
-        new Set()
-    );
+        // Convert cameras record to array for easier rendering
+        const newCamerasArray = Object.values(camerasRecord).sort((a, b) =>
+            a.config.camera_index - b.config.camera_index
+        );
+
+        setCamerasArray(newCamerasArray);
+    }, [camerasRecord]);
+
+
+
 
     // Handle expanding/collapsing camera config panels
     const toggleConfig = (cameraId: string) => {

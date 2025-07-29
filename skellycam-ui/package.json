@@ -29,7 +29,6 @@
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.1.1",
     "@mui/x-tree-view": "^7.28.1",
-    "@react-buddy/ide-toolbox": "^2.4.0",
     "@react-three/drei": "^10.4.2",
     "@react-three/fiber": "^9.1.4",
     "@reduxjs/toolkit": "^2.5.1",
