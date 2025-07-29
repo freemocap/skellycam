@@ -21,7 +21,8 @@ export const CameraImagesGrid = () => {
         <Box sx={{ height: '100%',
             width: '100%',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
             border: "3px solid #c00",
         }}>
 
