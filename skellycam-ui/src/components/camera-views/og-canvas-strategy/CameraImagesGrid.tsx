@@ -18,16 +18,13 @@ export const CameraImagesGrid = () => {
     const {latestImageData} = useWebSocketContext();
 
     return (
-        <Box sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            border: "3px solid #c00",
+        }}>
 
-            {/* Camera Grid */}
-            <Box
-                sx={{
-                    flexGrow: 1,
-                    gap: .5,
-                    border: "3px solid #c00",
-                }}
-            >
                 {Object.entries(latestImageData).map(([cameraId, cameraImageData]) =>
                     cameraImageData ? (
                         <CameraImage
@@ -36,7 +33,6 @@ export const CameraImagesGrid = () => {
                         />
                     ) : null
                 )}
-            </Box>
         </Box>
     );
 };
