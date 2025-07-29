@@ -25,12 +25,15 @@ export const useWebSocket = (wsUrl: string) => {
             const allAcknowledged = Object.values(latestCameraFrameAcknowledgment.current).every(
                 (acknowledgedFrame) => acknowledgedFrame === latestFrameAcknowledgment.current?.frameNumber);
 
-        if (allAcknowledged && latestFrameAcknowledgment.current) {
-            websocket?.send(
-                JSON.stringify(latestFrameAcknowledgment.current)
-            )
-
-        }},
+            if (allAcknowledged && latestFrameAcknowledgment.current) {
+                // Schedule the acknowledgment to be sent on the next frame
+                setTimeout(() => {
+                    websocket?.send(
+                        JSON.stringify(latestFrameAcknowledgment.current)
+                    );
+                }, 0);
+            }
+        },
         [latestCameraFrameAcknowledgment, latestFrameAcknowledgment, websocket]
     )
 
@@ -80,10 +83,11 @@ export const useWebSocket = (wsUrl: string) => {
 
         ws.onmessage = (event) => {
             handleIncomingMessage(event, ws).then(
-                () => {}
+                () => {
+                }
             ).catch((error) => {
-                console.error("Error processing incoming message:", error);
-            }
+                    console.error("Error processing incoming message:", error);
+                }
             );
         };
 
