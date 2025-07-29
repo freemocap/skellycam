@@ -241,7 +241,6 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 if (latestCameraImageData[frameHeader.cameraId]?.imageWidth !== frameHeader.imageWidth ||
                     latestCameraImageData[frameHeader.cameraId]?.imageHeight !== frameHeader.imageHeight) {
                     // If the image dimensions or frame number have changed, update the state
-
                     newCameraImageData[frameHeader.cameraId] =  {
                             imageWidth: frameHeader.imageWidth,
                             imageHeight: frameHeader.imageHeight,

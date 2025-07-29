@@ -49,9 +49,6 @@ export const CameraImage = ({ cameraImageData}: CameraImageProps) => {
             <canvas
                 ref={setCanvasRef}
                 style={{
-                    width: `$640px`,
-                    height: `$480px`,
-
                     objectFit: 'cover',
                 }}
             />

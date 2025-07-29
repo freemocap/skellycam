@@ -159,29 +159,27 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
         frame_recarray = mf_rec_array[camera_id][0]
 
         if frame_recarray.frame_metadata.camera_config.rotation != -1:
-            image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
+            rotated_image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
         else:
-            image = frame_recarray.image[:]
+            rotated_image = frame_recarray.image[:]
 
         if display_image_sizes is None or camera_id not in display_image_sizes.keys() or True: # TODO - Disable resizing for now, but should revisit
             # Default resize to 50% if no sizes provided
-            resize_image_height = int(image.shape[0] * image_scale)
-            resize_image_width = int(image.shape[1] * image_scale)
+            resize_image_height = int(rotated_image.shape[0] * image_scale)
+            resize_image_width = int(rotated_image.shape[1] * image_scale)
         else:
             resize_image_height = int(display_image_sizes[camera_id]['height'])
             resize_image_width = int(display_image_sizes[camera_id]['width'])
-        resized_img = cv2.resize(image, dsize=(resize_image_width, resize_image_height),
+        resized_img = cv2.resize(rotated_image, dsize=(resize_image_width, resize_image_height),
                                  interpolation=cv2.INTER_LINEAR) #TODO - see if other interpolation methods are faster/better
         _, jpeg_data = cv2.imencode('.jpg', resized_img, jpeg_encoding_parameters)
         jpeg_string = jpeg_data.tobytes()
         jpeg_string_length = len(jpeg_string)
 
-        if frame_recarray.frame_metadata.camera_config.rotation == -1 or frame_recarray.frame_metadata.camera_config.rotation == cv2.ROTATE_180:
-            frame_height = resized_img.shape[0]
-            frame_width = resized_img.shape[1]
-        else:
-            frame_height = frame_recarray.image.shape[1]
-            frame_width = frame_recarray.image.shape[0]
+
+        frame_height = resized_img.shape[0]
+        frame_width = resized_img.shape[1]
+
 
         frame_header = np.array([(1,
                                   frame_number,
