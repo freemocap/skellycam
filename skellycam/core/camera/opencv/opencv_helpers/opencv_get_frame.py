@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def opencv_get_frame(cap: cv2.VideoCapture,
-                     frame_rec_array: np.recarray ) -> np.recarray:
+                     frame_rec_array: np.recarray ) -> tuple[bool, np.recarray]:
     """
     THIS IS WHERE THE MAGIC HAPPENS
 
@@ -37,7 +37,8 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     frame_rec_array.frame_metadata.timestamps.post_frame_grab_ns[0] = time.perf_counter_ns()
 
     if not grab_success:
-        raise RuntimeError("Failed to grab frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        logger.error("Failed to grab frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        return False, frame_rec_array
 
     # decode the frame buffer into an image!
     # The light is now in the camera's memory,
@@ -52,6 +53,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
 
     frame_rec_array.frame_metadata.frame_number[0] += 1
     if not retrieve_success:
-        raise ValueError("Failed to retrieve frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        logger.error("Failed to retrieve frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        return False, frame_rec_array
 
-    return frame_rec_array
+    return True, frame_rec_array
