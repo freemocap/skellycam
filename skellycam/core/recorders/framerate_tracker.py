@@ -10,8 +10,7 @@ MAX_FRAMERATE_TRACKER_WINDOW = 1000
 FRAMERATE_UPDATE_INTERVAL = 1.0
 
 
-@dataclass
-class CurrentFramerate:
+class CurrentFramerate(BaseModel):
     mean_frame_duration_ms: float
     mean_frames_per_second: float
     frame_duration_max: float

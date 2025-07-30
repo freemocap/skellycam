@@ -29,12 +29,14 @@ def camera_loop_update_checks(config: CameraConfig,
                                                   recording_info_subscription=recording_info_subscription,
                                                   self_status=self_status,
                                                   video_recorder=video_recorder)
+
     frame_rec_array, config = check_for_new_config(current_config=config,
                                                    frame_rec_array=frame_rec_array,
                                                    cv2_video_capture=cv2_video_capture,
                                                    ipc=ipc,
                                                    self_status=self_status,
                                                    update_camera_settings_subscription=update_camera_settings_subscription)
+
     self_status = check_camera_should_pause(config=config,
                                             ipc=ipc,
                                             self_status=self_status)
@@ -51,5 +53,5 @@ def check_camera_should_pause(config: CameraConfig,
     else:
         if self_status.is_paused.value:
             logger.trace(f"Resuming camera {config.camera_id}...")
-        self_status.is_paused.value = False
+            self_status.is_paused.value = False
     return self_status

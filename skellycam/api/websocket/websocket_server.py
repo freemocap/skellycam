@@ -124,10 +124,10 @@ class WebsocketServer:
                         framerate_message = {
                             "message_type": "framerate_update",
                             "camera_group_id": camera_group_id,
-                            "backend_framerate": backend_framerate.to_dict(),
-                            "frontend_framerate": self._frontend_framerate_trackers[camera_group_id].current_framerate.to_dict()
+                            "backend_framerate": backend_framerate.model_dump(),
+                            "frontend_framerate": self._frontend_framerate_trackers[camera_group_id].current_framerate.model_dump()
                         }
-                        await self.websocket.send_json(json.dumps(framerate_message))
+                        await self.websocket.send_json(framerate_message)
                         self._frontend_framerate_trackers[camera_group_id].clear()
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
@@ -138,23 +138,16 @@ class WebsocketServer:
             get_skellycam_app().kill_everything()
             raise
 
-    async def _logs_relay(self, ws_log_level: LogLevels = LogLevels.DEBUG, ws_log_throttle: float = 0.5):
+    async def _logs_relay(self, ws_log_level: LogLevels = LogLevels.DEBUG):
         logger.info("Starting websocket log relay listener...")
         logs_queue = get_websocket_log_queue()
-        last_log_ws_sent = time.perf_counter()
-        logs_to_send = LogsToSend(logs=[])
         try:
             while self.should_continue:
                 if not logs_queue.empty() and self.websocket.client_state == WebSocketState.CONNECTED:
                     log_record: LogRecordModel = LogRecordModel(**logs_queue.get_nowait())
                     if log_record.levelno < ws_log_level.value:
                         continue  # Skip logs below the specified level
-                    logs_to_send.logs.append(log_record)
-                    if time.perf_counter() - last_log_ws_sent < ws_log_throttle:
-                        continue
-                    await self.websocket.send_json(logs_to_send.model_dump())
-                    logs_to_send.logs = []  # Clear the list after sending
-                    last_log_ws_sent = time.perf_counter()
+                    await self.websocket.send_json(log_record.model_dump())
                 else:
                     await async_wait_10ms()
         except asyncio.CancelledError:

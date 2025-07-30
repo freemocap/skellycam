@@ -138,12 +138,12 @@ export default function FramerateTimeseriesView({
     applyAxisStyles(svg, theme);
 
     // Add threshold lines
-    const thresholds = [
-      { value: 16.67, label: "60 FPS", color: theme.palette.success.main },
-      { value: 33.33, label: "30 FPS", color: theme.palette.warning.main },
-    ];
-
-    renderThresholdLines(chartArea, thresholds, xScaleZoomed, yScaleZoomed, width, height, true);
+    // const thresholds = [
+    //   { value: 16.67, label: "60 FPS", color: theme.palette.success.main },
+    //   { value: 33.33, label: "30 FPS", color: theme.palette.warning.main },
+    // ];
+    //
+    // renderThresholdLines(chartArea, thresholds, xScaleZoomed, yScaleZoomed, width, height, true);
 
     // Create line generator
     const line = d3
@@ -198,7 +198,7 @@ export default function FramerateTimeseriesView({
           .on("mouseover", function(event: MouseEvent, d: any) {
             const element = this as unknown as SVGCircleElement;
             d3.select(element).attr("r", 5).attr("fill", d3.color(source.color)!.brighter(0.5).toString());
-          
+
             tooltip
                 .style("opacity", 1)
                 .html(`

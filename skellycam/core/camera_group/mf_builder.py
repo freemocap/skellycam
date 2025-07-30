@@ -96,7 +96,9 @@ class MultiframeBuilder:
                 ipc.mf_builder_status.building_mfs_flag.value = False
 
                 if time.perf_counter() - last_sent_framerate_timestamp > FRAMERATE_UPDATE_INTERVAL:
-                    ipc.pubsub.topics[TopicTypes.FRAMERATE].publish(FramerateMessage(current_framerate=framerate_tracker.current_framerate), overwrite=True)
+                    ipc.pubsub.topics[TopicTypes.FRAMERATE].publish(FramerateMessage(current_framerate=framerate_tracker.current_framerate),
+                                                                    overwrite=True,
+                                                                    print_log=False)
                     framerate_tracker.clear()
                     last_sent_framerate_timestamp = time.perf_counter()
 

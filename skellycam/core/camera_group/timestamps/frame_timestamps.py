@@ -156,3 +156,14 @@ class FrameDurations:
         if self.timestamps.frame_initialized_ns and self.timestamps.pre_frame_grab_ns:
             return self.timestamps.pre_frame_grab_ns - self.timestamps.frame_initialized_ns
         return -1
+
+    def __str__(self):
+        return (f"\tduring_frame_grab (ms):              {self.during_frame_grab_ns/1e6},\n "
+                f"\tidle_before_retrieve (ms):           {self.idle_before_retrieve_ns/1e6},\n "
+                f"\tduring_frame_retrieve (ms):          {self.during_frame_retrieve_ns/1e6},\n "
+                f"\tidle_before_copy_to_camera_shm (ms): {self.idle_before_copy_to_camera_shm_ns/1e6},\n "
+                f"\tduring_copy_to_camera_shm (ms):      {self.during_copy_to_camera_shm_ns/1e6},\n "
+                f"\tidle_before_frame_record (ms):       {self.idle_before_frame_record_ns/1e6},\n "
+                f"\tduring_frame_record (ms):            {self.during_frame_record_ns/1e6},\n "
+                f"\ttotal_frame_processing_time (ms):    { self.total_frame_processing_time_ns/1e6},\n "
+                f"\ttotal_camera_idle_time (ms):         {self.total_camera_idle_time_ns/1e6}\n--------------------------------\n ")

@@ -140,7 +140,6 @@ class CameraGroupManager:
                 framerate_update = subscription.get()
                 if isinstance(framerate_update, FramerateMessage):
                     framerate_updates[camera_group_id] = framerate_update.current_framerate
-                    logger.debug(f"Received framerate update for camera group {camera_group_id}: {framerate_update}")
                 else:
                     raise TypeError(f"Received unexpected data type from framerate subscription: {type(framerate_update)}")
         return framerate_updates

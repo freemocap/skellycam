@@ -4,6 +4,8 @@ import {
     FrameRenderAcknowledgment,
     useWebsocketBinaryMessageProcessor
 } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerateTrackerSlice";
+import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/context/websocket-context/websocket-types";
 
 
 export const useWebSocket = (wsUrl: string) => {
@@ -18,7 +20,18 @@ export const useWebSocket = (wsUrl: string) => {
     const latestFrameAcknowledgment = useRef<FrameRenderAcknowledgment | null>(null);
     const latestCameraFrameAcknowledgment = useRef<Record<string, number>>({});
 
+    // Handler for framerate update messages
+    const handleFramerateUpdate = useCallback((message: FramerateUpdateWebSocketMessage) => {
+        dispatch(setBackendFramerate(message.backend_framerate));
+        dispatch(setFrontendFramerate(message.frontend_framerate));
 
+        console.log("Updated framerate data in store", {
+            backend: message.backend_framerate.mean_frames_per_second.toFixed(2) + " FPS",
+            frontend: message.frontend_framerate.mean_frames_per_second.toFixed(2) + " FPS"
+        });
+    }, [dispatch]);
+
+    // handler frame render acknowledgment messages
     const acknowledgeFrameRendered = useCallback(
         (cameraId: string, frameNumber: number) => {
             latestCameraFrameAcknowledgment.current[cameraId] = frameNumber;
@@ -36,6 +49,31 @@ export const useWebSocket = (wsUrl: string) => {
         },
         [latestCameraFrameAcknowledgment, latestFrameAcknowledgment, websocket]
     )
+    // Process JSON messages with type discrimination
+    const processJsonMessage = useCallback((jsonData: unknown) => {
+        try {
+            // Now validate against the full message schema
+            const result = WebSocketMessageSchema.safeParse(jsonData);
+            if (!result.success) {
+                throw new Error("Invalid base message format: " + result.error.message);
+
+            }
+
+            const message = result.data;
+
+            // Handle different message types
+            switch (message.message_type) {
+                case "framerate_update":
+                    handleFramerateUpdate(message);
+                    break;
+                // Add more cases for other message types as needed
+                default:
+                    console.log(`Received message of type: ${message.message_type}`, message);
+            }
+        } catch (error) {
+            console.error("Error processing JSON message:", error);
+        }
+    }, [handleFramerateUpdate]);
 
     const handleIncomingMessage = useCallback(
         async (event: MessageEvent, ws: WebSocket) => {
@@ -45,13 +83,15 @@ export const useWebSocket = (wsUrl: string) => {
             if (data instanceof ArrayBuffer) {
                 latestFrameAcknowledgment.current = await processBinaryMessage(data);
             } else if (typeof data === "string") {
-                if (data == 'ping') {
+                if (data === 'ping') {
                     console.log("Received ping message, sending pong response");
                     ws.send("pong");
+                    return;
                 }
+
                 try {
-                    const message = JSON.parse(data);
-                    console.log("Received JSON message:", JSON.stringify(message, null, 2));
+                    const jsonData = JSON.parse(data);
+                    processJsonMessage(jsonData);
                 } catch (error) {
                     console.log("Received non-JSON string data:", data);
                 }
@@ -59,8 +99,9 @@ export const useWebSocket = (wsUrl: string) => {
                 console.warn("Received unsupported message type:", typeof data);
             }
         },
-        [dispatch, processBinaryMessage, latestFrameAcknowledgment]
+        [processBinaryMessage, processJsonMessage]
     );
+
     const connect = useCallback(() => {
         if (websocket && websocket.readyState !== WebSocket.CLOSED) {
             return;

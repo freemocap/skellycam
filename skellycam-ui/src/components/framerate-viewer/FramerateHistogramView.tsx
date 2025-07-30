@@ -50,20 +50,20 @@ export default function FramerateHistogramView({
     };
   };
 
-  const renderChart = useCallback(({ 
-    svg, 
-    chartArea, 
-    width, 
-    height, 
-    margin, 
-    transform 
-  }: { 
-    svg: d3.Selection<SVGGElement, unknown, null, undefined>; 
-    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>; 
-    width: number; 
-    height: number; 
-    margin: {top: number; right: number; bottom: number; left: number}; 
-    transform: d3.ZoomTransform; 
+  const renderChart = useCallback(({
+    svg,
+    chartArea,
+    width,
+    height,
+    margin,
+    transform
+  }: {
+    svg: d3.Selection<SVGGElement, unknown, null, undefined>;
+    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>;
+    width: number;
+    height: number;
+    margin: {top: number; right: number; bottom: number; left: number};
+    transform: d3.ZoomTransform;
   }) => {
     // Prepare the sources with histogram data
     const sources = [
@@ -124,9 +124,13 @@ export default function FramerateHistogramView({
     const yScale = d3.scaleLinear().domain([0, maxDensity * 1.1]).range([height, 0]);
 
     // Apply the current zoom transform
-    const xScaleZoomed = transform.rescaleX(xScale);
-    const yScaleZoomed = transform.rescaleY(yScale);
+    const xScaleZoomed = d3.scaleLinear()
+        .domain([Math.max(0, transform.rescaleX(xScale).domain()[0]), transform.rescaleX(xScale).domain()[1]])
+        .range([0, width]);
 
+    const yScaleZoomed = d3.scaleLinear()
+        .domain([Math.max(0, transform.rescaleY(yScale).domain()[0]), transform.rescaleY(yScale).domain()[1]])
+        .range([height, 0]);
     // Create axes
     const xAxis = d3.axisBottom(xScaleZoomed).ticks(10).tickSize(-height);
     const yAxis = d3.axisLeft(yScaleZoomed).ticks(5).tickSize(-width);
@@ -169,12 +173,12 @@ export default function FramerateHistogramView({
     applyAxisStyles(svg, theme);
 
     // Add threshold lines
-    const thresholds = [
-      { value: 16.67, label: "60 FPS", color: theme.palette.success.main },
-      { value: 33.33, label: "30 FPS", color: theme.palette.warning.main },
-    ];
-
-    renderThresholdLines(chartArea, thresholds, xScaleZoomed, yScaleZoomed, width, height, false);
+    // const thresholds = [
+    //   { value: 16.67, label: "60 FPS", color: theme.palette.success.main },
+    //   { value: 33.33, label: "30 FPS", color: theme.palette.warning.main },
+    // ];
+    //
+    // renderThresholdLines(chartArea, thresholds, xScaleZoomed, yScaleZoomed, width, height, false);
 
     // Draw histograms
     sources.forEach(source => {

@@ -40,7 +40,7 @@ class PubSubTopicABC(BaseModel, ABC):
         return sub
 
 
-    def publish(self, message:TopicMessageABC, overwrite:bool=False):
+    def publish(self, message:TopicMessageABC, overwrite:bool=False, print_log:bool=True):
         """
         Publish a message to all subscribers of this topic.
         """
@@ -49,14 +49,16 @@ class PubSubTopicABC(BaseModel, ABC):
         if len(self.subscriptions) == 0:
             logger.warning(f"Publishing message of type {self.message_type} with no subscribers, message will be lost")
             return
-        logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
+        if print_log:
+            logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
         for sub in self.subscriptions:
             if overwrite:
                 overwrote = 0
                 while not sub.empty():
                     sub.get()
                     overwrote += 1
-                logger.trace(f"Overwrote {overwrote} messages in subscription queue {sub}")
+                if overwrote > 0 and print_log:
+                    logger.trace(f"Overwrote {overwrote} messages in subscription queue {sub}")
             sub.put(message)
     def close(self):
         """

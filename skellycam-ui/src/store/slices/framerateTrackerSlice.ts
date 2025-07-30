@@ -19,10 +19,12 @@ export const CurrentFramerateSchema = z.object({
     calculation_window_size: z.number(),
     framerate_source: z.string(),
 });
-
 export type CurrentFramerate = z.infer<typeof CurrentFramerateSchema>;
+
+
 // Set a maximum number of framerate entries to store
 const MAX_FRAMERATE_ENTRIES = 1000;
+
 interface FramerateState {
     currentFrontendFramerate: z.infer<typeof CurrentFramerateSchema> | null;
     currentBackendFramerate: z.infer<typeof CurrentFramerateSchema> | null;
@@ -63,5 +65,5 @@ export const framerateTrackerSlice = createSlice({
     }
 })
 
-export const { setFrontendFramerate,setBackendFramerate } = framerateTrackerSlice.actions
+export const {setFrontendFramerate, setBackendFramerate} = framerateTrackerSlice.actions
 export default framerateTrackerSlice.reducer
