@@ -51,9 +51,9 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     retrieve_success, _ = cap.retrieve(image=frame_rec_array.image[0])  # provide pre-allocated image for speed
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = time.perf_counter_ns()
 
-    frame_rec_array.frame_metadata.frame_number[0] += 1
     if not retrieve_success:
         logger.error("Failed to retrieve frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
         return False, frame_rec_array
 
+    frame_rec_array.frame_metadata.frame_number[0] += 1
     return True, frame_rec_array

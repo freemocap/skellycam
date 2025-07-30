@@ -1,15 +1,18 @@
 import logging
 import time
+from collections import deque
 
 import cv2
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_helpers.camera_loop_update_checks import camera_loop_update_checks
+from skellycam.core.camera.opencv.opencv_helpers.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.camera.opencv.opencv_helpers.handle_video_recording_loop import handle_video_recording
 from skellycam.core.camera.opencv.opencv_helpers.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
@@ -29,9 +32,11 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                            recording_info_subscription: TopicSubscriptionQueue):
     video_recorder: VideoRecorder | None = None
     previous_tik = time.perf_counter_ns()
+    target_frame_duration_ms = (config.framerate**-1 )*1e3 # Convert framerate to nanoseconds per frame
+    max_acceptable_frame_duration_ms = target_frame_duration_ms * 2
+    number_of_frames_outside_acceptable_range = 0
     try:
         while ipc.should_continue:
-
             (config,
              frame_rec_array,
              video_recorder,
@@ -55,13 +60,11 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             frame_success = False
             while not frame_success and ipc.should_continue:
                 frame_success, frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
-                                                   frame_rec_array=frame_rec_array, )
+                                                                  frame_rec_array=frame_rec_array, )
                 if not frame_success:
                     logger.error(f"Failed to grab frame from camera {config.camera_id}. Retrying...")
                     if not cv2_video_capture.isOpened():
                         raise RuntimeError(f"Camera {config.camera_id} shutdown unexpectedly - exiting camera loop.")
-
-
 
             # NOTE - Get `should_record` flags BEFORE unsetting 'grabbing_frame' to avoid
             # potential race-condition-generating flag setting gaps between cameras
@@ -85,12 +88,27 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                                                     should_finish_recording=should_finish_recording,
                                                     should_record_frame=should_record_frame,
                                                     video_recorder=video_recorder)
-
-
             frame_rec_array = initialize_frame_recarray(frame_rec_array=frame_rec_array)
+
+            if frame_rec_array.frame_metadata.frame_number[0] > 100:
+                frame_duration_ms = (time.perf_counter_ns() - previous_tik) / 1e6  # Convert to milliseconds
+                if frame_duration_ms > max_acceptable_frame_duration_ms:
+                    number_of_frames_outside_acceptable_range += 1
+                else:
+                    number_of_frames_outside_acceptable_range = 0
+                if number_of_frames_outside_acceptable_range > 10:
+
+                    logger.warning(
+                        f"Camera {config.camera_id} has had {number_of_frames_outside_acceptable_range} consecutive frames - resetting camera. ")
+                    cv2_video_capture.release()
+                    cv2_video_capture, config = create_cv2_video_capture(config)
+                    number_of_frames_outside_acceptable_range = 0
 
             # Last camera to increment their frame count status triggers the next frame_grab
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
+            previous_tik = time.perf_counter_ns()
+
+
 
 
     except Exception as e:
