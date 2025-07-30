@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
-from skellycam.core.types.type_overloads import FrameNumberInt
+from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimestampFloat
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
@@ -35,7 +35,6 @@ TIMEBASE_MAPPING_DTYPE = np.dtype([
 
 FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
     ('timebase_mapping', TIMEBASE_MAPPING_DTYPE), #TODO - move to frame_metadata
-
     ('frame_initialized_ns', np.uint64),
     ('pre_frame_grab_ns', np.uint64),
     ('post_frame_grab_ns', np.uint64),
@@ -111,8 +110,7 @@ _reusable_bytes_payload: bytearray = bytearray(0)  # Will be resized on first us
 
 def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
                                              display_image_sizes: dict[str, dict[str, float]] | None = None,
-                                             jpeg_encoding_parameters=None) -> tuple[
-    FrameNumberInt, bytes]:
+                                             jpeg_encoding_parameters=None) -> tuple[FrameNumberInt, MultiframeTimestampFloat,bytes]:
     """
     Convert a multi-frame record array into a list of record arrays for each camera.
      first element is the header, which tell the frontend how many cameras are in the payload.
@@ -155,8 +153,11 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
     current_pos += len(header_bytes)
     # image_scale= np.min([np.max([(len(camera_ids)*2)**-1, 0.2]), 1.0])
     image_scale= .5
+    frame_timestamps:list[int] = []
     for camera_id in camera_ids:
         frame_recarray = mf_rec_array[camera_id][0]
+        frame_timestamps.append(np.mean([frame_recarray.frame_metadata.timestamps.pre_frame_grab_ns,
+                                         frame_recarray.frame_metadata.timestamps.post_frame_grab_ns]))
 
         if frame_recarray.frame_metadata.camera_config.rotation != -1:
             rotated_image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
@@ -222,4 +223,4 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
     current_pos += len(footer_bytes)
 
     frontend_bytes = _reusable_bytes_payload[:current_pos]
-    return frame_number, frontend_bytes
+    return frame_number, np.mean(frame_timestamps), frontend_bytes
