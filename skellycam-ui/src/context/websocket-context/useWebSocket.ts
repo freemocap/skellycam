@@ -6,6 +6,7 @@ import {
 } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerateTrackerSlice";
 import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/context/websocket-context/websocket-types";
+import {addLog} from "@/store/slices/logRecordsSlice";
 
 
 export const useWebSocket = (wsUrl: string) => {
@@ -25,10 +26,6 @@ export const useWebSocket = (wsUrl: string) => {
         dispatch(setBackendFramerate(message.backend_framerate));
         dispatch(setFrontendFramerate(message.frontend_framerate));
 
-        console.log("Updated framerate data in store", {
-            backend: message.backend_framerate.mean_frames_per_second.toFixed(2) + " FPS",
-            frontend: message.frontend_framerate.mean_frames_per_second.toFixed(2) + " FPS"
-        });
     }, [dispatch]);
 
     // handler frame render acknowledgment messages
@@ -66,12 +63,16 @@ export const useWebSocket = (wsUrl: string) => {
                 case "framerate_update":
                     handleFramerateUpdate(message);
                     break;
-                // Add more cases for other message types as needed
+                case "log_record":
+                    // Add the log record to the Redux store
+                    dispatch(addLog(message));
+                    break;
                 default:
-                    console.log(`Received message of type: ${message.message_type}`, message);
+                    console.log(`Received websocket message of unknown type: ${message}`);
             }
         } catch (error) {
-            console.error("Error processing JSON message:", error);
+            console.error(`Error processing JSON message:${error}\n\nData:`, jsonData);
+
         }
     }, [handleFramerateUpdate]);
 

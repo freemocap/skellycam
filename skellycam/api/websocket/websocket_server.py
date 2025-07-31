@@ -9,7 +9,7 @@ from skellycam.core.recorders.framerate_tracker import FramerateTracker, Current
 from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
-    get_websocket_log_queue, LogsToSend
+    get_websocket_log_queue
 from skellycam.system.logging_configuration.log_levels import LogLevels
 from skellycam.utilities.wait_functions import async_wait_10ms
 

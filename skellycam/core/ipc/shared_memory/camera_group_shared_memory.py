@@ -131,9 +131,8 @@ class CameraGroupSharedMemoryManager:
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
-
-            mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[
-                                                                                   camera_id])  # TODO - check frame number available before grab - there's a race condition here that causes frame mismatch between cameras on occasion
+            # TODO - check frame number available before grab - there's a race condition here that causes frame mismatch between cameras on occasion
+            mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[camera_id])
             if mf_rec_array[camera_id].frame_metadata.frame_number[0] != self.latest_multiframe_number.value + 1:
                 raise ValueError(
                     f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
