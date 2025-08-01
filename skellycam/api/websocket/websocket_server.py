@@ -62,7 +62,7 @@ class WebsocketServer:
         logger.info("Starting websocket runner...")
         self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
                          # asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
-                         # asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
+                         asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
                          asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler")]
 
         try:
@@ -113,7 +113,7 @@ class WebsocketServer:
                     skipped_previous = True
                     backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
                     if backpressure > BACKPRESSURE_WARNING_THRESHOLD:
-                        logger.warning(
+                        print(
                             f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
 
                 backend_framerate_updates:dict[CameraGroupIdString,CurrentFramerate] = self._app.camera_group_manager.get_backend_framerate_updates()
@@ -138,7 +138,7 @@ class WebsocketServer:
             get_skellycam_app().kill_everything()
             raise
 
-    async def _logs_relay(self, ws_log_level: LogLevels = LogLevels.DEBUG):
+    async def _logs_relay(self, ws_log_level: LogLevels = LogLevels.INFO):
         logger.info("Starting websocket log relay listener...")
         logs_queue = get_websocket_log_queue()
         try:

@@ -56,8 +56,9 @@ sudo apt install portaudio19-dev
   - NOTE - Mac and Linux installer scripts should presumably work without much effort, but haven't don't that yet
 - This step can take up to an hour and results in an executable called `skellycam_server[.exe]` in the `skellycam-ui/` folder
 2. Build electron app (which bundles the python server executable from the previous step
-- `npm install`
-- `npm run build`
+   - set `SHOULD_LAUNCH_PYTHON: true` in `skellycam-ui/electron/main/helpers/app-environment.ts`
+   - `npm install`
+   - `npm run build`
 
 If all went well, the installer will be in `/skellycam-ui/releases/[version-number]/skellycam_[version-number]_installer[.exe]`!
 ---

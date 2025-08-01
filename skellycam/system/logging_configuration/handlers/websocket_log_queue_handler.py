@@ -50,7 +50,7 @@ class WebSocketQueueHandler(logging.Handler):
         self.setFormatter(CustomFormatter(LOG_FORMAT_STRING))
 
     def emit(self, record: logging.LogRecord):
-        if record.levelno > LogLevels.LOOP.value:
+        if record.levelno > LogLevels.INFO.value:
             log_record_dict =  record.__dict__
             log_record_dict["formatted_message"] = self.format(record)
             log_record_dict['type'] = record.__class__.__name__

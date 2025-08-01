@@ -1,39 +1,75 @@
-import { Box, Button, ButtonGroup, FormControlLabel, Switch, Typography } from "@mui/material";
-import React, {useEffect, useMemo, useRef, useState} from "react";
+import {Box} from "@mui/material";
+import React from "react";
 import {CameraImage} from "@/components/camera-views/og-canvas-strategy/CameraImage";
-import { CameraImageData } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
-import {useCameraGridLayout} from "@/hooks/useCameraGridLayout";
 import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
-
-// Utility function to debounce function calls
-const debounce = (fn: Function, ms = 50) => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    return function(...args: any[]) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => fn(...args), ms);
-    };
-};
 
 export const CameraImagesGrid = () => {
     const {latestImageData} = useWebSocketContext();
 
+    // Group images by orientation
+    const portraitImages = Object.entries(latestImageData)
+        .filter(([_, data]) => data && data.orientation === "portrait");
+
+    const landscapeImages = Object.entries(latestImageData)
+        .filter(([_, data]) => data && data.orientation === "landscape");
+
+    const squareImages = Object.entries(latestImageData)
+        .filter(([_, data]) => data && data.orientation === "square");
+
     return (
-        <Box sx={{ height: '100%',
+        <Box sx={{
+            height: '100%',
             width: '100%',
             display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            border: "3px solid #c00",
+            flexDirection: 'row', // Main container as row to place orientation groups side by side
+            gap: 1, // Add some spacing between orientation groups
         }}>
+            {/* Portrait Images Container */}
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                flexWrap: 'wrap',
+                flex: 1,
+                borderRight: '1px solid #666',
+            }}>
+                {portraitImages.map(([cameraId, cameraImageData]) => (
+                    <CameraImage
+                        key={cameraId}
+                        cameraImageData={cameraImageData}
+                    />
+                ))}
+            </Box>
 
-                {Object.entries(latestImageData).map(([cameraId, cameraImageData]) =>
-                    cameraImageData ? (
-                        <CameraImage
-                            key={cameraId}
-                            cameraImageData={cameraImageData}
-                        />
-                    ) : null
-                )}
+            {/* Landscape Images Container */}
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                flexWrap: 'wrap',
+                flex: 1,
+                borderRight: '1px solid #666',
+            }}>
+                {landscapeImages.map(([cameraId, cameraImageData]) => (
+                    <CameraImage
+                        key={cameraId}
+                        cameraImageData={cameraImageData}
+                    />
+                ))}
+            </Box>
+
+            {/* Square Images Container */}
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                flexWrap: 'wrap',
+                flex: 1,
+            }}>
+                {squareImages.map(([cameraId, cameraImageData]) => (
+                    <CameraImage
+                        key={cameraId}
+                        cameraImageData={cameraImageData}
+                    />
+                ))}
+            </Box>
         </Box>
     );
 };
