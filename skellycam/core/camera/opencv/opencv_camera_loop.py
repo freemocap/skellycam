@@ -99,7 +99,7 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                 if number_of_frames_outside_acceptable_range > 10:
 
                     logger.warning(
-                        f"Camera {config.camera_id} has had {number_of_frames_outside_acceptable_range} consecutive frames - resetting camera. ")
+                        f"Camera {config.camera_id} has had {number_of_frames_outside_acceptable_range} consecutive frames that were longer than acceptable duration ({max_acceptable_frame_duration_ms:.2f}ms) - I'm not sure why this happens, but resetting camera will help, so let's do that. ")
                     cv2_video_capture.release()
                     cv2_video_capture, config = create_cv2_video_capture(config)
                     number_of_frames_outside_acceptable_range = 0

@@ -15,7 +15,7 @@ from skellycam.utilities.wait_functions import async_wait_10ms
 
 logger = logging.getLogger(__name__)
 
-BACKPRESSURE_WARNING_THRESHOLD: int = 5  # Number of frames before we warn about backpressure
+BACKPRESSURE_WARNING_THRESHOLD: int = 15  # Number of frames before we warn about backpressure
 
 
 class WebsocketServer:
