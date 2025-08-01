@@ -4,6 +4,9 @@ import {
     FrameRenderAcknowledgment,
     useWebsocketBinaryMessageProcessor
 } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerateTrackerSlice";
+import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/context/websocket-context/websocket-types";
+import {addLog} from "@/store/slices/logRecordsSlice";
 
 
 export const useWebSocket = (wsUrl: string) => {
@@ -14,11 +17,64 @@ export const useWebSocket = (wsUrl: string) => {
     const {
         processBinaryMessage,
         latestImageData,
-        registerCameraViewTexture
     } = useWebsocketBinaryMessageProcessor();
+    const latestFrameAcknowledgment = useRef<FrameRenderAcknowledgment | null>(null);
+    const latestCameraFrameAcknowledgment = useRef<Record<string, number>>({});
 
+    // Handler for framerate update messages
+    const handleFramerateUpdate = useCallback((message: FramerateUpdateWebSocketMessage) => {
+        dispatch(setBackendFramerate(message.backend_framerate));
+        dispatch(setFrontendFramerate(message.frontend_framerate));
 
+    }, [dispatch]);
 
+    // handler frame render acknowledgment messages
+    const acknowledgeFrameRendered = useCallback(
+        (cameraId: string, frameNumber: number) => {
+            latestCameraFrameAcknowledgment.current[cameraId] = frameNumber;
+            const allAcknowledged = Object.values(latestCameraFrameAcknowledgment.current).every(
+                (acknowledgedFrame) => acknowledgedFrame === latestFrameAcknowledgment.current?.frameNumber);
+
+            if (allAcknowledged && latestFrameAcknowledgment.current) {
+                // Schedule the acknowledgment to be sent on the next frame
+                setTimeout(() => {
+                    websocket?.send(
+                        JSON.stringify(latestFrameAcknowledgment.current)
+                    );
+                }, 0);
+            }
+        },
+        [latestCameraFrameAcknowledgment, latestFrameAcknowledgment, websocket]
+    )
+    // Process JSON messages with type discrimination
+    const processJsonMessage = useCallback((jsonData: unknown) => {
+        try {
+            // Now validate against the full message schema
+            const result = WebSocketMessageSchema.safeParse(jsonData);
+            if (!result.success) {
+                throw new Error("Invalid base message format: " + result.error.message);
+
+            }
+
+            const message = result.data;
+
+            // Handle different message types
+            switch (message.message_type) {
+                case "framerate_update":
+                    handleFramerateUpdate(message);
+                    break;
+                case "log_record":
+                    // Add the log record to the Redux store
+                    dispatch(addLog(message));
+                    break;
+                default:
+                    console.log(`Received websocket message of unknown type: ${message}`);
+            }
+        } catch (error) {
+            console.error(`Error processing JSON message:${error}\n\nData:`, jsonData);
+
+        }
+    }, [handleFramerateUpdate]);
 
     const handleIncomingMessage = useCallback(
         async (event: MessageEvent, ws: WebSocket) => {
@@ -26,21 +82,17 @@ export const useWebSocket = (wsUrl: string) => {
 
             // Handle binary data
             if (data instanceof ArrayBuffer) {
-                const frameRenderAcknowledgment = await processBinaryMessage(data);
-                if (frameRenderAcknowledgment) {
-                    console.log(`${JSON.stringify(frameRenderAcknowledgment, null, 2)}`);
-                    ws.send(
-                        JSON.stringify(frameRenderAcknowledgment)
-                    )
-                }
+                latestFrameAcknowledgment.current = await processBinaryMessage(data);
             } else if (typeof data === "string") {
-                if (data == 'ping') {
+                if (data === 'ping') {
                     console.log("Received ping message, sending pong response");
                     ws.send("pong");
+                    return;
                 }
+
                 try {
-                    const message = JSON.parse(data);
-                    console.log("Received JSON message:", JSON.stringify(message, null, 2));
+                    const jsonData = JSON.parse(data);
+                    processJsonMessage(jsonData);
                 } catch (error) {
                     console.log("Received non-JSON string data:", data);
                 }
@@ -48,8 +100,9 @@ export const useWebSocket = (wsUrl: string) => {
                 console.warn("Received unsupported message type:", typeof data);
             }
         },
-        [dispatch, processBinaryMessage]
+        [processBinaryMessage, processJsonMessage]
     );
+
     const connect = useCallback(() => {
         if (websocket && websocket.readyState !== WebSocket.CLOSED) {
             return;
@@ -72,10 +125,11 @@ export const useWebSocket = (wsUrl: string) => {
 
         ws.onmessage = (event) => {
             handleIncomingMessage(event, ws).then(
-                () => {}
+                () => {
+                }
             ).catch((error) => {
-                console.error("Error processing incoming message:", error);
-            }
+                    console.error("Error processing incoming message:", error);
+                }
             );
         };
 
@@ -110,6 +164,6 @@ export const useWebSocket = (wsUrl: string) => {
         connect,
         disconnect,
         latestImageData,
-        registerCameraViewTexture,
+        acknowledgeFrameRendered,
     };
 };

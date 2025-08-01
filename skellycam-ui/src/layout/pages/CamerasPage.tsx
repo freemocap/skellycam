@@ -4,9 +4,9 @@ import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
 import {useTheme} from "@mui/material/styles";
-import StaticCameraGridDisplay from "@/components/camera-views/StaticCamerasView";
-import ThreeJSCameraDisplayGrid from "@/components/camera-views/threejs-strategy/ThreeJSCameraDisplayGrid";
-import {ResizableCameraGridDisplay} from "@/components/camera-views/ResizableCamerasView";
+import {CamerasView} from "@/components/camera-views/og-canvas-strategy/CamerasView";
+import MasonryCameraView from "@/components/camera-views/masonry-camera-grid-strategy/MasonryCameraView";
+import {CameraImagesGrid} from "@/components/camera-views/og-canvas-strategy/CameraImagesGrid";
 
 export const CamerasPage = () => {
     const theme = useTheme();
@@ -20,24 +20,22 @@ export const CamerasPage = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
+                width: '100%',
                 backgroundColor: theme.palette.mode === 'dark'
                     ? theme.palette.background.default
                     : theme.palette.background.paper,
                 borderStyle: 'solid',
-                borderWidth: '1px',
-                borderColor: theme.palette.divider
+                borderWidth: '3px',
+                borderColor: 'green',
+                overflow: "scroll"
+
             }}>
-                <Box sx={{
-                    flex: 1,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                }}>
+                <Box >
                     <ErrorBoundary>
-                         <ThreeJSCameraDisplayGrid/>
+                         {/*<ThreeJSCameraDisplayGrid/>*/}
                         {/*<ResizableCameraGridDisplay/>*/}
-                        {/*<StaticCameraGridDisplay/>*/}
+                        <CameraImagesGrid/>
+                        {/*{<MasonryCameraView/>}*/}
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{p: 1}}>

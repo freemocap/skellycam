@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def opencv_get_frame(cap: cv2.VideoCapture,
-                     frame_rec_array: np.recarray ) -> np.recarray:
+                     frame_rec_array: np.recarray ) -> tuple[bool, np.recarray]:
     """
     THIS IS WHERE THE MAGIC HAPPENS
 
@@ -37,21 +37,23 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     frame_rec_array.frame_metadata.timestamps.post_frame_grab_ns[0] = time.perf_counter_ns()
 
     if not grab_success:
-        raise RuntimeError("Failed to grab frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        logger.error("Failed to grab frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        return False, frame_rec_array
 
     # decode the frame buffer into an image!
     # The light is now in the camera's memory,
     # and we have a digital representation of the pattern of light
     # that was in the field of view of the camera during the frame/timeslice
-    # when the image was 'grabbed' in the previous step.
+    # when the image was grabbed in the previous step.
     # This is the empirical measurement upon which most/all our future calculations and inferences will be based.
 
     frame_rec_array.frame_metadata.timestamps.pre_frame_retrieve_ns[0] = time.perf_counter_ns()
     retrieve_success, _ = cap.retrieve(image=frame_rec_array.image[0])  # provide pre-allocated image for speed
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = time.perf_counter_ns()
 
-    frame_rec_array.frame_metadata.frame_number[0] += 1
     if not retrieve_success:
-        raise ValueError("Failed to retrieve frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        logger.error("Failed to retrieve frame from camera", frame_rec_array.frame_metadata.camera_config.camera_id[0])
+        return False, frame_rec_array
 
-    return frame_rec_array
+    frame_rec_array.frame_metadata.frame_number[0] += 1
+    return True, frame_rec_array

@@ -53,10 +53,10 @@ export const detectCameraDevices = createAsyncThunk<
                     index: serverCamera.index,
                     deviceId: serverCamera.vendor_id?.toString() + serverCamera.product_id?.toString(),
                     cameraId: serverCamera.index,
-                    selected: existingCamera?.selected ?? false,
-                    status: 'AVAILABLE', // TODO: do we want to validate the cameras again?
+                    selected: true, // Select all cameras by default
+                    status: 'AVAILABLE', // TODO: do we want to validate the cameras again? JSM - yes, we want to track camera status (somehow or another) to show it as "available, in use, unavailable, error etc")
                     label: serverCamera.name,
-                    groupId: '', // TODO: not sure if this needs to be passed form the server?
+                    groupId: '', // TODO: not sure if this needs to be passed form the server? JSM - this is originally to hold the 'groupId' returned by MediaDevices.enumerateDevices(). I don't think `cv2_enumerate_devices` returns it? I don't really know what it refers to tbh
                     kind: 'videoinput',
                     constraints: CAMERA_DEFAULT_CONSTRAINTS,
                     config: existingCamera?.config ||

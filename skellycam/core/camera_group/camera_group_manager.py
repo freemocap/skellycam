@@ -7,8 +7,12 @@ import numpy as np
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
+from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, TopicTypes
+from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
+from skellycam.core.recorders.framerate_tracker import FramerateTracker, CurrentFramerate
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.type_overloads import CameraGroupIdString, CameraIdString, FrameNumberInt
+from skellycam.core.types.type_overloads import CameraGroupIdString, CameraIdString, FrameNumberInt, \
+    MultiframeTimestampFloat, TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)
@@ -17,6 +21,7 @@ logger = logging.getLogger(__name__)
 class CameraGroupManager:
     global_kill_flag: multiprocessing.Value
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
+    camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(default_factory=dict)
     closing: bool = False
 
 
@@ -29,6 +34,7 @@ class CameraGroupManager:
             return None
         camera_group = CameraGroup.create(camera_configs = camera_configs,
                                                     global_kill_flag=self.global_kill_flag)
+        self.camera_group_framerate_subscriptions[camera_group.id] = camera_group.ipc.pubsub.get_subscription(TopicTypes.FRAMERATE)
         self.camera_groups[camera_group.id] = camera_group
         self.camera_groups[camera_group.id].start()
 
@@ -107,8 +113,10 @@ class CameraGroupManager:
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
 
-    def get_latest_frontend_payloads(self, if_newer_than:int, display_image_sizes:dict[CameraIdString,dict[str,float]]) -> dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]]:
-        fe_payloads:dict[CameraGroupIdString, tuple[FrameNumberInt, bytes]] = {}
+    def get_latest_frontend_payloads(self,
+                                     if_newer_than:int,
+                                     display_image_sizes:dict[CameraIdString,dict[str,float]]) -> dict[CameraGroupIdString, tuple[FrameNumberInt,MultiframeTimestampFloat, bytes]]:
+        fe_payloads:dict[CameraGroupIdString, tuple[FrameNumberInt,MultiframeTimestampFloat, bytes]] = {}
         if self.closing:
             return fe_payloads
         for camera_group in self.camera_groups.values():
@@ -116,9 +124,25 @@ class CameraGroupManager:
                                                                   display_image_sizes=display_image_sizes)
             if fe_return is None:
                 continue
-            frame_number, fe_payload = fe_return
-            fe_payloads[camera_group.id] = (frame_number, fe_payload) if fe_payload is not None else None
+            frame_number, multiframe_timestamp, fe_payload = fe_return
+            fe_payloads[camera_group.id] = (frame_number,multiframe_timestamp, fe_payload) if fe_payload is not None else None
         return fe_payloads
+
+    def get_backend_framerate_updates(self) -> dict[CameraGroupIdString, CurrentFramerate]:
+        """
+        Get the latest framerate updates for all camera groups.
+        """
+        if self.closing:
+            return {}
+        framerate_updates: dict[CameraGroupIdString, CurrentFramerate] = {}
+        for camera_group_id, subscription in self.camera_group_framerate_subscriptions.items():
+            if not subscription.empty():
+                framerate_update = subscription.get()
+                if isinstance(framerate_update, FramerateMessage):
+                    framerate_updates[camera_group_id] = framerate_update.current_framerate
+                else:
+                    raise TypeError(f"Received unexpected data type from framerate subscription: {type(framerate_update)}")
+        return framerate_updates
 
     def pause_all_groups(self, await_paused: bool = True) -> None:
         """

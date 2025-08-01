@@ -7,9 +7,10 @@ import numpy as np
 
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, FramerateMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO, \
     CameraGroupSharedMemoryManager
+from skellycam.core.recorders.framerate_tracker import FramerateTracker, FRAMERATE_UPDATE_INTERVAL
 from skellycam.core.types.numpy_record_dtypes import create_multiframe_dtype
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue, WorkerStrategy, WorkerType
 from skellycam.utilities.wait_functions import wait_10ms, wait_1ms
@@ -82,16 +83,24 @@ class MultiframeBuilder:
             mf_rec_array[camera_id].frame_metadata.camera_config[0] = camera_group_shm.camera_configs[camera_id].to_numpy_record_array()
             mf_rec_array[camera_id].frame_metadata.frame_number[0] = -1
 
+        last_sent_framerate_timestamp = time.perf_counter()
         try:
-            previous_tik = time.perf_counter_ns()
+            framerate_tracker = FramerateTracker.create(framerate_source=f"CameraGroup-{ipc.group_id}")
             while ipc.should_continue:
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_1ms()
                     continue
 
                 ipc.mf_builder_status.building_mfs_flag.value = True
-                new_data, mf_rec_array = camera_group_shm.build_all_new_multiframes(mf_rec_array)
+                new_data, mf_rec_array,framerate_tracker = camera_group_shm.build_all_new_multiframes(mf_rec_array=mf_rec_array,framerate_tracker=framerate_tracker)
                 ipc.mf_builder_status.building_mfs_flag.value = False
+
+                if time.perf_counter() - last_sent_framerate_timestamp > FRAMERATE_UPDATE_INTERVAL:
+                    ipc.pubsub.topics[TopicTypes.FRAMERATE].publish(FramerateMessage(current_framerate=framerate_tracker.current_framerate),
+                                                                    overwrite=True,
+                                                                    print_log=False)
+                    framerate_tracker.clear()
+                    last_sent_framerate_timestamp = time.perf_counter()
 
                 if not new_data:
                     wait_1ms()

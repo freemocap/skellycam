@@ -69,6 +69,7 @@ interface FrameHeader {
 }
 
 export interface CameraImageData {
+    imageBitmap?: ImageBitmap;
     imageWidth: number;
     imageHeight: number;
     frameNumber: number;
@@ -87,19 +88,10 @@ export interface FrameRenderAcknowledgment {
 }
 export const useWebsocketBinaryMessageProcessor = () => {
     const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string, CameraImageData>>({});
-    const registeredCameraViewTextures = useRef<Record<string, THREE.VideoFrameTexture>>({});
 
 
     const textDecoderRef = useRef(new TextDecoder());
 
-
-
-    const registerCameraViewTexture = useCallback((cameraId: string, texture: THREE.VideoFrameTexture) => {
-        if (registeredCameraViewTextures.current[cameraId]) {
-            console.warn(`Texture for camera ${cameraId} is already registered. Overwriting.`);
-        }
-        registeredCameraViewTextures.current[cameraId] = texture;
-    }, [registeredCameraViewTextures]);
 
     const parsePayloadHeader = useCallback((dataView: DataView): MessageHeaderFooter | null => {
         try {
@@ -214,6 +206,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
 
             // Process each camera frame
             const textDecoder = textDecoderRef.current;
+            const newCameraImageData: Record<string, CameraImageData> = {};
 
             for (let i = 0; i < numberOfCameras; i++) {
                 // Process frame header as a chunk
@@ -239,29 +232,19 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 if (latestCameraImageData[frameHeader.cameraId]?.imageWidth !== frameHeader.imageWidth ||
                     latestCameraImageData[frameHeader.cameraId]?.imageHeight !== frameHeader.imageHeight) {
                     // If the image dimensions or frame number have changed, update the state
-
-                    setLatestCameraImageData(prevData => ({
-                        ...prevData,
-                        [frameHeader.cameraId]: {
+                    newCameraImageData[frameHeader.cameraId] =  {
                             imageWidth: frameHeader.imageWidth,
                             imageHeight: frameHeader.imageHeight,
                             frameNumber: frameHeader.frameNumber,
                             cameraId: frameHeader.cameraId,
                             cameraIndex: frameHeader.cameraIndex,
+                            imageBitmap: await createImageBitmap(new Blob([jpegData], { type: 'image/jpeg' }))
                         }
-                    }));
-
-                }
-                if (registeredCameraViewTextures.current[frameHeader.cameraId]) {
-                    // Update existing texture
-                    registeredCameraViewTextures.current[frameHeader.cameraId].setFrame(await createImageBitmap(new Blob([jpegData], {type: "image/jpeg"})));
-                    registeredCameraViewTextures.current[frameHeader.cameraId].needsUpdate = true;
-                    frameRenderAcknowledgment.displayImageSizes[frameHeader.cameraId] = {
-                        width: frameHeader.imageWidth,
-                        height: frameHeader.imageHeight,
                     }
                 }
-            }
+                setLatestCameraImageData(newCameraImageData);
+
+
 
             // Process payload footer as a chunk
             const footerView = new DataView(data, offset, PAYLOAD_FOOTER_SIZE);
@@ -287,7 +270,6 @@ export const useWebsocketBinaryMessageProcessor = () => {
 
     return {
         latestImageData: latestCameraImageData,
-        registerCameraViewTexture,
         processBinaryMessage,
     };
 };

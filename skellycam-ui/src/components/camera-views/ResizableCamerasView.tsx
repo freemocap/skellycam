@@ -1,11 +1,9 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {Box, CircularProgress, Paper, Typography, useTheme} from '@mui/material';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import {Box, Paper, Typography, useTheme} from '@mui/material';
 import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
 import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
-import {useCameraGridLayout} from '@/hooks/useCameraGridLayout';
 import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
-import {FrameRenderAcknowledgment} from "@/context/websocket-context/useWebSocket";
-import {PlaceholderImage} from "@/components/camera-views/threejs-strategy/threejs-helper-components/PlaceholderImage";
+import {useCameraGridLayout} from "@/hooks/useCameraGridLayout";
 
 
 const CameraCanvasPanel = React.memo(({
@@ -15,7 +13,6 @@ const CameraCanvasPanel = React.memo(({
     cameraImageData: CameraImageData;
     canvasRef: (el: HTMLCanvasElement | null) => void;
 }) => {
-    const theme = useTheme();
 
     return (
         <Paper
@@ -79,87 +76,48 @@ const ResizeHandle = React.memo(({direction, theme}: { direction: 'horizontal' |
     />
 ));
 
-const CameraCanvasGridPanel: React.FC = () => {
+const CameraCanvasGridPanel: React.FC = (
+    {latestImageData}: { latestImageData: Record<string, CameraImageData> }
+) => {
     const theme = useTheme();
-    const {latestImageData, sendFrameAcknowledgment} = useWebSocketContext();
+
     const canvasContextRefs = useRef<Record<string, CanvasRenderingContext2D | null>>({});
-    const dimensionsRef = useRef<Record<string, { width: number, height: number }>>({});
 
 
     // Refs for container and canvases
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
 
-
+    const initialLayout = useCameraGridLayout(latestImageData,
+        containerRef.current?.clientWidth,
+        containerRef.current?.clientHeight);
     // Calculate optimal grid layout
-
-    const initialLayout = useCameraGridLayout(latestImageData, containerRef.current?.clientWidth, containerRef.current?.clientHeight);
-
-    // Optimize canvas drawing with requestAnimationFrame and offscreen canvas when available
     useEffect(() => {
         // Use requestAnimationFrame to batch canvas updates
-        let animationFrameId: number;
-
-        const updateCanvases = () => {
-            const frameRenderAcknowledgment: FrameRenderAcknowledgment = {
-                frameNumber: -1,
-                cameraDisplaySizes: {}
+        Object.entries(latestImageData).forEach(([cameraId, cameraImageData]) => {
+            const canvas = canvasRefs.current[cameraId];
+            if (canvas) {
+                if (!canvasContextRefs.current[cameraId]) {
+                    canvasContextRefs.current[cameraId] = canvas.getContext('2d', {alpha: false});
+                }
+                const ctx = canvasContextRefs.current[cameraId];
+                if (ctx) {
+                    if (canvas.width !== cameraImageData.imageWidth || canvas.height !== cameraImageData.imageHeight) {
+                        canvas.width = cameraImageData.imageWidth;
+                        canvas.height = cameraImageData.imageHeight;
+                    }
+                    // Draw the bitmap
+                    if (cameraImageData.imageBitmap) {
+                    ctx.drawImage(cameraImageData.imageBitmap, 0, 0);
+                    }
+                }
             }
-            Object.entries(latestImageData).forEach(([cameraId, cameraImageData]) => {
-                const canvas = canvasRefs.current[cameraId];
-                if (canvas) {
-                    if (!canvasContextRefs.current[cameraId]) {
-                        canvasContextRefs.current[cameraId] = canvas.getContext('2d', {alpha: false});
-                    }
-                    const ctx = canvasContextRefs.current[cameraId];
-                    if (ctx) {
-                        if (!dimensionsRef.current[cameraId] ||
-                            dimensionsRef.current[cameraId].width !== cameraImageData.imageBitmap.width ||
-                            dimensionsRef.current[cameraId].height !== cameraImageData.imageBitmap.height) {
+        });
 
-                            canvas.width = cameraImageData.imageBitmap.width;
-                            canvas.height = cameraImageData.imageBitmap.height;
-                            dimensionsRef.current[cameraId] = {
-                                width: cameraImageData.imageBitmap.width,
-                                height: cameraImageData.imageBitmap.height
-                            };
-                        }
 
-                        // Draw the bitmap
-                        ctx.drawImage(cameraImageData.imageBitmap, 0, 0);
-                    }
-                }
-                if (!(frameRenderAcknowledgment.frameNumber === -1) &&
-                    !(cameraImageData.frameNumber === frameRenderAcknowledgment.frameNumber)) {
-                    throw new Error(`Frame number mismatch for camera ${cameraId}: expected ${frameRenderAcknowledgment.frameNumber}, got ${cameraImageData.frameNumber}`);
-                }
-                frameRenderAcknowledgment.frameNumber = cameraImageData.frameNumber;
-                frameRenderAcknowledgment.cameraDisplaySizes[cameraId] = {
-                    cameraId: cameraImageData.cameraId,
-                    imageDisplayWidth: cameraImageData.imageBitmap.width, // TODO - send actual display size
-                    imageDisplayHeight: cameraImageData.imageBitmap.height // TODO - send actual display size
-                };
-            });
-            // Send acknowledgment after all canvases are updated
-            console.log("Sending frame acknowledgment:", frameRenderAcknowledgment);
-            sendFrameAcknowledgment(frameRenderAcknowledgment);
-        };
-
-        animationFrameId = requestAnimationFrame(updateCanvases);
-
-        return () => {
-            cancelAnimationFrame(animationFrameId);
-        };
     }, [latestImageData]);
 
-    // Memoized canvas ref callback
-    const getCanvasRef = useCallback((cameraId: string) => {
-        return (el: HTMLCanvasElement | null) => {
-            canvasRefs.current[cameraId] = el;
-        };
-    }, []);
 
-    // Create a nested panel structure - memoized to prevent unnecessary recalculations
     const panelStructure = useMemo(() => {
         if (sortedCameraImageDataArray.length === 0) return null;
 
@@ -210,7 +168,7 @@ const CameraCanvasGridPanel: React.FC = () => {
         }
 
         return rows;
-    }, [sortedCameraImageDataArray, initialLayout, theme, getCanvasRef]);
+    }, [canvasRefs, initialLayout, theme]);
 
     return (
         <Box
@@ -252,8 +210,6 @@ export const ResizableCameraGridDisplay: React.FC = React.memo(() => {
     const {latestImageData} = useWebSocketContext();
     const hasImages = Object.keys(latestImageData).length > 0;
 
-
-
     return (
         <Box
             sx={{
@@ -265,7 +221,7 @@ export const ResizableCameraGridDisplay: React.FC = React.memo(() => {
                 position: 'relative',
             }}
         >
-            { !hasImages ? (
+            {!hasImages ? (
                 <Box
                     sx={{
                         display: 'flex',
@@ -285,7 +241,7 @@ export const ResizableCameraGridDisplay: React.FC = React.memo(() => {
                         overflow: 'hidden',
                     }}
                 >
-                    <CameraCanvasGridPanel/>
+                    <CameraCanvasGridPanel latestImageData={latestImageData}/>
                 </Box>
             )}
         </Box>

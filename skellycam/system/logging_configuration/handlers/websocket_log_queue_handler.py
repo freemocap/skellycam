@@ -38,8 +38,7 @@ class LogRecordModel(BaseModel):
     asctime: str
     formatted_message: str
     type: str
-class LogsToSend(BaseModel):
-    logs: list[LogRecordModel] = []
+    message_type: str = "log_record"
 
 class WebSocketQueueHandler(logging.Handler):
     """Formats logs and puts them in a queue for websocket distribution"""
