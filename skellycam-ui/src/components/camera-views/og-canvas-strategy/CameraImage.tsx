@@ -14,9 +14,7 @@ export const CameraImage = ({ cameraImageData}: CameraImageProps) => {
 
     // Directly render the bitmap when the ref callback is called
     const setCanvasRef = (canvas: HTMLCanvasElement | null) => {
-        if (canvas) {
-            canvasRef.current = canvas;
-        }
+
         if (canvas && imageBitmap) {
             const ctx = canvas.getContext('2d');
             if (ctx) {
