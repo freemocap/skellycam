@@ -35,6 +35,7 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
     target_frame_duration_ms = (config.framerate**-1 )*1e3 # Convert framerate to nanoseconds per frame
     max_acceptable_frame_duration_ms = target_frame_duration_ms * 2
     number_of_frames_outside_acceptable_range = 0
+    fail_count = 0
     try:
         while ipc.should_continue:
             (config,
@@ -58,14 +59,15 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                 continue
             self_status.grabbing_frame.value = True
             frame_success = False
-            while not frame_success and ipc.should_continue:
+            while not frame_success and ipc.should_continue and fail_count < 30:
+                fail_count += 1
                 frame_success, frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
                                                                   frame_rec_array=frame_rec_array, )
                 if not frame_success:
                     logger.error(f"Failed to grab frame from camera {config.camera_id}. Retrying...")
                     if not cv2_video_capture.isOpened():
                         raise RuntimeError(f"Camera {config.camera_id} shutdown unexpectedly - exiting camera loop.")
-
+            fail_count = 0
             # NOTE - Get `should_record` flags BEFORE unsetting 'grabbing_frame' to avoid
             # potential race-condition-generating flag setting gaps between cameras
             (should_record_frame,

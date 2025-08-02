@@ -113,7 +113,7 @@ class WebsocketServer:
                     skipped_previous = True
                     backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
                     if backpressure > BACKPRESSURE_WARNING_THRESHOLD:
-                        print(
+                        logger.trace(
                             f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
 
                 backend_framerate_updates:dict[CameraGroupIdString,CurrentFramerate] = self._app.camera_group_manager.get_backend_framerate_updates()
