@@ -12,8 +12,9 @@ export class WindowManager {
             height: 720,
             webPreferences: {
                 preload: APP_PATHS.PRELOAD,
-                contextIsolation: true,
-                nodeIntegration: false
+                contextIsolation: true,  
+                nodeIntegration: true,    
+                nodeIntegrationInWorker: true, // Added to enable Node.js in web workers
             }
         });
 

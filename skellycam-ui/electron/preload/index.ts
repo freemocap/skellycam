@@ -1,5 +1,23 @@
 // /electron/preload/index.ts
 import {contextBridge, ipcRenderer} from 'electron'
+// Expose Node.js APIs needed for gRPC
+contextBridge.exposeInMainWorld('nodeAPI', {
+  // Expose require function for gRPC modules
+  require: (module: string) => {
+    try {
+      return require(module);
+    } catch (error) {
+      console.error(`Error requiring module ${module}:`, error);
+      return null;
+    }
+  },
+  // Expose process for gRPC
+  process: {
+    env: process.env,
+    platform: process.platform,
+    versions: process.versions,
+  }
+})
 // Expose a limited API to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // Specific functionality

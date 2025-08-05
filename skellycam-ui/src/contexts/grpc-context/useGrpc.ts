@@ -1,37 +1,17 @@
 // skellycam-ui/src/contexts/grpc-context/useGrpc.ts
-import {CompatServiceDefinition, createChannel, createClient} from 'nice-grpc';
-import {SkellycamServiceClient} from './grpc_generated/skellycam';
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {useAppDispatch} from '@/store/AppStateStore';
-import {updateFramerates} from '@/store/slices/framerateTrackerSlice';
-import {CameraImageData} from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
-import {addGrpcLog} from "@/store/slices/logRecordsSlice";
-// Define the service definition object
-const SkellycamServiceDefinition = {
-    serviceName: "skellycam.SkellycamService",
-    methods: {
-        streamMultiFrames: {
-            path: "/skellycam.SkellycamService/streamMultiFrames",
-            requestStream: false,
-            responseStream: true,
-        },
-        acknowledgeMultiFrame: {
-            path: "/skellycam.SkellycamService/acknowledgeMultiFrame",
-            requestStream: false,
-            responseStream: false,
-        },
-        streamLogs: {
-            path: "/skellycam.SkellycamService/streamLogs",
-            requestStream: false,
-            responseStream: true,
-        },
-        streamFramerates: {
-            path: "/skellycam.SkellycamService/streamFramerates",
-            requestStream: false,
-            responseStream: true,
-        }
-    }
-} as const;
+import { createChannel, createClient } from './grpcInitializer';
+import {
+    SkellycamServiceDefinition,
+    SkellycamServiceClient,
+    LogLevel,
+    DeepPartial,
+    CameraDisplaySize
+} from './grpc_generated/skellycam';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAppDispatch } from '@/store/AppStateStore';
+import { updateFramerates } from '@/store/slices/framerateTrackerSlice';
+import { CameraImageData } from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
+import { addGrpcLog } from "@/store/slices/logRecordsSlice";
 
 // Create gRPC channel and client
 const createGrpcClient = (serverUrl: string) => {
@@ -41,7 +21,7 @@ const createGrpcClient = (serverUrl: string) => {
 
 export const useGrpcClient = (serverUrl: string) => {
     const [isConnected, setIsConnected] = useState(false);
-    const [client, setClient] = useState<ReturnType<typeof createGrpcClient> | null>(null);
+    const [client, setClient] = useState<SkellycamServiceClient | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
     const [latestImageData, setLatestImageData] = useState<Record<string, CameraImageData>>({});
     const dispatch = useAppDispatch();
@@ -77,7 +57,7 @@ export const useGrpcClient = (serverUrl: string) => {
         const streamFrames = async () => {
             try {
                 // Convert display image sizes to the format expected by the server
-                const displayImageSizes: Record<string, { width: number, height: number }> = {};
+                const displayImageSizes: Record<string, DeepPartial<CameraDisplaySize>> = {};
 
                 // Start streaming frames
                 const stream = client.streamMultiFrames({
@@ -128,13 +108,12 @@ export const useGrpcClient = (serverUrl: string) => {
     }, [client, isConnected]);
 
     // Start streaming logs
-
     useEffect(() => {
         if (!client || !isConnected) return;
 
         const streamLogs = async () => {
             try {
-                const stream = client.streamLogs({minLevel: 2}); // INFO level
+                const stream = client.streamLogs({minLevel: LogLevel.INFO}); // INFO level
 
                 for await (const logRecord of stream) {
                     // Use the new action that accepts a gRPC LogRecord directly
@@ -147,6 +126,7 @@ export const useGrpcClient = (serverUrl: string) => {
 
         streamLogs();
     }, [client, isConnected, dispatch]);
+
     // Start streaming framerates
     useEffect(() => {
         if (!client || !isConnected) return;
@@ -162,7 +142,6 @@ export const useGrpcClient = (serverUrl: string) => {
                     if (update.backendFramerate) {
                         dispatch(updateFramerates(update));
                     }
-
                 }
             } catch (error) {
                 console.error('Error in framerate streaming:', error);
@@ -184,7 +163,7 @@ export const useGrpcClient = (serverUrl: string) => {
 
             if (allAcknowledged && latestFrameNumber.current >= 0) {
                 // Send acknowledgment to server
-                const displayImageSizes: Record<string, { width: number, height: number }> = {};
+                const displayImageSizes: Record<string, DeepPartial<CameraDisplaySize>> = {};
 
                 client.acknowledgeMultiFrame({
                     frameNumber: latestFrameNumber.current,

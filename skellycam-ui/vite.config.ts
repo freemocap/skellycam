@@ -3,6 +3,7 @@ import path from 'node:path'
 import {defineConfig} from 'vite'
 import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron/simple'
+import renderer from 'vite-plugin-electron-renderer'
 import pkg from './package.json'
 
 // https://vitejs.dev/config/
@@ -58,10 +59,17 @@ export default defineConfig(({ command }) => {
             },
           },
         },
-        // Ployfill the Electron and Node.js API for Renderer process.
-        // If you want use Node.js in Renderer process, the `nodeIntegration` needs to be enabled in the Main process.
-        // See 👉 https://github.com/electron-vite/vite-plugin-electron-renderer
+        // Use the default renderer configuration
         renderer: {},
+      }),
+      // Add the renderer plugin with proper configuration for gRPC
+      renderer({
+        // Configure specific modules that need special handling
+        resolve: {
+          // Handle gRPC modules
+          '@grpc/grpc-js': { type: 'cjs' },
+          'nice-grpc': { type: 'cjs' },
+        },
       }),
     ],
     optimizeDeps: {
