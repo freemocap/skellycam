@@ -189,10 +189,10 @@ export const MultiFrameRequest: MessageFns<MultiFrameRequest> = {
     return message;
   },
 
-  create(base?: DeepPartial<MultiFrameRequest>): MultiFrameRequest {
-    return MultiFrameRequest.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<MultiFrameRequest>, I>>(base?: I): MultiFrameRequest {
+    return MultiFrameRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<MultiFrameRequest>): MultiFrameRequest {
+  fromPartial<I extends Exact<DeepPartial<MultiFrameRequest>, I>>(object: I): MultiFrameRequest {
     const message = createBaseMultiFrameRequest();
     message.displayImageSizes = Object.entries(object.displayImageSizes ?? {}).reduce<
       { [key: string]: CameraDisplaySize }
@@ -254,10 +254,14 @@ export const MultiFrameRequest_DisplayImageSizesEntry: MessageFns<MultiFrameRequ
     return message;
   },
 
-  create(base?: DeepPartial<MultiFrameRequest_DisplayImageSizesEntry>): MultiFrameRequest_DisplayImageSizesEntry {
-    return MultiFrameRequest_DisplayImageSizesEntry.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<MultiFrameRequest_DisplayImageSizesEntry>, I>>(
+    base?: I,
+  ): MultiFrameRequest_DisplayImageSizesEntry {
+    return MultiFrameRequest_DisplayImageSizesEntry.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<MultiFrameRequest_DisplayImageSizesEntry>): MultiFrameRequest_DisplayImageSizesEntry {
+  fromPartial<I extends Exact<DeepPartial<MultiFrameRequest_DisplayImageSizesEntry>, I>>(
+    object: I,
+  ): MultiFrameRequest_DisplayImageSizesEntry {
     const message = createBaseMultiFrameRequest_DisplayImageSizesEntry();
     message.key = object.key ?? "";
     message.value = (object.value !== undefined && object.value !== null)
@@ -314,10 +318,10 @@ export const CameraDisplaySize: MessageFns<CameraDisplaySize> = {
     return message;
   },
 
-  create(base?: DeepPartial<CameraDisplaySize>): CameraDisplaySize {
-    return CameraDisplaySize.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<CameraDisplaySize>, I>>(base?: I): CameraDisplaySize {
+    return CameraDisplaySize.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<CameraDisplaySize>): CameraDisplaySize {
+  fromPartial<I extends Exact<DeepPartial<CameraDisplaySize>, I>>(object: I): CameraDisplaySize {
     const message = createBaseCameraDisplaySize();
     message.width = object.width ?? 0;
     message.height = object.height ?? 0;
@@ -394,10 +398,10 @@ export const MultiFrameResponse: MessageFns<MultiFrameResponse> = {
     return message;
   },
 
-  create(base?: DeepPartial<MultiFrameResponse>): MultiFrameResponse {
-    return MultiFrameResponse.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<MultiFrameResponse>, I>>(base?: I): MultiFrameResponse {
+    return MultiFrameResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<MultiFrameResponse>): MultiFrameResponse {
+  fromPartial<I extends Exact<DeepPartial<MultiFrameResponse>, I>>(object: I): MultiFrameResponse {
     const message = createBaseMultiFrameResponse();
     message.frameNumber = object.frameNumber ?? 0;
     message.cameraGroupId = object.cameraGroupId ?? "";
@@ -517,10 +521,10 @@ export const CameraFrameData: MessageFns<CameraFrameData> = {
     return message;
   },
 
-  create(base?: DeepPartial<CameraFrameData>): CameraFrameData {
-    return CameraFrameData.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<CameraFrameData>, I>>(base?: I): CameraFrameData {
+    return CameraFrameData.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<CameraFrameData>): CameraFrameData {
+  fromPartial<I extends Exact<DeepPartial<CameraFrameData>, I>>(object: I): CameraFrameData {
     const message = createBaseCameraFrameData();
     message.cameraId = object.cameraId ?? "";
     message.cameraName = object.cameraName ?? "";
@@ -584,10 +588,10 @@ export const MultiFrameAcknowledgment: MessageFns<MultiFrameAcknowledgment> = {
     return message;
   },
 
-  create(base?: DeepPartial<MultiFrameAcknowledgment>): MultiFrameAcknowledgment {
-    return MultiFrameAcknowledgment.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<MultiFrameAcknowledgment>, I>>(base?: I): MultiFrameAcknowledgment {
+    return MultiFrameAcknowledgment.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<MultiFrameAcknowledgment>): MultiFrameAcknowledgment {
+  fromPartial<I extends Exact<DeepPartial<MultiFrameAcknowledgment>, I>>(object: I): MultiFrameAcknowledgment {
     const message = createBaseMultiFrameAcknowledgment();
     message.frameNumber = object.frameNumber ?? 0;
     message.displayImageSizes = Object.entries(object.displayImageSizes ?? {}).reduce<
@@ -654,13 +658,13 @@ export const MultiFrameAcknowledgment_DisplayImageSizesEntry: MessageFns<
     return message;
   },
 
-  create(
-    base?: DeepPartial<MultiFrameAcknowledgment_DisplayImageSizesEntry>,
+  create<I extends Exact<DeepPartial<MultiFrameAcknowledgment_DisplayImageSizesEntry>, I>>(
+    base?: I,
   ): MultiFrameAcknowledgment_DisplayImageSizesEntry {
-    return MultiFrameAcknowledgment_DisplayImageSizesEntry.fromPartial(base ?? {});
+    return MultiFrameAcknowledgment_DisplayImageSizesEntry.fromPartial(base ?? ({} as any));
   },
-  fromPartial(
-    object: DeepPartial<MultiFrameAcknowledgment_DisplayImageSizesEntry>,
+  fromPartial<I extends Exact<DeepPartial<MultiFrameAcknowledgment_DisplayImageSizesEntry>, I>>(
+    object: I,
   ): MultiFrameAcknowledgment_DisplayImageSizesEntry {
     const message = createBaseMultiFrameAcknowledgment_DisplayImageSizesEntry();
     message.key = object.key ?? "";
@@ -707,10 +711,10 @@ export const AcknowledgmentResponse: MessageFns<AcknowledgmentResponse> = {
     return message;
   },
 
-  create(base?: DeepPartial<AcknowledgmentResponse>): AcknowledgmentResponse {
-    return AcknowledgmentResponse.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<AcknowledgmentResponse>, I>>(base?: I): AcknowledgmentResponse {
+    return AcknowledgmentResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<AcknowledgmentResponse>): AcknowledgmentResponse {
+  fromPartial<I extends Exact<DeepPartial<AcknowledgmentResponse>, I>>(object: I): AcknowledgmentResponse {
     const message = createBaseAcknowledgmentResponse();
     message.success = object.success ?? false;
     return message;
@@ -753,10 +757,10 @@ export const LogRequest: MessageFns<LogRequest> = {
     return message;
   },
 
-  create(base?: DeepPartial<LogRequest>): LogRequest {
-    return LogRequest.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<LogRequest>, I>>(base?: I): LogRequest {
+    return LogRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<LogRequest>): LogRequest {
+  fromPartial<I extends Exact<DeepPartial<LogRequest>, I>>(object: I): LogRequest {
     const message = createBaseLogRequest();
     message.minLevel = object.minLevel ?? 0;
     return message;
@@ -1077,10 +1081,10 @@ export const LogRecord: MessageFns<LogRecord> = {
     return message;
   },
 
-  create(base?: DeepPartial<LogRecord>): LogRecord {
-    return LogRecord.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<LogRecord>, I>>(base?: I): LogRecord {
+    return LogRecord.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<LogRecord>): LogRecord {
+  fromPartial<I extends Exact<DeepPartial<LogRecord>, I>>(object: I): LogRecord {
     const message = createBaseLogRecord();
     message.name = object.name ?? "";
     message.message = object.message ?? "";
@@ -1146,10 +1150,10 @@ export const FramerateRequest: MessageFns<FramerateRequest> = {
     return message;
   },
 
-  create(base?: DeepPartial<FramerateRequest>): FramerateRequest {
-    return FramerateRequest.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<FramerateRequest>, I>>(base?: I): FramerateRequest {
+    return FramerateRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<FramerateRequest>): FramerateRequest {
+  fromPartial<I extends Exact<DeepPartial<FramerateRequest>, I>>(object: I): FramerateRequest {
     const message = createBaseFramerateRequest();
     message.cameraGroupId = object.cameraGroupId ?? "";
     return message;
@@ -1214,10 +1218,10 @@ export const FramerateUpdate: MessageFns<FramerateUpdate> = {
     return message;
   },
 
-  create(base?: DeepPartial<FramerateUpdate>): FramerateUpdate {
-    return FramerateUpdate.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<FramerateUpdate>, I>>(base?: I): FramerateUpdate {
+    return FramerateUpdate.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<FramerateUpdate>): FramerateUpdate {
+  fromPartial<I extends Exact<DeepPartial<FramerateUpdate>, I>>(object: I): FramerateUpdate {
     const message = createBaseFramerateUpdate();
     message.cameraGroupId = object.cameraGroupId ?? "";
     message.backendFramerate = (object.backendFramerate !== undefined && object.backendFramerate !== null)
@@ -1364,10 +1368,10 @@ export const FramerateData: MessageFns<FramerateData> = {
     return message;
   },
 
-  create(base?: DeepPartial<FramerateData>): FramerateData {
-    return FramerateData.fromPartial(base ?? {});
+  create<I extends Exact<DeepPartial<FramerateData>, I>>(base?: I): FramerateData {
+    return FramerateData.fromPartial(base ?? ({} as any));
   },
-  fromPartial(object: DeepPartial<FramerateData>): FramerateData {
+  fromPartial<I extends Exact<DeepPartial<FramerateData>, I>>(object: I): FramerateData {
     const message = createBaseFramerateData();
     message.meanFrameDurationMs = object.meanFrameDurationMs ?? 0;
     message.meanFramesPerSecond = object.meanFramesPerSecond ?? 0;
@@ -1381,51 +1385,6 @@ export const FramerateData: MessageFns<FramerateData> = {
     return message;
   },
 };
-
-/** Service definition */
-export type SkellycamServiceDefinition = typeof SkellycamServiceDefinition;
-export const SkellycamServiceDefinition = {
-  name: "SkellycamService",
-  fullName: "skellycam.SkellycamService",
-  methods: {
-    /** Stream camera frames to the client */
-    streamMultiFrames: {
-      name: "StreamMultiFrames",
-      requestType: MultiFrameRequest,
-      requestStream: false,
-      responseType: MultiFrameResponse,
-      responseStream: true,
-      options: {},
-    },
-    /** Send frame acknowledgment from client to server */
-    acknowledgeMultiFrame: {
-      name: "AcknowledgeMultiFrame",
-      requestType: MultiFrameAcknowledgment,
-      requestStream: false,
-      responseType: AcknowledgmentResponse,
-      responseStream: false,
-      options: {},
-    },
-    /** Stream log messages to the client */
-    streamLogs: {
-      name: "StreamLogs",
-      requestType: LogRequest,
-      requestStream: false,
-      responseType: LogRecord,
-      responseStream: true,
-      options: {},
-    },
-    /** Stream framerate updates to the client */
-    streamFramerates: {
-      name: "StreamFramerates",
-      requestType: FramerateRequest,
-      requestStream: false,
-      responseType: FramerateUpdate,
-      responseStream: true,
-      options: {},
-    },
-  },
-} as const;
 
 export interface SkellycamServiceImplementation<CallContextExt = {}> {
   /** Stream camera frames to the client */
@@ -1478,6 +1437,10 @@ export type DeepPartial<T> = T extends Builtin ? T
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
 
+type KeysOfUnion<T> = T extends T ? keyof T : never;
+export type Exact<P, I extends P> = P extends Builtin ? P
+  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+
 function longToNumber(int64: { toString(): string }): number {
   const num = globalThis.Number(int64.toString());
   if (num > globalThis.Number.MAX_SAFE_INTEGER) {
@@ -1494,6 +1457,6 @@ export type ServerStreamingMethodResult<Response> = { [Symbol.asyncIterator](): 
 export interface MessageFns<T> {
   encode(message: T, writer?: BinaryWriter): BinaryWriter;
   decode(input: BinaryReader | Uint8Array, length?: number): T;
-  create(base?: DeepPartial<T>): T;
-  fromPartial(object: DeepPartial<T>): T;
+  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
+  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }
