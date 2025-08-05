@@ -3,9 +3,9 @@ import {useAppDispatch} from "@/store/AppStateStore";
 import {
     FrameRenderAcknowledgment,
     useWebsocketBinaryMessageProcessor
-} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+} from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
 import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerateTrackerSlice";
-import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/context/websocket-context/websocket-types";
+import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/contexts/websocket-context/websocket-types";
 import {addLog} from "@/store/slices/logRecordsSlice";
 
 

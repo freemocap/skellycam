@@ -36,6 +36,7 @@
     "d3": "^7.9.0",
     "electron-updater": "^6.1.8",
     "exploration": "^1.6.0",
+    "nice-grpc-web": "^3.3.7",
     "react-redux": "^9.1.2",
     "react-resizable-panels": "^2.1.7",
     "react-router": "^6.26.2",

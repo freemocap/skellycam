@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import React, { useRef, useMemo } from "react";
-import { CameraImageData } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
-import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
+import { CameraImageData } from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
+import {useWebSocketContext} from "@/contexts/websocket-context/WebSocketContext";
 
 interface CameraImageProps {
     cameraImageData: CameraImageData;

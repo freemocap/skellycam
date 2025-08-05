@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, IconButton, Tooltip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useWebSocketContext } from "@/context/websocket-context/WebSocketContext";
+import { useWebSocketContext } from "@/contexts/websocket-context/WebSocketContext";
 import { urlService } from '@/services/urlService';
 
 const WebsocketConnectionStatus = () => {
@@ -34,7 +34,7 @@ const WebsocketConnectionStatus = () => {
             >
                 <Typography
                     variant="body1"
-                    sx={{ 
+                    sx={{
                         display: 'flex',
                         alignItems: 'center',
                     }}

@@ -60,9 +60,9 @@ class WebsocketServer:
 
     async def run(self):
         logger.info("Starting websocket runner...")
-        self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
+        self.ws_tasks = [#asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
                          # asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
-                         asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
+                         #asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
                          asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler")]
 
         try:

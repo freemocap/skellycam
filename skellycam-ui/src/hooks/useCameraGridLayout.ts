@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import {CameraImageData} from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
 
 interface GridLayout {
     rows: number;

@@ -10,16 +10,10 @@ from pydantic import BaseModel
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
-from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.recorders.framerate_tracker import FramerateTracker
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, CameraIdString, \
-    MultiframeTimestampFloat
+from skellycam.core.types.type_overloads import CameraGroupIdString
 
 logger = logging.getLogger(__name__)
-
-
-
 
 
 @dataclass
@@ -27,11 +21,10 @@ class SkellycamApplication:
     global_kill_flag: multiprocessing.Value
     camera_group_manager: CameraGroupManager
 
-
     @classmethod
     def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):
         return cls(global_kill_flag=global_kill_flag,
-                     camera_group_manager=CameraGroupManager(global_kill_flag=global_kill_flag))
+                   camera_group_manager=CameraGroupManager(global_kill_flag=global_kill_flag))
 
     @property
     def should_continue(self) -> bool:
@@ -41,7 +34,6 @@ class SkellycamApplication:
         return not self.global_kill_flag.value
 
     def create_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
-
         logger.info(f"Creating camera group with cameras: {list(camera_configs.keys())}")
         camera_group = self.camera_group_manager.create_and_start_camera_group(camera_configs=camera_configs)
         if camera_group is None:
@@ -49,12 +41,9 @@ class SkellycamApplication:
         logger.info(f"Camera group created with ID: {camera_group.id} and cameras: {list(camera_configs.keys())}")
         return camera_group
 
-    def get_new_frontend_payloads(self,
-                                  if_newer_than:int,
-                                  display_image_sizes:dict[CameraIdString, dict[str,float]]) -> dict[CameraGroupIdString, tuple[FrameNumberInt,MultiframeTimestampFloat, bytes]]:
-        return self.camera_group_manager.get_latest_frontend_payloads(if_newer_than=if_newer_than,
-                                                                        display_image_sizes=display_image_sizes)
-    
+    def get_new_multiframes(self, if_newer_than: int) -> dict[CameraGroupIdString, np.recarray]:
+        return self.camera_group_manager.get_new_multiframes(if_newer_than=if_newer_than)
+
     def update_camera_configs(self,
                               camera_configs: CameraConfigs) -> CameraConfigs:
         return self.camera_group_manager.update_camera_settings(camera_configs=camera_configs)
@@ -79,6 +68,7 @@ class SkellycamApplication:
     def unpause_camera_groups(self):
         self.camera_group_manager.unpause_all_groups()
         logger.success("Camera groups unpaused successfully")
+
     def shutdown_skellycam(self):
         self.global_kill_flag.value = True
         self.camera_group_manager.close_all_camera_groups()

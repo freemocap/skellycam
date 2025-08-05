@@ -1,6 +1,6 @@
 import React, {createContext, ReactNode, useContext} from "react";
-import { useWebSocket} from "@/context/websocket-context/useWebSocket";
-import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
+import { useWebSocket} from "@/contexts/websocket-context/useWebSocket";
+import {CameraImageData} from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
 import * as THREE from "three";
 
 

@@ -112,22 +112,33 @@ class CameraGroupManager:
             camera_group.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
+    def get_new_multiframes(self, if_newer_than: int) -> dict[CameraGroupIdString, np.recarray]:
+        """
+        Get new multi-frames from all camera groups that are newer than the specified frame number.
 
-    def get_latest_frontend_payloads(self,
-                                     if_newer_than:int,
-                                     display_image_sizes:dict[CameraIdString,dict[str,float]]) -> dict[CameraGroupIdString, tuple[FrameNumberInt,MultiframeTimestampFloat, bytes]]:
-        fe_payloads:dict[CameraGroupIdString, tuple[FrameNumberInt,MultiframeTimestampFloat, bytes]] = {}
+        Args:
+            if_newer_than: Only return multi-frames with frame numbers greater than this value
+
+        Returns:
+            Dictionary mapping camera group IDs to their latest multi-frame record arrays
+        """
+        multiframes: dict[CameraGroupIdString, np.recarray] = {}
+
         if self.closing:
-            return fe_payloads
-        for camera_group in self.camera_groups.values():
-            fe_return =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than,
-                                                                  display_image_sizes=display_image_sizes)
-            if fe_return is None:
-                continue
-            frame_number, multiframe_timestamp, fe_payload = fe_return
-            fe_payloads[camera_group.id] = (frame_number,multiframe_timestamp, fe_payload) if fe_payload is not None else None
-        return fe_payloads
+            return multiframes
 
+        for camera_group in self.camera_groups.values():
+            if camera_group.shm is None or not camera_group.shm.valid:
+                continue
+
+            if camera_group.shm.latest_multiframe_number.value <= if_newer_than:
+                continue
+
+            mf_rec_array = camera_group.shm.multi_frame_ring_shm.get_latest_multiframe()
+            if mf_rec_array is not None:
+                multiframes[camera_group.id] = mf_rec_array
+
+        return multiframes
     def get_backend_framerate_updates(self) -> dict[CameraGroupIdString, CurrentFramerate]:
         """
         Get the latest framerate updates for all camera groups.
