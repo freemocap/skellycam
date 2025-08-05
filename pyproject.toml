@@ -70,6 +70,8 @@ dependencies = [
     "nuitka>=2.6.5",
     "numpydantic>=1.6.9",
     "cv2-enumerate-cameras>=1.2.2",
+    "grpcio>=1.74.0",
+    "grpcio-tools>=1.74.0",
 ]
 requires-python = ">=3.10,<3.13"
 
