@@ -2,7 +2,7 @@
 // versions:
 //   protoc-gen-ts_proto  v2.7.5
 //   protoc               v3.20.3
-// source: skellycam.proto
+// source: proto/skellycam.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
@@ -21,6 +21,63 @@ export enum LogLevel {
   ERROR = 6,
   CRITICAL = 7,
   UNRECOGNIZED = -1,
+}
+
+export function logLevelFromJSON(object: any): LogLevel {
+  switch (object) {
+    case 0:
+    case "TRACE":
+      return LogLevel.TRACE;
+    case 1:
+    case "DEBUG":
+      return LogLevel.DEBUG;
+    case 2:
+    case "INFO":
+      return LogLevel.INFO;
+    case 3:
+    case "SUCCESS":
+      return LogLevel.SUCCESS;
+    case 4:
+    case "API":
+      return LogLevel.API;
+    case 5:
+    case "WARNING":
+      return LogLevel.WARNING;
+    case 6:
+    case "ERROR":
+      return LogLevel.ERROR;
+    case 7:
+    case "CRITICAL":
+      return LogLevel.CRITICAL;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return LogLevel.UNRECOGNIZED;
+  }
+}
+
+export function logLevelToJSON(object: LogLevel): string {
+  switch (object) {
+    case LogLevel.TRACE:
+      return "TRACE";
+    case LogLevel.DEBUG:
+      return "DEBUG";
+    case LogLevel.INFO:
+      return "INFO";
+    case LogLevel.SUCCESS:
+      return "SUCCESS";
+    case LogLevel.API:
+      return "API";
+    case LogLevel.WARNING:
+      return "WARNING";
+    case LogLevel.ERROR:
+      return "ERROR";
+    case LogLevel.CRITICAL:
+      return "CRITICAL";
+    case LogLevel.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
 }
 
 /** Request for starting frame streaming */
@@ -60,7 +117,7 @@ export interface CameraFrameData {
   imageWidth: number;
   imageHeight: number;
   colorChannels: number;
-  jpegData: Uint8Array;
+  jpegData: Buffer;
 }
 
 /** MultiFrame acknowledgment from client */
@@ -189,6 +246,37 @@ export const MultiFrameRequest: MessageFns<MultiFrameRequest> = {
     return message;
   },
 
+  fromJSON(object: any): MultiFrameRequest {
+    return {
+      displayImageSizes: isObject(object.displayImageSizes)
+        ? Object.entries(object.displayImageSizes).reduce<{ [key: string]: CameraDisplaySize }>((acc, [key, value]) => {
+          acc[key] = CameraDisplaySize.fromJSON(value);
+          return acc;
+        }, {})
+        : {},
+      lastReceivedFrameNumber: isSet(object.lastReceivedFrameNumber)
+        ? globalThis.Number(object.lastReceivedFrameNumber)
+        : 0,
+    };
+  },
+
+  toJSON(message: MultiFrameRequest): unknown {
+    const obj: any = {};
+    if (message.displayImageSizes) {
+      const entries = Object.entries(message.displayImageSizes);
+      if (entries.length > 0) {
+        obj.displayImageSizes = {};
+        entries.forEach(([k, v]) => {
+          obj.displayImageSizes[k] = CameraDisplaySize.toJSON(v);
+        });
+      }
+    }
+    if (message.lastReceivedFrameNumber !== 0) {
+      obj.lastReceivedFrameNumber = Math.round(message.lastReceivedFrameNumber);
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<MultiFrameRequest>, I>>(base?: I): MultiFrameRequest {
     return MultiFrameRequest.fromPartial(base ?? ({} as any));
   },
@@ -254,6 +342,24 @@ export const MultiFrameRequest_DisplayImageSizesEntry: MessageFns<MultiFrameRequ
     return message;
   },
 
+  fromJSON(object: any): MultiFrameRequest_DisplayImageSizesEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? CameraDisplaySize.fromJSON(object.value) : undefined,
+    };
+  },
+
+  toJSON(message: MultiFrameRequest_DisplayImageSizesEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== undefined) {
+      obj.value = CameraDisplaySize.toJSON(message.value);
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<MultiFrameRequest_DisplayImageSizesEntry>, I>>(
     base?: I,
   ): MultiFrameRequest_DisplayImageSizesEntry {
@@ -316,6 +422,24 @@ export const CameraDisplaySize: MessageFns<CameraDisplaySize> = {
       reader.skip(tag & 7);
     }
     return message;
+  },
+
+  fromJSON(object: any): CameraDisplaySize {
+    return {
+      width: isSet(object.width) ? globalThis.Number(object.width) : 0,
+      height: isSet(object.height) ? globalThis.Number(object.height) : 0,
+    };
+  },
+
+  toJSON(message: CameraDisplaySize): unknown {
+    const obj: any = {};
+    if (message.width !== 0) {
+      obj.width = message.width;
+    }
+    if (message.height !== 0) {
+      obj.height = message.height;
+    }
+    return obj;
   },
 
   create<I extends Exact<DeepPartial<CameraDisplaySize>, I>>(base?: I): CameraDisplaySize {
@@ -398,6 +522,34 @@ export const MultiFrameResponse: MessageFns<MultiFrameResponse> = {
     return message;
   },
 
+  fromJSON(object: any): MultiFrameResponse {
+    return {
+      frameNumber: isSet(object.frameNumber) ? globalThis.Number(object.frameNumber) : 0,
+      cameraGroupId: isSet(object.cameraGroupId) ? globalThis.String(object.cameraGroupId) : "",
+      timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
+      cameraFrames: globalThis.Array.isArray(object?.cameraFrames)
+        ? object.cameraFrames.map((e: any) => CameraFrameData.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: MultiFrameResponse): unknown {
+    const obj: any = {};
+    if (message.frameNumber !== 0) {
+      obj.frameNumber = Math.round(message.frameNumber);
+    }
+    if (message.cameraGroupId !== "") {
+      obj.cameraGroupId = message.cameraGroupId;
+    }
+    if (message.timestamp !== 0) {
+      obj.timestamp = message.timestamp;
+    }
+    if (message.cameraFrames?.length) {
+      obj.cameraFrames = message.cameraFrames.map((e) => CameraFrameData.toJSON(e));
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<MultiFrameResponse>, I>>(base?: I): MultiFrameResponse {
     return MultiFrameResponse.fromPartial(base ?? ({} as any));
   },
@@ -419,7 +571,7 @@ function createBaseCameraFrameData(): CameraFrameData {
     imageWidth: 0,
     imageHeight: 0,
     colorChannels: 0,
-    jpegData: new Uint8Array(0),
+    jpegData: Buffer.alloc(0),
   };
 }
 
@@ -509,7 +661,7 @@ export const CameraFrameData: MessageFns<CameraFrameData> = {
             break;
           }
 
-          message.jpegData = reader.bytes();
+          message.jpegData = Buffer.from(reader.bytes());
           continue;
         }
       }
@@ -519,6 +671,44 @@ export const CameraFrameData: MessageFns<CameraFrameData> = {
       reader.skip(tag & 7);
     }
     return message;
+  },
+
+  fromJSON(object: any): CameraFrameData {
+    return {
+      cameraId: isSet(object.cameraId) ? globalThis.String(object.cameraId) : "",
+      cameraName: isSet(object.cameraName) ? globalThis.String(object.cameraName) : "",
+      cameraIndex: isSet(object.cameraIndex) ? globalThis.Number(object.cameraIndex) : 0,
+      imageWidth: isSet(object.imageWidth) ? globalThis.Number(object.imageWidth) : 0,
+      imageHeight: isSet(object.imageHeight) ? globalThis.Number(object.imageHeight) : 0,
+      colorChannels: isSet(object.colorChannels) ? globalThis.Number(object.colorChannels) : 0,
+      jpegData: isSet(object.jpegData) ? Buffer.from(bytesFromBase64(object.jpegData)) : Buffer.alloc(0),
+    };
+  },
+
+  toJSON(message: CameraFrameData): unknown {
+    const obj: any = {};
+    if (message.cameraId !== "") {
+      obj.cameraId = message.cameraId;
+    }
+    if (message.cameraName !== "") {
+      obj.cameraName = message.cameraName;
+    }
+    if (message.cameraIndex !== 0) {
+      obj.cameraIndex = Math.round(message.cameraIndex);
+    }
+    if (message.imageWidth !== 0) {
+      obj.imageWidth = Math.round(message.imageWidth);
+    }
+    if (message.imageHeight !== 0) {
+      obj.imageHeight = Math.round(message.imageHeight);
+    }
+    if (message.colorChannels !== 0) {
+      obj.colorChannels = Math.round(message.colorChannels);
+    }
+    if (message.jpegData.length !== 0) {
+      obj.jpegData = base64FromBytes(message.jpegData);
+    }
+    return obj;
   },
 
   create<I extends Exact<DeepPartial<CameraFrameData>, I>>(base?: I): CameraFrameData {
@@ -532,7 +722,7 @@ export const CameraFrameData: MessageFns<CameraFrameData> = {
     message.imageWidth = object.imageWidth ?? 0;
     message.imageHeight = object.imageHeight ?? 0;
     message.colorChannels = object.colorChannels ?? 0;
-    message.jpegData = object.jpegData ?? new Uint8Array(0);
+    message.jpegData = object.jpegData ?? Buffer.alloc(0);
     return message;
   },
 };
@@ -586,6 +776,35 @@ export const MultiFrameAcknowledgment: MessageFns<MultiFrameAcknowledgment> = {
       reader.skip(tag & 7);
     }
     return message;
+  },
+
+  fromJSON(object: any): MultiFrameAcknowledgment {
+    return {
+      frameNumber: isSet(object.frameNumber) ? globalThis.Number(object.frameNumber) : 0,
+      displayImageSizes: isObject(object.displayImageSizes)
+        ? Object.entries(object.displayImageSizes).reduce<{ [key: string]: CameraDisplaySize }>((acc, [key, value]) => {
+          acc[key] = CameraDisplaySize.fromJSON(value);
+          return acc;
+        }, {})
+        : {},
+    };
+  },
+
+  toJSON(message: MultiFrameAcknowledgment): unknown {
+    const obj: any = {};
+    if (message.frameNumber !== 0) {
+      obj.frameNumber = Math.round(message.frameNumber);
+    }
+    if (message.displayImageSizes) {
+      const entries = Object.entries(message.displayImageSizes);
+      if (entries.length > 0) {
+        obj.displayImageSizes = {};
+        entries.forEach(([k, v]) => {
+          obj.displayImageSizes[k] = CameraDisplaySize.toJSON(v);
+        });
+      }
+    }
+    return obj;
   },
 
   create<I extends Exact<DeepPartial<MultiFrameAcknowledgment>, I>>(base?: I): MultiFrameAcknowledgment {
@@ -658,6 +877,24 @@ export const MultiFrameAcknowledgment_DisplayImageSizesEntry: MessageFns<
     return message;
   },
 
+  fromJSON(object: any): MultiFrameAcknowledgment_DisplayImageSizesEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? CameraDisplaySize.fromJSON(object.value) : undefined,
+    };
+  },
+
+  toJSON(message: MultiFrameAcknowledgment_DisplayImageSizesEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== undefined) {
+      obj.value = CameraDisplaySize.toJSON(message.value);
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<MultiFrameAcknowledgment_DisplayImageSizesEntry>, I>>(
     base?: I,
   ): MultiFrameAcknowledgment_DisplayImageSizesEntry {
@@ -711,6 +948,18 @@ export const AcknowledgmentResponse: MessageFns<AcknowledgmentResponse> = {
     return message;
   },
 
+  fromJSON(object: any): AcknowledgmentResponse {
+    return { success: isSet(object.success) ? globalThis.Boolean(object.success) : false };
+  },
+
+  toJSON(message: AcknowledgmentResponse): unknown {
+    const obj: any = {};
+    if (message.success !== false) {
+      obj.success = message.success;
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<AcknowledgmentResponse>, I>>(base?: I): AcknowledgmentResponse {
     return AcknowledgmentResponse.fromPartial(base ?? ({} as any));
   },
@@ -755,6 +1004,18 @@ export const LogRequest: MessageFns<LogRequest> = {
       reader.skip(tag & 7);
     }
     return message;
+  },
+
+  fromJSON(object: any): LogRequest {
+    return { minLevel: isSet(object.minLevel) ? logLevelFromJSON(object.minLevel) : 0 };
+  },
+
+  toJSON(message: LogRequest): unknown {
+    const obj: any = {};
+    if (message.minLevel !== 0) {
+      obj.minLevel = logLevelToJSON(message.minLevel);
+    }
+    return obj;
   },
 
   create<I extends Exact<DeepPartial<LogRequest>, I>>(base?: I): LogRequest {
@@ -1081,6 +1342,112 @@ export const LogRecord: MessageFns<LogRecord> = {
     return message;
   },
 
+  fromJSON(object: any): LogRecord {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      message: isSet(object.message) ? globalThis.String(object.message) : "",
+      args: globalThis.Array.isArray(object?.args) ? object.args.map((e: any) => globalThis.String(e)) : [],
+      levelName: isSet(object.levelName) ? globalThis.String(object.levelName) : "",
+      levelNo: isSet(object.levelNo) ? globalThis.Number(object.levelNo) : 0,
+      pathname: isSet(object.pathname) ? globalThis.String(object.pathname) : "",
+      filename: isSet(object.filename) ? globalThis.String(object.filename) : "",
+      module: isSet(object.module) ? globalThis.String(object.module) : "",
+      excInfo: isSet(object.excInfo) ? globalThis.String(object.excInfo) : "",
+      excText: isSet(object.excText) ? globalThis.String(object.excText) : "",
+      stackInfo: isSet(object.stackInfo) ? globalThis.String(object.stackInfo) : "",
+      lineNo: isSet(object.lineNo) ? globalThis.Number(object.lineNo) : 0,
+      funcName: isSet(object.funcName) ? globalThis.String(object.funcName) : "",
+      created: isSet(object.created) ? globalThis.Number(object.created) : 0,
+      msecs: isSet(object.msecs) ? globalThis.Number(object.msecs) : 0,
+      relativeCreated: isSet(object.relativeCreated) ? globalThis.Number(object.relativeCreated) : 0,
+      thread: isSet(object.thread) ? globalThis.Number(object.thread) : 0,
+      threadName: isSet(object.threadName) ? globalThis.String(object.threadName) : "",
+      processName: isSet(object.processName) ? globalThis.String(object.processName) : "",
+      process: isSet(object.process) ? globalThis.Number(object.process) : 0,
+      deltaT: isSet(object.deltaT) ? globalThis.String(object.deltaT) : "",
+      formattedMessage: isSet(object.formattedMessage) ? globalThis.String(object.formattedMessage) : "",
+      asctime: isSet(object.asctime) ? globalThis.String(object.asctime) : "",
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
+    };
+  },
+
+  toJSON(message: LogRecord): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.message !== "") {
+      obj.message = message.message;
+    }
+    if (message.args?.length) {
+      obj.args = message.args;
+    }
+    if (message.levelName !== "") {
+      obj.levelName = message.levelName;
+    }
+    if (message.levelNo !== 0) {
+      obj.levelNo = Math.round(message.levelNo);
+    }
+    if (message.pathname !== "") {
+      obj.pathname = message.pathname;
+    }
+    if (message.filename !== "") {
+      obj.filename = message.filename;
+    }
+    if (message.module !== "") {
+      obj.module = message.module;
+    }
+    if (message.excInfo !== "") {
+      obj.excInfo = message.excInfo;
+    }
+    if (message.excText !== "") {
+      obj.excText = message.excText;
+    }
+    if (message.stackInfo !== "") {
+      obj.stackInfo = message.stackInfo;
+    }
+    if (message.lineNo !== 0) {
+      obj.lineNo = Math.round(message.lineNo);
+    }
+    if (message.funcName !== "") {
+      obj.funcName = message.funcName;
+    }
+    if (message.created !== 0) {
+      obj.created = message.created;
+    }
+    if (message.msecs !== 0) {
+      obj.msecs = message.msecs;
+    }
+    if (message.relativeCreated !== 0) {
+      obj.relativeCreated = message.relativeCreated;
+    }
+    if (message.thread !== 0) {
+      obj.thread = Math.round(message.thread);
+    }
+    if (message.threadName !== "") {
+      obj.threadName = message.threadName;
+    }
+    if (message.processName !== "") {
+      obj.processName = message.processName;
+    }
+    if (message.process !== 0) {
+      obj.process = Math.round(message.process);
+    }
+    if (message.deltaT !== "") {
+      obj.deltaT = message.deltaT;
+    }
+    if (message.formattedMessage !== "") {
+      obj.formattedMessage = message.formattedMessage;
+    }
+    if (message.asctime !== "") {
+      obj.asctime = message.asctime;
+    }
+    if (message.type !== "") {
+      obj.type = message.type;
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<LogRecord>, I>>(base?: I): LogRecord {
     return LogRecord.fromPartial(base ?? ({} as any));
   },
@@ -1150,6 +1517,18 @@ export const FramerateRequest: MessageFns<FramerateRequest> = {
     return message;
   },
 
+  fromJSON(object: any): FramerateRequest {
+    return { cameraGroupId: isSet(object.cameraGroupId) ? globalThis.String(object.cameraGroupId) : "" };
+  },
+
+  toJSON(message: FramerateRequest): unknown {
+    const obj: any = {};
+    if (message.cameraGroupId !== "") {
+      obj.cameraGroupId = message.cameraGroupId;
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<FramerateRequest>, I>>(base?: I): FramerateRequest {
     return FramerateRequest.fromPartial(base ?? ({} as any));
   },
@@ -1216,6 +1595,28 @@ export const FramerateUpdate: MessageFns<FramerateUpdate> = {
       reader.skip(tag & 7);
     }
     return message;
+  },
+
+  fromJSON(object: any): FramerateUpdate {
+    return {
+      cameraGroupId: isSet(object.cameraGroupId) ? globalThis.String(object.cameraGroupId) : "",
+      backendFramerate: isSet(object.backendFramerate) ? FramerateData.fromJSON(object.backendFramerate) : undefined,
+      frontendFramerate: isSet(object.frontendFramerate) ? FramerateData.fromJSON(object.frontendFramerate) : undefined,
+    };
+  },
+
+  toJSON(message: FramerateUpdate): unknown {
+    const obj: any = {};
+    if (message.cameraGroupId !== "") {
+      obj.cameraGroupId = message.cameraGroupId;
+    }
+    if (message.backendFramerate !== undefined) {
+      obj.backendFramerate = FramerateData.toJSON(message.backendFramerate);
+    }
+    if (message.frontendFramerate !== undefined) {
+      obj.frontendFramerate = FramerateData.toJSON(message.frontendFramerate);
+    }
+    return obj;
   },
 
   create<I extends Exact<DeepPartial<FramerateUpdate>, I>>(base?: I): FramerateUpdate {
@@ -1368,6 +1769,54 @@ export const FramerateData: MessageFns<FramerateData> = {
     return message;
   },
 
+  fromJSON(object: any): FramerateData {
+    return {
+      meanFrameDurationMs: isSet(object.meanFrameDurationMs) ? globalThis.Number(object.meanFrameDurationMs) : 0,
+      meanFramesPerSecond: isSet(object.meanFramesPerSecond) ? globalThis.Number(object.meanFramesPerSecond) : 0,
+      frameDurationMin: isSet(object.frameDurationMin) ? globalThis.Number(object.frameDurationMin) : 0,
+      frameDurationMax: isSet(object.frameDurationMax) ? globalThis.Number(object.frameDurationMax) : 0,
+      frameDurationStddev: isSet(object.frameDurationStddev) ? globalThis.Number(object.frameDurationStddev) : 0,
+      frameDurationMedian: isSet(object.frameDurationMedian) ? globalThis.Number(object.frameDurationMedian) : 0,
+      frameDurationCoefficientOfVariation: isSet(object.frameDurationCoefficientOfVariation)
+        ? globalThis.Number(object.frameDurationCoefficientOfVariation)
+        : 0,
+      calculationWindowSize: isSet(object.calculationWindowSize) ? globalThis.Number(object.calculationWindowSize) : 0,
+      framerateSource: isSet(object.framerateSource) ? globalThis.String(object.framerateSource) : "",
+    };
+  },
+
+  toJSON(message: FramerateData): unknown {
+    const obj: any = {};
+    if (message.meanFrameDurationMs !== 0) {
+      obj.meanFrameDurationMs = message.meanFrameDurationMs;
+    }
+    if (message.meanFramesPerSecond !== 0) {
+      obj.meanFramesPerSecond = message.meanFramesPerSecond;
+    }
+    if (message.frameDurationMin !== 0) {
+      obj.frameDurationMin = message.frameDurationMin;
+    }
+    if (message.frameDurationMax !== 0) {
+      obj.frameDurationMax = message.frameDurationMax;
+    }
+    if (message.frameDurationStddev !== 0) {
+      obj.frameDurationStddev = message.frameDurationStddev;
+    }
+    if (message.frameDurationMedian !== 0) {
+      obj.frameDurationMedian = message.frameDurationMedian;
+    }
+    if (message.frameDurationCoefficientOfVariation !== 0) {
+      obj.frameDurationCoefficientOfVariation = message.frameDurationCoefficientOfVariation;
+    }
+    if (message.calculationWindowSize !== 0) {
+      obj.calculationWindowSize = Math.round(message.calculationWindowSize);
+    }
+    if (message.framerateSource !== "") {
+      obj.framerateSource = message.framerateSource;
+    }
+    return obj;
+  },
+
   create<I extends Exact<DeepPartial<FramerateData>, I>>(base?: I): FramerateData {
     return FramerateData.fromPartial(base ?? ({} as any));
   },
@@ -1385,6 +1834,51 @@ export const FramerateData: MessageFns<FramerateData> = {
     return message;
   },
 };
+
+/** Service definition */
+export type SkellycamServiceDefinition = typeof SkellycamServiceDefinition;
+export const SkellycamServiceDefinition = {
+  name: "SkellycamService",
+  fullName: "skellycam.SkellycamService",
+  methods: {
+    /** Stream camera frames to the client */
+    streamMultiFrames: {
+      name: "StreamMultiFrames",
+      requestType: MultiFrameRequest,
+      requestStream: false,
+      responseType: MultiFrameResponse,
+      responseStream: true,
+      options: {},
+    },
+    /** Send frame acknowledgment from client to server */
+    acknowledgeMultiFrame: {
+      name: "AcknowledgeMultiFrame",
+      requestType: MultiFrameAcknowledgment,
+      requestStream: false,
+      responseType: AcknowledgmentResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** Stream log messages to the client */
+    streamLogs: {
+      name: "StreamLogs",
+      requestType: LogRequest,
+      requestStream: false,
+      responseType: LogRecord,
+      responseStream: true,
+      options: {},
+    },
+    /** Stream framerate updates to the client */
+    streamFramerates: {
+      name: "StreamFramerates",
+      requestType: FramerateRequest,
+      requestStream: false,
+      responseType: FramerateUpdate,
+      responseStream: true,
+      options: {},
+    },
+  },
+} as const;
 
 export interface SkellycamServiceImplementation<CallContextExt = {}> {
   /** Stream camera frames to the client */
@@ -1429,6 +1923,14 @@ export interface SkellycamServiceClient<CallOptionsExt = {}> {
   ): AsyncIterable<FramerateUpdate>;
 }
 
+function bytesFromBase64(b64: string): Uint8Array {
+  return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
+}
+
+function base64FromBytes(arr: Uint8Array): string {
+  return globalThis.Buffer.from(arr).toString("base64");
+}
+
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
 export type DeepPartial<T> = T extends Builtin ? T
@@ -1452,11 +1954,21 @@ function longToNumber(int64: { toString(): string }): number {
   return num;
 }
 
+function isObject(value: any): boolean {
+  return typeof value === "object" && value !== null;
+}
+
+function isSet(value: any): boolean {
+  return value !== null && value !== undefined;
+}
+
 export type ServerStreamingMethodResult<Response> = { [Symbol.asyncIterator](): AsyncIterator<Response, void> };
 
 export interface MessageFns<T> {
   encode(message: T, writer?: BinaryWriter): BinaryWriter;
   decode(input: BinaryReader | Uint8Array, length?: number): T;
+  fromJSON(object: any): T;
+  toJSON(message: T): unknown;
   create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
   fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }
