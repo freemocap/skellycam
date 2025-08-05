@@ -16,9 +16,10 @@ export enum LogLevel {
   DEBUG = 1,
   INFO = 2,
   SUCCESS = 3,
-  WARNING = 4,
-  ERROR = 5,
-  CRITICAL = 6,
+  API = 4,
+  WARNING = 5,
+  ERROR = 6,
+  CRITICAL = 7,
   UNRECOGNIZED = -1,
 }
 
@@ -48,12 +49,13 @@ export interface MultiFrameResponse {
   cameraGroupId: string;
   timestamp: number;
   /** Camera frames */
-  cameraFrames: CameraMultiFrame[];
+  cameraFrames: CameraFrameData[];
 }
 
 /** Individual camera frame */
-export interface CameraMultiFrame {
+export interface CameraFrameData {
   cameraId: string;
+  cameraName: string;
   cameraIndex: number;
   imageWidth: number;
   imageHeight: number;
@@ -126,10 +128,15 @@ export interface FramerateUpdate {
 
 /** Framerate data */
 export interface FramerateData {
-  fps: number;
-  frameTimeMs: number;
-  source: string;
-  recentFrameDurations: number[];
+  meanFrameDurationMs: number;
+  meanFramesPerSecond: number;
+  frameDurationMin: number;
+  frameDurationMax: number;
+  frameDurationStddev: number;
+  frameDurationMedian: number;
+  frameDurationCoefficientOfVariation: number;
+  calculationWindowSize: number;
+  framerateSource: string;
 }
 
 function createBaseMultiFrameRequest(): MultiFrameRequest {
@@ -334,7 +341,7 @@ export const MultiFrameResponse: MessageFns<MultiFrameResponse> = {
       writer.uint32(25).double(message.timestamp);
     }
     for (const v of message.cameraFrames) {
-      CameraMultiFrame.encode(v!, writer.uint32(34).fork()).join();
+      CameraFrameData.encode(v!, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -375,7 +382,7 @@ export const MultiFrameResponse: MessageFns<MultiFrameResponse> = {
             break;
           }
 
-          message.cameraFrames.push(CameraMultiFrame.decode(reader, reader.uint32()));
+          message.cameraFrames.push(CameraFrameData.decode(reader, reader.uint32()));
           continue;
         }
       }
@@ -395,42 +402,53 @@ export const MultiFrameResponse: MessageFns<MultiFrameResponse> = {
     message.frameNumber = object.frameNumber ?? 0;
     message.cameraGroupId = object.cameraGroupId ?? "";
     message.timestamp = object.timestamp ?? 0;
-    message.cameraFrames = object.cameraFrames?.map((e) => CameraMultiFrame.fromPartial(e)) || [];
+    message.cameraFrames = object.cameraFrames?.map((e) => CameraFrameData.fromPartial(e)) || [];
     return message;
   },
 };
 
-function createBaseCameraMultiFrame(): CameraMultiFrame {
-  return { cameraId: "", cameraIndex: 0, imageWidth: 0, imageHeight: 0, colorChannels: 0, jpegData: new Uint8Array(0) };
+function createBaseCameraFrameData(): CameraFrameData {
+  return {
+    cameraId: "",
+    cameraName: "",
+    cameraIndex: 0,
+    imageWidth: 0,
+    imageHeight: 0,
+    colorChannels: 0,
+    jpegData: new Uint8Array(0),
+  };
 }
 
-export const CameraMultiFrame: MessageFns<CameraMultiFrame> = {
-  encode(message: CameraMultiFrame, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const CameraFrameData: MessageFns<CameraFrameData> = {
+  encode(message: CameraFrameData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.cameraId !== "") {
       writer.uint32(10).string(message.cameraId);
     }
+    if (message.cameraName !== "") {
+      writer.uint32(18).string(message.cameraName);
+    }
     if (message.cameraIndex !== 0) {
-      writer.uint32(16).int32(message.cameraIndex);
+      writer.uint32(24).int32(message.cameraIndex);
     }
     if (message.imageWidth !== 0) {
-      writer.uint32(24).int32(message.imageWidth);
+      writer.uint32(32).int32(message.imageWidth);
     }
     if (message.imageHeight !== 0) {
-      writer.uint32(32).int32(message.imageHeight);
+      writer.uint32(40).int32(message.imageHeight);
     }
     if (message.colorChannels !== 0) {
-      writer.uint32(40).int32(message.colorChannels);
+      writer.uint32(48).int32(message.colorChannels);
     }
     if (message.jpegData.length !== 0) {
-      writer.uint32(50).bytes(message.jpegData);
+      writer.uint32(58).bytes(message.jpegData);
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): CameraMultiFrame {
+  decode(input: BinaryReader | Uint8Array, length?: number): CameraFrameData {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCameraMultiFrame();
+    const message = createBaseCameraFrameData();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -443,11 +461,11 @@ export const CameraMultiFrame: MessageFns<CameraMultiFrame> = {
           continue;
         }
         case 2: {
-          if (tag !== 16) {
+          if (tag !== 18) {
             break;
           }
 
-          message.cameraIndex = reader.int32();
+          message.cameraName = reader.string();
           continue;
         }
         case 3: {
@@ -455,7 +473,7 @@ export const CameraMultiFrame: MessageFns<CameraMultiFrame> = {
             break;
           }
 
-          message.imageWidth = reader.int32();
+          message.cameraIndex = reader.int32();
           continue;
         }
         case 4: {
@@ -463,7 +481,7 @@ export const CameraMultiFrame: MessageFns<CameraMultiFrame> = {
             break;
           }
 
-          message.imageHeight = reader.int32();
+          message.imageWidth = reader.int32();
           continue;
         }
         case 5: {
@@ -471,11 +489,19 @@ export const CameraMultiFrame: MessageFns<CameraMultiFrame> = {
             break;
           }
 
-          message.colorChannels = reader.int32();
+          message.imageHeight = reader.int32();
           continue;
         }
         case 6: {
-          if (tag !== 50) {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.colorChannels = reader.int32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
             break;
           }
 
@@ -491,12 +517,13 @@ export const CameraMultiFrame: MessageFns<CameraMultiFrame> = {
     return message;
   },
 
-  create(base?: DeepPartial<CameraMultiFrame>): CameraMultiFrame {
-    return CameraMultiFrame.fromPartial(base ?? {});
+  create(base?: DeepPartial<CameraFrameData>): CameraFrameData {
+    return CameraFrameData.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<CameraMultiFrame>): CameraMultiFrame {
-    const message = createBaseCameraMultiFrame();
+  fromPartial(object: DeepPartial<CameraFrameData>): CameraFrameData {
+    const message = createBaseCameraFrameData();
     message.cameraId = object.cameraId ?? "";
+    message.cameraName = object.cameraName ?? "";
     message.cameraIndex = object.cameraIndex ?? 0;
     message.imageWidth = object.imageWidth ?? 0;
     message.imageHeight = object.imageHeight ?? 0;
@@ -1204,25 +1231,48 @@ export const FramerateUpdate: MessageFns<FramerateUpdate> = {
 };
 
 function createBaseFramerateData(): FramerateData {
-  return { fps: 0, frameTimeMs: 0, source: "", recentFrameDurations: [] };
+  return {
+    meanFrameDurationMs: 0,
+    meanFramesPerSecond: 0,
+    frameDurationMin: 0,
+    frameDurationMax: 0,
+    frameDurationStddev: 0,
+    frameDurationMedian: 0,
+    frameDurationCoefficientOfVariation: 0,
+    calculationWindowSize: 0,
+    framerateSource: "",
+  };
 }
 
 export const FramerateData: MessageFns<FramerateData> = {
   encode(message: FramerateData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.fps !== 0) {
-      writer.uint32(9).double(message.fps);
+    if (message.meanFrameDurationMs !== 0) {
+      writer.uint32(9).double(message.meanFrameDurationMs);
     }
-    if (message.frameTimeMs !== 0) {
-      writer.uint32(17).double(message.frameTimeMs);
+    if (message.meanFramesPerSecond !== 0) {
+      writer.uint32(17).double(message.meanFramesPerSecond);
     }
-    if (message.source !== "") {
-      writer.uint32(26).string(message.source);
+    if (message.frameDurationMin !== 0) {
+      writer.uint32(25).double(message.frameDurationMin);
     }
-    writer.uint32(34).fork();
-    for (const v of message.recentFrameDurations) {
-      writer.double(v);
+    if (message.frameDurationMax !== 0) {
+      writer.uint32(33).double(message.frameDurationMax);
     }
-    writer.join();
+    if (message.frameDurationStddev !== 0) {
+      writer.uint32(41).double(message.frameDurationStddev);
+    }
+    if (message.frameDurationMedian !== 0) {
+      writer.uint32(49).double(message.frameDurationMedian);
+    }
+    if (message.frameDurationCoefficientOfVariation !== 0) {
+      writer.uint32(57).double(message.frameDurationCoefficientOfVariation);
+    }
+    if (message.calculationWindowSize !== 0) {
+      writer.uint32(64).int32(message.calculationWindowSize);
+    }
+    if (message.framerateSource !== "") {
+      writer.uint32(74).string(message.framerateSource);
+    }
     return writer;
   },
 
@@ -1238,7 +1288,7 @@ export const FramerateData: MessageFns<FramerateData> = {
             break;
           }
 
-          message.fps = reader.double();
+          message.meanFrameDurationMs = reader.double();
           continue;
         }
         case 2: {
@@ -1246,34 +1296,64 @@ export const FramerateData: MessageFns<FramerateData> = {
             break;
           }
 
-          message.frameTimeMs = reader.double();
+          message.meanFramesPerSecond = reader.double();
           continue;
         }
         case 3: {
-          if (tag !== 26) {
+          if (tag !== 25) {
             break;
           }
 
-          message.source = reader.string();
+          message.frameDurationMin = reader.double();
           continue;
         }
         case 4: {
-          if (tag === 33) {
-            message.recentFrameDurations.push(reader.double());
-
-            continue;
+          if (tag !== 33) {
+            break;
           }
 
-          if (tag === 34) {
-            const end2 = reader.uint32() + reader.pos;
-            while (reader.pos < end2) {
-              message.recentFrameDurations.push(reader.double());
-            }
-
-            continue;
+          message.frameDurationMax = reader.double();
+          continue;
+        }
+        case 5: {
+          if (tag !== 41) {
+            break;
           }
 
-          break;
+          message.frameDurationStddev = reader.double();
+          continue;
+        }
+        case 6: {
+          if (tag !== 49) {
+            break;
+          }
+
+          message.frameDurationMedian = reader.double();
+          continue;
+        }
+        case 7: {
+          if (tag !== 57) {
+            break;
+          }
+
+          message.frameDurationCoefficientOfVariation = reader.double();
+          continue;
+        }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.calculationWindowSize = reader.int32();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.framerateSource = reader.string();
+          continue;
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -1289,10 +1369,15 @@ export const FramerateData: MessageFns<FramerateData> = {
   },
   fromPartial(object: DeepPartial<FramerateData>): FramerateData {
     const message = createBaseFramerateData();
-    message.fps = object.fps ?? 0;
-    message.frameTimeMs = object.frameTimeMs ?? 0;
-    message.source = object.source ?? "";
-    message.recentFrameDurations = object.recentFrameDurations?.map((e) => e) || [];
+    message.meanFrameDurationMs = object.meanFrameDurationMs ?? 0;
+    message.meanFramesPerSecond = object.meanFramesPerSecond ?? 0;
+    message.frameDurationMin = object.frameDurationMin ?? 0;
+    message.frameDurationMax = object.frameDurationMax ?? 0;
+    message.frameDurationStddev = object.frameDurationStddev ?? 0;
+    message.frameDurationMedian = object.frameDurationMedian ?? 0;
+    message.frameDurationCoefficientOfVariation = object.frameDurationCoefficientOfVariation ?? 0;
+    message.calculationWindowSize = object.calculationWindowSize ?? 0;
+    message.framerateSource = object.framerateSource ?? "";
     return message;
   },
 };
