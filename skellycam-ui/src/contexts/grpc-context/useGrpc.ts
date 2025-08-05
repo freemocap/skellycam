@@ -1,16 +1,42 @@
 // skellycam-ui/src/contexts/grpc-context/useGrpc.ts
-import { createChannel, createClient } from 'nice-grpc';
+import {CompatServiceDefinition, createChannel, createClient} from 'nice-grpc';
 import {SkellycamServiceClient} from './grpc_generated/skellycam';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useAppDispatch} from '@/store/AppStateStore';
 import {updateFramerates} from '@/store/slices/framerateTrackerSlice';
 import {CameraImageData} from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
 import {addGrpcLog} from "@/store/slices/logRecordsSlice";
+// Define the service definition object
+const SkellycamServiceDefinition = {
+    serviceName: "skellycam.SkellycamService",
+    methods: {
+        streamMultiFrames: {
+            path: "/skellycam.SkellycamService/streamMultiFrames",
+            requestStream: false,
+            responseStream: true,
+        },
+        acknowledgeMultiFrame: {
+            path: "/skellycam.SkellycamService/acknowledgeMultiFrame",
+            requestStream: false,
+            responseStream: false,
+        },
+        streamLogs: {
+            path: "/skellycam.SkellycamService/streamLogs",
+            requestStream: false,
+            responseStream: true,
+        },
+        streamFramerates: {
+            path: "/skellycam.SkellycamService/streamFramerates",
+            requestStream: false,
+            responseStream: true,
+        }
+    }
+} as const;
 
 // Create gRPC channel and client
 const createGrpcClient = (serverUrl: string) => {
     const channel = createChannel(serverUrl);
-    return createClient(SkellycamServiceClient, channel);
+    return createClient(SkellycamServiceDefinition, channel);
 };
 
 export const useGrpcClient = (serverUrl: string) => {
