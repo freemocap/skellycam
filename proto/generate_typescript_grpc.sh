@@ -10,5 +10,4 @@ npx protoc --plugin=protoc-gen-ts_proto=skellycam-ui/node_modules/.bin/protoc-ge
            --ts_proto_opt=esModuleInterop=true,outputServices=nice-grpc,outputJsonMethods=false \
            -I ./proto \
            ./proto/skellycam.proto
-
 echo "TypeScript gRPC code generation completed successfully."

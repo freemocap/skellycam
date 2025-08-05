@@ -1,6 +1,6 @@
 // skellycam-ui/src/contexts/grpc-context/useGrpc.ts
 import { createChannel, createClient } from 'nice-grpc';
-import {SkellycamServiceDefinition} from './grpc_generated/skellycam';
+import { SkellycamServiceImplementation } from './grpc_generated/skellycam';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useAppDispatch} from '@/store/AppStateStore';
 import {updateFramerates} from '@/store/slices/framerateTrackerSlice';
@@ -10,7 +10,7 @@ import {addGrpcLog} from "@/store/slices/logRecordsSlice";
 // Create gRPC channel and client
 const createGrpcClient = (serverUrl: string) => {
     const channel = createChannel(serverUrl);
-    return createClient(SkellycamServiceDefinition, channel);
+    return createClient(SkellycamServiceImplementation, channel);
 };
 
 export const useGrpcClient = (serverUrl: string) => {
@@ -165,7 +165,7 @@ export const useGrpcClient = (serverUrl: string) => {
                     displayImageSizes
                 }).then(() => {
                     // Acknowledgment sent successfully
-                }).catch((error) => {
+                }).catch((error: any) => {
                     console.error('Error sending frame acknowledgment:', error);
                 });
             }
