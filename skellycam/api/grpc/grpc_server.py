@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 import time
 from concurrent import futures
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import AsyncGenerator
 
 import cv2
 import grpc
@@ -22,13 +22,11 @@ from skellycam.utilities.wait_functions import async_wait_10ms
 logger = logging.getLogger(__name__)
 
 
-
 class SkellycamServicer(pb2_grpc.SkellycamServiceServicer):
     def __init__(self) -> None:
         self._app: SkellycamApplication = get_skellycam_app()
         self._frontend_framerate_trackers: dict[CameraGroupIdString, FramerateTracker] = {}
         self._websocket_queue: multiprocessing.Queue = get_websocket_log_queue()
-
 
     async def StreamMultiFrames(
             self,
@@ -203,14 +201,13 @@ class SkellycamServicer(pb2_grpc.SkellycamServiceServicer):
             pb2.LogLevel.API: LogLevels.API,
             pb2.LogLevel.WARNING: LogLevels.WARNING,
             pb2.LogLevel.ERROR: LogLevels.ERROR,
-            pb2.LogLevel.CRITICAL: LogLevels.CRITICAL,
+            pb2.LogLevel.CRITICAL: LogLevels.ERROR, # we should define a CRITICAL level in LogLevels some day
         }
 
         min_level = min_level_map.get(request.min_level, logging.INFO)
-        self._log_handler.setLevel(min_level)
 
         try:
-            while context.is_active():
+            while context.is_active() and not self._app.global_kill_flag.value:
                 try:
 
                     if not self._websocket_queue.empty():
@@ -282,7 +279,7 @@ class SkellycamServicer(pb2_grpc.SkellycamServiceServicer):
         camera_group_id_filter = request.camera_group_id if request.camera_group_id else None
 
         try:
-            while context.is_active():
+            while context.is_active() and self._app.global_kill_flag.value is False:
                 # Get all camera groups
                 camera_groups = self._app.get_camera_groups()
 
@@ -333,13 +330,19 @@ class SkellycamServicer(pb2_grpc.SkellycamServiceServicer):
         )
 
 
+
 def serve_grpc(port: int = 50051) -> grpc.aio.Server:
     """Start the gRPC server."""
-    server: grpc.aio.Server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))
+    server: grpc.aio.Server = grpc.aio.server(
+        futures.ThreadPoolExecutor(max_workers=10),
+        options=[
+            # Add this option to allow insecure HTTP/1.1 connections
+            ('grpc.enable_http_proxy', 1)
+        ]
+    )
     pb2_grpc.add_SkellycamServiceServicer_to_server(SkellycamServicer(), server)
     server.add_insecure_port(f'[::]:{port}')
     return server
-
 
 async def start_grpc_server(port: int = 50051) -> None:
     """Start the gRPC server and keep it running."""

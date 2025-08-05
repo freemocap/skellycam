@@ -1,11 +1,11 @@
 // skellycam-ui/src/contexts/grpc-context/useGrpc.ts
-import { createChannel, createClient } from 'nice-grpc-web';
-import { SkellycamServiceDefinition } from './grpc_generated/skellycam';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAppDispatch } from '@/store/AppStateStore';
-import { setBackendFramerate, setFrontendFramerate } from '@/store/slices/framerateTrackerSlice';
-import { addLog } from '@/store/slices/logRecordsSlice';
-import { CameraImageData } from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
+import { createChannel, createClient } from 'nice-grpc';
+import {SkellycamServiceDefinition} from './grpc_generated/skellycam';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {useAppDispatch} from '@/store/AppStateStore';
+import {updateFramerates} from '@/store/slices/framerateTrackerSlice';
+import {CameraImageData} from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
+import {addGrpcLog} from "@/store/slices/logRecordsSlice";
 
 // Create gRPC channel and client
 const createGrpcClient = (serverUrl: string) => {
@@ -70,9 +70,10 @@ export const useGrpcClient = (serverUrl: string) => {
 
                     for (const cameraFrame of response.cameraFrames) {
                         const cameraId = cameraFrame.cameraId;
+                        const cameraName = cameraFrame.cameraName;
 
                         // Create image bitmap from JPEG data
-                        const blob = new Blob([cameraFrame.jpegData], { type: 'image/jpeg' });
+                        const blob = new Blob([cameraFrame.jpegData], {type: 'image/jpeg'});
                         const imageBitmap = await createImageBitmap(blob);
 
                         newImageData[cameraId] = {
@@ -81,6 +82,7 @@ export const useGrpcClient = (serverUrl: string) => {
                             imageHeight: cameraFrame.imageHeight,
                             frameNumber: frameNumber,
                             cameraId: cameraId,
+                            cameraName: cameraName,
                             cameraIndex: cameraFrame.cameraIndex
                         };
                     }
@@ -100,43 +102,17 @@ export const useGrpcClient = (serverUrl: string) => {
     }, [client, isConnected]);
 
     // Start streaming logs
+
     useEffect(() => {
         if (!client || !isConnected) return;
 
         const streamLogs = async () => {
             try {
-                const stream = client.streamLogs({ minLevel: 2 }); // INFO level
+                const stream = client.streamLogs({minLevel: 2}); // INFO level
 
                 for await (const logRecord of stream) {
-                    // Dispatch log to Redux store
-                    dispatch(addLog({
-                        message_type: 'log_record',
-                        name: logRecord.name,
-                        msg: logRecord.message,
-                        args: logRecord.args,
-                        levelname: logRecord.levelName,
-                        levelno: logRecord.levelNo,
-                        pathname: logRecord.pathname,
-                        filename: logRecord.filename,
-                        module: logRecord.module,
-                        exc_info: logRecord.excInfo,
-                        exc_text: logRecord.excText,
-                        stack_info: logRecord.stackInfo,
-                        lineno: logRecord.lineNo,
-                        funcName: logRecord.funcName,
-                        created: logRecord.created,
-                        msecs: logRecord.msecs,
-                        relativeCreated: logRecord.relativeCreated,
-                        thread: logRecord.thread,
-                        threadName: logRecord.threadName,
-                        processName: logRecord.processName,
-                        process: logRecord.process,
-                        delta_t: logRecord.deltaT,
-                        message: logRecord.formattedMessage,
-                        asctime: logRecord.asctime,
-                        formatted_message: logRecord.formattedMessage,
-                        type: logRecord.type
-                    }));
+                    // Use the new action that accepts a gRPC LogRecord directly
+                    dispatch(addGrpcLog(logRecord));
                 }
             } catch (error) {
                 console.error('Error in log streaming:', error);
@@ -145,7 +121,6 @@ export const useGrpcClient = (serverUrl: string) => {
 
         streamLogs();
     }, [client, isConnected, dispatch]);
-
     // Start streaming framerates
     useEffect(() => {
         if (!client || !isConnected) return;
@@ -159,22 +134,9 @@ export const useGrpcClient = (serverUrl: string) => {
                 for await (const update of stream) {
                     // Dispatch framerate updates to Redux store
                     if (update.backendFramerate) {
-                        dispatch(setBackendFramerate({
-                            fps: update.backendFramerate.fps,
-                            frame_time_ms: update.backendFramerate.frameTimeMs,
-                            source: update.backendFramerate.source,
-                            recent_frame_durations: update.backendFramerate.recentFrameDurations
-                        }));
+                        dispatch(updateFramerates(update));
                     }
 
-                    if (update.frontendFramerate) {
-                        dispatch(setFrontendFramerate({
-                            fps: update.frontendFramerate.fps,
-                            frame_time_ms: update.frontendFramerate.frameTimeMs,
-                            source: update.frontendFramerate.source,
-                            recent_frame_durations: update.frontendFramerate.recentFrameDurations
-                        }));
-                    }
                 }
             } catch (error) {
                 console.error('Error in framerate streaming:', error);

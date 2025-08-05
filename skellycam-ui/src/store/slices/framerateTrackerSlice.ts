@@ -1,6 +1,7 @@
 import type {PayloadAction} from '@reduxjs/toolkit'
 import {createSlice} from '@reduxjs/toolkit'
 import {z} from 'zod'
+import {FramerateData, FramerateUpdate} from "@/contexts/grpc-context/grpc_generated/skellycam";
 
 export const FramerateHistorgramSchema = z.object({
     bin_edges: z.array(z.number()),
@@ -20,6 +21,19 @@ export const CurrentFramerateSchema = z.object({
     framerate_source: z.string(),
 });
 export type CurrentFramerate = z.infer<typeof CurrentFramerateSchema>;
+// Helper function to map from gRPC FramerateData to our CurrentFramerate format
+const mapFramerateDataToCurrentFramerate = (data: FramerateData): CurrentFramerate => ({
+    mean_frame_duration_ms: data.meanFrameDurationMs,
+    mean_frames_per_second: data.meanFramesPerSecond,
+    frame_duration_min: data.frameDurationMin,
+    frame_duration_max: data.frameDurationMax,
+    frame_duration_mean: data.meanFrameDurationMs,
+    frame_duration_stddev: data.frameDurationStddev,
+    frame_duration_median: data.frameDurationMedian,
+    frame_duration_coefficient_of_variation: data.frameDurationCoefficientOfVariation,
+    calculation_window_size: data.calculationWindowSize,
+    framerate_source: data.framerateSource
+});
 
 
 // Set a maximum number of framerate entries to store
@@ -43,8 +57,10 @@ export const framerateTrackerSlice = createSlice({
     name: 'framerate',
     initialState,
     reducers: {
-        setFrontendFramerate: (state, action: PayloadAction<CurrentFramerate>) => {
-            state.currentFrontendFramerate = CurrentFramerateSchema.parse(action.payload);
+        setFrontendFramerate: (state, action: PayloadAction<FramerateData>) => {
+            // Map the gRPC FramerateData to our CurrentFramerate format
+            const mappedFramerate = mapFramerateDataToCurrentFramerate(action.payload);
+            state.currentFrontendFramerate = CurrentFramerateSchema.parse(mappedFramerate);
 
             // Keep a rolling list of recent framerates
             state.recentFrontendFrameDurations.push(state.currentFrontendFramerate.frame_duration_median);
@@ -52,18 +68,48 @@ export const framerateTrackerSlice = createSlice({
                 state.recentFrontendFrameDurations.shift();
             }
         },
-        setBackendFramerate: (state, action: PayloadAction<CurrentFramerate>) => {
-            state.currentBackendFramerate = CurrentFramerateSchema.parse(action.payload);
+        setBackendFramerate: (state, action: PayloadAction<FramerateData>) => {
+            // Map the gRPC FramerateData to our CurrentFramerate format
+            const mappedFramerate = mapFramerateDataToCurrentFramerate(action.payload);
+            state.currentBackendFramerate = CurrentFramerateSchema.parse(mappedFramerate);
 
             // Keep a rolling list of recent framerates
             state.recentBackendFrameDurations.push(state.currentBackendFramerate.frame_duration_median);
             if (state.recentBackendFrameDurations.length > MAX_FRAMERATE_ENTRIES) {
                 state.recentBackendFrameDurations.shift();
             }
-
         },
+        // combined setter for both framerates
+        updateFramerates: (state, action: PayloadAction<FramerateUpdate>) => {
+            const { backendFramerate, frontendFramerate } = action.payload;
+
+            // Update backend framerate if provided
+            if (backendFramerate) {
+                const mappedBackendFramerate = mapFramerateDataToCurrentFramerate(backendFramerate);
+                state.currentBackendFramerate = CurrentFramerateSchema.parse(mappedBackendFramerate);
+
+                // Keep a rolling list of recent framerates
+                state.recentBackendFrameDurations.push(state.currentBackendFramerate.frame_duration_median);
+                if (state.recentBackendFrameDurations.length > MAX_FRAMERATE_ENTRIES) {
+                    state.recentBackendFrameDurations.shift();
+                }
+            }
+
+            // Update frontend framerate if provided
+            if (frontendFramerate) {
+                const mappedFrontendFramerate = mapFramerateDataToCurrentFramerate(frontendFramerate);
+                state.currentFrontendFramerate = CurrentFramerateSchema.parse(mappedFrontendFramerate);
+
+                // Keep a rolling list of recent framerates
+                state.recentFrontendFrameDurations.push(state.currentFrontendFramerate.frame_duration_median);
+                if (state.recentFrontendFrameDurations.length > MAX_FRAMERATE_ENTRIES) {
+                    state.recentFrontendFrameDurations.shift();
+                }
+            }
+        }
     }
 })
 
-export const {setFrontendFramerate, setBackendFramerate} = framerateTrackerSlice.actions
+
+export const {setFrontendFramerate, setBackendFramerate, updateFramerates} = framerateTrackerSlice.actions
 export default framerateTrackerSlice.reducer

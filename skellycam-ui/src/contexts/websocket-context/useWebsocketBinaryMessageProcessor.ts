@@ -75,6 +75,7 @@ export interface CameraImageData {
     frameNumber: number;
     cameraId: string;
     cameraIndex: number;
+    cameraName: string;
 }
 
 export interface CameraDisplaySize {
@@ -238,6 +239,7 @@ export const useWebsocketBinaryMessageProcessor = () => {
                             frameNumber: frameHeader.frameNumber,
                             cameraId: frameHeader.cameraId,
                             cameraIndex: frameHeader.cameraIndex,
+                            cameraName: `camera-${frameHeader.cameraId}`,
                             imageBitmap: await createImageBitmap(new Blob([jpegData], { type: 'image/jpeg' }))
                         }
                     }
