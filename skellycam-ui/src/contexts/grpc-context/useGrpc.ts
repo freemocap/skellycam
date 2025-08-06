@@ -1,27 +1,33 @@
-// skellycam-ui/src/contexts/grpc-context/useGrpc.ts
-import { createChannel, createClient } from './grpcInitializer';
-import {
-    SkellycamServiceDefinition,
-    SkellycamServiceClient,
-    LogLevel,
-    DeepPartial,
-    CameraDisplaySize
-} from './grpc_generated/skellycam';
+// src/contexts/grpc-context/useGrpc.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch } from '@/store/AppStateStore';
 import { updateFramerates } from '@/store/slices/framerateTrackerSlice';
 import { CameraImageData } from "@/contexts/websocket-context/useWebsocketBinaryMessageProcessor";
 import { addGrpcLog } from "@/store/slices/logRecordsSlice";
+import { createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import { SkellycamService } from "./grpc_generated/skellycam_connect";
+import { LogLevel } from "./grpc_generated/skellycam_pb";
 
-// Create gRPC channel and client
-const createGrpcClient = (serverUrl: string) => {
-    const channel = createChannel(serverUrl);
-    return createClient(SkellycamServiceDefinition, channel);
-};
+// Define the GrpcClient type based on the service
+type GrpcClient = ReturnType<typeof createGrpcClient>;
+
+export function createGrpcClient(serverUrl: string) {
+  // Create a transport using the Connect protocol
+  // This works directly with HTTP/1.1 without needing a proxy
+  const transport = createConnectTransport({
+    baseUrl: serverUrl,
+    // Use JSON format for easier debugging
+    useBinaryFormat: false,
+  });
+
+  // Create the client
+  return createClient(SkellycamService, transport);
+}
 
 export const useGrpcClient = (serverUrl: string) => {
     const [isConnected, setIsConnected] = useState(false);
-    const [client, setClient] = useState<SkellycamServiceClient | null>(null);
+    const [client, setClient] = useState<GrpcClient | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
     const [latestImageData, setLatestImageData] = useState<Record<string, CameraImageData>>({});
     const dispatch = useAppDispatch();
@@ -50,24 +56,21 @@ export const useGrpcClient = (serverUrl: string) => {
         setIsConnected(false);
     }, []);
 
-    // Start streaming frames
+    // Stream frames
     useEffect(() => {
         if (!client || !isConnected) return;
 
         const streamFrames = async () => {
             try {
-                // Convert display image sizes to the format expected by the server
-                const displayImageSizes: Record<string, DeepPartial<CameraDisplaySize>> = {};
-
                 // Start streaming frames
                 const stream = client.streamMultiFrames({
-                    displayImageSizes,
-                    lastReceivedFrameNumber: latestFrameNumber.current
+                    displayImageSizes: {},
+                    lastReceivedFrameNumber: BigInt(latestFrameNumber.current)
                 });
 
                 for await (const response of stream) {
                     // Process frame response
-                    const frameNumber = response.frameNumber;
+                    const frameNumber = Number(response.frameNumber);
                     const cameraGroupId = response.cameraGroupId;
                     const timestamp = response.timestamp;
 
@@ -76,8 +79,7 @@ export const useGrpcClient = (serverUrl: string) => {
 
                     for (const cameraFrame of response.cameraFrames) {
                         const cameraId = cameraFrame.cameraId;
-                        const cameraName = cameraFrame.cameraName;
-
+                        
                         // Create image bitmap from JPEG data
                         const blob = new Blob([cameraFrame.jpegData], {type: 'image/jpeg'});
                         const imageBitmap = await createImageBitmap(blob);
@@ -88,8 +90,8 @@ export const useGrpcClient = (serverUrl: string) => {
                             imageHeight: cameraFrame.imageHeight,
                             frameNumber: frameNumber,
                             cameraId: cameraId,
-                            cameraName: cameraName,
-                            cameraIndex: cameraFrame.cameraIndex
+                            cameraIndex: cameraFrame.cameraIndex,
+                            cameraName: cameraFrame.cameraName,
                         };
                     }
 
@@ -107,13 +109,13 @@ export const useGrpcClient = (serverUrl: string) => {
         streamFrames();
     }, [client, isConnected]);
 
-    // Start streaming logs
+    // Stream logs
     useEffect(() => {
         if (!client || !isConnected) return;
 
         const streamLogs = async () => {
             try {
-                const stream = client.streamLogs({minLevel: LogLevel.INFO}); // INFO level
+                const stream = client.streamLogs({minLevel: LogLevel.INFO});
 
                 for await (const logRecord of stream) {
                     // Use the new action that accepts a gRPC LogRecord directly
@@ -127,7 +129,7 @@ export const useGrpcClient = (serverUrl: string) => {
         streamLogs();
     }, [client, isConnected, dispatch]);
 
-    // Start streaming framerates
+    // Stream framerates
     useEffect(() => {
         if (!client || !isConnected) return;
 
@@ -163,11 +165,9 @@ export const useGrpcClient = (serverUrl: string) => {
 
             if (allAcknowledged && latestFrameNumber.current >= 0) {
                 // Send acknowledgment to server
-                const displayImageSizes: Record<string, DeepPartial<CameraDisplaySize>> = {};
-
                 client.acknowledgeMultiFrame({
-                    frameNumber: latestFrameNumber.current,
-                    displayImageSizes
+                    frameNumber: BigInt(latestFrameNumber.current),
+                    displayImageSizes: {}
                 }).then(() => {
                     // Acknowledgment sent successfully
                 }).catch((error: any) => {

@@ -38,6 +38,7 @@ class UrlService {
         return `${this.getBaseWsUrl()}${path}`;
     }
 
+
     getGrpcServerUrl(): string {
         const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
         const host = window.location.hostname;
@@ -45,7 +46,6 @@ class UrlService {
 
         return `${protocol}://${host}:${port}`;
     }
-
     // Camera API endpoints
     getCameraUrls() {
         return {

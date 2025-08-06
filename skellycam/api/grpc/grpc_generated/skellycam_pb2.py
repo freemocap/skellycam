@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fskellycam.proto\x12\tskellycam\"\xe1\x01\n\x11MultiFrameRequest\x12P\n\x13\x64isplay_image_sizes\x18\x01 \x03(\x0b\x32\x33.skellycam.MultiFrameRequest.DisplayImageSizesEntry\x12\"\n\x1alast_received_frame_number\x18\x02 \x01(\x03\x1aV\n\x16\x44isplayImageSizesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12+\n\x05value\x18\x02 \x01(\x0b\x32\x1c.skellycam.CameraDisplaySize:\x02\x38\x01\"2\n\x11\x43\x61meraDisplaySize\x12\r\n\x05width\x18\x01 \x01(\x02\x12\x0e\n\x06height\x18\x02 \x01(\x02\"\x89\x01\n\x12MultiFrameResponse\x12\x14\n\x0c\x66rame_number\x18\x01 \x01(\x03\x12\x17\n\x0f\x63\x61mera_group_id\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x03 \x01(\x01\x12\x31\n\rcamera_frames\x18\x04 \x03(\x0b\x32\x1a.skellycam.CameraFrameData\"\xa5\x01\n\x0f\x43\x61meraFrameData\x12\x11\n\tcamera_id\x18\x01 \x01(\t\x12\x13\n\x0b\x63\x61mera_name\x18\x02 \x01(\t\x12\x14\n\x0c\x63\x61mera_index\x18\x03 \x01(\x05\x12\x13\n\x0bimage_width\x18\x04 \x01(\x05\x12\x14\n\x0cimage_height\x18\x05 \x01(\x05\x12\x16\n\x0e\x63olor_channels\x18\x06 \x01(\x05\x12\x11\n\tjpeg_data\x18\x07 \x01(\x0c\"\xe1\x01\n\x18MultiFrameAcknowledgment\x12\x14\n\x0c\x66rame_number\x18\x01 \x01(\x03\x12W\n\x13\x64isplay_image_sizes\x18\x02 \x03(\x0b\x32:.skellycam.MultiFrameAcknowledgment.DisplayImageSizesEntry\x1aV\n\x16\x44isplayImageSizesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12+\n\x05value\x18\x02 \x01(\x0b\x32\x1c.skellycam.CameraDisplaySize:\x02\x38\x01\")\n\x16\x41\x63knowledgmentResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"4\n\nLogRequest\x12&\n\tmin_level\x18\x01 \x01(\x0e\x32\x13.skellycam.LogLevel\"\xbf\x03\n\tLogRecord\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0c\n\x04\x61rgs\x18\x03 \x03(\t\x12\x12\n\nlevel_name\x18\x04 \x01(\t\x12\x10\n\x08level_no\x18\x05 \x01(\x05\x12\x10\n\x08pathname\x18\x06 \x01(\t\x12\x10\n\x08\x66ilename\x18\x07 \x01(\t\x12\x0e\n\x06module\x18\x08 \x01(\t\x12\x10\n\x08\x65xc_info\x18\t \x01(\t\x12\x10\n\x08\x65xc_text\x18\n \x01(\t\x12\x12\n\nstack_info\x18\x0b \x01(\t\x12\x0f\n\x07line_no\x18\x0c \x01(\x05\x12\x11\n\tfunc_name\x18\r \x01(\t\x12\x0f\n\x07\x63reated\x18\x0e \x01(\x01\x12\r\n\x05msecs\x18\x0f \x01(\x01\x12\x18\n\x10relative_created\x18\x10 \x01(\x01\x12\x0e\n\x06thread\x18\x11 \x01(\x03\x12\x13\n\x0bthread_name\x18\x12 \x01(\t\x12\x14\n\x0cprocess_name\x18\x13 \x01(\t\x12\x0f\n\x07process\x18\x14 \x01(\x05\x12\x0f\n\x07\x64\x65lta_t\x18\x15 \x01(\t\x12\x19\n\x11\x66ormatted_message\x18\x16 \x01(\t\x12\x0f\n\x07\x61sctime\x18\x17 \x01(\t\x12\x0c\n\x04type\x18\x18 \x01(\t\"+\n\x10\x46ramerateRequest\x12\x17\n\x0f\x63\x61mera_group_id\x18\x01 \x01(\t\"\x95\x01\n\x0f\x46ramerateUpdate\x12\x17\n\x0f\x63\x61mera_group_id\x18\x01 \x01(\t\x12\x33\n\x11\x62\x61\x63kend_framerate\x18\x02 \x01(\x0b\x32\x18.skellycam.FramerateData\x12\x34\n\x12\x66rontend_framerate\x18\x03 \x01(\x0b\x32\x18.skellycam.FramerateData\"\xb1\x02\n\rFramerateData\x12\x1e\n\x16mean_frame_duration_ms\x18\x01 \x01(\x01\x12\x1e\n\x16mean_frames_per_second\x18\x02 \x01(\x01\x12\x1a\n\x12\x66rame_duration_min\x18\x03 \x01(\x01\x12\x1a\n\x12\x66rame_duration_max\x18\x04 \x01(\x01\x12\x1d\n\x15\x66rame_duration_stddev\x18\x05 \x01(\x01\x12\x1d\n\x15\x66rame_duration_median\x18\x06 \x01(\x01\x12/\n\'frame_duration_coefficient_of_variation\x18\x07 \x01(\x01\x12\x1f\n\x17\x63\x61lculation_window_size\x18\x08 \x01(\x05\x12\x18\n\x10\x66ramerate_source\x18\t \x01(\t*]\n\x08LogLevel\x12\t\n\x05TRACE\x10\x00\x12\t\n\x05\x44\x45\x42UG\x10\x01\x12\x08\n\x04INFO\x10\x02\x12\x0b\n\x07SUCCESS\x10\x03\x12\x0b\n\x07WARNING\x10\x04\x12\t\n\x05\x45RROR\x10\x05\x12\x0c\n\x08\x43RITICAL\x10\x06\x32\xd3\x02\n\x10SkellycamService\x12R\n\x11StreamMultiFrames\x12\x1c.skellycam.MultiFrameRequest\x1a\x1d.skellycam.MultiFrameResponse0\x01\x12_\n\x15\x41\x63knowledgeMultiFrame\x12#.skellycam.MultiFrameAcknowledgment\x1a!.skellycam.AcknowledgmentResponse\x12;\n\nStreamLogs\x12\x15.skellycam.LogRequest\x1a\x14.skellycam.LogRecord0\x01\x12M\n\x10StreamFramerates\x12\x1b.skellycam.FramerateRequest\x1a\x1a.skellycam.FramerateUpdate0\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fskellycam.proto\x12\tskellycam\"\x99\x02\n\x11MultiFrameRequest\x12\x63\n\x13\x64isplay_image_sizes\x18\x01 \x03(\x0b\x32\x33.skellycam.MultiFrameRequest.DisplayImageSizesEntryR\x11\x64isplayImageSizes\x12;\n\x1alast_received_frame_number\x18\x02 \x01(\x03R\x17lastReceivedFrameNumber\x1a\x62\n\x16\x44isplayImageSizesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32\x1c.skellycam.CameraDisplaySizeR\x05value:\x02\x38\x01\"A\n\x11\x43\x61meraDisplaySize\x12\x14\n\x05width\x18\x01 \x01(\x02R\x05width\x12\x16\n\x06height\x18\x02 \x01(\x02R\x06height\"\xbe\x01\n\x12MultiFrameResponse\x12!\n\x0c\x66rame_number\x18\x01 \x01(\x03R\x0b\x66rameNumber\x12&\n\x0f\x63\x61mera_group_id\x18\x02 \x01(\tR\rcameraGroupId\x12\x1c\n\ttimestamp\x18\x03 \x01(\x01R\ttimestamp\x12?\n\rcamera_frames\x18\x04 \x03(\x0b\x32\x1a.skellycam.CameraFrameDataR\x0c\x63\x61meraFrames\"\xfa\x01\n\x0f\x43\x61meraFrameData\x12\x1b\n\tcamera_id\x18\x01 \x01(\tR\x08\x63\x61meraId\x12\x1f\n\x0b\x63\x61mera_name\x18\x02 \x01(\tR\ncameraName\x12!\n\x0c\x63\x61mera_index\x18\x03 \x01(\x05R\x0b\x63\x61meraIndex\x12\x1f\n\x0bimage_width\x18\x04 \x01(\x05R\nimageWidth\x12!\n\x0cimage_height\x18\x05 \x01(\x05R\x0bimageHeight\x12%\n\x0e\x63olor_channels\x18\x06 \x01(\x05R\rcolorChannels\x12\x1b\n\tjpeg_data\x18\x07 \x01(\x0cR\x08jpegData\"\x8d\x02\n\x18MultiFrameAcknowledgment\x12!\n\x0c\x66rame_number\x18\x01 \x01(\x03R\x0b\x66rameNumber\x12j\n\x13\x64isplay_image_sizes\x18\x02 \x03(\x0b\x32:.skellycam.MultiFrameAcknowledgment.DisplayImageSizesEntryR\x11\x64isplayImageSizes\x1a\x62\n\x16\x44isplayImageSizesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32\x1c.skellycam.CameraDisplaySizeR\x05value:\x02\x38\x01\"2\n\x16\x41\x63knowledgmentResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\">\n\nLogRequest\x12\x30\n\tmin_level\x18\x01 \x01(\x0e\x32\x13.skellycam.LogLevelR\x08minLevel\"\xa7\x05\n\tLogRecord\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n\x07message\x18\x02 \x01(\tR\x07message\x12\x12\n\x04\x61rgs\x18\x03 \x03(\tR\x04\x61rgs\x12\x1d\n\nlevel_name\x18\x04 \x01(\tR\tlevelName\x12\x19\n\x08level_no\x18\x05 \x01(\x05R\x07levelNo\x12\x1a\n\x08pathname\x18\x06 \x01(\tR\x08pathname\x12\x1a\n\x08\x66ilename\x18\x07 \x01(\tR\x08\x66ilename\x12\x16\n\x06module\x18\x08 \x01(\tR\x06module\x12\x19\n\x08\x65xc_info\x18\t \x01(\tR\x07\x65xcInfo\x12\x19\n\x08\x65xc_text\x18\n \x01(\tR\x07\x65xcText\x12\x1d\n\nstack_info\x18\x0b \x01(\tR\tstackInfo\x12\x17\n\x07line_no\x18\x0c \x01(\x05R\x06lineNo\x12\x1b\n\tfunc_name\x18\r \x01(\tR\x08\x66uncName\x12\x18\n\x07\x63reated\x18\x0e \x01(\x01R\x07\x63reated\x12\x14\n\x05msecs\x18\x0f \x01(\x01R\x05msecs\x12)\n\x10relative_created\x18\x10 \x01(\x01R\x0frelativeCreated\x12\x16\n\x06thread\x18\x11 \x01(\x03R\x06thread\x12\x1f\n\x0bthread_name\x18\x12 \x01(\tR\nthreadName\x12!\n\x0cprocess_name\x18\x13 \x01(\tR\x0bprocessName\x12\x18\n\x07process\x18\x14 \x01(\x05R\x07process\x12\x17\n\x07\x64\x65lta_t\x18\x15 \x01(\tR\x06\x64\x65ltaT\x12+\n\x11\x66ormatted_message\x18\x16 \x01(\tR\x10\x66ormattedMessage\x12\x18\n\x07\x61sctime\x18\x17 \x01(\tR\x07\x61sctime\x12\x12\n\x04type\x18\x18 \x01(\tR\x04type\":\n\x10\x46ramerateRequest\x12&\n\x0f\x63\x61mera_group_id\x18\x01 \x01(\tR\rcameraGroupId\"\xc9\x01\n\x0f\x46ramerateUpdate\x12&\n\x0f\x63\x61mera_group_id\x18\x01 \x01(\tR\rcameraGroupId\x12\x45\n\x11\x62\x61\x63kend_framerate\x18\x02 \x01(\x0b\x32\x18.skellycam.FramerateDataR\x10\x62\x61\x63kendFramerate\x12G\n\x12\x66rontend_framerate\x18\x03 \x01(\x0b\x32\x18.skellycam.FramerateDataR\x11\x66rontendFramerate\"\xf6\x03\n\rFramerateData\x12\x33\n\x16mean_frame_duration_ms\x18\x01 \x01(\x01R\x13meanFrameDurationMs\x12\x33\n\x16mean_frames_per_second\x18\x02 \x01(\x01R\x13meanFramesPerSecond\x12,\n\x12\x66rame_duration_min\x18\x03 \x01(\x01R\x10\x66rameDurationMin\x12,\n\x12\x66rame_duration_max\x18\x04 \x01(\x01R\x10\x66rameDurationMax\x12\x32\n\x15\x66rame_duration_stddev\x18\x05 \x01(\x01R\x13\x66rameDurationStddev\x12\x32\n\x15\x66rame_duration_median\x18\x06 \x01(\x01R\x13\x66rameDurationMedian\x12T\n\'frame_duration_coefficient_of_variation\x18\x07 \x01(\x01R#frameDurationCoefficientOfVariation\x12\x36\n\x17\x63\x61lculation_window_size\x18\x08 \x01(\x05R\x15\x63\x61lculationWindowSize\x12)\n\x10\x66ramerate_source\x18\t \x01(\tR\x0f\x66ramerateSource*f\n\x08LogLevel\x12\t\n\x05TRACE\x10\x00\x12\t\n\x05\x44\x45\x42UG\x10\x01\x12\x08\n\x04INFO\x10\x02\x12\x0b\n\x07SUCCESS\x10\x03\x12\x07\n\x03\x41PI\x10\x04\x12\x0b\n\x07WARNING\x10\x05\x12\t\n\x05\x45RROR\x10\x06\x12\x0c\n\x08\x43RITICAL\x10\x07\x32\xd3\x02\n\x10SkellycamService\x12R\n\x11StreamMultiFrames\x12\x1c.skellycam.MultiFrameRequest\x1a\x1d.skellycam.MultiFrameResponse0\x01\x12_\n\x15\x41\x63knowledgeMultiFrame\x12#.skellycam.MultiFrameAcknowledgment\x1a!.skellycam.AcknowledgmentResponse\x12;\n\nStreamLogs\x12\x15.skellycam.LogRequest\x1a\x14.skellycam.LogRecord0\x01\x12M\n\x10StreamFramerates\x12\x1b.skellycam.FramerateRequest\x1a\x1a.skellycam.FramerateUpdate0\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,34 +35,34 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_MULTIFRAMEREQUEST_DISPLAYIMAGESIZESENTRY']._serialized_options = b'8\001'
   _globals['_MULTIFRAMEACKNOWLEDGMENT_DISPLAYIMAGESIZESENTRY']._loaded_options = None
   _globals['_MULTIFRAMEACKNOWLEDGMENT_DISPLAYIMAGESIZESENTRY']._serialized_options = b'8\001'
-  _globals['_LOGLEVEL']._serialized_start=1898
-  _globals['_LOGLEVEL']._serialized_end=1991
+  _globals['_LOGLEVEL']._serialized_start=2666
+  _globals['_LOGLEVEL']._serialized_end=2768
   _globals['_MULTIFRAMEREQUEST']._serialized_start=31
-  _globals['_MULTIFRAMEREQUEST']._serialized_end=256
-  _globals['_MULTIFRAMEREQUEST_DISPLAYIMAGESIZESENTRY']._serialized_start=170
-  _globals['_MULTIFRAMEREQUEST_DISPLAYIMAGESIZESENTRY']._serialized_end=256
-  _globals['_CAMERADISPLAYSIZE']._serialized_start=258
-  _globals['_CAMERADISPLAYSIZE']._serialized_end=308
-  _globals['_MULTIFRAMERESPONSE']._serialized_start=311
-  _globals['_MULTIFRAMERESPONSE']._serialized_end=448
-  _globals['_CAMERAFRAMEDATA']._serialized_start=451
-  _globals['_CAMERAFRAMEDATA']._serialized_end=616
-  _globals['_MULTIFRAMEACKNOWLEDGMENT']._serialized_start=619
-  _globals['_MULTIFRAMEACKNOWLEDGMENT']._serialized_end=844
-  _globals['_MULTIFRAMEACKNOWLEDGMENT_DISPLAYIMAGESIZESENTRY']._serialized_start=170
-  _globals['_MULTIFRAMEACKNOWLEDGMENT_DISPLAYIMAGESIZESENTRY']._serialized_end=256
-  _globals['_ACKNOWLEDGMENTRESPONSE']._serialized_start=846
-  _globals['_ACKNOWLEDGMENTRESPONSE']._serialized_end=887
-  _globals['_LOGREQUEST']._serialized_start=889
-  _globals['_LOGREQUEST']._serialized_end=941
-  _globals['_LOGRECORD']._serialized_start=944
-  _globals['_LOGRECORD']._serialized_end=1391
-  _globals['_FRAMERATEREQUEST']._serialized_start=1393
-  _globals['_FRAMERATEREQUEST']._serialized_end=1436
-  _globals['_FRAMERATEUPDATE']._serialized_start=1439
-  _globals['_FRAMERATEUPDATE']._serialized_end=1588
-  _globals['_FRAMERATEDATA']._serialized_start=1591
-  _globals['_FRAMERATEDATA']._serialized_end=1896
-  _globals['_SKELLYCAMSERVICE']._serialized_start=1994
-  _globals['_SKELLYCAMSERVICE']._serialized_end=2333
+  _globals['_MULTIFRAMEREQUEST']._serialized_end=312
+  _globals['_MULTIFRAMEREQUEST_DISPLAYIMAGESIZESENTRY']._serialized_start=214
+  _globals['_MULTIFRAMEREQUEST_DISPLAYIMAGESIZESENTRY']._serialized_end=312
+  _globals['_CAMERADISPLAYSIZE']._serialized_start=314
+  _globals['_CAMERADISPLAYSIZE']._serialized_end=379
+  _globals['_MULTIFRAMERESPONSE']._serialized_start=382
+  _globals['_MULTIFRAMERESPONSE']._serialized_end=572
+  _globals['_CAMERAFRAMEDATA']._serialized_start=575
+  _globals['_CAMERAFRAMEDATA']._serialized_end=825
+  _globals['_MULTIFRAMEACKNOWLEDGMENT']._serialized_start=828
+  _globals['_MULTIFRAMEACKNOWLEDGMENT']._serialized_end=1097
+  _globals['_MULTIFRAMEACKNOWLEDGMENT_DISPLAYIMAGESIZESENTRY']._serialized_start=214
+  _globals['_MULTIFRAMEACKNOWLEDGMENT_DISPLAYIMAGESIZESENTRY']._serialized_end=312
+  _globals['_ACKNOWLEDGMENTRESPONSE']._serialized_start=1099
+  _globals['_ACKNOWLEDGMENTRESPONSE']._serialized_end=1149
+  _globals['_LOGREQUEST']._serialized_start=1151
+  _globals['_LOGREQUEST']._serialized_end=1213
+  _globals['_LOGRECORD']._serialized_start=1216
+  _globals['_LOGRECORD']._serialized_end=1895
+  _globals['_FRAMERATEREQUEST']._serialized_start=1897
+  _globals['_FRAMERATEREQUEST']._serialized_end=1955
+  _globals['_FRAMERATEUPDATE']._serialized_start=1958
+  _globals['_FRAMERATEUPDATE']._serialized_end=2159
+  _globals['_FRAMERATEDATA']._serialized_start=2162
+  _globals['_FRAMERATEDATA']._serialized_end=2664
+  _globals['_SKELLYCAMSERVICE']._serialized_start=2771
+  _globals['_SKELLYCAMSERVICE']._serialized_end=3110
 # @@protoc_insertion_point(module_scope)

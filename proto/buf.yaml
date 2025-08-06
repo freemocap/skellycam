@@ -1,0 +1,8 @@
+version: v1
+name: github.com/freemocap/skellycam
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE

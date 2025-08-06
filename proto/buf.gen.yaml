@@ -1,0 +1,19 @@
+version: v1
+plugins:
+  # For Python (unchanged)
+  - plugin: buf.build/protocolbuffers/python
+    out: ../skellycam/api/grpc/grpc_generated
+  - plugin: buf.build/grpc/python
+    out: ../skellycam/api/grpc/grpc_generated
+  
+  # For TypeScript (with correct options)
+  - plugin: buf.build/bufbuild/es
+    out: ../skellycam-ui/src/contexts/grpc-context/grpc_generated
+    opt:
+      - target=ts
+      - import_extension=.js
+  - plugin: buf.build/connectrpc/es
+    out: ../skellycam-ui/src/contexts/grpc-context/grpc_generated
+    opt:
+      - target=ts
+      - import_extension=.js

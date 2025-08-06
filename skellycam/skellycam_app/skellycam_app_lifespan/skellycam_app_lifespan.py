@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 
 import skellycam
-from skellycam.api.grpc.grpc_server import start_grpc_server
+  from skellycam.api.grpc.grpc_server import start_grpc_server
 from skellycam.api.server.server_constants import APP_URL
 from skellycam.skellycam_app.skellycam_app import get_skellycam_app
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
