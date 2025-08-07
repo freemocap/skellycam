@@ -13,7 +13,7 @@ export class WindowManager {
             webPreferences: {
                 preload: APP_PATHS.PRELOAD,
                 contextIsolation: true,
-                nodeIntegration: false
+                nodeIntegration: true
             }
         });
 

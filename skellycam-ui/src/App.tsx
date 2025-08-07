@@ -4,14 +4,16 @@ import { Provider } from "react-redux";
 import { AppStateStore } from "@/store/AppStateStore";
 import { WebSocketContextProvider } from "@/context/websocket-context/WebSocketContext";
 import { urlService } from '@/services/urlService';
+import {ZeroMQProvider} from "@/context/zeromq-context/ZeroMQContext";
 
 function App() {
-    const wsUrl = urlService.getWebSocketUrl();
     return (
         <Provider store={AppStateStore}>
-                <WebSocketContextProvider url={wsUrl}>
+            <ZeroMQProvider>
+                <WebSocketContextProvider>
                     <PaperbaseContent/>
                 </WebSocketContextProvider>
+            </ZeroMQProvider>
         </Provider>
     );
 }

@@ -4,6 +4,7 @@ import {defineConfig} from 'vite'
 import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron/simple'
 import pkg from './package.json'
+import renderer from 'vite-plugin-electron-renderer'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
@@ -61,7 +62,11 @@ export default defineConfig(({ command }) => {
         // Ployfill the Electron and Node.js API for Renderer process.
         // If you want use Node.js in Renderer process, the `nodeIntegration` needs to be enabled in the Main process.
         // See 👉 https://github.com/electron-vite/vite-plugin-electron-renderer
-        renderer: {},
+        renderer: {
+            resolve: {
+                zeromq: { type: 'esm' }
+            }
+        },
       }),
     ],
     optimizeDeps: {

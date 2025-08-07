@@ -2,6 +2,7 @@ import React, {createContext, ReactNode, useContext} from "react";
 import { useWebSocket} from "@/context/websocket-context/useWebSocket";
 import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
 import * as THREE from "three";
+import {urlService} from "@/services/urlService";
 
 
 interface WebSocketContextProps {
@@ -14,15 +15,14 @@ interface WebSocketContextProps {
 
 
 interface WebSocketProviderProps {
-    url: string;
     children: ReactNode;
 }
 
 const WebSocketContext = createContext<WebSocketContextProps | undefined>(undefined);
 
-export const WebSocketContextProvider: React.FC<WebSocketProviderProps> = ({url, children}) => {
-    const { isConnected, connect, disconnect, latestImageData,acknowledgeFrameRendered } = useWebSocket(url);
-
+export const WebSocketContextProvider: React.FC<WebSocketProviderProps> = ({children}) => {
+    const wsUrl = urlService.getWebSocketUrl();
+    const { isConnected, connect, disconnect, latestImageData,acknowledgeFrameRendered } = useWebSocket(wsUrl);
     return (
         <WebSocketContext.Provider value={{isConnected, connect, disconnect,latestImageData,acknowledgeFrameRendered}}>
             {children}
