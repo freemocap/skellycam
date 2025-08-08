@@ -4,13 +4,14 @@ import os
 import numpy as np
 import json
 from typing import Any
+from pathlib import Path
 
 # Define the LMDB database path
-LMDB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lmdb_data")
-
+LMDB_PATH = str(Path.home() / 'skellycam_data' / 'skellycam_lmdb')
+Path(LMDB_PATH).mkdir(parents=True, exist_ok=True)
 # Define the data structure
 # We'll store data as JSON for flexibility
-MAX_ITEMS = 100  # Maximum number of items to keep in the database
+MAX_ITEMS = 10 # Maximum number of items to keep in the database
 
 DUMMY_IMAGE = np.random.randint(0, 255, (1920, 1080, 3), dtype=np.uint8)
 DUMMY_IMAGE_BYTES = DUMMY_IMAGE.tobytes()
@@ -24,7 +25,7 @@ def write_data() -> None:
     lmdb_environment = lmdb.open(
         LMDB_PATH,
         map_size=1024 * 1024 * 1024,  # 10MB should be plenty for our data
-        max_dbs=1,  # We'll use two databases: one for data, one for metadata
+        max_dbs=1,
         subdir=True
     )
     
