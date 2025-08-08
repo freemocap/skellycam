@@ -31,7 +31,13 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // You can expose other APTs you need here.
   // ...
 })
+contextBridge.exposeInMainWorld('lmdbAPI', {
+  get: (key: string) => ipcRenderer.invoke('lmdb:get', key),
+  put: (key: string, value: any) => ipcRenderer.invoke('lmdb:put', key, value),
+  remove: (key: string) => ipcRenderer.invoke('lmdb:remove', key),
+    getDbPath: () => ipcRenderer.invoke('lmdb:getDbPath')
 
+});
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
   console.log('Document Object Model (DOM) is ready.')

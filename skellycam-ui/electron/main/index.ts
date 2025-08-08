@@ -7,6 +7,7 @@ import {LifecycleLogger} from "./helpers/logger";
 import os from "node:os";
 import {APP_ENVIRONMENT} from "./helpers/app-environment";
 import {installExtension, REDUX_DEVTOOLS} from 'electron-devtools-installer';
+import { lmdbService } from './helpers/lmdb-service';
 
 
 // Environment variables that `python` server will use for its lifecycle management
@@ -31,7 +32,11 @@ function startApplication() {
             installExtension(REDUX_DEVTOOLS, options)
                 .then((ext) => console.log(`Added Extension:  ${ext.name}`))
                 .catch((err) => console.log('An error occurred: ', err));
-
+        
+            // Initialize LMDB database
+            const dbInitialized = lmdbService.initialize();
+            console.log(`LMDB database initialization ${dbInitialized ? 'successful' : 'failed'}`);
+        
             console.log('SHOULD_LAUNCH_PYTHON:', APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON);
             if (APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON) {
                 console.log('Launching Python Server');
@@ -51,6 +56,7 @@ function startApplication() {
 // Lifecycle Handlers
 app.on('window-all-closed', async () => {
     await PythonServer.shutdown();
+    lmdbService.close(); 
     app.quit();
     LifecycleLogger.logShutdownSequence();
 });

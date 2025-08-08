@@ -11,23 +11,16 @@
   ],
   "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
   "asar": true,
-  "asarUnpack": [
-    "**/skellycam_server.exe"
-  ],
+  "asarUnpack": ["**/skellycam_server.exe", "node_modules/lmdb/**/*"],
   "mac": {
     "artifactName": "${productName}_${version}_installer.${ext}",
-    "target": [
-      "dmg",
-      "zip"
-    ]
+    "target": ["dmg", "zip"]
   },
   "win": {
     "target": [
       {
         "target": "nsis",
-        "arch": [
-          "x64"
-        ]
+        "arch": ["x64"]
       }
     ],
     "artifactName": "${productName}_${version}_installer.${ext}"
