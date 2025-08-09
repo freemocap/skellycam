@@ -2,69 +2,71 @@
 import {contextBridge, ipcRenderer} from 'electron'
 // Expose a limited API to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Specific functionality
-  selectDirectory: () => ipcRenderer.invoke('select-directory'),
-  openFolder: (folderPath: string) => ipcRenderer.invoke('open-folder', folderPath),
-  getHomeDirectory: () => ipcRenderer.invoke('get-home-directory'),
-  getFolderContents: (folderPath: string) => ipcRenderer.invoke('get-folder-contents', folderPath),
+    // Specific functionality
+    selectDirectory: () => ipcRenderer.invoke('select-directory'),
+    openFolder: (folderPath: string) => ipcRenderer.invoke('open-folder', folderPath),
+    getHomeDirectory: () => ipcRenderer.invoke('get-home-directory'),
+    getFolderContents: (folderPath: string) => ipcRenderer.invoke('get-folder-contents', folderPath),
 
 })
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
-  on(...args: Parameters<typeof ipcRenderer.on>) {
-    const [channel, listener] = args
-    return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
-  },
-  off(...args: Parameters<typeof ipcRenderer.off>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.off(channel, ...omit)
-  },
-  send(...args: Parameters<typeof ipcRenderer.send>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.send(channel, ...omit)
-  },
-  invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.invoke(channel, ...omit)
-  },
+    on(...args: Parameters<typeof ipcRenderer.on>) {
+        const [channel, listener] = args
+        return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
+    },
+    off(...args: Parameters<typeof ipcRenderer.off>) {
+        const [channel, ...omit] = args
+        return ipcRenderer.off(channel, ...omit)
+    },
+    send(...args: Parameters<typeof ipcRenderer.send>) {
+        const [channel, ...omit] = args
+        return ipcRenderer.send(channel, ...omit)
+    },
+    invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
+        const [channel, ...omit] = args
+        return ipcRenderer.invoke(channel, ...omit)
+    },
 
-  // You can expose other APTs you need here.
-  // ...
+    // You can expose other APTs you need here.
+    // ...
 })
 contextBridge.exposeInMainWorld('lmdbAPI', {
-  get: (key: string) => ipcRenderer.invoke('lmdb:get', key),
-  put: (key: string, value: any) => ipcRenderer.invoke('lmdb:put', key, value),
-  remove: (key: string) => ipcRenderer.invoke('lmdb:remove', key),
-    getDbPath: () => ipcRenderer.invoke('lmdb:getDbPath')
+    get: ( dbName: string,key: string) => ipcRenderer.invoke('lmdb:get',  dbName, key),
+    put: ( dbName: string,key: string, value: any) => ipcRenderer.invoke('lmdb:put', dbName, key, value),
+    remove: ( dbName: string,key: string) => ipcRenderer.invoke('lmdb:remove', dbName, key),
+    getDbPath: () => ipcRenderer.invoke('lmdb:getDbPath'),
+    listKeys: (dbName: string, prefix?: string) => ipcRenderer.invoke('lmdb:listKeys', dbName, prefix),
 
 });
+
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
-  console.log('Document Object Model (DOM) is ready.')
-  return new Promise(resolve => {
-    if (condition.includes(document.readyState)) {
-      resolve(true)
-    } else {
-      document.addEventListener('readystatechange', () => {
+    console.log('Document Object Model (DOM) is ready.')
+    return new Promise(resolve => {
         if (condition.includes(document.readyState)) {
-          resolve(true)
+            resolve(true)
+        } else {
+            document.addEventListener('readystatechange', () => {
+                if (condition.includes(document.readyState)) {
+                    resolve(true)
+                }
+            })
         }
-      })
-    }
-  })
+    })
 }
 
 const safeDOM = {
-  append(parent: HTMLElement, child: HTMLElement) {
-    if (!Array.from(parent.children).find(e => e === child)) {
-      return parent.appendChild(child)
-    }
-  },
-  remove(parent: HTMLElement, child: HTMLElement) {
-    if (Array.from(parent.children).find(e => e === child)) {
-      return parent.removeChild(child)
-    }
-  },
+    append(parent: HTMLElement, child: HTMLElement) {
+        if (!Array.from(parent.children).find(e => e === child)) {
+            return parent.appendChild(child)
+        }
+    },
+    remove(parent: HTMLElement, child: HTMLElement) {
+        if (Array.from(parent.children).find(e => e === child)) {
+            return parent.removeChild(child)
+        }
+    },
 }
 
 /**
@@ -74,8 +76,8 @@ const safeDOM = {
  * https://matejkustec.github.io/SpinThatShit
  */
 function useLoading() {
-  const className = `loaders-css__square-spin`
-  const styleContent = `
+    const className = `loaders-css__square-spin`
+    const styleContent = `
 @keyframes square-spin {
   25% { transform: perspective(100px) rotateX(180deg) rotateY(0); }
   50% { transform: perspective(100px) rotateX(180deg) rotateY(180deg); }
@@ -102,33 +104,33 @@ function useLoading() {
   z-index: 9;
 }
     `
-  const oStyle = document.createElement('style')
-  const oDiv = document.createElement('div')
+    const oStyle = document.createElement('style')
+    const oDiv = document.createElement('div')
 
-  oStyle.id = 'app-loading-style'
-  oStyle.innerHTML = styleContent
-  oDiv.className = 'app-loading-wrap'
-  oDiv.innerHTML = `<div class="${className}"><div></div></div>`
+    oStyle.id = 'app-loading-style'
+    oStyle.innerHTML = styleContent
+    oDiv.className = 'app-loading-wrap'
+    oDiv.innerHTML = `<div class="${className}"><div></div></div>`
 
-  return {
-    appendLoading() {
-      safeDOM.append(document.head, oStyle)
-      safeDOM.append(document.body, oDiv)
-    },
-    removeLoading() {
-      safeDOM.remove(document.head, oStyle)
-      safeDOM.remove(document.body, oDiv)
-    },
-  }
+    return {
+        appendLoading() {
+            safeDOM.append(document.head, oStyle)
+            safeDOM.append(document.body, oDiv)
+        },
+        removeLoading() {
+            safeDOM.remove(document.head, oStyle)
+            safeDOM.remove(document.body, oDiv)
+        },
+    }
 }
 
 // ----------------------------------------------------------------------
 
-const { appendLoading, removeLoading } = useLoading()
+const {appendLoading, removeLoading} = useLoading()
 domReady().then(appendLoading)
 
 window.onmessage = (ev) => {
-  ev.data.payload === 'removeLoading' && removeLoading()
+    ev.data.payload === 'removeLoading' && removeLoading()
 }
 
 setTimeout(removeLoading, 4999)

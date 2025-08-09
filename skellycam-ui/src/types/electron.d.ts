@@ -28,10 +28,11 @@ declare global {
             invoke: (channel: string, ...args: any[]) => Promise<any>;
         };
         lmdbAPI: {
-            get: <T>(key: string) => Promise<T | null>;
-            put: <T>(key: string, value: T) => Promise<boolean>;
-            remove: (key: string) => Promise<boolean>;
+            get: <T>(dbName:string, key: string) => Promise<T | null>;
+            put: <T>(dbName:string,key: string, value: T) => Promise<boolean>;
+            remove: (dbName:string,key: string) => Promise<boolean>;
             getDbPath: () => Promise<string>;
+            listKeys: (dbName: string, prefix?: string) => Promise<string[]>;
         };
     }
 }
