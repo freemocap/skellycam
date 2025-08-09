@@ -40,7 +40,7 @@ export const LmdbContextProvider: React.FC<LmdbProviderProps> = ({ children }) =
       console.log(`LMDB: Getting value for key "${key}"`);
       const result = await window.lmdbAPI.get(key);
       console.log(`LMDB: Got value for key "${key}":`, result);
-      return result;
+      return result as T | null;
     } catch (err) {
       const errorMsg = `Error getting key ${key}: ${err}`;
       console.error(`LMDB: ${errorMsg}`);
@@ -89,7 +89,7 @@ export const LmdbContextProvider: React.FC<LmdbProviderProps> = ({ children }) =
         console.error(`LMDB: Error getting database path: ${err}`);
       }
     };
-    
+
     getDbPath();
   }, []);
 
@@ -97,12 +97,12 @@ export const LmdbContextProvider: React.FC<LmdbProviderProps> = ({ children }) =
   useEffect(() => {
     const initializeAndTest = async () => {
       console.log('LMDB: Initializing database and running test operations');
-      
+
       try {
         // Test 1: Write a simple string
         console.log('LMDB: Test 1 - Writing a simple string');
         await put('test-string', 'Hello from LMDB!');
-        
+
         // Test 2: Write a complex object
         console.log('LMDB: Test 2 - Writing a complex object');
         const testObject = {
@@ -118,12 +118,12 @@ export const LmdbContextProvider: React.FC<LmdbProviderProps> = ({ children }) =
           dbLocation: dbPath || 'Unknown'
         };
         await put('test-object', testObject);
-        
+
         // Test 3: Read back the values
         console.log('LMDB: Test 3 - Reading back values');
         const stringValue = await get<string>('test-string');
         const objectValue = await get<typeof testObject>('test-object');
-        
+
         // Store test results
         const testResults = {
           string: stringValue,
@@ -131,7 +131,7 @@ export const LmdbContextProvider: React.FC<LmdbProviderProps> = ({ children }) =
           dbPath: dbPath
         };
         setTestData(testResults);
-        
+
         console.log('LMDB: All tests completed successfully!');
         console.log(`LMDB: Test data: \n ${JSON.stringify(testResults, null, 2)}`);
 
@@ -143,7 +143,7 @@ export const LmdbContextProvider: React.FC<LmdbProviderProps> = ({ children }) =
         setError(errorMsg);
       }
     };
-    
+
     initializeAndTest();
   }, [dbPath]);
 
