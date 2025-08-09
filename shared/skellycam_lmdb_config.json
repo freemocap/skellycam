@@ -1,19 +1,11 @@
 {
-  "dbDirectory": "~/skellycam_data/skellycam_lmdb",
+  "dbPath": "~/skellycam_data/skellycam_lmdb",
   "mapSize": 524288000, 
-  "maxDbs": 20,
+  "maxDbs": 10,
   "compression": false,
   "schemas": {
-    "frames": {
-      "keyFormat": "string",
-      "valueFormat": "binary"
-    },
     "metadata": {
-      "keyFormat": "string",
-      "valueFormat": "json"
-    },
-    "settings": {
-      "keyFormat": "string",
+      "keyFormat": "binary",
       "valueFormat": "json"
     }
   }
