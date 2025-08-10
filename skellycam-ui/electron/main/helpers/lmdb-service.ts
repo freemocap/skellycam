@@ -1,5 +1,6 @@
 // electron/main/helpers/lmdb-service.ts
 import {Database, open, RootDatabase} from "lmdb";
+import * as nodelmdb from "node-lmdb";
 import path from "node:path";
 import {app} from "electron";
 import os from "node:os";
@@ -15,7 +16,6 @@ interface LmdbConfig {
     dbPath: string;
     mapSize: number;
     maxDbs: number;
-    compression: boolean;
     schemas: {
         [key: string]: LmdbSchemaConfig;
     };
@@ -63,7 +63,6 @@ export class LmdbService {
                 path: this.dbPath,
                 mapSize: this.config.mapSize,
                 maxDbs: this.config.maxDbs,
-                compression: this.config.compression,
             });
 
             // Open named databases based on schema config

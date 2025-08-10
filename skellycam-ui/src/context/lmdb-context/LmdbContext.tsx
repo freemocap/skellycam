@@ -162,9 +162,12 @@ export const LmdbContextProvider: React.FC<LmdbProviderProps> = ({ children }) =
 
                 console.log('LMDB: All tests completed successfully!');
                 console.log(`LMDB: Test data: \n ${JSON.stringify(testResults, null, 2)}`);
-
+                const pyResult = await get('metadata', 'test_key_python');
+                console.log(`LMDB: Python test key result: ${JSON.stringify(pyResult)}`);
                 // Set initialized state
                 setIsInitialized(true);
+
+
             } catch (err) {
                 const errorMsg = `Failed to initialize and test LMDB: ${err}`;
                 console.error(`LMDB: ${errorMsg}`);

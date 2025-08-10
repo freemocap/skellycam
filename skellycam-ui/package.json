@@ -17,7 +17,8 @@
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",
@@ -37,6 +38,7 @@
     "electron-updater": "^6.1.8",
     "exploration": "^1.6.0",
     "lmdb": "^3.4.2",
+    "node-lmdb": "^0.10.1",
     "react-redux": "^9.1.2",
     "react-resizable-panels": "^2.1.7",
     "react-router": "^6.26.2",

@@ -60,7 +60,7 @@ class LmdbService(BaseModel):
 
             # Open named databases based on schema config
             for db_name in self.lmdb_config.schemas.keys():
-                self.dbs[db_name] = self.lmdb_environment.open_db(b'db_name')
+                self.dbs[db_name] = self.lmdb_environment.open_db(db_name.encode('utf-8'))
 
             logger.success(f"LMDB initialized at: {self.lmdb_config.db_full_path}, using lmdb version: {lmdb.version()}, \n\n self.lmdb_environment.info(): {self.lmdb_environment.info()}, \n\n  self.lmdb_environment.stat(): {self.lmdb_environment.stat()}")
             return True
@@ -75,7 +75,7 @@ class LmdbService(BaseModel):
         
         try:
             with self.lmdb_environment.begin(db=self.dbs[db_name]) as lmdb_transaction:
-                value = lmdb_transaction.get(b'key')
+                value = lmdb_transaction.get(key.encode('utf-8'))
                 if value is None:
                     return None
                 
@@ -98,12 +98,12 @@ class LmdbService(BaseModel):
             # Handle different value formats based on schema
             value_format = self.lmdb_config.schemas[db_name].valueFormat
             if value_format == 'json':
-                encoded_value = json.dumps(value).encode()
+                encoded_value = json.dumps(value).encode('utf-8')
             else:
                 raise NotImplementedError(f"Unsupported value format (for now): {value_format}")
             
             with self.lmdb_environment.begin(write=True, db=self.dbs[db_name]) as lmdb_transaction:
-                lmdb_transaction.put(b'key', encoded_value)
+                lmdb_transaction.put(key.encode('utf-8'), encoded_value)
             return True
         except Exception as e:
             logger.error(f"Error putting key {key} to {db_name}: {e}")
@@ -116,7 +116,7 @@ class LmdbService(BaseModel):
         
         try:
             with self.lmdb_environment.begin(write=True, db=self.dbs[db_name]) as lmdb_transaction:
-                lmdb_transaction.delete(b'key')
+                lmdb_transaction.delete(key.encode('utf-8'))
             return True
         except Exception as e:
             logger.error(f"Error removing key {key} from {db_name}: {e}")
@@ -165,19 +165,15 @@ if __name__ == "__main__":
     lmdb_service = get_or_create_lmdb_service()
 
     # Example of putting a value
-    lmdb_service.put('metadata', 'test_key', {'example': 'value'})
-    lmdb_service.put('metadata', 'test_key2', {'example': 'value'})
+    lmdb_service.put('metadata', 'test_key_python', {'example': 'value_python'})
+    lmdb_service.put('metadata', 'test_key2', {'example2': 'value2'})
 
     # Example of getting a value
-    value = lmdb_service.get('metadata', 'test_key')
+    value = lmdb_service.get('metadata', 'test_key_python')
     logger.debug(f"Retrieved value : {value} from 'metadata' for key 'test_key'")
     keys = lmdb_service.list_keys('metadata')
     logger.debug(f"Keys in 'metadata': {keys}")
 
-    # Example of removing a key
-    lmdb_service.remove('metadata', 'test_key')
 
-    keys = lmdb_service.list_keys('metadata')
-    logger.debug(f"Keys in 'metadata': {keys}")
     # Close the service when done
     lmdb_service.close()
