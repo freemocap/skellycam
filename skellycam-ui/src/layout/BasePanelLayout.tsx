@@ -29,9 +29,9 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                 style={{ flex: 1 }}
             >
                 {/* Top section (horizontal panels) - 80% height */}
-                <Panel defaultSize={96} minSize={20}>
+                <Panel defaultSize={87} minSize={20}>
                     <PanelGroup direction="horizontal">
-                        <Panel collapsible defaultSize={40} minSize={10} collapsedSize={4}>
+                        <Panel collapsible defaultSize={24} minSize={10} collapsedSize={4}>
                             <LeftSidePanelContent/>
                         </Panel>
                         {/* Horizontal Resize Handle */}
@@ -44,7 +44,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                         />
 
                         {/*Main/Central Content Panel*/}
-                        <Panel defaultSize={60} minSize={10}>
+                        <Panel defaultSize={76} minSize={10}>
                             {children}
                         </Panel>
                     </PanelGroup>
@@ -59,7 +59,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                     }}
                 />
 
-                <Panel collapsible defaultSize={4} minSize={10} collapsedSize={4}>
+                <Panel collapsible defaultSize={13} minSize={10} collapsedSize={4}>
                     <BottomPanelContent/>
                 </Panel>
             </PanelGroup>
