@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
+import rerun as rr
 import skellycam
 from skellycam.api.server.server_constants import APP_URL
 from skellycam.skellycam_app.skellycam_app import get_skellycam_app
@@ -18,6 +19,9 @@ async def lifespan(app: FastAPI):
     logger.api("Skellycam API starting...")
     logger.info(f"Skellycam API base folder path: {get_default_skellycam_base_folder_path()}")
     Path(get_default_skellycam_base_folder_path()).mkdir(parents=True, exist_ok=True)
+
+    rr.init("rerun_example_multiprocessing")
+    rr.spawn(connect=False, memory_limit="10GB")  # this is the Viewer that each child process will connect to
 
     logger.info("Adding middleware...")
     skellycam_app = get_skellycam_app()

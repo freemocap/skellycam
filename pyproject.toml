@@ -70,6 +70,7 @@ dependencies = [
     "nuitka>=2.6.5",
     "numpydantic>=1.6.9",
     "cv2-enumerate-cameras>=1.2.2",
+    "rerun-sdk>=0.23.1",
 ]
 requires-python = ">=3.10,<3.13"
 

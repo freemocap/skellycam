@@ -1,4 +1,6 @@
 import logging
+import os
+import threading
 import time
 from collections import deque
 
@@ -17,10 +19,10 @@ from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer im
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
-
+import rerun as rr
 logger = logging.getLogger(__name__)
 
-
+@rr.shutdown_at_exit
 def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                            config: CameraConfig,
                            cv2_video_capture: cv2.VideoCapture,
@@ -30,6 +32,20 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                            self_status: CameraStatus,
                            update_camera_settings_subscription: TopicSubscriptionQueue,
                            recording_info_subscription: TopicSubscriptionQueue):
+
+    rr.init("rerun_example_multiprocessing")
+
+    rr.connect_grpc()
+    rr.set_time("stable_time", duration=0)
+
+    title = f"Camera-{config.camera_id}-Loop"
+    rr.log(
+        "log",
+        rr.TextLog(
+            f"Logging from pid={os.getpid()}, thread={threading.get_ident()} using the Rerun recording id {rr.get_recording_id()}"
+        )
+    )
+
     video_recorder: VideoRecorder | None = None
     previous_tik = time.perf_counter_ns()
     target_frame_duration_ms = (config.framerate**-1 )*1e3 # Convert framerate to nanoseconds per frame
@@ -83,6 +99,11 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = time.perf_counter_ns()
             camera_shm.put_frame(frame_rec_array=frame_rec_array, overwrite=True)
             frame_rec_array.frame_metadata.timestamps.post_copy_to_camera_shm_ns[0] = time.perf_counter_ns()
+            _, jpeg_bytes = cv2.imencode('.jpg', frame_rec_array.image[0])
+            rr.log(
+                title,
+                rr.EncodedImage(media_type='image/jpeg',contents=jpeg_bytes)
+            )
             video_recorder = handle_video_recording(config=config,
                                                     frame_rec_array=frame_rec_array,
                                                     ipc=ipc,
