@@ -107,21 +107,21 @@ class SkellycamAppStateDTO(BaseModel):
         )
 
 
-SKELLYCAM_APP_STATE: Optional[SkellycamApplication] = None
+SKELLYCAM_APP: SkellycamApplication|None = None
 
 
 def create_skellycam_app(global_kill_flag: multiprocessing.Value,
                          ) -> SkellycamApplication:
-    global SKELLYCAM_APP_STATE
-    if not SKELLYCAM_APP_STATE:
-        SKELLYCAM_APP_STATE = SkellycamApplication.initialize_skellycam_app(global_kill_flag=global_kill_flag)
+    global SKELLYCAM_APP
+    if not SKELLYCAM_APP:
+        SKELLYCAM_APP = SkellycamApplication.initialize_skellycam_app(global_kill_flag=global_kill_flag)
     else:
         raise ValueError("SkellycamAppState already exists!")
-    return SKELLYCAM_APP_STATE
+    return SKELLYCAM_APP
 
 
 def get_skellycam_app() -> SkellycamApplication:
-    global SKELLYCAM_APP_STATE
-    if SKELLYCAM_APP_STATE is None:
+    global SKELLYCAM_APP
+    if SKELLYCAM_APP is None:
         raise ValueError("SkellycamAppState does not exist!")
-    return SKELLYCAM_APP_STATE
+    return SKELLYCAM_APP

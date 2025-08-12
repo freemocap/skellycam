@@ -9,11 +9,19 @@ from uvicorn import Server
 
 from skellycam.api.server.server_constants import HOSTNAME, PORT
 from skellycam.skellycam_app.skellycam_app import create_skellycam_app
-from skellycam.skellycam_app.skellycam_app_lifespan.create_skellycam_app import create_skellycam_fastapi_app
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
 
+
+def create_skellycam_fastapi_app() -> FastAPI:
+    logger.api("Creating FastAPI app")
+    app = FastAPI(lifespan=lifespan)
+    cors(app)
+    register_routes(app)
+    add_middleware(app)
+    customize_swagger_ui(app)
+    return app
 
 class UvicornServerManager:
     def __init__(self,
