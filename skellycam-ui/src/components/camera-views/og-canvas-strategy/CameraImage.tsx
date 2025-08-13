@@ -26,19 +26,6 @@ export const CameraImage = ({ cameraImageData}: CameraImageProps) => {
         }
     };
 
-    // Also update the canvas whenever the component renders with a new imageBitmap
-    if (canvasRef.current && imageBitmap) {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-            if (canvas.width !== imageWidth || canvas.height !== imageHeight) {
-                canvas.width = imageWidth;
-                canvas.height = imageHeight;
-            }
-            ctx.drawImage(imageBitmap, 0, 0);
-        }
-    }
-
     return (
         <Box
             key={cameraId}

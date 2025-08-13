@@ -43,3 +43,4 @@ def customize_swagger_ui(app: FastAPI):
         return app.openapi_schema
 
     app.openapi = custom_openapi
+

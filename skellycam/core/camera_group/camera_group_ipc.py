@@ -35,6 +35,7 @@ class CameraGroupIPC(BaseModel):
     shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
 
+
     global_kill_flag: SkipValidation[multiprocessing.Value]
 
     @classmethod

@@ -172,6 +172,26 @@ class SharedMemoryRingBuffer(BaseModel):
         np.copyto(rec_array,self.ring_shm.buffer[self.last_written_index.value % self.ring_buffer_length])
         return rec_array
 
+    def get_data_by_index(self,
+                          index: int,
+                          rec_array: np.recarray | None = None) -> np.recarray:
+        """
+        Get data at a specific index in the ring buffer.
+        :param index: Index of the data to retrieve. # Note this is the APPARENT index from the User's perspective, not the actual index in the ring buffer
+        :param rec_array: Optional pre-allocated recarray to store the result.
+        :return: The data at the specified index. # NOTE - Caller should verify index of returned data based on structure of stored data
+        """
+        if not self.first_data_written:
+            raise ValueError("Ring buffer is not ready to read yet.")
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+        if index < 0 or index > self.last_written_index.value:
+            raise IndexError(f"Index {index} is out of bounds for the ring buffer.")
+        if rec_array is None:
+            rec_array = np.recarray(1, dtype=self.dtype)
+        np.copyto(rec_array, self.ring_shm.buffer[ index % self.ring_buffer_length ])
+        return rec_array
+
     def close(self):
         self.last_written_index.close()
         self.last_read_index.close()

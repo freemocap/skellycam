@@ -30,7 +30,9 @@ class MultiframeBuilder:
 
         worker = worker_strategy.value(target=cls._run_mf_builder_loop,
                                        kwargs=dict(ipc=ipc,
-                                                   new_shm_subscription=ipc.pubsub.topics[TopicTypes.SHM_UPDATES].get_subscription()),
+                                                   new_shm_subscription=ipc.pubsub.topics[
+                                                       TopicTypes.SHM_UPDATES].get_subscription(),
+                                                   ),
                                        daemon=True)
         return cls(ipc=ipc,
                    worker=worker,
@@ -50,7 +52,7 @@ class MultiframeBuilder:
             from skellycam import LOG_LEVEL
             configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
         ipc.mf_builder_status.is_running.value = True
-        camera_group_shm:CameraGroupSharedMemoryManager|None = None
+        camera_group_shm: CameraGroupSharedMemoryManager | None = None
         while ipc.should_continue:
             try:
                 if new_shm_subscription.empty():
@@ -62,7 +64,8 @@ class MultiframeBuilder:
                     raise ValueError(f"Expected SetShmMessage, got {type(shm_message)}")
                 shm_dto: CameraGroupSharedMemoryDTO = shm_message.camera_group_shm_dto
                 camera_group_shm = CameraGroupSharedMemoryManager.recreate(shm_dto=shm_dto, read_only=False)
-                logger.info(f"Initialized shared memory for camera group {ipc.group_id} with {len(camera_group_shm.camera_configs)} cameras in multi-frame builder.")
+                logger.info(
+                    f"Initialized shared memory for camera group {ipc.group_id} with {len(camera_group_shm.camera_configs)} cameras in multi-frame builder.")
                 break
             except Exception as e:
                 if not ipc.should_continue:
@@ -80,35 +83,42 @@ class MultiframeBuilder:
         multiframe_dtype = create_multiframe_dtype(camera_group_shm.camera_configs)
         mf_rec_array = np.recarray(1, dtype=multiframe_dtype)
         for camera_id in multiframe_dtype.names:
-            mf_rec_array[camera_id].frame_metadata.camera_config[0] = camera_group_shm.camera_configs[camera_id].to_numpy_record_array()
+            mf_rec_array[camera_id].frame_metadata.camera_config[0] = camera_group_shm.camera_configs[
+                camera_id].to_numpy_record_array()
             mf_rec_array[camera_id].frame_metadata.frame_number[0] = -1
 
         last_sent_framerate_timestamp = time.perf_counter()
+        last_read_mf_number = -1
         try:
             framerate_tracker = FramerateTracker.create(framerate_source=f"CameraGroup-{ipc.group_id}")
             while ipc.should_continue:
                 if not ipc.camera_orchestrator.all_cameras_ready:
                     wait_1ms()
                     continue
-
-                ipc.mf_builder_status.building_mfs_flag.value = True
-                new_data, mf_rec_array,framerate_tracker = camera_group_shm.build_all_new_multiframes(mf_rec_array=mf_rec_array,framerate_tracker=framerate_tracker)
-                ipc.mf_builder_status.building_mfs_flag.value = False
-
-                if time.perf_counter() - last_sent_framerate_timestamp > FRAMERATE_UPDATE_INTERVAL:
-                    ipc.pubsub.topics[TopicTypes.FRAMERATE].publish(FramerateMessage(current_framerate=framerate_tracker.current_framerate),
-                                                                    overwrite=True,
-                                                                    print_log=False)
-                    framerate_tracker.clear()
-                    last_sent_framerate_timestamp = time.perf_counter()
-
-                if not new_data:
+                target_mf_number = ipc.camera_orchestrator.latest_multiframe_available
+                if  last_read_mf_number >= target_mf_number:
                     wait_1ms()
                     continue
 
-                # tik = time.perf_counter_ns()
-                # print(f"Multi-frame builder for camera group {ipc.group_id} built new multi-frame in {(tik - previous_tik) / 1e6} ms and got {len(new_data)} new multi-frames")
-                # previous_tik = tik
+                ipc.mf_builder_status.building_mfs_flag.value = True
+                (mf_rec_array,
+                 last_read_mf_number,
+                 framerate_tracker) = camera_group_shm.build_multiframe_by_number(
+                    mf_rec_array=mf_rec_array,
+                    target_mf_number=target_mf_number,
+                    framerate_tracker=framerate_tracker)
+                ipc.mf_builder_status.building_mfs_flag.value = False
+
+
+                if time.perf_counter() - last_sent_framerate_timestamp > FRAMERATE_UPDATE_INTERVAL:
+                    ipc.pubsub.topics[TopicTypes.FRAMERATE].publish(
+                        FramerateMessage(current_framerate=framerate_tracker.current_framerate),
+                        overwrite=True,
+                        print_log=False)
+                    framerate_tracker.clear()
+                    last_sent_framerate_timestamp = time.perf_counter()
+
+
 
 
         except Exception as e:
@@ -121,12 +131,9 @@ class MultiframeBuilder:
             ipc.mf_builder_status.closed.value = True
             logger.info(f"Multi-frame publication thread for camera group {ipc.group_id} exited")
 
-
-
     def start(self):
         logger.debug(f"Starting multi-frame publisher for camera group {self.ipc.group_id}...")
         self.worker.start()
-
 
     @property
     def is_alive(self) -> bool:
