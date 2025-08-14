@@ -16,7 +16,7 @@ from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) 
 
 
 def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,

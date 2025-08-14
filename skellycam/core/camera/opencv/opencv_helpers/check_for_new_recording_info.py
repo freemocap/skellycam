@@ -51,4 +51,4 @@ def finish_recording(ipc: CameraGroupIPC,
         frame_metadatas=frame_metadatas,
     ))
     video_recorder = None
-    return video_recorder
+    return video_recorder 

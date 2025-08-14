@@ -10,7 +10,7 @@ from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 
 import logging
 logger = logging.getLogger(__name__)
-
+ 
 def handle_video_recording(config: CameraConfig,
                            frame_rec_array: np.recarray,
                            ipc: CameraGroupIPC,

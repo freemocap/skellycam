@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
+from numpy import typing as npt
 
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
 from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimestampFloat
@@ -38,13 +39,36 @@ FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
     ('frame_initialized_ns', np.uint64),
     ('pre_frame_grab_ns', np.uint64),
     ('post_frame_grab_ns', np.uint64),
-    ('pre_frame_retrieve_ns', np.uint64),
+    ('pre_frame_retrieve_ns', np.uint64), 
     ('post_frame_retrieve_ns', np.uint64),
     ('pre_copy_to_camera_shm_ns', np.uint64),
     ('post_copy_to_camera_shm_ns', np.uint64),
     ('pre_frame_record_ns', np.uint64),
     ('post_frame_record_ns', np.uint64),
 ], align=True)
+
+# Define the dtype for calculated durations
+FRAME_DURATION_DTYPE = np.dtype([
+    ('during_frame_grab_ns', np.int64),
+    ('idle_before_retrieve_ns', np.int64),
+    ('during_frame_retrieve_ns', np.int64),
+    ('idle_before_copy_to_camera_shm_ns', np.int64),
+    ('during_copy_to_camera_shm_ns', np.int64),
+    ('idle_before_frame_record_ns', np.int64),
+    ('during_frame_record_ns', np.int64),
+    ('total_frame_processing_time_ns', np.int64),
+    ('total_camera_idle_time_ns', np.int64),
+])
+
+# Define the dtype for statistics
+STATS_DTYPE = np.dtype([
+    ('mean', np.float64),
+    ('median', np.float64),
+    ('std', np.float64),
+    ('min', np.float64),
+    ('max', np.float64),
+    ('range', np.float64),
+])
 
 FRAME_METADATA_DTYPE = np.dtype([
     ('camera_config', CAMERA_CONFIG_DTYPE),
@@ -224,3 +248,15 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
 
     frontend_bytes = _reusable_bytes_payload[:current_pos]
     return frame_number, np.mean(frame_timestamps), frontend_bytes
+
+
+FrameMetadataArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype
+AllTimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, shape (num_cameras, num_frames)
+AllDurationsArray = npt.NDArray[np.recarray]  # Arrays with durations record dtype, shape (num_cameras, num_frames)
+AllFrameGrabTimestampsArray = npt.NDArray[np.int64]     # Arrays with int64 dtype, shape (num_cameras, num_frames), midpoints between pre_frame_grab_ns and post_frame_grab_ns
+TimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, (for a single camera/frame)
+DurationArray = npt.NDArray[np.recarray]   # Arrays with duration record dtype
+StatsArray = npt.NDArray[np.recarray]      # Arrays with statistics record dtype
+FloatArray = npt.NDArray[np.float64]       # Arrays of float64 values
+IntArray = npt.NDArray[np.int64]           # Arrays of int64 values
+BoolArray = npt.NDArray[np.bool_]          # Arrays of boolean values

@@ -1,0 +1,66 @@
+import numpy as np
+import pandas as pd
+
+from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import vectorized_ns_to_sec, calculate_framerate, vectorized_ns_to_ms
+from skellycam.core.camera_group.timestamps.numpy_timestamps.timestamp_typed_dicts import StatsDict
+
+
+def create_multiframe_dataframe(
+        statistics: StatsDict,
+        recording_start_time_ns: int
+) -> pd.DataFrame:
+    """
+    Create a DataFrame for multiframe timestamps suitable for CSV output.
+
+    Args:
+        statistics: Dictionary of statistics from process_recording_timestamps
+        recording_start_time_ns: Recording start time in nanoseconds
+
+    Returns:
+        DataFrame with multiframe timestamp data
+    """
+    num_frames = len(statistics['frame_numbers'])
+
+    # Calculate timestamp midpoints relative to recording start
+    midpoints = statistics['timestamp_midpoint']['mean']
+    from_recording_start_sec = vectorized_ns_to_sec(midpoints - recording_start_time_ns)
+
+    # Calculate framerates
+    framerates = calculate_framerate(midpoints)
+    frame_durations_ms = vectorized_ns_to_ms(np.diff(midpoints, prepend=midpoints[0] - (midpoints[1] - midpoints[0])))
+
+    # Calculate inter-camera grab range
+    inter_camera_grab_range_ms = vectorized_ns_to_ms(statistics['timestamp_midpoint']['range'])
+
+    # Create DataFrame
+    data = {
+        'recording_frame_number': np.arange(num_frames),
+        'connection_frame_number': statistics['frame_numbers'],
+        'timestamp.from_recording_start.sec': from_recording_start_sec,
+        'timestamp.perf_counter_ns.ns': midpoints,
+        'from_previous.frame_duration.ms': frame_durations_ms,
+        'from_previous.framerate.hz': framerates,
+        'multiframe.inter_camera_grab_range.ms': inter_camera_grab_range_ms,
+    }
+
+    # Add duration statistics (mean and std)
+    for field in statistics['durations']:
+        # Convert to milliseconds
+        mean_ms = vectorized_ns_to_ms(statistics['durations'][field]['mean'])
+        std_ms = vectorized_ns_to_ms(statistics['durations'][field]['std'])
+
+        # Add to data dictionary
+        data[f'duration.{field.replace("_ns", "")}.mean.ms'] = mean_ms
+        data[f'duration.{field.replace("_ns", "")}.std.ms'] = std_ms
+
+    # Add timestamp statistics (mean and std)
+    for field in statistics['timestamps']:
+        # Convert to milliseconds relative to recording start
+        field_ms = vectorized_ns_to_ms(statistics['timestamps'][field]['mean'] - recording_start_time_ns)
+        field_std_ms = vectorized_ns_to_ms(statistics['timestamps'][field]['std'])
+
+        # Add to data dictionary
+        data[f'frame.{field.replace("_ns", "")}.mean.ms'] = field_ms
+        data[f'frame.{field.replace("_ns", "")}.std.ms'] = field_std_ms
+
+    return pd.DataFrame(data)
