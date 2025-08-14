@@ -22,6 +22,7 @@ CameraSharedMemoryDTOs = dict[CameraIdString, SharedMemoryRingBufferDTO]
 class CameraGroupSharedMemoryDTO:
     camera_shm_dtos: CameraSharedMemoryDTOs
     multi_frame_ring_shm_dto: SharedMemoryRingBufferDTO
+    latest_multiframe_number_shm_dto: SharedMemoryElementDTO
     camera_configs: CameraConfigs
 
 
@@ -29,6 +30,7 @@ class CameraGroupSharedMemoryDTO:
 class CameraGroupSharedMemoryManager:
     camera_shms: dict[CameraIdString, FramePayloadSharedMemoryRingBuffer]
     multi_frame_ring_shm: MultiFrameSharedMemoryRingBuffer
+    latest_multiframe_number: SharedMemoryNumber
     camera_configs: CameraConfigs
     read_only: bool
     original: bool = False
@@ -40,6 +42,7 @@ class CameraGroupSharedMemoryManager:
         """
         return all([
             all([camera_shared_memory.valid for camera_shared_memory in self.camera_shms.values()]),
+            self.latest_multiframe_number.valid,
             self.multi_frame_ring_shm.valid,
         ])
 
@@ -51,6 +54,7 @@ class CameraGroupSharedMemoryManager:
         """
         for camera_shared_memory in self.camera_shms.values():
             camera_shared_memory.valid = value
+        self.latest_multiframe_number.valid = value
         self.multi_frame_ring_shm.valid = value
 
     @classmethod
@@ -71,6 +75,7 @@ class CameraGroupSharedMemoryManager:
                    camera_configs=camera_configs,
                    original=True,
                    read_only=read_only,
+                   latest_multiframe_number=SharedMemoryNumber.create(initial_value=-1, read_only=read_only),
                    )
 
     @classmethod
@@ -86,6 +91,8 @@ class CameraGroupSharedMemoryManager:
                 dto=shm_dto.multi_frame_ring_shm_dto,
                 read_only=read_only),
             camera_configs=shm_dto.camera_configs,
+            latest_multiframe_number=SharedMemoryNumber.recreate(dto=shm_dto.latest_multiframe_number_shm_dto,
+                                                                 read_only=read_only),
             read_only=read_only)
 
     @property
@@ -98,32 +105,20 @@ class CameraGroupSharedMemoryManager:
         return list(self.camera_shms.keys())
 
     @property
-    def latest_mf_available(self) -> int:
-        """
-        Returns the latest multi-frame number available in the shared memory.
-        """
+    def new_multi_frame_available(self) -> bool:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        return self.multi_frame_ring_shm.last_written_index.value
-
-    @property
-    def latest_frame_number_available_by_camera(self) -> dict[CameraIdString, int]:
-        """
-        Returns a dictionary mapping camera IDs to the latest frame number available in each camera's shared memory.
-        """
-        if not self.valid:
-            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        return {camera_id: camera_shared_memory.latest_frame_number
-                for camera_id, camera_shared_memory in self.camera_shms.items()}
+        return all([camera_shared_memory.new_frame_available
+                    for camera_shared_memory in self.camera_shms.values()])
 
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_shm_dtos=self.camera_shm_dtos,
                                           multi_frame_ring_shm_dto=self.multi_frame_ring_shm.to_dto(),
+                                          latest_multiframe_number_shm_dto=self.latest_multiframe_number.to_dto(),
                                           camera_configs=self.camera_configs
                                           )
 
-
-    def _build_multi_frame_payload_by_number(self, mf_rec_array: np.recarray, target_mf_number: int) -> tuple[np.recarray, int]:
+    def build_next_multi_frame_payload(self, mf_rec_array: np.recarray) -> np.recarray:
         """
         Retrieves the latest frame from each camera shm and copies it to the MultiFrameSharedMemoryRingBuffer.
         """
@@ -136,16 +131,11 @@ class CameraGroupSharedMemoryManager:
         for camera_id, camera_shared_memory in self.camera_shms.items():
             if not camera_shared_memory.new_frame_available:
                 raise ValueError(f"Camera {camera_id} does not have a new frame available!")
-            mf_rec_array[camera_id] = camera_shared_memory.get_data_by_index(rec_array=mf_rec_array[camera_id],
-                                                                             index=target_mf_number)
-            if mf_rec_array[camera_id].frame_metadata.frame_number[0] != target_mf_number:
-                raise ValueError(
-                    f"Frame number mismatch! Expected {target_mf_number}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]}")
-
-        return self._validate_and_copy_out_multiframe(mf_rec_array=mf_rec_array,
-                                                        target_mf_number=target_mf_number)
-
-    def _validate_and_copy_out_multiframe(self, mf_rec_array: np.recarray, target_mf_number:int) -> tuple[np.recarray, int]:
+            # TODO - check frame number available before grab - there's a race condition here that causes frame mismatch between cameras on occasion
+            mf_rec_array[camera_id] = camera_shared_memory.retrieve_next_frame(mf_rec_array[camera_id])
+            if mf_rec_array[camera_id].frame_metadata.frame_number[0] != self.latest_multiframe_number.value + 1:
+                logger.warning(
+                    f"Frame number mismatch! Expected {self.latest_multiframe_number.value + 1}, got {mf_rec_array[camera_id].frame_metadata.frame_number[0]} - this won't affect recorded videos but may cause flickering in live view.")
 
         self.multi_frame_ring_shm.put_multiframe(mf_rec_array=mf_rec_array,
                                                  overwrite_allowed=False)  # Don't overwrite to ensure all frames are saved
@@ -154,26 +144,25 @@ class CameraGroupSharedMemoryManager:
         if len(mf_numbers) > 1:
             raise ValueError(f"Multi-frame payload has multiple frame numbers: {mf_numbers}. "
                              f"Expected all cameras to have the same frame number.")
-        latest_read_mf_number = mf_numbers.pop()
-        if not latest_read_mf_number == target_mf_number:
-            raise ValueError(f"Multi-frame payload has frame number {latest_read_mf_number}, "
-                             f"but requested frame number was {target_mf_number}.")
+        self.latest_multiframe_number.value = mf_numbers.pop()
+        logger.loop(
+            f"Built multiframe #{self.latest_multiframe_number.value} from cameras: {list(self.camera_ids)}")
 
-        return mf_rec_array, latest_read_mf_number
+        return mf_rec_array
 
+    def build_all_new_multiframes(self, mf_rec_array: np.recarray, framerate_tracker: FramerateTracker) -> tuple[
+        bool, np.recarray, FramerateTracker]:
+        new_data = False
+        while self.new_multi_frame_available:
+            new_data = True
+            mf_rec_array = self.build_next_multi_frame_payload(mf_rec_array)
+            ts = []
+            for camera_id in mf_rec_array.dtype.names:
+                ts.append(np.mean([mf_rec_array[camera_id].frame_metadata.timestamps.pre_frame_grab_ns,
+                                   mf_rec_array[camera_id].frame_metadata.timestamps.post_frame_grab_ns]))
+            framerate_tracker.update(timestamp_ns=float(np.mean(ts)))
 
-    def build_multiframe_by_number(self, mf_rec_array: np.recarray, target_mf_number: int,
-                                   framerate_tracker: FramerateTracker) -> tuple[
-        np.recarray, int, FramerateTracker]:
-        mf_rec_array, read_mf_number = self._build_multi_frame_payload_by_number(mf_rec_array=mf_rec_array,
-                                                                                 target_mf_number=target_mf_number)
-        ts = []
-        for camera_id in mf_rec_array.dtype.names:
-            ts.append(np.mean([mf_rec_array[camera_id].frame_metadata.timestamps.pre_frame_grab_ns,
-                               mf_rec_array[camera_id].frame_metadata.timestamps.post_frame_grab_ns]))
-        framerate_tracker.update(timestamp_ns=float(np.mean(ts)))
-
-        return mf_rec_array, read_mf_number, framerate_tracker  # recycle the mf object to save memory
+        return new_data, mf_rec_array, framerate_tracker  # recycle the mf object to save memory
 
     def close(self):
         # Close this process's access to the shared memory, but other processes can still access it

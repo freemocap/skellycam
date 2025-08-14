@@ -1,11 +1,12 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from pydantic import BaseModel, Field, SkipValidation, ConfigDict
 
-from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, TopicTypes
+from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.types.type_overloads import CameraIdString
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,8 @@ class CameraStatus(BaseModel):
         default_factory=lambda: multiprocessing.Value("b", False))
     closing: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    recording_in_progress: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-    is_recording_frame: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
+    recording_in_progress: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    is_recording_frame: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
     error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
@@ -53,6 +52,7 @@ class CameraStatus(BaseModel):
         self.is_paused.value = False
 
 
+
 @dataclass
 class CameraOrchestrator:
     camera_statuses: dict[CameraIdString, CameraStatus]
@@ -64,12 +64,13 @@ class CameraOrchestrator:
     def camera_ids(self) -> list[CameraIdString]:
         return list(self.camera_statuses.keys())
 
+
     @classmethod
     def from_camera_ids(cls, camera_ids: list[CameraIdString],
                         should_record_frames: multiprocessing.Value) -> 'CameraOrchestrator':
 
         return cls(camera_statuses={camera_id: CameraStatus() for camera_id in camera_ids},
-                   should_record_frames=should_record_frames, )
+                     should_record_frames=should_record_frames,)
 
     @property
     def all_cameras_ready(self):
@@ -95,6 +96,7 @@ class CameraOrchestrator:
     def all_cameras_alive(self) -> bool:
         return any([not status.closed.value for status in self.camera_statuses.values()])
 
+
     @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:
         return {camera_id: status.frame_count.value for camera_id, status in self.camera_statuses.items()}
@@ -106,14 +108,6 @@ class CameraOrchestrator:
     @property
     def any_recording_frame(self) -> bool:
         return any([status.is_recording_frame.value for status in self.camera_statuses.values()])
-
-    @property
-    def latest_frame_by_camera(self) -> dict[CameraIdString, int]:
-        return {camera_id: status.frame_count.value for camera_id, status in self.camera_statuses.items()}
-
-    @property
-    def latest_multiframe_available(self) -> int | None:
-        return min(self.latest_frame_by_camera.values())
 
     def should_record_frame_number(self, frame_number: int) -> tuple[bool, bool]:
 
@@ -139,23 +133,19 @@ class CameraOrchestrator:
         return self._all_camera_counts_greater_than_or_equal_to_camera(camera_id)
 
     def _all_camera_counts_greater_than_or_equal_to_camera(self, camera_id: CameraIdString) -> bool:
-
         frame_counts = self.camera_frame_counts
 
         if len(set(list(frame_counts.values()))) == 1:
             # all cameras are on the same frame count - check recording status
             if self.should_record_frames.value and self.first_recording_frame_number is None:
                 self.first_recording_frame_number = frame_counts[camera_id]
-                logger.api(
-                    f"Setting first recording frame number for camera {camera_id} to {self.first_recording_frame_number}")
+                logger.api(f"Setting first recording frame number for camera {camera_id} to {self.first_recording_frame_number}")
                 self.last_recording_frame_number = None
 
             if not self.should_record_frames.value and self.first_recording_frame_number is not None:
                 self.last_recording_frame_number = frame_counts[camera_id]
-                logger.api(
-                    f"Setting last recording frame number for camera {camera_id} to {self.last_recording_frame_number}")
+                logger.api(f"Setting last recording frame number for camera {camera_id} to {self.last_recording_frame_number}")
                 self.first_recording_frame_number = None
-
 
         if camera_id not in frame_counts:
             raise ValueError(f"Camera ID {camera_id} not found in orchestrator: {self.camera_statuses.keys()}")

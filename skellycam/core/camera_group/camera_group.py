@@ -103,7 +103,7 @@ class CameraGroup:
     def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
         if self.shm is None or not self.shm.valid:
             return None
-        if self.shm.latest_mf_available <= if_newer_than:
+        if self.shm.latest_multiframe_number.value <= if_newer_than:
             return None
 
         mf_rec_array = self.shm.multi_frame_ring_shm.get_latest_multiframe()
