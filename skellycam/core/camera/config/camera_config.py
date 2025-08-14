@@ -22,7 +22,7 @@ DEFAULT_CAMERA_NAME: CameraNameString = "Default Camera"
 DEFAULT_RESOLUTION: ImageResolution = ImageResolution(height=DEFAULT_IMAGE_HEIGHT, width=DEFAULT_IMAGE_WIDTH)
 DEFAULT_EXPOSURE_MODE: str = ExposureModes.MANUAL.name
 DEFAULT_EXPOSURE: int = -7
-DEFAULT_FRAMERATE: float = 30.0
+DEFAULT_FRAMERATE: float = 0.0
 DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
 DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
 DEFAULT_WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
@@ -132,7 +132,7 @@ class CameraConfig(BaseModel):
     )
 
     framerate: float = Field(default=DEFAULT_FRAMERATE,
-                             description="The frame rate of the camera (in frames per second).")
+                             description="The frame rate of the camera (in frames per second), default to `0` to use camera's default framerate and run frame loop as quick as it'll go. ")
 
     rotation: RotationTypes = Field(
         default=DEFAULT_ROTATION,

@@ -31,11 +31,11 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
         )
     # Handle exposure mode and settings
 
-    apply_exposure_mode = initial_config or prior_config.exposure_mode != config.exposure_mode
-    apply_exposure_value = initial_config or prior_config.exposure != config.exposure
-    apply_resolution = initial_config or prior_config.resolution != config.resolution
-    apply_framerate = initial_config or prior_config.framerate != config.framerate
-    apply_capture_fourcc = initial_config or prior_config.capture_fourcc != config.capture_fourcc
+    should_apply_exposure_mode = initial_config or prior_config.exposure_mode != config.exposure_mode
+    should_apply_exposure_value = initial_config or prior_config.exposure != config.exposure
+    should_apply_resolution = initial_config or prior_config.resolution != config.resolution
+    should_apply_framerate = initial_config or prior_config.framerate != config.framerate
+    should_apply_capture_fourcc = initial_config or prior_config.capture_fourcc != config.capture_fourcc
 
     try:
         if not cv2_vid_capture.isOpened():
@@ -43,7 +43,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
                 f"Failed to apply configuration to Camera {config.camera_index} - Camera is not open"
             )
 
-        if apply_exposure_mode:
+        if should_apply_exposure_mode:
             if config.exposure_mode == ExposureModes.RECOMMEND.name:
                 config.exposure = find_recommended_exposure(cv2_vid_capture)
                 config.exposure_mode = ExposureModes.MANUAL.name
@@ -52,19 +52,21 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
             elif config.exposure_mode == ExposureModes.MANUAL.name:
                 cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
                 cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(config.exposure))
-        elif config.exposure_mode == ExposureModes.MANUAL.name and apply_exposure_value:
+        elif config.exposure_mode == ExposureModes.MANUAL.name and should_apply_exposure_value:
             # Only update exposure value if in manual mode and the value changed
             cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(config.exposure))
 
         # Handle resolution changes
-        if apply_resolution:
+        if should_apply_resolution:
             cv2_vid_capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
             cv2_vid_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
 
-        if apply_framerate:
-            cv2_vid_capture.set(cv2.CAP_PROP_FPS, config.framerate)
+        if should_apply_framerate:
+            if config.framerate > 0:
+                #If framerate is 0, use camera's default framerate
+                cv2_vid_capture.set(cv2.CAP_PROP_FPS, config.framerate)
 
-        if apply_capture_fourcc:
+        if should_apply_capture_fourcc:
             cv2_vid_capture.set(
                 cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc)
             )
