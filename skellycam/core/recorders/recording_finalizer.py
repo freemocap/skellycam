@@ -11,6 +11,7 @@ from skellycam.core.camera_group.timestamps.numpy_timestamps.process_and_save_re
 from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
+from skellycam.core.types.numpy_record_dtypes import FrameMetadataArray
 from skellycam.core.types.type_overloads import CameraIdString
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
@@ -39,11 +40,9 @@ class RecordingFinalizer(BaseModel):
                recording_info: RecordingInfo,
                frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
                ):
-
-
         return cls(recording_info=recording_info,
                    frame_metadatas_by_camera=frame_metadatas_by_camera,
-                   camera_configs={camera_id: CameraConfig.from_numpy_record_array(metadata.camera_config[0])
+                   camera_configs={camera_id: CameraConfig.from_numpy_record_array(metadata[0].camera_config)
                                    for camera_id, metadata in frame_metadatas_by_camera.items()}
                    )
 

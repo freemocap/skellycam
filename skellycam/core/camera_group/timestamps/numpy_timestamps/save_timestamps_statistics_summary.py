@@ -24,11 +24,11 @@ def save_timestamp_statistics_summary(
     """
     # Calculate overall statistics
     num_cameras = len(timestamps_by_camera)
-    num_frames = next(iter(timestamps_by_camera.values())).shape[0]
+    num_frames = len(next(iter(timestamps_by_camera.values())))
 
     # Calculate framerate statistics
-    midpoints = statistics['timestamp_midpoint']['mean']
-    framerates = calculate_framerate(midpoints)[1:]  # Skip first NaN
+    timestamps_ns = statistics['frame_grab_timestamps']['mean']
+    framerates = calculate_framerate(timestamps_ns)[1:]  # Skip first NaN
     framerate_stats = {
         'mean': np.nanmean(framerates),
         'median': np.nanmedian(framerates),
@@ -38,7 +38,7 @@ def save_timestamp_statistics_summary(
     }
 
     # Calculate frame duration statistics
-    frame_durations_ms = vectorized_ns_to_ms(np.diff(midpoints))
+    frame_durations_ms = vectorized_ns_to_ms(np.diff(timestamps_ns))
     frame_duration_stats = {
         'mean': np.nanmean(frame_durations_ms),
         'median': np.nanmedian(frame_durations_ms),
@@ -48,7 +48,7 @@ def save_timestamp_statistics_summary(
     }
 
     # Calculate inter-camera grab range statistics
-    inter_camera_grab_range_ms = vectorized_ns_to_ms(statistics['timestamp_midpoint']['range'])
+    inter_camera_grab_range_ms = vectorized_ns_to_ms(statistics['frame_grab_timestamps']['range'])
     inter_camera_stats = {
         'mean': np.nanmean(inter_camera_grab_range_ms),
         'median': np.nanmedian(inter_camera_grab_range_ms),
@@ -58,7 +58,7 @@ def save_timestamp_statistics_summary(
     }
 
     # Calculate total duration
-    total_duration_sec = vectorized_ns_to_sec(midpoints[-1] - midpoints[0])
+    total_duration_sec = vectorized_ns_to_sec(timestamps_ns[-1] - timestamps_ns[0])
 
     # Create summary dictionary
     summary = {

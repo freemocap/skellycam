@@ -1,5 +1,5 @@
 import enum
-from typing import Tuple, Self, Any
+from typing import Tuple, Self, Any, ClassVar
 
 import cv2
 import numpy as np
@@ -88,6 +88,12 @@ class SettableCameraParameters(BaseModel):
 
 
 class CameraConfig(BaseModel):
+    model_config: ClassVar[dict[str, Any]] = {
+        "json_encoders": {
+            RotationTypes: lambda v: v.name,
+            OrientationTypes: lambda v: v.name,
+        }
+    }
     camera_id: CameraIdString = Field(
         default=DEFAULT_CAMERA_ID,
         description="The ID of the camera. May be used for display purposes, must be unique.")

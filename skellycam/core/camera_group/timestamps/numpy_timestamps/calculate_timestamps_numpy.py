@@ -12,24 +12,24 @@ logger = logging.getLogger(__name__)
 
 
 
-def calculate_frame_grab_timestamps(timestamps: AllTimestampsArray) -> AllFrameGrabTimestampsArray:
+def calculate_frame_grab_timestamps(all_timestamps: AllTimestampsArray) -> AllFrameGrabTimestampsArray:
     """
     Calculate the midpoint between pre_frame_grab_ns and post_frame_grab_ns for all frames.
 
     Args:
-        timestamps: Array of timestamps with shape (num_cameras, num_frames)
+        all_timestamps: Array of timestamps with shape (num_cameras, num_frames)
 
     Returns:
         Array of midpoint timestamps with shape (num_cameras, num_frames)
     """
-    (num_cams, num_frames) = timestamps.shape
-    frame_grabs = np.zeros(timestamps.shape, dtype=np.int64)
+    (num_cams, num_frames) = all_timestamps.shape
+    frame_grab_timestamps = np.zeros(all_timestamps.shape, dtype=np.int64)
 
     for camera_number in range(num_cams):
         for frame_number in range(num_frames):
-            frame_grabs[num_cams, num_frames] = (timestamps.pre_frame_grab_ns + timestamps.post_frame_grab_ns) // 2
+            frame_grab_timestamps[camera_number, frame_number] = (all_timestamps[camera_number, frame_number].pre_frame_grab_ns + all_timestamps[camera_number, frame_number].post_frame_grab_ns) // 2
 
-    return frame_grabs
+    return frame_grab_timestamps
 
 
 def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
@@ -87,16 +87,15 @@ def calculate_statistics(data: npt.NDArray, axis: Literal[0, 1]) -> StatsArray:
     # Create output array with the appropriate shape
     output_shape = list(data.shape)
     output_shape.pop(axis)
-    stats = np.zeros(tuple(output_shape), dtype=STATS_DTYPE)
+    stats = np.recarray(tuple(output_shape), dtype=STATS_DTYPE)
 
     # Calculate statistics
-    with np.errstate(invalid='ignore'):  # Ignore NaN warnings
-        stats.mean = np.nanmean(data, axis=axis)
-        stats.median = np.nanmedian(data, axis=axis)
-        stats.std = np.nanstd(data, axis=axis)
-        stats.min = np.nanmin(data, axis=axis)
-        stats.max = np.nanmax(data, axis=axis)
-        stats.range = stats.max - stats.min
+    stats.mean = np.nanmean(data, axis=axis)
+    stats.median = np.nanmedian(data, axis=axis)
+    stats.std = np.nanstd(data, axis=axis)
+    stats.min = np.nanmin(data, axis=axis)
+    stats.max = np.nanmax(data, axis=axis)
+    stats.range = np.nanmax(data, axis=axis) - np.nanmin(data, axis=axis)
 
     return stats
 

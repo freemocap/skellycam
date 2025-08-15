@@ -5,15 +5,14 @@ import numpy as np
 from pydantic import Field, model_validator
 
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO
 from skellycam.core.recorders.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 from skellycam.core.types.type_overloads import TopicPublicationQueue, CameraIdString
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue
-from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 
 
 class DeviceExtractedConfigMessage(TopicMessageABC):
@@ -35,6 +34,7 @@ class RecordingInfoMessage(TopicMessageABC):
 class RecordingFinishedMessage(TopicMessageABC):
     recording_info: RecordingInfo
     frame_metadatas: list[np.recarray]
+
 
     @model_validator(mode='after')
     def validate_frame_metadatas(self):

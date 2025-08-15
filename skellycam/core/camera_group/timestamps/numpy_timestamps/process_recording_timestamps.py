@@ -10,7 +10,7 @@ from skellycam.core.types.type_overloads import CameraIdString
 
 
 def process_recording_timestamps(
-        frame_metadatas_by_camera: dict[CameraIdString, FrameMetadataArray],
+        frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
         recording_start_time_ns: int,
         frame_numbers: list[int]
 ) -> tuple[TimestampsArray, DurationArray, StatsDict]:

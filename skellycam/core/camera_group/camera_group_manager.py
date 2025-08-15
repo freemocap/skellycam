@@ -2,14 +2,11 @@ import logging
 import multiprocessing
 from dataclasses import dataclass, field
 
-import numpy as np
-
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
-from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, TopicTypes
+from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
-from skellycam.core.recorders.framerate_tracker import FramerateTracker, CurrentFramerate
+from skellycam.core.recorders.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraGroupIdString, CameraIdString, FrameNumberInt, \
     MultiframeTimestampFloat, TopicSubscriptionQueue
@@ -17,31 +14,33 @@ from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class CameraGroupManager:
     global_kill_flag: multiprocessing.Value
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
-    camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(default_factory=dict)
+    camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
+        default_factory=dict)
     closing: bool = False
 
-
-    def create_and_start_camera_group(self, camera_configs:CameraConfigs) -> CameraGroup| None:
+    def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
         if self.closing:
             logger.warning("Cannot start recording, camera groups are closing.")
             return None
-        camera_group = CameraGroup.create(camera_configs = camera_configs,
-                                                    global_kill_flag=self.global_kill_flag)
-        self.camera_group_framerate_subscriptions[camera_group.id] = camera_group.ipc.pubsub.get_subscription(TopicTypes.FRAMERATE)
+        camera_group = CameraGroup.create(camera_configs=camera_configs,
+                                          global_kill_flag=self.global_kill_flag)
+        self.camera_group_framerate_subscriptions[camera_group.id] = camera_group.ipc.pubsub.get_subscription(
+            TopicTypes.FRAMERATE)
         self.camera_groups[camera_group.id] = camera_group
         self.camera_groups[camera_group.id].start()
 
         logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
         return camera_group
 
-    def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup|None:
+    def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup | None:
         """
         Retrieve a camera group by its ID.
         """
@@ -52,7 +51,7 @@ class CameraGroupManager:
             raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
         return self.camera_groups[camera_group_id]
 
-    def _get_configs_by_group(self, camera_configs:CameraConfigs) -> dict[CameraGroupIdString, CameraConfigs]:
+    def _get_configs_by_group(self, camera_configs: CameraConfigs) -> dict[CameraGroupIdString, CameraConfigs]:
         configs_by_group: dict[CameraGroupIdString, CameraConfigs] = {}
         for camera_group in self.camera_groups.values():
             configs_by_group[camera_group.id] = {}
@@ -61,7 +60,7 @@ class CameraGroupManager:
                     configs_by_group[camera_group.id][camera_id] = camera_config
         return configs_by_group
 
-    def update_camera_settings(self, camera_configs:CameraConfigs) -> CameraConfigs:
+    def update_camera_settings(self, camera_configs: CameraConfigs) -> CameraConfigs:
         if self.closing:
             logger.warning("Cannot start recording, camera groups are closing.")
             return {}
@@ -69,10 +68,9 @@ class CameraGroupManager:
         for camera_group_id, camera_configs in self._get_configs_by_group(camera_configs).items():
             extracted_configs.update(self.camera_groups[camera_group_id].update_camera_settings(
                 requested_configs=camera_configs))
-            logger.info(f"Camera Group ID: {camera_group_id} - Updated Camera Configs for Cameras: {list(camera_configs.keys())}")
+            logger.info(
+                f"Camera Group ID: {camera_group_id} - Updated Camera Configs for Cameras: {list(camera_configs.keys())}")
         return extracted_configs
-
-
 
     def close_all_camera_groups(self) -> None:
         """
@@ -92,7 +90,7 @@ class CameraGroupManager:
         self.camera_groups.clear()
         self.closing = False
 
-    def start_recording_all_groups(self, recording_info:RecordingInfo) -> None:
+    def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
         """
         Start recording for all camera groups.
         """
@@ -112,20 +110,21 @@ class CameraGroupManager:
             camera_group.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
-
     def get_latest_frontend_payloads(self,
-                                     if_newer_than:int,
-                                     display_image_sizes:dict[CameraIdString,dict[str,float]]) -> dict[CameraGroupIdString, tuple[FrameNumberInt,MultiframeTimestampFloat, bytes]]:
-        fe_payloads:dict[CameraGroupIdString, tuple[FrameNumberInt,MultiframeTimestampFloat, bytes]] = {}
+                                     if_newer_than: int,
+                                     display_image_sizes: dict[CameraIdString, dict[str, float]]) -> dict[
+        CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]]:
+        fe_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]] = {}
         if self.closing:
             return fe_payloads
         for camera_group in self.camera_groups.values():
-            fe_return =  camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than,
-                                                                  display_image_sizes=display_image_sizes)
+            fe_return = camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than,
+                                                                 display_image_sizes=display_image_sizes)
             if fe_return is None:
                 continue
             frame_number, multiframe_timestamp, fe_payload = fe_return
-            fe_payloads[camera_group.id] = (frame_number,multiframe_timestamp, fe_payload) if fe_payload is not None else None
+            fe_payloads[camera_group.id] = (frame_number, multiframe_timestamp,
+                                            fe_payload) if fe_payload is not None else None
         return fe_payloads
 
     def get_backend_framerate_updates(self) -> dict[CameraGroupIdString, CurrentFramerate]:
@@ -141,7 +140,8 @@ class CameraGroupManager:
                 if isinstance(framerate_update, FramerateMessage):
                     framerate_updates[camera_group_id] = framerate_update.current_framerate
                 else:
-                    raise TypeError(f"Received unexpected data type from framerate subscription: {type(framerate_update)}")
+                    raise TypeError(
+                        f"Received unexpected data type from framerate subscription: {type(framerate_update)}")
         return framerate_updates
 
     def pause_all_groups(self, await_paused: bool = True) -> None:

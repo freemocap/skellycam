@@ -21,23 +21,23 @@ def create_multiframe_dataframe(
     """
     num_frames = len(statistics['frame_numbers'])
 
-    # Calculate timestamp midpoints relative to recording start
-    midpoints = statistics['timestamp_midpoint']['mean']
-    from_recording_start_sec = vectorized_ns_to_sec(midpoints - recording_start_time_ns)
+    # Calculate timestamp frame_grab_timestamps_ns relative to recording start
+    frame_grab_timestamps_ns = statistics['frame_grab_timestamps']['mean']
+    from_recording_start_sec = vectorized_ns_to_sec(frame_grab_timestamps_ns - recording_start_time_ns)
 
     # Calculate framerates
-    framerates = calculate_framerate(midpoints)
-    frame_durations_ms = vectorized_ns_to_ms(np.diff(midpoints, prepend=midpoints[0] - (midpoints[1] - midpoints[0])))
+    framerates = calculate_framerate(frame_grab_timestamps_ns)
+    frame_durations_ms = vectorized_ns_to_ms(np.diff(frame_grab_timestamps_ns, prepend=frame_grab_timestamps_ns[0] - (frame_grab_timestamps_ns[1] - frame_grab_timestamps_ns[0])))
 
     # Calculate inter-camera grab range
-    inter_camera_grab_range_ms = vectorized_ns_to_ms(statistics['timestamp_midpoint']['range'])
+    inter_camera_grab_range_ms = vectorized_ns_to_ms(statistics['frame_grab_timestamps']['range'])
 
     # Create DataFrame
     data = {
         'recording_frame_number': np.arange(num_frames),
         'connection_frame_number': statistics['frame_numbers'],
         'timestamp.from_recording_start.sec': from_recording_start_sec,
-        'timestamp.perf_counter_ns.ns': midpoints,
+        'timestamp.perf_counter_ns.ns': frame_grab_timestamps_ns,
         'from_previous.frame_duration.ms': frame_durations_ms,
         'from_previous.framerate.hz': framerates,
         'multiframe.inter_camera_grab_range.ms': inter_camera_grab_range_ms,

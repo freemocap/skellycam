@@ -79,6 +79,9 @@ class RecordingInfo(BaseModel):
         recording_info_dict = self.model_dump()
         recording_info_dict["camera_configs"] = {camera_id: config.model_dump() for camera_id, config in
                                                  camera_configs.items()}
+        for camera_id, config in recording_info_dict["camera_configs"].items():
+            recording_info_dict["camera_configs"][camera_id]["rotation"] = config["rotation"].name
+
         with open(self.recording_info_path, "w") as f:
             f.write(json.dumps(recording_info_dict, indent=4))
 

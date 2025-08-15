@@ -1,3 +1,4 @@
+import time
 from typing import Optional
 
 import numpy as np
@@ -9,6 +10,7 @@ from skellycam.core.camera_group.timestamps.numpy_timestamps.create_multiframe_t
 from skellycam.core.camera_group.timestamps.numpy_timestamps.create_camera_dataframes import create_camera_dataframes
 from skellycam.core.camera_group.timestamps.numpy_timestamps.save_timestamps_statistics_summary import \
     save_timestamp_statistics_summary
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import FrameMetadataArray
 from skellycam.core.types.type_overloads import CameraIdString
@@ -16,7 +18,7 @@ from skellycam.core.types.type_overloads import CameraIdString
 import  logging
 logger = logging.getLogger(__name__)
 
-def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, FrameMetadataArray]) -> list[int]:
+def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]]) -> list[int]:
     """
     Validate that all frame metadatas contain the same number of frames, and that the frame numbers match within each cameras' metadata.
 
@@ -45,9 +47,10 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, Fra
     return frame_numbers
 
 def process_and_save_recording_timestamps(
-        frame_metadatas_by_camera: dict[CameraIdString, FrameMetadataArray],
+        frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
         recording_info: RecordingInfo,
 ) -> None:
+    tik = time.perf_counter()
     frame_numbers = validate_frame_metadatas(frame_metadatas_by_camera)
 
     # Find the earliest timestamp as recording start time
@@ -82,4 +85,4 @@ def process_and_save_recording_timestamps(
     # Save statistics summary
     save_timestamp_statistics_summary(statistics, recording_info, frame_metadatas_by_camera)
 
-    logger.info(f"Successfully processed and saved timestamps for recording {recording_info.recording_name}")
+    logger.info(f"Successfully processed and saved timestamps for recording {recording_info.recording_name} - processed {len(frame_numbers)} frames across {len(frame_metadatas_by_camera)} cameras in {time.perf_counter() - tik:.3f} seconds.")
