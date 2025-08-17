@@ -137,7 +137,6 @@ def create_camera_frame_csv_row_recarray(camera_frame_timestamps: np.recarray,
     csv_row_recarray['duration.idle_before_frame_record.ns'] = camera_frame_durations.idle_before_frame_record_ns
     csv_row_recarray['duration.during_frame_record.ns'] = camera_frame_durations.during_frame_record_ns
     csv_row_recarray['duration.total_frame_processing_time.ns'] = camera_frame_durations.total_frame_processing_time_ns
-    csv_row_recarray['duration.total_camera_idle_time.ns'] = camera_frame_durations.total_camera_idle_time_ns
 
     return timebase_mapping, csv_row_recarray
 
@@ -201,6 +200,9 @@ def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
                     local_dt = utc_dt.astimezone()
 
                     multiframe_csv_rows[frame_number]["timestamp.local.iso8601"] = local_dt.isoformat()
+                elif column_name == "timestamp.perf_counter_ns.ns":
+                    multiframe_csv_rows[frame_number]["inter_camera_grab_range.ms"] = ns_to_ms(np.nanmax(column_data_by_camera) - np.nanmin(column_data_by_camera))
+
                 continue
 
             if column_name in from_previous_column_names:
@@ -212,18 +214,20 @@ def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
                 continue
 
             column_stats = calculate_camera_timestamp_statistics(
-                data=column_data_by_camera,
+                data=(column_data_by_camera/1e6) if '.ns' in column_name else column_data_by_camera,
                 axis="by_camera"
             )
 
             for stat_name in column_stats.dtype.names:
-                if stat_name == "min" or stat_name == "max":
+                stat_name.replace('_value', '')  # Remove '_value' suffix, which was added to avoid conflicts with builtin np st
+                if  "min"  in stat_name or "max" in stat_name:
                     continue
-                if stat_name == "coefficient_of_variation":
+                if "coefficient_of_variation" in stat_name:
                     mf_stat_column_name = column_name.replace('.ns', f'.proportion.{stat_name}')
                 else:
                     mf_stat_column_name = column_name.replace('.ns', f'.ms.{stat_name}')
-                multiframe_csv_rows[frame_number][mf_stat_column_name] = column_stats[stat_name]
+
+                multiframe_csv_rows[frame_number][mf_stat_column_name.replace('_value','')] = column_stats[stat_name]
 
     # Save to CSV
     np.savetxt(recording_info.timestamp_file_path,

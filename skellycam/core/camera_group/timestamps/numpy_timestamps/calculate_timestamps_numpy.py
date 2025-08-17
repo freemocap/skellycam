@@ -53,6 +53,7 @@ def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
             durations = np.recarray(1, dtype=FRAME_DURATION_DTYPE)
 
             # Calculate all durations in a vectorized way
+            durations.idle_before_frame_grab_ns = timestamps.post_frame_grab_ns - timestamps.pre_frame_grab_ns
             durations.during_frame_grab_ns = timestamps.post_frame_grab_ns - timestamps.pre_frame_grab_ns
             durations.idle_before_retrieve_ns = timestamps.pre_frame_retrieve_ns - timestamps.post_frame_grab_ns
             durations.during_frame_retrieve_ns = timestamps.post_frame_retrieve_ns - timestamps.pre_frame_retrieve_ns
@@ -61,7 +62,6 @@ def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
             durations.idle_before_frame_record_ns = timestamps.pre_frame_record_ns - timestamps.post_copy_to_camera_shm_ns
             durations.during_frame_record_ns = timestamps.post_frame_record_ns - timestamps.pre_frame_record_ns
             durations.total_frame_processing_time_ns = timestamps.post_frame_record_ns - timestamps.pre_frame_grab_ns
-            durations.total_camera_idle_time_ns = timestamps.pre_frame_grab_ns - timestamps.frame_initialized_ns
 
              # Store the calculated durations
             all_durations[camera_number, frame_number] = durations
@@ -94,13 +94,13 @@ def calculate_camera_timestamp_statistics(data: npt.NDArray, axis: Literal["by_c
     stats = np.recarray(tuple(output_shape), dtype=STATS_DTYPE)
 
     # Calculate statistics
-    stats.mean = np.nanmean(data, axis=axis_num)
-    stats.median = np.nanmedian(data, axis=axis_num)
-    stats.standard_deviation = np.nanstd(data, axis=axis_num)
-    stats.coefficient_of_variation = np.abs(np.nanstd(data, axis=axis_num) / np.nanmean(data, axis=axis_num)) if np.nanmean(data, axis=axis_num) != 0 else np.nan
-    stats.min = np.nanmin(data, axis=axis_num)
-    stats.max = np.nanmax(data, axis=axis_num)
-    stats.range = np.nanmax(data, axis=axis_num) -  np.nanmin(data, axis=axis_num)
+    stats.mean_value = np.nanmean(data, axis=axis_num)
+    stats.median_value = np.nanmedian(data, axis=axis_num)
+    stats.standard_deviation_value = np.nanstd(data, axis=axis_num)
+    stats.coefficient_of_variation_value = np.abs(np.nanstd(data, axis=axis_num) / np.nanmean(data, axis=axis_num)) if np.nanmean(data, axis=axis_num) != 0 else np.nan
+    stats.min_value = np.nanmin(data, axis=axis_num)
+    stats.max_value = np.nanmax(data, axis=axis_num)
+    stats.range_value = np.nanmax(data, axis=axis_num) -  np.nanmin(data, axis=axis_num)
 
     return stats
 

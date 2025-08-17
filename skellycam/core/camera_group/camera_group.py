@@ -246,4 +246,4 @@ def finalize_recording(ipc: CameraGroupIPC):
         frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items()},
     )
     recording_finalizer.finalize_recording()
-    logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")
+    # logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")
