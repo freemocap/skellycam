@@ -13,7 +13,7 @@ def create_initial_frame_rec_array(config: CameraConfig, ipc: CameraGroupIPC) ->
 
     frame_rec_array.frame_metadata.camera_config[0] = config.to_numpy_record_array()
     frame_rec_array.frame_metadata.frame_number[0] = -1
-    frame_rec_array.frame_metadata.timestamps.timebase_mapping[0] = ipc.timebase_mapping.to_numpy_record_array()
+    frame_rec_array.frame_metadata.timebase_mapping[0] = ipc.timebase_mapping.to_numpy_record_array()
     # Initialize the image with zeros
     image_shape = (config.resolution.height, config.resolution.width, config.color_channels)
     frame_rec_array.image[0] = np.zeros(image_shape, dtype=np.uint8) + config.camera_index

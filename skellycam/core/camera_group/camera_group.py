@@ -13,7 +13,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.numpy_record_dtypes import create_frontend_payload_from_mf_recarray
+from skellycam.core.types.create_frontend_payload_bytearray import create_frontend_payload_from_mf_recarray
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt, \
     MultiframeTimestampFloat
 from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms

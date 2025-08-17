@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FrameTimestamps:
-    timebase_mapping:TimebaseMapping
     frame_initialized_ns: int = 0
     pre_frame_grab_ns: int = 0
     post_frame_grab_ns: int = 0
@@ -58,8 +57,6 @@ class FrameTimestamps:
             post_copy_to_camera_shm_ns=timestamps.post_copy_to_camera_shm_ns[0],
             pre_frame_record_ns=timestamps.pre_frame_record_ns[0],
             post_frame_record_ns=timestamps.post_frame_record_ns[0],
-
-            timebase_mapping=TimebaseMapping.from_numpy_record_array(timestamps.timebase_mapping)
         )
 
     def to_numpy_record_array(self) -> np.recarray:
@@ -70,7 +67,6 @@ class FrameTimestamps:
         result = np.recarray(1, dtype=FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)
 
         # Assign values to the record array
-        result.timebase_mapping[0] = self.timebase_mapping.to_numpy_record_array()[0]
         result.frame_initialized_ns[0] = self.frame_initialized_ns
         result.pre_frame_grab_ns[0] = self.pre_frame_grab_ns
         result.post_frame_grab_ns[0] = self.post_frame_grab_ns

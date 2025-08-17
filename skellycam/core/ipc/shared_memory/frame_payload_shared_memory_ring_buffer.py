@@ -25,7 +25,7 @@ class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         # Initialize the frame metadata
         dummy_frame.frame_metadata.camera_config = camera_config.to_numpy_record_array()[0]
         dummy_frame.frame_metadata.frame_number = -99
-        dummy_frame.frame_metadata.timestamps.timebase_mapping = timebase_mapping.to_numpy_record_array()[0]
+        dummy_frame.frame_metadata.timebase_mapping = timebase_mapping.to_numpy_record_array()[0]
 
         # Initialize the image with zeros
         image_shape = (camera_config.resolution.height, camera_config.resolution.width, camera_config.color_channels)

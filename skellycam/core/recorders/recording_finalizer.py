@@ -52,6 +52,7 @@ class RecordingFinalizer(BaseModel):
 
         process_and_save_recording_timestamps(
             recording_info=self.recording_info,
+            camera_configs=self.camera_configs,
             frame_metadatas_by_camera=self.frame_metadatas_by_camera,
         )
 

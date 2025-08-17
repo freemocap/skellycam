@@ -69,7 +69,7 @@ def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
     return all_durations
 
 
-def calculate_statistics(data: npt.NDArray, axis: Literal[0, 1]) -> StatsArray:
+def calculate_camera_timestamp_statistics(data: npt.NDArray, axis: Literal["by_camera", "by_frame"]) -> np.recarray:
     """
     Calculate descriptive statistics for the given data along the specified axis.
 
@@ -82,20 +82,25 @@ def calculate_statistics(data: npt.NDArray, axis: Literal[0, 1]) -> StatsArray:
     """
     # Handle empty or single-value arrays
     if data.size == 0:
-        return np.zeros(1, dtype=STATS_DTYPE)
+        raise ValueError("Input data array is empty.")
+
 
     # Create output array with the appropriate shape
+    axis_num = 0 if axis == "by_camera" else 1
+    if axis_num > data.ndim - 1:
+        raise ValueError(f"Invalid axis '{axis}' for data with shape {data.shape}. Axis must be 'by_camera' or 'by_frame'.")
     output_shape = list(data.shape)
-    output_shape.pop(axis)
+    output_shape.pop(axis_num)
     stats = np.recarray(tuple(output_shape), dtype=STATS_DTYPE)
 
     # Calculate statistics
-    stats.mean = np.nanmean(data, axis=axis)
-    stats.median = np.nanmedian(data, axis=axis)
-    stats.std = np.nanstd(data, axis=axis)
-    stats.min = np.nanmin(data, axis=axis)
-    stats.max = np.nanmax(data, axis=axis)
-    stats.range = np.nanmax(data, axis=axis) - np.nanmin(data, axis=axis)
+    stats.mean = np.nanmean(data, axis=axis_num)
+    stats.median = np.nanmedian(data, axis=axis_num)
+    stats.standard_deviation = np.nanstd(data, axis=axis_num)
+    stats.coefficient_of_variation = np.abs(np.nanstd(data, axis=axis_num) / np.nanmean(data, axis=axis_num)) if np.nanmean(data, axis=axis_num) != 0 else np.nan
+    stats.min = np.nanmin(data, axis=axis_num)
+    stats.max = np.nanmax(data, axis=axis_num)
+    stats.range = np.nanmax(data, axis=axis_num) -  np.nanmin(data, axis=axis_num)
 
     return stats
 

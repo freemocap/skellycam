@@ -81,7 +81,7 @@ class MultiFramePayload(BaseModel):
 
     @property
     def timebase_mapping(self) -> TimebaseMapping:
-        mappings = [frame.frame_metadata.timestamps.timebase_mapping for frame in self.frames.values()]
+        mappings = [frame.frame_metadata.timebase_mapping for frame in self.frames.values()]
         mapping = set(mappings)
         if len(mapping) > 1:
             raise ValueError(f"MultiFramePayload has multiple frame numbers {mapping}")
@@ -139,7 +139,7 @@ class MultiFramePayload(BaseModel):
 
             # Check timebase mapping consistency
             if any(
-                    frame.frame_metadata.timestamps.timebase_mapping != new_frame.frame_metadata.timestamps.timebase_mapping
+                    frame.frame_metadata.timebase_mapping != new_frame.frame_metadata.timebase_mapping
                     for frame in existing_frames):
                 raise ValueError(
                     f"Cannot add frame for camera_id {new_frame.camera_id} to MultiFramePayload, timebase mapping mismatch!")

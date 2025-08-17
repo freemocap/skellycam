@@ -3,7 +3,12 @@ import dataclasses
 import json
 from dataclasses import dataclass
 
+import numpy as np
+
+from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import calculate_camera_timestamp_statistics
 from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.types.numpy_record_dtypes import MULI_FRAME_TIMESTAMP_CSV_ROW
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 
@@ -13,26 +18,54 @@ class RecordingTimestampsStats:
     A class to hold statistics about timestamps in a recording session.
     This is used to generate statistics about the recording timestamps.
     """
-    recording_name: str
+    recording_info: str
     number_of_cameras: int
     number_of_frames: int
     total_duration_sec: float
-    framerate_stats: DescriptiveStatistics
-    frame_duration_stats: DescriptiveStatistics
-    inter_camera_grab_range_ms: DescriptiveStatistics
+    framerate_stats: np.recarray
 
-    during_frame_grab_ms: DescriptiveStatistics
-    idle_before_retrieve_ms: DescriptiveStatistics
-    during_frame_retrieve_ms: DescriptiveStatistics
-    idle_before_copy_to_camera_shm_ms: DescriptiveStatistics
-    during_copy_to_camera_shm_ms: DescriptiveStatistics
-    idle_before_frame_record_ms: DescriptiveStatistics
-    during_frame_record_ms: DescriptiveStatistics
-    total_frame_processing_time_ms: DescriptiveStatistics
-    total_camera_idle_time_ms: DescriptiveStatistics
+    frame_duration_stats: np.recarray
+    inter_camera_grab_range_ms: np.recarray
+
+    during_frame_grab_ms: np.recarray
+    idle_before_retrieve_ms: np.recarray
+    during_frame_retrieve_ms: np.recarray
+    idle_before_copy_to_camera_shm_ms: np.recarray
+    during_copy_to_camera_shm_ms: np.recarray
+    idle_before_frame_record_ms: np.recarray
+    during_frame_record_ms: np.recarray
+    total_frame_processing_time_ms: np.recarray
+    total_camera_idle_time_ms: np.recarray
+
+    @classmethod
+    def from_multiframe_rows(cls, multiframe_rows: np.recarray,
+                             recording_info: RecordingInfo):
+        if multiframe_rows.dtype != MULI_FRAME_TIMESTAMP_CSV_ROW:
+            raise ValueError(f"Expected dtype {MULI_FRAME_TIMESTAMP_CSV_ROW}, got {multiframe_rows.dtype}")
+
+        return cls(
+            recording_info = recording_info,
+            number_of_cameras = multiframe_rows.shape[0],
+            number_of_frames = multiframe_rows.shape[1],
+            total_duration_sec = multiframe_rows[-1]['timestamp.from_recording_start.sec'],
+            framerate_stats = calculate_camera_timestamp_statistics(data=multiframe_rows['from_previous.framerate.hz'], axis=1),
+            frame_duration_stats = calculate_camera_timestamp_statistics(data=multiframe_rows['from_previous.frame_duration.ms'], axis=1),
+            inter_camera_grab_range_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['inter_camera.frame_grab_range.ms'], axis=1),
+            during_frame_grab_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['during.frame_grab.ms'], axis=1),
+            idle_before_retrieve_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['idle.before_retrieve.ms'], axis=1),
+            during_frame_retrieve_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['during.frame_retrieve.ms'], axis=1),
+            idle_before_copy_to_camera_shm_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['idle.before_copy_to_camera_shm.ms'], axis=1),
+            during_copy_to_camera_shm_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['during.copy_to_camera_shm.ms'], axis=1),
+            idle_before_frame_record_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['idle.before_frame_record.ms'], axis=1),
+            during_frame_record_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['during.frame_record.ms'], axis=1),
+            total_frame_processing_time_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['total.frame_processing_time.ms'], axis=1),
+            total_camera_idle_time_ms = calculate_camera_timestamp_statistics(data=multiframe_rows['total.camera_idle_time.ms'], axis=1),
+        )
 
     @classmethod
     def from_recording_timestamps(cls, recording_timestamps: RecordingTimestamps):
+
+
         return cls(
             recording_name=recording_timestamps.recording_info.recording_name,
             number_of_cameras=recording_timestamps.number_of_cameras,

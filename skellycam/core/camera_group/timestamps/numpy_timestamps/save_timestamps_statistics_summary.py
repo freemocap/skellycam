@@ -1,7 +1,7 @@
 import numpy as np
 
 from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import calculate_framerate, vectorized_ns_to_ms, vectorized_ns_to_sec, logger
-from skellycam.core.camera_group.timestamps.numpy_timestamps.timestamp_typed_dicts import StatsDict
+from skellycam.core.types.timestamp_types import TimestampStats
 from skellycam.core.types.numpy_record_dtypes import TimestampsArray
 from skellycam.core.camera_group.timestamps.numpy_timestamps.generate_timestamps_stats_text_report import \
     generate_timestamps_stats_text_report
@@ -10,7 +10,7 @@ from skellycam.core.types.type_overloads import CameraIdString
 
 
 def save_timestamp_statistics_summary(
-        statistics: StatsDict,
+        ts_statistics: TimestampStats,
         recording_info: RecordingInfo,
         timestamps_by_camera: dict[CameraIdString, TimestampsArray]
 ) -> None:
@@ -18,7 +18,7 @@ def save_timestamp_statistics_summary(
     Generate and save a summary of timestamp statistics.
 
     Args:
-        statistics: Dictionary of statistics from process_recording_timestamps
+        ts_statistics: Dictionary of statistics from process_recording_timestamps
         recording_info: RecordingInfo object with paths for saving
         timestamps_by_camera: Dictionary mapping camera IDs to timestamp arrays
     """
@@ -27,7 +27,7 @@ def save_timestamp_statistics_summary(
     num_frames = len(next(iter(timestamps_by_camera.values())))
 
     # Calculate framerate statistics
-    timestamps_ns = statistics['frame_grab_timestamps']['mean']
+    timestamps_ns = ts_statistics['frame_grab_timestamps']['mean']
     framerates = calculate_framerate(timestamps_ns)[1:]  # Skip first NaN
     framerate_stats = {
         'mean': np.nanmean(framerates),
@@ -48,7 +48,7 @@ def save_timestamp_statistics_summary(
     }
 
     # Calculate inter-camera grab range statistics
-    inter_camera_grab_range_ms = vectorized_ns_to_ms(statistics['frame_grab_timestamps']['range'])
+    inter_camera_grab_range_ms = vectorized_ns_to_ms(ts_statistics['frame_grab_timestamps']['range'])
     inter_camera_stats = {
         'mean': np.nanmean(inter_camera_grab_range_ms),
         'median': np.nanmedian(inter_camera_grab_range_ms),
@@ -72,14 +72,14 @@ def save_timestamp_statistics_summary(
     }
 
     # Add duration statistics
-    for field in statistics['durations']:
+    for field in ts_statistics['durations']:
         field_name = field.replace('_ns', '_ms')
         summary[field_name] = {
-            'mean': float(np.nanmean(vectorized_ns_to_ms(statistics['durations'][field]['mean']))),
-            'median': float(np.nanmedian(vectorized_ns_to_ms(statistics['durations'][field]['median']))),
-            'std': float(np.nanmean(vectorized_ns_to_ms(statistics['durations'][field]['std']))),
-            'min': float(np.nanmin(vectorized_ns_to_ms(statistics['durations'][field]['min']))),
-            'max': float(np.nanmax(vectorized_ns_to_ms(statistics['durations'][field]['max']))),
+            'mean': float(np.nanmean(vectorized_ns_to_ms(ts_statistics['durations'][field]['mean']))),
+            'median': float(np.nanmedian(vectorized_ns_to_ms(ts_statistics['durations'][field]['median']))),
+            'std': float(np.nanmean(vectorized_ns_to_ms(ts_statistics['durations'][field]['std']))),
+            'min': float(np.nanmin(vectorized_ns_to_ms(ts_statistics['durations'][field]['min']))),
+            'max': float(np.nanmax(vectorized_ns_to_ms(ts_statistics['durations'][field]['max']))),
         }
 
     # Save as JSON
