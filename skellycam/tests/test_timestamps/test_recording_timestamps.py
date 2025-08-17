@@ -78,7 +78,7 @@ class TestRecordingTimestamps:
                 # Create timestamps with controlled values
                 frame_ts = FrameTimestamps(
                     timebase_mapping=self.timebase,
-                    frame_initialized_ns=current_time + camera_offset,
+                    initialized_ns=current_time + camera_offset,
                     pre_frame_grab_ns=current_time + camera_offset + 1_000_000,  # +1ms
                     post_frame_grab_ns=current_time + camera_offset + 3_000_000,  # +3ms (+2ms from pre_grab)
                     pre_frame_retrieve_ns=current_time + camera_offset + 4_000_000,  # +4ms (+1ms from post_grab)

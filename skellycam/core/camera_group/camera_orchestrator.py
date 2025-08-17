@@ -139,12 +139,12 @@ class CameraOrchestrator:
             # all cameras are on the same frame count - check recording status
             if self.should_record_frames.value and self.first_recording_frame_number is None:
                 self.first_recording_frame_number = frame_counts[camera_id]
-                logger.api(f"Setting first recording frame number for camera {camera_id} to {self.first_recording_frame_number}")
+                logger.trace(f"Setting first recording frame number for camera {camera_id} to {self.first_recording_frame_number}")
                 self.last_recording_frame_number = None
 
             if not self.should_record_frames.value and self.first_recording_frame_number is not None:
                 self.last_recording_frame_number = frame_counts[camera_id]
-                logger.api(f"Setting last recording frame number for camera {camera_id} to {self.last_recording_frame_number}")
+                logger.trace(f"Setting last recording frame number for camera {camera_id} to {self.last_recording_frame_number}")
                 self.first_recording_frame_number = None
 
         if camera_id not in frame_counts:

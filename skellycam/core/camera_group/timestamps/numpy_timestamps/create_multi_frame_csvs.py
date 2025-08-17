@@ -11,6 +11,7 @@ from skellycam.utilities.time_unit_conversion import ns_to_ms
 import logging
 logger = logging.getLogger(__name__)
 
+
 def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
                                    recording_info: RecordingInfo) -> np.recarray:
     """
@@ -32,72 +33,84 @@ def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
         dtype=MULTI_FRAME_TIMESTAMP_CSV_ROW
     )
 
-    skip_columns = ["connection_frame_number", 'timestamp.local.iso8601']
-    mapped_column_names = {"recording_frame_number": "multiframe_number"}
-    non_stats_column_names = ["timestamp.from_recording_start.sec",
-                              "timestamp.perf_counter_ns.ns",
-                              "timestamp.utc.seconds",
-                              "timestamp.local.iso8601"]
+    # Process non-statistical columns first (these are faster)
+    # Check that all cameras have the same recording frame numbers
+    value_set = set(np.unique(timestamps_rows_by_camera['recording_frame_number']))
+    if len(value_set) != number_of_frames:
+        raise ValueError(f"Inconsistent recording_frame_number values found across cameras")
 
-    from_previous_column_names = ["from_previous.frame_duration.ms",
-                                  "from_previous.framerate.hz"]
+    # Copy recording frame numbers to multiframe numbers
+    multiframe_csv_rows['multiframe_number'] = timestamps_rows_by_camera[0, :]['recording_frame_number']
 
-    # Combine timestamps from all cameras into the multiframe recarray
-    for frame_number in range(number_of_frames):
+    # Process simple mean-based columns
+    for column_name in ['timestamp.from_recording_start.sec', 'timestamp.utc.seconds', 'timestamp.perf_counter_ns.ns']:
+        multiframe_csv_rows[column_name] = np.mean(timestamps_rows_by_camera[column_name], axis=0)
 
-        for column_name in CAMERA_TIMESTAMPS_CSV_ROW_DTYPE.names:
-            if column_name in skip_columns:
-                continue
+    # Calculate local ISO timestamps from UTC seconds
+    utc_seconds = multiframe_csv_rows['timestamp.utc.seconds']
+    for i in range(number_of_frames):
+        utc_dt = datetime.fromtimestamp(utc_seconds[i], tz=timezone.utc)
+        local_dt = utc_dt.astimezone()
+        multiframe_csv_rows[i]['timestamp.local.iso8601'] = local_dt.isoformat()
 
-            if column_name in mapped_column_names:
-                value_set = set(timestamps_rows_by_camera[:, frame_number][column_name])
-                if len(value_set) != 1:
-                    raise ValueError(
-                        f"Inconsistent values found for column '{column_name}' across cameras at frame {frame_number}. "
-                        f"Expected all cameras to have the same value for this frame, received: {value_set}")
-                multiframe_csv_rows[frame_number][mapped_column_names[column_name]] = value_set.pop()
-                continue
+    # Calculate inter-camera frame grab range
+    perf_counter_ns = timestamps_rows_by_camera['timestamp.perf_counter_ns.ns']
+    multiframe_csv_rows['inter_camera.frame_grab_range.ms'] = ns_to_ms(
+        np.nanmax(perf_counter_ns, axis=0) - np.nanmin(perf_counter_ns, axis=0)
+    )
 
-            column_data_by_camera = timestamps_rows_by_camera[:, frame_number][column_name]
-            assert column_data_by_camera.shape == (number_of_cameras,)
-            if column_name in non_stats_column_names:
-                multiframe_csv_rows[frame_number][column_name] = np.mean(column_data_by_camera)
-                if column_name == "timestamp.utc.seconds":
-                    # Create a datetime object from UTC seconds
-                    utc_dt = datetime.fromtimestamp(multiframe_csv_rows[frame_number][column_name], tz=timezone.utc)
+    # Process from_previous columns
+    for column_name in ['from_previous.frame_duration.ms', 'from_previous.framerate.hz']:
+        column_data = np.zeros(number_of_frames)
+        for i in range(number_of_frames):
+            slice_data = timestamps_rows_by_camera[column_name][:, i]
+            if np.any(~np.isnan(slice_data)):
+                column_data[i] = np.nanmean(slice_data)
+            else:
+                column_data[i] = np.nan
+        # First frame has no previous frame
+        column_data[0] = np.nan
+        multiframe_csv_rows[column_name] = column_data
 
-                    # Convert to local timezone
-                    local_dt = utc_dt.astimezone()
+    # Process statistical columns in batches by type
+    timestamp_columns = [col for col in CAMERA_TIMESTAMPS_CSV_ROW_DTYPE.names
+                         if col.startswith(('frame.', 'duration.', 'total.'))]
 
-                    multiframe_csv_rows[frame_number]["timestamp.local.iso8601"] = local_dt.isoformat()
-                elif column_name == "timestamp.perf_counter_ns.ns":
-                    multiframe_csv_rows[frame_number]["inter_camera.frame_grab_range.ms"] = ns_to_ms(np.nanmax(column_data_by_camera) - np.nanmin(column_data_by_camera))
+    for column_name in timestamp_columns:
+        # Get data for all cameras and frames for this column
+        column_data = timestamps_rows_by_camera[column_name]
 
-                continue
+        # Convert to ms if needed
+        if '.ns' in column_name:
+            column_data = column_data / 1e6
 
-            if column_name in from_previous_column_names:
-                if frame_number == 0:
-                    multiframe_csv_rows[frame_number][column_name] = np.nan
-                else:
-                    multiframe_csv_rows[frame_number][column_name] = np.nanmean(
-                        timestamps_rows_by_camera[:, frame_number][column_name])
-                continue
+        # Calculate statistics across cameras (axis=0)
+        mean_values = np.nanmean(column_data, axis=0)
+        median_values = np.nanmedian(column_data, axis=0)
+        std_values = np.nanstd(column_data, axis=0)
+        min_values = np.nanmin(column_data, axis=0)
+        max_values = np.nanmax(column_data, axis=0)
+        range_values = max_values - min_values
+        # Avoid division by zero in coefficient of variation
+        cv_values = np.zeros_like(mean_values)
+        nonzero_mask = mean_values != 0
+        cv_values[nonzero_mask] = std_values[nonzero_mask] / mean_values[nonzero_mask]
 
-            column_stats = calculate_statistics(
-                data=(column_data_by_camera/1e6) if '.ns' in column_name else column_data_by_camera,
-                axis=0
-            )
-
-            for stat_name in column_stats.dtype.names:
-                stat_name.replace('_value', '')  # Remove '_value' suffix, which was added to avoid conflicts with builtin np st
-                if  "min"  in stat_name or "max" in stat_name:
-                    continue
-                if "coefficient_of_variation" in stat_name:
-                    mf_stat_column_name = column_name.replace('.ns', f'.proportion.{stat_name}')
-                else:
-                    mf_stat_column_name = column_name.replace('.ns', f'.ms.{stat_name}')
-
-                multiframe_csv_rows[frame_number][mf_stat_column_name.replace('_value','')] = column_stats[stat_name]
+        # Map to output column names
+        if '.ns' in column_name:
+            base_name = column_name.replace('.ns', '')
+            multiframe_csv_rows[f'{base_name}.ms.mean'] = mean_values
+            multiframe_csv_rows[f'{base_name}.ms.median'] = median_values
+            multiframe_csv_rows[f'{base_name}.ms.standard_deviation'] = std_values
+            multiframe_csv_rows[f'{base_name}.ms.range'] = range_values
+            multiframe_csv_rows[f'{base_name}.proportion.coefficient_of_variation'] = cv_values
+        else:
+            base_name = column_name
+            multiframe_csv_rows[f'{base_name}.ms.mean'] = mean_values
+            multiframe_csv_rows[f'{base_name}.ms.median'] = median_values
+            multiframe_csv_rows[f'{base_name}.ms.standard_deviation'] = std_values
+            multiframe_csv_rows[f'{base_name}.ms.range'] = range_values
+            multiframe_csv_rows[f'{base_name}.proportion.coefficient_of_variation'] = cv_values
 
     # Save to CSV
     np.savetxt(recording_info.timestamp_file_path,
@@ -106,5 +119,5 @@ def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
                fmt='%s',
                header=",".join(MULTI_FRAME_TIMESTAMP_CSV_ROW.names),
                comments='')
-    # logger.info(f"Saved multiframe timestamps CSV to {recording_info.timestamp_file_path}")
+
     return multiframe_csv_rows

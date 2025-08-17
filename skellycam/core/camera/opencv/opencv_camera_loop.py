@@ -125,7 +125,7 @@ def initialize_frame_recarray(frame_rec_array: np.recarray) -> np.recarray:
     frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = 0
     frame_rec_array.frame_metadata.timestamps.post_copy_to_camera_shm_ns[0] = 0
 
-    frame_rec_array.frame_metadata.timestamps.frame_initialized_ns[0] = time.perf_counter_ns()
+    frame_rec_array.frame_metadata.timestamps.initialized_ns[0] = time.perf_counter_ns()
 
     return frame_rec_array
 

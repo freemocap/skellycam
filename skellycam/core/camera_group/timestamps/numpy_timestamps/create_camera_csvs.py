@@ -34,36 +34,76 @@ def create_and_save_camera_csvs(
         timebase_mapping: TimebaseMapping instance for converting timestamps.
 
     Returns:
-        A dictionary mapping camera IDs to their respective CSV row recarrays.
+        A numpy recarray containing all camera CSV rows.
     """
     num_cameras, num_frames = all_timestamps.shape
+    connection_frame_numbers = np.array(connection_frame_numbers)
 
     all_camera_csv_rows = np.recarray((num_cameras, num_frames), dtype=CAMERA_TIMESTAMPS_CSV_ROW_DTYPE)
 
+    # Process each camera's data in a vectorized way
     for camera_number, camera_id in enumerate(camera_configs.keys()):
         camera_frame_timestamps = all_timestamps[camera_number]
         camera_frame_durations = all_durations[camera_number]
 
-        previous_frame_timestamp_ns = None
+        # Calculate main timestamps (midpoint between pre and post grab)
+        frame_main_timestamps_ns = (
+                                               camera_frame_timestamps.pre_frame_grab_ns + camera_frame_timestamps.post_frame_grab_ns) // 2
+
+        # Fill in basic fields for all frames at once
+        all_camera_csv_rows[camera_number]['recording_frame_number'] = np.arange(num_frames)
+        all_camera_csv_rows[camera_number]['connection_frame_number'] = connection_frame_numbers
+        all_camera_csv_rows[camera_number]['timestamp.from_recording_start.sec'] = ns_to_sec(
+            frame_main_timestamps_ns - recording_start_time_ns)
+        all_camera_csv_rows[camera_number]['timestamp.perf_counter_ns.ns'] = frame_main_timestamps_ns
+
+        # Convert timestamps to UTC and local time
+        utc_timestamps_ns = [timebase_mapping.convert_perf_counter_ns_to_unix_ns(
+            timestamps_ns, local_time=False) for timestamps_ns in frame_main_timestamps_ns]
+        all_camera_csv_rows[camera_number]['timestamp.utc.seconds'] = np.asarray(utc_timestamps_ns) / 1e9
+
+        # Handle local ISO timestamps (still needs loop due to string formatting)
         for frame_number in range(num_frames):
-            (timebase_mapping, csv_row) = create_camera_frame_csv_row_recarray(
-                camera_frame_timestamps=camera_frame_timestamps[frame_number],
-                camera_frame_durations=camera_frame_durations[frame_number],
-                recording_frame_number=frame_number,
-                connection_frame_number=connection_frame_numbers[frame_number],
-                recording_start_time_ns=recording_start_time_ns,
-                previous_frame_timestamp_ns=previous_frame_timestamp_ns,
-                timebase_mapping=timebase_mapping
-            )
-            all_camera_csv_rows[camera_number, frame_number] = csv_row
-            previous_frame_timestamp_ns = csv_row['timestamp.perf_counter_ns.ns']  # Update for next frame
+            all_camera_csv_rows[camera_number, frame_number]['timestamp.local.iso8601'] = \
+                timebase_mapping.convert_perf_counter_ns_to_local_iso8601(frame_main_timestamps_ns[frame_number])
+
+        # Calculate frame durations and framerates (from previous frame)
+        prev_frame_durations_ns = np.zeros(num_frames, dtype=np.float64)
+        prev_frame_durations_ns[1:] = np.diff(frame_main_timestamps_ns)
+        # Set first frame values to NaN
+        prev_frame_durations_ns[0] = np.nan
+
+        all_camera_csv_rows[camera_number]['from_previous.frame_duration.ms'] = prev_frame_durations_ns / 1e6
+
+        # Calculate framerate (avoiding division by zero)
+        framerates = np.zeros(num_frames, dtype=np.float64)
+        valid_durations = prev_frame_durations_ns > 0
+        framerates[valid_durations] = (prev_frame_durations_ns[valid_durations] / 1e9) ** -1  # Convert to Hz
+        framerates[~valid_durations] = np.nan
+        all_camera_csv_rows[camera_number]['from_previous.framerate.hz'] = framerates
+
+        # Fill in all timestamp fields (vectorized)
+        for field_name in FRAME_LIFECYCLE_TIMESTAMPS_DTYPE.names:
+            csv_field = f'frame.{field_name.replace("_ns", "")}.ns'
+            all_camera_csv_rows[camera_number][csv_field] = camera_frame_timestamps[
+                                                                field_name] - recording_start_time_ns
+
+        # Fill in all duration fields (vectorized)
+        for field_name in FRAME_DURATION_DTYPE.names:
+            if  "total" in field_name:
+                csv_field = field_name.replace("_ns", ".ns").replace('total_', 'total.')
+            else:
+                csv_field = f'duration.{field_name.replace("_ns", ".ns")}'
+
+            all_camera_csv_rows[camera_number][csv_field] = camera_frame_durations[
+                field_name]
 
         # Save to CSV
         csv_file_path = recording_info.camera_timestamps_file_path_from_camera_id(camera_id)
         np.savetxt(csv_file_path, all_camera_csv_rows[camera_number], delimiter=',', fmt='%s',
                    header=",".join(CAMERA_TIMESTAMPS_CSV_ROW_DTYPE.names),
                    comments='')
-        # logger.debug(f"Saved camera {camera_id} timestamps CSV to {csv_file_path}")
+
     return all_camera_csv_rows
 
 
@@ -107,7 +147,7 @@ def create_camera_frame_csv_row_recarray(camera_frame_timestamps: np.recarray,
         csv_row_recarray['from_previous.framerate.hz'] = np.nan
 
     # Fill in all timestamp fields
-    csv_row_recarray['frame.initialized.ns'] = camera_frame_timestamps.frame_initialized_ns - recording_start_time_ns
+    csv_row_recarray['frame.initialized.ns'] = camera_frame_timestamps.initialized_ns - recording_start_time_ns
     csv_row_recarray['frame.pre_grab.ns'] = camera_frame_timestamps.pre_frame_grab_ns - recording_start_time_ns
     csv_row_recarray['frame.post_grab.ns'] = camera_frame_timestamps.post_frame_grab_ns - recording_start_time_ns
     csv_row_recarray['frame.pre_retrieve.ns'] = camera_frame_timestamps.pre_frame_retrieve_ns - recording_start_time_ns
@@ -136,5 +176,3 @@ def create_camera_frame_csv_row_recarray(camera_frame_timestamps: np.recarray,
     csv_row_recarray['total.camera_idle_time.ns'] = camera_frame_durations.total_camera_idle_time_ns
 
     return timebase_mapping, csv_row_recarray
-
-

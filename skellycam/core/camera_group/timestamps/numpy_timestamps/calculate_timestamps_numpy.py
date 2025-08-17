@@ -53,7 +53,7 @@ def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
             durations = np.recarray(1, dtype=FRAME_DURATION_DTYPE)
 
             # Calculate all durations in a vectorized way
-            durations.idle_before_frame_grab_ns = timestamps.pre_frame_grab_ns - timestamps.frame_initialized_ns
+            durations.idle_before_frame_grab_ns = timestamps.pre_frame_grab_ns - timestamps.initialized_ns
             durations.during_frame_grab_ns = timestamps.post_frame_grab_ns - timestamps.pre_frame_grab_ns
             durations.idle_before_retrieve_ns = timestamps.pre_frame_retrieve_ns - timestamps.post_frame_grab_ns
             durations.during_frame_retrieve_ns = timestamps.post_frame_retrieve_ns - timestamps.pre_frame_retrieve_ns

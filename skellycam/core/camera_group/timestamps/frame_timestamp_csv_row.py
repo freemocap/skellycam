@@ -76,7 +76,7 @@ class FrameTimestampsCSVRow(BaseModel):
             frame_duration_ms=frame_duration_ms,
             framerate_hz=framerate_hz,
 
-            initialized_ns=frame_timestamps.frame_initialized_ns - recording_start_time_ns,
+            initialized_ns=frame_timestamps.initialized_ns - recording_start_time_ns,
             pre_grab_ns=frame_timestamps.pre_frame_grab_ns - recording_start_time_ns,
             post_grab_ns=frame_timestamps.post_frame_grab_ns - recording_start_time_ns,
             pre_retrieve_ns=frame_timestamps.pre_frame_retrieve_ns - recording_start_time_ns,

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FrameTimestamps:
-    frame_initialized_ns: int = 0
+    initialized_ns: int = 0
     pre_frame_grab_ns: int = 0
     post_frame_grab_ns: int = 0
     pre_frame_retrieve_ns: int = 0
@@ -48,7 +48,7 @@ class FrameTimestamps:
                              f"\nExpected:\n\t {FRAME_LIFECYCLE_TIMESTAMPS_DTYPE}, "
                              f"\nReceived: \n\t {timestamps.dtype}")
         return cls(
-            frame_initialized_ns=timestamps.frame_initialized_ns[0],
+            initialized_ns=timestamps.initialized_ns[0],
             pre_frame_grab_ns=timestamps.pre_frame_grab_ns[0],
             post_frame_grab_ns=timestamps.post_frame_grab_ns[0],
             pre_frame_retrieve_ns=timestamps.pre_frame_retrieve_ns[0],
@@ -67,7 +67,7 @@ class FrameTimestamps:
         result = np.recarray(1, dtype=FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)
 
         # Assign values to the record array
-        result.frame_initialized_ns[0] = self.frame_initialized_ns
+        result.initialized_ns[0] = self.initialized_ns
         result.pre_frame_grab_ns[0] = self.pre_frame_grab_ns
         result.post_frame_grab_ns[0] = self.post_frame_grab_ns
         result.pre_frame_retrieve_ns[0] = self.pre_frame_retrieve_ns
@@ -149,8 +149,8 @@ class FrameDurations:
     @cached_property
     def total_camera_idle_time_ns(self) -> int:
         """Time between frame initialization and the start of the grab operation."""
-        if self.timestamps.frame_initialized_ns and self.timestamps.pre_frame_grab_ns:
-            return self.timestamps.pre_frame_grab_ns - self.timestamps.frame_initialized_ns
+        if self.timestamps.initialized_ns and self.timestamps.pre_frame_grab_ns:
+            return self.timestamps.pre_frame_grab_ns - self.timestamps.initialized_ns
         return -1
 
     def __str__(self):

@@ -27,4 +27,4 @@ def save_timestamp_statistics_summary(
         f.write(str(stats))
 #     logger.debug(f"Saved timestamp statistics summary to {stats_text_path}")
 
-#     logger.success(f"Recording timestamps statistics summary:\n\n{stats}\n\n--------------------------------------------------------\n")
+    logger.success(f"Recording timestamps statistics summary:\n\n{stats}\n\n--------------------------------------------------------\n")

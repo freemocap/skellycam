@@ -38,7 +38,7 @@ class MultiFrameSharedMemoryRingBuffer(SharedMemoryRingBuffer):
             mf_numbers.append(mf_rec_array[camera_id].frame_metadata.frame_number[0])
 
         if len(set(mf_numbers)) != 1:
-            raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_numbers}, expected only one.")
+            logger.warning(f"MultiFramePayload has multiple frame numbers {mf_numbers}, expected only one - this won't affect the recording, but may cause frontend flickering if it happens alot.")
 
 
 

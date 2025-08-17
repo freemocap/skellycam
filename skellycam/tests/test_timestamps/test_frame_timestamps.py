@@ -14,8 +14,8 @@ class TestFrameTimestamps:
         timebase = TimebaseMapping()
         timestamps = FrameTimestamps(timebase_mapping=timebase)
 
-        # Check that frame_initialized_ns is set by default
-        assert timestamps.frame_initialized_ns > 0
+        # Check that initialized_ns is set by default
+        assert timestamps.initialized_ns > 0
 
         # Check that other timestamps are initialized to 0
         assert timestamps.pre_frame_grab_ns == 0
@@ -56,7 +56,7 @@ class TestFrameTimestamps:
 
         timestamps = FrameTimestamps(
             timebase_mapping=timebase,
-            frame_initialized_ns=1000,
+            initialized_ns=1000,
             pre_frame_grab_ns=2000,
             post_frame_grab_ns=3000,
             pre_frame_retrieve_ns=4000,
@@ -94,7 +94,7 @@ class TestFrameTimestamps:
         timebase = TimebaseMapping()
         original = FrameTimestamps(
             timebase_mapping=timebase,
-            frame_initialized_ns=1000,
+            initialized_ns=1000,
             pre_frame_grab_ns=2000,
             post_frame_grab_ns=3000,
             pre_frame_retrieve_ns=4000,
@@ -116,7 +116,7 @@ class TestFrameTimestamps:
         assert record_array.dtype == FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
 
         # Check values in the record array
-        assert record_array.frame_initialized_ns[0] == 1000
+        assert record_array.initialized_ns[0] == 1000
         assert record_array.pre_frame_grab_ns[0] == 2000
         assert record_array.post_frame_grab_ns[0] == 3000
         assert record_array.pre_frame_retrieve_ns[0] == 4000
@@ -132,7 +132,7 @@ class TestFrameTimestamps:
         reconstructed = FrameTimestamps.from_frame_timestamps_recarray(record_array)
 
         # Check that the reconstructed object has the same values
-        assert reconstructed.frame_initialized_ns == original.frame_initialized_ns
+        assert reconstructed.initialized_ns == original.initialized_ns
         assert reconstructed.pre_frame_grab_ns == original.pre_frame_grab_ns
         assert reconstructed.post_frame_grab_ns == original.post_frame_grab_ns
         assert reconstructed.pre_frame_retrieve_ns == original.pre_frame_retrieve_ns
@@ -165,7 +165,7 @@ class TestFrameTimestamps:
         timestamps = FrameTimestamps(timebase_mapping=timebase)
         durations = timestamps.durations
 
-        # All metrics should return -1 since no timestamps are set (except frame_initialized_ns)
+        # All metrics should return -1 since no timestamps are set (except initialized_ns)
         assert durations.total_camera_idle_time_ns == -1
         assert durations.during_frame_grab_ns == -1
         assert durations.idle_before_retrieve_ns == -1
@@ -194,7 +194,7 @@ class TestFrameTimestamps:
 
         # Set timestamps with fixed increments instead of using sleep
         base_time = 1_000_000_000  # 1 second in ns
-        timestamps.frame_initialized_ns = base_time
+        timestamps.initialized_ns = base_time
         timestamps.pre_frame_grab_ns = base_time + 100_000_000  # +100ms
         timestamps.post_frame_grab_ns = base_time + 300_000_000  # +300ms (+200ms from previous)
         timestamps.pre_frame_retrieve_ns = base_time + 600_000_000  # +600ms (+300ms from previous)

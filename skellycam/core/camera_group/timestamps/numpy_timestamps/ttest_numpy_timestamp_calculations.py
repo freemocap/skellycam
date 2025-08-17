@@ -91,7 +91,7 @@ def create_dummy_frame_metadata(num_cameras:int,
             metadata.timebase_mapping[0] = timebase_mapping
 
             # Fill timestamp fields with realistic values
-            timestamps.frame_initialized_ns = frame_time + get_jitter() - 500_000
+            timestamps.initialized_ns = frame_time + get_jitter() - 500_000
             timestamps.pre_frame_grab_ns = frame_time + get_jitter()
             timestamps.post_frame_grab_ns = frame_time + get_jitter() + 2_000_000
             timestamps.pre_frame_retrieve_ns = frame_time + get_jitter() + 3_000_000
@@ -109,4 +109,4 @@ def create_dummy_frame_metadata(num_cameras:int,
 
 
 if __name__ == "__main__":
-    ttest_numpy_timestamp_processing()
+    ttest_numpy_timestamp_processing(num_cameras=5, num_frames=1000)

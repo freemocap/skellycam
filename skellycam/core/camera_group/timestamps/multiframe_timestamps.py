@@ -78,7 +78,7 @@ class MultiFrameTimestamps:
     @cached_property
     def frame_initialized_ms(self) -> DescriptiveStatistics:
         return DescriptiveStatistics.from_samples(
-            samples=[ns_to_ms(ts.frame_initialized_ns) for ts in self.frame_timestamps.values()],
+            samples=[ns_to_ms(ts.initialized_ns) for ts in self.frame_timestamps.values()],
             name="frame_initialized_ms",
             units="milliseconds"
         )

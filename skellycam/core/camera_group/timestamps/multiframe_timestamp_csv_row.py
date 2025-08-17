@@ -32,7 +32,7 @@ class MultiframeTimestampsCSVRow(BaseModel):
     initialized_ms_stddev: float = Field(serialization_alias="frame.initialized.ms.stddev")
     initialized_ms_range: float = Field(serialization_alias="frame.initialized.ms.range")
     
-    # pre_grab_ns
+    # initialized_ns
     pre_grab_ms_mean: float = Field(serialization_alias="frame.pre_grab.ms.mean")
     pre_grab_ms_median: float = Field(serialization_alias="frame.pre_grab.ms.median")
     pre_grab_ms_stddev: float = Field(serialization_alias="frame.pre_grab.ms.stddev")

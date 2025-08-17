@@ -30,15 +30,17 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
         ValueError: If the number of frames is inconsistent across cameras.
     """
     num_frames = None
-    for camera_id, frame_metadatas in frame_metadatas_by_camera.items():
-        if num_frames is None:
-            num_frames = len(frame_metadatas)
-        elif len(frame_metadatas) != num_frames:
-            raise ValueError(f"Camera {camera_id} has {len(frame_metadatas)} frames, expected {num_frames} frames.")
 
+    frame_count_by_camera = {camera_id: len(frame_metadatas) for camera_id, frame_metadatas in
+                                                    frame_metadatas_by_camera.items()}
+    number_of_frames_set = set(frame_count_by_camera.values())
+    if len(number_of_frames_set) != 1:
+        raise ValueError(f"Inconsistent number of frames found across cameras: {frame_count_by_camera}. "
+                         f"Expected all cameras to have the same number of frames.")
+    number_of_frames = number_of_frames_set.pop()
     # Check that frame numbers are consistent across cameras
     frame_numbers = []
-    for frame_number in range(num_frames):
+    for frame_number in range(number_of_frames):
         frame_number = set([metadata[frame_number].frame_number[0] for metadata in frame_metadatas_by_camera.values()])
         if len(frame_number) != 1:
             raise ValueError(f"Inconsistent frame numbers found across cameras: {frame_number}. "
@@ -51,13 +53,15 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
         if metadata[0].camera_config != camera_config_recarrays[camera_id]:
             raise ValueError(f"Camera {camera_id} has inconsistent camera config across frames.")
 
-    timebase_mapping_recarray: TimebaseMapping | None = None
+    timebase_mapping_recarray: np.recarray | None = None
     for camera_id, metadata in frame_metadatas_by_camera.items():
-        for frame_index in range(num_frames):
+        for frame_index in range(number_of_frames):
             if timebase_mapping_recarray is None:
                 timebase_mapping_recarray = metadata[frame_index].timebase_mapping[0]
             elif metadata[frame_index].timebase_mapping[0] != timebase_mapping_recarray:
                 raise ValueError(f"Camera {camera_id} has inconsistent timebase mapping across frames.")
+    if timebase_mapping_recarray is None:
+        raise ValueError("No timebase mapping found in frame metadata.")
 
     return frame_numbers, TimebaseMapping.from_numpy_record_array(timebase_mapping_recarray)
 
