@@ -15,7 +15,7 @@ class MultiFrameTimestampsCSVRow(BaseModel):
     local_iso8601: str = Field(serialization_alias="timestamp.local.iso8601")
     perf_counter_ns: float = Field(serialization_alias="timestamp.perf_counter_ns.ns")
 
-    inter_camera_grab_range_ms: float = Field(serialization_alias="multiframe.inter_camera_grab_range.ms",
+    inter_camera_grab_range_ms: float = Field(serialization_alias="multiframe.inter_camera.frame_grab_range.ms",
         description="The range of time in milliseconds between the first and last camera grab in a multi-camera frame."
     )
     # From-previous measures (i.e. frame duration and framerate, which require knowledge of the previous frame)

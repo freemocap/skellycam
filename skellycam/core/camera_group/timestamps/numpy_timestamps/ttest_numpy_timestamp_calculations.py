@@ -12,7 +12,8 @@ from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 
 
-def ttest_numpy_timestamp_processing():
+def ttest_numpy_timestamp_processing(num_cameras=3,
+                                     num_frames=1000):
     """
     Simple test function to verify the functionality of the numpy timestamp processing.
     """
@@ -21,7 +22,8 @@ def ttest_numpy_timestamp_processing():
      metadatas_by_camera,
      num_cameras,
      num_frames,
-     recording_info) = create_dummy_frame_metadata()
+     recording_info) = create_dummy_frame_metadata(num_cameras=num_cameras,
+                                                   num_frames=num_frames)
 
     # Process and save timestamps
     print(f"Processing {num_cameras} cameras with {num_frames} frames each...")
@@ -36,25 +38,24 @@ def ttest_numpy_timestamp_processing():
     end_time = time.time()
     print(f"Processing completed in {end_time - start_time:.3f} seconds")
 
-    # Will uncomment when it works 
-    # # Verify output files exist
-    # assert Path(recording_info.timestamp_file_path).exists(), "Multiframe timestamps file not created"
-    # assert Path(recording_info.timestamp_stats_json_file_path).exists(), "Statistics JSON file not created"
-    # assert Path(recording_info.timestamp_stats_text_file_path).exists(), "Statistics text file not created"
+    # Verify output files exist
+    assert Path(recording_info.timestamp_file_path).exists(), "Multiframe timestamps file not created"
+    assert Path(recording_info.timestamp_stats_json_file_path).exists(), "Statistics JSON file not created"
+    assert Path(recording_info.timestamp_stats_text_file_path).exists(), "Statistics text file not created"
 
-    # for camera_id in camera_configs.keys():
-    #     camera_file = Path(recording_info.camera_timestamps_file_path_from_camera_id(camera_id))
-    #     assert camera_file.exists(), f"Camera {camera_id} timestamps file not created"
+    for camera_id in camera_configs.keys():
+        camera_file = Path(recording_info.camera_timestamps_file_path_from_camera_id(camera_id))
+        assert camera_file.exists(), f"Camera {camera_id} timestamps file not created"
 
-    # # Clean up
-    # # temp_dir.cleanup()
-    # print("All tests passed!")
+    # Clean up
+    # temp_dir.cleanup()
+    print("All tests passed!")
 
 
-def create_dummy_frame_metadata():
+def create_dummy_frame_metadata(num_cameras:int,
+                                num_frames:int):
     # Create synthetic test data
-    num_cameras = 3
-    num_frames = 100
+
     camera_ids = [f"camera_{i}" for i in range(num_cameras)]
     # Create a temporary directory for test output
     recording_path = Path(__file__).parent / "test_timestamps_recording"
@@ -70,9 +71,9 @@ def create_dummy_frame_metadata():
     metadatas_by_camera = {}
     camera_index = 0
 
-    def get_jitter()-> int:
+    def get_jitter() -> int:
         """Generate a random jitter value between -1000 and 1000 nanoseconds."""
-        return np.random.randint(0,1_000)
+        return np.random.randint(0, 1_000)
 
     for camera_id in camera_ids:
         metadatas_by_camera[camera_id] = []
@@ -102,7 +103,7 @@ def create_dummy_frame_metadata():
 
             metadata.camera_config = configs[camera_id].to_numpy_record_array()
             metadata.timestamps = timestamps
-            metadata.frame_number = fr+100  # Start at 100 to test non-zero start
+            metadata.frame_number = fr + 100  # Start at 100 to test non-zero start
             metadatas_by_camera[camera_id].append(metadata)
     return configs, metadatas_by_camera, num_cameras, num_frames, recording_info
 

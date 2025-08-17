@@ -38,7 +38,7 @@ def create_multiframe_dataframe(
         'timestamp.perf_counter_ns.ns': frame_grab_timestamps_ns,
         'from_previous.frame_duration.ms': frame_durations_ms,
         'from_previous.framerate.hz': framerates,
-        'multiframe.inter_camera_grab_range.ms': inter_camera_grab_range_ms,
+        'multiframe.inter_camera.frame_grab_range.ms': inter_camera_grab_range_ms,
     }
 
     # Add duration statistics (mean and std)

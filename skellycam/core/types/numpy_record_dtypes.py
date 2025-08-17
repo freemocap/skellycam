@@ -55,6 +55,7 @@ FRAME_DURATION_DTYPE = np.dtype([
     ('idle_before_frame_record_ns', np.int64),
     ('during_frame_record_ns', np.int64),
     ('total_frame_processing_time_ns', np.int64),
+    ('total_camera_idle_time_ns', np.int64),
 ])
 
 CAMERA_TIMESTAMPS_CSV_ROW_DTYPE = np.dtype([
@@ -85,10 +86,11 @@ CAMERA_TIMESTAMPS_CSV_ROW_DTYPE = np.dtype([
     ('duration.during_copy_to_camera_shm.ns', np.int64),
     ('duration.idle_before_frame_record.ns', np.int64),
     ('duration.during_frame_record.ns', np.int64),
-    ('duration.total_frame_processing_time.ns', np.int64),
+    ('total.frame_processing_time.ns', np.int64),
+    ('total.camera_idle_time.ns', np.int64),
 ])
 
-MULI_FRAME_TIMESTAMP_CSV_ROW = np.dtype([
+MULTI_FRAME_TIMESTAMP_CSV_ROW = np.dtype([
     ('multiframe_number', np.int64),
     ('timestamp.from_recording_start.sec', np.float64),
     ('timestamp.perf_counter_ns.ns', np.float64),
@@ -96,7 +98,7 @@ MULI_FRAME_TIMESTAMP_CSV_ROW = np.dtype([
     ('timestamp.local.iso8601', 'U32'),
     ('from_previous.frame_duration.ms', np.float64),
     ('from_previous.framerate.hz', np.float64),
-    ('inter_camera_grab_range.ms', np.float64),
+    ('inter_camera.frame_grab_range.ms', np.float64),
 
     # Lifespan timestamp fields with statistical measures
     ('frame.initialized.ms.mean', np.float64),
@@ -202,11 +204,17 @@ MULI_FRAME_TIMESTAMP_CSV_ROW = np.dtype([
     ('duration.during_frame_record.ms.range', np.float64),
     ('duration.during_frame_record.proportion.coefficient_of_variation', np.float64),
 
-    ('duration.total_frame_processing_time.ms.mean', np.float64),
-    ('duration.total_frame_processing_time.ms.median', np.float64),
-    ('duration.total_frame_processing_time.ms.standard_deviation', np.float64),
-    ('duration.total_frame_processing_time.ms.range', np.float64),
-    ('duration.total_frame_processing_time.proportion.coefficient_of_variation', np.float64),
+    ('total.frame_processing_time.ms.mean', np.float64),
+    ('total.frame_processing_time.ms.median', np.float64),
+    ('total.frame_processing_time.ms.standard_deviation', np.float64),
+    ('total.frame_processing_time.ms.range', np.float64),
+    ('total.frame_processing_time.proportion.coefficient_of_variation', np.float64),
+
+    ('total.camera_idle_time.ms.mean', np.float64),
+    ('total.camera_idle_time.ms.median', np.float64),
+    ('total.camera_idle_time.ms.standard_deviation', np.float64),
+    ('total.camera_idle_time.ms.range', np.float64),
+    ('total.camera_idle_time.proportion.coefficient_of_variation', np.float64),
 
 
 ])

@@ -47,7 +47,7 @@ class FrameTimestampsCSVRow(BaseModel):
     during_frame_record_ns: int = Field(serialization_alias="duration.during_frame_record.ns")
 
     total_camera_idle_time_ns: int = Field(serialization_alias="duration.idle_before_grab.ns")
-    total_frame_processing_time_ns: int = Field(serialization_alias="duration.total_frame_processing_time.ns")
+    total_frame_processing_time_ns: int = Field(serialization_alias="total.frame_processing_time.ns")
 
     @classmethod
     def from_frame_timestamps(cls,
