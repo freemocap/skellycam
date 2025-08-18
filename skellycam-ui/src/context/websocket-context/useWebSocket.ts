@@ -39,9 +39,14 @@ export const useWebSocket = (wsUrl: string) => {
             if (allAcknowledged && latestFrameAcknowledgment.current) {
                 // Schedule the acknowledgment to be sent on the next frame
                 setTimeout(() => {
-                    websocket?.send(
-                        JSON.stringify(latestFrameAcknowledgment.current)
-                    );
+                    if (websocket?.readyState === WebSocket.OPEN) {
+                        websocket.send(
+                            JSON.stringify(latestFrameAcknowledgment.current)
+                        );
+                    } else {
+                        console.error('WebSocket is not open. Message not sent.');
+                    }
+
                 }, 0);
             }
         },

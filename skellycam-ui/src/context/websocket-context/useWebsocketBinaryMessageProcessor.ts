@@ -85,6 +85,7 @@ export interface CameraDisplaySize {
 export interface FrameRenderAcknowledgment {
     frameNumber: number;
     displayImageSizes: Record<string, CameraDisplaySize>;
+
 }
 export const useWebsocketBinaryMessageProcessor = () => {
     const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string, CameraImageData>>({});
