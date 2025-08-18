@@ -3,14 +3,14 @@ import time
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.opencv_helpers.check_for_new_recording_info import finish_recording
+from skellycam.core.camera.opencv.opencv_helpers.handle_recording_updates import finish_recording
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraStatus
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 
 import logging
 logger = logging.getLogger(__name__)
-
+ 
 def handle_video_recording(config: CameraConfig,
                            frame_rec_array: np.recarray,
                            ipc: CameraGroupIPC,

@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import numpy as np
 from pydantic import BaseModel, Field
 
 from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
@@ -8,7 +9,6 @@ from skellycam.utilities.time_unit_conversion import ns_to_ms
 
 if TYPE_CHECKING:
     pass
-
 
 class MultiframeTimestampsCSVRow(BaseModel):
 
@@ -32,7 +32,7 @@ class MultiframeTimestampsCSVRow(BaseModel):
     initialized_ms_stddev: float = Field(serialization_alias="frame.initialized.ms.stddev")
     initialized_ms_range: float = Field(serialization_alias="frame.initialized.ms.range")
     
-    # pre_grab_ns
+    # initialized_ns
     pre_grab_ms_mean: float = Field(serialization_alias="frame.pre_grab.ms.mean")
     pre_grab_ms_median: float = Field(serialization_alias="frame.pre_grab.ms.median")
     pre_grab_ms_stddev: float = Field(serialization_alias="frame.pre_grab.ms.stddev")
@@ -56,42 +56,19 @@ class MultiframeTimestampsCSVRow(BaseModel):
     post_retrieve_ms_stddev: float = Field(serialization_alias="frame.post_retrieve.ms.stddev")
     post_retrieve_ms_range: float = Field(serialization_alias="frame.post_retrieve.ms.range")
     
-    # copy_to_camera_shm_ns
-    copy_to_camera_shm_ms_mean: float = Field(serialization_alias="frame.copy_to_camera_shm.ms.mean")
-    copy_to_camera_shm_ms_median: float = Field(serialization_alias="frame.copy_to_camera_shm.ms.median")
-    copy_to_camera_shm_ms_stddev: float = Field(serialization_alias="frame.copy_to_camera_shm.ms.stddev")
-    copy_to_camera_shm_ms_range: float = Field(serialization_alias="frame.copy_to_camera_shm.ms.range")
+    # pre_copy_to_camera_shm_ns
+    pre_copy_to_camera_shm_ms_mean: float = Field(serialization_alias="frame.pre_copy_to_camera_shm.ms.mean")
+    pre_copy_to_camera_shm_ms_median: float = Field(serialization_alias="frame.pre_copy_to_camera_shm.ms.median")
+    pre_copy_to_camera_shm_ms_stddev: float = Field(serialization_alias="frame.pre_copy_to_camera_shm.ms.stddev")
+    pre_copy_to_camera_shm_ms_range: float = Field(serialization_alias="frame.pre_copy_to_camera_shm.ms.range")
     
-    # pre_retrieve_from_camera_shm_ns
-    pre_retrieve_from_camera_shm_ms_mean: float = Field(serialization_alias="frame.pre_retrieve_from_camera_shm.ms.mean")
-    pre_retrieve_from_camera_shm_ms_median: float = Field(serialization_alias="frame.pre_retrieve_from_camera_shm.ms.median")
-    pre_retrieve_from_camera_shm_ms_stddev: float = Field(serialization_alias="frame.pre_retrieve_from_camera_shm.ms.stddev")
-    pre_retrieve_from_camera_shm_ms_range: float = Field(serialization_alias="frame.pre_retrieve_from_camera_shm.ms.range")
-    
-    # post_retrieve_from_camera_shm_ns
-    post_retrieve_from_camera_shm_ms_mean: float = Field(serialization_alias="frame.post_retrieve_from_camera_shm.ms.mean")
-    post_retrieve_from_camera_shm_ms_median: float = Field(serialization_alias="frame.post_retrieve_from_camera_shm.ms.median")
-    post_retrieve_from_camera_shm_ms_stddev: float = Field(serialization_alias="frame.post_retrieve_from_camera_shm.ms.stddev")
-    post_retrieve_from_camera_shm_ms_range: float = Field(serialization_alias="frame.post_retrieve_from_camera_shm.ms.range")
-    
-    # copy_to_multiframe_shm_ns
-    pre_copy_to_multiframe_shm_ms_mean: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.mean")
-    pre_copy_to_multiframe_shm_ms_median: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.median")
-    pre_copy_to_multiframe_shm_ms_stddev: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.stddev")
-    pre_copy_to_multiframe_shm_ms_range: float = Field(serialization_alias="frame.pre_copy_to_multiframe_shm.ms.range")
-    
-    # pre_retrieve_from_multiframe_shm_ns
-    pre_retrieve_from_multiframe_shm_ms_mean: float = Field(serialization_alias="frame.pre_retrieve_from_multiframe_shm.ms.mean")
-    pre_retrieve_from_multiframe_shm_ms_median: float = Field(serialization_alias="frame.pre_retrieve_from_multiframe_shm.ms.median")
-    pre_retrieve_from_multiframe_shm_ms_stddev: float = Field(serialization_alias="frame.pre_retrieve_from_multiframe_shm.ms.stddev")
-    pre_retrieve_from_multiframe_shm_ms_range: float = Field(serialization_alias="frame.pre_retrieve_from_multiframe_shm.ms.range")
-    
-    # post_retrieve_from_multiframe_shm_ns
-    post_retrieve_from_multiframe_shm_ms_mean: float = Field(serialization_alias="frame.post_retrieve_from_multiframe_shm.ms.mean")
-    post_retrieve_from_multiframe_shm_ms_median: float = Field(serialization_alias="frame.post_retrieve_from_multiframe_shm.ms.median")
-    post_retrieve_from_multiframe_shm_ms_stddev: float = Field(serialization_alias="frame.post_retrieve_from_multiframe_shm.ms.stddev")
-    post_retrieve_from_multiframe_shm_ms_range: float = Field(serialization_alias="frame.post_retrieve_from_multiframe_shm.ms.range")
-    
+    # post_copy_to_camera_shm_ns
+    post_copy_to_camera_shm_ms_mean: float = Field(serialization_alias="frame.post_copy_to_camera_shm.ms.mean")
+    post_copy_to_camera_shm_ms_median: float = Field(serialization_alias="frame.post_copy_to_camera_shm.ms.median")
+    post_copy_to_camera_shm_ms_stddev: float = Field(serialization_alias="frame.post_copy_to_camera_shm.ms.stddev")
+    post_copy_to_camera_shm_ms_range: float = Field(serialization_alias="frame.post_copy_to_camera_shm.ms.range")
+
+
     # Lifespan duration fields with statistical measures
     # idle_before_grab_ns
     idle_before_grab_ms_mean: float = Field(serialization_alias="duration.idle_before_grab.ms.mean")

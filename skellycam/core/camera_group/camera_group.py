@@ -6,15 +6,14 @@ from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.mf_builder import MultiframeBuilder
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
     RecordingInfoMessage, RecordingFinishedMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
-from skellycam.core.recorders.videos.recording_finalizer import RecordingFinalizer
+from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.numpy_record_dtypes import create_frontend_payload_from_mf_recarray
+from skellycam.core.types.create_frontend_payload_bytearray import create_frontend_payload_from_mf_recarray
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt, \
     MultiframeTimestampFloat
 from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms
@@ -148,11 +147,14 @@ class CameraGroup:
         """
         self.ipc.pause(await_paused=True)
         logger.info("Publishing recording info message...")
+        frame_count = max([status.frame_count.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
+        self.ipc.camera_orchestrator.last_recording_frame_number.value  = -1  # Reset last recording frame number
+        self.ipc.camera_orchestrator.first_recording_frame_number.value = frame_count+ 3 # + a few to avoid off-by-one errors
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
         while not self.ipc.all_ready_to_record and self.ipc.should_continue:
             wait_10ms()
         logger.api(f"All cameras are ready to record for camera group ID: {self.id}")
-        self.ipc.camera_orchestrator.should_record_frames.value = True
+
         wait_10ms()
         logger.api("Unpausing camera group to start recording...")
         self.ipc.unpause(await_unpaused=True)
@@ -168,7 +170,10 @@ class CameraGroup:
 
         logger.debug(f"Stopping recording for all cameras in orchestrator...")
         self.pause(await_paused=True)
-        self.ipc.camera_orchestrator.should_record_frames.value = False
+        frame_count = max(
+            [status.frame_count.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
+        self.ipc.camera_orchestrator.first_recording_frame_number.value = -1
+        self.ipc.camera_orchestrator.last_recording_frame_number.value = frame_count + 3
         self.unpause(await_unpaused=True)
         finalize_recording(ipc=self.ipc)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
@@ -247,4 +252,4 @@ def finalize_recording(ipc: CameraGroupIPC):
         frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items()},
     )
     recording_finalizer.finalize_recording()
-    logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")
+    # logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")

@@ -3,7 +3,12 @@ import dataclasses
 import json
 from dataclasses import dataclass
 
+import numpy as np
+
+from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import calculate_statistics
 from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.types.numpy_record_dtypes import MULTI_FRAME_TIMESTAMP_CSV_ROW
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 
@@ -13,44 +18,52 @@ class RecordingTimestampsStats:
     A class to hold statistics about timestamps in a recording session.
     This is used to generate statistics about the recording timestamps.
     """
-    recording_name: str
+    recording_info: RecordingInfo
     number_of_cameras: int
     number_of_frames: int
     total_duration_sec: float
-    framerate_stats: DescriptiveStatistics
-    frame_duration_stats: DescriptiveStatistics
-    inter_camera_grab_range_ms: DescriptiveStatistics
+    framerate_stats: np.recarray
 
-    during_frame_grab_ms: DescriptiveStatistics
-    idle_before_retrieve_ms: DescriptiveStatistics
-    during_frame_retrieve_ms: DescriptiveStatistics
-    idle_before_copy_to_camera_shm_ms: DescriptiveStatistics
-    during_copy_to_camera_shm_ms: DescriptiveStatistics
-    idle_before_frame_record_ms: DescriptiveStatistics
-    during_frame_record_ms: DescriptiveStatistics
-    total_frame_processing_time_ms: DescriptiveStatistics
-    total_camera_idle_time_ms: DescriptiveStatistics
+    frame_duration_stats: np.recarray
+    inter_camera_grab_range_ms: np.recarray
+
+    idle_before_frame_grab_ms: np.recarray
+    during_frame_grab_ms: np.recarray
+    idle_before_retrieve_ms: np.recarray
+    during_frame_retrieve_ms: np.recarray
+    idle_before_copy_to_camera_shm_ms: np.recarray
+    during_copy_to_camera_shm_ms: np.recarray
+    idle_before_frame_record_ms: np.recarray
+    during_frame_record_ms: np.recarray
+    total_frame_processing_time_ms: np.recarray
+    total_camera_idle_time_ms: np.recarray
 
     @classmethod
-    def from_recording_timestamps(cls, recording_timestamps: RecordingTimestamps):
-        return cls(
-            recording_name=recording_timestamps.recording_info.recording_name,
-            number_of_cameras=recording_timestamps.number_of_cameras,
-            number_of_frames=recording_timestamps.number_of_recorded_frames,
-            total_duration_sec=recording_timestamps.total_duration_sec,
-            framerate_stats=recording_timestamps.framerate_stats,
-            frame_duration_stats=recording_timestamps.frame_duration_stats,
-            inter_camera_grab_range_ms=recording_timestamps.inter_camera_grab_range_stats,
+    def from_multiframe_rows(cls, multiframe_rows: np.recarray,
+                             recording_info: RecordingInfo,
+                             number_of_cameras: int) -> 'RecordingTimestampsStats':
+        if multiframe_rows.dtype != MULTI_FRAME_TIMESTAMP_CSV_ROW:
+            raise ValueError(f"Expected dtype {MULTI_FRAME_TIMESTAMP_CSV_ROW}, got {multiframe_rows.dtype}")
 
-            during_frame_grab_ms=recording_timestamps.during_frame_grab_stats,
-            idle_before_retrieve_ms=recording_timestamps.idle_before_retrieve_duration_stats,
-            during_frame_retrieve_ms=recording_timestamps.during_frame_retrieve_stats,
-            idle_before_copy_to_camera_shm_ms=recording_timestamps.idle_before_copy_to_camera_shm_stats,
-            during_copy_to_camera_shm_ms=recording_timestamps.during_copy_to_camera_shm_stats,
-            idle_before_frame_record_ms=recording_timestamps.idle_before_frame_record_stats,
-            during_frame_record_ms=recording_timestamps.during_frame_record_stats,
-            total_frame_processing_time_ms=recording_timestamps.total_frame_processing_time_stats,
-            total_camera_idle_time_ms=recording_timestamps.total_camera_idle_time_stats,
+        return cls(
+            recording_info = recording_info,
+            number_of_cameras = number_of_cameras,
+            number_of_frames = multiframe_rows.shape[0],
+            total_duration_sec = multiframe_rows[-1]['timestamp.from_recording_start.sec'],
+            framerate_stats = calculate_statistics(data=multiframe_rows['from_previous.framerate.hz'], axis=0),
+            frame_duration_stats = calculate_statistics(data=multiframe_rows['from_previous.frame_duration.ms'], axis=0),
+            inter_camera_grab_range_ms = calculate_statistics(data=multiframe_rows['inter_camera.frame_grab_range.ms'], axis=0),
+
+            idle_before_frame_grab_ms = calculate_statistics(data=multiframe_rows['duration.idle_before_frame_grab.ms.median'], axis=0),
+            during_frame_grab_ms = calculate_statistics(data=multiframe_rows['duration.during_frame_grab.ms.median'], axis=0),
+            idle_before_retrieve_ms = calculate_statistics(data=multiframe_rows['duration.idle_before_retrieve.ms.median'], axis=0),
+            during_frame_retrieve_ms = calculate_statistics(data=multiframe_rows['duration.during_frame_retrieve.ms.median'], axis=0),
+            idle_before_copy_to_camera_shm_ms = calculate_statistics(data=multiframe_rows['duration.idle_before_copy_to_camera_shm.ms.median'], axis=0),
+            during_copy_to_camera_shm_ms = calculate_statistics(data=multiframe_rows['duration.during_copy_to_camera_shm.ms.median'], axis=0),
+            idle_before_frame_record_ms = calculate_statistics(data=multiframe_rows['duration.idle_before_frame_record.ms.median'], axis=0),
+            during_frame_record_ms = calculate_statistics(data=multiframe_rows['duration.during_frame_record.ms.median'], axis=0),
+            total_frame_processing_time_ms = calculate_statistics(data=multiframe_rows['total.frame_processing_time.ms.median'], axis=0),
+            total_camera_idle_time_ms = calculate_statistics(data=multiframe_rows['total.camera_idle_time.ms.median'], axis=0),
         )
 
     def to_json(self, exclude: set[str] = None, indent: int = None) -> str:
@@ -73,7 +86,8 @@ class RecordingTimestampsStats:
                 for field in dataclasses.fields(obj):
                     if field.name not in exclude:
                         value = getattr(obj, field.name)
-                        result[field.name] = dataclass_to_dict(value)
+
+                        result[field.name.replace('_value', '')] = dataclass_to_dict(value)
                 return result
             elif isinstance(obj, list):
                 return [dataclass_to_dict(item) for item in obj]
@@ -100,25 +114,25 @@ class RecordingTimestampsStats:
         # Create timing table
         timing_data = [
             ["Framerate/FPS (Hz)",
-             f"{self.framerate_stats.median:.{precision}f}",
-             f"{self.framerate_stats.mean:.{precision}f}",
-             f"{self.framerate_stats.standard_deviation:.{precision}f}",
-             f"{self.framerate_stats.min:.{precision}f}",
-             f"{self.framerate_stats.max:.{precision}f}",
+             f"{self.framerate_stats.median_value:.{precision}f}",
+             f"{self.framerate_stats.mean_value:.{precision}f}",
+             f"{self.framerate_stats.standard_deviation_value:.{precision}f}",
+             f"{self.framerate_stats.min_value:.{precision}f}",
+             f"{self.framerate_stats.max_value:.{precision}f}",
              ],
             ["Frame Duration (ms)",
-             f"{self.frame_duration_stats.median:.{precision}f}",
-             f"{self.frame_duration_stats.mean:.{precision}f}",
-             f"{self.frame_duration_stats.standard_deviation:.{precision}f}",
-             f"{self.frame_duration_stats.min:.{precision}f}",
-             f"{self.frame_duration_stats.max:.{precision}f}",
+             f"{self.frame_duration_stats.median_value:.{precision}f}",
+             f"{self.frame_duration_stats.mean_value:.{precision}f}",
+             f"{self.frame_duration_stats.standard_deviation_value:.{precision}f}",
+             f"{self.frame_duration_stats.min_value:.{precision}f}",
+             f"{self.frame_duration_stats.max_value:.{precision}f}",
              ],
             ["Inter-Camera Frame Grab Sync (ms)",
-             f"{self.inter_camera_grab_range_ms.median:.{precision}f}",
-             f"{self.inter_camera_grab_range_ms.mean:.{precision}f}",
-             f"{self.inter_camera_grab_range_ms.standard_deviation:.{precision}f}",
-             f"{self.inter_camera_grab_range_ms.min:.{precision}f}",
-             f"{self.inter_camera_grab_range_ms.max:.{precision}f}",
+             f"{self.inter_camera_grab_range_ms.median_value:.{precision}f}",
+             f"{self.inter_camera_grab_range_ms.mean_value:.{precision}f}",
+             f"{self.inter_camera_grab_range_ms.standard_deviation_value:.{precision}f}",
+             f"{self.inter_camera_grab_range_ms.min_value:.{precision}f}",
+             f"{self.inter_camera_grab_range_ms.max_value:.{precision}f}",
              ]
         ]
 
@@ -130,13 +144,13 @@ class RecordingTimestampsStats:
         )
 
         # Calculate total time for percentage calculations
-        total_time = self.total_camera_idle_time_ms.mean
+
 
         # Create processing table data
-        table_data = []
+        processing_stages_table_data = []
 
         # Add Camera Frame Acquisition stages
-        acquisition_stages = [
+        processing_stages = [
             ("During frame grab", self.during_frame_grab_ms),
             ("Idle before retrieve", self.idle_before_retrieve_ms),
             ("During frame retrieve", self.during_frame_retrieve_ms),
@@ -146,79 +160,81 @@ class RecordingTimestampsStats:
             ("During frame record", self.during_frame_record_ms),
         ]
 
-        for stage_name, stats in acquisition_stages:
-            percentage = (stats.mean / total_time) * 100 if total_time > 0 else 0
-            table_data.append([
+        median_total_processing_time = sum(stage.median_value for _, stage in processing_stages)
+        for stage_name, stats in processing_stages:
+            percentage = (stats.median_value / median_total_processing_time) * 100 if median_total_processing_time > 0 else 0
+            processing_stages_table_data.append([
                 stage_name,
-                f"{stats.median:.{precision}f}",
-                f"{stats.mean:.{precision}f}",
-                f"{stats.standard_deviation:.{precision}f}",
-                f"{stats.min:.{precision}f}",
-                f"{stats.max:.{precision}f}",
+                f"{stats.median_value:.{precision}f}",
+                f"{stats.mean_value:.{precision}f}",
+                f"{stats.standard_deviation_value:.{precision}f}",
+                f"{stats.min_value:.{precision}f}",
+                f"{stats.max_value:.{precision}f}",
                 f"{percentage:.1f}%"
             ])
 
         # Add a separator line before the total
-        table_data.append(["═" * 25, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 10])
+        processing_stages_table_data.append(["═" * 25, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 10])
 
         # Add Total Processing Time with highlighting
         total_processing_stats = self.total_frame_processing_time_ms
-        processing_percentage = (total_processing_stats.mean / total_time) * 100 if total_time > 0 else 0
-        table_data.append([
-            "Total Frame Processing Time".upper(),
-            f"{total_processing_stats.median:.{precision}f}",
-            f"{total_processing_stats.mean:.{precision}f}",
-            f"{total_processing_stats.standard_deviation:.{precision}f}",
-            f"{total_processing_stats.min:.{precision}f}",
-            f"{total_processing_stats.max:.{precision}f}",
+        # Add Total Camera Idle Time
+        total_idle_stats = self.total_camera_idle_time_ms
+
+        total_time = total_processing_stats.median_value + total_idle_stats.median_value
+        processing_percentage = (total_processing_stats.median_value / total_time) * 100
+        idle_percentage = (total_idle_stats.median_value / total_time) * 100
+
+        processing_stages_table_data.append([
+            "TOTAL FRAME PROCESSING TIME",
+            f"{total_processing_stats.median_value:.{precision}f}",
+            f"{total_processing_stats.mean_value:.{precision}f}",
+            f"{total_processing_stats.standard_deviation_value:.{precision}f}",
+            f"{total_processing_stats.min_value:.{precision}f}",
+            f"{total_processing_stats.max_value:.{precision}f}",
             f"{processing_percentage:.1f}%"
         ])
 
-        # Add Total Camera Idle Time
-        total_idle_stats = self.total_camera_idle_time_ms
-        table_data.append([
-            "Total Camera Idle Time".upper(),
-            f"{total_idle_stats.median:.{precision}f}",
-            f"{total_idle_stats.mean:.{precision}f}",
-            f"{total_idle_stats.standard_deviation:.{precision}f}",
-            f"{total_idle_stats.min:.{precision}f}",
-            f"{total_idle_stats.max:.{precision}f}",
-            f"{100-processing_percentage:.1f}%"
+        processing_stages_table_data.append([
+            "TOTAL CAMERA IDLE TIME",
+            f"{total_idle_stats.median_value:.{precision}f}",
+            f"{total_idle_stats.mean_value:.{precision}f}",
+            f"{total_idle_stats.standard_deviation_value:.{precision}f}",
+            f"{total_idle_stats.min_value:.{precision}f}",
+            f"{total_idle_stats.max_value:.{precision}f}",
+            f"{idle_percentage:.1f}%"
         ])
 
         processing_table = tabulate(
-            table_data,
-            headers=["Stage", "Median (ms)", "Mean (ms)", "Std (ms)", "Min (ms)", "Max (ms)", "% of Total"],
+            processing_stages_table_data,
+            headers=["Stage", "Median (ms)", "Mean (ms)", "Std (ms)", "Min (ms)", "Max (ms)", "% of Processing Time"],
             tablefmt="rst",
             floatfmt=f".{precision}f"
         )
 
         # Calculate efficiency metrics
-        processing_ratio = (self.total_frame_processing_time_ms.mean / total_time) * 100 if total_time > 0 else 0
+        processing_ratio = (self.total_frame_processing_time_ms.median_value / median_total_processing_time) * 100 if median_total_processing_time > 0 else 0
 
         # Define the template as a multi-line string
         template_str = """$separator
+Timestamp Statistics for recording: $recording_name
 
-    Timestamp Statistics for recording: $recording_name
+Number of Cameras: $num_cameras
+Total Frames: $num_frames
+Total Duration: $duration seconds
 
-    Number of Cameras: $num_cameras
-    Total Frames: $num_frames
-    Total Duration: $duration seconds
+FRAME TIMING STATISTICS
+$timing_table
 
-    FRAME TIMING STATISTICS
-    $timing_table
-
-    FRAME PROCESSING TIMESTAMPS
-    $processing_table
-
-
+FRAME PROCESSING TIMESTAMPS
+$processing_table
     """
 
         # Create a template and substitute values
         template = Template(template_str)
         return template.substitute(
             separator="_" * 80,
-            recording_name=self.recording_name,
+            recording_name=self.recording_info.recording_name,
             num_cameras=self.number_of_cameras,
             num_frames=self.number_of_frames,
             duration=f"{self.total_duration_sec:.3f}",
@@ -226,6 +242,6 @@ class RecordingTimestampsStats:
             processing_table=processing_table,
             proc_ratio=f"{processing_ratio:.1f}",
             idle_ratio=f"{(100 - processing_ratio):.1f}",
-            avg_fps=f"{self.framerate_stats.mean:.2f}",
-            sync_ms=f"{self.inter_camera_grab_range_ms.mean:.2f}"
+            avg_fps=f"{self.framerate_stats.mean_value:.2f}",
+            sync_ms=f"{self.inter_camera_grab_range_ms.mean_value:.2f}"
         )

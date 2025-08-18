@@ -1,5 +1,5 @@
 import enum
-from typing import Tuple, Self, Any
+from typing import Tuple, Self, Any, ClassVar
 
 import cv2
 import numpy as np

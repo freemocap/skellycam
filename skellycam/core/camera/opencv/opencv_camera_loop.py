@@ -16,7 +16,7 @@ from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) 
 
 
 def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
@@ -125,7 +125,7 @@ def initialize_frame_recarray(frame_rec_array: np.recarray) -> np.recarray:
     frame_rec_array.frame_metadata.timestamps.pre_copy_to_camera_shm_ns[0] = 0
     frame_rec_array.frame_metadata.timestamps.post_copy_to_camera_shm_ns[0] = 0
 
-    frame_rec_array.frame_metadata.timestamps.frame_initialized_ns[0] = time.perf_counter_ns()
+    frame_rec_array.frame_metadata.timestamps.initialized_ns[0] = time.perf_counter_ns()
 
     return frame_rec_array
 

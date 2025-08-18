@@ -20,7 +20,7 @@ class TestMultiframeTimestamps:
         # Camera 1 timestamps
         self.camera1_timestamps = FrameTimestamps(
             timebase_mapping=self.timebase,
-            frame_initialized_ns=base_time,
+            initialized_ns=base_time,
             pre_frame_grab_ns=base_time + 100_000_000,  # +100ms
             post_frame_grab_ns=base_time + 300_000_000,  # +300ms (+200ms from previous)
             pre_frame_retrieve_ns=base_time + 400_000_000,  # +400ms (+100ms from previous)
@@ -36,7 +36,7 @@ class TestMultiframeTimestamps:
         # Camera 2 timestamps (slightly different timing)
         self.camera2_timestamps = FrameTimestamps(
             timebase_mapping=self.timebase,
-            frame_initialized_ns=base_time + 50_000_000,  # +50ms from base
+            initialized_ns=base_time + 50_000_000,  # +50ms from base
             pre_frame_grab_ns=base_time + 150_000_000,  # +150ms (+100ms from initialized)
             post_frame_grab_ns=base_time + 350_000_000,  # +350ms (+200ms from pre_grab)
             pre_frame_retrieve_ns=base_time + 450_000_000,  # +450ms (+100ms from post_grab)

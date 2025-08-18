@@ -11,6 +11,7 @@ import {addLog} from "@/store/slices/logRecordsSlice";
 
 export const useWebSocket = (wsUrl: string) => {
     const [isConnected, setIsConnected] = useState(false);
+    const [shouldReconnect, setShouldReconnect] = useState(true);
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
     const dispatch = useAppDispatch();
@@ -114,6 +115,7 @@ export const useWebSocket = (wsUrl: string) => {
         ws.onopen = () => {
             setIsConnected(true);
             setConnectAttempt(0);
+            setShouldReconnect(true);
             ws.send("Hello from the Skellycam Frontend💀📸👋");
             console.log(`Websocket is connected to url: ${wsUrl}`);
         };
@@ -139,14 +141,18 @@ export const useWebSocket = (wsUrl: string) => {
         setWebSocket(ws);
     }, [wsUrl, websocket, connectAttempt]);
 
-    const disconnect = useCallback(() => {
+    const disconnect = useCallback((shouldReconnect:boolean=true) => {
         if (websocket) {
             websocket.close();
             setWebSocket(null);
         }
+        setShouldReconnect(shouldReconnect)
     }, [websocket]);
 
     useEffect(() => {
+        if (isConnected || !shouldReconnect) {
+            return;
+        }
         const timeout = setTimeout(() => {
             console.log(
                 `Connecting  to websocket at url: ${wsUrl} (attempt #${connectAttempt + 1})`

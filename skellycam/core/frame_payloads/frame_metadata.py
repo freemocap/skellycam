@@ -16,13 +16,15 @@ class FrameMetadata(BaseModel):
     frame_number: int
     camera_config: CameraConfig
     timestamps: FrameTimestamps
+    timebase_mapping: TimebaseMapping
 
     @classmethod
     def create_initial(cls, camera_config: CameraConfig, timebase_mapping:TimebaseMapping) -> "FrameMetadata":
         return cls(
             frame_number=-1,
             camera_config=camera_config,
-            timestamps=FrameTimestamps(timebase_mapping=timebase_mapping),
+            timestamps=FrameTimestamps(),
+            timebase_mapping=timebase_mapping,
         )
 
     def initialize(self):
@@ -55,6 +57,7 @@ class FrameMetadata(BaseModel):
         # Assign values to the record array
         result.camera_config[0] = self.camera_config.to_numpy_record_array()
         result.frame_number[0] = self.frame_number
+        result.timebase_mapping[0] = self.timebase_mapping.to_numpy_record_array()
         result.timestamps[0] = self.timestamps.to_numpy_record_array()
 
         return result

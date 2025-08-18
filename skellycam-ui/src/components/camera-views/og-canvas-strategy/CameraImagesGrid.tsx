@@ -11,9 +11,9 @@ export const CameraImagesGrid = () => {
         <Box sx={{ height: '100%',
             width: '100%',
             display: 'flex',
+            gap: 1,
             flexDirection: 'row',
             flexWrap: 'wrap',
-            border: "3px solid #c00",
         }}>
 
             {Object.entries(latestImageData).map(([cameraId, cameraImageData]) =>

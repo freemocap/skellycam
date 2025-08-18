@@ -142,8 +142,8 @@ class CameraGroupSharedMemoryManager:
 
         mf_numbers = set(mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in self.camera_ids)
         if len(mf_numbers) > 1:
-            raise ValueError(f"Multi-frame payload has multiple frame numbers: {mf_numbers}. "
-                             f"Expected all cameras to have the same frame number.")
+            logger.warning(f"Multi-frame payload has multiple frame numbers: {mf_numbers}. "
+                             f"Expected all cameras to have the same frame number. This will not affect recorded videos but may cause flickering in live view if it happens a lot.")
         self.latest_multiframe_number.value = mf_numbers.pop()
         logger.loop(
             f"Built multiframe #{self.latest_multiframe_number.value} from cameras: {list(self.camera_ids)}")

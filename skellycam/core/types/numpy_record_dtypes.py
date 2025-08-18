@@ -3,13 +3,11 @@ from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
-
-from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
-from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimestampFloat
+from numpy import typing as npt
 
 logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
-    from skellycam.core.camera.config.camera_config import CameraConfig
+    pass
 
 CAMERA_CONFIG_DTYPE = np.dtype([
     ('camera_id', 'U1000'),
@@ -27,28 +25,216 @@ CAMERA_CONFIG_DTYPE = np.dtype([
     ('capture_fourcc', 'U4'),
     ('writer_fourcc', 'U4'),
 ], align=True)
+
 TIMEBASE_MAPPING_DTYPE = np.dtype([
-    ('utc_time_ns', np.uint64),
-    ('perf_counter_ns', np.uint64),
+    ('utc_time_ns', np.int64),
+    ('perf_counter_ns', np.int64),
     ('local_time_utc_offset', np.int32),
 ], align=True)
 
 FRAME_LIFECYCLE_TIMESTAMPS_DTYPE = np.dtype([
-    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE), #TODO - move to frame_metadata
-    ('frame_initialized_ns', np.uint64),
-    ('pre_frame_grab_ns', np.uint64),
-    ('post_frame_grab_ns', np.uint64),
-    ('pre_frame_retrieve_ns', np.uint64),
-    ('post_frame_retrieve_ns', np.uint64),
-    ('pre_copy_to_camera_shm_ns', np.uint64),
-    ('post_copy_to_camera_shm_ns', np.uint64),
-    ('pre_frame_record_ns', np.uint64),
-    ('post_frame_record_ns', np.uint64),
+    ('initialized_ns', np.int64),
+    ('pre_frame_grab_ns', np.int64),
+    ('post_frame_grab_ns', np.int64),
+    ('pre_frame_retrieve_ns', np.int64),
+    ('post_frame_retrieve_ns', np.int64),
+    ('pre_copy_to_camera_shm_ns', np.int64),
+    ('post_copy_to_camera_shm_ns', np.int64),
+    ('pre_frame_record_ns', np.int64),
+    ('post_frame_record_ns', np.int64),
 ], align=True)
+
+# Define the dtype for calculated durations
+FRAME_DURATION_DTYPE = np.dtype([
+    ('idle_before_frame_grab_ns', np.int64),
+    ('during_frame_grab_ns', np.int64),
+    ('idle_before_retrieve_ns', np.int64),
+    ('during_frame_retrieve_ns', np.int64),
+    ('idle_before_copy_to_camera_shm_ns', np.int64),
+    ('during_copy_to_camera_shm_ns', np.int64),
+    ('idle_before_frame_record_ns', np.int64),
+    ('during_frame_record_ns', np.int64),
+    ('total_frame_processing_time_ns', np.int64),
+    ('total_camera_idle_time_ns', np.int64),
+])
+
+CAMERA_TIMESTAMPS_CSV_ROW_DTYPE = np.dtype([
+    ('recording_frame_number', np.int64),
+    ('connection_frame_number', np.int64),
+    ('timestamp.from_recording_start.sec', np.float64),
+    ('timestamp.utc.seconds', np.float64),
+    ('timestamp.local.iso8601', 'U32'),
+    ('timestamp.perf_counter_ns.ns', np.int64),
+    ("from_previous.frame_duration.ms", np.float64),
+    ("from_previous.framerate.hz", np.float64),
+    # Include all timestamp fields with csv-friendly names
+    ('frame.initialized.ns', np.int64),
+    ('frame.pre_frame_grab.ns', np.int64),
+    ('frame.post_frame_grab.ns', np.int64),
+    ('frame.pre_frame_retrieve.ns', np.int64),
+    ('frame.post_frame_retrieve.ns', np.int64),
+    ('frame.pre_copy_to_camera_shm.ns', np.int64),
+    ('frame.post_copy_to_camera_shm.ns', np.int64),
+    ('frame.pre_frame_record.ns', np.int64),
+    ('frame.post_frame_record.ns', np.int64),
+    # Include all duration fields with csv-friendly names
+    ('duration.idle_before_frame_grab.ns', np.int64),
+    ('duration.during_frame_grab.ns', np.int64),
+    ('duration.idle_before_retrieve.ns', np.int64),
+    ('duration.during_frame_retrieve.ns', np.int64),
+    ('duration.idle_before_copy_to_camera_shm.ns', np.int64),
+    ('duration.during_copy_to_camera_shm.ns', np.int64),
+    ('duration.idle_before_frame_record.ns', np.int64),
+    ('duration.during_frame_record.ns', np.int64),
+    ('total.frame_processing_time.ns', np.int64),
+    ('total.camera_idle_time.ns', np.int64),
+])
+
+MULTI_FRAME_TIMESTAMP_CSV_ROW = np.dtype([
+    ('multiframe_number', np.int64),
+    ('timestamp.from_recording_start.sec', np.float64),
+    ('timestamp.perf_counter_ns.ns', np.float64),
+    ('timestamp.utc.seconds', np.float64),
+    ('timestamp.local.iso8601', 'U32'),
+    ('from_previous.frame_duration.ms', np.float64),
+    ('from_previous.framerate.hz', np.float64),
+    ('inter_camera.frame_grab_range.ms', np.float64),
+
+    # Lifespan timestamp fields with statistical measures
+    ('frame.initialized.ms.mean', np.float64),
+    ('frame.initialized.ms.median', np.float64),
+    ('frame.initialized.ms.standard_deviation', np.float64),
+    ('frame.initialized.ms.range', np.float64),
+    ('frame.initialized.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.pre_frame_grab.ms.mean', np.float64),
+    ('frame.pre_frame_grab.ms.median', np.float64),
+    ('frame.pre_frame_grab.ms.standard_deviation', np.float64),
+    ('frame.pre_frame_grab.ms.range', np.float64),
+    ('frame.pre_frame_grab.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.post_frame_grab.ms.mean', np.float64),
+    ('frame.post_frame_grab.ms.median', np.float64),
+    ('frame.post_frame_grab.ms.standard_deviation', np.float64),
+    ('frame.post_frame_grab.ms.range', np.float64),
+    ('frame.post_frame_grab.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.pre_frame_retrieve.ms.mean', np.float64),
+    ('frame.pre_frame_retrieve.ms.median', np.float64),
+    ('frame.pre_frame_retrieve.ms.standard_deviation', np.float64),
+    ('frame.pre_frame_retrieve.ms.range', np.float64),
+    ('frame.pre_frame_retrieve.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.post_frame_retrieve.ms.mean', np.float64),
+    ('frame.post_frame_retrieve.ms.median', np.float64),
+    ('frame.post_frame_retrieve.ms.standard_deviation', np.float64),
+    ('frame.post_frame_retrieve.ms.range', np.float64),
+    ('frame.post_frame_retrieve.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.pre_copy_to_camera_shm.ms.mean', np.float64),
+    ('frame.pre_copy_to_camera_shm.ms.median', np.float64),
+    ('frame.pre_copy_to_camera_shm.ms.standard_deviation', np.float64),
+    ('frame.pre_copy_to_camera_shm.ms.range', np.float64),
+    ('frame.pre_copy_to_camera_shm.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.post_copy_to_camera_shm.ms.mean', np.float64),
+    ('frame.post_copy_to_camera_shm.ms.median', np.float64),
+    ('frame.post_copy_to_camera_shm.ms.standard_deviation', np.float64),
+    ('frame.post_copy_to_camera_shm.ms.range', np.float64),
+    ('frame.post_copy_to_camera_shm.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.pre_frame_record.ms.mean', np.float64),
+    ('frame.pre_frame_record.ms.median', np.float64),
+    ('frame.pre_frame_record.ms.standard_deviation', np.float64),
+    ('frame.pre_frame_record.ms.range', np.float64),
+    ('frame.pre_frame_record.proportion.coefficient_of_variation', np.float64),
+
+    ('frame.post_frame_record.ms.mean', np.float64),
+    ('frame.post_frame_record.ms.median', np.float64),
+    ('frame.post_frame_record.ms.standard_deviation', np.float64),
+    ('frame.post_frame_record.ms.range', np.float64),
+    ('frame.post_frame_record.proportion.coefficient_of_variation', np.float64),
+
+    # Lifespan duration fields with statistical measures
+    ('duration.idle_before_frame_grab.ms.mean', np.float64),
+    ('duration.idle_before_frame_grab.ms.median', np.float64),
+    ('duration.idle_before_frame_grab.ms.standard_deviation', np.float64),
+    ('duration.idle_before_frame_grab.ms.range', np.float64),
+    ('duration.idle_before_frame_grab.proportion.coefficient_of_variation', np.float64),
+
+    ('duration.during_frame_grab.ms.mean', np.float64),
+    ('duration.during_frame_grab.ms.median', np.float64),
+    ('duration.during_frame_grab.ms.standard_deviation', np.float64),
+    ('duration.during_frame_grab.ms.range', np.float64),
+    ('duration.during_frame_grab.proportion.coefficient_of_variation', np.float64),
+
+    ('duration.idle_before_retrieve.ms.mean', np.float64),
+    ('duration.idle_before_retrieve.ms.median', np.float64),
+    ('duration.idle_before_retrieve.ms.standard_deviation', np.float64),
+    ('duration.idle_before_retrieve.ms.range', np.float64),
+    ('duration.idle_before_retrieve.proportion.coefficient_of_variation', np.float64),
+
+    ('duration.during_frame_retrieve.ms.mean', np.float64),
+    ('duration.during_frame_retrieve.ms.median', np.float64),
+    ('duration.during_frame_retrieve.ms.standard_deviation', np.float64),
+    ('duration.during_frame_retrieve.ms.range', np.float64),
+    ('duration.during_frame_retrieve.proportion.coefficient_of_variation', np.float64),
+
+    ('duration.idle_before_copy_to_camera_shm.ms.mean', np.float64),
+    ('duration.idle_before_copy_to_camera_shm.ms.median', np.float64),
+    ('duration.idle_before_copy_to_camera_shm.ms.standard_deviation', np.float64),
+    ('duration.idle_before_copy_to_camera_shm.ms.range', np.float64),
+    ('duration.idle_before_copy_to_camera_shm.proportion.coefficient_of_variation', np.float64),
+
+    ('duration.during_copy_to_camera_shm.ms.mean', np.float64),
+    ('duration.during_copy_to_camera_shm.ms.median', np.float64),
+    ('duration.during_copy_to_camera_shm.ms.standard_deviation', np.float64),
+    ('duration.during_copy_to_camera_shm.ms.range', np.float64),
+    ('duration.during_copy_to_camera_shm.proportion.coefficient_of_variation', np.float64),
+
+    ('duration.idle_before_frame_record.ms.mean', np.float64),
+    ('duration.idle_before_frame_record.ms.median', np.float64),
+    ('duration.idle_before_frame_record.ms.standard_deviation', np.float64),
+    ('duration.idle_before_frame_record.ms.range', np.float64),
+    ('duration.idle_before_frame_record.proportion.coefficient_of_variation', np.float64),
+
+    ('duration.during_frame_record.ms.mean', np.float64),
+    ('duration.during_frame_record.ms.median', np.float64),
+    ('duration.during_frame_record.ms.standard_deviation', np.float64),
+    ('duration.during_frame_record.ms.range', np.float64),
+    ('duration.during_frame_record.proportion.coefficient_of_variation', np.float64),
+
+    ('total.frame_processing_time.ms.mean', np.float64),
+    ('total.frame_processing_time.ms.median', np.float64),
+    ('total.frame_processing_time.ms.standard_deviation', np.float64),
+    ('total.frame_processing_time.ms.range', np.float64),
+    ('total.frame_processing_time.proportion.coefficient_of_variation', np.float64),
+
+    ('total.camera_idle_time.ms.mean', np.float64),
+    ('total.camera_idle_time.ms.median', np.float64),
+    ('total.camera_idle_time.ms.standard_deviation', np.float64),
+    ('total.camera_idle_time.ms.range', np.float64),
+    ('total.camera_idle_time.proportion.coefficient_of_variation', np.float64),
+
+
+])
+
+# Define the dtype for statistics
+#NOTE - adding `_value` suffix to avoid conflict with numpy's built-in statistics functions
+STATS_DTYPE = np.dtype([
+    ('mean_value', np.float64),
+    ('median_value', np.float64),
+    ('standard_deviation_value', np.float64),
+    ('coefficient_of_variation_value', np.float64),
+    ('min_value', np.float64),
+    ('max_value', np.float64),
+    ('range_value', np.float64),
+])
 
 FRAME_METADATA_DTYPE = np.dtype([
     ('camera_config', CAMERA_CONFIG_DTYPE),
     ('frame_number', np.int64),
+    ('timebase_mapping', TIMEBASE_MAPPING_DTYPE),
     ('timestamps', FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)
 ],
     align=True)
@@ -105,122 +291,15 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
 
 JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 
-_reusable_bytes_payload: bytearray = bytearray(0)  # Will be resized on first use
 
+FrameMetadataArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype
+AllTimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, shape (num_cameras, num_frames)
 
-def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
-                                             display_image_sizes: dict[str, dict[str, float]] | None = None,
-                                             jpeg_encoding_parameters=None) -> tuple[FrameNumberInt, MultiframeTimestampFloat,bytes]:
-    """
-    Convert a multi-frame record array into a list of record arrays for each camera.
-     first element is the header, which tell the frontend how many cameras are in the payload.
-     then for each camera, we send a frame metadata record array (including the length of the JPEG string), followed by the JPEG image data.
-     We end with a footer record array that indicates the end of the payload, allowing verification that all data was received correctly.
-
-    We then convert that list into a bytes object for websocket transmission.
-    """
-    global _reusable_bytes_payload
-    if jpeg_encoding_parameters is None:
-        jpeg_encoding_parameters = JPEG_ENCODING_PARAMETERS
-
-    camera_ids = mf_rec_array.dtype.names
-    frame_numbers = [mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in camera_ids]
-    if len(set(frame_numbers)) != 1:
-        raise ValueError("All cameras in the multi-frame record array must have the same frame number.")
-    frame_number = frame_numbers[0]
-    number_of_cameras = len(camera_ids)
-
-    # Pre-allocate approximate size to avoid reallocations
-    estimated_size = (number_of_cameras + 1) * ONE_MEGABYTE
-
-    # Reuse existing bytearray if it's large enough, otherwise resize it
-    if len(_reusable_bytes_payload) < estimated_size:
-        if len(_reusable_bytes_payload) > 0:
-            logger.warning(
-                f"Reusable bytes payload size ({len(_reusable_bytes_payload)} bytes) is smaller than estimated size ({estimated_size} bytes), resizing.")
-        logger.debug(f"Set reusable bytes payload to {estimated_size // ONE_KILOBYTE} kilobytes")
-        _reusable_bytes_payload = bytearray(estimated_size)
-
-    # Reset position counter
-    current_pos = 0
-
-    # Add header
-    payload_header = np.array([(0, frame_number, number_of_cameras)],
-                              dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
-    header_bytes = payload_header.tobytes()
-
-    _reusable_bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
-    current_pos += len(header_bytes)
-    # image_scale= np.min([np.max([(len(camera_ids)*2)**-1, 0.2]), 1.0])
-    image_scale= .5
-    frame_timestamps:list[int] = []
-    for camera_id in camera_ids:
-        frame_recarray = mf_rec_array[camera_id][0]
-        frame_timestamps.append(np.mean([frame_recarray.frame_metadata.timestamps.pre_frame_grab_ns,
-                                         frame_recarray.frame_metadata.timestamps.post_frame_grab_ns]))
-
-        if frame_recarray.frame_metadata.camera_config.rotation != -1:
-            rotated_image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
-        else:
-            rotated_image = frame_recarray.image[:]
-
-        if display_image_sizes is None or camera_id not in display_image_sizes.keys() or True: # TODO - Disable resizing for now, but should revisit
-            # Default resize to 50% if no sizes provided
-            resize_image_height = int(rotated_image.shape[0] * image_scale)
-            resize_image_width = int(rotated_image.shape[1] * image_scale)
-        else:
-            resize_image_height = int(display_image_sizes[camera_id]['height'])
-            resize_image_width = int(display_image_sizes[camera_id]['width'])
-        resized_img = cv2.resize(rotated_image, dsize=(resize_image_width, resize_image_height),
-                                 interpolation=cv2.INTER_LINEAR) #TODO - see if other interpolation methods are faster/better
-        _, jpeg_data = cv2.imencode('.jpg', resized_img, jpeg_encoding_parameters)
-        jpeg_string = jpeg_data.tobytes()
-        jpeg_string_length = len(jpeg_string)
-
-
-        frame_height = resized_img.shape[0]
-        frame_width = resized_img.shape[1]
-
-
-        frame_header = np.array([(1,
-                                  frame_number,
-                                  camera_id.encode('utf-8'),
-                                  frame_recarray.frame_metadata.camera_config.camera_index,
-                                  frame_width,
-                                  frame_height,
-                                  frame_recarray.image.shape[2],
-                                  jpeg_string_length)], dtype=FRONTEND_FRAME_HEADER_DTYPE)
-        frame_header_bytes = frame_header.tobytes()
-
-        # Ensure enough space in bytearray
-        required_size = current_pos + len(frame_header_bytes) + jpeg_string_length
-        if required_size > len(_reusable_bytes_payload):
-            old_size = len(_reusable_bytes_payload)
-            # resize the bytearray to accommodate the new data ([plus an additional 1MB for future frames])
-            _reusable_bytes_payload.extend(bytearray((required_size - old_size) + ONE_MEGABYTE))
-            logger.warning(
-                f"Payload size ({old_size} bytes) exceeded pre-allocated size, resized to {len(_reusable_bytes_payload)} bytes")
-
-        # Copy data into the reusable bytearray
-        _reusable_bytes_payload[current_pos:current_pos + len(frame_header_bytes)] = frame_header_bytes
-        current_pos += len(frame_header_bytes)
-        _reusable_bytes_payload[current_pos:current_pos + jpeg_string_length] = jpeg_string
-        current_pos += jpeg_string_length
-
-    # Add footer
-    payload_footer = np.array([(2, frame_number, number_of_cameras)],
-                              dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
-    footer_bytes = payload_footer.tobytes()
-
-    # Ensure enough space
-    if current_pos + len(footer_bytes) > len(_reusable_bytes_payload):
-        og_len = len(_reusable_bytes_payload)
-        _reusable_bytes_payload.extend(bytearray(len(footer_bytes)))
-        logging.warning(
-            f"Payload size ({og_len}bytes) exceeded pre-allocated size, resized to {len(_reusable_bytes_payload)} bytes - change default pre-allocated size!")
-
-    _reusable_bytes_payload[current_pos:current_pos + len(footer_bytes)] = footer_bytes
-    current_pos += len(footer_bytes)
-
-    frontend_bytes = _reusable_bytes_payload[:current_pos]
-    return frame_number, np.mean(frame_timestamps), frontend_bytes
+AllDurationsArray = npt.NDArray[np.recarray]  # Arrays with durations record dtype, shape (num_cameras, num_frames)
+AllFrameGrabTimestampsArray = npt.NDArray[np.int64]     # Arrays with int64 dtype, shape (num_cameras, num_frames), midpoints between pre_frame_grab_ns and post_frame_grab_ns
+TimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, (for a single camera/frame)
+DurationArray = npt.NDArray[np.recarray]   # Arrays with duration record dtype
+StatsArray = npt.NDArray[np.recarray]      # Arrays with statistics record dtype
+FloatArray = npt.NDArray[np.float64]       # Arrays of float64 values
+IntArray = npt.NDArray[np.int64]           # Arrays of int64 values
+BoolArray = npt.NDArray[np.bool_]          # Arrays of boolean values

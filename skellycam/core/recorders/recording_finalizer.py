@@ -2,12 +2,16 @@ import logging
 from pathlib import Path
 
 import cv2
+import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera_group.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
+    process_and_save_recording_timestamps
 from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
+from skellycam.core.types.numpy_record_dtypes import FrameMetadataArray
 from skellycam.core.types.type_overloads import CameraIdString
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
@@ -27,28 +31,31 @@ logger = logging.getLogger(__name__)
 
 class RecordingFinalizer(BaseModel):
     recording_info: RecordingInfo
-    recording_timestamps: RecordingTimestamps
     camera_configs: CameraConfigs
-
+    frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]]
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
-               frame_metadatas_by_camera: dict[CameraIdString, list[FrameMetadata]],
+               frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
                ):
-
         return cls(recording_info=recording_info,
-                   recording_timestamps=RecordingTimestamps.from_frame_metadata_by_camera(recording_info=recording_info,
-                                                                                          frame_metadatas_by_camera=frame_metadatas_by_camera),
-                   camera_configs={camera_id: metadatas[0].camera_config
-                                   for camera_id, metadatas in frame_metadatas_by_camera.items()}
+                   frame_metadatas_by_camera=frame_metadatas_by_camera,
+                   camera_configs={camera_id: CameraConfig.from_numpy_record_array(metadata[0].camera_config)
+                                   for camera_id, metadata in frame_metadatas_by_camera.items()}
                    )
 
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
-        self.recording_info.save_to_file()
-        self.recording_timestamps.save_timestamps()
+        self.recording_info.save_to_file(camera_configs = self.camera_configs)
+
+        process_and_save_recording_timestamps(
+            recording_info=self.recording_info,
+            camera_configs=self.camera_configs,
+            frame_metadatas_by_camera=self.frame_metadatas_by_camera,
+        )
+
         self._save_folder_readme()
         self.validate_recording()
 

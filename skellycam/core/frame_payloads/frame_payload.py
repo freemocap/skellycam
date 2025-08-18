@@ -110,10 +110,10 @@ class FramePayload(BaseModel):
             raise ValueError(f"FramePayload array shape mismatch - "
                              f"Expected: {create_frame_dtype(self.frame_metadata.camera_config)}, "
                              f"Actual: {frame_rec_array.dtype}")
-        if self.frame_metadata.timestamps.timebase_mapping.to_numpy_record_array() != frame_rec_array.frame_metadata.timestamps.timebase_mapping:
+        if self.frame_metadata.timebase_mapping.to_numpy_record_array() != frame_rec_array.frame_metadata.timebase_mapping:
             raise ValueError(f"FramePayload timebase mapping mismatch - "
-                             f"Expected: {self.frame_metadata.timestamps.timebase_mapping}, "
-                             f"Actual: {frame_rec_array.frame_metadata.timestamps.timebase_mapping}")
+                             f"Expected: {self.frame_metadata.timebase_mapping}, "
+                             f"Actual: {frame_rec_array.frame_metadata.timebase_mapping}")
 
         self.image = frame_rec_array.image.copy()
         self.frame_metadata = FrameMetadata.from_recarray(frame_rec_array.frame_metadata.copy())

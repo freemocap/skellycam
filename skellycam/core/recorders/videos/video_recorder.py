@@ -6,6 +6,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import numpy.typing as npt
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
@@ -87,11 +88,12 @@ class VideoRecorder:
         self.video_frame_metadata.append(copy(frame.frame_metadata))
         return frame.frame_metadata.frame_number
 
-    def finish_and_close(self) -> list[FrameMetadata]:
+    def finish_and_close(self) -> list[np.recarray]:
         logger.debug(
             f"Finishing and closing VideoSaver for camera {self.camera_id}")
         self.close()
-        return self._create_metadata_objects()
+        # return self._create_metadata_objects()
+        return self.video_frame_metadata
 
     def _create_metadata_objects(self) -> list[FrameMetadata]:
         """
