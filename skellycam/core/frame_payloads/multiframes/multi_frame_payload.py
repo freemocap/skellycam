@@ -75,7 +75,6 @@ class MultiFramePayload(BaseModel):
         frame_numbers = [frame.frame_metadata.frame_number for frame in self.frames.values()]
         mf_number = set(frame_numbers)
         if len(mf_number) > 1:
-            # raise ValueError(f"MultiFramePayload has multiple frame numbers {mf_number}")
             logger.warning(f"MultiFramePayload has multiple frame numbers {mf_number}")
         return mf_number.pop()
 
@@ -84,7 +83,7 @@ class MultiFramePayload(BaseModel):
         mappings = [frame.frame_metadata.timebase_mapping for frame in self.frames.values()]
         mapping = set(mappings)
         if len(mapping) > 1:
-            raise ValueError(f"MultiFramePayload has multiple frame numbers {mapping}")
+            logger.warning(f"MultiFramePayload has multiple frame numbers {mapping}")
         return mapping.pop()
 
     def validate_multi_frame(self):
