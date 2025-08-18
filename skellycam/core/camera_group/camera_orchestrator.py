@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field, SkipValidation, ConfigDict
 
@@ -56,9 +56,9 @@ class CameraStatus(BaseModel):
 @dataclass
 class CameraOrchestrator:
     camera_statuses: dict[CameraIdString, CameraStatus]
-    should_record_frames: SkipValidation[multiprocessing.Value]
-    first_recording_frame_number: int | None = None
-    last_recording_frame_number: int | None = None
+    first_recording_frame_number: multiprocessing.Value
+    last_recording_frame_number: multiprocessing.Value
+
 
     @property
     def camera_ids(self) -> list[CameraIdString]:
@@ -67,10 +67,13 @@ class CameraOrchestrator:
 
     @classmethod
     def from_camera_ids(cls, camera_ids: list[CameraIdString],
-                        should_record_frames: multiprocessing.Value) -> 'CameraOrchestrator':
+                        first_recording_frame:multiprocessing.Value,
+                        last_recording_frame:multiprocessing.Value,
+                        ) -> 'CameraOrchestrator':
 
         return cls(camera_statuses={camera_id: CameraStatus() for camera_id in camera_ids},
-                     should_record_frames=should_record_frames,)
+                     first_recording_frame_number=first_recording_frame,
+                     last_recording_frame_number=last_recording_frame)
 
     @property
     def all_cameras_ready(self):
@@ -113,14 +116,16 @@ class CameraOrchestrator:
 
         should_record_frame = False
         should_finish_recording = False
-        if self.first_recording_frame_number is not None or self.last_recording_frame_number is not None:
-            if self.first_recording_frame_number is not None and frame_number >= self.first_recording_frame_number:
+        if self.first_recording_frame_number.value != -1 and frame_number >= self.first_recording_frame_number.value:
+            should_record_frame = True
+
+        if self.last_recording_frame_number.value != -1:
+            if frame_number < self.last_recording_frame_number.value:
                 should_record_frame = True
-            if self.last_recording_frame_number is not None and frame_number <= self.last_recording_frame_number:
-                should_record_frame = True
-            if self.last_recording_frame_number is not None and frame_number > self.last_recording_frame_number:
+            elif frame_number >= self.last_recording_frame_number.value:
+                should_record_frame = False
                 should_finish_recording = True
-                self.last_recording_frame_number = None
+
         return should_record_frame, should_finish_recording
 
     def should_grab_by_id(self, camera_id: CameraIdString) -> bool:
@@ -133,23 +138,7 @@ class CameraOrchestrator:
         return self._all_camera_counts_greater_than_or_equal_to_camera(camera_id)
 
     def _all_camera_counts_greater_than_or_equal_to_camera(self, camera_id: CameraIdString) -> bool:
-        frame_counts = self.camera_frame_counts
 
-        if len(set(list(frame_counts.values()))) == 1:
-            # all cameras are on the same frame count - check recording status
-            if self.should_record_frames.value and self.first_recording_frame_number is None:
-                self.first_recording_frame_number = frame_counts[camera_id]
-                logger.trace(f"Setting first recording frame number for camera {camera_id} to {self.first_recording_frame_number}")
-                self.last_recording_frame_number = None
-
-            if not self.should_record_frames.value and self.first_recording_frame_number is not None:
-                self.last_recording_frame_number = frame_counts[camera_id]
-                logger.trace(f"Setting last recording frame number for camera {camera_id} to {self.last_recording_frame_number}")
-                self.first_recording_frame_number = None
-
-        if camera_id not in frame_counts:
-            raise ValueError(f"Camera ID {camera_id} not found in orchestrator: {self.camera_statuses.keys()}")
-
-        if all(frame_counts[camera_id] <= count for count in frame_counts.values()):
+        if all(self.camera_frame_counts[camera_id] <= count for count in self.camera_frame_counts.values()):
             return True
         return False

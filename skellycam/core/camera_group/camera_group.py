@@ -147,11 +147,14 @@ class CameraGroup:
         """
         self.ipc.pause(await_paused=True)
         logger.info("Publishing recording info message...")
+        frame_count = max([status.frame_count.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
+        self.ipc.camera_orchestrator.last_recording_frame_number.value  = -1  # Reset last recording frame number
+        self.ipc.camera_orchestrator.first_recording_frame_number.value = frame_count+ 3 # + a few to avoid off-by-one errors
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
         while not self.ipc.all_ready_to_record and self.ipc.should_continue:
             wait_10ms()
         logger.api(f"All cameras are ready to record for camera group ID: {self.id}")
-        self.ipc.camera_orchestrator.should_record_frames.value = True
+
         wait_10ms()
         logger.api("Unpausing camera group to start recording...")
         self.ipc.unpause(await_unpaused=True)
@@ -167,7 +170,10 @@ class CameraGroup:
 
         logger.debug(f"Stopping recording for all cameras in orchestrator...")
         self.pause(await_paused=True)
-        self.ipc.camera_orchestrator.should_record_frames.value = False
+        frame_count = max(
+            [status.frame_count.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
+        self.ipc.camera_orchestrator.first_recording_frame_number.value = -1
+        self.ipc.camera_orchestrator.last_recording_frame_number.value = frame_count + 3
         self.unpause(await_unpaused=True)
         finalize_recording(ipc=self.ipc)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
