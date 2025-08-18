@@ -31,7 +31,7 @@ export const CameraImage = ({ cameraImageData}: CameraImageProps) => {
             key={cameraId}
             sx={{
                 position: 'relative',
-                border: "1px solid #00c",
+                border: "1px solid #333",
             }}
         >
             <canvas

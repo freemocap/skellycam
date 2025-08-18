@@ -32,12 +32,11 @@ const WebsocketConnectionStatus = () => {
             >
                 <Typography
                     variant="body1"
+                    component="div" // Override the default <p> to <div>
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-
-
                     }}
                 >
                     <Box sx={{
@@ -60,15 +59,13 @@ const WebsocketConnectionStatus = () => {
                             borderColor: 'rgba(255, 255, 255, 0.2)',
                         },
                     }}>
-
                         {isConnected ? (
-                            <CheckIcon sx={{color: 'green'}}/>
+                            <CheckIcon sx={{ color: 'green' }} />
                         ) : (
-                            <CloseIcon fontSize="small" sx={{color: 'red'}}/>
+                            <CloseIcon fontSize="small" sx={{ color: 'red' }} />
                         )}
                     </Box>
                     Websocket: {isConnected ? 'connected' : 'disconnected'}
-
                 </Typography>
             </Box>
         </Tooltip>
