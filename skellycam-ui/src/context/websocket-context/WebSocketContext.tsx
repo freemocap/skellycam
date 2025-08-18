@@ -7,7 +7,7 @@ import * as THREE from "three";
 interface WebSocketContextProps {
     isConnected: boolean;
     connect: () => void;
-    disconnect: () => void;
+    disconnect: (shouldReconnect:boolean) => void;
     latestImageData: Record<string, CameraImageData>;
     acknowledgeFrameRendered: (cameraId: string, frameNumber: number) => void;
 }
