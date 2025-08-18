@@ -26,7 +26,7 @@ export const CamerasPage = () => {
                 overflow: "scroll"
 
             }}>
-                <CamerasViewSettingsOverlay/>
+                {/*<CamerasViewSettingsOverlay/>*/}
 
                 <Box>
                     <ErrorBoundary>
