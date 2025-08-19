@@ -64,20 +64,20 @@ class PubSubTopicManager(BaseModel):
 
 
 
-PUB_SUB_MANAGERS: dict[CameraGroupIdString, PubSubTopicManager] = {}
+CAMERA_GROUP_PUB_SUB_MANAGERS: dict[CameraGroupIdString, PubSubTopicManager] = {}
 
 
-def create_pubsub_manager(group_id: CameraGroupIdString) -> PubSubTopicManager:
+def create_camera_group_pubsub_manager(group_id: CameraGroupIdString) -> PubSubTopicManager:
     """
     Create a global PubSubManager instance, raises an error if called in a non-main process.
     """
-    global PUB_SUB_MANAGERS
+    global CAMERA_GROUP_PUB_SUB_MANAGERS
     if parent_process() is not None:
         raise RuntimeError("PubSubManager can only be created in the main process.")
-    if PUB_SUB_MANAGERS.get(group_id) is not None:
+    if CAMERA_GROUP_PUB_SUB_MANAGERS.get(group_id) is not None:
         logger.debug(f"Creating PubSubManager for group {group_id}")
-        PUB_SUB_MANAGERS.get(group_id).close()
-    PUB_SUB_MANAGERS[group_id] = PubSubTopicManager()
-    return PUB_SUB_MANAGERS[group_id]
+        CAMERA_GROUP_PUB_SUB_MANAGERS.get(group_id).close()
+    CAMERA_GROUP_PUB_SUB_MANAGERS[group_id] = PubSubTopicManager()
+    return CAMERA_GROUP_PUB_SUB_MANAGERS[group_id]
 
 

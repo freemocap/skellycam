@@ -22,7 +22,6 @@ CameraSharedMemoryDTOs = dict[CameraIdString, SharedMemoryRingBufferDTO]
 class CameraGroupSharedMemoryDTO:
     camera_shm_dtos: CameraSharedMemoryDTOs
     multi_frame_ring_shm_dto: SharedMemoryRingBufferDTO
-    latest_multiframe_number_shm_dto: SharedMemoryElementDTO
     camera_configs: CameraConfigs
 
 
@@ -30,10 +29,13 @@ class CameraGroupSharedMemoryDTO:
 class CameraGroupSharedMemoryManager:
     camera_shms: dict[CameraIdString, FramePayloadSharedMemoryRingBuffer]
     multi_frame_ring_shm: MultiFrameSharedMemoryRingBuffer
-    latest_multiframe_number: SharedMemoryNumber
     camera_configs: CameraConfigs
     read_only: bool
     original: bool = False
+
+    @property
+    def latest_multiframe_number(self) -> SharedMemoryNumber:
+        return self.multi_frame_ring_shm.last_written_index
 
     @property
     def valid(self) -> bool:
@@ -42,7 +44,6 @@ class CameraGroupSharedMemoryManager:
         """
         return all([
             all([camera_shared_memory.valid for camera_shared_memory in self.camera_shms.values()]),
-            self.latest_multiframe_number.valid,
             self.multi_frame_ring_shm.valid,
         ])
 
@@ -54,7 +55,6 @@ class CameraGroupSharedMemoryManager:
         """
         for camera_shared_memory in self.camera_shms.values():
             camera_shared_memory.valid = value
-        self.latest_multiframe_number.valid = value
         self.multi_frame_ring_shm.valid = value
 
     @classmethod
@@ -75,7 +75,6 @@ class CameraGroupSharedMemoryManager:
                    camera_configs=camera_configs,
                    original=True,
                    read_only=read_only,
-                   latest_multiframe_number=SharedMemoryNumber.create(initial_value=-1, read_only=read_only),
                    )
 
     @classmethod
@@ -91,8 +90,6 @@ class CameraGroupSharedMemoryManager:
                 dto=shm_dto.multi_frame_ring_shm_dto,
                 read_only=read_only),
             camera_configs=shm_dto.camera_configs,
-            latest_multiframe_number=SharedMemoryNumber.recreate(dto=shm_dto.latest_multiframe_number_shm_dto,
-                                                                 read_only=read_only),
             read_only=read_only)
 
     @property
@@ -114,7 +111,6 @@ class CameraGroupSharedMemoryManager:
     def to_dto(self) -> CameraGroupSharedMemoryDTO:
         return CameraGroupSharedMemoryDTO(camera_shm_dtos=self.camera_shm_dtos,
                                           multi_frame_ring_shm_dto=self.multi_frame_ring_shm.to_dto(),
-                                          latest_multiframe_number_shm_dto=self.latest_multiframe_number.to_dto(),
                                           camera_configs=self.camera_configs
                                           )
 

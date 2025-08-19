@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.ipc.pubsub.pubsub_manager import create_pubsub_manager, TopicTypes, PubSubTopicManager
+from skellycam.core.ipc.pubsub.pubsub_manager import create_camera_group_pubsub_manager, TopicTypes, PubSubTopicManager
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage, RecordingInfoMessage
 from skellycam.core.recorders.mf_builder_status import MultiFrameBuilderStatus
 from skellycam.core.recorders.recording_manager_status import RecordingManagerStatus
@@ -46,7 +46,7 @@ class CameraGroupIPC(BaseModel):
         validate_camera_configs(camera_configs)
         if group_id is None:
             group_id = create_camera_group_id()
-        pubsub = create_pubsub_manager(group_id=group_id)
+        pubsub = create_camera_group_pubsub_manager(group_id=group_id)
         first_recording_frame_number = multiprocessing.Value("q", -1)
         last_recording_frame_number = multiprocessing.Value("q", -1)
         return cls(
