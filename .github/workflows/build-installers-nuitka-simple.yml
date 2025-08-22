@@ -65,7 +65,7 @@ jobs:
         with:
           nuitka-version: main
           script-name: skellycam/__main__.py
-          mode: onefile
+          mode: package
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           output-file: skellycam_server.exe
           output-dir: skellycam-ui
