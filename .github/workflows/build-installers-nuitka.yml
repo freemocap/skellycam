@@ -1,6 +1,7 @@
-name: Build installers
+name: Build installers (Nuitka + Electron)
 
 on:
+
     workflow_dispatch:
 
 jobs:
@@ -69,6 +70,7 @@ jobs:
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           output-file: skellycam_server.exe
           output-dir: skellycam-ui
+          follow-imports: true
 
       - name: Check Nuitka build
         run: |
