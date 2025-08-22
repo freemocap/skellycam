@@ -64,14 +64,7 @@ jobs:
       # Replace Nuitka build with PyInstaller
       - name: Build with PyInstaller
         run: |
-          uv pip install pyinstaller
-          uv pip install pydantic
-          uv pip install pyinstaller-hooks-contrib
-          uv pip install pywin32
-          uv pip install pyinstaller-archiver
-          uv pip install pyinstaller-bootloader
-          uv pip install pyinstaller-hooks-contrib
-          uv run pyinstaller m --clean --onefile --name skellycam_server skellycam/__main__.py
+          pyinstaller skellycam/__main__.py --clean --onefile --name skellycam_server
       - name: Move PyInstaller output to expected location
         run: |
           mkdir -p skellycam-ui
