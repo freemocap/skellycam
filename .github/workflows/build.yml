@@ -1,7 +1,7 @@
 name: Build SkellyCam
 
 on:
-  push:
+#  push:
 #    branches: [ jon/development ]
     # tags: [ 'v*' ]
   # pull_request:
