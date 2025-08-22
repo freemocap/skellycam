@@ -1,8 +1,10 @@
 name: Build installers
 
 on:
-
-    workflow_dispatch:
+  push:
+    branches:
+      - jon/development
+  workflow_dispatch:
 
 jobs:
   build:
@@ -69,7 +71,7 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pip install pyinstaller
-          pyinstaller skellycam/__main__.py ---paths .venv\Lib\site-packages --onefile --name skellycam_server
+          pyinstaller skellycam/__main__.py --paths .venv\Lib\site-packages --onefile --name skellycam_server
       - name: Move PyInstaller output to expected location
         run: |
           cp dist/skellycam_server.exe skellycam-ui/
