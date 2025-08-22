@@ -68,13 +68,11 @@ jobs:
         with:
           nuitka-version: main
           script-name: skellycam/__main__.py
-          mode: standalone
+          mode: onefile
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           output-file: skellycam_server.exe
+          output-dir: skellycam-ui
 
-      - name: Move Nuitka build to skellycam-ui
-        run: |          
-          mv build\__main__.dist\skellycam_server.exe skellycam-ui/
       - name: Check Nuitka build
         run: |
           ls -l skellycam-ui/skellycam_server.exe
@@ -93,6 +91,7 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
           trace: false # set `true` if need more debug
+
       - name: Upload skellycam_server.exe artifact
         uses: actions/upload-artifact@v4
         with:
@@ -100,6 +99,7 @@ jobs:
           path: |
             skellycam-ui/skellycam_server.exe
           include-hidden-files: true
+      
       - name: Install UI dependencies
         run: |
           cd skellycam-ui
