@@ -21,24 +21,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install uv
-        run: pip install uv
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
 
-      - name: Create venv
-        run: uv venv
+      - name: Install uv and enable cache
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
 
-      - name: Activate venv
-        run: ${{ matrix.venv-activate }}
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
 
       - name: Install Python dependencies
         run: uv sync

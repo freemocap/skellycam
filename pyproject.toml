@@ -67,7 +67,6 @@ dependencies = [
     "pip>=24.2",
     "pyaudio>=0.2.14",
     "tabulate>=0.9.0",
-    "nuitka>=2.6.5",
     "numpydantic>=1.6.9",
     "cv2-enumerate-cameras>=1.2.2",
 ]
@@ -104,8 +103,7 @@ py-modules = ["skellycam"]
 
 [tool.uv]
 dev-dependencies = [
-#    "nuitka>=2.4.9",
-#    "pyinstaller>=6.11.1",
+    "nuitka>=2.6.5",
 ]
 
 [dependency-groups]
