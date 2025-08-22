@@ -52,6 +52,12 @@ jobs:
       - name: Install uv and enable cache
         uses: astral-sh/setup-uv@v6
 
+      - name: Create venv
+        run: uv venv
+
+      - name: Create venv
+        run: .venv\Scripts\activate
+
       - name: Install the project
         run: uv sync
       - name: Verify installation 1/3
