@@ -73,6 +73,7 @@ jobs:
           output-file: skellycam_server.exe
           output-dir: skellycam-ui
           follow-imports: true
+          include-data-dir: .venv/Lib/site-packages
 
       - name: Check Nuitka build
         run: |
