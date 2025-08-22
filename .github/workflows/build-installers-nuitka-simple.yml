@@ -49,7 +49,7 @@ jobs:
         with:
           python-version-file: ".python-version"
 
-      - name: Install uv and enable cache
+      - name: Install uv 
         uses: astral-sh/setup-uv@v6
 
       - name: Create and activate venv
@@ -69,6 +69,7 @@ jobs:
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           output-file: skellycam_server.exe
           output-dir: skellycam-ui
+          disable-cache: true
 
       - name: Check Nuitka build
         run: |
