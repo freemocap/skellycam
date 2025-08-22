@@ -49,18 +49,16 @@ jobs:
         with:
           nuitka-version: main
           script-name: skellycam/__main__.py
-          mode: standalone
+          mode: onefile
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           output-file: skellycam_server.exe
+          output-dir: skellycam-ui/
 
 
       - name: Check Nuitka build
         if: ${{ github.event.inputs.test-mode != 'true' }}
         run: |
-          ls -l skellycam_server.exe
-      - name: Move skellycam exe to build into `skellycam-ui` directory
-        run: |          
-          mv skellycam_server.exe skellycam-ui
+          ls -l skellycam-ui/skellycam_server.exe
 
       - name: Install UI dependencies
         run: |
