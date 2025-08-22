@@ -64,6 +64,7 @@ jobs:
       # Replace Nuitka build with PyInstaller
       - name: Build with PyInstaller
         run: |
+          pip install pyinstaller
           pyinstaller skellycam/__main__.py --clean --onefile --name skellycam_server
       - name: Move PyInstaller output to expected location
         run: |
