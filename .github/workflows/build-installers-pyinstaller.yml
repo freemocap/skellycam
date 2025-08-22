@@ -67,7 +67,6 @@ jobs:
       - name: Verify installation 3/3
         run: uv pip show pydantic # check that app dependencies are installed
 
-      # Replace Nuitka build with PyInstaller
       - name: Build with PyInstaller
         run: |
           pip install pyinstaller
@@ -96,7 +95,7 @@ jobs:
       - name: Upload skellycam_server.exe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-${{ runner.os }}
+          name: skellycam-server-${{ runner.os }}
           path: |
             skellycam-ui/skellycam_server.exe
           include-hidden-files: true
@@ -131,7 +130,7 @@ jobs:
       - name: Upload electron installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-${{ runner.os }}
+          name: skellycam-electron-${{ runner.os }}
           path: |            
             skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true
