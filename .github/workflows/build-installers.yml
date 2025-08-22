@@ -74,7 +74,7 @@ jobs:
 
       - name: Move Nuitka build to skellycam-ui
         run: |          
-          mv __main__.dist\skellycam_server.exe skellycam-ui/
+          mv build\__main__.dist\skellycam_server.exe skellycam-ui/
       - name: Check Nuitka build
         run: |
           ls -l skellycam-ui/skellycam_server.exe
