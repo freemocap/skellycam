@@ -1,4 +1,4 @@
-name: Build installers
+name: Build installers (Pyinstaller + Electron)
 
 on:
   push:
