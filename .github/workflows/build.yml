@@ -96,6 +96,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           uv sync
+      - name: Install Nuitka
+        run: |
+          uv pip install nuitka
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

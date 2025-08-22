@@ -2,9 +2,9 @@ name: Create Windows Installer
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - jon/development
+#  push:
+#    branches:
+#      - jon/development
 #    tags: [ v* ]
 
 jobs:
