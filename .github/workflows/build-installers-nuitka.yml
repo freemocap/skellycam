@@ -1,8 +1,10 @@
 name: Build installers (Nuitka + Electron)
 
 on:
-
-    workflow_dispatch:
+  push: 
+    branches:
+      - jon/development
+  workflow_dispatch:
 
 jobs:
   build:
