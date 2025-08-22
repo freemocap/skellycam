@@ -89,7 +89,15 @@ jobs:
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-          trace: true 
+          trace: false # set `true` if need more debug
+      - name: Upload skellycam server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-${{ runner.os }}
+          path: |
+            skellycam-ui/skellycam_server.exe
+            skellycam-ui/releases/*/skellycam_*_installer.exe
+          include-hidden-files: true
       - name: Install UI dependencies
         run: |
           cd skellycam-ui
@@ -115,11 +123,12 @@ jobs:
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-      - name: Upload artifacts
+          trace: false # set `true` if need more debug
+
+      - name: Upload electron installer artifacts
         uses: actions/upload-artifact@v4
         with:
           name: skellycam-${{ runner.os }}
-          path: |
-            skellycam-ui/skellycam_server.exe
-            skellycam-ui/releases/*/skellycam_*_installer.exe
+          path: |            
+            skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true
