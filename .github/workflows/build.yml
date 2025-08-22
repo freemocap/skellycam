@@ -2,10 +2,10 @@ name: Build SkellyCam
 
 on:
   push:
-    branches: [ main, jon/development ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, jon/development ]
+    branches: [ jon/development ]
+    # tags: [ 'v*' ]
+  # pull_request:
+    # branches: [ main, jon/development ]
   workflow_dispatch:
 
 jobs:

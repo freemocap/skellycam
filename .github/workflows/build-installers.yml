@@ -2,9 +2,7 @@ name: Build installers
 
 on:
   push:
-    branches: [ "jon/development" ]
   workflow_dispatch:
-    inputs:
 
 jobs:
   build:
