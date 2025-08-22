@@ -63,6 +63,8 @@ jobs:
         run: uv pip show pydantic # check that app dependencies are installed
 
 
+      - name: Install nuitka special?
+        run: uv add nuitka
       - name: Build with Nuitka using batch script
         run: |
           cd installers/nuitka_scripts
