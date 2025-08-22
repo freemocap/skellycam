@@ -74,6 +74,6 @@ jobs:
         with:
           name: skellycam-${{ runner.os }}
           path: |
-            build/skellycam_server.exe
-            build/*.dist/**
+            skellycam-ui/skellycam_server.exe
+            skellycam-ui/releases/*/skellycam_*_installer.exe
           include-hidden-files: true
