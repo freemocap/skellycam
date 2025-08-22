@@ -1,0 +1,223 @@
+name: Build SkellyCam
+
+on:
+  push:
+    branches: [ main, jon/development ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, jon/development ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install uv
+        run: |
+          pip install uv
+          uv --version
+
+      - name: Create and activate virtual environment
+        run: |
+          uv venv
+          .\.venv\Scripts\activate
+
+      - name: Install Python dependencies
+        run: |
+          uv sync
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'skellycam-ui/package-lock.json'
+
+      - name: Install Node.js dependencies
+        run: |
+          cd skellycam-ui
+          npm install
+
+      - name: Build Python installer with Nuitka
+        run: |
+          cd skellycam-ui
+          ..\installers\nuitka_scripts\nuitka_installer_windows.bat
+
+      - name: Configure Electron app to use Python server
+        run: |
+          cd skellycam-ui
+          # Set SHOULD_LAUNCH_PYTHON to true in app-environment.ts
+          $envFile = "electron/main/helpers/app-environment.ts"
+          (Get-Content $envFile) -replace "SHOULD_LAUNCH_PYTHON: false", "SHOULD_LAUNCH_PYTHON: true" | Set-Content $envFile
+
+      - name: Build Electron app
+        run: |
+          cd skellycam-ui
+          npm run build
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-windows-installer
+          path: skellycam-ui/releases/*/skellycam_*_installer.exe
+          if-no-files-found: error
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install uv
+        run: |
+          pip install uv
+          uv --version
+
+      - name: Create and activate virtual environment
+        run: |
+          uv venv
+          source .venv/bin/activate
+
+      - name: Install Python dependencies
+        run: |
+          uv sync
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'skellycam-ui/package-lock.json'
+
+      - name: Install Node.js dependencies
+        run: |
+          cd skellycam-ui
+          npm install
+
+      - name: Build Python installer with Nuitka
+        run: |
+          cd skellycam-ui
+          bash ../installers/nuitka_scripts/nuitka_installer_mac.sh
+
+      - name: Configure Electron app to use Python server
+        run: |
+          cd skellycam-ui
+          # Set SHOULD_LAUNCH_PYTHON to true in app-environment.ts
+          sed -i '' 's/SHOULD_LAUNCH_PYTHON: false/SHOULD_LAUNCH_PYTHON: true/g' electron/main/helpers/app-environment.ts
+
+      - name: Build Electron app
+        run: |
+          cd skellycam-ui
+          npm run build
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-macos-installer
+          path: skellycam-ui/releases/*/skellycam_*_installer.dmg
+          if-no-files-found: error
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang portaudio19-dev
+
+      - name: Install uv
+        run: |
+          pip install uv
+          uv --version
+
+      - name: Create and activate virtual environment
+        run: |
+          uv venv
+          source .venv/bin/activate
+
+      - name: Install Python dependencies
+        run: |
+          uv sync
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'skellycam-ui/package-lock.json'
+
+      - name: Install Node.js dependencies
+        run: |
+          cd skellycam-ui
+          npm install
+
+      - name: Build Python installer with Nuitka
+        run: |
+          cd skellycam-ui
+          bash ../installers/nuitka_scripts/nuitka_installer_linux.sh
+
+      - name: Configure Electron app to use Python server
+        run: |
+          cd skellycam-ui
+          # Set SHOULD_LAUNCH_PYTHON to true in app-environment.ts
+          sed -i 's/SHOULD_LAUNCH_PYTHON: false/SHOULD_LAUNCH_PYTHON: true/g' electron/main/helpers/app-environment.ts
+
+      - name: Build Electron app
+        run: |
+          cd skellycam-ui
+          npm run build
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-linux-installer
+          path: |
+            skellycam-ui/releases/*/skellycam_*_amd64.deb
+            skellycam-ui/releases/*/skellycam_*_x86_64.AppImage
+          if-no-files-found: error
+
+  create-release:
+    needs: [build-windows, build-macos, build-linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/skellycam-windows-installer/*
+            artifacts/skellycam-macos-installer/*
+            artifacts/skellycam-linux-installer/*
+          draft: true
+          generate_release_notes: true
