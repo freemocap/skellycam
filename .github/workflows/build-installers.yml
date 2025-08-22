@@ -48,6 +48,7 @@ jobs:
           script-name: skellycam/__main__.py
           mode: standalone
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
+          output-file: skellycam_server.exe
 
 
       - name: Check Nuitka build
