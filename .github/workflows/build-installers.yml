@@ -21,6 +21,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Validate code signing prerequisites
+      - name: Validate code signing prerequisites
+        run: |
+          $missingSecrets = @()
+          
+          if (-not "${{ secrets.AZURE_TENANT_ID }}") { $missingSecrets += "AZURE_TENANT_ID" }
+          if (-not "${{ secrets.AZURE_CLIENT_ID }}") { $missingSecrets += "AZURE_CLIENT_ID" }
+          if (-not "${{ secrets.AZURE_CLIENT_SECRET }}") { $missingSecrets += "AZURE_CLIENT_SECRET" }
+          if (-not "${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}") { $missingSecrets += "TRUSTED_SIGNING_ACCOUNT_NAME" }
+          if (-not "${{ secrets.CERTIFICATE_PROFILE_NAME }}") { $missingSecrets += "CERTIFICATE_PROFILE_NAME" }
+          
+          if ($missingSecrets.Count -gt 0) {
+            Write-Error "Missing required secrets for code signing: $($missingSecrets -join ', ')"
+            exit 1
+          }
+          
+          Write-Output "✅ All required code signing secrets are available"
+        shell: pwsh
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -80,7 +98,22 @@ jobs:
         run: |
           cd skellycam-ui
           npm run build
-
+      # Sign the Electron installer
+      - name: Sign Electron installer with Trusted Signing
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://eus.codesigning.azure.net/ # Update with your endpoint
+          trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\skellycam-ui\releases
+          files-folder-filter: "*.exe"
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
