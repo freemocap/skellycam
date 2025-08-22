@@ -119,7 +119,7 @@ jobs:
           endpoint: https://eus.codesigning.azure.net/ # Update with your endpoint
           trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
-          files-folder: ${{ github.workspace }}\skellycam-ui\releases
+          files-folder: ${{ github.workspace }}\skellycam-ui\release
           files-folder-filter: "*.exe"
           files-folder-recurse: true
           file-digest: SHA256
