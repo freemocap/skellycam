@@ -10,7 +10,7 @@ from ..filters.delta_time import DeltaTimeFilter
 from ..formatters.custom_formatter import CustomFormatter
 from ..log_format_string import LOG_FORMAT_STRING
 
-
+MIN_LOG_LEVEL_FOR_WEBSOCKET = LogLevels.TRACE.value
 
 class LogRecordModel(BaseModel):
     name: str
@@ -49,16 +49,26 @@ class WebSocketQueueHandler(logging.Handler):
         self.addFilter(DeltaTimeFilter())
         self.setFormatter(CustomFormatter(LOG_FORMAT_STRING))
 
+
     def emit(self, record: logging.LogRecord):
-        if record.levelno > LogLevels.INFO.value:
-            log_record_dict =  record.__dict__
-            log_record_dict["formatted_message"] = self.format(record)
-            log_record_dict['type'] = record.__class__.__name__
-            log_record_dict['exc_info'] = str(log_record_dict['exc_info']) if log_record_dict['exc_info'] else None
+        if record.levelno > MIN_LOG_LEVEL_FOR_WEBSOCKET:
+            log_record_dict = record.__dict__
+            
+            # Preserve original message formatting
+            formatted_message = self.format(record)
+            log_record_dict["formatted_message"] = formatted_message
+            
+            # Ensure proper string conversion while preserving whitespace
             if not isinstance(log_record_dict['msg'], str):
                 log_record_dict['msg'] = str(log_record_dict['msg'])
+            
+            # Handle exception info with proper formatting
+            if log_record_dict['exc_info']:
+                log_record_dict['exc_info'] = self.formatException(log_record_dict['exc_info'])
+            
+            log_record_dict['type'] = record.__class__.__name__
+            
             self.queue.put(LogRecordModel(**log_record_dict).model_dump())
-
 
 MAX_WEBSOCKET_LOG_QUEUE_SIZE = 1000
 WEBSOCKET_LOG_QUEUE: Optional[Queue] = None

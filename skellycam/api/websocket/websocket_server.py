@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import time
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 
@@ -9,8 +8,7 @@ from skellycam.core.recorders.framerate_tracker import FramerateTracker, Current
 from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
-    get_websocket_log_queue
-from skellycam.system.logging_configuration.log_levels import LogLevels
+    get_websocket_log_queue, MIN_LOG_LEVEL_FOR_WEBSOCKET
 from skellycam.utilities.wait_functions import async_wait_10ms
 
 logger = logging.getLogger(__name__)
@@ -138,16 +136,19 @@ class WebsocketServer:
             get_skellycam_app().kill_everything()
             raise
 
-    async def _logs_relay(self, ws_log_level: LogLevels = LogLevels.INFO):
+    async def _logs_relay(self, ws_log_level: int = MIN_LOG_LEVEL_FOR_WEBSOCKET):
         logger.info("Starting websocket log relay listener...")
         logs_queue = get_websocket_log_queue()
         try:
             while self.should_continue:
                 if not logs_queue.empty() and self.websocket.client_state == WebSocketState.CONNECTED:
                     log_record: LogRecordModel = LogRecordModel(**logs_queue.get_nowait())
-                    if log_record.levelno < ws_log_level.value:
+                    if log_record.levelno < ws_log_level:
                         continue  # Skip logs below the specified level
-                    await self.websocket.send_json(log_record.model_dump())
+                    
+                    # Convert to JSON with ensure_ascii=False to preserve formatting
+                    log_data = log_record.model_dump()
+                    await self.websocket.send_json(log_data, ensure_ascii=False)
                 else:
                     await async_wait_10ms()
         except asyncio.CancelledError:
