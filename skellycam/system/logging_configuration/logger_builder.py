@@ -10,6 +10,7 @@ from .log_format_string import LOG_FORMAT_STRING
 from .log_levels import LogLevels
 from ..default_paths import get_log_file_path
 
+
 class LoggerBuilder:
 
     def __init__(self,

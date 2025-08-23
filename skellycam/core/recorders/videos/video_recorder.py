@@ -6,7 +6,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import numpy.typing as npt
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata

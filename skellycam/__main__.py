@@ -7,7 +7,6 @@ import sys
 import threading
 import time
 
-
 from skellycam.api.server.server_manager import UvicornServerManager
 from skellycam.api.server.server_singleton import create_server_manager
 

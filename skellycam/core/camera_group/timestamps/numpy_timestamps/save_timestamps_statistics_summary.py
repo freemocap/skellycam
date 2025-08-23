@@ -1,9 +1,10 @@
+import logging
+
 import numpy as np
 
 from skellycam.core.camera_group.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 
-import logging
 logger = logging.getLogger(__name__)
 def save_timestamp_statistics_summary(
         multiframe_rows_recarray: np.recarray,

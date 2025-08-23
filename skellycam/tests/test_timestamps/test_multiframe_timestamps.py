@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from skellycam.core.camera_group.timestamps import FrameTimestamps
-from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.camera_group.timestamps import TimebaseMapping
+from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 

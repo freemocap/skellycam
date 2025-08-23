@@ -6,10 +6,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import calculate_statistics
-from skellycam.core.camera_group.timestamps.recording_timestamps import RecordingTimestamps
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import MULTI_FRAME_TIMESTAMP_CSV_ROW
-from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 
 @dataclass

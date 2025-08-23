@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 from pydantic import BaseModel
 
+from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
-from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
 from skellycam.core.types.type_overloads import CameraIdString
 
 if TYPE_CHECKING:
-    from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
+    pass
 
 class MultiFrameMetadata(BaseModel):
     multi_frame_number: int

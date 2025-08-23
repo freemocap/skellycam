@@ -1,7 +1,7 @@
 from dataclasses import dataclass
+from functools import cached_property
 
 import numpy as np
-from functools import cached_property
 
 Z_SCORE_95_CI = 1.96  # Z-score for 95% confidence interval
 

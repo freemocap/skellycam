@@ -1,6 +1,7 @@
+from skellycam.core.types.timestamp_types import TimestampStats
+
 from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import \
     calculate_frame_grab_timestamps, calculate_statistics
-from skellycam.core.types.timestamp_types import  TimestampStats
 from skellycam.core.types.numpy_record_dtypes import AllTimestampsArray, AllDurationsArray
 
 

@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import vectorized_ns_to_sec, calculate_framerate, vectorized_ns_to_ms
+from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import vectorized_ns_to_sec, \
+    calculate_framerate, vectorized_ns_to_ms
+
 
 def create_multiframe_dataframe(
         ts_statistics: TimestampStats,

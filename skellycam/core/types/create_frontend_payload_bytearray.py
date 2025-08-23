@@ -7,6 +7,7 @@ from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGAB
 from skellycam.core.types.numpy_record_dtypes import JPEG_ENCODING_PARAMETERS, logger, \
     FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE, FRONTEND_FRAME_HEADER_DTYPE
 from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimestampFloat
+
 _reusable_bytes_payload: bytearray = bytearray(0)  # Will be resized to fit the payload size in runtime
 
 

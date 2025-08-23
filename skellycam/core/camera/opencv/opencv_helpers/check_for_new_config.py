@@ -1,14 +1,15 @@
+import logging
+
 import cv2
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-
 from skellycam.core.camera.opencv.opencv_helpers.opencv_apply_config import apply_camera_configuration
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import UpdateCamerasSettingsMessage, DeviceExtractedConfigMessage
-import logging
+
 logger = logging.getLogger(__name__)
 
 def check_for_new_config(current_config: CameraConfig,

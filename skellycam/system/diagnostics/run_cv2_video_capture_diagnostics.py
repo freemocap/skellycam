@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 
-
 class BackendSelectionEnum(enum.Enum):
     CAP_ANY = cv2.CAP_ANY
     CAP_FFMPEG = cv2.CAP_FFMPEG

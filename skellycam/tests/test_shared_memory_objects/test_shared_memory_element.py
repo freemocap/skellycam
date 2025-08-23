@@ -1,11 +1,11 @@
 import gc
+import os
 import time
 from multiprocessing import Process
-import os
-import sys
-import pytest
+
 import numpy as np
 import psutil
+import pytest
 
 from skellycam.core.ipc.shared_memory.shared_memory_element import (
     SharedMemoryElement,

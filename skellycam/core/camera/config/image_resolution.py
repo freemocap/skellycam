@@ -1,8 +1,6 @@
-import enum
 from typing import Hashable
 
 from pydantic import BaseModel
-
 
 
 class ImageResolution(BaseModel):

@@ -1,13 +1,10 @@
 import logging
-import time
 from dataclasses import dataclass
 from functools import cached_property
 
 import numpy as np
-from pydantic import BaseModel, Field, computed_field
 
-from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE, FRAME_METADATA_DTYPE
+from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE
 
 logger = logging.getLogger(__name__)
 

@@ -2,16 +2,12 @@ import logging
 import multiprocessing
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
-import numpy as np
 from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
-from skellycam.core.frame_payloads.frontend_image_payload import FrontendFramePayload
-from skellycam.core.recorders.framerate_tracker import FramerateTracker
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, CameraIdString, \
     MultiframeTimestampFloat

@@ -1,11 +1,10 @@
 import logging
-from typing import Literal
 
 import numpy as np
 import numpy.typing as npt
 
-from skellycam.core.types.numpy_record_dtypes import FRAME_DURATION_DTYPE,  DurationArray, StatsArray, \
-    FloatArray, IntArray, AllTimestampsArray, AllFrameGrabTimestampsArray
+from skellycam.core.types.numpy_record_dtypes import FRAME_DURATION_DTYPE, DurationArray, FloatArray, IntArray, \
+    AllTimestampsArray, AllFrameGrabTimestampsArray
 from skellycam.core.types.numpy_record_dtypes import STATS_DTYPE
 
 logger = logging.getLogger(__name__)

@@ -1,5 +1,5 @@
 import enum
-from typing import Tuple, Self, Any, ClassVar
+from typing import Tuple, Self, Any
 
 import cv2
 import numpy as np
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 from skellycam.core.camera.config.image_resolution import ImageResolution
 from skellycam.core.types.image_rotation_types import RotationTypes
 from skellycam.core.types.numpy_record_dtypes import CAMERA_CONFIG_DTYPE
-from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL, CameraNameString
+from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
 

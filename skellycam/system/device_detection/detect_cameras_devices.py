@@ -1,3 +1,4 @@
+import logging
 from platform import platform
 
 import cv2
@@ -11,8 +12,6 @@ from skellycam.core.camera.opencv.opencv_helpers.determine_backend import determ
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString, CameraBackendInt, CameraVendorIdInt, \
     CameraProductIdInt, CameraDevicePathString, CameraBackendNameString
 
-
-import logging
 logger = logging.getLogger(__name__)
 
 # define a function to search for a camera

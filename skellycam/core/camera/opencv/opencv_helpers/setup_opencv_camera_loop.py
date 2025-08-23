@@ -1,9 +1,11 @@
+import logging
+
 import cv2
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.opencv_helpers.create_initial_frame_recarray import create_initial_frame_rec_array
 from skellycam.core.camera.opencv.opencv_helpers.create_cv2_video_capture import create_cv2_video_capture
+from skellycam.core.camera.opencv.opencv_helpers.create_initial_frame_recarray import create_initial_frame_rec_array
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
@@ -12,7 +14,6 @@ from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer im
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_10ms
 
-import logging
 logger = logging.getLogger(__name__)
 
 def setup_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer | None,

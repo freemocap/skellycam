@@ -4,10 +4,6 @@ import time
 import cv2
 import numpy as np
 
-from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
-    FramePayloadSharedMemoryRingBuffer
-
 logger = logging.getLogger(__name__)
 
 

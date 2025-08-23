@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from skellycam.core.types.image_rotation_types import  RotationTypes
+from skellycam.core.types.image_rotation_types import RotationTypes
 
 
 def rotate_image(image:np.ndarray, rotation: RotationTypes):

@@ -1,10 +1,8 @@
 import logging
 from abc import ABC
 from multiprocessing.process import parent_process
-from sys import platform
 from typing import Type
 
-import numpy as np
 from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue

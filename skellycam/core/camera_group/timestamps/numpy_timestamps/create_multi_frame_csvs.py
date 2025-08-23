@@ -1,14 +1,12 @@
+import logging
 from datetime import datetime, timezone
 
 import numpy as np
-
-from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import calculate_statistics
 
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import CAMERA_TIMESTAMPS_CSV_ROW_DTYPE, MULTI_FRAME_TIMESTAMP_CSV_ROW
 from skellycam.utilities.time_unit_conversion import ns_to_ms
 
-import logging
 logger = logging.getLogger(__name__)
 
 

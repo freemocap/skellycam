@@ -7,8 +7,6 @@ from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapp
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 
 
-
-
 class FrameMetadata(BaseModel):
     """
     A Pydantic model to represent the metadata associated with a frame of image data, we will build this from the numpy array once we've cleared the camera/shm whackiness.

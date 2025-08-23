@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 

@@ -1,4 +1,4 @@
-import time
+import logging
 
 import numpy as np
 
@@ -8,7 +8,6 @@ from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraStatus
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 
-import logging
 logger = logging.getLogger(__name__)
  
 def handle_video_recording(config: CameraConfig,
