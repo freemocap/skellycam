@@ -73,13 +73,12 @@ jobs:
           output-file: skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}
           output-dir: skellycam-ui
           include-package: opencv-contrib-python,pydantic,Pillow,psutil,setproctitle,scipy,pandas,uvicorn,fastapi,tzlocal,httpx,websockets,pyaudio,tabulate,numpydantic,cv2-enumerate-cameras,nuitka,
-          include-data-dir: .venv/Lib/site-packages
 
       - name: Check Nuitka build
         run: |
-          ls -l skellycam-ui/skellycam_server.exe
+          ls -l skellycam-ui/skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe
       # Sign the Nuitka-built executable
-      - name: Sign skellycam_server.exe with Trusted Signing
+      - name: Sign skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe with Trusted Signing
         uses: azure/trusted-signing-action@v0
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -134,5 +133,5 @@ jobs:
         with:
           name: skellycam-electron-nuitka-${{ runner.os }}-${{ github.run_id }}
           path: |
-            skellycam-ui/release/*/skellycam_*_installer-electron-nuitka-${{github.run_id}}.exe
+            skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true

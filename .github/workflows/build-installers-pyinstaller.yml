@@ -130,5 +130,5 @@ jobs:
         with:
           name: skellycam-electron-pyinstaller-${{ runner.os }}-${{ github.run_id }}
           path: |
-            skellycam-ui/release/*/skellycam_*_installer-electron-pyinstaller-${{github.run_id}}.exe
+            skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true
