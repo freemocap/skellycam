@@ -70,7 +70,7 @@ jobs:
           script-name: skellycam/__main__.py
           mode: onefile
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
-          output-file: skellycam_server.exe
+          output-file: skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}
           output-dir: skellycam-ui
           include-package: opencv-contrib-python,pydantic,Pillow,psutil,setproctitle,scipy,pandas,uvicorn,fastapi,tzlocal,httpx,websockets,pyaudio,tabulate,numpydantic,cv2-enumerate-cameras,nuitka,
           include-data-dir: .venv/Lib/site-packages
@@ -88,7 +88,7 @@ jobs:
           endpoint: https://eus.codesigning.azure.net/ # Update with your endpoint
           trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
-          files: ${{ github.workspace }}\skellycam-ui\skellycam_server.exe
+          files: ${{ github.workspace }}\skellycam-ui\skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -97,9 +97,9 @@ jobs:
       - name: Upload skellycam_server.exe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-${{ runner.os }}
+          name: skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}
           path: |
-            skellycam-ui/skellycam_server.exe
+            skellycam-ui/skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe
           include-hidden-files: true
 
       - name: Install UI dependencies
@@ -132,7 +132,7 @@ jobs:
       - name: Upload electron installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-${{ runner.os }}
+          name: skellycam-electron-nuitka-${{ runner.os }}-${{ github.run_id }}
           path: |
-            skellycam-ui/release/*/skellycam_*_installer.exe
+            skellycam-ui/release/*/skellycam_*_installer-electron-nuitka-${{github.run_id}}.exe
           include-hidden-files: true

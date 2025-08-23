@@ -70,11 +70,9 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pip install pyinstaller
-          pyinstaller skellycam/__main__.py --paths .venv\Lib\site-packages --onefile --name skellycam_server
-      - name: Move PyInstaller output to expected location
-        run: |
-          cp dist/skellycam_server.exe skellycam-ui/
-        shell: bash
+          pyinstaller skellycam/__main__.py --paths .venv\Lib\site-packages --onefile --name skellycam-ui/skellycam_server_pyinstaller_${{github.run_id}}.exe
+          
+
 
       # Sign the PyInstaller-built executable
       - name: Sign skellycam_server.exe with Trusted Signing
@@ -95,9 +93,9 @@ jobs:
       - name: Upload skellycam_server.exe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-server-${{ runner.os }}
+          name: skellycam-server-pyinstaller-${{ runner.os }}-${{ github.run_id }}
           path: |
-            skellycam-ui/skellycam_server.exe
+            skellycam-ui/skellycam_server_pyinstaller_${{github.run_id}}.exe
           include-hidden-files: true
       
       - name: Install UI dependencies
@@ -130,7 +128,7 @@ jobs:
       - name: Upload electron installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-electron-${{ runner.os }}
-          path: |            
-            skellycam-ui/release/*/skellycam_*_installer.exe
+          name: skellycam-electron-pyinstaller-${{ runner.os }}-${{ github.run_id }}
+          path: |
+            skellycam-ui/release/*/skellycam_*_installer-electron-pyinstaller-${{github.run_id}}.exe
           include-hidden-files: true
