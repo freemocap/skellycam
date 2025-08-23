@@ -1,7 +1,7 @@
 name: Build installers (Nuitka + Electron)
 
 on:
-  push: 
+  push:
     branches:
       - jon/development
   workflow_dispatch:
@@ -11,11 +11,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]  # Start with Windows first
+        os: [ windows-latest ]  # Start with Windows first
         include:
           - os: windows-latest
             venv-activate: .venv\Scripts\activate
-#    continue-on-error: true
+    #    continue-on-error: true
     steps:
 
       - name: Checkout code
@@ -72,13 +72,13 @@ jobs:
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           output-file: skellycam_server.exe
           output-dir: skellycam-ui
-          follow-imports: true
+          include-package: opencv-contrib-python,pydantic,Pillow,psutil,setproctitle,scipy,pandas,uvicorn,fastapi,tzlocal,httpx,websockets,pyaudio,tabulate,numpydantic,cv2-enumerate-cameras,nuitka,
           include-data-dir: .venv/Lib/site-packages
 
       - name: Check Nuitka build
         run: |
           ls -l skellycam-ui/skellycam_server.exe
-     # Sign the Nuitka-built executable
+      # Sign the Nuitka-built executable
       - name: Sign skellycam_server.exe with Trusted Signing
         uses: azure/trusted-signing-action@v0
         with:
@@ -101,7 +101,7 @@ jobs:
           path: |
             skellycam-ui/skellycam_server.exe
           include-hidden-files: true
-      
+
       - name: Install UI dependencies
         run: |
           cd skellycam-ui
@@ -133,6 +133,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: skellycam-${{ runner.os }}
-          path: |            
+          path: |
             skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true
