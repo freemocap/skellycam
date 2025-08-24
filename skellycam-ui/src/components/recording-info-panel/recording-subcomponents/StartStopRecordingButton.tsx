@@ -24,11 +24,13 @@ const pulseAnimation = keyframes`
 const PulsingButton = styled(Button)(({isRecording}: { isRecording: boolean | undefined }) => ({
     backgroundColor: isRecording ? '#8d0a02' : '#005d94',
     borderStyle: 'solid',
-    borderWidth: '1px',
-    borderColor: '#000b10',
+    borderWidth: '3px',
+    borderColor: '#00ccff',
     padding: 10,
     '&:hover': {
-        backgroundColor: '#d32f2f',
+        borderColor: '#fb1402',
+        borderWidth: '3px',
+
     },
     ...(isRecording && {
         animation: `${pulseAnimation} 1.5s infinite ease-in-out`,

@@ -10,7 +10,7 @@ const config = {
   server: {
     host: 'localhost', // Default for local development
     port: 8006, // Default port
-    protocol: 'http',
+    httpProtocol: 'http',
     wsProtocol: 'ws',
     basePath: '/skellycam',
   },

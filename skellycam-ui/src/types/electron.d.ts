@@ -20,6 +20,9 @@ declare global {
                 }>;
                 error?: string;
             }>;
+            startPythonServer: () => Promise<void>;
+            stopPythonServer: () => Promise<void>;
+            onPythonServerStatus: (callback: (isRunning: boolean) => void) => void;
         }
         ipcRenderer: {
             on: (channel: string, func: (...args: any[]) => void) => void;

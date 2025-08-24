@@ -32,11 +32,11 @@ function startApplication() {
                 .then((ext) => console.log(`Added Extension:  ${ext.name}`))
                 .catch((err) => console.log('An error occurred: ', err));
 
-            console.log('SHOULD_LAUNCH_PYTHON:', APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON);
-            if (APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON) {
-                console.log('Launching Python Server');
-                PythonServer.start();
-            }
+            // console.log('SHOULD_LAUNCH_PYTHON:', APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON);
+            // if (APP_ENVIRONMENT.SHOULD_LAUNCH_PYTHON) {
+            //     console.log('Launching Python Server');
+            //     PythonServer.start();
+            // }
 
             const mainWindow = WindowManager.createMainWindow();
 

@@ -43,6 +43,16 @@ export class IpcManager {
         });
 
 
+        ipcMain.handle('python-server:start', async () => {
+            console.log('Starting Python Server');
+            await PythonServer.start();
+        });
+
+        ipcMain.handle('python-server:stop', async () => {
+            console.log('Stopping Python Server');
+            await PythonServer.shutdown();
+        });
+
         ipcMain.handle('get-folder-contents', async (_, folderPath: string) => {
             try {
                 // Ensure the folder exists
