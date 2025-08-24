@@ -18,6 +18,7 @@ export class IpcManager {
             child.loadURL(`${process.env.VITE_DEV_SERVER_URL}#${route}`);
         });
     }
+
     private static handleFileSystemControls() {
         ipcMain.handle('select-directory', async () => {
             const result = await dialog.showOpenDialog({
@@ -43,9 +44,12 @@ export class IpcManager {
         });
 
 
-        ipcMain.handle('python-server:start', async () => {
+        ipcMain.handle('python-server:start', async (_, exePath: string | null) => {
             console.log('Starting Python Server');
-            await PythonServer.start();
+
+            await PythonServer.start(exePath);
+
+
         });
 
         ipcMain.handle('python-server:stop', async () => {
@@ -57,7 +61,7 @@ export class IpcManager {
             try {
                 // Ensure the folder exists
                 if (!fs.existsSync(folderPath)) {
-                    return { error: 'Folder does not exist', path: folderPath };
+                    return {error: 'Folder does not exist', path: folderPath};
                 }
 
                 // Get all files and directories in the folder
@@ -106,7 +110,7 @@ export class IpcManager {
         ipcMain.handle('restart-python-server', () => {
             console.log('Restarting Python Server');
             PythonServer.shutdown();
-            PythonServer.start();
+            PythonServer.start(null);
         });
     }
 }

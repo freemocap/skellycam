@@ -1,22 +1,22 @@
 import { useState, useCallback } from "react";
 
 export const usePythonServer = () => {
-    const [isRunning, setIsRunning] = useState(false);
+    const [isPythonRunning, setIsRunning] = useState(false);
 
-    const startServer = useCallback(async () => {
+    const startPythonServer = useCallback(async (exePath:string|null) => {
         try {
             console.log("Starting Python server...");
-            window.electronAPI.startPythonServer();
+            await window.electronAPI.startPythonServer(exePath);
             setIsRunning(true);
         } catch (error) {
             console.error('Failed to start Python server:', error);
         }
     }, []);
 
-    const stopServer = useCallback(async () => {
+    const stopPythonServer = useCallback(async () => {
         try {
             console.log("Stopping Python server...");
-            window.electronAPI.stopPythonServer();
+            await window.electronAPI.stopPythonServer();
             setIsRunning(false);
         } catch (error) {
             console.error('Failed to stop Python server:', error);
@@ -24,8 +24,8 @@ export const usePythonServer = () => {
     }, []);
 
     return {
-        isRunning,
-        startServer,
-        stopServer
+        isPythonRunning,
+        startPythonServer,
+        stopPythonServer
     };
 };

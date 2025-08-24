@@ -148,7 +148,7 @@ class WebsocketServer:
                     
                     # Convert to JSON with ensure_ascii=False to preserve formatting
                     log_data = log_record.model_dump()
-                    await self.websocket.send_json(log_data, ensure_ascii=False)
+                    await self.websocket.send_json(log_data)
                 else:
                     await async_wait_10ms()
         except asyncio.CancelledError:

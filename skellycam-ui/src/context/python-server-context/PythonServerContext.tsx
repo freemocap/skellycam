@@ -2,9 +2,9 @@ import React, { createContext, useContext, ReactNode } from "react";
 import { usePythonServer } from "./usePythonServer";
 
 interface PythonServerContextProps {
-    isRunning: boolean;
-    startServer: () => void;
-    stopServer: () => void;
+    isPythonRunning: boolean;
+    startPythonServer: (exePath:string|null) => void;
+    stopPythonServer: () => void;
 }
 
 const PythonServerContext = createContext<PythonServerContextProps | undefined>(undefined);

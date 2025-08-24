@@ -10,8 +10,10 @@ const WebsocketConnectionStatus = () => {
 
     const handleToggleConnection = () => {
         if (isConnected) {
+            console.log('Toggling WebSocket: disconnecting');
             disconnect(false);
         } else {
+            console.log('Toggling WebSocket: connecting');
             connect();
         }
     };
@@ -27,6 +29,12 @@ const WebsocketConnectionStatus = () => {
                     pl: 4,
                     color: '#dadada',
                     cursor: 'pointer',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    ':hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                    },
                 }}
                 onClick={handleToggleConnection}
             >
