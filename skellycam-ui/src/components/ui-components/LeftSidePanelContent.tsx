@@ -2,7 +2,7 @@
 import * as React from 'react';
 import Box from "@mui/material/Box";
 import {IconButton, List, ListItem, useTheme} from "@mui/material";
-import WebsocketConnectionStatus from "@/components/WebsocketConnectionStatus";
+import WebsocketConnectionStatus from "@/components/server-settings-panel/WebsocketConnectionStatus";
 import {AvailableCamerasPanel} from "@/components/available-cameras-panel/AvailableCamerasPanel";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import ThemeToggle from "@/components/ui-components/ThemeToggle";
@@ -11,6 +11,9 @@ import {useLocation, useNavigate} from "react-router-dom";
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import {VideoFolderPanel} from "@/components/video-folder-panel/VideoFolderPanel";
+import { ServerSettingsPanel } from '../server-settings-panel/ServerSettingsPanel';
+import SettingsIcon from '@mui/icons-material/Settings';
+
 // Extract reusable scrollbar styles
 const scrollbarStyles = {
     '&::-webkit-scrollbar': {
@@ -41,6 +44,7 @@ export const LeftSidePanelContent = () => {
     const theme = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
+    const [showSettings, setShowSettings] = React.useState(false);
 
     // Dynamic styles based on theme
     const item = {
@@ -105,14 +109,21 @@ export const LeftSidePanelContent = () => {
                         >
                             <VideoLibraryIcon/>
                         </IconButton>
-
+                        <IconButton
+                            color="inherit"
+                            onClick={() => setShowSettings(!showSettings)}
+                        >
+                            <SettingsIcon/>
+                        </IconButton>
                         <ThemeToggle/>
                     </Box>
 
                 </ListItem>
             </List>
 
-            <WebsocketConnectionStatus/>
+            <ServerSettingsPanel/>
+
+   
 
             {location.pathname === '/cameras' || location.pathname === '/' && (
                 <Box sx={{
