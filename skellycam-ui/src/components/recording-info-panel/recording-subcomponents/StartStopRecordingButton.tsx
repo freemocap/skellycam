@@ -1,6 +1,7 @@
 import React from 'react';
 import {Button, keyframes, Typography} from '@mui/material';
 import {styled} from '@mui/system';
+import {useTheme} from "@mui/material/styles";
 
 interface StartStopButtonProps {
     isRecording: boolean;
@@ -20,9 +21,8 @@ const pulseAnimation = keyframes`
     }
 `;
 
-
-const PulsingButton = styled(Button)(({pulsing}: { pulsing: boolean | undefined }) => ({
-    backgroundColor: '#9f1810',
+const PulsingButton = styled(Button)(({isRecording}: { isRecording: boolean | undefined }) => ({
+    backgroundColor: isRecording ? '#8d0a02' : '#005d94',
     borderStyle: 'solid',
     borderWidth: '1px',
     borderColor: '#000b10',
@@ -30,33 +30,26 @@ const PulsingButton = styled(Button)(({pulsing}: { pulsing: boolean | undefined 
     '&:hover': {
         backgroundColor: '#d32f2f',
     },
-    ...(pulsing && {
+    ...(isRecording && {
         animation: `${pulseAnimation} 1.5s infinite ease-in-out`,
     }),
 }));
 
 export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
-                                                                             isRecording,
-                                                                             countdown,
-                                                                             onClick
-                                                                         }) => {
+    isRecording,
+    countdown,
+    onClick
+}) => {
     return (
-        <>
-            {countdown !== null && (
-                <Typography variant="h4" align="center" color="secondary">
-                    Starting in {countdown}...
-                </Typography>
-            )}
-            <PulsingButton
-                onClick={onClick}
-                variant="contained"
-                pulsing={isRecording ? true : undefined}
-                fullWidth
-            >
-                <Typography variant={'h6'}>
-                {isRecording ? 'Stop Recording' : 'Start Recording'}
-                </Typography>
-            </PulsingButton>
-        </>
+        <PulsingButton
+            onClick={onClick}
+            variant="contained"
+            isRecording={isRecording}
+            fullWidth
+        >
+            <Typography variant="h6">
+                {isRecording ? '🔴 Stop Recording' : '🔴 Start Recording'}
+            </Typography>
+        </PulsingButton>
     );
 };
