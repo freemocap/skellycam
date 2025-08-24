@@ -4,7 +4,7 @@ import Box from "@mui/material/Box";
 import {IconButton, List, ListItem, useTheme} from "@mui/material";
 import WebsocketConnectionStatus from "@/components/server-settings-panel/WebsocketConnectionStatus";
 import {AvailableCamerasPanel} from "@/components/available-cameras-panel/AvailableCamerasPanel";
-import {TreeViewRecordingInfoPanel} from "@/components/recording-info-panel/TreeViewRecordingInfoPanel";
+import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import ThemeToggle from "@/components/ui-components/ThemeToggle";
 import HomeIcon from '@mui/icons-material/Home';
 import {useLocation, useNavigate} from "react-router-dom";
@@ -109,12 +109,7 @@ export const LeftSidePanelContent = () => {
                         >
                             <VideoLibraryIcon/>
                         </IconButton>
-                        <IconButton
-                            color="inherit"
-                            onClick={() => setShowSettings(!showSettings)}
-                        >
-                            <SettingsIcon/>
-                        </IconButton>
+      
                         <ThemeToggle/>
                     </Box>
 
@@ -132,7 +127,7 @@ export const LeftSidePanelContent = () => {
                     overflowX: 'hidden',
                     ...scrollbarStyles
                 }}>
-                    <TreeViewRecordingInfoPanel/>
+                    <RecordingInfoPanel/>
                     <AvailableCamerasPanel/>
                 </Box>
             )}
