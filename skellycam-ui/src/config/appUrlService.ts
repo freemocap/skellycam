@@ -1,4 +1,3 @@
-import {AppConfig, currentConfig} from './useAppConfig';
 
 
 export interface DefaultUrlConfig {
@@ -39,7 +38,7 @@ const getHttpEndpointUrls = () => {
     updateConfigs: getApiUrl('/skellycam/camera/update'),
     startRecording: getApiUrl('/skellycam/camera/group/all/record/start'),
     stopRecording: getApiUrl('/skellycam/camera/group/all/record/stop'),
-    pauseUnpauseCameras: getApiUrl('/skellycam/camera/group/all/pause'),
+    pauseUnpauseCameras: getApiUrl('/skellycam/camera/group/all/pause_unpause'),
   };
 };
 

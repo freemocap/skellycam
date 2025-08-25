@@ -114,7 +114,7 @@ class CameraGroup:
         )
 
     def pause_unpause(self, await_state_change: bool = True):
-        if self.ipc.paused.value:
+        if self.ipc.any_paused:
             self.unpause(await_unpaused=await_state_change)
         else:
             self.pause(await_paused=await_state_change)

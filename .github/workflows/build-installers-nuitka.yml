@@ -72,7 +72,7 @@ jobs:
           windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
           output-file: skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}
           output-dir: skellycam-ui
-          include-package: opencv-contrib-python,pydantic,Pillow,psutil,setproctitle,scipy,pandas,uvicorn,fastapi,tzlocal,httpx,websockets,pyaudio,tabulate,numpydantic,cv2-enumerate-cameras,nuitka,
+          include-package: cv2,pydantic,PIL,psutil,setproctitle,scipy,pandas,uvicorn,fastapi,tzlocal,httpx,websockets,pyaudio,tabulate,numpydantic,cv2_enumerate_cameras
 
       - name: Check Nuitka build
         run: |

@@ -91,15 +91,13 @@ class CameraGroupIPC(BaseModel):
 
     @property
     def all_paused(self) -> bool:
-        return all([
-            self.camera_orchestrator.all_cameras_paused,
-        ])
+        return self.camera_orchestrator.all_cameras_paused
 
     @property
     def any_paused(self) -> bool:
-        return not any([
-            self.camera_orchestrator.any_cameras_paused,
-        ])
+        return self.camera_orchestrator.any_cameras_paused
+
+
     def publish_shm_message(self, shm_dto) -> None:
         """
         Publish a shared memory message to the pubsub system.

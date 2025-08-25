@@ -13,7 +13,7 @@ export default function BottomPanelContent() {
         <Box sx={{ width: '100%', height: '100%' }}>
             <PanelGroup direction="horizontal">
                 {/* Framerate Viewer Panel */}
-                <Panel defaultSize={50} minSize={20}>
+                <Panel defaultSize={30} minSize={20}>
                     <Box sx={{ height: '100%', overflow: 'auto' }}>
                         <FramerateViewerPanel />
                     </Box>
@@ -29,7 +29,7 @@ export default function BottomPanelContent() {
                 />
 
                 {/* Logs Terminal Panel */}
-                <Panel defaultSize={50} minSize={20}>
+                <Panel defaultSize={70} minSize={20}>
                     <Box sx={{ height: '100%', overflow: 'auto' }}>
                         <LogTerminal />
                     </Box>
