@@ -55,22 +55,23 @@ jobs:
       - name: Create venv
         run: uv venv
 
-      - name: Create venv
+      - name: Activate uv environment
         run: .venv\Scripts\activate
 
-      - name: Install the project
+      - name: Install the project dependencies
         run: uv sync
+
       - name: Verify installation 1/3
         run: uv pip show skellycam
       - name: Verify installation 2/3
         run: uv pip show pyinstaller
       - name: Verify installation 3/3
-        run: uv pip show pydantic # check that app dependencies are installed
+        run: uv pip show cv2 # check that app dependencies are installed
 
       - name: Build with PyInstaller
         run: |
-          pip install pyinstaller
-          pyinstaller ./skellycam.spec
+          uv pip install pyinstaller
+          uv python -m pyinstaller ./skellycam.spec --clean
 
       - name: Move skellycam_server.exe into `/skellycam-ui/`
         run: |
