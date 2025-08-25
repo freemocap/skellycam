@@ -51,6 +51,8 @@ jobs:
 
       - name: Install uv and enable cache
         uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
 
       - name: Create venv
         run: uv venv
@@ -71,7 +73,7 @@ jobs:
       - name: Build with PyInstaller
         run: |
           uv pip install pyinstaller
-          uv python -m pyinstaller ./skellycam.spec --clean
+          uv run pyinstaller ./skellycam.spec --clean
 
       - name: Move skellycam_server.exe into `/skellycam-ui/`
         run: |
