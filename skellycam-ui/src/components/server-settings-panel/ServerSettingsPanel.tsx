@@ -34,7 +34,6 @@ export const ServerSettingsPanel = () => {
     return (
         <Box sx={{padding: 2, color: 'text.primary'}}>
             <SimpleTreeView
-                defaultExpandedItems={['server-status']}
                 slots={{
                     collapseIcon: ExpandMoreIcon,
                     expandIcon: ChevronRightIcon
@@ -64,106 +63,106 @@ export const ServerSettingsPanel = () => {
                     <Box sx={{pl: 2, pt: 1, borderTop: '2px solid', borderColor: 'darkcyan'}}>
                         <ServerConnectionStatus/>
                         <WebsocketConnectionStatus/>
-                        {/*<TreeItem itemId="server-settings" label="Server Settings">*/}
-                        {/*    <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>*/}
-                        {/*        <FormControlLabel*/}
-                        {/*            control={*/}
-                        {/*                <Checkbox*/}
-                        {/*                    checked={startServer}*/}
-                        {/*                    onChange={(e) => setStartServer(e.target.checked)}*/}
-                        {/*                />*/}
-                        {/*            }*/}
-                        {/*            label="Start server executable"*/}
-                        {/*        />*/}
+                        <TreeItem itemId="server-settings" label="Server Settings"  disabled={true}>
+                            <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={startServer}
+                                            onChange={(e) => setStartServer(e.target.checked)}
+                                        />
+                                    }
+                                    label="Start server executable"
+                                />
 
-                        {/*        <TextField*/}
-                        {/*            label="Server executable path"*/}
-                        {/*            value={serverExecutablePath}*/}
-                        {/*            onChange={(e) => setServerExecutablePath(e.target.value)}*/}
-                        {/*            fullWidth*/}
-                        {/*            size="small"*/}
-                        {/*        />*/}
+                                <TextField
+                                    label="Server executable path"
+                                    value={serverExecutablePath}
+                                    onChange={(e) => setServerExecutablePath(e.target.value)}
+                                    fullWidth
+                                    size="small"
+                                />
 
-                        {/*        <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>*/}
-                        {/*            <TextField*/}
-                        {/*                label="Host"*/}
-                        {/*                value={host}*/}
-                        {/*                onChange={(e) => setHost(e.target.value)}*/}
-                        {/*                size="small"*/}
-                        {/*                sx={{flex: 1}}*/}
-                        {/*            />*/}
-                        {/*            <TextField*/}
-                        {/*                label="HTTP Port"*/}
-                        {/*                type="number"*/}
-                        {/*                value={httpPort}*/}
-                        {/*                onChange={(e) => setHttpPort(Number(e.target.value))}*/}
-                        {/*                size="small"*/}
-                        {/*                sx={{width: 100}}*/}
-                        {/*            />*/}
-                        {/*        </Box>*/}
+                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+                                    <TextField
+                                        label="Host"
+                                        value={host}
+                                        onChange={(e) => setHost(e.target.value)}
+                                        size="small"
+                                        sx={{flex: 1}}
+                                    />
+                                    <TextField
+                                        label="HTTP Port"
+                                        type="number"
+                                        value={httpPort}
+                                        onChange={(e) => setHttpPort(Number(e.target.value))}
+                                        size="small"
+                                        sx={{width: 100}}
+                                    />
+                                </Box>
 
-                        {/*        <Typography variant="body2" color="textSecondary">*/}
-                        {/*            WebSocket URL: ws://{host}:{httpPort}/websocket/connect*/}
-                        {/*        </Typography>*/}
-                        {/*    </Box>*/}
-                        {/*</TreeItem>*/}
+                                <Typography variant="body2" color="textSecondary">
+                                    WebSocket URL: ws://{host}:{httpPort}/websocket/connect
+                                </Typography>
+                            </Box>
+                        </TreeItem>
 
-                        {/*<TreeItem itemId="display-settings" label="Display Settings">*/}
-                        {/*    <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>*/}
-                        {/*        <FormControlLabel*/}
-                        {/*            control={*/}
-                        {/*                <Checkbox*/}
-                        {/*                    checked={limitFramerate}*/}
-                        {/*                    onChange={(e) => setLimitFramerate(e.target.checked)}*/}
-                        {/*                />*/}
-                        {/*            }*/}
-                        {/*            label="Limit display framerate"*/}
-                        {/*        />*/}
+                        <TreeItem itemId="display-settings" label="Display Settings"  disabled={true}>
+                            <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={limitFramerate}
+                                            onChange={(e) => setLimitFramerate(e.target.checked)}
+                                        />
+                                    }
+                                    label="Limit display framerate"
+                                />
 
-                        {/*        {limitFramerate && (*/}
-                        {/*            <Box sx={{pl: 4}}>*/}
-                        {/*                <Typography gutterBottom>*/}
-                        {/*                    Framerate: {framerate} FPS*/}
-                        {/*                </Typography>*/}
-                        {/*                <Slider*/}
-                        {/*                    value={framerate}*/}
-                        {/*                    onChange={handleFramerateChange}*/}
-                        {/*                    min={0}*/}
-                        {/*                    max={maxFramerate}*/}
-                        {/*                    valueLabelDisplay="auto"*/}
-                        {/*                    size="small"*/}
-                        {/*                />*/}
-                        {/*            </Box>*/}
-                        {/*        )}*/}
+                                {limitFramerate && (
+                                    <Box sx={{pl: 4}}>
+                                        <Typography gutterBottom>
+                                            Framerate: {framerate} FPS
+                                        </Typography>
+                                        <Slider
+                                            value={framerate}
+                                            onChange={handleFramerateChange}
+                                            min={0}
+                                            max={maxFramerate}
+                                            valueLabelDisplay="auto"
+                                            size="small"
+                                        />
+                                    </Box>
+                                )}
 
-                        {/*        <FormControlLabel*/}
-                        {/*            control={*/}
-                        {/*                <Checkbox*/}
-                        {/*                    checked={preShrink}*/}
-                        {/*                    onChange={(e) => setPreShrink(e.target.checked)}*/}
-                        {/*                />*/}
-                        {/*            }*/}
-                        {/*            label="Pre-shrink images"*/}
-                        {/*        />*/}
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={preShrink}
+                                            onChange={(e) => setPreShrink(e.target.checked)}
+                                        />
+                                    }
+                                    label="Pre-shrink images"
+                                />
 
-                        {/*        {preShrink && (*/}
-                        {/*            <Box sx={{pl: 4}}>*/}
-                        {/*                <Typography gutterBottom>*/}
-                        {/*                    Shrink factor: {shrinkFactor.toFixed(2)}*/}
-                        {/*                </Typography>*/}
-                        {/*                <Slider*/}
-                        {/*                    value={shrinkFactor}*/}
-                        {/*                    onChange={handleShrinkFactorChange}*/}
-                        {/*                    min={0}*/}
-                        {/*                    max={1}*/}
-                        {/*                    step={0.01}*/}
-                        {/*                    valueLabelDisplay="auto"*/}
-                        {/*                    size="small"*/}
-                        {/*                />*/}
-                        {/*            </Box>*/}
-                        {/*        )}*/}
-                        {/*    </Box>*/}
-                        {/*</TreeItem>*/}
+                                {preShrink && (
+                                    <Box sx={{pl: 4}}>
+                                        <Typography gutterBottom>
+                                            Shrink factor: {shrinkFactor.toFixed(2)}
+                                        </Typography>
+                                        <Slider
+                                            value={shrinkFactor}
+                                            onChange={handleShrinkFactorChange}
+                                            min={0}
+                                            max={1}
+                                            step={0.01}
+                                            valueLabelDisplay="auto"
+                                            size="small"
+                                        />
+                                    </Box>
+                                )}
+                            </Box>
+                        </TreeItem>
                     </Box>
                 </TreeItem>
             </SimpleTreeView>
