@@ -3,7 +3,7 @@ import React from 'react';
 import { CircularProgress, IconButton, Tooltip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAppDispatch } from '@/store/AppStateStore';
-import { detectCameraDevices } from '@/store/thunks/detect-cameras-server-thunk';
+import { detectCameraDevices } from '@/store/thunks/detect-camera-thunks/detect-cameras-server-thunk';
 // import { detectCameraDevices } from '@/store/thunks/detect-cameras-client-thunks';
 
 interface RefreshDetectedCamerasButtonProps {

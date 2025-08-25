@@ -113,6 +113,11 @@ class CameraGroup:
             display_image_sizes=display_image_sizes,
         )
 
+    def pause_unpause(self, await_state_change: bool = True):
+        if self.ipc.paused.value:
+            self.unpause(await_unpaused=await_state_change)
+        else:
+            self.pause(await_paused=await_state_change)
     def pause(self, await_paused: bool = True):
         """
         Pause the camera group operations.
