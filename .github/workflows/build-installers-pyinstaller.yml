@@ -68,7 +68,7 @@ jobs:
       - name: Verify installation 2/3
         run: uv pip show pyinstaller
       - name: Verify installation 3/3
-        run: uv pip show cv2 # check that app dependencies are installed
+        run: uv pip show opencv-contrib-python
 
       - name: Build with PyInstaller
         run: |
