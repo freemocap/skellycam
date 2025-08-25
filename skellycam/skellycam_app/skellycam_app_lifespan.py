@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     logger.info("Adding middleware...")
     skellycam_app = get_skellycam_app()
     logger.success(f"Skellycam API (version:{skellycam.__version__}) started successfully 💀📸✨")
-    logger.api(f"Skellycam API  running on: \n\t\tSwagger API docs - {APP_URL} \n\t\tTest UI: {APP_URL}/skellycam/ui 👈[click to simple test UI in your browser]")
+    logger.api(f"Skellycam API  running on: \n\t\tSwagger API docs - {APP_URL}")
 
     # # Let the app do its thing
     yield

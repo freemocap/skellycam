@@ -11,8 +11,8 @@ from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
 from skellycam.api.server.server_constants import HOSTNAME, PORT
 from skellycam.skellycam_app.skellycam_app import create_skellycam_app
-from skellycam.skellycam_app.skellycam_app_lifespan.skellycam_app_lifespan import lifespan
-from skellycam.skellycam_app.skellycam_app_lifespan.skellycam_app_setup import register_routes, customize_swagger_ui
+from skellycam.skellycam_app.skellycam_app_lifespan import lifespan
+from skellycam.skellycam_app.skellycam_app_setup import register_routes, customize_swagger_ui
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
 
 logger = logging.getLogger(__name__)
