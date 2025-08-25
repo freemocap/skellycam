@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import IconButton from '@mui/material/IconButton';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
-import { useTheme } from "@mui/material/styles";
-import { ImageScaleSlider } from './ImageScaleSlider';
+import {useTheme} from "@mui/material/styles";
+import {ImageScaleSlider} from './ImageScaleSlider';
 
 export const CamerasViewSettingsOverlay = () => {
     const [expanded, setExpanded] = useState(false);

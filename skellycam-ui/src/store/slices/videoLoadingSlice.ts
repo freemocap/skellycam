@@ -1,5 +1,5 @@
 // skellycam-ui/src/store/slices/videoLoadingSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 
 interface VideoFile {
   name: string;

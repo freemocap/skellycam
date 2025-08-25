@@ -1,10 +1,10 @@
 import React from 'react';
-import {Box, Button, Typography, Container, Paper, Fade, Grow, darken} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
+import {Box, Button, Container, darken, Fade, Grow, Paper, Typography} from '@mui/material';
+import {useNavigate} from 'react-router-dom';
+import {useTheme} from '@mui/material/styles';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import { Copyright } from '@/components/ui-components/Copyright';
+import {Copyright} from '@/components/ui-components/Copyright';
 
 const WelcomePage: React.FC = () => {
   const theme = useTheme();

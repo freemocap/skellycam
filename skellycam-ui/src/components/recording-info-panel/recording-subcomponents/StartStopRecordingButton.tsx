@@ -1,7 +1,6 @@
 import React from 'react';
 import {Button, keyframes, Typography} from '@mui/material';
 import {styled} from '@mui/system';
-import {useTheme} from "@mui/material/styles";
 
 interface StartStopButtonProps {
     isRecording: boolean;

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, ReactNode } from "react";
-import { usePythonServer } from "./usePythonServer";
+import React, {createContext, ReactNode, useContext} from "react";
+import {usePythonServer} from "./usePythonServer";
 
 interface PythonServerContextProps {
     isPythonRunning: boolean;

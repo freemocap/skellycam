@@ -1,11 +1,11 @@
 // skellycam-ui/src/layout/BasePanelLayout.tsx
 import React from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { LeftSidePanelContent } from "@/components/ui-components/LeftSidePanelContent";
+import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
+import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
-import { useTheme } from "@mui/material/styles";
-import { Box } from "@mui/material";
-import { useLocation } from "react-router-dom";
+import {useTheme} from "@mui/material/styles";
+import {Box} from "@mui/material";
+import {useLocation} from "react-router-dom";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const theme = useTheme();

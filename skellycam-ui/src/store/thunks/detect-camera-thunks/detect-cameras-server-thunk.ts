@@ -6,7 +6,6 @@ import {
     createDefaultCameraConfig
 } from "@/store/slices/cameras-slices/camera-types";
 import {RootState} from "@/store/AppStateStore";
-import {useAppConfig} from "@/config/useAppConfig";
 import {urlService} from "@/config/appUrlService";
 
 export const detectCameraDevices = createAsyncThunk<

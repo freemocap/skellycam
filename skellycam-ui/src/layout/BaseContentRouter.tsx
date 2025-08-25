@@ -1,7 +1,6 @@
 // skellycam-ui/src/layout/BaseContent.tsx
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import WelcomePage from "@/layout/pages/WelcomePage";
+import {Navigate, Route, Routes} from 'react-router-dom';
 import {CamerasPage} from "@/layout/pages/CamerasPage";
 import VideosPage from "@/layout/pages/VideosPage";
 

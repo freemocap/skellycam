@@ -1,15 +1,7 @@
-import {
-  alpha,
-  Box,
-  Chip,
-  Collapse,
-  ToggleButton,
-  ToggleButtonGroup,
-  useTheme,
-} from "@mui/material";
-import { useEffect, useRef, useState } from "react";
-import { LogRecord } from "@/store/slices/logRecordsSlice";
-import { useAppSelector } from "@/store/AppStateStore";
+import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup, useTheme,} from "@mui/material";
+import {useEffect, useRef, useState} from "react";
+import {LogRecord} from "@/store/slices/logRecordsSlice";
+import {useAppSelector} from "@/store/AppStateStore";
 
 const LOG_COLORS = {
   LOOP: "#999",

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Slider, Tooltip, Typography, useTheme } from '@mui/material';
+import React from 'react';
+import {Box, Slider, Tooltip, Typography, useTheme} from '@mui/material';
 
 interface ImageScaleSliderProps {
     scale: number;

@@ -1,5 +1,4 @@
 import {useCallback, useRef, useState} from "react";
-import * as THREE from "three";
 
 // Define the message types from the Python code
 enum MessageType {

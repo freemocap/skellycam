@@ -2,8 +2,6 @@
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {z} from 'zod';
 import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
-import {selectConfigsForSelectedCameras} from "@/store/slices/cameras-slices/camerasSlice";
-import {useAppConfig} from "@/config/useAppConfig";
 import {urlService} from "@/config/appUrlService";
 
 const RecordStartRequestSchema = z.object({

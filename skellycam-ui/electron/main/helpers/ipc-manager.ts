@@ -3,7 +3,6 @@ import {WindowManager} from "./window-manager";
 import {PythonServer} from "./python-server";
 import path from "node:path";
 import fs from "node:fs";
-import {APP_PATHS} from "./app-paths";
 
 export class IpcManager {
     static initialize() {

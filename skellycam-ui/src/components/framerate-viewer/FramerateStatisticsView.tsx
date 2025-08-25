@@ -1,20 +1,20 @@
 // src/components/framerate-viewer/FramerateStatisticsView.tsx
 import {
-  Box,
-  Divider,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tooltip,
-  Typography,
+    Box,
+    Divider,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Tooltip,
+    Typography,
 } from "@mui/material";
-import { alpha, useTheme } from "@mui/material/styles";
-import { CurrentFramerate } from "@/store/slices/framerateTrackerSlice";
-import { useState } from "react";
+import {alpha, useTheme} from "@mui/material/styles";
+import {CurrentFramerate} from "@/store/slices/framerateTrackerSlice";
+import {useState} from "react";
 
 type FramerateStatisticsViewProps = {
   frontendFramerate: CurrentFramerate | null;
@@ -208,8 +208,8 @@ const FramerateRow = ({
         getCellStyle={getCellStyle}
         primaryValue={framerateData?.frame_duration_mean}
         primarySuffix="ms"
-        secondaryValue={framerateData?.frame_duration_mean && framerateData.frame_duration_mean > 0 
-          ? 1000 / framerateData.frame_duration_mean 
+        secondaryValue={framerateData?.frame_duration_mean && framerateData.frame_duration_mean > 0
+          ? 1000 / framerateData.frame_duration_mean
           : null}
         secondarySuffix="fps"
       />
@@ -220,8 +220,8 @@ const FramerateRow = ({
         getCellStyle={getCellStyle}
         primaryValue={framerateData?.frame_duration_median}
         primarySuffix="ms"
-        secondaryValue={framerateData?.frame_duration_median && framerateData.frame_duration_median > 0 
-          ? 1000 / framerateData.frame_duration_median 
+        secondaryValue={framerateData?.frame_duration_median && framerateData.frame_duration_median > 0
+          ? 1000 / framerateData.frame_duration_median
           : null}
         secondarySuffix="fps"
       />

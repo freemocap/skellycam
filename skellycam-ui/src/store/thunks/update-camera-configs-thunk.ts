@@ -1,12 +1,11 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
 import {
-    selectCameraById,
     selectConfigsForSelectedCameras,
     setError,
-    setLoading, updateCameraConfig, updateCameraConfigs
+    setLoading,
+    updateCameraConfigs
 } from "@/store/slices/cameras-slices/camerasSlice";
-import { CameraConfig } from "../slices/cameras-slices/camera-types";
-import {useAppConfig} from "@/config/useAppConfig";
+import {CameraConfig} from "../slices/cameras-slices/camera-types";
 import {urlService} from "@/config/appUrlService";
 
 export const updateCameraConfigsThunk = createAsyncThunk(

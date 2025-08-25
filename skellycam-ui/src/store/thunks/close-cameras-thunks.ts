@@ -1,7 +1,5 @@
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import {useAppConfig} from "@/config/useAppConfig";
 import {urlService} from "@/config/appUrlService";
-
 
 
 export const closeCameras = createAsyncThunk(

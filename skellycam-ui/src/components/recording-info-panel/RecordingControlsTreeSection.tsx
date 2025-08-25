@@ -1,9 +1,15 @@
 import React from 'react';
-import { Box } from '@mui/material';
-import { DelayRecordingStartControl } from "@/components/recording-info-panel/recording-subcomponents/DelayRecordingStartControl";
-import { BaseRecordingDirectoryInput } from "@/components/recording-info-panel/recording-subcomponents/BaseRecordingDirectoryInput";
-import { RecordingNamePreview } from "@/components/recording-info-panel/recording-subcomponents/RecordingNamePreview";
-import { RecordingSettingsSection } from "@/components/recording-info-panel/recording-subcomponents/RecordingSettingsSection";
+import {Box} from '@mui/material';
+import {
+    DelayRecordingStartControl
+} from "@/components/recording-info-panel/recording-subcomponents/DelayRecordingStartControl";
+import {
+    BaseRecordingDirectoryInput
+} from "@/components/recording-info-panel/recording-subcomponents/BaseRecordingDirectoryInput";
+import {RecordingNamePreview} from "@/components/recording-info-panel/recording-subcomponents/RecordingNamePreview";
+import {
+    RecordingSettingsSection
+} from "@/components/recording-info-panel/recording-subcomponents/RecordingSettingsSection";
 
 interface RecordingControlsSectionProps {
   recordingDirectory: string;

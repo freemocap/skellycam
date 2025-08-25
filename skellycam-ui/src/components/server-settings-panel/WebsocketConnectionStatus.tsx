@@ -1,4 +1,4 @@
-import {Box, Tooltip, Typography} from "@mui/material";
+import {Box, Typography} from "@mui/material";
 import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';

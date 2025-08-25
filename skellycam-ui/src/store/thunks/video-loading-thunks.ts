@@ -1,11 +1,6 @@
 // skellycam-ui/src/store/thunks/video-loading-thunks.ts
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import { 
-  setVideoFolder, 
-  setVideoFiles, 
-  setIsLoading, 
-  setError 
-} from '../slices/videoLoadingSlice';
+import {createAsyncThunk} from '@reduxjs/toolkit';
+import {setError, setIsLoading, setVideoFiles, setVideoFolder} from '../slices/videoLoadingSlice';
 
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
 export const selectVideoFolder = createAsyncThunk(
@@ -14,7 +9,7 @@ export const selectVideoFolder = createAsyncThunk(
     try {
       dispatch(setIsLoading(true));
       dispatch(setError(null));
-      
+
       const selectedFolder = await window.electronAPI.selectDirectory();
 
       if (!selectedFolder) {
@@ -40,7 +35,7 @@ export const selectVideoFolder = createAsyncThunk(
           path: file.path
         })) || [];
       dispatch(setVideoFiles(videoFiles));
-      
+
       return {
         folder: selectedFolder,
         files: videoFiles
@@ -60,7 +55,7 @@ export const loadVideos = createAsyncThunk(
     try {
       dispatch(setIsLoading(true));
       dispatch(setError(null));
-      
+
       const success = await window.electronAPI.openFolder(folder);
 
       if (!success) {

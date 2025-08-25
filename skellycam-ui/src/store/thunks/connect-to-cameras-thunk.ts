@@ -6,7 +6,6 @@ import {
     updateCameraConfigs
 } from "@/store/slices/cameras-slices/camerasSlice";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
-import {useAppConfig} from "@/config/useAppConfig";
 import {urlService} from "@/config/appUrlService";
 
 export const connectToCameras = createAsyncThunk(

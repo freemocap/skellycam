@@ -1,26 +1,26 @@
 // skellycam-ui/src/components/video-folder-panel/VideoFolderPanel.tsx
 import React, {useState} from 'react';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  alpha,
-  Box,
-  Button,
-  Checkbox,
-  FormControlLabel,
-  IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Paper,
-  Stack,
-  TextField,
-  Tooltip,
-  Typography,
-  useTheme
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
+    alpha,
+    Box,
+    Button,
+    Checkbox,
+    FormControlLabel,
+    IconButton,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Paper,
+    Stack,
+    TextField,
+    Tooltip,
+    Typography,
+    useTheme
 } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
@@ -28,8 +28,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
-import { useAppDispatch, useAppSelector } from "@/store/AppStateStore";
-import { loadVideos, openVideoFile, selectVideoFolder } from "@/store/thunks/video-loading-thunks";
+import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {loadVideos, openVideoFile, selectVideoFolder} from "@/store/thunks/video-loading-thunks";
 
 export const VideoFolderPanel: React.FC = () => {
   const theme = useTheme();

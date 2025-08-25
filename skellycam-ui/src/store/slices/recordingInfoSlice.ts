@@ -3,9 +3,6 @@ import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {z} from 'zod';
 
 
-
-
-
 export const RecordingInfoSchema = z.object({
     isRecording: z.boolean(),
     recordingDirectory: z.string(),

@@ -1,8 +1,10 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
-import { TreeItem } from '@mui/x-tree-view/TreeItem';
-import { FullRecordingPathPreview } from "@/components/recording-info-panel/recording-subcomponents/FullRecordingPathPreview";
-import { RecordingControlsSection } from "@/components/recording-info-panel/RecordingControlsTreeSection";
+import {Box, Typography} from '@mui/material';
+import {TreeItem} from '@mui/x-tree-view/TreeItem';
+import {
+    FullRecordingPathPreview
+} from "@/components/recording-info-panel/recording-subcomponents/FullRecordingPathPreview";
+import {RecordingControlsSection} from "@/components/recording-info-panel/RecordingControlsTreeSection";
 
 interface RecordingPathTreeItemProps {
   recordingDirectory: string;

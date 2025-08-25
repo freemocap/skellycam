@@ -1,4 +1,3 @@
-import {ipcRenderer} from "electron";
 import {AppConfig} from "@/config/useAppConfig";
 
 declare global {

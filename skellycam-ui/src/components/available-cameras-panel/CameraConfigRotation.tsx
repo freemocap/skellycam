@@ -3,8 +3,7 @@ import * as React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import {Box, Tooltip, useTheme} from '@mui/material';
-import {RotationOptions, RotationLabels} from "@/store/slices/cameras-slices/camera-types";
-import {z} from 'zod';
+import {RotationLabels, RotationOptions} from "@/store/slices/cameras-slices/camera-types";
 
 interface CameraConfigRotationProps {
     rotation?: number; // Use number directly

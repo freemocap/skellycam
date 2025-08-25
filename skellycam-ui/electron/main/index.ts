@@ -7,7 +7,6 @@ import {LifecycleLogger} from "./helpers/logger";
 import os from "node:os";
 
 
-
 // Environment variables that `python` server will use for its lifecycle management
 process.env.SKELLYCAM_RUNNING_IN_ELECTRON = 'true';
 

@@ -17,7 +17,7 @@ import {CameraConfig, CameraDevice} from "@/store/slices/cameras-slices/camera-t
 import {ApplyCameraConfigsButton} from "@/components/available-cameras-panel/ApplyCameraConfigsButton";
 import {PauseUnpauseButton} from "../PauseUnpauseButton";
 // import { detectCameraDevices } from "@/store/thunks/detect-cameras-client-thunks";
-import { detectCameraDevices } from "@/store/thunks/detect-camera-thunks/detect-cameras-server-thunk";
+import {detectCameraDevices} from "@/store/thunks/detect-camera-thunks/detect-cameras-server-thunk";
 
 export const AvailableCamerasPanel = () => {
     const theme = useTheme();

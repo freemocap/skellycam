@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import {Copyright} from "@/components/ui-components/Copyright";
 import {useTheme} from "@mui/material/styles";
-import { Typography } from '@mui/material';
+import {Typography} from '@mui/material';
 
 const VideosPage: React.FC = () => {
     const theme = useTheme();

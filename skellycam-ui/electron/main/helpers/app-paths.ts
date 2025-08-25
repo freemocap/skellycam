@@ -1,6 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import { app } from "electron";
+import {app} from "electron";
 
 export const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Function to get the correct resources path based on environment
