@@ -1,9 +1,9 @@
 name: Build installers (Pyinstaller + Electron)
 
 on:
-#  push:
-#    branches:
-#      - jon/development
+  push:
+    branches:
+      - jon/development
   workflow_dispatch:
 
 jobs:
