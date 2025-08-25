@@ -31,7 +31,7 @@ export class LifecycleLogger {
     \t- PID: ${pythonProcess.pid}
     \t- Command: ${pythonProcess.spawnargs.join(' ')}
     \t- Executable: ${pythonProcess.spawnfile}
-    \t- Executable Path: ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH};
+    \t- Executable Path: ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH_DEV};
     \t- Environment: ${JSON.stringify(APP_ENVIRONMENT)}`);
   }
 

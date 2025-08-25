@@ -11,8 +11,8 @@ let pythonProcess: ReturnType<typeof exec> | null = null;
 
 export class PythonServer {
     static async start(exePath: string | null) {
-        console.log(`Starting python server subprocess - ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH}`);
-        let executablePath = APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH;
+        console.log(`Starting python server subprocess - ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH_DEV}`);
+        let executablePath = APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH_DEV;
         try {
             await this.shutdown();
 
@@ -86,7 +86,7 @@ export class PythonServer {
 
         checkPath(exePath);
 
-        console.log(`Using python server executable at ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH}`);
+        console.log(`Using python server executable at ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH_DEV}`);
 
     }
 }
