@@ -9,7 +9,7 @@ run from /skellycam-ui folder:
 ## Windows
 
 ```
-nuitka --onefile --windows-icon-from-ico=../shared/skellycam-logo/skellycam-favicon.ico --user-package-configuration-file=../installers/skellycam-nuitka.config.yml --remove-output --output-filename=skellycam_server.exe ../skellycam/__main__.py
+nuitka --onefile --windows-icon-from-ico=../shared/skellycam-logo/skellycam-favicon.ico --user-package-configuration-file=../installers/nuitka_scripts/skellycam-nuitka.config.yml --remove-output --output-filename=skellycam_server.exe ../skellycam/__main__.py
 ```
 
 ## Mac
