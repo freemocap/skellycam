@@ -44,7 +44,6 @@ export const LeftSidePanelContent = () => {
     const theme = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
-    const [showSettings, setShowSettings] = React.useState(false);
 
     // Dynamic styles based on theme
     const item = {

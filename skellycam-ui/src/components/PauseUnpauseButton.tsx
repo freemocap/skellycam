@@ -4,7 +4,8 @@ import {Button, CircularProgress, keyframes} from '@mui/material';
 import {styled} from '@mui/system';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-import {urlService} from "@/services/urlService";
+import {dispatch} from "d3";
+import {pauseUnpauseThunk} from "@/store/thunks/pause-unpause-thunk";
 
 interface PauseUnpauseButtonProps {
     disabled?: boolean;
@@ -66,28 +67,10 @@ export const PauseUnpauseButton: React.FC<PauseUnpauseButtonProps> = ({
         }
     };
 
-    const handlePause = () => {
-        const pauseUrl = urlService.getCameraUrls().pauseCameras;
-        handleApiCall(pauseUrl, () => {
-            console.log('Paused successfully');
-            setIsPaused(true);
-        });
-    };
 
-    const handleUnpause = () => {
-        const unpauseUrl = urlService.getCameraUrls().unpauseCameras;
-        handleApiCall(unpauseUrl, () => {
-            console.log('Unpaused successfully');
-            setIsPaused(false);
-        });
-    };
 
     const handleClick = () => {
-        if (isPaused) {
-            handleUnpause();
-        } else {
-            handlePause();
-        }
+        dispatch(pauseUnpauseThunk())
     };
 
     return (

@@ -12,7 +12,6 @@ import {videoLoadingSlice} from "@/store/slices/videoLoadingSlice";
 export const AppStateStore = configureStore({
     reducer: {
         cameras: camerasSlice.reducer,
-        latestPayload: latestFrontendPayloadSlice.reducer,
         logRecords: logRecordsSlice.reducer,
         recordingStatus: recordingInfoSlice.reducer,
         framerateTracker: framerateTrackerSlice.reducer,

@@ -1,3 +1,6 @@
+import {ipcRenderer} from "electron";
+import {AppConfig} from "@/config/useAppConfig";
+
 declare global {
     interface Window {
         electronAPI: {
@@ -22,6 +25,12 @@ declare global {
             }>;
             startPythonServer: (exePath:string|null) => Promise<void>;
             stopPythonServer: () => Promise<void>;
+            getAppConfig: () => Promise<AppConfig>;
+            setAppConfig: (config: any) => Promise<void>;
+            getAppConfigPath: () => Promise<string>;
+            onAppConfigUpdate: (callback: any) => Promise<void>
+            removeAppConfigUpdateListener: (callback: any)  => Promise<void>;
+
         }
         ipcRenderer: {
             on: (channel: string, func: (...args: any[]) => void) => void;

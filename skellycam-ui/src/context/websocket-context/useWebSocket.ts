@@ -7,7 +7,7 @@ import {
 import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerateTrackerSlice";
 import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/context/websocket-context/websocket-types";
 import {addLog} from "@/store/slices/logRecordsSlice";
-import {urlService} from "@/services/urlService";
+import {urlService} from "@/config/appUrlService";
 
 
 export const useWebSocket = () => {
@@ -16,6 +16,7 @@ export const useWebSocket = () => {
     const [websocket, setWebSocket] = useState<WebSocket | null>(null);
     const [connectAttempt, setConnectAttempt] = useState(0);
     const dispatch = useAppDispatch();
+
     const {
         processBinaryMessage,
         latestImageData,

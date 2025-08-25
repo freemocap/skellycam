@@ -6,13 +6,15 @@ import {
     setLoading, updateCameraConfig, updateCameraConfigs
 } from "@/store/slices/cameras-slices/camerasSlice";
 import { CameraConfig } from "../slices/cameras-slices/camera-types";
+import {useAppConfig} from "@/config/useAppConfig";
+import {urlService} from "@/config/appUrlService";
 
 export const updateCameraConfigsThunk = createAsyncThunk(
     'camera/update',
     async (_, { dispatch, getState }) => {
         const state = getState() as any;
         dispatch(setLoading(true));
-        const connectUrl = `http://localhost:8006/skellycam/camera/update`;
+        const updateConfigsUrl = urlService.getHttpEndpointUrls().updateConfigs;
 
         const payload = {
             camera_configs: selectConfigsForSelectedCameras(state)
@@ -20,8 +22,8 @@ export const updateCameraConfigsThunk = createAsyncThunk(
 
         const requestBody = JSON.stringify(payload, null, 2);
         try {
-            console.log(`Updating Camera Configs at ${connectUrl} with request body keys:`, Object.keys(payload));
-            const response = await fetch(connectUrl, {
+            console.log(`Updating Camera Configs at ${updateConfigsUrl} with request body keys:`, Object.keys(payload));
+            const response = await fetch(updateConfigsUrl, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

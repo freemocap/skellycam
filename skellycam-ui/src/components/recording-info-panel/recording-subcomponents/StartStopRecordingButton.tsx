@@ -21,7 +21,10 @@ const pulseAnimation = keyframes`
     }
 `;
 
-const PulsingButton = styled(Button)(({isRecording}: { isRecording: boolean | undefined }) => ({
+// Use shouldForwardProp to prevent isRecording from being passed to the DOM
+const PulsingButton = styled(Button, {
+    shouldForwardProp: (prop) => prop !== 'isRecording'
+})(({isRecording}: { isRecording: boolean | undefined }) => ({
     backgroundColor: isRecording ? '#8d0a02' : '#005d94',
     borderStyle: 'solid',
     borderWidth: '3px',
@@ -30,7 +33,6 @@ const PulsingButton = styled(Button)(({isRecording}: { isRecording: boolean | un
     '&:hover': {
         borderColor: '#fb1402',
         borderWidth: '3px',
-
     },
     ...(isRecording && {
         animation: `${pulseAnimation} 1.5s infinite ease-in-out`,

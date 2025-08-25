@@ -52,4 +52,7 @@ export class WindowManager {
         }
     }
 
+    static getAllWindows() {
+        return BrowserWindow.getAllWindows();
+    }
 }

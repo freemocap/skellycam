@@ -1,17 +1,13 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
-import {
-    setError,
-    setLoading,
-    setAvailableCameras,
-    setCameraStatus
-} from "@/store/slices/cameras-slices/camerasSlice";
+import {setAvailableCameras, setCameraStatus, setError, setLoading} from "@/store/slices/cameras-slices/camerasSlice";
 import {
     CAMERA_DEFAULT_CONSTRAINTS,
     CameraDevice,
     createDefaultCameraConfig
 } from "@/store/slices/cameras-slices/camera-types";
-import { urlService } from "@/services/urlService";
 import {RootState} from "@/store/AppStateStore";
+import {useAppConfig} from "@/config/useAppConfig";
+import {urlService} from "@/config/appUrlService";
 
 export const detectCameraDevices = createAsyncThunk<
     CameraDevice[]
@@ -21,7 +17,7 @@ export const detectCameraDevices = createAsyncThunk<
         dispatch(setLoading(true));
 
         try {
-            const connectUrl = urlService.getCameraUrls().detectCameras;
+            const connectUrl = urlService.getHttpEndpointUrls().detectCameras;
 
             console.log(`Detecting cameras at ${connectUrl}`);
             const response = await fetch(connectUrl, {
