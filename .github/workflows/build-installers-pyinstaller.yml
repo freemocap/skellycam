@@ -70,7 +70,7 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pip install pyinstaller
-          pyinstaller skellycam/__main__.py --paths .venv\Lib\site-packages --onefile --name skellycam-ui/skellycam_server_pyinstaller_${{github.run_id}}.exe
+          pyinstaller skellycam/__main__.py --paths .venv\Lib\site-packages --onefile --name skellycam-ui/skellycam_server.exe
           
 
 
@@ -95,7 +95,7 @@ jobs:
         with:
           name: skellycam-server-pyinstaller-${{ runner.os }}-${{ github.run_id }}
           path: |
-            skellycam-ui/skellycam_server_pyinstaller_${{github.run_id}}.exe
+            skellycam-ui/skellycam_server.exe
           include-hidden-files: true
       
       - name: Install UI dependencies
