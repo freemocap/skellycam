@@ -1,9 +1,0 @@
-{
-  "host": "localhost",
-  "httpPort": 8006,
-  "serverExecutablePath": "",
-  "limitFrontendFramerate": false,
-  "maxFrontendFramerate": 30,
-  "preShrinkFrontendImages": true,
-  "frontendyImagesShrinkFactor": 0.5
-}

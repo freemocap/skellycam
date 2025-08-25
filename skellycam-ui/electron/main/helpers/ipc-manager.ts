@@ -10,7 +10,6 @@ export class IpcManager {
         this.handleWindowControls();
         this.handlePythonControls();
         this.handleFileSystemControls();
-        this.handleConfigControls();
 
     }
 
@@ -118,50 +117,5 @@ export class IpcManager {
     }
 
 
-    private static handleConfigControls() {
-        ipcMain.handle('app-config:get-path', () => {
-            return APP_PATHS.CONFIG_PATH;
-        });
 
-        ipcMain.handle('app-config:get', () => {
-            try {
-                if (fs.existsSync(APP_PATHS.CONFIG_PATH)) {
-                    const configFile = fs.readFileSync(APP_PATHS.CONFIG_PATH, 'utf-8');
-                    return JSON.parse(configFile);
-                } else {
-                    // Create default config file if it doesn't exist
-                    const defaultConfig = {
-                        host: 'localhost',
-                        httpPort: 8006,
-                        startServer: true,
-                        serverExecutablePath: APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH,
-                        limitFramerate: false,
-                        framerate: 30,
-                        preShrink: true,
-                        shrinkFactor: 0.5
-                    };
-
-                    fs.writeFileSync(APP_PATHS.CONFIG_PATH, JSON.stringify(defaultConfig, null, 2));
-                    return defaultConfig;
-                }
-            } catch (error) {
-                console.error('Failed to read config file:', error);
-                throw error;
-            }
-        });
-
-        ipcMain.handle('app-config:set', (_, config) => {
-            try {
-                fs.writeFileSync(APP_PATHS.CONFIG_PATH, JSON.stringify(config, null, 2));
-                // Notify all windows about the config update
-                WindowManager.getAllWindows().forEach(window => {
-                    window.webContents.send('app-config:updated', config);
-                });
-                return config;
-            } catch (error) {
-                console.error('Failed to write config file:', error);
-                throw error;
-            }
-        });
-    }
 }

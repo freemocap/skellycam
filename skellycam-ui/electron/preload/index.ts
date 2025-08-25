@@ -9,11 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getFolderContents: (folderPath: string) => ipcRenderer.invoke('get-folder-contents', folderPath),
     startPythonServer: (exePath: string | null) => ipcRenderer.invoke('python-server:start', exePath),
     stopPythonServer: () => ipcRenderer.invoke('python-server:stop'),
-    getAppConfig: () => ipcRenderer.invoke('app-config:get'),
-    setAppConfig: (config: any) => ipcRenderer.invoke('app-config:set', config),
-    getAppConfigPath: () => ipcRenderer.invoke('app-config:get-path'),
-    onAppConfigUpdate: (callback: any) => ipcRenderer.on('app-config:updated', callback),
-    removeAppConfigUpdateListener: (callback: any) => ipcRenderer.removeListener('app-config:updated', callback)
+
 
 })
 // --------- Expose some API to the Renderer process ---------
