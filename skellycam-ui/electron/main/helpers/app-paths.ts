@@ -14,7 +14,7 @@ const getResourcesPath = () => {
 export const APP_PATHS = {
     PRELOAD: path.join(__dirname, '../preload/index.mjs'),
     RENDERER_HTML: path.join(__dirname, '../../dist/index.html'),
-    PYTHON_SERVER_EXECUTABLE_PATH: path.join(getResourcesPath(), 'skellycam_server.exe'),
+    PYTHON_SERVER_EXECUTABLE_PATH: path.join(getResourcesPath(), 'dist/skellycam_server.exe'),
     PYTHON_SERVER_EXECUTABLE_PATH_WINDOWS_INSTALL: path.join(app.getPath('home'), 'AppData/Local/Programs/skellycam/resources/app.asar.unpacked/skellycam_server.exe'),
     PYTHON_SERVER_EXECUTABLE_DEV: path.resolve(__dirname, '../../skellycam_server.exe'),
     SKELLYCAM_ICON_PATH: path.resolve(__dirname, '../../../shared/skellycam-logo/skellycam-favicon.ico'),

@@ -11,7 +11,7 @@ let pythonProcess: ReturnType<typeof exec> | null = null;
 
 export class PythonServer {
     static async start(exePath: string | null) {
-        console.log('Starting python server subprocess');
+        console.log(`Starting python server subprocess - ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH}`);
         let executablePath = APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH;
         try {
             await this.shutdown();
@@ -24,6 +24,8 @@ export class PythonServer {
             }
             this.validateExecutable(executablePath);
         } catch (error) {
+            console.error('Error validating python server executable:', error);
+            console.log(`Falling back to default executable path - executablePath = ${APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH_WINDOWS_INSTALL}`)
             try {
                 executablePath = APP_PATHS.PYTHON_SERVER_EXECUTABLE_PATH_WINDOWS_INSTALL
                 executablePath = executablePath.replace('~',app.getPath('home'));
