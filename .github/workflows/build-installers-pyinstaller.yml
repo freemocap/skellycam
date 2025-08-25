@@ -70,9 +70,11 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pip install pyinstaller
-          pyinstaller skellycam/__main__.py --paths .venv\Lib\site-packages --onefile --name skellycam-ui/skellycam_server.exe
-          
+          pyinstaller skellycam/__main__.py --paths .venv\Lib\site-packages --onefile --name skellycam_server.exe
 
+      - name: Move skellycam_server.exe into `/skellycam-ui/`
+        run: |
+          Move-Item -Path ".\dist\skellycam_server.exe" -Destination ".\skellycam-ui\skellycam_server.exe"
 
       # Sign the PyInstaller-built executable
       - name: Sign skellycam_server.exe with Trusted Signing
