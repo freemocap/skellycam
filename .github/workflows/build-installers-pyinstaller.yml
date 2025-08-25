@@ -70,7 +70,7 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pip install pyinstaller
-          pyinstaller skellycam_pyinstaller.spec
+          pyinstaller ./skellycam.spec
 
       - name: Move skellycam_server.exe into `/skellycam-ui/`
         run: |
