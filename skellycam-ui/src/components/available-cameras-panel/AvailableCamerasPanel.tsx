@@ -67,7 +67,7 @@ export const AvailableCamerasPanel = () => {
             return;
         }
         dispatch(detectCameraDevices());
-    }, [ isConnected]);
+    }, [isConnected]);
 
     // Handle connection to selected cameras
     const handleConnectCameras = () => {
@@ -130,9 +130,9 @@ export const AvailableCamerasPanel = () => {
                 <Box sx={{pr: 2}}>
                     <ConnectToCamerasButton onClick={handleConnectCameras}/>
                 </Box>
-                <Box sx={{pr: 2}}>
-                    <        ApplyCameraConfigsButton/>
-                </Box>
+                {/*<Box sx={{pr: 2}}>*/}
+                {/*    <        ApplyCameraConfigsButton/>*/}
+                {/*</Box>*/}
                 <Box sx={{pr: 2}}>
                     <RefreshDetectedCamerasButton isLoading={isLoading}/>
                 </Box>

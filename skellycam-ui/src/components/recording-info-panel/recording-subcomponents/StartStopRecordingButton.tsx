@@ -39,10 +39,10 @@ const PulsingButton = styled(Button, {
 }));
 
 export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
-    isRecording,
-    countdown,
-    onClick
-}) => {
+                                                                             isRecording,
+                                                                             countdown,
+                                                                             onClick
+                                                                         }) => {
     return (
         <PulsingButton
             onClick={onClick}

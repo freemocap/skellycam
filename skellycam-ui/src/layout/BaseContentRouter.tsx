@@ -8,9 +8,9 @@ export const BaseContentRouter: React.FC = () => {
     return (
         <Routes>
             {/*<Route path="/" element={<WelcomePage />} />*/}
-            <Route path="/" element={<CamerasPage />} />
-            <Route path="/videos" element={<VideosPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/" element={<CamerasPage/>}/>
+            <Route path="/videos" element={<VideosPage/>}/>
+            <Route path="*" element={<Navigate to="/" replace/>}/>
         </Routes>
     );
 };

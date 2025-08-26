@@ -7,6 +7,7 @@ import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
 interface DirectoryInputProps {
     value: string;
 }
+
 export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({value}) => {
     const dispatch = useAppDispatch();
 

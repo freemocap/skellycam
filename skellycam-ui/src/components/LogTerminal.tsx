@@ -1,5 +1,5 @@
 import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup, useTheme,} from "@mui/material";
-import {useEffect, useMemo, useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {LogRecord} from "@/store/slices/logRecordsSlice";
 import {useAppSelector} from "@/store/AppStateStore";
 

@@ -9,11 +9,11 @@ interface RecordingNamePreviewProps {
 }
 
 export const RecordingNamePreview: React.FC<RecordingNamePreviewProps> = ({
-    name,
-    tag,
-    isRecording,
-    onTagChange
-}) => {
+                                                                              name,
+                                                                              tag,
+                                                                              isRecording,
+                                                                              onTagChange
+                                                                          }) => {
     return (
         <>
             <Typography variant="body2" sx={{mb: 1}}>

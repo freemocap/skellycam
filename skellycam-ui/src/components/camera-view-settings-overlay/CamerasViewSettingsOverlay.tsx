@@ -21,7 +21,7 @@ export const CamerasViewSettingsOverlay = () => {
             }}
         >
             <IconButton onClick={() => setExpanded(!expanded)}>
-                <SettingsIcon />
+                <SettingsIcon/>
             </IconButton>
             {expanded && (
                 <Paper
@@ -32,7 +32,7 @@ export const CamerasViewSettingsOverlay = () => {
                         position: 'relative', // Ensure the gear icon stays pinned
                     }}
                 >
-                    <ImageScaleSlider scale={scale} onScaleChange={setScale} />
+                    <ImageScaleSlider scale={scale} onScaleChange={setScale}/>
                 </Paper>
             )}
         </Box>

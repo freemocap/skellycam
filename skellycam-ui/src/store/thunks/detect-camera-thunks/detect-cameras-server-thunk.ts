@@ -10,8 +10,8 @@ import {urlService} from "@/config/appUrlService";
 
 export const detectCameraDevices = createAsyncThunk<
     CameraDevice[]
-    >('cameras/detectServer',
-    async (args, { dispatch, getState }) => {
+>('cameras/detectServer',
+    async (args, {dispatch, getState}) => {
         const filterVirtual = true;
         dispatch(setLoading(true));
 
@@ -24,7 +24,7 @@ export const detectCameraDevices = createAsyncThunk<
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ filterVirtual }),
+                body: JSON.stringify({filterVirtual}),
             });
 
             const data = await response.json();
@@ -36,9 +36,11 @@ export const detectCameraDevices = createAsyncThunk<
             const existingCameras = state.cameras.cameras;
 
             Object.keys(existingCameras).forEach(cameraId => {
-                const stillExists = serverCameras.some((device: { index: number; }) => device.index === parseInt(cameraId));
+                const stillExists = serverCameras.some((device: {
+                    index: number;
+                }) => device.index === parseInt(cameraId));
                 if (!stillExists) {
-                    dispatch(setCameraStatus({ cameraId, status: 'UNAVAILABLE' }));
+                    dispatch(setCameraStatus({cameraId, status: 'UNAVAILABLE'}));
                 }
             });
 
@@ -55,11 +57,11 @@ export const detectCameraDevices = createAsyncThunk<
                     kind: 'videoinput',
                     constraints: CAMERA_DEFAULT_CONSTRAINTS,
                     config: existingCamera?.config ||
-                    createDefaultCameraConfig(
-                        serverCamera.index,
-                        serverCamera.name,
-                        serverCamera.index.toString()
-                    )
+                        createDefaultCameraConfig(
+                            serverCamera.index,
+                            serverCamera.name,
+                            serverCamera.index.toString()
+                        )
                 };
 
                 validatedCameras.push(newCamera);

@@ -1,32 +1,15 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
-import { TreeItem } from '@mui/x-tree-view/TreeItem';
-import {
-    Alert,
-    Checkbox,
-    Chip,
-    FormControl,
-    FormControlLabel,
-    IconButton,
-    InputAdornment,
-    InputLabel,
-    MenuItem,
-    Select,
-    Slider,
-    Stack,
-    TextField,
-    Typography
-} from '@mui/material';
+import {SimpleTreeView} from '@mui/x-tree-view/SimpleTreeView';
+import {TreeItem} from '@mui/x-tree-view/TreeItem';
+import {Checkbox, FormControlLabel, Slider, TextField, Typography} from '@mui/material';
 import WebsocketConnectionStatus from './WebsocketConnectionStatus';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import { useWebSocketContext } from "@/context/websocket-context/WebSocketContext";
-import { ServerConnectionStatus } from "@/components/server-settings-panel/ServerConnectionStatus";
-import { usePythonServerContext } from "@/context/python-server-context/PythonServerContext";
-import { ExecutablePathSelector } from './ExecutablePathSelector';
+import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
+import {ServerConnectionStatus} from "@/components/server-settings-panel/ServerConnectionStatus";
+import {usePythonServerContext} from "@/context/python-server-context/PythonServerContext";
+import {ExecutablePathSelector} from './ExecutablePathSelector';
 
 interface ExecutableCandidate {
     name: string;
@@ -37,8 +20,8 @@ interface ExecutableCandidate {
 }
 
 export const ServerSettingsPanel = () => {
-    const { isConnected } = useWebSocketContext();
-    const { serverStatus, startPythonServer } = usePythonServerContext();
+    const {isConnected} = useWebSocketContext();
+    const {serverStatus, startPythonServer} = usePythonServerContext();
 
     // State for executable path management
     const [currentExecutablePath, setCurrentExecutablePath] = React.useState<string | null>(null);
@@ -81,18 +64,18 @@ export const ServerSettingsPanel = () => {
     };
 
     return (
-        <Box sx={{ padding: 2, color: 'text.primary' }}>
+        <Box sx={{padding: 2, color: 'text.primary'}}>
             <SimpleTreeView
                 slots={{
                     collapseIcon: ExpandMoreIcon,
                     expandIcon: ChevronRightIcon
                 }}
-                sx={{ flexGrow: 1, maxWidth: 600 }}
+                sx={{flexGrow: 1, maxWidth: 600}}
             >
                 <TreeItem
                     itemId="server-status"
                     label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                             <Box
                                 sx={{
                                     display: 'inline-flex',
@@ -100,7 +83,8 @@ export const ServerSettingsPanel = () => {
                                     bgcolor: serverStatus === 'alive'
                                         ? 'rgba(0, 255, 255, 0.25)'
                                         : serverStatus === 'spawning'
-                                            ? 'rgba(255, 165, 0, 0.25)'
+                                            ? 'rgba(255, 255, 0, 0.25)'
+
                                             : 'rgba(255, 0, 0, 0.25)',
                                     px: 1,
                                     py: 0.5,
@@ -124,13 +108,13 @@ export const ServerSettingsPanel = () => {
                         </Box>
                     }
                 >
-                    <Box sx={{ pl: 2, pt: 1, borderTop: '2px solid', borderColor: 'darkcyan' }}>
-                        <ServerConnectionStatus />
-                        <WebsocketConnectionStatus />
+                    <Box sx={{pl: 2, pt: 1, borderTop: '2px solid', borderColor: 'darkcyan'}}>
+                        <ServerConnectionStatus/>
+                        <WebsocketConnectionStatus/>
 
                         <TreeItem itemId="server-settings" label="Server Settings">
                             <TreeItem itemId="python-server-executable" label="Python server executable">
-                                <Box sx={{ pl: 2, pt: 2 }}>
+                                <Box sx={{pl: 2, pt: 2}}>
                                     <ExecutablePathSelector
                                         onPathSelect={handlePathSelect}
                                         currentPath={currentExecutablePath}
@@ -138,13 +122,13 @@ export const ServerSettingsPanel = () => {
                                 </Box>
                             </TreeItem>
                             <TreeItem itemId="server-api-urls" label="Server API URL">
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mt: 2}}>
                                     <TextField
                                         label="Host"
                                         value={host}
                                         onChange={(e) => setHost(e.target.value)}
                                         size="small"
-                                        sx={{ flex: 1 }}
+                                        sx={{flex: 1}}
                                         disabled={true}
                                     />
                                     <TextField
@@ -153,19 +137,19 @@ export const ServerSettingsPanel = () => {
                                         value={httpPort}
                                         onChange={(e) => setHttpPort(Number(e.target.value))}
                                         size="small"
-                                        sx={{ width: 100 }}
+                                        sx={{width: 100}}
                                         disabled={true}
                                     />
                                 </Box>
 
-                                <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
+                                <Typography variant="body2" color="textSecondary" sx={{mt: 2}}>
                                     WebSocket URL: ws://{host}:{httpPort}/websocket/connect
                                 </Typography>
                             </TreeItem>
                         </TreeItem>
 
                         <TreeItem itemId="display-settings" label="Display Settings">
-                            <Box sx={{ pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
                                 <FormControlLabel
                                     control={
                                         <Checkbox
@@ -178,7 +162,7 @@ export const ServerSettingsPanel = () => {
                                 />
 
                                 {limitFramerate && (
-                                    <Box sx={{ pl: 4 }}>
+                                    <Box sx={{pl: 4}}>
                                         <Typography gutterBottom>
                                             Framerate: {framerate} FPS
                                         </Typography>
@@ -206,7 +190,7 @@ export const ServerSettingsPanel = () => {
                                 />
 
                                 {preShrink && (
-                                    <Box sx={{ pl: 4 }}>
+                                    <Box sx={{pl: 4}}>
                                         <Typography gutterBottom>
                                             Shrink factor: {shrinkFactor.toFixed(2)}
                                         </Typography>

@@ -42,6 +42,7 @@ export type IncomingLogs = z.infer<typeof IncomingLogsSchema>;
 interface LogsState {
     entries: LogRecord[]
 }
+
 const initialLogRecord: LogRecord = {
     name: "initial",
     msg: "Log entry initialized",
@@ -91,7 +92,7 @@ export const logRecordsSlice = createSlice({
             state.entries.push(newLogEntry)
         },
         addLogs: (state,
-                    action: PayloadAction<IncomingLogs>) => {
+                  action: PayloadAction<IncomingLogs>) => {
             const newLogs: LogRecord[] = action.payload.logs
             // Add new logs to the state, ensuring we don't exceed the max limit
             for (const log of newLogs) {

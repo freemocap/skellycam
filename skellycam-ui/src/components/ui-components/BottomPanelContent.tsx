@@ -10,12 +10,12 @@ export default function BottomPanelContent() {
     const theme = useTheme();
 
     return (
-        <Box sx={{ width: '100%', height: '100%' }}>
+        <Box sx={{width: '100%', height: '100%'}}>
             <PanelGroup direction="horizontal">
                 {/* Framerate Viewer Panel */}
                 <Panel defaultSize={30} minSize={20}>
-                    <Box sx={{ height: '100%', overflow: 'auto' }}>
-                        <FramerateViewerPanel />
+                    <Box sx={{height: '100%', overflow: 'auto'}}>
+                        <FramerateViewerPanel/>
                     </Box>
                 </Panel>
 
@@ -30,8 +30,8 @@ export default function BottomPanelContent() {
 
                 {/* Logs Terminal Panel */}
                 <Panel defaultSize={70} minSize={20}>
-                    <Box sx={{ height: '100%', overflow: 'auto' }}>
-                        <LogTerminal />
+                    <Box sx={{height: '100%', overflow: 'auto'}}>
+                        <LogTerminal/>
                     </Box>
                 </Panel>
             </PanelGroup>

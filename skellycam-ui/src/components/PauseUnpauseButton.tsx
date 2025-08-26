@@ -57,7 +57,7 @@ export const PauseUnpauseButton: React.FC<PauseUnpauseButtonProps> = ({
 
     return (
         <PulsingButton
-            onClick={ handleClick}
+            onClick={handleClick}
             variant="contained"
             pulsing={isPaused ? true : undefined}
             fullWidth

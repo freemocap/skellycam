@@ -1,16 +1,17 @@
 // ConnectToCamerasButton.tsx
 import React from 'react';
-import {Button, Typography} from '@mui/material';
+import {Button, CircularProgress, Tooltip, Typography} from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
 import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {selectSelectedDevices} from "@/store/slices/cameras-slices/camerasSlice";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
+import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 
 interface ConnectToCamerasButtonProps {
     onClick?: () => void;
 }
 
-export const ConnectToCamerasButton: React.FC<ConnectToCamerasButtonProps> = ({ onClick }) => {
+export const ConnectToCamerasButton: React.FC<ConnectToCamerasButtonProps> = ({onClick}) => {
     const dispatch = useAppDispatch();
     const isLoading = useAppSelector(state => state.cameras.isLoading);
     const selectedCameras = useAppSelector(selectSelectedDevices);
@@ -43,6 +44,7 @@ export const ConnectToCamerasButton: React.FC<ConnectToCamerasButtonProps> = ({ 
     const hasSelectedCameras = selectedCameras.length > 0;
 
     return (
+        <Tooltip title="Create new Camera Group  with these settings or update camera configurations of existing group" arrow>
         <Button
             variant="contained"
             onClick={handleConnectClick}
@@ -55,15 +57,15 @@ export const ConnectToCamerasButton: React.FC<ConnectToCamerasButtonProps> = ({ 
                 borderStyle: 'solid',
                 borderWidth: '1px',
                 borderColor: '#000b10',
+                p:2,
                 '&:disabled': {
                     backgroundColor: "#9d729c",
                     color: "#333",
                 }
             }}
         >
-            <Typography variant={'h6'}>
-            {isLoading ? 'Connecting...' : 'Connect'}
-            </Typography>
+                {isLoading ? <CircularProgress size={24} color="inherit"/> : <SystemUpdateAltIcon/>}
         </Button>
+        </Tooltip>
     );
 };

@@ -25,8 +25,6 @@ function startApplication() {
             console.log('App is ready')
 
 
-
-
             const mainWindow = WindowManager.createMainWindow();
 
             update(mainWindow);

@@ -6,18 +6,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openFolder: (folderPath: string) => ipcRenderer.invoke('open-folder', folderPath),
     getHomeDirectory: () => ipcRenderer.invoke('get-home-directory'),
     getFolderContents: (folderPath: string) => ipcRenderer.invoke('get-folder-contents', folderPath),
-    
+
     // Python server controls
     startPythonServer: (exePath: string | null) => ipcRenderer.invoke('python-server:start', exePath),
     stopPythonServer: () => ipcRenderer.invoke('python-server:stop'),
-    
+
     // New python server management
     getPythonServerExecutablePath: () => ipcRenderer.invoke('python-server:get-executable-path'),
     getPythonServerExecutableCandidates: () => ipcRenderer.invoke('python-server:get-executable-candidates'),
     refreshPythonServerCandidates: () => ipcRenderer.invoke('python-server:refresh-candidates'),
     isPythonServerRunning: () => ipcRenderer.invoke('python-server:is-running'),
     getPythonServerProcessInfo: () => ipcRenderer.invoke('python-server:get-process-info'),
-    
+
     // File selection
     selectExecutableFile: () => ipcRenderer.invoke('select-executable-file'),
 });

@@ -10,7 +10,7 @@ import {urlService} from "@/config/appUrlService";
 
 export const updateCameraConfigsThunk = createAsyncThunk(
     'camera/update',
-    async (_, { dispatch, getState }) => {
+    async (_, {dispatch, getState}) => {
         const state = getState() as any;
         dispatch(setLoading(true));
         const updateConfigsUrl = urlService.getHttpEndpointUrls().updateConfigs;

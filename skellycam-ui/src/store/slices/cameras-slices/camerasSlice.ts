@@ -37,8 +37,8 @@ export const camerasSlice = createSlice({
         setError: (state, action: PayloadAction<string | null>) => {
             state.error = action.payload;
         },
-        setCameraStatus: (state, action: PayloadAction<{cameraId: string, status: string}>) => {
-            const { cameraId, status } = action.payload;
+        setCameraStatus: (state, action: PayloadAction<{ cameraId: string, status: string }>) => {
+            const {cameraId, status} = action.payload;
             if (state.cameras[cameraId]) {
                 state.cameras[cameraId].status = status;
             }
@@ -62,7 +62,7 @@ export const camerasSlice = createSlice({
             cameraId: string;
             config: Partial<CameraConfig>;
         }>) => {
-            const { cameraId, config } = action.payload;
+            const {cameraId, config} = action.payload;
             if (state.cameras[cameraId]) {
                 state.cameras[cameraId] = {
                     ...state.cameras[cameraId],
@@ -87,7 +87,7 @@ export const camerasSlice = createSlice({
                     };
                 } else {
                     // If camera doesn't exist, throw an error
-                    throw  new Error(`Camera with ID ${cameraId} does not exist in the state.`);
+                    throw new Error(`Camera with ID ${cameraId} does not exist in the state.`);
                 }
             });
         },

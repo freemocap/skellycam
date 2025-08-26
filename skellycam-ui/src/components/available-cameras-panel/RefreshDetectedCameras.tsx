@@ -11,7 +11,7 @@ interface RefreshDetectedCamerasButtonProps {
     isLoading: boolean;
 }
 
-export const RefreshDetectedCamerasButton: React.FC<RefreshDetectedCamerasButtonProps> = ({ isLoading }) => {
+export const RefreshDetectedCamerasButton: React.FC<RefreshDetectedCamerasButtonProps> = ({isLoading}) => {
     const dispatch = useAppDispatch();
 
     const handleRefresh = () => {
@@ -27,7 +27,7 @@ export const RefreshDetectedCamerasButton: React.FC<RefreshDetectedCamerasButton
                 onClick={handleRefresh}
                 disabled={isLoading}
             >
-                {isLoading ? <CircularProgress size={24} color="inherit" /> : <RefreshIcon />}
+                {isLoading ? <CircularProgress size={24} color="inherit"/> : <RefreshIcon/>}
             </IconButton>
         </Tooltip>
     );

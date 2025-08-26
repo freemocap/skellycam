@@ -86,6 +86,7 @@ export interface FrameRenderAcknowledgment {
     displayImageSizes: Record<string, CameraDisplaySize>;
 
 }
+
 export const useWebsocketBinaryMessageProcessor = () => {
     const [latestCameraImageData, setLatestCameraImageData] = useState<Record<string, CameraImageData>>({});
 
@@ -232,18 +233,17 @@ export const useWebsocketBinaryMessageProcessor = () => {
                 if (latestCameraImageData[frameHeader.cameraId]?.imageWidth !== frameHeader.imageWidth ||
                     latestCameraImageData[frameHeader.cameraId]?.imageHeight !== frameHeader.imageHeight) {
                     // If the image dimensions or frame number have changed, update the state
-                    newCameraImageData[frameHeader.cameraId] =  {
-                            imageWidth: frameHeader.imageWidth,
-                            imageHeight: frameHeader.imageHeight,
-                            frameNumber: frameHeader.frameNumber,
-                            cameraId: frameHeader.cameraId,
-                            cameraIndex: frameHeader.cameraIndex,
-                            imageBitmap: await createImageBitmap(new Blob([jpegData], { type: 'image/jpeg' }))
-                        }
+                    newCameraImageData[frameHeader.cameraId] = {
+                        imageWidth: frameHeader.imageWidth,
+                        imageHeight: frameHeader.imageHeight,
+                        frameNumber: frameHeader.frameNumber,
+                        cameraId: frameHeader.cameraId,
+                        cameraIndex: frameHeader.cameraIndex,
+                        imageBitmap: await createImageBitmap(new Blob([jpegData], {type: 'image/jpeg'}))
                     }
                 }
-                setLatestCameraImageData(newCameraImageData);
-
+            }
+            setLatestCameraImageData(newCameraImageData);
 
 
             // Process payload footer as a chunk

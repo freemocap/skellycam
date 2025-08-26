@@ -175,3 +175,13 @@ class CameraGroupManager:
         for camera_group in self.camera_groups.values():
             camera_group.unpause(await_unpaused=await_unpaused)
             logger.info(f"Unpaused camera group ID: {camera_group.id}")
+
+    def find_camera_group_by_camera_ids(self, camera_ids:list[CameraIdString]) -> CameraGroup|None:
+        """
+        Find a camera group that contains all the specified camera IDs.
+        """
+        for camera_group in self.camera_groups.values():
+            if all(camera_id in camera_group.camera_ids for camera_id in camera_ids):
+                return camera_group
+        return None
+

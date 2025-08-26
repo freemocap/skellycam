@@ -5,7 +5,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import {usePythonServerContext} from "@/context/python-server-context/PythonServerContext";
 import {ServerStatus} from "@/context/python-server-context/usePythonServer";
 
-export const getStatusIcon = (serverStatus:ServerStatus) => {
+export const getStatusIcon = (serverStatus: ServerStatus) => {
     switch (serverStatus) {
         case 'alive':
             return <CheckIcon sx={{color: 'green', fontSize: '16px'}}/>;
@@ -18,7 +18,7 @@ export const getStatusIcon = (serverStatus:ServerStatus) => {
     }
 };
 
-export const getStatusColor = (serverStatus:ServerStatus) => {
+export const getStatusColor = (serverStatus: ServerStatus) => {
     switch (serverStatus) {
         case 'alive':
             return 'rgba(0, 255, 255, 0.1)';
@@ -33,7 +33,7 @@ export const getStatusColor = (serverStatus:ServerStatus) => {
     }
 };
 
-export const getServerStatusColor = (serverStatus:ServerStatus) => {
+export const getServerStatusColor = (serverStatus: ServerStatus) => {
     switch (serverStatus) {
         case 'alive':
             return 'rgba(0, 255, 255, 0.5)';
@@ -53,10 +53,10 @@ export const ServerConnectionStatus = () => {
 
 
     const handleClick = () => {
-        if ( serverStatus === 'alive' || serverStatus === 'spawning') {
+        if (serverStatus === 'alive' || serverStatus === 'spawning') {
             console.log('Stopping Python Server');
             stopPythonServer();
-        }else {
+        } else {
             console.log('Stopping Python Server');
             startPythonServer(null)
         }
@@ -71,7 +71,7 @@ export const ServerConnectionStatus = () => {
                 flexDirection: 'column',
                 pl: 4,
                 color: '#dadada',
-                cursor:'pointer' ,
+                cursor: 'pointer',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px',
                 ':hover': {

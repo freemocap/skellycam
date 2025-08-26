@@ -7,8 +7,8 @@ interface CameraImageProps {
     cameraImageData: CameraImageData;
 }
 
-export const CameraImage = ({ cameraImageData}: CameraImageProps) => {
-    const { cameraId, imageBitmap, imageWidth, imageHeight, cameraIndex , frameNumber} = cameraImageData;
+export const CameraImage = ({cameraImageData}: CameraImageProps) => {
+    const {cameraId, imageBitmap, imageWidth, imageHeight, cameraIndex, frameNumber} = cameraImageData;
     const {acknowledgeFrameRendered} = useWebSocketContext()
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -40,21 +40,21 @@ export const CameraImage = ({ cameraImageData}: CameraImageProps) => {
                     objectFit: 'cover',
                 }}
             />
-                <Typography
-                    variant="caption"
-                    sx={{
-                        position: "absolute",
-                        bottom: 8,
-                        left: 8,
-                        color: "white",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)",
-                        padding: "2px 4px",
-                        borderRadius: "4px",
-                        zIndex: 1,
-                    }}
-                >
-                    Camera {cameraIndex}
-                </Typography>
+            <Typography
+                variant="caption"
+                sx={{
+                    position: "absolute",
+                    bottom: 8,
+                    left: 8,
+                    color: "white",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    padding: "2px 4px",
+                    borderRadius: "4px",
+                    zIndex: 1,
+                }}
+            >
+                Camera {cameraIndex}
+            </Typography>
 
         </Box>
     );

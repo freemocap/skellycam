@@ -14,12 +14,12 @@ export const CloseCamerasButton: React.FC = () => {
 
     return (
         <Tooltip title="Close all cameras" arrow placement="bottom">
-        <IconButton
-            color="inherit"
-            onClick={handleCloseCameras}
-        >
-            <CloseIcon/>
-        </IconButton>
+            <IconButton
+                color="inherit"
+                onClick={handleCloseCameras}
+            >
+                <CloseIcon/>
+            </IconButton>
         </Tooltip>
     );
 };

@@ -10,7 +10,7 @@ from ..filters.delta_time import DeltaTimeFilter
 from ..formatters.custom_formatter import CustomFormatter
 from ..log_format_string import LOG_FORMAT_STRING
 
-MIN_LOG_LEVEL_FOR_WEBSOCKET = LogLevels.TRACE.value-1
+MIN_LOG_LEVEL_FOR_WEBSOCKET = LogLevels.TRACE.value
 
 class LogRecordModel(BaseModel):
     name: str

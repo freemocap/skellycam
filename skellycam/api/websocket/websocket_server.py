@@ -13,7 +13,7 @@ from skellycam.utilities.wait_functions import async_wait_10ms
 
 logger = logging.getLogger(__name__)
 
-BACKPRESSURE_WARNING_THRESHOLD: int = 100  # Number of frames before we warn about backpressure
+BACKPRESSURE_WARNING_THRESHOLD: int = 1000  # Number of frames before we warn about backpressure
 
 
 class WebsocketServer:
@@ -110,7 +110,7 @@ class WebsocketServer:
                 else:
                     skipped_previous = True
                     backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
-                    if backpressure > BACKPRESSURE_WARNING_THRESHOLD:
+                    if backpressure > BACKPRESSURE_WARNING_THRESHOLD and backpressure % BACKPRESSURE_WARNING_THRESHOLD == 0:
                         logger.trace(
                             f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
 

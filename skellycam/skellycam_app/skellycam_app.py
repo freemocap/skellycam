@@ -37,6 +37,11 @@ class SkellycamApplication:
         return not self.global_kill_flag.value
 
     def create_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
+        camera_group = self.camera_group_manager.find_camera_group_by_camera_ids(camera_ids=[*camera_configs.keys()])
+        if camera_group:
+            logger.info(f"Updating configs for camera group with ID: {camera_group.id} and cameras: {list(camera_configs.keys())}")
+            self.camera_group_manager.update_camera_settings(camera_configs=camera_configs)
+            return camera_group
 
         logger.info(f"Creating camera group with cameras: {list(camera_configs.keys())}")
         camera_group = self.camera_group_manager.create_and_start_camera_group(camera_configs=camera_configs)

@@ -11,9 +11,9 @@ interface CameraConfigRotationProps {
 }
 
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
-    rotation = -1, // Set default value to -1 for NO_ROTATION
-    onChange
-}) => {
+                                                                              rotation = -1, // Set default value to -1 for NO_ROTATION
+                                                                              onChange
+                                                                          }) => {
     const theme = useTheme();
     const handleChange = (
         event: React.MouseEvent<HTMLElement>,

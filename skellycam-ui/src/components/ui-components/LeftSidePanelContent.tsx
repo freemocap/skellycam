@@ -44,24 +44,8 @@ export const LeftSidePanelContent = () => {
     const location = useLocation();
 
     // Dynamic styles based on theme
-    const item = {
-        py: '2px',
-        px: 3,
-        color: theme.palette.primary.contrastText,
-        // '&:hover, &:focus': {
-        //     bgcolor: theme.palette.mode === 'dark'
-        //         ? 'rgba(255, 255, 255, 0.08)'
-        //         : 'rgba(0, 0, 0, 0.04)',
-        // },
-    };
 
-    const itemCategory = {
-        boxShadow: theme.palette.mode === 'dark'
-            ? '0 -1px 0 rgb(255,255,255,0.1) inset'
-            : '0 -1px 0 rgba(0,0,0,0.1) inset',
-        py: 1.5,
-        px: 3,
-    };
+
 
     return (
         <Box sx={{
@@ -76,15 +60,18 @@ export const LeftSidePanelContent = () => {
             <List disablePadding>
                 <ListItem
                     sx={{
-                        ...item,
-                        ...itemCategory,
+                        boxShadow: theme.palette.mode === 'dark'
+                            ? '0 -1px 0 rgb(255,255,255,0.1) inset'
+                            : '0 -1px 0 rgba(0,0,0,0.1) inset',
+                        py: 1.5,
+                        px: 3,
+                        color: theme.palette.primary.contrastText,
                         fontSize: 22,
-                        color: theme.palette.common.white,
                         display: 'flex',
                         justifyContent: 'space-between'
                     }}
                 >
-                    <Box  component="span" >SkellyCam💀📸</Box>
+                    <Box component="span">SkellyCam💀📸</Box>
 
                     <ServerSettingsPanel/>
 
@@ -115,9 +102,6 @@ export const LeftSidePanelContent = () => {
                 </ListItem>
 
             </List>
-
-
-
 
 
             {location.pathname === '/cameras' || location.pathname === '/' && (

@@ -73,15 +73,15 @@ def cameras_detect_endpoint(filter_virtual: bool = True,
                             detail=f"Error when processing `skellycam/cameras/detect` request: {type(e).__name__} - {e}")
 
 
-@camera_router.post("/group/create",
-                    summary="Create camera group with provided configuration settings",
+@camera_router.post("/group/apply",
+                    summary="Create camera group with provided configuration settings or update existing group"
                     )
-def camera_group_create_post_endpoint(
+def camera_group_apply_post_endpoint(
         request: CameraGroupCreateRequest = Body(...,
                                                  description="Request body containing desired camera configuration",
                                                  examples=[
                                                      CameraGroupCreateRequest.example()]), ) -> CreateCameraGroupResponse:
-    logger.api(f"Received `skellycam/cameras/group/create` POST request with config:  {request.camera_configs}...")
+    logger.api(f"Received `skellycam/cameras/group/apply` POST request with config:  {request.camera_configs}...")
     try:
         configs = request.camera_configs
         camera_group = get_skellycam_app().create_camera_group(camera_configs=configs)

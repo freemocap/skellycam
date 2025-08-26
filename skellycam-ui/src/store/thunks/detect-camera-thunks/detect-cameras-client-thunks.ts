@@ -17,7 +17,7 @@ export const validateVideoStream = async (deviceId: string): Promise<{ isValid: 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
-                deviceId: { exact: deviceId }
+                deviceId: {exact: deviceId}
             }
         });
 
@@ -26,9 +26,9 @@ export const validateVideoStream = async (deviceId: string): Promise<{ isValid: 
         return new Promise((resolve) => {
             video.onloadedmetadata = () => {
                 if (video.videoWidth > 0 && video.videoHeight > 0) {
-                    resolve({ isValid: true, status: 'AVAILABLE' });
+                    resolve({isValid: true, status: 'AVAILABLE'});
                 } else {
-                    resolve({ isValid: false, status: 'ERROR' });
+                    resolve({isValid: false, status: 'ERROR'});
                 }
                 stream.getTracks().forEach(track => track.stop());
                 video.remove();
@@ -37,13 +37,13 @@ export const validateVideoStream = async (deviceId: string): Promise<{ isValid: 
             video.onerror = () => {
                 stream.getTracks().forEach(track => track.stop());
                 video.remove();
-                resolve({ isValid: false, status: 'ERROR' });
+                resolve({isValid: false, status: 'ERROR'});
             };
 
             setTimeout(() => {
                 stream.getTracks().forEach(track => track.stop());
                 video.remove();
-                resolve({ isValid: false, status: 'ERROR' });
+                resolve({isValid: false, status: 'ERROR'});
             }, 3000);
         });
     } catch (error) {
@@ -54,22 +54,22 @@ export const validateVideoStream = async (deviceId: string): Promise<{ isValid: 
                 error.message.includes('in use') ||
                 error.message.includes('busy') ||
                 error.message.includes('already in use')) {
-                return { isValid: false, status: 'IN_USE' };
+                return {isValid: false, status: 'IN_USE'};
             }
         }
 
-        return { isValid: false, status: 'ERROR' };
+        return {isValid: false, status: 'ERROR'};
     }
 };
 
 export const detectCameraDevices = createAsyncThunk(
     'cameras/detectBrowserDevices',
-    async (filterVirtual: boolean = true, { dispatch, getState }) => {
+    async (filterVirtual: boolean = true, {dispatch, getState}) => {
         try {
             dispatch(setLoading(true));
             const devices = await navigator.mediaDevices.enumerateDevices();
 
-            const cameras = devices.filter(({ kind }) => kind === "videoinput");
+            const cameras = devices.filter(({kind}) => kind === "videoinput");
             if (cameras.length === 0) {
                 dispatch(setError('No camera devices found'));
                 console.warn('No camera devices found');
@@ -81,14 +81,14 @@ export const detectCameraDevices = createAsyncThunk(
             const existingCameras = state.cameras.cameras;
 
             const initialFiltered = filterVirtual ?
-                cameras.filter(({ label }) => !isVirtualCamera(label)) :
+                cameras.filter(({label}) => !isVirtualCamera(label)) :
                 cameras;
             console.log(`After removing virtual cameras, ${initialFiltered.length} camera(s) remain`, initialFiltered);
 
             Object.keys(existingCameras).forEach(cameraId => {
                 const stillExists = initialFiltered.some(device => device.deviceId.slice(-5) === cameraId);
                 if (!stillExists) {
-                    dispatch(setCameraStatus({ cameraId, status: 'UNAVAILABLE' }));
+                    dispatch(setCameraStatus({cameraId, status: 'UNAVAILABLE'}));
                 }
             });
 
@@ -96,23 +96,23 @@ export const detectCameraDevices = createAsyncThunk(
             for (const camera of initialFiltered) {
                 const cameraId = camera.deviceId.slice(-5);
                 const validationResult = await validateVideoStream(camera.deviceId);
-                    const existingCamera = existingCameras[cameraId];
-                    const newCamera: CameraDevice = {
-                        ...camera.toJSON(),
-                        index: existingCamera?.index ?? validatedCameras.length,
-                        cameraId,
+                const existingCamera = existingCameras[cameraId];
+                const newCamera: CameraDevice = {
+                    ...camera.toJSON(),
+                    index: existingCamera?.index ?? validatedCameras.length,
+                    cameraId,
                     selected: existingCamera?.selected ?? (validationResult.status === 'AVAILABLE'),
                     status: validationResult.status,
-                constraints: CAMERA_DEFAULT_CONSTRAINTS,
-                        config: existingCamera?.config ||
-                            createDefaultCameraConfig(
-                                existingCamera?.index ?? validatedCameras.length,
-                                camera.label,
-                                cameraId
-                            )
-                    };
+                    constraints: CAMERA_DEFAULT_CONSTRAINTS,
+                    config: existingCamera?.config ||
+                        createDefaultCameraConfig(
+                            existingCamera?.index ?? validatedCameras.length,
+                            camera.label,
+                            cameraId
+                        )
+                };
 
-                    validatedCameras.push(newCamera);
+                validatedCameras.push(newCamera);
                 if (!validationResult.isValid) {
                     console.warn(`Camera ${camera.label} validation status: ${validationResult.status}`);
                 }

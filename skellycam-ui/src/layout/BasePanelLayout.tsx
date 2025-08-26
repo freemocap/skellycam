@@ -23,10 +23,10 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     // }
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <Box sx={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
             <PanelGroup
                 direction="vertical"
-                style={{ flex: 1 }}
+                style={{flex: 1}}
             >
                 {/* Top section (horizontal panels) - 80% height */}
                 <Panel defaultSize={87} minSize={20}>

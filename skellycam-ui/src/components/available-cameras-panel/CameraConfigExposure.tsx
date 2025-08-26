@@ -5,7 +5,7 @@ import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras-s
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;
-    exposure: number ;
+    exposure: number;
     onExposureModeChange: (mode: ExposureMode) => void;
     onExposureValueChange: (value: number) => void;
 }
@@ -46,10 +46,12 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
     };
 
 
-
     const baseMarks = [
         {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.min, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.min)},
-        {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.default, label: `${CAMERA_DEFAULT_CONSTRAINTS.exposure.default} (default)`},
+        {
+            value: CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
+            label: `${CAMERA_DEFAULT_CONSTRAINTS.exposure.default} (default)`
+        },
         {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.max, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.max)}
     ];
     const marks = [

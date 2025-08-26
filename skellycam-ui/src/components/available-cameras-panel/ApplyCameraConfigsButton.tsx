@@ -9,12 +9,12 @@ export const ApplyCameraConfigsButton: React.FC = () => {
 
     return (
         <Tooltip title="Apply camera configurations" arrow>
-        <IconButton
-            color="inherit"
-      onClick={() => dispatch(updateCameraConfigsThunk())}
-        >
-      <SystemUpdateAltIcon />
-        </IconButton>
+            <IconButton
+                color="inherit"
+                onClick={() => dispatch(updateCameraConfigsThunk())}
+            >
+                <SystemUpdateAltIcon/>
+            </IconButton>
         </Tooltip>
     );
 };

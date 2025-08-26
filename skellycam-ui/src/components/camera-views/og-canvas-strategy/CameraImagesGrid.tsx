@@ -8,7 +8,8 @@ export const CameraImagesGrid = () => {
     const {latestImageData} = useWebSocketContext();
 
     return (
-        <Box sx={{ height: '100%',
+        <Box sx={{
+            height: '100%',
             width: '100%',
             display: 'flex',
             gap: 1,

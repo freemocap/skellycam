@@ -192,7 +192,7 @@ export const RecordingInfoPanel: React.FC = () => {
                             </Typography>
 
 
-                            <Box sx={{display: "flex", flexGrow:1, pl: 2, alignItems: "left"}}>
+                            <Box sx={{display: "flex", flexGrow: 1, pl: 2, alignItems: "left"}}>
                                 <StartStopRecordingButton
                                     isRecording={recordingInfo.isRecording}
                                     countdown={countdown}

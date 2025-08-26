@@ -27,9 +27,9 @@ declare global {
             setAppConfig: (config: any) => Promise<void>;
             getAppConfigPath: () => Promise<string>;
             onAppConfigUpdate: (callback: any) => Promise<void>
-            removeAppConfigUpdateListener: (callback: any)  => Promise<void>;
+            removeAppConfigUpdateListener: (callback: any) => Promise<void>;
 
-            startPythonServer: (exePath:string|null) => Promise<void>;
+            startPythonServer: (exePath: string | null) => Promise<void>;
             stopPythonServer: () => Promise<void>;
 
 

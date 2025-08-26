@@ -148,7 +148,7 @@ export const useWebSocket = () => {
         setWebSocket(ws);
     }, [websocket, connectAttempt]);
 
-    const disconnect = useCallback((shouldReconnect:boolean=true) => {
+    const disconnect = useCallback((shouldReconnect: boolean = true) => {
         if (websocket) {
             websocket.close();
             setWebSocket(null);

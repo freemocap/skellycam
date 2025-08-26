@@ -6,28 +6,28 @@ import {useAppDispatch, useAppSelector} from '@/store/AppStateStore';
 import {toggleThemeMode} from '@/store/slices/themeSlice';
 
 export const ThemeToggle: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const theme = useTheme();
-  const themeMode = useAppSelector(state => state.theme.mode);
-  const isDarkMode = themeMode === 'dark';
+    const dispatch = useAppDispatch();
+    const theme = useTheme();
+    const themeMode = useAppSelector(state => state.theme.mode);
+    const isDarkMode = themeMode === 'dark';
 
-  return (
-    <Tooltip title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
-      <IconButton
-        onClick={() => dispatch(toggleThemeMode())}
-        color="inherit"
-        aria-label="toggle theme"
-        edge="end"
-        sx={{
-          '&:hover': {
-            backgroundColor: theme.palette.action.hover,
-          },
-        }}
-      >
-        {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-      </IconButton>
-    </Tooltip>
-  );
+    return (
+        <Tooltip title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}>
+            <IconButton
+                onClick={() => dispatch(toggleThemeMode())}
+                color="inherit"
+                aria-label="toggle theme"
+                edge="end"
+                sx={{
+                    '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                    },
+                }}
+            >
+                {isDarkMode ? <Brightness7Icon/> : <Brightness4Icon/>}
+            </IconButton>
+        </Tooltip>
+    );
 };
 
 export default ThemeToggle;

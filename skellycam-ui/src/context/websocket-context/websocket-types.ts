@@ -13,7 +13,6 @@ export const FramerateUpdateWebsocketMessageSchema = BaseWebsocketMessageSchema.
 });
 
 
-
 // Log record message schema - matching the Python LogRecordModel
 export const LogRecordWebsocketMessageSchema = BaseWebsocketMessageSchema.extend({
     message_type: z.literal("log_record"),
@@ -43,8 +42,6 @@ export const LogRecordWebsocketMessageSchema = BaseWebsocketMessageSchema.extend
     formatted_message: z.string(),
     type: z.string()
 });
-
-
 
 
 // Add more message schemas as needed

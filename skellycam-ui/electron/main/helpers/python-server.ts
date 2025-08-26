@@ -1,4 +1,3 @@
-
 import {exec} from 'child_process';
 import fs from 'node:fs';
 import {LifecycleLogger} from "./logger";
@@ -16,6 +15,7 @@ export interface ExecutableCandidate {
     isValid?: boolean;
     error?: string;
 }
+
 export class PythonServer {
     private static currentExecutablePath: string | null = null;
     private static validatedCandidates: ExecutableCandidate[] = [];
@@ -106,11 +106,12 @@ export class PythonServer {
         this.currentExecutablePath = null;
         console.log('✓ Python server shutdown complete');
     }
+
     static getCurrentExecutablePath(): string | null {
         return this.currentExecutablePath;
     }
 
-  static async findValidExecutablePath(): Promise<string> {
+    static async findValidExecutablePath(): Promise<string> {
         console.log('Searching for valid Python server executable...');
 
         // Validate all candidates if not done yet
@@ -130,6 +131,7 @@ export class PythonServer {
         console.log(`✓ Selected executable: ${validCandidate.name} (${validCandidate.path})`);
         return validCandidate.path;
     }
+
     static async validateAllCandidates(): Promise<ExecutableCandidate[]> {
         console.log('Validating all executable candidates...');
 

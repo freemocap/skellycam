@@ -10,7 +10,7 @@ const ValueLabelComponent = (props: {
     children: React.ReactElement;
     value: number;
 }) => {
-    const { children, value } = props;
+    const {children, value} = props;
 
     return (
         <Tooltip title={
@@ -24,15 +24,15 @@ const ValueLabelComponent = (props: {
 };
 
 export const ImageScaleSlider: React.FC<ImageScaleSliderProps> = ({
-    scale = 0.5,
-    onScaleChange,
-}) => {
+                                                                      scale = 0.5,
+                                                                      onScaleChange,
+                                                                  }) => {
     const theme = useTheme();
 
     const marks = [
-        { value: 0.1, label: '0.1' },
-        { value: 0.5, label: '0.5 (default)' },
-        { value: 2.0, label: '2.0' },
+        {value: 0.1, label: '0.1'},
+        {value: 0.5, label: '0.5 (default)'},
+        {value: 2.0, label: '2.0'},
     ];
 
     return (

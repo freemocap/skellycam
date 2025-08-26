@@ -16,7 +16,7 @@ interface PythonServerProviderProps {
     children: ReactNode;
 }
 
-export const PythonServerContextProvider: React.FC<PythonServerProviderProps> = ({ children }) => {
+export const PythonServerContextProvider: React.FC<PythonServerProviderProps> = ({children}) => {
     const pythonServer = usePythonServer();
 
     return (

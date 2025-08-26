@@ -24,8 +24,8 @@ interface CameraListItemProps {
 }
 
 export const CameraListItem: React.FC<CameraListItemProps> = ({
-    camera,
-    isLast,
+                                                                  camera,
+                                                                  isLast,
                                                                   isConfigExpanded,
                                                                   onToggleSelect,
                                                                   onToggleConfig
@@ -35,19 +35,19 @@ export const CameraListItem: React.FC<CameraListItemProps> = ({
     const getStatusChipProps = (status: string) => {
         switch (status) {
             case 'CONNECTED':
-                return { color: 'success' as const, label: 'Connected' };
+                return {color: 'success' as const, label: 'Connected'};
             case 'AVAILABLE':
-                return { color: 'primary' as const, label: 'Available' };
+                return {color: 'primary' as const, label: 'Available'};
             case 'UNAVAILABLE':
-                return { color: 'warning' as const, label: 'Unavailable' };
+                return {color: 'warning' as const, label: 'Unavailable'};
             case 'IN_USE':
-                return { color: 'secondary' as const, label: 'In Use' };
+                return {color: 'secondary' as const, label: 'In Use'};
             case 'ERROR':
-                return { color: 'error' as const, label: 'Error' };
+                return {color: 'error' as const, label: 'Error'};
             default:
-                return { color: 'default' as const, label: status || 'Unknown' };
+                return {color: 'default' as const, label: status || 'Unknown'};
         }
-};
+    };
 
     const statusChipProps = getStatusChipProps(camera.status);
 
@@ -67,7 +67,7 @@ export const CameraListItem: React.FC<CameraListItemProps> = ({
                     checked={camera.selected || false}
                     onChange={onToggleSelect}
                     color={theme.palette.primary.main as any}
-                    disabled={camera.status === 'UNAVAILABLE' || camera.status === 'ERROR' }
+                    disabled={camera.status === 'UNAVAILABLE' || camera.status === 'ERROR'}
                 />
             </ListItemIcon>
             <ListItemText
@@ -93,12 +93,12 @@ export const CameraListItem: React.FC<CameraListItemProps> = ({
                             size="small"
                             label={statusChipProps.label}
                             color={statusChipProps.color}
-                            sx={{ ml: 'auto', mr: 1 }}
+                            sx={{ml: 'auto', mr: 1}}
                         />
                     </Box>
                 }
             />
-            {camera.selected && camera.status !== 'UNAVAILABLE' && camera.status !== 'ERROR'  && (
+            {camera.selected && camera.status !== 'UNAVAILABLE' && camera.status !== 'ERROR' && (
                 <IconButton
                     size="small"
                     onClick={onToggleConfig}

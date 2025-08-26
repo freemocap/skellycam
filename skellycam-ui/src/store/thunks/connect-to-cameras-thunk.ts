@@ -10,7 +10,7 @@ import {urlService} from "@/config/appUrlService";
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',
-    async (_, { dispatch, getState }) => {
+    async (_, {dispatch, getState}) => {
         const state = getState() as any;
         const cameraConfigs = selectConfigsForSelectedCameras(state);
 

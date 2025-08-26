@@ -43,7 +43,7 @@ const VideosPage: React.FC = () => {
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{p: 1}}>
-                    <Footer />
+                    <Footer/>
                 </Box>
             </Box>
         </React.Fragment>

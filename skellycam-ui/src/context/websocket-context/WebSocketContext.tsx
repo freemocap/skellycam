@@ -6,7 +6,7 @@ import {CameraImageData} from "@/context/websocket-context/useWebsocketBinaryMes
 interface WebSocketContextProps {
     isConnected: boolean;
     connect: () => void;
-    disconnect: (shouldReconnect:boolean) => void;
+    disconnect: (shouldReconnect: boolean) => void;
     latestImageData: Record<string, CameraImageData>;
     acknowledgeFrameRendered: (cameraId: string, frameNumber: number) => void;
 }
@@ -19,10 +19,11 @@ interface WebSocketProviderProps {
 const WebSocketContext = createContext<WebSocketContextProps | undefined>(undefined);
 
 export const WebSocketContextProvider: React.FC<WebSocketProviderProps> = ({children}) => {
-    const { isConnected, connect, disconnect, latestImageData,acknowledgeFrameRendered } = useWebSocket();
+    const {isConnected, connect, disconnect, latestImageData, acknowledgeFrameRendered} = useWebSocket();
 
     return (
-        <WebSocketContext.Provider value={{isConnected, connect, disconnect,latestImageData,acknowledgeFrameRendered}}>
+        <WebSocketContext.Provider
+            value={{isConnected, connect, disconnect, latestImageData, acknowledgeFrameRendered}}>
             {children}
         </WebSocketContext.Provider>
     )
