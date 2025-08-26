@@ -31,13 +31,25 @@ export class WindowManager {
         window.webContents.on('did-finish-load', () => {
             console.log('Window finished loading');
             window.webContents.send('app-ready', Date.now());
+        });// handler for external links
+        window.webContents.setWindowOpenHandler(({ url }) => {
+            // Open external URLs in default browser
+            if (url.startsWith('http:') || url.startsWith('https:')) {
+                shell.openExternal(url).then(r => console.log('External link opened:', url)).catch(err => console.error('Failed to open external link:', err));
+                return { action: 'deny' }; // Prevent Electron from opening the window
+            }
+            return { action: 'allow' }; // Allow internal URLs to open normally
         });
 
-        window.webContents.setWindowOpenHandler(({url}) => {
-            console.log('Opening window', url);
-            if (url.startsWith('https:')) shell.openExternal(url);
-            return {action: 'deny'};
+        // Intercept navigation to external links (for regular link clicks)
+        window.webContents.on('will-navigate', (event, url) => {
+            // Prevent navigation to external URLs and open them in default browser
+            if (url.startsWith('http:') || url.startsWith('https:')) {
+                event.preventDefault();
+                shell.openExternal(url).then(r => console.log('External link opened via navigation:', url)).catch(err => console.error('Failed to open external link via navigation:', err));
+            }
         });
+
     }
 
     private static loadContent(window: BrowserWindow) {
@@ -47,12 +59,7 @@ export class WindowManager {
             ? window.loadURL(process.env.VITE_DEV_SERVER_URL!)
             : window.loadFile(APP_PATHS.RENDERER_HTML);
 
-        if (APP_ENVIRONMENT.IS_DEV) {
-            // window.webContents.openDevTools();
-        }
+
     }
 
-    static getAllWindows() {
-        return BrowserWindow.getAllWindows();
-    }
 }

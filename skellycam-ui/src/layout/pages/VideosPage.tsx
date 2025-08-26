@@ -1,7 +1,7 @@
 import React from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
-import {Copyright} from "@/components/ui-components/Copyright";
+import {Footer} from "@/components/ui-components/Footer";
 import {useTheme} from "@mui/material/styles";
 import {Typography} from '@mui/material';
 
@@ -43,7 +43,7 @@ const VideosPage: React.FC = () => {
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{p: 1}}>
-                    <Copyright />
+                    <Footer />
                 </Box>
             </Box>
         </React.Fragment>

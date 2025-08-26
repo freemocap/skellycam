@@ -18,10 +18,12 @@ import {ApplyCameraConfigsButton} from "@/components/available-cameras-panel/App
 import {PauseUnpauseButton} from "../PauseUnpauseButton";
 // import { detectCameraDevices } from "@/store/thunks/detect-cameras-client-thunks";
 import {detectCameraDevices} from "@/store/thunks/detect-camera-thunks/detect-cameras-server-thunk";
+import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
 
 export const AvailableCamerasPanel = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
+    const {isConnected} = useWebSocketContext()
 
     // Get data from the unified slice
     const camerasRecord = useAppSelector(selectAllCameras);
@@ -45,8 +47,6 @@ export const AvailableCamerasPanel = () => {
     }, [camerasRecord]);
 
 
-
-
     // Handle expanding/collapsing camera config panels
     const toggleConfig = (cameraId: string) => {
         setExpandedConfigs((prev) => {
@@ -67,7 +67,7 @@ export const AvailableCamerasPanel = () => {
             return;
         }
         dispatch(detectCameraDevices());
-    }, [dispatch]);
+    }, [ isConnected]);
 
     // Handle connection to selected cameras
     const handleConnectCameras = () => {

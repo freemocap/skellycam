@@ -103,6 +103,42 @@ export const usePythonServer = () => {
         }
     }, []);
 
+    // Auto-start server on mount if it's not already running
+    useEffect(() => {
+        const autoStartServer = async () => {
+            // Check if server is already running or being spawned
+            if (serverStatus === 'alive' || serverStatus === 'spawning') {
+                return;
+            }
+
+            // Check if there's a current executable path
+            try {
+                const currentPath = await window.electronAPI.getPythonServerExecutablePath();
+                if (currentPath) {
+                    console.log("Auto-starting Python server with path:", currentPath);
+                    startPythonServer(currentPath);
+                } else {
+                    // Try to find a valid candidate
+                    const candidates = await window.electronAPI.getPythonServerExecutableCandidates();
+                    const validCandidate = candidates.find(c => c.isValid);
+                    if (validCandidate) {
+                        console.log("Auto-starting Python server with candidate:", validCandidate.path);
+                        startPythonServer(validCandidate.path);
+                    }
+                }
+            } catch (error) {
+                console.log("Error during auto-start:", error);
+            }
+        };
+
+        // Small delay to allow context to initialize
+        const timeoutId = setTimeout(() => {
+            autoStartServer();
+        }, 1000);
+
+        return () => clearTimeout(timeoutId);
+    }, []); // Run only once on mount
+
     useEffect(() => {
         if (!isConnected) {
             checkServerHealth()

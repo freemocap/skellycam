@@ -4,7 +4,7 @@ import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import {Copyright} from '@/components/ui-components/Copyright';
+import {Footer} from '@/components/ui-components/Footer';
 
 const WelcomePage: React.FC = () => {
   const theme = useTheme();
@@ -165,7 +165,7 @@ const WelcomePage: React.FC = () => {
           </Box>
 
           <Box component="footer" sx={{p: 3}}>
-                    <Copyright />
+                    <Footer />
                 </Box>
         </Paper>
       </Fade>

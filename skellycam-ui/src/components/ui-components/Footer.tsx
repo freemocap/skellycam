@@ -4,7 +4,7 @@ import Link from "@mui/material/Link";
 import * as React from "react";
 import {useTheme} from "@mui/material";
 
-export const Copyright = function() {
+export const Footer = function() {
   const theme = useTheme();
 
   return (
