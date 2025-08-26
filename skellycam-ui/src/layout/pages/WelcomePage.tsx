@@ -110,59 +110,59 @@ const WelcomePage: React.FC = () => {
                         Record and View Synchronized Videos
                     </Typography>
 
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: {xs: 'column', sm: 'row'},
-                        gap: 3,
-                        width: '100%',
-                        mt: 2,
-                        justifyContent: 'center'
-                    }}>
-                        <Button
-                            variant="contained"
-                            size="large"
-                            fullWidth
-                            startIcon={<VideocamIcon/>}
-                            onClick={() => navigate('/cameras')}
-                            sx={{
-                                py: 2.5,
-                                fontSize: '1.1rem',
-                                backgroundColor: theme.palette.primary.main,
-                                borderRadius: 2,
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                    transform: 'translateY(-3px)',
-                                    boxShadow: theme.palette.mode === 'dark'
-                                        ? '0 7px 15px rgba(0, 0, 0, 0.4)'
-                                        : '0 7px 15px rgba(0, 0, 0, 0.2)',
-                                }
-                            }}
-                        >
-                            Record New Videos
-                        </Button>
-                        <Button
-                            variant="contained"
-                            size="large"
-                            fullWidth
-                            startIcon={<VideoLibraryIcon/>}
-                            onClick={() => navigate('/videos')}
-                            sx={{
-                                py: 2.5,
-                                fontSize: '1.1rem',
-                                backgroundColor: darken(theme.palette.secondary.main, 0.2),
-                                borderRadius: 2,
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                    transform: 'translateY(-3px)',
-                                    boxShadow: theme.palette.mode === 'dark'
-                                        ? '0 7px 15px rgba(0, 0, 0, 0.4)'
-                                        : '0 7px 15px rgba(0, 0, 0, 0.2)',
-                                }
-                            }}
-                        >
-                            Load Synchronized Videos
-                        </Button>
-                    </Box>
+                    {/*<Box sx={{*/}
+                    {/*    display: 'flex',*/}
+                    {/*    flexDirection: {xs: 'column', sm: 'row'},*/}
+                    {/*    gap: 3,*/}
+                    {/*    width: '100%',*/}
+                    {/*    mt: 2,*/}
+                    {/*    justifyContent: 'center'*/}
+                    {/*}}>*/}
+                    {/*    <Button*/}
+                    {/*        variant="contained"*/}
+                    {/*        size="large"*/}
+                    {/*        fullWidth*/}
+                    {/*        startIcon={<VideocamIcon/>}*/}
+                    {/*        onClick={() => navigate('/cameras')}*/}
+                    {/*        sx={{*/}
+                    {/*            py: 2.5,*/}
+                    {/*            fontSize: '1.1rem',*/}
+                    {/*            backgroundColor: theme.palette.primary.main,*/}
+                    {/*            borderRadius: 2,*/}
+                    {/*            transition: 'all 0.3s ease',*/}
+                    {/*            '&:hover': {*/}
+                    {/*                transform: 'translateY(-3px)',*/}
+                    {/*                boxShadow: theme.palette.mode === 'dark'*/}
+                    {/*                    ? '0 7px 15px rgba(0, 0, 0, 0.4)'*/}
+                    {/*                    : '0 7px 15px rgba(0, 0, 0, 0.2)',*/}
+                    {/*            }*/}
+                    {/*        }}*/}
+                    {/*    >*/}
+                    {/*        Record New Videos*/}
+                    {/*    </Button>*/}
+                    {/*    <Button*/}
+                    {/*        variant="contained"*/}
+                    {/*        size="large"*/}
+                    {/*        fullWidth*/}
+                    {/*        startIcon={<VideoLibraryIcon/>}*/}
+                    {/*        onClick={() => navigate('/videos')}*/}
+                    {/*        sx={{*/}
+                    {/*            py: 2.5,*/}
+                    {/*            fontSize: '1.1rem',*/}
+                    {/*            backgroundColor: darken(theme.palette.secondary.main, 0.2),*/}
+                    {/*            borderRadius: 2,*/}
+                    {/*            transition: 'all 0.3s ease',*/}
+                    {/*            '&:hover': {*/}
+                    {/*                transform: 'translateY(-3px)',*/}
+                    {/*                boxShadow: theme.palette.mode === 'dark'*/}
+                    {/*                    ? '0 7px 15px rgba(0, 0, 0, 0.4)'*/}
+                    {/*                    : '0 7px 15px rgba(0, 0, 0, 0.2)',*/}
+                    {/*            }*/}
+                    {/*        }}*/}
+                    {/*    >*/}
+                    {/*        Load Synchronized Videos*/}
+                    {/*    </Button>*/}
+                    {/*</Box>*/}
 
                     <Box component="footer" sx={{p: 3}}>
                         <Footer/>

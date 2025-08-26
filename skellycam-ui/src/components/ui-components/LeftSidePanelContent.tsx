@@ -60,6 +60,7 @@ export const LeftSidePanelContent = () => {
             <List disablePadding>
                 <ListItem
                     sx={{
+
                         boxShadow: theme.palette.mode === 'dark'
                             ? '0 -1px 0 rgb(255,255,255,0.1) inset'
                             : '0 -1px 0 rgba(0,0,0,0.1) inset',
@@ -104,17 +105,6 @@ export const LeftSidePanelContent = () => {
             </List>
 
 
-            {location.pathname === '/cameras' || location.pathname === '/' && (
-                <Box sx={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    ...scrollbarStyles
-                }}>
-                    <RecordingInfoPanel/>
-                    <AvailableCamerasPanel/>
-                </Box>
-            )}
 
 
             {location.pathname === '/videos' && (
@@ -126,7 +116,17 @@ export const LeftSidePanelContent = () => {
                 }}>
                     <VideoFolderPanel/>
                 </Box>
-            )}
+            )} : {
+            <Box sx={{
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                ...scrollbarStyles
+            }}>
+                <RecordingInfoPanel/>
+                <AvailableCamerasPanel/>
+            </Box>
+        }
         </Box>
     );
 }

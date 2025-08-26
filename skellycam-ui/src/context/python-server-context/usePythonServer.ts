@@ -6,7 +6,7 @@ import {shutdownServer} from "@/store/thunks/shutdown-server";
 export type ServerStatus = 'not-connected' | 'spawning' | 'alive' | 'error';
 
 export const usePythonServer = () => {
-    const {isConnected} = useWebSocketContext()
+    const {isConnected, connect} = useWebSocketContext()
     const [serverStatus, setServerStatus] = useState<ServerStatus>('not-connected');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -106,11 +106,17 @@ export const usePythonServer = () => {
     // Auto-start server on mount if it's not already running
     useEffect(() => {
         const autoStartServer = async () => {
+
             // Check if server is already running or being spawned
-            if (serverStatus === 'alive' || serverStatus === 'spawning') {
+            if (serverStatus === 'alive' || serverStatus === 'spawning'|| isConnected) {
                 return;
             }
-
+            try{
+                connect()
+                return; // If connect() doesn't throw, we're connected
+            } catch(error){
+                console.log("Server not connected, spawning server process...")
+            }
             // Check if there's a current executable path
             try {
                 const currentPath = await window.electronAPI.getPythonServerExecutablePath();
@@ -134,7 +140,7 @@ export const usePythonServer = () => {
         // Small delay to allow context to initialize
         const timeoutId = setTimeout(() => {
             autoStartServer();
-        }, 1000);
+        }, 3000);
 
         return () => clearTimeout(timeoutId);
     }, []); // Run only once on mount

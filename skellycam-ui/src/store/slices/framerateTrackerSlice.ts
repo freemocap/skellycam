@@ -23,7 +23,7 @@ export type CurrentFramerate = z.infer<typeof CurrentFramerateSchema>;
 
 
 // Set a maximum number of framerate entries to store
-const MAX_FRAMERATE_ENTRIES = 10000;
+const MAX_FRAMERATE_ENTRIES = 1000;
 
 interface FramerateState {
     currentFrontendFramerate: z.infer<typeof CurrentFramerateSchema> | null;

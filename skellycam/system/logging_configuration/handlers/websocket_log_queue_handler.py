@@ -14,16 +14,13 @@ MIN_LOG_LEVEL_FOR_WEBSOCKET = LogLevels.TRACE.value
 
 class LogRecordModel(BaseModel):
     name: str
-    msg: str|None = None
+
     args: list
     levelname: str
     levelno: int
     pathname: str
     filename: str
     module: str
-    exc_info: str|None
-    exc_text: str|None
-    stack_info: str|None
     lineno: int
     funcName: str
     created: float
@@ -39,6 +36,10 @@ class LogRecordModel(BaseModel):
     formatted_message: str
     type: str
     message_type: str = "log_record"
+    msg: str|None = None
+    exc_info: str|tuple|None = None
+    exc_text: str|None = None
+    stack_info: str|None = None
 
 class WebSocketQueueHandler(logging.Handler):
     """Formats logs and puts them in a queue for websocket distribution"""
@@ -61,10 +62,6 @@ class WebSocketQueueHandler(logging.Handler):
             # Ensure proper string conversion while preserving whitespace
             if not isinstance(log_record_dict['msg'], str):
                 log_record_dict['msg'] = str(log_record_dict['msg'])
-            
-            # Handle exception info with proper formatting
-            if log_record_dict['exc_info']:
-                log_record_dict['exc_info'] = self.formatException(log_record_dict['exc_info'])
             
             log_record_dict['type'] = record.__class__.__name__
             

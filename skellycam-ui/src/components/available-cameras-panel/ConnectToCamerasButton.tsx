@@ -6,6 +6,7 @@ import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
 import {selectSelectedDevices} from "@/store/slices/cameras-slices/camerasSlice";
 import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
+import {useNavigate} from "react-router-dom";
 
 interface ConnectToCamerasButtonProps {
     onClick?: () => void;
@@ -15,9 +16,11 @@ export const ConnectToCamerasButton: React.FC<ConnectToCamerasButtonProps> = ({o
     const dispatch = useAppDispatch();
     const isLoading = useAppSelector(state => state.cameras.isLoading);
     const selectedCameras = useAppSelector(selectSelectedDevices);
+    const navigate = useNavigate()
 
     const handleConnectClick = async () => {
         console.log("ConnectToCamerasButton handleConnectClick", selectedCameras, isLoading);
+        navigate('/cameras')
         if (isLoading) {
             console.log('Camera connection is already in progress');
             return;
