@@ -4,7 +4,7 @@ import {CircularProgress, IconButton, Tooltip} from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import {useAppDispatch} from '@/store/AppStateStore';
 import {detectCameraDevices} from '@/store/thunks/detect-camera-thunks/detect-cameras-server-thunk';
-
+import YoutubeSearchedForIcon from '@mui/icons-material/YoutubeSearchedFor';
 // import { detectCameraDevices } from '@/store/thunks/detect-cameras-client-thunks';
 
 interface RefreshDetectedCamerasButtonProps {
@@ -21,13 +21,13 @@ export const RefreshDetectedCamerasButton: React.FC<RefreshDetectedCamerasButton
     };
 
     return (
-        <Tooltip title="Redetect available cameras">
+        <Tooltip title="Detect available camera devices">
             <IconButton
                 color="inherit"
                 onClick={handleRefresh}
                 disabled={isLoading}
             >
-                {isLoading ? <CircularProgress size={24} color="inherit"/> : <RefreshIcon/>}
+                {isLoading ? <CircularProgress size={24} color="inherit"/> : <YoutubeSearchedForIcon/>}
             </IconButton>
         </Tooltip>
     );
