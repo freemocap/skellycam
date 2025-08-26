@@ -8,11 +8,11 @@ import {PythonServerContextProvider} from "@/context/python-server-context/Pytho
 function App() {
     return (
         <Provider store={AppStateStore}>
-            <PythonServerContextProvider>
-                <WebSocketContextProvider>
+            <WebSocketContextProvider>
+                <PythonServerContextProvider>
                     <PaperbaseContent/>
-                </WebSocketContextProvider>
-            </PythonServerContextProvider>
+                </PythonServerContextProvider>
+            </WebSocketContextProvider>
         </Provider>
     );
 }

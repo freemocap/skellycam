@@ -48,11 +48,11 @@ export const LeftSidePanelContent = () => {
         py: '2px',
         px: 3,
         color: theme.palette.primary.contrastText,
-        '&:hover, &:focus': {
-            bgcolor: theme.palette.mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.08)'
-                : 'rgba(0, 0, 0, 0.04)',
-        },
+        // '&:hover, &:focus': {
+        //     bgcolor: theme.palette.mode === 'dark'
+        //         ? 'rgba(255, 255, 255, 0.08)'
+        //         : 'rgba(0, 0, 0, 0.04)',
+        // },
     };
 
     const itemCategory = {
@@ -86,6 +86,8 @@ export const LeftSidePanelContent = () => {
                 >
                     <Box component="span" sx={{ml: 1}}>SkellyCam💀📸</Box>
 
+                    <ServerSettingsPanel/>
+
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <IconButton
                             color="inherit"
@@ -111,9 +113,10 @@ export const LeftSidePanelContent = () => {
                     </Box>
 
                 </ListItem>
+
             </List>
 
-            <ServerSettingsPanel/>
+
 
 
 

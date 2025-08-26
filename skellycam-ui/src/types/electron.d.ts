@@ -22,14 +22,24 @@ declare global {
                 }>;
                 error?: string;
             }>;
-            startPythonServer: (exePath:string|null) => Promise<void>;
-            stopPythonServer: () => Promise<void>;
+
             getAppConfig: () => Promise<AppConfig>;
             setAppConfig: (config: any) => Promise<void>;
             getAppConfigPath: () => Promise<string>;
             onAppConfigUpdate: (callback: any) => Promise<void>
             removeAppConfigUpdateListener: (callback: any)  => Promise<void>;
 
+            startPythonServer: (exePath:string|null) => Promise<void>;
+            stopPythonServer: () => Promise<void>;
+
+
+            getPythonServerExecutablePath: () => Promise<string | null>;
+            getPythonServerExecutableCandidates: () => Promise<ExecutableCandidate[]>;
+
+            refreshPythonServerCandidates: () => Promise<ExecutableCandidate[]>;
+            isPythonServerRunning: () => Promise<boolean>;
+            getPythonServerProcessInfo: () => Promise<{ pid: number | undefined; killed: boolean } | null>;
+            selectExecutableFile: () => Promise<string | null>;
         }
         ipcRenderer: {
             on: (channel: string, func: (...args: any[]) => void) => void;

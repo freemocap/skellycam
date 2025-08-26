@@ -1,9 +1,12 @@
 import React, {createContext, ReactNode, useContext} from "react";
-import {usePythonServer} from "./usePythonServer";
+import {ServerStatus, usePythonServer} from "./usePythonServer";
+
 
 interface PythonServerContextProps {
+    serverStatus: ServerStatus;
+    errorMessage: string | null;
     isPythonRunning: boolean;
-    startPythonServer: (exePath:string|null) => void;
+    startPythonServer: (exePath: string | null) => void;
     stopPythonServer: () => void;
 }
 
