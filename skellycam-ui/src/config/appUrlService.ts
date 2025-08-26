@@ -33,6 +33,7 @@ const getWebSocketUrl = () => {
 const getHttpEndpointUrls = () => {
   return {
     health: getApiUrl('/health'),
+    shutdown: getApiUrl('/shutdown'),
     detectCameras: getApiUrl('/skellycam/camera/detect'),
     createGroup: getApiUrl('/skellycam/camera/group/create'),
     closeAll: getApiUrl('/skellycam/camera/group/close/all'),

@@ -3,21 +3,20 @@ import Box from '@mui/material/Box';
 import {SimpleTreeView} from '@mui/x-tree-view/SimpleTreeView';
 import {TreeItem} from '@mui/x-tree-view/TreeItem';
 import {
-    Button,
-    Checkbox,
-    FormControlLabel,
-    Slider,
-    TextField,
-    Typography,
-    Select,
-    MenuItem,
-    FormControl,
-    InputLabel,
-    InputAdornment,
-    IconButton,
-    Stack,
     Alert,
-    Chip
+    Checkbox,
+    Chip,
+    FormControl,
+    FormControlLabel,
+    IconButton,
+    InputAdornment,
+    InputLabel,
+    MenuItem,
+    Select,
+    Slider,
+    Stack,
+    TextField,
+    Typography
 } from '@mui/material';
 import WebsocketConnectionStatus from './WebsocketConnectionStatus';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -168,7 +167,7 @@ export const ServerSettingsPanel = () => {
                                     borderRadius: 1
                                 }}
                             >
-                                Server: {serverStatus}
+                                server: {serverStatus}
                             </Box>
                             <Box
                                 sx={{
@@ -188,119 +187,117 @@ export const ServerSettingsPanel = () => {
                     <Box sx={{pl: 2, pt: 1, borderTop: '2px solid', borderColor: 'darkcyan'}}>
                         <ServerConnectionStatus/>
                         <WebsocketConnectionStatus/>
-                        <TreeItem itemId="server-settings" label="Server Settings">
-                            <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
-                                <Button
-                                    variant="contained"
-                                    onClick={handleSpawnServer}
-                                    disabled={serverStatus === 'alive' || serverStatus === 'spawning'}
-                                    sx={{
-                                        alignSelf: 'flex-start',
-                                        textTransform: 'none'
-                                    }}
-                                >
-                                    Spawn server process
-                                </Button>
 
-                                {/* Current executable path display */}
-                                {currentExecutablePath && (
-                                    <Alert severity="info" sx={{mb: 1}}>
+                        <TreeItem itemId="server-settings" label="Server Settings">
+                            <TreeItem itemId="python-server-executable" label="Python server executable">
+                                <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
+
+
+                                    {/* Current executable path display */}
+                                    {currentExecutablePath && (
                                         <Typography variant="body2">
-                                            <strong>Current executable:</strong><br />
+                                            <strong>Current executable:</strong><br/>
                                             {currentExecutablePath}
                                         </Typography>
-                                    </Alert>
-                                )}
-
-                                {/* Executable path selector */}
-                                <Stack spacing={2}>
-                                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                        <FormControl fullWidth size="small">
-                                            <InputLabel id="executable-select-label">
-                                                Server executable
-                                            </InputLabel>
-                                            <Select
-                                                labelId="executable-select-label"
-                                                value={selectedExecutablePath}
-                                                onChange={(e) => setSelectedExecutablePath(e.target.value)}
-                                                label="Server executable"
-                                                disabled={isLoading}
-                                            >
-                                                {getExecutableOptions().map((option) => (
-                                                    <MenuItem
-                                                        key={option.value}
-                                                        value={option.value}
-                                                        disabled={option.isValid === false}
-                                                    >
-                                                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, width: '100%'}}>
-                                                            <Typography variant="body2" sx={{flexGrow: 1}}>
-                                                                {option.label}
-                                                            </Typography>
-                                                            {option.isValid === true && (
-                                                                <Chip label="Valid" color="success" size="small" />
-                                                            )}
-                                                            {option.isValid === false && (
-                                                                <Chip label="Invalid" color="error" size="small" />
-                                                            )}
-                                                        </Box>
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                        <IconButton
-                                            onClick={handleRefreshCandidates}
-                                            disabled={isLoading}
-                                            title="Refresh executable candidates"
-                                        >
-                                            <RefreshIcon />
-                                        </IconButton>
-                                    </Box>
-
-                                    {/* Custom path input */}
-                                    <TextField
-                                        label="Custom executable path"
-                                        value={customExecutablePath}
-                                        onChange={(e) => {
-                                            setCustomExecutablePath(e.target.value);
-                                            setSelectedExecutablePath(e.target.value);
-                                        }}
-                                        size="small"
-                                        placeholder="Enter path or browse..."
-                                        InputProps={{
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <IconButton
-                                                        onClick={handleSelectCustomExecutable}
-                                                        size="small"
-                                                        title="Browse for executable"
-                                                    >
-                                                        <FolderOpenIcon />
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-
-                                    {/* Show validation errors for selected path */}
-                                    {selectedExecutablePath && (
-                                        (() => {
-                                            const selectedCandidate = executableCandidates.find(c => c.path === selectedExecutablePath);
-                                            if (selectedCandidate?.isValid === false) {
-                                                return (
-                                                    <Alert severity="error">
-                                                        <Typography variant="body2">
-                                                            <strong>Validation Error:</strong><br />
-                                                            {selectedCandidate.error}
-                                                        </Typography>
-                                                    </Alert>
-                                                );
-                                            }
-                                            return null;
-                                        })()
                                     )}
-                                </Stack>
 
-                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+                                    {/*Executable path selector */}
+                                    <Stack spacing={2}>
+                                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel id="executable-select-label">
+                                                    Server executable
+                                                </InputLabel>
+                                                <Select
+                                                    labelId="executable-select-label"
+                                                    value={selectedExecutablePath}
+                                                    onChange={(e) => setSelectedExecutablePath(e.target.value)}
+                                                    label="Server executable"
+                                                    disabled={isLoading}
+                                                >
+                                                    {getExecutableOptions().map((option) => (
+                                                        <MenuItem
+                                                            key={option.value}
+                                                            value={option.value}
+                                                            disabled={option.isValid === false}
+                                                        >
+                                                            <Box sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 1,
+                                                                width: '100%'
+                                                            }}>
+                                                                <Typography variant="body2" sx={{flexGrow: 1}}>
+                                                                    {option.label}
+                                                                </Typography>
+                                                                {option.isValid === true && (
+                                                                    <Chip label="Valid" color="success" size="small"/>
+                                                                )}
+                                                                {option.isValid === false && (
+                                                                    <Chip label="Invalid" color="error" size="small"/>
+                                                                )}
+                                                            </Box>
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                            <IconButton
+                                                onClick={handleRefreshCandidates}
+                                                disabled={isLoading}
+                                                title="Refresh executable candidates"
+                                            >
+                                                <RefreshIcon/>
+                                            </IconButton>
+                                        </Box>
+
+                                        {/* Custom path input */}
+                                        <TextField
+                                            label="Custom executable path"
+                                            value={customExecutablePath}
+                                            onChange={(e) => {
+                                                setCustomExecutablePath(e.target.value);
+                                                setSelectedExecutablePath(e.target.value);
+                                            }}
+                                            size="small"
+                                            placeholder="Enter path or browse..."
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton
+                                                            onClick={handleSelectCustomExecutable}
+                                                            size="small"
+                                                            title="Browse for executable"
+                                                        >
+                                                            <FolderOpenIcon/>
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+
+                                        {/* Show validation errors for selected path */}
+                                        {selectedExecutablePath && (
+                                            (() => {
+                                                const selectedCandidate = executableCandidates.find(c => c.path === selectedExecutablePath);
+                                                if (selectedCandidate?.isValid === false) {
+                                                    return (
+                                                        <Alert severity="error">
+                                                            <Typography variant="body2">
+                                                                <strong>Validation Error:</strong><br/>
+                                                                {selectedCandidate.error}
+                                                            </Typography>
+                                                        </Alert>
+                                                    );
+                                                }
+                                                return null;
+                                            })()
+                                        )}
+                                    </Stack>
+
+                                </Box>
+                            </TreeItem>
+                            <TreeItem itemId="server-api-urls" label="Server API URL">
+                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mt:2}}>
                                     <TextField
                                         label="Host"
                                         value={host}
@@ -320,10 +317,10 @@ export const ServerSettingsPanel = () => {
                                     />
                                 </Box>
 
-                                <Typography variant="body2" color="textSecondary">
+                                <Typography variant="body2" color="textSecondary" sx={{mt:2}}>
                                     WebSocket URL: ws://{host}:{httpPort}/websocket/connect
                                 </Typography>
-                            </Box>
+                            </TreeItem>
                         </TreeItem>
 
                         <TreeItem itemId="display-settings" label="Display Settings">
@@ -390,5 +387,6 @@ export const ServerSettingsPanel = () => {
                 </TreeItem>
             </SimpleTreeView>
         </Box>
-    );
+    )
+        ;
 };

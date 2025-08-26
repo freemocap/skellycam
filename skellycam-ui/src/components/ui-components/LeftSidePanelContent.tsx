@@ -84,7 +84,7 @@ export const LeftSidePanelContent = () => {
                         justifyContent: 'space-between'
                     }}
                 >
-                    <Box component="span" sx={{ml: 1}}>SkellyCam💀📸</Box>
+                    <Box  component="span" >SkellyCam💀📸</Box>
 
                     <ServerSettingsPanel/>
 

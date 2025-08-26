@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // New python server management
     getPythonServerExecutablePath: () => ipcRenderer.invoke('python-server:get-executable-path'),
-    getPythonServerCandidates: () => ipcRenderer.invoke('python-server:get-executable-candidates'),
+    getPythonServerExecutableCandidates: () => ipcRenderer.invoke('python-server:get-executable-candidates'),
     refreshPythonServerCandidates: () => ipcRenderer.invoke('python-server:refresh-candidates'),
     isPythonServerRunning: () => ipcRenderer.invoke('python-server:is-running'),
     getPythonServerProcessInfo: () => ipcRenderer.invoke('python-server:get-process-info'),

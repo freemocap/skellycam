@@ -1,6 +1,7 @@
-import { urlService } from "@/config/appUrlService";
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
+import {serverHealthcheck} from "@/store/thunks/server-healthcheck";
+import {shutdownServer} from "@/store/thunks/shutdown-server";
 
 export type ServerStatus = 'not-connected' | 'spawning' | 'alive' | 'error';
 
@@ -8,63 +9,90 @@ export const usePythonServer = () => {
     const {isConnected} = useWebSocketContext()
     const [serverStatus, setServerStatus] = useState<ServerStatus>('not-connected');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const healthCheckInterval = useRef<NodeJS.Timeout | null>(null);
+
 
     const checkServerHealth = useCallback(async () => {
-        if (isConnected){
-            return true
-        }
-        try {
-            const response = await fetch(urlService.getHttpEndpointUrls().health, {
-                method: 'GET',
-                signal: AbortSignal.timeout(2000) // 2 second timeout
-            });
-            
-            if (response.ok) {
-                setServerStatus('alive');
-                setErrorMessage(null);
-                return true;
-            } else {
-                setServerStatus('error');
-                setErrorMessage(`Health check failed: ${response.status}`);
-                return false;
+
+        const maxRetries = 10;
+        const retryDelay = 3000; // ms
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                if (isConnected) {
+                    // If websocket is connected, we can assume server is alive
+
+                    setServerStatus('alive');
+                    setErrorMessage(null);
+                    return true;
+                }
+                const response = await serverHealthcheck();
+
+                if (response?.ok) {
+                    setServerStatus('alive');
+                    setErrorMessage(null);
+                    return true;
+                }
+
+                // If not the last attempt, wait before retrying
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                }
+            } catch (error) {
+                // If not the last attempt, wait before retrying
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                } else {
+                    // Last attempt failed
+                    setServerStatus('not-connected');
+                    setErrorMessage(null);
+                    return false;
+                }
             }
-        } catch (error) {
-            setServerStatus('not-connected');
-            setErrorMessage(null);
-            return false;
         }
+
+        // All attempts failed
+        setServerStatus('error');
+        setErrorMessage(`Health check failed after ${maxRetries} attempts`);
+        return false;
     }, [isConnected]);
 
     const startPythonServer = useCallback(async (exePath: string | null) => {
         try {
-            setServerStatus('spawning');
             setErrorMessage(null);
             console.log("Starting Python server...");
+            try {
+                await shutdownServer()
+
+            } catch (error) {
+                console.log("Error sending shutdown signal", error)
+            }
+            setServerStatus('spawning');
+
             await window.electronAPI.startPythonServer(exePath);
-            
-            // Start health checks
-            healthCheckInterval.current = setInterval(checkServerHealth, 2000);
-            
-            // Do initial check after a short delay
-            setTimeout(() => checkServerHealth(), 500);
+
+            // Start health checks only if websocket is not connected
+            if (!isConnected) {
+                setTimeout(() => checkServerHealth(), 1000);
+            } else {
+                setServerStatus('alive');
+            }
         } catch (error) {
             setServerStatus('error');
             setErrorMessage(`Failed to start server: ${error}`);
             console.error('Failed to start Python server:', error);
         }
-    }, [checkServerHealth]);
+    }, [checkServerHealth, isConnected]);
 
     const stopPythonServer = useCallback(async () => {
         try {
             console.log("Stopping Python server...");
-            
-            // Stop health checks
-            if (healthCheckInterval.current) {
-                clearInterval(healthCheckInterval.current);
-                healthCheckInterval.current = null;
+            try {
+                await shutdownServer()
+
+            } catch (error) {
+                console.log("Error sending shutdown signal", error)
             }
-            
+
             await window.electronAPI.stopPythonServer();
             setServerStatus('not-connected');
             setErrorMessage(null);
@@ -75,16 +103,17 @@ export const usePythonServer = () => {
         }
     }, []);
 
-    // Start health checks if server might be running
     useEffect(() => {
-        checkServerHealth();
-        
-        return () => {
-            if (healthCheckInterval.current) {
-                clearInterval(healthCheckInterval.current);
-            }
-        };
-    }, []);
+        if (!isConnected) {
+            checkServerHealth()
+            return () => {
+            };
+        } else {
+            // If websocket is connected, server is alive
+            setServerStatus('alive');
+            setErrorMessage(null);
+        }
+    }, [isConnected, checkServerHealth]);
 
     return {
         serverStatus,

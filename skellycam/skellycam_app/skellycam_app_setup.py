@@ -7,6 +7,7 @@ from starlette.responses import FileResponse
 
 import skellycam
 from skellycam.api.http.app.health import health_router
+from skellycam.api.http.app.shutdown import shutdown_router
 from skellycam.api.routers import SKELLYCAM_ROUTERS
 from skellycam.system.default_paths import SKELLYCAM_FAVICON_ICO_PATH
 
@@ -22,10 +23,10 @@ def register_routes(app: FastAPI):
     async def favicon():
         return FileResponse(SKELLYCAM_FAVICON_ICO_PATH)
 
-
-    for route in health_router.routes:
-        logger.api(f"\tRegistering route: `{route.path}`")
-    app.include_router(health_router) #add health route w/o package name prefix
+    for app_router in [health_router,shutdown_router]:
+        for route in app_router.routes:
+            logger.api(f"\tRegistering route: `{route.path}`")
+            app.include_router(app_router) #add health/shutdown routes w/o package name prefix
 
     for router in SKELLYCAM_ROUTERS:
         for route in router.routes:

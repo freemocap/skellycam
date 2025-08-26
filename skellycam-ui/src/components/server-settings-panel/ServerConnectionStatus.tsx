@@ -49,14 +49,16 @@ export const getServerStatusColor = (serverStatus:ServerStatus) => {
 };
 
 export const ServerConnectionStatus = () => {
-    const {serverStatus, errorMessage, stopPythonServer} = usePythonServerContext();
+    const {serverStatus, errorMessage, stopPythonServer, startPythonServer} = usePythonServerContext();
 
-    const canStopServer = serverStatus === 'alive' || serverStatus === 'spawning';
 
     const handleClick = () => {
-        if (canStopServer) {
+        if ( serverStatus === 'alive' || serverStatus === 'spawning') {
             console.log('Stopping Python Server');
             stopPythonServer();
+        }else {
+            console.log('Stopping Python Server');
+            startPythonServer(null)
         }
     };
 
@@ -69,13 +71,13 @@ export const ServerConnectionStatus = () => {
                 flexDirection: 'column',
                 pl: 4,
                 color: '#dadada',
-                cursor: canStopServer ? 'pointer' : 'default',
+                cursor:'pointer' ,
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px',
-                ':hover': canStopServer ? {
+                ':hover': {
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
                     borderColor: 'rgba(255, 255, 255, 0.2)',
-                } : {},
+                },
             }}
             onClick={handleClick}
         >
