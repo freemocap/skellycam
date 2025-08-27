@@ -75,9 +75,9 @@ jobs:
           uv pip install pyinstaller
           uv run pyinstaller ./skellycam.spec --clean
 
-#      - name: Move skellycam_server.exe into `/skellycam-ui/`
-#        run: |
-#          Move-Item -Path ".\dist\skellycam_server.exe" -Destination ".\skellycam-ui\skellycam_server.exe"
+      - name: Move skellycam_server.exe into `/skellycam-ui/`
+        run: |
+          Move-Item -Path ".\dist\skellycam_server.exe" -Destination ".\skellycam-ui\skellycam_server.exe"
 
       # Sign the PyInstaller-built executable
       - name: Sign skellycam_server.exe with Trusted Signing
