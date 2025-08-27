@@ -126,7 +126,7 @@ class WebsocketServer:
                             "frontend_framerate": self._frontend_framerate_trackers[camera_group_id].current_framerate.model_dump()
                         }
                         await self.websocket.send_json(framerate_message)
-                        self._frontend_framerate_trackers[camera_group_id].clear()
+
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
         except asyncio.CancelledError:
