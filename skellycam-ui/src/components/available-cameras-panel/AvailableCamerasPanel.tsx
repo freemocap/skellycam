@@ -124,21 +124,23 @@ export const AvailableCamerasPanel = () => {
                         </Typography>
                     </Stack>
                 </AccordionSummary>
-                <Box sx={{pr: 2}}>
-                    <PauseUnpauseButton/>
-                </Box>
+
                 <Box sx={{pr: 2}}>
                     <ConnectToCamerasButton onClick={handleConnectCameras}/>
+                </Box>
+                <Box sx={{pr: 2}}>
+                    <PauseUnpauseButton/>
                 </Box>
                 {/*<Box sx={{pr: 2}}>*/}
                 {/*    <        ApplyCameraConfigsButton/>*/}
                 {/*</Box>*/}
                 <Box sx={{pr: 2}}>
-                    <RefreshDetectedCamerasButton isLoading={isLoading}/>
-                </Box>
-                <Box sx={{pr: 2}}>
                     <CloseCamerasButton/>
                 </Box>
+                <Box sx={{pr: 2}}>
+                    <RefreshDetectedCamerasButton isLoading={isLoading}/>
+                </Box>
+
             </Box>
 
             <AccordionDetails sx={{bgcolor: "background.default"}}>

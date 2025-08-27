@@ -23,8 +23,8 @@ const pulseAnimation = keyframes`
 `;
 
 const PulsingButton = styled(Button)<{ pulsing?: boolean }>(({pulsing}) => ({
-    backgroundColor: '#1976d2', // MUI primary blue
-    borderRadius: '8px',
+    // backgroundColor: '#1976d2', // MUI primary blue
+    borderRadius: '80px',
     padding: '16px',
     '&:hover': {
         backgroundColor: '#1565c0', // Darker blue on hover

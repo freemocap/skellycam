@@ -10,14 +10,8 @@ import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext"
 import {ServerConnectionStatus} from "@/components/server-settings-panel/ServerConnectionStatus";
 import {usePythonServerContext} from "@/context/python-server-context/PythonServerContext";
 import {ExecutablePathSelector} from './ExecutablePathSelector';
+import Link from "@mui/material/Link";
 
-interface ExecutableCandidate {
-    name: string;
-    path: string;
-    description: string;
-    isValid?: boolean;
-    error?: string;
-}
 
 export const ServerSettingsPanel = () => {
     const {isConnected} = useWebSocketContext();
@@ -112,41 +106,42 @@ export const ServerSettingsPanel = () => {
                         <ServerConnectionStatus/>
                         <WebsocketConnectionStatus/>
 
-                        <TreeItem itemId="server-settings" label="Server Settings">
-                            <TreeItem itemId="python-server-executable" label="Python server executable">
-                                <Box sx={{pl: 2, pt: 2}}>
-                                    <ExecutablePathSelector
-                                        onPathSelect={handlePathSelect}
-                                        currentPath={currentExecutablePath}
-                                    />
-                                </Box>
-                            </TreeItem>
-                            <TreeItem itemId="server-api-urls" label="Server API URL">
-                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mt: 2}}>
-                                    <TextField
-                                        label="Host"
-                                        value={host}
-                                        onChange={(e) => setHost(e.target.value)}
-                                        size="small"
-                                        sx={{flex: 1}}
-                                        disabled={true}
-                                    />
-                                    <TextField
-                                        label="HTTP Port"
-                                        type="number"
-                                        value={httpPort}
-                                        onChange={(e) => setHttpPort(Number(e.target.value))}
-                                        size="small"
-                                        sx={{width: 100}}
-                                        disabled={true}
-                                    />
-                                </Box>
 
-                                <Typography variant="body2" color="textSecondary" sx={{mt: 2}}>
-                                    WebSocket URL: ws://{host}:{httpPort}/websocket/connect
-                                </Typography>
-                            </TreeItem>
-                        </TreeItem>
+                        <Box sx={{pl: 2, pt: 2}}>
+                            <ExecutablePathSelector
+                                onPathSelect={handlePathSelect}
+                                currentPath={currentExecutablePath}
+                            />
+                        </Box>
+                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mt: 2}}>
+                            <TextField
+                                label="Host"
+                                value={host}
+                                onChange={(e) => setHost(e.target.value)}
+                                size="small"
+                                sx={{flex: 1}}
+                                disabled={true}
+                            />
+                            <TextField
+                                label="HTTP Port"
+                                type="number"
+                                value={httpPort}
+                                onChange={(e) => setHttpPort(Number(e.target.value))}
+                                size="small"
+                                sx={{width: 100}}
+                                disabled={true}
+                            />
+                        </Box>
+
+                        <Typography variant="body2" color="textSecondary" sx={{mt: 2}}>
+                            HTTP API URL: <Link color="inherit" href={`http://${host}:${httpPort}/`}>
+                            http://{host}:{httpPort}/
+                        </Link>
+                        </Typography>
+
+                        <Typography variant="body2" color="textSecondary" sx={{mt: 2}}>
+                            WebSocket URL: ws://{host}:{httpPort}/websocket/connect
+                        </Typography>
 
                         <TreeItem itemId="display-settings" label="Display Settings">
                             <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>

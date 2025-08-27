@@ -90,12 +90,12 @@ export const LeftSidePanelContent = () => {
                         >
                             <VideocamIcon/>
                         </IconButton>
-                        <IconButton
-                            color="inherit"
-                            onClick={() => navigate('/videos')}
-                        >
-                            <VideoLibraryIcon/>
-                        </IconButton>
+                        {/*<IconButton*/}
+                        {/*    color="inherit"*/}
+                        {/*    onClick={() => navigate('/videos')}*/}
+                        {/*>*/}
+                        {/*    <VideoLibraryIcon/>*/}
+                        {/*</IconButton>*/}
 
                         <ThemeToggle/>
                     </Box>
@@ -116,7 +116,8 @@ export const LeftSidePanelContent = () => {
                 }}>
                     <VideoFolderPanel/>
                 </Box>
-            )} : {
+            )}
+
             <Box sx={{
                 flex: 1,
                 overflowY: 'auto',
@@ -126,7 +127,7 @@ export const LeftSidePanelContent = () => {
                 <RecordingInfoPanel/>
                 <AvailableCamerasPanel/>
             </Box>
-        }
+
         </Box>
     );
 }

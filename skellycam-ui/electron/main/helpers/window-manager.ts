@@ -31,15 +31,8 @@ export class WindowManager {
         window.webContents.on('did-finish-load', () => {
             console.log('Window finished loading');
             window.webContents.send('app-ready', Date.now());
-        });// handler for external links
-        window.webContents.setWindowOpenHandler(({url}) => {
-            // Open external URLs in default browser
-            if (url.startsWith('http:') || url.startsWith('https:')) {
-                shell.openExternal(url).then(r => console.log('External link opened:', url)).catch(err => console.error('Failed to open external link:', err));
-                return {action: 'deny'}; // Prevent Electron from opening the window
-            }
-            return {action: 'allow'}; // Allow internal URLs to open normally
         });
+
 
         // Intercept navigation to external links (for regular link clicks)
         window.webContents.on('will-navigate', (event, url) => {
