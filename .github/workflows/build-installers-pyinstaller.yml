@@ -100,7 +100,7 @@ jobs:
         with:
           name: skellycam-server-pyinstaller-${{ runner.os }}-${{ github.run_id }}
           path: |
-            dist/skellycam_server.exe
+            skellycam-ui/skellycam_server.exe
           include-hidden-files: true
 
       - name: Install UI dependencies
