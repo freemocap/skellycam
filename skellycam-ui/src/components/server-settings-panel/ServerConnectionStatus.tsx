@@ -18,12 +18,15 @@ export const getStatusIcon = (serverStatus: ServerStatus) => {
     }
 };
 
-export const getStatusColor = (serverStatus: ServerStatus) => {
+export const getStatusBorderColor = (serverStatus: ServerStatus) => {
     switch (serverStatus) {
         case 'alive':
             return 'rgba(0, 255, 255, 0.1)';
         case 'spawning':
             return 'rgba(255, 165, 0, 0.1)';
+
+        case 'shutting-down':
+            return 'rgba(105, 0, 255,0.1)';
         case 'error':
             return 'rgba(255, 0, 0, 0.1)';
         case 'not-connected':
@@ -33,12 +36,15 @@ export const getStatusColor = (serverStatus: ServerStatus) => {
     }
 };
 
-export const getServerStatusColor = (serverStatus: ServerStatus) => {
+export const getServerStatusBackgroundColor = (serverStatus: ServerStatus) => {
     switch (serverStatus) {
         case 'alive':
             return 'rgba(0, 255, 255, 0.5)';
         case 'spawning':
             return 'rgba(255, 165, 0, 0.5)';
+
+        case 'shutting-down':
+            return 'rgba(105, 0, 255,0.5)';
         case 'error':
             return 'rgba(255, 0, 0, 0.5)';
         case 'not-connected':
@@ -92,8 +98,8 @@ export const ServerConnectionStatus = () => {
             >
                 <Box sx={{
                     border: '1px solid rgba(255, 255, 255, 0.3)',
-                    backgroundColor: getStatusColor(serverStatus),
-                    borderColor: getServerStatusColor(serverStatus),
+                    backgroundColor: getStatusBorderColor(serverStatus),
+                    borderColor: getServerStatusBackgroundColor(serverStatus),
                     width: '24px',
                     height: '24px',
                     marginRight: '8px',

@@ -83,6 +83,7 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=None,
     noarchive=False,
+
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
@@ -98,7 +99,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=False,  # Try disabling UPX first to see if it resolves the issue
+    upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,

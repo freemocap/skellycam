@@ -3,7 +3,7 @@ import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext"
 import {serverHealthcheck} from "@/store/thunks/server-healthcheck";
 import {shutdownServer} from "@/store/thunks/shutdown-server";
 
-export type ServerStatus = 'not-connected' | 'spawning' | 'alive' | 'error';
+export type ServerStatus = 'not-connected' | 'spawning' | 'shutting-down' | 'alive' | 'error';
 
 export const usePythonServer = () => {
     const {isConnected, connect} = useWebSocketContext()
@@ -58,6 +58,7 @@ export const usePythonServer = () => {
 
     const startPythonServer = useCallback(async (exePath: string | null) => {
         try {
+            setServerStatus('spawning');
             setErrorMessage(null);
             console.log("Starting Python server...");
             try {
@@ -66,7 +67,7 @@ export const usePythonServer = () => {
             } catch (error) {
                 console.log("Error sending shutdown signal", error)
             }
-            setServerStatus('spawning');
+
 
             await window.electronAPI.startPythonServer(exePath);
 
@@ -85,6 +86,7 @@ export const usePythonServer = () => {
 
     const stopPythonServer = useCallback(async () => {
         try {
+            setServerStatus('shutting-down')
             console.log("Stopping Python server...");
             try {
                 await shutdownServer()
