@@ -59,7 +59,7 @@ export const ExecutablePathSelector: React.FC<ExecutablePathSelectorProps> = ({
     const [showCustomInput, setShowCustomInput] = React.useState(false);
 
     React.useEffect(() => {
-        loadExecutableInfo();
+        loadExecutableInfo().then(r => {});
     }, []);
 
     const loadExecutableInfo = async () => {
@@ -146,7 +146,7 @@ export const ExecutablePathSelector: React.FC<ExecutablePathSelectorProps> = ({
     return (
         <Stack spacing={2}>
             {/* Current Path Display */}
-            {currentPath && (
+            {/*{currentPath || true && (*/}
                 <Paper
                     elevation={0}
                     sx={{
@@ -169,11 +169,12 @@ export const ExecutablePathSelector: React.FC<ExecutablePathSelectorProps> = ({
                                 wordBreak: "break-all",
                             }}
                         >
-                            {truncatePath(currentPath, 60)}
+                            {currentPath}
+                            {/*{truncatePath(currentPath, 60)}*/}
                         </Typography>
                     </Tooltip>
                 </Paper>
-            )}
+            {/*)}*/}
 
             {/* Path Selector */}
             <Box sx={{display: "flex", alignItems: "center", gap: 1}}>

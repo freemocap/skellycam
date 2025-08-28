@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // File selection
     selectExecutableFile: () => ipcRenderer.invoke('select-executable-file'),
+
+        // Asset access
+    getLogoPngPath: () => ipcRenderer.invoke('get-logo-png-path'),
 });
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {

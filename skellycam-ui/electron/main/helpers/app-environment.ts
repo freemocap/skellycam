@@ -2,5 +2,4 @@
 export const APP_ENVIRONMENT = {
     IS_DEV: process.env.NODE_ENV === 'development',
     SHOULD_LAUNCH_PYTHON: true,
-
 };

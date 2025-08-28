@@ -27,9 +27,9 @@ export const PYTHON_EXECUTABLE_CANDIDATES = [
         description: 'Development build executable'
     },
     {
-        name: 'windows-installer-exe',
+        name: 'installed',
         path: path.join(getResourcesPath(), 'skellycam_server.exe'),
-        description: 'User level Windows installation executable'
+        description: 'Executable in the installation folder'
     },
 
     {
@@ -51,5 +51,13 @@ export const APP_PATHS = {
         __dirname,
         "../../../shared/skellycam-logo/skellycam-favicon.ico"
     ),
-    SKELLYCAM_PNG_PATH: path.join(getResourcesPath(), 'dist/skellycam-logo.png'),
+        SKELLYCAM_LOGO_PNG_RESOURCES_PATH: path.join(getResourcesPath(), 'dist/skellycam-logo.png'),
+    SKELLYCAM_LOGO_PNG_SHARED_PATH:path.resolve(
+        __dirname,
+        "../../../shared/skellycam-logo/skellycam-logo.png"
+    ),
+
 };
+
+
+console.log(`APP_PATHS: ${JSON.stringify(APP_PATHS, null, 2)}`);

@@ -31,7 +31,9 @@ export const ServerSettingsPanel = () => {
 
     // Load current executable path on component mount
     React.useEffect(() => {
-        loadCurrentPath();
+        loadCurrentPath().then(r => {
+            console.log('Loaded current executable path:', r);
+        });
     }, []);
 
     const loadCurrentPath = async () => {
@@ -45,6 +47,7 @@ export const ServerSettingsPanel = () => {
 
     const handlePathSelect = (path: string) => {
         // Start server with selected path
+        console.log('Starting Python server with path:', path);
         startPythonServer(path);
         setCurrentExecutablePath(path);
     };
@@ -134,7 +137,7 @@ export const ServerSettingsPanel = () => {
                         </Box>
 
                         <Typography variant="body2" color="textSecondary" sx={{mt: 2}}>
-                            HTTP API URL: <Link color="inherit" href={`http://${host}:${httpPort}/`}>
+                            API DOCS URL: <Link color="inherit" href={`http://${host}:${httpPort}/`}>
                             http://{host}:{httpPort}/
                         </Link>
                         </Typography>

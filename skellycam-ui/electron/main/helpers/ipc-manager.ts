@@ -3,14 +3,29 @@ import {WindowManager} from "./window-manager";
 import {PythonServer} from "./python-server";
 import path from "node:path";
 import fs from "node:fs";
+import { APP_PATHS } from "./app-paths";
 
 export class IpcManager {
     static initialize() {
         this.handleWindowControls();
         this.handlePythonControls();
         this.handleFileSystemControls();
+        this.handleAssetControls()
     }
 
+    private static handleAssetControls() {
+        ipcMain.handle("get-logo-png-path", async (_) => {
+            let logoPath:string
+            if (fs.existsSync(APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH)){
+                logoPath = APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH
+            } else {
+                logoPath = APP_PATHS.SKELLYCAM_LOGO_PNG_RESOURCES_PATH
+            }
+            console.log(`Fetching logo from path: ${logoPath}`)
+            return logoPath;
+        });
+
+    }
     private static handleWindowControls() {
         ipcMain.handle("open-child-window", (_, route) => {
             console.log("Opening child window with route:", route);

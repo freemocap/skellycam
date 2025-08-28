@@ -40,6 +40,8 @@ declare global {
             isPythonServerRunning: () => Promise<boolean>;
             getPythonServerProcessInfo: () => Promise<{ pid: number | undefined; killed: boolean } | null>;
             selectExecutableFile: () => Promise<string | null>;
+
+            getLogoPngPath: () => Promise<string|null>;
         }
         ipcRenderer: {
             on: (channel: string, func: (...args: any[]) => void) => void;

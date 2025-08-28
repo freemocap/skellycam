@@ -1,14 +1,31 @@
-import React from 'react';
-import {Box, Button, Container, darken, Fade, Grow, Paper, Typography} from '@mui/material';
+import React, {useEffect, useState} from 'react';
+import {Box, Container, Fade, Grow, Paper, Typography} from '@mui/material';
 import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
-import VideocamIcon from '@mui/icons-material/Videocam';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import {Footer} from '@/components/ui-components/Footer';
 
 const WelcomePage: React.FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
+    const [logoPath, setLogoPath] = useState<string | null>(null)
+
+
+    useEffect(() => {
+        const fetchLogoPath = async () => {
+            try {
+                const path = await window.electronAPI.getLogoPngPath();
+                if (path) {
+                    console.log(`Loading skellycam logo from: '${path}'`)
+                    setLogoPath(path);
+                }
+            } catch (error) {
+                console.error('Failed to load logo path:', error);
+            }
+        };
+
+        fetchLogoPath().then(r => {
+        })
+    }, [])
 
     return (
         <Container maxWidth="md" sx={{
@@ -66,16 +83,14 @@ const WelcomePage: React.FC = () => {
                                 }
                             }}
                         >
-                            <img
-                                src="/skellycam-logo.png"
-                                alt="SkellyCam Logo"
-                                style={{
-                                    maxWidth: '100%',
-                                    maxHeight: '100%',
-                                    objectFit: 'contain',
-                                    filter: theme.palette.mode === 'dark' ? 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' : 'drop-shadow(0 0 10px rgba(0,0,0,0.1))'
-                                }}
-                            />
+                            {logoPath && <img src={logoPath}
+                                                       alt="SkellyCam Logo"
+                                                       style={{
+                                                           maxWidth: '100%',
+                                                           maxHeight: '100%',
+                                                           objectFit: 'contain',
+                                                           filter: theme.palette.mode === 'dark' ? 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' : 'drop-shadow(0 0 10px rgba(0,0,0,0.1))'
+                                                       }}/>}
                         </Box>
                     </Grow>
 

@@ -14,7 +14,7 @@ export const usePythonServer = () => {
     const checkServerHealth = useCallback(async () => {
 
         const maxRetries = 10;
-        const retryDelay = 3000; // ms
+        const retryDelay = 1000; // ms
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -82,7 +82,7 @@ export const usePythonServer = () => {
             setErrorMessage(`Failed to start server: ${error}`);
             console.error('Failed to start Python server:', error);
         }
-    }, [checkServerHealth, isConnected]);
+    }, []);
 
     const stopPythonServer = useCallback(async () => {
         try {
@@ -115,6 +115,7 @@ export const usePythonServer = () => {
             }
             try{
                 connect()
+                console.log("WebSocket already connected, no need to start server.")
                 return; // If connect() doesn't throw, we're connected
             } catch(error){
                 console.log("Server not connected, spawning server process...")
@@ -123,33 +124,41 @@ export const usePythonServer = () => {
             try {
                 const currentPath = await window.electronAPI.getPythonServerExecutablePath();
                 if (currentPath) {
-                    console.log("Auto-starting Python server with path:", currentPath);
-                    startPythonServer(currentPath);
+                    console.log("Starting Python server with path:", currentPath);
+                    await startPythonServer(currentPath);
                 } else {
                     // Try to find a valid candidate
                     const candidates = await window.electronAPI.getPythonServerExecutableCandidates();
                     const validCandidate = candidates.find(c => c.isValid);
                     if (validCandidate) {
-                        console.log("Auto-starting Python server with candidate:", validCandidate.path);
-                        startPythonServer(validCandidate.path);
+                        console.log("Starting Python server with candidate:", validCandidate.path);
+                        await startPythonServer(validCandidate.path);
+                     } else {
+                        console.log("No valid Python server executable found. Please select one manually.");
+                        setServerStatus('not-connected');
+                        setErrorMessage('No valid Python server executable found. Please select one manually.');
                     }
+
                 }
             } catch (error) {
-                console.log("Error during auto-start:", error);
+                console.log("Error during server start:", error);
             }
         };
 
         // Small delay to allow context to initialize
-        const timeoutId = setTimeout(() => {
-            autoStartServer();
-        }, 3000);
-
-        return () => clearTimeout(timeoutId);
-    }, []); // Run only once on mount
+        autoStartServer().then(r => {}).catch(e => {
+            console.error("Error auto-starting server:", e);
+        });
+    }, []); // Run on mount
 
     useEffect(() => {
         if (!isConnected) {
-            checkServerHealth()
+            checkServerHealth().then(r => {
+            setErrorMessage(null);
+            }).catch(e => {
+                setServerStatus('not-connected');
+                setErrorMessage(null);
+            });
             return () => {
             };
         } else {

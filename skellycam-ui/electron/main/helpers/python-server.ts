@@ -40,7 +40,7 @@ export class PythonServer {
             }
 
             this.currentExecutablePath = executablePath;
-
+            console.log(`Launching Python server from: ${executablePath}`);
             pythonProcess = exec(`"${executablePath}"`, {
                 env: {
                     ...process.env,
