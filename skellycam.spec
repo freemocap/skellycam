@@ -3,6 +3,7 @@
 from PyInstaller.utils.hooks import collect_all
 import cv2
 import os
+import platform
 
 datas = []
 binaries = []
@@ -56,7 +57,12 @@ hiddenimports.extend([
 
 # Add the directory containing cv2 DLLs
 cv2_path = os.path.dirname(cv2.__file__)
-binaries.append((os.path.join(cv2_path, '*.dll'), '.'))
+if platform.system=="Windows":
+    binaries.append((os.path.join(cv2_path, '*.dll'), '.'))
+elif platform.system=="Darwin":
+    binaries.append((os.path.join(cv2_path, '*.dylib'), '.'))
+else:
+    binaries.append((os.path.join(cv2_path, '*.so.*'), '.'))
 
 # Collect missing setuptools data files
 setuptools_datas, _, setuptools_hidden = collect_all('setuptools')
