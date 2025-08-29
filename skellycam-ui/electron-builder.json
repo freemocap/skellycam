@@ -6,33 +6,32 @@
   "files": [
     "dist-electron",
     "dist",
-    "skellycam_server.exe",
+    "skellycam_server*",
     "../shared/skellycam-logo/skellycam-favicon.ico",
     "../shared/skellycam-logo/skellycam-logo.png"
   ],
-  "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
   "asar": true,
-  "asarUnpack": [
-    "**/skellycam_server.exe",
-    "**/skellycam-logo.png"
-  ],
   "mac": {
-    "artifactName": "${productName}_${version}_installer.${ext}",
     "target": [
-      "dmg",
-      "zip"
-    ]
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      }
+    ],
+    "artifactName": "${productName}_${version}_installer_${arch}.${ext}",
+    "icon": "../shared/skellycam-logo/skellycam-icon.icns",
+    "asarUnpack": ["**/skellycam_server", "**/skellycam-logo.png"]
   },
   "win": {
     "target": [
       {
         "target": "nsis",
-        "arch": [
-          "x64"
-        ]
+        "arch": ["x64"]
       }
     ],
-    "artifactName": "${productName}_${version}_installer.${ext}"
+    "artifactName": "${productName}_${version}_installer.${ext}",
+    "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
+    "asarUnpack": ["**/skellycam_server.exe", "**/skellycam-logo.png"]
   },
   "nsis": {
     "oneClick": false,

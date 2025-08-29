@@ -229,3 +229,4 @@ pyapp-latest/*
 pyapp-v*
 *.exe
 *onefile-build
+skellycam-ui/skellycam_server
