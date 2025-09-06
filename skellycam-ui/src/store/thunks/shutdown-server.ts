@@ -1,7 +1,7 @@
-import {urlService} from "@/config/appUrlService";
+import {useAppUrls} from "@/hooks/useAppUrls";
 
 export const shutdownServer = async () => {
-    const url = urlService.getHttpEndpointUrls().shutdown;
+    const url = useAppUrls.getHttpEndpointUrls().shutdown;
     const response = await fetch(url, {method: 'GET'});
 
     if (!response.ok) {

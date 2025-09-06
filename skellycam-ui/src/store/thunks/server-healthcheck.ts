@@ -1,7 +1,7 @@
-import {urlService} from "@/config/appUrlService";
+import {useAppUrls} from "@/hooks/useAppUrls";
 
 export const serverHealthcheck = async () => {
-    const url = urlService.getHttpEndpointUrls().health;
+    const url = useAppUrls.getHttpEndpointUrls().health;
     const response = await fetch(url, {method: 'GET'});
 
     if (!response.ok) {

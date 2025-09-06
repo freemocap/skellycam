@@ -7,7 +7,7 @@ import {
 import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerateTrackerSlice";
 import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/context/websocket-context/websocket-types";
 import {addLog} from "@/store/slices/logRecordsSlice";
-import {urlService} from "@/config/appUrlService";
+import {useAppUrls} from "@/hooks/useAppUrls";
 
 
 export const useWebSocket = () => {
@@ -116,7 +116,7 @@ export const useWebSocket = () => {
             return;
         }
 
-        const ws = new WebSocket(urlService.getWebSocketUrl());
+        const ws = new WebSocket(useAppUrls.getWebSocketUrl());
         ws.binaryType = "arraybuffer";
 
         ws.onopen = () => {
@@ -124,7 +124,7 @@ export const useWebSocket = () => {
             setConnectAttempt(0);
             setShouldReconnect(true);
             ws.send("Hello from the Skellycam Frontend💀📸👋");
-            console.log(`Websocket is connected to url: ${urlService.getWebSocketUrl()}`);
+            console.log(`Websocket is connected to url: ${useAppUrls.getWebSocketUrl()}`);
         };
 
         ws.onclose = () => {
@@ -162,7 +162,7 @@ export const useWebSocket = () => {
         }
         const timeout = setTimeout(() => {
             console.log(
-                `Connecting  to websocket at url: ${urlService.getWebSocketUrl()} (attempt #${connectAttempt + 1})`
+                `Connecting  to websocket at url: ${useAppUrls.getWebSocketUrl()} (attempt #${connectAttempt + 1})`
             );
             connect();
         }, Math.min(1000 * Math.pow(2, connectAttempt), 10000)); // exponential backoff

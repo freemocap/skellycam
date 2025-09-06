@@ -11,7 +11,7 @@ import {ServerConnectionStatus} from "@/components/server-settings-panel/ServerC
 import {usePythonServerContext} from "@/context/python-server-context/PythonServerContext";
 import {ExecutablePathSelector} from './ExecutablePathSelector';
 import Link from "@mui/material/Link";
-
+import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
 
 export const ServerSettingsPanel = () => {
     const {isConnected} = useWebSocketContext();
@@ -26,7 +26,7 @@ export const ServerSettingsPanel = () => {
     const [framerate, setFramerate] = React.useState(30);
     const [preShrink, setPreShrink] = React.useState(true);
     const [shrinkFactor, setShrinkFactor] = React.useState(0.5);
-
+    const { isElectron, isLoading: electronLoading, pythonServer, api } = useElectronAPI();
     const maxFramerate = 60;
 
     // Load current executable path on component mount
@@ -38,8 +38,8 @@ export const ServerSettingsPanel = () => {
 
     const loadCurrentPath = async () => {
         try {
-            const currentPath = await window.electronAPI.getPythonServerExecutablePath();
-            setCurrentExecutablePath(currentPath);
+            const currentPath = await api?.pythonServer.getExecutablePath.query();
+            if (currentPath){setCurrentExecutablePath(currentPath);}
         } catch (error) {
             console.error('Error loading current path:', error);
         }

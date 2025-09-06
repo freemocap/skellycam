@@ -6,7 +6,7 @@ import {
     updateCameraConfigs
 } from "@/store/slices/cameras-slices/camerasSlice";
 import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
-import {urlService} from "@/config/appUrlService";
+import {useAppUrls} from "@/hooks/useAppUrls";
 
 export const connectToCameras = createAsyncThunk(
     'cameras/connect',
@@ -22,7 +22,7 @@ export const connectToCameras = createAsyncThunk(
 
         dispatch(setLoading(true));
 
-        const connectUrl = urlService.getHttpEndpointUrls().createGroup;
+        const connectUrl = useAppUrls.getHttpEndpointUrls().createGroup;
 
         const payload = {
             camera_configs: cameraConfigs

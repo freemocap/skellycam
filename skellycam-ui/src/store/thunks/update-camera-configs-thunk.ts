@@ -6,14 +6,14 @@ import {
     updateCameraConfigs
 } from "@/store/slices/cameras-slices/camerasSlice";
 import {CameraConfig} from "../slices/cameras-slices/camera-types";
-import {urlService} from "@/config/appUrlService";
+import {useAppUrls} from "@/hooks/useAppUrls";
 
 export const updateCameraConfigsThunk = createAsyncThunk(
     'camera/update',
     async (_, {dispatch, getState}) => {
         const state = getState() as any;
         dispatch(setLoading(true));
-        const updateConfigsUrl = urlService.getHttpEndpointUrls().updateConfigs;
+        const updateConfigsUrl = useAppUrls.getHttpEndpointUrls().updateConfigs;
 
         const payload = {
             camera_configs: selectConfigsForSelectedCameras(state)

@@ -13,7 +13,7 @@
   "type": "module",
   "scripts": {
     "dev": "cross-env NODE_ENV=development vite",
-    "demo": "cross-env NODE_ENV=production vite build && electron .",
+    "demo": "cross-env NODE_ENV=production vite build && old_electron .",
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
@@ -32,6 +32,8 @@
     "@react-three/drei": "^10.4.2",
     "@react-three/fiber": "^9.1.4",
     "@reduxjs/toolkit": "^2.5.1",
+    "@trpc/client": "^11.5.1",
+    "@trpc/server": "^11.5.1",
     "axios": "^1.7.7",
     "d3": "^7.9.0",
     "electron-updater": "^6.1.8",
@@ -41,9 +43,10 @@
     "react-router": "^6.26.2",
     "react-router-dom": "^6.26.2",
     "react-use": "^17.5.1",
+    "superjson": "^2.2.2",
     "three": "^0.178.0",
     "tree-kill": "^1.2.2",
-    "zod": "^4.0.3"
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.1",

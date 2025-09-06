@@ -6,7 +6,7 @@ import {
     createDefaultCameraConfig
 } from "@/store/slices/cameras-slices/camera-types";
 import {RootState} from "@/store/AppStateStore";
-import {urlService} from "@/config/appUrlService";
+import {useAppUrls} from "@/hooks/useAppUrls";
 
 export const detectCameraDevices = createAsyncThunk<
     CameraDevice[]
@@ -16,7 +16,7 @@ export const detectCameraDevices = createAsyncThunk<
         dispatch(setLoading(true));
 
         try {
-            const connectUrl = urlService.getHttpEndpointUrls().detectCameras;
+            const connectUrl = useAppUrls.getHttpEndpointUrls().detectCameras;
 
             console.log(`Detecting cameras at ${connectUrl}`);
             const response = await fetch(connectUrl, {

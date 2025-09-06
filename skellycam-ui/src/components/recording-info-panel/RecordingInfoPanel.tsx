@@ -12,6 +12,7 @@ import {
 import {startRecording, stopRecording,} from "@/store/thunks/start-stop-recording-thunks";
 import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
 import {RecordingPathTreeItem} from "@/components/recording-info-panel/RecordingPathTreeItem";
+import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
 
 export const RecordingInfoPanel: React.FC = () => {
     const theme = useTheme();
@@ -33,19 +34,21 @@ export const RecordingInfoPanel: React.FC = () => {
     const [baseName, setBaseName] = useState("recording");
     const [customSubfolderName, setCustomSubfolderName] = useState("");
     const [recordingTag, setRecordingTag] = useState("");
-
+    const {isElectron, api, fileSystem} = useElectronAPI();
     // replace ~ with user's home directory
     useEffect(() => {
         if (recordingInfo?.recordingDirectory?.startsWith("~")) {
-            window.electronAPI.getHomeDirectory().then((homePath: string) => {
+            fileSystem?.getHomeDirectory().then((homePath) => {
                 const updatedDirectory = recordingInfo.recordingDirectory.replace(
                     "~",
                     homePath
                 );
                 dispatch(setRecordingInfo({recordingDirectory: updatedDirectory}));
+            }).catch((error) => {
+                console.error("Failed to get home directory:", error);
             });
         }
-    }, [recordingInfo, dispatch]);
+    }, [recordingInfo.recordingDirectory, fileSystem, dispatch]);
 
     // Handle countdown timer
     useEffect(() => {

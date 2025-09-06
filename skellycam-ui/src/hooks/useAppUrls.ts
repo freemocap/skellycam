@@ -42,7 +42,7 @@ const getHttpEndpointUrls = () => {
     };
 };
 
-export const urlService = {
+export const useAppUrls = {
     getBaseHttpUrl,
     getApiUrl,
     getWebSocketUrl,
