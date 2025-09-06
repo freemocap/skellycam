@@ -3,6 +3,7 @@ import {IconButton, InputAdornment, TextField} from '@mui/material';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import {useAppDispatch} from "@/store/AppStateStore";
 import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
+import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
 
 interface DirectoryInputProps {
     value: string;
@@ -10,10 +11,11 @@ interface DirectoryInputProps {
 
 export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({value}) => {
     const dispatch = useAppDispatch();
+    const { fileSystem } = useElectronAPI();
 
     const handleSelectDirectory = async () => {
         try {
-            const result = await window.electronAPI.selectDirectory();
+            const result = await fileSystem?.selectDirectory();
             if (result) {
                 dispatch(setRecordingInfo({recordingDirectory: result}));
             }
@@ -24,18 +26,16 @@ export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({valu
 
     const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const newPath = e.target.value;
-
-        // If the path contains a tilde, expand it immediately
         if (newPath.includes('~')) {
             try {
-                const expandedPath = await window.electronAPI.expandPath(newPath);
-                dispatch(setRecordingInfo({recordingDirectory: expandedPath}));
-            } catch (error) {
-                console.error('Failed to expand path:', error);
-                dispatch(setRecordingInfo({recordingDirectory: newPath}));
+                const home = await fileSystem?.getHomeDirectory();
+                const expanded = home ? newPath.replace(/^~(\/|\\)?/, `${home}$1` || home) : newPath;
+                dispatch(setRecordingInfo({ recordingDirectory: expanded }));
+            } catch {
+                dispatch(setRecordingInfo({ recordingDirectory: newPath }));
             }
         } else {
-            dispatch(setRecordingInfo({recordingDirectory: newPath}));
+            dispatch(setRecordingInfo({ recordingDirectory: newPath }));
         }
     };
 

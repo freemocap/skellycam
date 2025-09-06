@@ -5,6 +5,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
 
 interface FullPathPreviewProps {
     directory: string;
@@ -18,7 +19,7 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
                                                                              subfolder
                                                                          }) => {
     const theme = useTheme();
-
+    const { fileSystem } = useElectronAPI();
     const parts = [
         {icon: <FolderIcon/>, text: directory},
         ...(subfolder ? [{icon: <FolderIcon/>, text: subfolder}] : []),
@@ -32,9 +33,10 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
         ? `${directory}/${subfolder}`
         : directory;
 
+
     const handleOpenFolder = async () => {
         try {
-            await window.electronAPI.openFolder(directoryToOpen);
+            await fileSystem?.openFolder(directoryToOpen);
         } catch (error) {
             console.error('Failed to open folder:', error);
         }

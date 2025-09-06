@@ -1,13 +1,16 @@
-import React, {createContext, ReactNode, useContext} from "react";
-import {ServerStatus, usePythonServer} from "./usePythonServer";
-
+import React, { createContext, ReactNode, useContext } from "react";
+import { ServerStatus, usePythonServer } from "./usePythonServer";
 
 interface PythonServerContextProps {
     serverStatus: ServerStatus;
     errorMessage: string | null;
     isPythonRunning: boolean;
-    startPythonServer: (exePath: string | null) => void;
-    stopPythonServer: () => void;
+    isTransitioning: boolean;
+    retryCount: number;
+    lastHealthCheck: Date | null;
+    startPythonServer: (exePath: string | null) => Promise<boolean>;
+    stopPythonServer: () => Promise<boolean>;
+    checkServerHealth: () => Promise<boolean>;
 }
 
 const PythonServerContext = createContext<PythonServerContextProps | undefined>(undefined);
@@ -16,7 +19,7 @@ interface PythonServerProviderProps {
     children: ReactNode;
 }
 
-export const PythonServerContextProvider: React.FC<PythonServerProviderProps> = ({children}) => {
+export const PythonServerContextProvider: React.FC<PythonServerProviderProps> = ({ children }) => {
     const pythonServer = usePythonServer();
 
     return (

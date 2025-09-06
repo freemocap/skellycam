@@ -1,50 +1,73 @@
-export interface DefaultUrlConfig {
-    host: string;
-    port: number;
-}
+import { useServerConfig } from './useServerConfig';
 
-// Default URL configuration
-const defaultUrlConfig: DefaultUrlConfig = {
-    host: 'localhost',
-    port: 8006,
-};
+// Export a hook version for React components
+export const useAppUrls = () => {
+    const { config, getBaseHttpUrl, getApiUrl, getWebSocketUrl, getHttpEndpointUrls } = useServerConfig();
 
-
-// Get the base HTTP URL
-const getBaseHttpUrl = () => {
-    const {host, port} = defaultUrlConfig;
-    return `http://${host}:${port}`;
-};
-
-// Get a specific API URL
-const getApiUrl = (path: string) => {
-    return `${getBaseHttpUrl()}${path}`;
-};
-
-// Get WebSocket URL
-const getWebSocketUrl = () => {
-    const {host, port} = defaultUrlConfig;
-    return `ws://${host}:${port}/skellycam/websocket/connect`;
-};
-
-// Get all HTTP endpoint URLs
-const getHttpEndpointUrls = () => {
     return {
-        health: getApiUrl('/health'),
-        shutdown: getApiUrl('/shutdown'),
-        detectCameras: getApiUrl('/skellycam/camera/detect'),
-        createGroup: getApiUrl('/skellycam/camera/group/apply'),
-        closeAll: getApiUrl('/skellycam/camera/group/close/all'),
-        updateConfigs: getApiUrl('/skellycam/camera/update'),
-        startRecording: getApiUrl('/skellycam/camera/group/all/record/start'),
-        stopRecording: getApiUrl('/skellycam/camera/group/all/record/stop'),
-        pauseUnpauseCameras: getApiUrl('/skellycam/camera/group/all/pause_unpause'),
+        config,
+        getBaseHttpUrl,
+        getApiUrl,
+        getWebSocketUrl,
+        getHttpEndpointUrls,
     };
 };
 
-export const useAppUrls = {
-    getBaseHttpUrl,
-    getApiUrl,
-    getWebSocketUrl,
-    getHttpEndpointUrls,
-};
+// For non-React contexts (like thunks), we need a singleton instance
+// This will use the values from localStorage or defaults
+class AppUrlsService {
+    private host: string = 'localhost';
+    private port: number = 8006;
+
+    constructor() {
+        this.loadConfig();
+    }
+
+    private loadConfig() {
+        try {
+            const stored = localStorage.getItem('skellycam-server-config');
+            if (stored) {
+                const config = JSON.parse(stored);
+                this.host = config.host || 'localhost';
+                this.port = config.port || 8006;
+            }
+        } catch (error) {
+            console.error('Failed to load server config:', error);
+        }
+    }
+
+    getBaseHttpUrl = () => {
+        return `http://${this.host}:${this.port}`;
+    };
+
+    getApiUrl = (path: string) => {
+        return `${this.getBaseHttpUrl()}${path}`;
+    };
+
+    getWebSocketUrl = () => {
+        return `ws://${this.host}:${this.port}/skellycam/websocket/connect`;
+    };
+
+    getHttpEndpointUrls = () => {
+        return {
+            health: this.getApiUrl('/health'),
+            shutdown: this.getApiUrl('/shutdown'),
+            detectCameras: this.getApiUrl('/skellycam/camera/detect'),
+            createGroup: this.getApiUrl('/skellycam/camera/group/apply'),
+            closeAll: this.getApiUrl('/skellycam/camera/group/close/all'),
+            updateConfigs: this.getApiUrl('/skellycam/camera/update'),
+            startRecording: this.getApiUrl('/skellycam/camera/group/all/record/start'),
+            stopRecording: this.getApiUrl('/skellycam/camera/group/all/record/stop'),
+            pauseUnpauseCameras: this.getApiUrl('/skellycam/camera/group/all/pause_unpause'),
+        };
+    };
+
+    // Allow manual refresh of config
+    refreshConfig() {
+        this.loadConfig();
+    }
+}
+
+// Export singleton for non-React contexts
+export const appUrlsService = new AppUrlsService();
+

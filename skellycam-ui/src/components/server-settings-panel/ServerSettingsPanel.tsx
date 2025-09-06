@@ -1,215 +1,376 @@
 import * as React from 'react';
-import Box from '@mui/material/Box';
-import {SimpleTreeView} from '@mui/x-tree-view/SimpleTreeView';
-import {TreeItem} from '@mui/x-tree-view/TreeItem';
-import {Checkbox, FormControlLabel, Slider, TextField, Typography} from '@mui/material';
-import WebsocketConnectionStatus from './WebsocketConnectionStatus';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
-import {ServerConnectionStatus} from "@/components/server-settings-panel/ServerConnectionStatus";
-import {usePythonServerContext} from "@/context/python-server-context/PythonServerContext";
-import {ExecutablePathSelector} from './ExecutablePathSelector';
-import Link from "@mui/material/Link";
-import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
+import {
+    Box,
+    Card,
+    CardContent,
+    Typography,
+    Switch,
+    FormControlLabel,
+    TextField,
+    Button,
+    Chip,
+    Stack,
+    Divider,
+    IconButton,
+    Collapse,
+    Alert,
+    LinearProgress,
+    Paper,
+    Tooltip,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    SelectChangeEvent,
+} from '@mui/material';
+import {
+    ExpandMore as ExpandMoreIcon,
+    Settings as SettingsIcon,
+    PlayArrow as PlayArrowIcon,
+    Stop as StopIcon,
+    Refresh as RefreshIcon,
+    Link as LinkIcon,
+    LinkOff as LinkOffIcon,
+    FolderOpen as FolderOpenIcon,
+    CheckCircle as CheckCircleIcon,
+    Error as ErrorIcon,
+    Warning as WarningIcon,
+    Info as InfoIcon,
+} from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
+import { useWebSocketContext } from "@/context/websocket-context/WebSocketContext";
+import { usePythonServerContext } from "@/context/python-server-context/PythonServerContext";
+import { useElectronAPI } from "@/hooks/electron-service/useElectronApi";
+import { useServerConfig } from "@/hooks/useServerConfig";
+import { ServerStatus } from "@/context/python-server-context/usePythonServer";
 
-export const ServerSettingsPanel = () => {
-    const {isConnected} = useWebSocketContext();
-    const {serverStatus, startPythonServer} = usePythonServerContext();
+const ExpandMoreStyled = styled((props: any) => {
+    const { expand, ...other } = props;
+    return <IconButton {...other} />;
+})(({ theme, expand }) => ({
+    transform: !expand ? 'rotate(0deg)' : 'rotate(180deg)',
+    marginLeft: 'auto',
+    transition: theme.transitions.create('transform', {
+        duration: theme.transitions.duration.shortest,
+    }),
+}));
 
-    // State for executable path management
-    const [currentExecutablePath, setCurrentExecutablePath] = React.useState<string | null>(null);
-    // Other settings state
-    const [host, setHost] = React.useState('localhost');
-    const [httpPort, setHttpPort] = React.useState(8006);
-    const [limitFramerate, setLimitFramerate] = React.useState(false);
-    const [framerate, setFramerate] = React.useState(30);
-    const [preShrink, setPreShrink] = React.useState(true);
-    const [shrinkFactor, setShrinkFactor] = React.useState(0.5);
-    const { isElectron, isLoading: electronLoading, pythonServer, api } = useElectronAPI();
-    const maxFramerate = 60;
-
-    // Load current executable path on component mount
-    React.useEffect(() => {
-        loadCurrentPath().then(r => {
-            console.log('Loaded current executable path:', r);
-        });
-    }, []);
-
-    const loadCurrentPath = async () => {
-        try {
-            const currentPath = await api?.pythonServer.getExecutablePath.query();
-            if (currentPath){setCurrentExecutablePath(currentPath);}
-        } catch (error) {
-            console.error('Error loading current path:', error);
+const StatusChip = styled(Chip)<{ status: ServerStatus }>(({ theme, status }) => {
+    const getStatusColor = () => {
+        switch (status) {
+            case 'alive':
+                return { bg: theme.palette.success.main, text: theme.palette.success.contrastText };
+            case 'spawning':
+                return { bg: theme.palette.warning.main, text: theme.palette.warning.contrastText };
+            case 'shutting-down':
+                return { bg: theme.palette.info.main, text: theme.palette.info.contrastText };
+            case 'error':
+                return { bg: theme.palette.error.main, text: theme.palette.error.contrastText };
+            default:
+                return { bg: theme.palette.grey[500], text: theme.palette.common.white };
         }
     };
 
-    const handlePathSelect = (path: string) => {
-        // Start server with selected path
-        console.log('Starting Python server with path:', path);
-        startPythonServer(path);
-        setCurrentExecutablePath(path);
+    const colors = getStatusColor();
+    return {
+        backgroundColor: colors.bg,
+        color: colors.text,
+        fontWeight: 600,
+    };
+});
+
+export const ServerSettingsPanel: React.FC = () => {
+    const { isConnected, connect, disconnect } = useWebSocketContext();
+    const { serverStatus, errorMessage, startPythonServer, stopPythonServer } = usePythonServerContext();
+    const { api, isElectron } = useElectronAPI();
+    const { config, updateConfig, getBaseHttpUrl, getWebSocketUrl } = useServerConfig();
+
+    const [expanded, setExpanded] = React.useState(false);
+    const [candidates, setCandidates] = React.useState<any[]>([]);
+    const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+    React.useEffect(() => {
+        if (api && isElectron) {
+            loadExecutableCandidates();
+        }
+    }, [api, isElectron]);
+
+    React.useEffect(() => {
+        // Auto-connect behavior
+        if (config.autoConnect && serverStatus === 'alive' && !isConnected) {
+            connect();
+        }
+    }, [config.autoConnect, serverStatus, isConnected, connect]);
+
+    const loadExecutableCandidates = async () => {
+        if (!api) return;
+        setIsRefreshing(true);
+        try {
+            const [path, candidateList] = await Promise.all([
+                api.pythonServer.getExecutablePath.query(),
+                api.pythonServer.getExecutableCandidates.query(),
+            ]);
+            setSelectedPath(path);
+            setCandidates(candidateList);
+        } catch (error) {
+            console.error('Failed to load executables:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
-    const handleFramerateChange = (event: Event, newValue: number | number[]) => {
-        setFramerate(newValue as number);
+    const handleServerToggle = async () => {
+        if (serverStatus === 'alive' || serverStatus === 'spawning') {
+            await stopPythonServer();
+        } else {
+            await startPythonServer(selectedPath);
+        }
     };
 
-    const handleShrinkFactorChange = (event: Event, newValue: number | number[]) => {
-        setShrinkFactor(newValue as number);
+    const handleWebSocketToggle = () => {
+        if (isConnected) {
+            disconnect(false);
+        } else {
+            connect();
+        }
     };
+
+    const handleSelectCustomExecutable = async () => {
+        if (!api) return;
+        const path = await api.fileSystem.selectExecutableFile.mutate();
+        if (path) {
+            setSelectedPath(path);
+            await startPythonServer(path);
+        }
+    };
+
+    const handleExecutableChange = (event: SelectChangeEvent) => {
+        setSelectedPath(event.target.value);
+    };
+
+    const getStatusIcon = (status: ServerStatus) => {
+        switch (status) {
+            case 'alive':
+                return <CheckCircleIcon color="success" />;
+            case 'spawning':
+                return <WarningIcon color="warning" />;
+            case 'error':
+                return <ErrorIcon color="error" />;
+            default:
+                return <InfoIcon color="disabled" />;
+        }
+    };
+
+    const isServerOperational = serverStatus === 'alive';
+    const isServerTransitioning = serverStatus === 'spawning' || serverStatus === 'shutting-down';
 
     return (
-        <Box sx={{padding: 2, color: 'text.primary'}}>
-            <SimpleTreeView
-                slots={{
-                    collapseIcon: ExpandMoreIcon,
-                    expandIcon: ChevronRightIcon
-                }}
-                sx={{flexGrow: 1, maxWidth: 600}}
-            >
-                <TreeItem
-                    itemId="server-status"
-                    label={
-                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                            <Box
-                                sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    bgcolor: serverStatus === 'alive'
-                                        ? 'rgba(0, 255, 255, 0.25)'
-                                        : serverStatus === 'spawning'
-                                            ? 'rgba(255, 255, 0, 0.25)'
-
-                                            : 'rgba(255, 0, 0, 0.25)',
-                                    px: 1,
-                                    py: 0.5,
-                                    borderRadius: 1
-                                }}
-                            >
-                                {serverStatus}
-                            </Box>
-                            <Box
-                                sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    bgcolor: isConnected ? 'rgba(0, 255, 255, 0.25)' : 'rgba(255, 0, 0, 0.25)',
-                                    px: 1,
-                                    py: 0.5,
-                                    borderRadius: 1
-                                }}
-                            >
-                                {isConnected ? 'connected' : 'not-connected'}
-                            </Box>
+        <Card elevation={2} sx={{ m: 2 }}>
+            <CardContent>
+                <Stack spacing={3}>
+                    {/* Header */}
+                    <Box display="flex" alignItems="center" justifyContent="space-between">
+                        <Box display="flex" alignItems="center" gap={1}>
+                            <SettingsIcon color="primary" />
+                            <Typography variant="h6" component="h2">
+                                Server Management
+                            </Typography>
                         </Box>
-                    }
-                >
-                    <Box sx={{pl: 2, pt: 1, borderTop: '2px solid', borderColor: 'darkcyan'}}>
-                        <ServerConnectionStatus/>
-                        <WebsocketConnectionStatus/>
-
-
-                        <Box sx={{pl: 2, pt: 2}}>
-                            <ExecutablePathSelector
-                                onPathSelect={handlePathSelect}
-                                currentPath={currentExecutablePath}
-                            />
-                        </Box>
-                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mt: 2}}>
-                            <TextField
-                                label="Host"
-                                value={host}
-                                onChange={(e) => setHost(e.target.value)}
-                                size="small"
-                                sx={{flex: 1}}
-                                disabled={true}
-                            />
-                            <TextField
-                                label="HTTP Port"
-                                type="number"
-                                value={httpPort}
-                                onChange={(e) => setHttpPort(Number(e.target.value))}
-                                size="small"
-                                sx={{width: 100}}
-                                disabled={true}
-                            />
-                        </Box>
-
-                        <Typography variant="body2" color="textSecondary" sx={{mt: 2}}>
-                            API DOCS URL: <Link color="inherit" href={`http://${host}:${httpPort}/`}>
-                            http://{host}:{httpPort}/
-                        </Link>
-                        </Typography>
-
-                        <Typography variant="body2" color="textSecondary" sx={{mt: 2}}>
-                            WebSocket URL: ws://{host}:{httpPort}/websocket/connect
-                        </Typography>
-
-                        <TreeItem itemId="display-settings" label="Display Settings">
-                            <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={limitFramerate}
-                                            onChange={(e) => setLimitFramerate(e.target.checked)}
-                                            disabled={true}
-                                        />
-                                    }
-                                    label="Limit display framerate"
-                                />
-
-                                {limitFramerate && (
-                                    <Box sx={{pl: 4}}>
-                                        <Typography gutterBottom>
-                                            Framerate: {framerate} FPS
-                                        </Typography>
-                                        <Slider
-                                            value={framerate}
-                                            onChange={handleFramerateChange}
-                                            min={0}
-                                            max={maxFramerate}
-                                            valueLabelDisplay="auto"
-                                            size="small"
-                                            disabled={true}
-                                        />
-                                    </Box>
-                                )}
-
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={preShrink}
-                                            onChange={(e) => setPreShrink(e.target.checked)}
-                                            disabled={true}
-                                        />
-                                    }
-                                    label="Pre-shrink images"
-                                />
-
-                                {preShrink && (
-                                    <Box sx={{pl: 4}}>
-                                        <Typography gutterBottom>
-                                            Shrink factor: {shrinkFactor.toFixed(2)}
-                                        </Typography>
-                                        <Slider
-                                            value={shrinkFactor}
-                                            onChange={handleShrinkFactorChange}
-                                            min={0}
-                                            max={1}
-                                            step={0.01}
-                                            valueLabelDisplay="auto"
-                                            size="small"
-                                            disabled={true}
-                                        />
-                                    </Box>
-                                )}
-                            </Box>
-                        </TreeItem>
+                        <ExpandMoreStyled
+                            expand={expanded}
+                            onClick={() => setExpanded(!expanded)}
+                            aria-expanded={expanded}
+                            aria-label="show more"
+                        >
+                            <ExpandMoreIcon />
+                        </ExpandMoreStyled>
                     </Box>
-                </TreeItem>
-            </SimpleTreeView>
-        </Box>
+
+                    {/* Status Section */}
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+                        <Stack spacing={2}>
+                            <Box display="flex" alignItems="center" justifyContent="space-between">
+                                <Box display="flex" alignItems="center" gap={2}>
+                                    {getStatusIcon(serverStatus)}
+                                    <Typography variant="body1" fontWeight={500}>
+                                        Python Server
+                                    </Typography>
+                                    <StatusChip
+                                        label={serverStatus.toUpperCase()}
+                                        status={serverStatus}
+                                        size="small"
+                                    />
+                                </Box>
+                                <Button
+                                    variant="contained"
+                                    color={isServerOperational ? "error" : "primary"}
+                                    startIcon={isServerOperational ? <StopIcon /> : <PlayArrowIcon />}
+                                    onClick={handleServerToggle}
+                                    disabled={isServerTransitioning}
+                                    size="small"
+                                >
+                                    {isServerOperational ? 'Stop' : 'Start'}
+                                </Button>
+                            </Box>
+
+                            {isServerTransitioning && <LinearProgress />}
+
+                            <Box display="flex" alignItems="center" justifyContent="space-between">
+                                <Box display="flex" alignItems="center" gap={2}>
+                                    {isConnected ? <LinkIcon color="success" /> : <LinkOffIcon color="disabled" />}
+                                    <Typography variant="body1" fontWeight={500}>
+                                        WebSocket
+                                    </Typography>
+                                    <Chip
+                                        label={isConnected ? 'CONNECTED' : 'DISCONNECTED'}
+                                        color={isConnected ? 'success' : 'default'}
+                                        size="small"
+                                    />
+                                </Box>
+                                <Button
+                                    variant="outlined"
+                                    color={isConnected ? "error" : "primary"}
+                                    startIcon={isConnected ? <LinkOffIcon /> : <LinkIcon />}
+                                    onClick={handleWebSocketToggle}
+                                    disabled={!isServerOperational}
+                                    size="small"
+                                >
+                                    {isConnected ? 'Disconnect' : 'Connect'}
+                                </Button>
+                            </Box>
+                        </Stack>
+                    </Paper>
+
+                    {errorMessage && (
+                        <Alert severity="error" onClose={() => {}}>
+                            {errorMessage}
+                        </Alert>
+                    )}
+
+                    {/* Configuration Section */}
+                    <Collapse in={expanded} timeout="auto" unmountOnExit>
+                        <Stack spacing={3}>
+                            <Divider />
+
+                            {/* Auto-connect Setting */}
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={config.autoConnect}
+                                        onChange={(e) => updateConfig({ autoConnect: e.target.checked })}
+                                        color="primary"
+                                    />
+                                }
+                                label={
+                                    <Box>
+                                        <Typography variant="body1">Auto-connect WebSocket</Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Automatically connect WebSocket when server starts
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
+
+                            {/* URL Configuration */}
+                            <Stack direction="row" spacing={2}>
+                                <TextField
+                                    label="Host"
+                                    value={config.host}
+                                    onChange={(e) => updateConfig({ host: e.target.value })}
+                                    size="small"
+                                    fullWidth
+                                />
+                                <TextField
+                                    label="Port"
+                                    type="number"
+                                    value={config.port}
+                                    onChange={(e) => updateConfig({ port: parseInt(e.target.value) || 8006 })}
+                                    size="small"
+                                    sx={{ width: 120 }}
+                                />
+                            </Stack>
+
+                            {/* URLs Display */}
+                            <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+                                <Stack spacing={1}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        API URL
+                                    </Typography>
+                                    <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                        {getBaseHttpUrl()}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                                        WebSocket URL
+                                    </Typography>
+                                    <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                        {getWebSocketUrl()}
+                                    </Typography>
+                                </Stack>
+                            </Paper>
+
+                            {/* Executable Selection */}
+                            {isElectron && (
+                                <>
+                                    <Divider />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                                            <Typography variant="subtitle2">
+                                                Python Executable
+                                            </Typography>
+                                            <IconButton
+                                                onClick={loadExecutableCandidates}
+                                                disabled={isRefreshing}
+                                                size="small"
+                                            >
+                                                <RefreshIcon />
+                                            </IconButton>
+                                        </Box>
+
+                                        <Stack spacing={2}>
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Select Executable</InputLabel>
+                                                <Select
+                                                    value={selectedPath || ''}
+                                                    onChange={handleExecutableChange}
+                                                    label="Select Executable"
+                                                >
+                                                    {candidates.map((candidate) => (
+                                                        <MenuItem
+                                                            key={candidate.path}
+                                                            value={candidate.path}
+                                                            disabled={!candidate.isValid}
+                                                        >
+                                                            <Box>
+                                                                <Typography variant="body2">
+                                                                    {candidate.name}
+                                                                </Typography>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {candidate.description}
+                                                                    {!candidate.isValid && ` - ${candidate.error}`}
+                                                                </Typography>
+                                                            </Box>
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+
+                                            <Button
+                                                variant="outlined"
+                                                startIcon={<FolderOpenIcon />}
+                                                onClick={handleSelectCustomExecutable}
+                                                fullWidth
+                                            >
+                                                Browse for Executable
+                                            </Button>
+                                        </Stack>
+                                    </Box>
+                                </>
+                            )}
+                        </Stack>
+                    </Collapse>
+                </Stack>
+            </CardContent>
+        </Card>
     );
 };
-

@@ -19,8 +19,8 @@ const WelcomePage: React.FC = () => {
                     // Convert to file:// URL for images
                     const fileUrl = `file://${path.replace(/\\/g, '/')}`;
                     if (path) {
-                        console.log(`Loading skellycam logo from: '${path}'`)
-                        setLogoPath(path);
+                        console.log(`Loading skellycam logo from: '${fileUrl}'`)
+                        setLogoPath(fileUrl);
                     }
                 }
 

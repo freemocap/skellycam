@@ -45,6 +45,7 @@ if (!gotTheLock) {
         // Create window
         const mainWindow = WindowManager.createMainWindow();
 
+        //TODO: Re-enable auto-updates
         // // Initialize auto-updater (only in production)
         // if (!APP_ENVIRONMENT.IS_DEV) {
         //     UpdateHandler.initialize(mainWindow);

@@ -1,178 +1,271 @@
-import {useCallback, useEffect, useState} from "react";
-import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
-import {serverHealthcheck} from "@/store/thunks/server-healthcheck";
-import {shutdownServer} from "@/store/thunks/shutdown-server";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { useWebSocketContext } from "@/context/websocket-context/WebSocketContext";
+import { serverHealthcheck } from "@/store/thunks/server-healthcheck";
+import { shutdownServer } from "@/store/thunks/shutdown-server";
+import { electronIpcClient } from "@/hooks/electron-service/electron-ipc-client";
+import { useServerConfig } from "@/hooks/useServerConfig";
 
 export type ServerStatus = 'not-connected' | 'spawning' | 'shutting-down' | 'alive' | 'error';
 
+interface ServerState {
+    status: ServerStatus;
+    errorMessage: string | null;
+    retryCount: number;
+    lastHealthCheck: Date | null;
+}
+
+const MAX_RETRIES = 10;
+const RETRY_DELAY = 1000;
+const HEALTH_CHECK_INTERVAL = 5000; // Check every 5 seconds when not connected
+
 export const usePythonServer = () => {
-    const {isConnected, connect} = useWebSocketContext()
-    const [serverStatus, setServerStatus] = useState<ServerStatus>('not-connected');
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const { isConnected, connect } = useWebSocketContext();
+    const { config } = useServerConfig();
 
+    const [state, setState] = useState<ServerState>({
+        status: 'not-connected',
+        errorMessage: null,
+        retryCount: 0,
+        lastHealthCheck: null,
+    });
 
-    const checkServerHealth = useCallback(async () => {
+    const healthCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const isTransitioningRef = useRef(false);
 
-        const maxRetries = 10;
-        const retryDelay = 1000; // ms
+    // Update status helper
+    const updateState = useCallback((updates: Partial<ServerState>) => {
+        setState(prev => ({ ...prev, ...updates }));
+    }, []);
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                if (isConnected) {
-                    // If websocket is connected, we can assume server is alive
+    // Clear health check interval
+    const clearHealthCheckInterval = useCallback(() => {
+        if (healthCheckIntervalRef.current) {
+            clearInterval(healthCheckIntervalRef.current);
+            healthCheckIntervalRef.current = null;
+        }
+    }, []);
 
-                    setServerStatus('alive');
-                    setErrorMessage(null);
-                    return true;
-                }
-                const response = await serverHealthcheck();
-
-                if (response?.ok) {
-                    setServerStatus('alive');
-                    setErrorMessage(null);
-                    return true;
-                }
-
-                // If not the last attempt, wait before retrying
-                if (attempt < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, retryDelay));
-                }
-            } catch (error) {
-                // If not the last attempt, wait before retrying
-                if (attempt < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, retryDelay));
-                } else {
-                    // Last attempt failed
-                    setServerStatus('not-connected');
-                    setErrorMessage(null);
-                    return false;
-                }
-            }
+    // Health check with retry logic
+    const checkServerHealth = useCallback(async (): Promise<boolean> => {
+        // If WebSocket is connected, server is definitely alive
+        if (isConnected) {
+            updateState({
+                status: 'alive',
+                errorMessage: null,
+                retryCount: 0,
+                lastHealthCheck: new Date()
+            });
+            return true;
         }
 
-        // All attempts failed
-        setServerStatus('error');
-        setErrorMessage(`Health check failed after ${maxRetries} attempts`);
+        // Try health check endpoint
+        try {
+            const response = await serverHealthcheck();
+            if (response?.ok) {
+                updateState({
+                    status: 'alive',
+                    errorMessage: null,
+                    retryCount: 0,
+                    lastHealthCheck: new Date()
+                });
+                return true;
+            }
+        } catch (error) {
+            console.debug('Health check failed:', error);
+        }
+
+        // Server not responding
+        updateState({
+            status: 'not-connected',
+            lastHealthCheck: new Date()
+        });
         return false;
-    }, [isConnected]);
+    }, [isConnected, updateState]);
 
-    const startPythonServer = useCallback(async (exePath: string | null) => {
-        try {
-            setServerStatus('spawning');
-            setErrorMessage(null);
-            console.log("Starting Python server...");
-            try {
-                await shutdownServer()
-
-            } catch (error) {
-                console.log("Error sending shutdown signal", error)
-            }
-
-
-            await window.electronAPI.startPythonServer(exePath);
-
-            // Start health checks only if websocket is not connected
-            if (!isConnected) {
-                setTimeout(() => checkServerHealth(), 1000);
-            } else {
-                setServerStatus('alive');
-            }
-        } catch (error) {
-            setServerStatus('error');
-            setErrorMessage(`Failed to start server: ${error}`);
-            console.error('Failed to start Python server:', error);
+    // Start server with proper lifecycle management
+    const startPythonServer = useCallback(async (exePath: string | null = null): Promise<boolean> => {
+        if (isTransitioningRef.current) {
+            console.warn('Server transition already in progress');
+            return false;
         }
-    }, []);
 
-    const stopPythonServer = useCallback(async () => {
+        isTransitioningRef.current = true;
+        updateState({ status: 'spawning', errorMessage: null, retryCount: 0 });
+
         try {
-            setServerStatus('shutting-down')
-            console.log("Stopping Python server...");
+            // First try to shutdown any existing server
             try {
-                await shutdownServer()
-
-            } catch (error) {
-                console.log("Error sending shutdown signal", error)
+                await shutdownServer();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch {
+                // Ignore shutdown errors
             }
 
-            await window.electronAPI.stopPythonServer();
-            setServerStatus('not-connected');
-            setErrorMessage(null);
-        } catch (error) {
-            setServerStatus('error');
-            setErrorMessage(`Failed to stop server: ${error}`);
-            console.error('Failed to stop Python server:', error);
-        }
-    }, []);
+            // Start the server
+            await electronIpcClient.pythonServer.start.mutate({ exePath });
 
-    // Auto-start server on mount if it's not already running
-    useEffect(() => {
-        const autoStartServer = async () => {
+            // Wait for server to be ready with retries
+            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                updateState({ retryCount: attempt });
 
-            // Check if server is already running or being spawned
-            if (serverStatus === 'alive' || serverStatus === 'spawning'|| isConnected) {
-                return;
-            }
-            try{
-                connect()
-                console.log("WebSocket already connected, no need to start server.")
-                return; // If connect() doesn't throw, we're connected
-            } catch(error){
-                console.log("Server not connected, spawning server process...")
-            }
-            // Check if there's a current executable path
-            try {
-                const currentPath = await window.electronAPI.getPythonServerExecutablePath();
-                if (currentPath) {
-                    console.log("Starting Python server with path:", currentPath);
-                    await startPythonServer(currentPath);
-                } else {
-                    // Try to find a valid candidate
-                    const candidates = await window.electronAPI.getPythonServerExecutableCandidates();
-                    const validCandidate = candidates.find(c => c.isValid);
-                    if (validCandidate) {
-                        console.log("Starting Python server with candidate:", validCandidate.path);
-                        await startPythonServer(validCandidate.path);
-                     } else {
-                        console.log("No valid Python server executable found. Please select one manually.");
-                        setServerStatus('not-connected');
-                        setErrorMessage('No valid Python server executable found. Please select one manually.');
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+
+                const isHealthy = await checkServerHealth();
+                if (isHealthy) {
+                    updateState({ status: 'alive', errorMessage: null, retryCount: 0 });
+
+                    // Auto-connect WebSocket if configured
+                    if (config.autoConnect && !isConnected) {
+                        setTimeout(() => connect(), 500);
                     }
 
+                    isTransitioningRef.current = false;
+                    return true;
                 }
-            } catch (error) {
-                console.log("Error during server start:", error);
+            }
+
+            // Failed after all retries
+            throw new Error(`Server failed to start after ${MAX_RETRIES} attempts`);
+
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            updateState({
+                status: 'error',
+                errorMessage: `Failed to start server: ${errorMsg}`,
+                retryCount: 0
+            });
+            console.error('Failed to start Python server:', error);
+            isTransitioningRef.current = false;
+            return false;
+        }
+    }, [checkServerHealth, config.autoConnect, isConnected, connect, updateState]);
+
+    // Stop server with proper cleanup
+    const stopPythonServer = useCallback(async (): Promise<boolean> => {
+        if (isTransitioningRef.current) {
+            console.warn('Server transition already in progress');
+            return false;
+        }
+
+        isTransitioningRef.current = true;
+        updateState({ status: 'shutting-down', errorMessage: null });
+
+        try {
+            // First disconnect WebSocket if connected
+            if (isConnected) {
+                // This will be handled by the WebSocketContext
+            }
+
+            // Shutdown via HTTP endpoint first (graceful)
+            try {
+                await shutdownServer();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch {
+                // If HTTP shutdown fails, continue with force stop
+            }
+
+            // Force stop via IPC
+            await electronIpcClient.pythonServer.stop.mutate();
+
+            updateState({ status: 'not-connected', errorMessage: null });
+            isTransitioningRef.current = false;
+            return true;
+
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            updateState({
+                status: 'error',
+                errorMessage: `Failed to stop server: ${errorMsg}`
+            });
+            console.error('Failed to stop Python server:', error);
+            isTransitioningRef.current = false;
+            return false;
+        }
+    }, [isConnected, updateState]);
+
+    // Auto-start logic on mount
+    useEffect(() => {
+        const autoStartServer = async () => {
+            // Skip if already operational or transitioning
+            if (state.status === 'alive' ||
+                state.status === 'spawning' ||
+                state.status === 'shutting-down' ||
+                isConnected) {
+                return;
+            }
+
+            // First try to connect to existing server
+            const isHealthy = await checkServerHealth();
+            if (isHealthy) {
+                if (config.autoConnect) {
+                    connect();
+                }
+                return;
+            }
+
+            // If configured for auto-start, try to start server
+            if (config.autoConnect) {
+                try {
+                    const currentPath = await electronIpcClient.pythonServer.getExecutablePath.query();
+                    if (currentPath) {
+                        await startPythonServer(currentPath);
+                    } else {
+                        // Try to find a valid executable
+                        const candidates = await electronIpcClient.pythonServer.getExecutableCandidates.query();
+                        const validCandidate = candidates.find((c: any) => c.isValid);
+                        if (validCandidate) {
+                            await startPythonServer(validCandidate.path);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error during auto-start:", error);
+                }
             }
         };
 
-        // Small delay to allow context to initialize
-        autoStartServer().then(r => {}).catch(e => {
-            console.error("Error auto-starting server:", e);
-        });
-    }, []); // Run on mount
+        autoStartServer();
+    }, []); // Only run once on mount
 
+    // Periodic health checks when not connected
     useEffect(() => {
-        if (!isConnected) {
-            checkServerHealth().then(r => {
-            setErrorMessage(null);
-            }).catch(e => {
-                setServerStatus('not-connected');
-                setErrorMessage(null);
-            });
-            return () => {
-            };
-        } else {
-            // If websocket is connected, server is alive
-            setServerStatus('alive');
-            setErrorMessage(null);
+        if (isConnected) {
+            // WebSocket connected, server is alive
+            updateState({ status: 'alive', errorMessage: null });
+            clearHealthCheckInterval();
+        } else if (state.status === 'alive') {
+            // Lost WebSocket connection but server might still be alive
+            // Start periodic health checks
+            clearHealthCheckInterval();
+            healthCheckIntervalRef.current = setInterval(() => {
+                checkServerHealth();
+            }, HEALTH_CHECK_INTERVAL);
+        } else if (state.status === 'not-connected') {
+            // Periodic checks to detect if server comes online
+            clearHealthCheckInterval();
+            healthCheckIntervalRef.current = setInterval(() => {
+                checkServerHealth();
+            }, HEALTH_CHECK_INTERVAL);
         }
-    }, [isConnected, checkServerHealth]);
+
+        return () => clearHealthCheckInterval();
+    }, [isConnected, state.status, checkServerHealth, clearHealthCheckInterval, updateState]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            clearHealthCheckInterval();
+        };
+    }, [clearHealthCheckInterval]);
 
     return {
-        serverStatus,
-        errorMessage,
-        isPythonRunning: serverStatus === 'alive',
+        serverStatus: state.status,
+        errorMessage: state.errorMessage,
+        isPythonRunning: state.status === 'alive',
+        isTransitioning: state.status === 'spawning' || state.status === 'shutting-down',
+        retryCount: state.retryCount,
+        lastHealthCheck: state.lastHealthCheck,
         startPythonServer,
-        stopPythonServer
+        stopPythonServer,
+        checkServerHealth,
     };
 };
