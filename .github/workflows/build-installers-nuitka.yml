@@ -1,0 +1,152 @@
+name: Build installers (Nuitka + Electron)
+
+on:
+#  push:
+#    branches:
+#      - jon/development
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ windows-latest ]  # Start with Windows first
+        include:
+          - os: windows-latest
+            venv-activate: .venv\Scripts\activate
+    #    continue-on-error: true
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Validate code signing prerequisites
+      - name: Validate code signing prerequisites
+        run: |
+          $missingSecrets = @()
+          
+          if (-not "${{ secrets.AZURE_TENANT_ID }}") { $missingSecrets += "AZURE_TENANT_ID" }
+          if (-not "${{ secrets.AZURE_CLIENT_ID }}") { $missingSecrets += "AZURE_CLIENT_ID" }
+          if (-not "${{ secrets.AZURE_CLIENT_SECRET }}") { $missingSecrets += "AZURE_CLIENT_SECRET" }
+          if (-not "${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}") { $missingSecrets += "TRUSTED_SIGNING_ACCOUNT_NAME" }
+          if (-not "${{ secrets.CERTIFICATE_PROFILE_NAME }}") { $missingSecrets += "CERTIFICATE_PROFILE_NAME" }
+          
+          if ($missingSecrets.Count -gt 0) {
+            Write-Error "Missing required secrets for code signing: $($missingSecrets -join ', ')"
+            exit 1
+          }
+          
+          Write-Output "✅ All required code signing secrets are available"
+        shell: pwsh
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install uv and enable cache
+        uses: astral-sh/setup-uv@v6
+
+
+      - name: Install the project
+        run: uv sync
+      - name: Verify installation 1/3
+        run: uv pip show skellycam
+      - name: Verify installation 2/3
+        run: uv pip show nuitka
+      - name: Verify installation 3/3
+        run: uv pip show pydantic # check that app dependencies are installed
+
+
+      - name: Build with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: main
+          script-name: skellycam/__main__.py
+          mode: onefile
+          windows-icon-from-ico: shared/skellycam-logo/skellycam-favicon.ico
+          output-file: skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}
+          output-dir: skellycam-ui
+          include-module: |
+            pydantic
+            PIL
+            psutil
+            setproctitle
+            scipy
+            pandas
+            uvicorn
+            fastapi
+            tzlocal
+            httpx
+            websockets
+            pyaudio
+            tabulate
+            numpydantic
+            cv2_enumerate_cameras
+
+      - name: Check Nuitka build
+        run: |
+          ls -l skellycam-ui/skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe
+      # Sign the Nuitka-built executable
+      - name: Sign skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe with Trusted Signing
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://eus.codesigning.azure.net/ # Update with your endpoint
+          trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
+          files: ${{ github.workspace }}\skellycam-ui\skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          trace: false # set `true` if need more debug
+
+      - name: Upload skellycam_server.exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}
+          path: |
+            skellycam-ui/skellycam-server-nuitka-${{ runner.os }}-${{ github.run_id }}.exe
+          include-hidden-files: true
+
+      - name: Install UI dependencies
+        run: |
+          cd skellycam-ui
+          npm install
+
+      - name: Build UI
+        run: |
+          cd skellycam-ui
+          npm run build
+      # Sign the Electron installer
+      - name: Sign Electron installer with Trusted Signing
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://eus.codesigning.azure.net/ # Update with your endpoint
+          trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\skellycam-ui\release
+          files-folder-filter: "*.exe"
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          trace: false # set `true` if need more debug
+
+      - name: Upload electron installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-electron-nuitka-${{ runner.os }}-${{ github.run_id }}
+          path: |
+            skellycam-ui/release/*/skellycam_*_installer.exe
+          include-hidden-files: true

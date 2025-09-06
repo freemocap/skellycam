@@ -1,0 +1,165 @@
+import {app, dialog, ipcMain, shell} from "electron";
+import {WindowManager} from "./window-manager";
+import {PythonServer} from "./python-server";
+import path from "node:path";
+import fs from "node:fs";
+import { APP_PATHS } from "./app-paths";
+
+export class IpcManager {
+    static initialize() {
+        this.handleWindowControls();
+        this.handlePythonControls();
+        this.handleFileSystemControls();
+        this.handleAssetControls()
+    }
+
+    private static handleAssetControls() {
+        ipcMain.handle("get-logo-png-path", async (_) => {
+            let logoPath:string
+            if (fs.existsSync(APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH)){
+                logoPath = APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH
+            } else {
+                logoPath = APP_PATHS.SKELLYCAM_LOGO_PNG_RESOURCES_PATH
+            }
+            console.log(`Fetching logo from path: ${logoPath}`)
+            return logoPath;
+        });
+
+    }
+    private static handleWindowControls() {
+        ipcMain.handle("open-child-window", (_, route) => {
+            console.log("Opening child window with route:", route);
+            const child = WindowManager.createMainWindow();
+            child.loadURL(`${process.env.VITE_DEV_SERVER_URL}#${route}`);
+        });
+    }
+
+    private static handleFileSystemControls() {
+        ipcMain.handle("select-directory", async () => {
+            const result = await dialog.showOpenDialog({
+                properties: ["openDirectory"],
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+                return result.filePaths[0];
+            }
+            return null;
+        });
+        ipcMain.handle("open-folder", async (_, folderPath: string) => {
+            try {
+                await shell.openPath(folderPath);
+                return true;
+            } catch (error) {
+                console.error("Failed to open folder:", error);
+                return false;
+            }
+        });
+        ipcMain.handle("get-home-directory", () => {
+            return app.getPath("home");
+        });
+
+        ipcMain.handle("get-folder-contents", async (_, folderPath: string) => {
+            try {
+                // Ensure the folder exists
+                if (!fs.existsSync(folderPath)) {
+                    return {error: "Folder does not exist", path: folderPath};
+                }
+
+                // Get all files and directories in the folder
+                const entries = fs.readdirSync(folderPath);
+
+                // Map the entries to include their details
+                const contents = entries.map((entry) => {
+                    const fullPath = path.join(folderPath, entry);
+                    try {
+                        const stats = fs.statSync(fullPath);
+                        return {
+                            name: entry,
+                            path: fullPath,
+                            isDirectory: stats.isDirectory(),
+                            isFile: stats.isFile(),
+                            size: stats.size,
+                            created: stats.birthtime,
+                            modified: stats.mtime,
+                            accessed: stats.atime,
+                        };
+                    } catch (err) {
+                        // If we can't get stats for some reason, just return basic info
+                        return {
+                            name: entry,
+                            path: fullPath,
+                            error: "Failed to get file stats",
+                        };
+                    }
+                });
+
+                return {
+                    path: folderPath,
+                    contents: contents,
+                };
+            } catch (error: any) {
+                console.error("Failed to get folder contents:", error);
+                return {
+                    error: `Failed to get folder contents: ${error.message}`,
+                    path: folderPath,
+                };
+            }
+        });
+    }
+
+    private static handlePythonControls() {
+        ipcMain.handle("python-server:start", async (_, exePath: string | null) => {
+            console.log("Starting Python Server");
+            await PythonServer.start(exePath);
+        });
+
+        ipcMain.handle("python-server:stop", async () => {
+            console.log("Stopping Python Server");
+            await PythonServer.shutdown();
+        });
+
+        ipcMain.handle("restart-python-server", () => {
+            console.log("Restarting Python Server");
+            PythonServer.shutdown();
+            PythonServer.start(null);
+        });
+
+        // New handlers for executable path management
+        ipcMain.handle("python-server:get-executable-path", () => {
+            return PythonServer.getCurrentExecutablePath();
+        });
+
+        ipcMain.handle("python-server:get-executable-candidates", async () => {
+            return await PythonServer.validateAllCandidates();
+        });
+
+        ipcMain.handle("python-server:refresh-candidates", async () => {
+            return await PythonServer.refreshCandidates();
+        });
+
+        ipcMain.handle("python-server:is-running", () => {
+            return PythonServer.isRunning();
+        });
+
+        ipcMain.handle("python-server:get-process-info", () => {
+            return PythonServer.getProcessInfo();
+        });
+
+        // File selection for custom executable path
+        ipcMain.handle("select-executable-file", async () => {
+            const result = await dialog.showOpenDialog({
+                properties: ["openFile"],
+                filters: [
+                    {name: "Executable Files", extensions: ["exe"]},
+                    {name: "All Files", extensions: ["*"]},
+                ],
+                title: "Select Python Server Executable",
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+                return result.filePaths[0];
+            }
+            return null;
+        });
+    }
+}
