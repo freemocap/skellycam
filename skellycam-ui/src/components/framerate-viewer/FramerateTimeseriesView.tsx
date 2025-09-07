@@ -2,7 +2,7 @@
 import {useCallback} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
-import {CurrentFramerate} from "@/store/slices/framerateTrackerSlice"
+import {CurrentFramerate} from "@/store/slices/framerate/framerate-slice"
 import {applyAxisStyles, createTooltip, renderEmptyChart} from "@/components/framerate-viewer/d3ChartUtils";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
 

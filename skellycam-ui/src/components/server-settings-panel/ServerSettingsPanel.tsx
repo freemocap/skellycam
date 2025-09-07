@@ -40,7 +40,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { useWebSocketContext } from "@/context/websocket-context/WebSocketContext";
 import { usePythonServerContext } from "@/context/python-server-context/PythonServerContext";
-import { useElectronAPI } from "@/hooks/electron-service/useElectronApi";
+import { electronApi } from "@/hooks/electron-service/electron-api";
 import { useServerConfig } from "@/hooks/useServerConfig";
 import { ServerStatus } from "@/context/python-server-context/usePythonServer";
 
@@ -82,7 +82,7 @@ const StatusChip = styled(Chip)<{ status: ServerStatus }>(({ theme, status }) =>
 export const ServerSettingsPanel: React.FC = () => {
     const { isConnected, connect, disconnect } = useWebSocketContext();
     const { serverStatus, errorMessage, startPythonServer, stopPythonServer } = usePythonServerContext();
-    const { api, isElectron } = useElectronAPI();
+    const { api, isElectron } = electronApi();
     const { config, updateConfig, getBaseHttpUrl, getWebSocketUrl } = useServerConfig();
 
     const [expanded, setExpanded] = React.useState(false);

@@ -1,7 +1,7 @@
 // CameraConfigExposure.tsx
 import * as React from 'react';
 import {Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme} from '@mui/material';
-import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras-slices/camera-types";
+import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras/camera-types";
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;

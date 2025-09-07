@@ -28,7 +28,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
-import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {useAppDispatch, useAppSelector} from "@/store";
 import {loadVideos, openVideoFile, selectVideoFolder} from "@/store/thunks/video-loading-thunks";
 
 export const VideoFolderPanel: React.FC = () => {

@@ -13,7 +13,7 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import * as React from "react";
-import {CameraDevice} from "@/store/slices/cameras-slices/camera-types";
+import {CameraDevice} from "@/store/slices/cameras/camera-types";
 
 interface CameraListItemProps {
     camera: CameraDevice;

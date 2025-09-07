@@ -1,13 +1,13 @@
 import {useCallback, useEffect, useRef, useState} from "react";
-import {useAppDispatch} from "@/store/AppStateStore";
+import {useAppDispatch} from "@/store";
 import {
     FrameRenderAcknowledgment,
     useWebsocketBinaryMessageProcessor
 } from "@/context/websocket-context/useWebsocketBinaryMessageProcessor";
-import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerateTrackerSlice";
-import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/context/websocket-context/websocket-types";
+import {setBackendFramerate, setFrontendFramerate} from "@/store/slices/framerate/framerate-slice";
+import {FramerateUpdateWebSocketMessage, WebSocketMessageSchema} from "@/store/slices/websocket/websocket-types";
 import {addLog} from "@/store/slices/logRecordsSlice";
-import {useAppUrls} from "@/hooks/useAppUrls";
+import {appUrls} from "@/hooks/app-urls";
 
 
 export const useWebSocket = () => {
@@ -116,7 +116,7 @@ export const useWebSocket = () => {
             return;
         }
 
-        const ws = new WebSocket(useAppUrls.getWebSocketUrl());
+        const ws = new WebSocket(appUrls.getWebSocketUrl());
         ws.binaryType = "arraybuffer";
 
         ws.onopen = () => {
@@ -124,7 +124,7 @@ export const useWebSocket = () => {
             setConnectAttempt(0);
             setShouldReconnect(true);
             ws.send("Hello from the Skellycam Frontend💀📸👋");
-            console.log(`Websocket is connected to url: ${useAppUrls.getWebSocketUrl()}`);
+            console.log(`Websocket is connected to url: ${appUrls.getWebSocketUrl()}`);
         };
 
         ws.onclose = () => {
@@ -162,7 +162,7 @@ export const useWebSocket = () => {
         }
         const timeout = setTimeout(() => {
             console.log(
-                `Connecting  to websocket at url: ${useAppUrls.getWebSocketUrl()} (attempt #${connectAttempt + 1})`
+                `Connecting  to websocket at url: ${appUrls.getWebSocketUrl()} (attempt #${connectAttempt + 1})`
             );
             connect();
         }, Math.min(1000 * Math.pow(2, connectAttempt), 10000)); // exponential backoff

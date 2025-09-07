@@ -5,14 +5,14 @@ import {TreeItem} from "@mui/x-tree-view/TreeItem";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import VideocamIcon from "@mui/icons-material/Videocam";
-import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {useAppDispatch, useAppSelector} from "@/store";
 import {
     StartStopRecordingButton
 } from "@/components/recording-info-panel/recording-subcomponents/StartStopRecordingButton";
-import {startRecording, stopRecording,} from "@/store/thunks/start-stop-recording-thunks";
-import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
+import {startRecording, stopRecording,} from "@/store/slices/cameras/old-camera-thunks/start-stop-recording-thunks";
+import {setRecordingInfo} from "@/store/slices/recording/recording-slice";
 import {RecordingPathTreeItem} from "@/components/recording-info-panel/RecordingPathTreeItem";
-import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
+import {electronApi} from "@/hooks/electron-service/electron-api";
 
 export const RecordingInfoPanel: React.FC = () => {
     const theme = useTheme();
@@ -34,7 +34,7 @@ export const RecordingInfoPanel: React.FC = () => {
     const [baseName, setBaseName] = useState("recording");
     const [customSubfolderName, setCustomSubfolderName] = useState("");
     const [recordingTag, setRecordingTag] = useState("");
-    const {isElectron, api, fileSystem} = useElectronAPI();
+    const {isElectron, api, fileSystem} = electronApi();
     // replace ~ with user's home directory
     useEffect(() => {
         if (recordingInfo?.recordingDirectory?.startsWith("~")) {

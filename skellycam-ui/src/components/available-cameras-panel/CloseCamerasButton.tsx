@@ -2,7 +2,7 @@ import React from 'react';
 import {IconButton, Tooltip} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {useAppDispatch} from '@/store/AppStateStore';
-import {closeCameras} from "@/store/thunks/close-cameras-thunks";
+import {closeCameras} from "@/store/slices/cameras/old-camera-thunks/close-cameras-thunks";
 
 
 export const CloseCamerasButton: React.FC = () => {

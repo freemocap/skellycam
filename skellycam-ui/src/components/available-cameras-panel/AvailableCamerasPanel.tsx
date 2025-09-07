@@ -8,16 +8,16 @@ import VideocamIcon from "@mui/icons-material/Videocam";
 import {CameraConfigPanel} from "@/components/available-cameras-panel/CameraConfigPanel";
 import {CameraListItem} from "@/components/available-cameras-panel/CameraListItem";
 import {RefreshDetectedCamerasButton} from "@/components/available-cameras-panel/RefreshDetectedCameras";
-import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
+import {useAppDispatch, useAppSelector} from "@/store";
 import {ConnectToCamerasButton} from "@/components/available-cameras-panel/ConnectToCamerasButton";
-import {selectAllCameras, toggleCameraSelection, updateCameraConfig,} from "@/store/slices/cameras-slices/camerasSlice";
-import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
+import {selectAllCameras, toggleCameraSelection, updateCameraConfig,} from "@/store/slices/cameras/camerasSlice";
+import {connectToCameras} from "@/store/slices/cameras/old-camera-thunks/connect-to-cameras-thunk";
 import {CloseCamerasButton} from "@/components/available-cameras-panel/CloseCamerasButton";
-import {CameraConfig, CameraDevice} from "@/store/slices/cameras-slices/camera-types";
+import {CameraConfig, CameraDevice} from "@/store/slices/cameras/camera-types";
 import {ApplyCameraConfigsButton} from "@/components/available-cameras-panel/ApplyCameraConfigsButton";
 import {PauseUnpauseButton} from "../PauseUnpauseButton";
 // import { detectCameraDevices } from "@/store/thunks/detect-cameras-client-thunks";
-import {detectCameraDevices} from "@/store/thunks/detect-camera-thunks/detect-cameras-server-thunk";
+import {detectCameraDevices} from "@/store/slices/cameras/old-camera-thunks/detect-cameras-server-thunk";
 import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
 
 export const AvailableCamerasPanel = () => {

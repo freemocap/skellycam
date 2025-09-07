@@ -2,9 +2,9 @@
 import React from 'react';
 import {Button, CircularProgress, Tooltip, Typography} from '@mui/material';
 import extendedPaperbaseTheme from "@/layout/paperbase_theme/paperbase-theme";
-import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
-import {selectSelectedDevices} from "@/store/slices/cameras-slices/camerasSlice";
-import {connectToCameras} from "@/store/thunks/connect-to-cameras-thunk";
+import {useAppDispatch, useAppSelector} from "@/store";
+import {selectSelectedDevices} from "@/store/slices/cameras/camerasSlice";
+import {connectToCameras} from "@/store/slices/cameras/old-camera-thunks/connect-to-cameras-thunk";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import {useNavigate} from "react-router-dom";
 

@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
+import {electronApi} from "@/hooks/electron-service/electron-api";
 
 export const ExecutablePathSelector: React.FC = () => {
-    const { api, isElectron } = useElectronAPI();
+    const { api, isElectron } = electronApi();
     const [candidates, setCandidates] = useState<any[]>([]);
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
     const [isRunning, setIsRunning] = useState(false);

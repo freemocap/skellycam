@@ -1,9 +1,9 @@
 import React from 'react';
 import {IconButton, InputAdornment, TextField} from '@mui/material';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import {useAppDispatch} from "@/store/AppStateStore";
-import {setRecordingInfo} from "@/store/slices/recordingInfoSlice";
-import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
+import {useAppDispatch} from "@/store";
+import {setRecordingInfo} from "@/store/slices/recording/recording-slice";
+import {electronApi} from "@/hooks/electron-service/electron-api";
 
 interface DirectoryInputProps {
     value: string;
@@ -11,7 +11,7 @@ interface DirectoryInputProps {
 
 export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({value}) => {
     const dispatch = useAppDispatch();
-    const { fileSystem } = useElectronAPI();
+    const { fileSystem } = electronApi();
 
     const handleSelectDirectory = async () => {
         try {

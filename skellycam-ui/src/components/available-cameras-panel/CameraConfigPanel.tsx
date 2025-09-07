@@ -5,9 +5,9 @@ import * as React from "react";
 import {CameraConfigResolution} from "./CameraConfigResolution";
 import {CameraConfigExposure} from "./CameraConfigExposure";
 import {CameraConfigRotation} from "./CameraConfigRotation";
-import {CameraConfig} from "@/store/slices/cameras-slices/camera-types";
-import {copyConfigToAllCameras} from "@/store/slices/cameras-slices/camerasSlice";
-import {useAppDispatch} from "@/store/AppStateStore";
+import {CameraConfig} from "@/store/slices/cameras/camera-types";
+import {copyConfigToAllCameras} from "@/store/slices/cameras/camerasSlice";
+import {useAppDispatch} from "@/store";
 
 interface CameraConfigPanelProps {
     config: CameraConfig;

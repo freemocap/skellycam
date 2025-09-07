@@ -5,7 +5,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import {useElectronAPI} from "@/hooks/electron-service/useElectronApi";
+import {electronApi} from "@/hooks/electron-service/electron-api";
 
 interface FullPathPreviewProps {
     directory: string;
@@ -19,7 +19,7 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
                                                                              subfolder
                                                                          }) => {
     const theme = useTheme();
-    const { fileSystem } = useElectronAPI();
+    const { fileSystem } = electronApi();
     const parts = [
         {icon: <FolderIcon/>, text: directory},
         ...(subfolder ? [{icon: <FolderIcon/>, text: subfolder}] : []),
