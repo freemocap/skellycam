@@ -8,30 +8,33 @@ import {useElectronIPC} from "@/services";
 const WelcomePage: React.FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
-    const [logoPath, setLogoPath] = useState<string | null>(null)
-    const {isElectron, api} = useElectronIPC()
+    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+    const {isElectron, api} = useElectronIPC();
 
     useEffect(() => {
-        const fetchLogoPath = async () => {
+        const fetchLogo = async (): Promise<void> => {
             try {
                 if (isElectron && api) {
-                    const path = await api.assets.getLogoPngPath.query();
-                    // Convert to file:// URL for images
-                    const fileUrl = `file://${path.replace(/\\/g, '/')}`;
-                    if (path) {
-                        console.log(`Loading skellycam logo from: '${fileUrl}'`)
-                        setLogoPath(fileUrl);
+                    // Use the new base64 method that returns a data URL
+                    const dataUrl = await api.assets.getLogoBase64.query();
+                    if (dataUrl) {
+                        console.log('Successfully loaded logo as base64 data URL');
+                        setLogoDataUrl(dataUrl);
+                    } else {
+                        console.warn('Logo not found, using fallback');
+                        // Optionally set a fallback image from your public folder
+                        setLogoDataUrl('/skellycam-logo.png');
                     }
                 }
-
             } catch (error) {
-                console.error('Failed to load logo path:', error);
+                console.error('Failed to load logo:', error);
+                // Use fallback from public folder
+                setLogoDataUrl('/skellycam-logo.png');
             }
         };
 
-        fetchLogoPath().then(r => {
-        })
-    }, [])
+        fetchLogo();
+    }, [isElectron, api]);
 
     return (
         <Container maxWidth="md" sx={{
@@ -76,8 +79,8 @@ const WelcomePage: React.FC = () => {
                     <Grow in={true} timeout={1000}>
                         <Box
                             sx={{
-                                width: 180,
-                                height: 180,
+                                width: 360,
+                                height: 360,
                                 mb: 4,
                                 mt: 2,
                                 display: 'flex',
@@ -89,14 +92,20 @@ const WelcomePage: React.FC = () => {
                                 }
                             }}
                         >
-                            {logoPath && <img src={logoPath}
-                                              alt="SkellyCam Logo"
-                                              style={{
-                                                  maxWidth: '100%',
-                                                  maxHeight: '100%',
-                                                  objectFit: 'contain',
-                                                  filter: theme.palette.mode === 'dark' ? 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' : 'drop-shadow(0 0 10px rgba(0,0,0,0.1))'
-                                              }}/>}
+                            {logoDataUrl && (
+                                <img
+                                    src={logoDataUrl}
+                                    alt="SkellyCam Logo"
+                                    style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '100%',
+                                        objectFit: 'contain',
+                                        filter: theme.palette.mode === 'dark'
+                                            ? 'drop-shadow(0 0 10px rgba(255,255,255,0.2))'
+                                            : 'drop-shadow(0 0 10px rgba(0,0,0,0.1))'
+                                    }}
+                                />
+                            )}
                         </Box>
                     </Grow>
 
@@ -130,60 +139,6 @@ const WelcomePage: React.FC = () => {
                     >
                         Record and View Synchronized Videos
                     </Typography>
-
-                    {/*<Box sx={{*/}
-                    {/*    display: 'flex',*/}
-                    {/*    flexDirection: {xs: 'column', sm: 'row'},*/}
-                    {/*    gap: 3,*/}
-                    {/*    width: '100%',*/}
-                    {/*    mt: 2,*/}
-                    {/*    justifyContent: 'center'*/}
-                    {/*}}>*/}
-                    {/*    <Button*/}
-                    {/*        variant="contained"*/}
-                    {/*        size="large"*/}
-                    {/*        fullWidth*/}
-                    {/*        startIcon={<VideocamIcon/>}*/}
-                    {/*        onClick={() => navigate('/cameras')}*/}
-                    {/*        sx={{*/}
-                    {/*            py: 2.5,*/}
-                    {/*            fontSize: '1.1rem',*/}
-                    {/*            backgroundColor: theme.palette.primary.main,*/}
-                    {/*            borderRadius: 2,*/}
-                    {/*            transition: 'all 0.3s ease',*/}
-                    {/*            '&:hover': {*/}
-                    {/*                transform: 'translateY(-3px)',*/}
-                    {/*                boxShadow: theme.palette.mode === 'dark'*/}
-                    {/*                    ? '0 7px 15px rgba(0, 0, 0, 0.4)'*/}
-                    {/*                    : '0 7px 15px rgba(0, 0, 0, 0.2)',*/}
-                    {/*            }*/}
-                    {/*        }}*/}
-                    {/*    >*/}
-                    {/*        Record New Videos*/}
-                    {/*    </Button>*/}
-                    {/*    <Button*/}
-                    {/*        variant="contained"*/}
-                    {/*        size="large"*/}
-                    {/*        fullWidth*/}
-                    {/*        startIcon={<VideoLibraryIcon/>}*/}
-                    {/*        onClick={() => navigate('/videos')}*/}
-                    {/*        sx={{*/}
-                    {/*            py: 2.5,*/}
-                    {/*            fontSize: '1.1rem',*/}
-                    {/*            backgroundColor: darken(theme.palette.secondary.main, 0.2),*/}
-                    {/*            borderRadius: 2,*/}
-                    {/*            transition: 'all 0.3s ease',*/}
-                    {/*            '&:hover': {*/}
-                    {/*                transform: 'translateY(-3px)',*/}
-                    {/*                boxShadow: theme.palette.mode === 'dark'*/}
-                    {/*                    ? '0 7px 15px rgba(0, 0, 0, 0.4)'*/}
-                    {/*                    : '0 7px 15px rgba(0, 0, 0, 0.2)',*/}
-                    {/*            }*/}
-                    {/*        }}*/}
-                    {/*    >*/}
-                    {/*        Load Synchronized Videos*/}
-                    {/*    </Button>*/}
-                    {/*</Box>*/}
 
                     <Box component="footer" sx={{p: 3}}>
                         <Footer/>

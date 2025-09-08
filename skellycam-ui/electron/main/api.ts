@@ -99,6 +99,37 @@ export const api = t.router({
 
     // Asset Management
     assets: t.router({
+        getLogoBase64: t.procedure
+            .query((): string | null => {
+                try {
+                    let logoPath: string | null = null;
+
+                    // Check for logo in order of preference
+                    if (fs.existsSync(APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH)) {
+                        logoPath = APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH;
+                    } else if (fs.existsSync(APP_PATHS.SKELLYCAM_LOGO_PNG_RESOURCES_PATH)) {
+                        logoPath = APP_PATHS.SKELLYCAM_LOGO_PNG_RESOURCES_PATH;
+                    }
+
+                    if (!logoPath) {
+                        console.error('Logo file not found in any expected location');
+                        return null;
+                    }
+
+                    // Read the file and convert to base64
+                    const imageBuffer = fs.readFileSync(logoPath);
+                    const base64String = imageBuffer.toString('base64');
+                    const mimeType = 'image/png'; // Since we know it's a PNG
+
+                    // Return as a data URL that can be used directly in img src
+                    return `data:${mimeType};base64,${base64String}`;
+                } catch (error) {
+                    console.error('Failed to load logo as base64:', error);
+                    return null;
+                }
+            }),
+
+        // Keep the old method for backward compatibility if needed
         getLogoPngPath: t.procedure
             .query(() => {
                 if (fs.existsSync(APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH)) {

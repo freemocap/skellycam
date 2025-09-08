@@ -1,5 +1,6 @@
 import {exec} from 'child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 import {LifecycleLogger} from "./logger";
 import {promisify} from 'util';
 import treeKill from "tree-kill";
@@ -14,6 +15,7 @@ export interface ExecutableCandidate {
     description: string;
     isValid?: boolean;
     error?: string;
+    resolvedPath?: string; // Add resolved path for deduplication
 }
 
 export class PythonServer {
@@ -63,7 +65,7 @@ export class PythonServer {
             }
 
             LifecycleLogger.logPythonProcess(pythonProcess);
-            console.log(`✓ Python server started successfully (PID: ${pythonProcess.pid})`);
+            console.log(`✔ Python server started successfully (PID: ${pythonProcess.pid})`);
 
         } catch (error) {
             console.error('Failed to start Python server:', error);
@@ -83,13 +85,13 @@ export class PythonServer {
         try {
             // Kill entire process tree
             await treeKillAsync(pythonProcess.pid);
-            console.log('✓ Python server process tree terminated');
+            console.log('✔ Python server process tree terminated');
         } catch (error) {
             console.error('Error killing process tree:', error);
             // Fallback to direct kill
             try {
                 pythonProcess?.kill('SIGKILL');
-                console.log('✓ Python server force-killed as fallback');
+                console.log('✔ Python server force-killed as fallback');
             } catch (killError) {
                 console.error('Failed to force-kill Python server:', killError);
             }
@@ -104,7 +106,7 @@ export class PythonServer {
 
         pythonProcess = null;
         this.currentExecutablePath = null;
-        console.log('✓ Python server shutdown complete');
+        console.log('✔ Python server shutdown complete');
     }
 
     static getCurrentExecutablePath(): string | null {
@@ -128,14 +130,15 @@ export class PythonServer {
             throw new Error(errorMessage);
         }
 
-        console.log(`✓ Selected executable: ${validCandidate.name} (${validCandidate.path})`);
+        console.log(`✔ Selected executable: ${validCandidate.name} (${validCandidate.path})`);
         return validCandidate.path;
     }
 
     static async validateAllCandidates(): Promise<ExecutableCandidate[]> {
         console.log('Validating all executable candidates...');
 
-        this.validatedCandidates = await Promise.all(
+        // First, validate all candidates
+        const allValidatedCandidates = await Promise.all(
             PYTHON_EXECUTABLE_CANDIDATES.map(async (candidate) => {
                 const validatedCandidate: ExecutableCandidate = {
                     ...candidate,
@@ -145,7 +148,11 @@ export class PythonServer {
                 try {
                     this.validateExecutable(candidate.path);
                     validatedCandidate.isValid = true;
-                    console.log(`  ✓ ${candidate.name}: Valid`);
+                    // Store resolved path for deduplication
+                    validatedCandidate.resolvedPath = fs.existsSync(candidate.path)
+                        ? path.resolve(candidate.path)
+                        : candidate.path;
+                    console.log(`  ✔ ${candidate.name}: Valid`);
                 } catch (error) {
                     validatedCandidate.error = error instanceof Error ? error.message : 'Unknown validation error';
                     console.log(`  ✗ ${candidate.name}: ${validatedCandidate.error}`);
@@ -155,12 +162,27 @@ export class PythonServer {
             })
         );
 
+        // Deduplicate by resolved path
+        const seenPaths = new Set<string>();
+        this.validatedCandidates = allValidatedCandidates.filter(candidate => {
+            const pathKey = candidate.resolvedPath || candidate.path;
+
+            // If we've seen this path before, skip it
+            if (seenPaths.has(pathKey)) {
+                console.log(`  ⚠ Skipping duplicate: ${candidate.name} (same as another candidate)`);
+                return false;
+            }
+
+            // Add to seen paths
+            seenPaths.add(pathKey);
+            return true;
+        });
+
         const validCount = this.validatedCandidates.filter(c => c.isValid).length;
-        console.log(`Validation complete: ${validCount}/${this.validatedCandidates.length} candidates are valid`);
+        console.log(`Validation complete: ${validCount}/${this.validatedCandidates.length} unique candidates are valid`);
 
         return this.validatedCandidates;
     }
-
 
     static getPythonServerExecutableCandidates(): ExecutableCandidate[] {
         return [...this.validatedCandidates]; // Return copy to prevent mutation
